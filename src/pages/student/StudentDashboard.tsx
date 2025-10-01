@@ -8,7 +8,7 @@ import { ClassroomCard } from "@/components/ClassroomCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Gamepad2, Loader2 } from "lucide-react";
+import { Gamepad2, Loader2, UserPlus } from "lucide-react";
 
 const StudentDashboard = () => {
   const [profile, setProfile] = useState<any>(null);
@@ -154,13 +154,26 @@ const StudentDashboard = () => {
               </Card>
 
               <div>
-                <h2 className="text-2xl font-bold mb-4">My Classrooms</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-bold">My Classrooms</h2>
+                  <Button 
+                    variant="outline"
+                    onClick={() => navigate('/join-class')}
+                  >
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Join Classroom
+                  </Button>
+                </div>
                 {classrooms.length === 0 ? (
                   <Card className="p-8 text-center">
                     <p className="text-muted-foreground mb-4">
                       You haven't joined any classrooms yet. Ask your teacher for a join code!
                     </p>
-                    <Button variant="outline">
+                    <Button 
+                      onClick={() => navigate('/join-class')}
+                      className="bg-gradient-primary hover:opacity-90"
+                    >
+                      <UserPlus className="mr-2 h-4 w-4" />
                       Join a Classroom
                     </Button>
                   </Card>

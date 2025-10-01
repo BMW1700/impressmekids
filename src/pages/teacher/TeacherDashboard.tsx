@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ClassroomCard } from "@/components/ClassroomCard";
+import { CreateClassroomModal } from "@/components/CreateClassroomModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +14,7 @@ const TeacherDashboard = () => {
   const [profile, setProfile] = useState<any>(null);
   const [classrooms, setClassrooms] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -136,7 +138,10 @@ const TeacherDashboard = () => {
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold">My Classrooms</h2>
-              <Button className="bg-gradient-primary hover:opacity-90">
+              <Button 
+                className="bg-gradient-primary hover:opacity-90"
+                onClick={() => setShowCreateModal(true)}
+              >
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Create Classroom
               </Button>
@@ -150,7 +155,10 @@ const TeacherDashboard = () => {
                   <p className="text-muted-foreground mb-4">
                     Create your first classroom to start inviting students and playing games!
                   </p>
-                  <Button className="bg-gradient-primary hover:opacity-90">
+                  <Button 
+                    className="bg-gradient-primary hover:opacity-90"
+                    onClick={() => setShowCreateModal(true)}
+                  >
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Create Your First Classroom
                   </Button>
@@ -205,6 +213,12 @@ const TeacherDashboard = () => {
       </main>
 
       <Footer />
+      
+      <CreateClassroomModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        onSuccess={loadDashboardData}
+      />
     </div>
   );
 };

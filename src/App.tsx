@@ -9,6 +9,8 @@ import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import Games from "./pages/Games";
 import JeopardyGame from "./pages/games/JeopardyGame";
+import JoinClass from "./pages/JoinClass";
+import ClassroomDetail from "./pages/classrooms/ClassroomDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +26,8 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
           <Route path="/student/dashboard" element={<StudentDashboard />} />
+          <Route path="/classrooms/:id" element={<ClassroomDetail />} />
+          <Route path="/join-class" element={<JoinClass />} />
           <Route path="/games" element={<Games />} />
           <Route path="/games/jeopardy-1v1" element={<JeopardyGame />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
