@@ -1,0 +1,191 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+import { ProfileCard } from "@/components/ProfileCard";
+import { ClassroomCard } from "@/components/ClassroomCard";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { Gamepad2, Loader2 } from "lucide-react";
+
+const StudentDashboard = () => {
+  const [profile, setProfile] = useState<any>(null);
+  const [studentProfile, setStudentProfile] = useState<any>(null);
+  const [classrooms, setClassrooms] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    checkAuth();
+    loadDashboardData();
+  }, []);
+
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      navigate('/auth');
+      return;
+    }
+
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
+
+    if (profileData?.role === 'teacher') {
+      navigate('/teacher/dashboard');
+      return;
+    }
+
+    setProfile(profileData);
+
+    // Get or create student profile
+    const { data: studentData } = await supabase
+      .from('student_profiles')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .single();
+
+    if (!studentData) {
+      const { data: newProfile } = await supabase
+        .from('student_profiles')
+        .insert({ user_id: session.user.id, stats: { games_played: 0, games_won: 0 } })
+        .select()
+        .single();
+      setStudentProfile(newProfile);
+    } else {
+      setStudentProfile(studentData);
+    }
+  };
+
+  const loadDashboardData = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data: classroomsData, error } = await supabase
+        .from('classroom_students')
+        .select(`
+          classroom:classrooms(
+            id,
+            name,
+            join_code,
+            created_at,
+            teacher:profiles!classrooms_teacher_id_fkey(full_name)
+          )
+        `)
+        .eq('student_id', session.user.id);
+
+      if (error) throw error;
+      setClassrooms(classroomsData?.map(item => item.classroom) || []);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate('/');
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Header showAuthButtons={false} />
+      
+      <main className="flex-1 py-8">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">
+                Hey {profile?.full_name}! 🎮
+              </h1>
+              <p className="text-muted-foreground">Ready to play and learn?</p>
+            </div>
+            <Button variant="outline" onClick={handleSignOut}>
+              Sign Out
+            </Button>
+          </div>
+
+          <div className="grid lg:grid-cols-3 gap-6 mb-8">
+            <div className="lg:col-span-1">
+              <ProfileCard
+                fullName={profile?.full_name}
+                grade={studentProfile?.grade}
+                avatarUrl={studentProfile?.avatar_url}
+                stats={studentProfile?.stats}
+              />
+            </div>
+            
+            <div className="lg:col-span-2 space-y-6">
+              <Card className="bg-gradient-hero text-white">
+                <CardHeader>
+                  <CardTitle className="text-2xl">Ready to Play?</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="mb-4">
+                    Challenge your friends and show off your knowledge!
+                  </p>
+                  <Button 
+                    className="bg-secondary text-secondary-foreground hover:bg-secondary-light"
+                    onClick={() => navigate('/games')}
+                  >
+                    <Gamepad2 className="mr-2 h-4 w-4" />
+                    Browse Games
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <div>
+                <h2 className="text-2xl font-bold mb-4">My Classrooms</h2>
+                {classrooms.length === 0 ? (
+                  <Card className="p-8 text-center">
+                    <p className="text-muted-foreground mb-4">
+                      You haven't joined any classrooms yet. Ask your teacher for a join code!
+                    </p>
+                    <Button variant="outline">
+                      Join a Classroom
+                    </Button>
+                  </Card>
+                ) : (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {classrooms.map((classroom: any) => (
+                      <ClassroomCard
+                        key={classroom.id}
+                        id={classroom.id}
+                        name={classroom.name}
+                        teacherName={classroom.teacher?.full_name}
+                        createdAt={classroom.created_at}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <Footer />
+    </div>
+  );
+};
+
+export default StudentDashboard;
