@@ -280,29 +280,47 @@ export type Database = {
       questions: {
         Row: {
           answer_text: string
+          audio_url: string | null
           created_at: string
+          difficulty: Database["public"]["Enums"]["difficulty_level"] | null
+          explanation: string | null
           grade: number
           id: string
+          image_url: string | null
           metadata: Json | null
+          options: Json | null
           question_text: string
+          question_type: Database["public"]["Enums"]["question_type"] | null
           subject: string
         }
         Insert: {
           answer_text: string
+          audio_url?: string | null
           created_at?: string
+          difficulty?: Database["public"]["Enums"]["difficulty_level"] | null
+          explanation?: string | null
           grade: number
           id?: string
+          image_url?: string | null
           metadata?: Json | null
+          options?: Json | null
           question_text: string
+          question_type?: Database["public"]["Enums"]["question_type"] | null
           subject: string
         }
         Update: {
           answer_text?: string
+          audio_url?: string | null
           created_at?: string
+          difficulty?: Database["public"]["Enums"]["difficulty_level"] | null
+          explanation?: string | null
           grade?: number
           id?: string
+          image_url?: string | null
           metadata?: Json | null
+          options?: Json | null
           question_text?: string
+          question_type?: Database["public"]["Enums"]["question_type"] | null
           subject?: string
         }
         Relationships: []
@@ -353,6 +371,13 @@ export type Database = {
       }
     }
     Enums: {
+      difficulty_level: "easy" | "medium" | "hard"
+      question_type:
+        | "multiple_choice"
+        | "true_false"
+        | "short_answer"
+        | "fill_blank"
+        | "matching"
       user_role: "teacher" | "student" | "admin"
     }
     CompositeTypes: {
@@ -481,6 +506,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      difficulty_level: ["easy", "medium", "hard"],
+      question_type: [
+        "multiple_choice",
+        "true_false",
+        "short_answer",
+        "fill_blank",
+        "matching",
+      ],
       user_role: ["teacher", "student", "admin"],
     },
   },

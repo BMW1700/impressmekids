@@ -3,9 +3,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { GRADES_K12 } from "@/lib/gradeUtils";
 
 interface CreateClassroomModalProps {
   open: boolean;
@@ -15,7 +17,7 @@ interface CreateClassroomModalProps {
 
 export const CreateClassroomModal = ({ open, onOpenChange, onSuccess }: CreateClassroomModalProps) => {
   const [name, setName] = useState("");
-  const [grade, setGrade] = useState("");
+  const [grade, setGrade] = useState<string>("");
   const [subject, setSubject] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -98,13 +100,18 @@ export const CreateClassroomModal = ({ open, onOpenChange, onSuccess }: CreateCl
             </div>
             <div className="grid gap-2">
               <Label htmlFor="grade">Grade (Optional)</Label>
-              <Input
-                id="grade"
-                value={grade}
-                onChange={(e) => setGrade(e.target.value)}
-                placeholder="e.g., 5th Grade"
-                disabled={isLoading}
-              />
+              <Select value={grade} onValueChange={setGrade} disabled={isLoading}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select grade level" />
+                </SelectTrigger>
+                <SelectContent>
+                  {GRADES_K12.map((g) => (
+                    <SelectItem key={g.value} value={g.value.toString()}>
+                      {g.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="subject">Subject (Optional)</Label>

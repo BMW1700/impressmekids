@@ -23,14 +23,14 @@ const Games = () => {
             <GameTile
               title="Jeopardy Duel"
               description="Challenge your classmates in a fast-paced trivia battle! Answer questions across multiple subjects."
-              gradeRange="Grades 3-6"
+              gradeRange="Grades K-12"
               path="/games/jeopardy-1v1"
               icon={<Zap className="h-6 w-6 text-white" />}
             />
             <GameTile
               title="Math Race"
               description="Solve math problems faster than your opponent. Perfect for practicing arithmetic skills!"
-              gradeRange="Grades 2-5"
+              gradeRange="Grades K-8"
               path="/games"
               icon={<Calculator className="h-6 w-6 text-white" />}
               isComingSoon
@@ -38,7 +38,7 @@ const Games = () => {
             <GameTile
               title="Word Builder"
               description="Create words and outscore your competition in this vocabulary challenge!"
-              gradeRange="Grades 3-6"
+              gradeRange="Grades 1-8"
               path="/games"
               icon={<BookOpen className="h-6 w-6 text-white" />}
               isComingSoon
@@ -46,7 +46,7 @@ const Games = () => {
             <GameTile
               title="Science Sprint"
               description="Race through science questions and learn amazing facts about our world!"
-              gradeRange="Grades 4-6"
+              gradeRange="Grades 3-12"
               path="/games"
               icon={<Brain className="h-6 w-6 text-white" />}
               isComingSoon
@@ -54,7 +54,7 @@ const Games = () => {
             <GameTile
               title="Geography Quest"
               description="Explore the world through fun geography challenges and trivia!"
-              gradeRange="Grades 3-5"
+              gradeRange="Grades 2-10"
               path="/games"
               icon={<Globe className="h-6 w-6 text-white" />}
               isComingSoon
@@ -62,7 +62,7 @@ const Games = () => {
             <GameTile
               title="Spelling Bee"
               description="Show off your spelling skills in head-to-head spelling competitions!"
-              gradeRange="Grades 2-6"
+              gradeRange="Grades 1-8"
               path="/games"
               icon={<Trophy className="h-6 w-6 text-white" />}
               isComingSoon
