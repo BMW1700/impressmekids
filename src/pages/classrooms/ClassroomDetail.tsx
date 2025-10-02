@@ -7,8 +7,8 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Users, Copy, ArrowLeft } from "lucide-react";
-import { ProfileCard } from "@/components/ProfileCard";
+import { Loader2, Users, Copy, Trophy, Play } from "lucide-react";
+import { CreateTournamentModal } from "@/components/tournament/CreateTournamentModal";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -17,6 +17,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const ClassroomDetail = () => {
   const { id } = useParams();
@@ -24,7 +25,9 @@ const ClassroomDetail = () => {
   const { toast } = useToast();
   const [classroom, setClassroom] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
+  const [tournaments, setTournaments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showCreateTournament, setShowCreateTournament] = useState(false);
 
   useEffect(() => {
     loadClassroomData();
@@ -67,6 +70,16 @@ const ClassroomDetail = () => {
 
       if (studentsError) throw studentsError;
       setStudents(studentsData || []);
+
+      // Load tournaments
+      const { data: tournamentsData, error: tournamentsError } = await supabase
+        .from('tournaments')
+        .select('*, tournament_players(count)')
+        .eq('classroom_id', id)
+        .order('created_at', { ascending: false });
+
+      if (tournamentsError) throw tournamentsError;
+      setTournaments(tournamentsData || []);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -164,11 +177,18 @@ const ClassroomDetail = () => {
             </CardContent>
           </Card>
 
-          <div className="mb-4">
-            <h2 className="text-2xl font-bold">Student Roster</h2>
-          </div>
+          <Tabs defaultValue="students" className="mb-8">
+            <TabsList className="grid w-full grid-cols-2 max-w-md">
+              <TabsTrigger value="students">Students</TabsTrigger>
+              <TabsTrigger value="tournaments">Tournaments</TabsTrigger>
+            </TabsList>
 
-          {students.length === 0 ? (
+            <TabsContent value="students" className="mt-6">
+              <div className="mb-4">
+                <h2 className="text-2xl font-bold">Student Roster</h2>
+              </div>
+
+              {students.length === 0 ? (
             <Card className="p-12 text-center">
               <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <h3 className="text-xl font-bold mb-2">No Students Yet</h3>
@@ -198,10 +218,85 @@ const ClassroomDetail = () => {
               ))}
             </div>
           )}
+            </TabsContent>
+
+            <TabsContent value="tournaments" className="mt-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold">Tournaments</h2>
+                <Button
+                  className="bg-gradient-primary hover:opacity-90"
+                  onClick={() => setShowCreateTournament(true)}
+                >
+                  <Trophy className="mr-2 h-4 w-4" />
+                  Create Tournament
+                </Button>
+              </div>
+
+              {tournaments.length === 0 ? (
+                <Card className="p-12 text-center">
+                  <Trophy className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-xl font-bold mb-2">No Tournaments Yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Create your first Jeopardy Duel tournament for this classroom
+                  </p>
+                  <Button
+                    className="bg-gradient-primary hover:opacity-90"
+                    onClick={() => setShowCreateTournament(true)}
+                  >
+                    <Trophy className="mr-2 h-4 w-4" />
+                    Create Tournament
+                  </Button>
+                </Card>
+              ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {tournaments.map((tournament) => (
+                    <Card key={tournament.id} className="shadow-card hover:shadow-purple transition-shadow">
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <CardTitle>{tournament.name}</CardTitle>
+                          <Badge variant={
+                            tournament.status === 'completed' ? 'secondary' :
+                            tournament.status === 'in_progress' ? 'default' : 'outline'
+                          }>
+                            {tournament.status}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <p className="text-sm text-muted-foreground">
+                            {tournament.tournament_players?.[0]?.count || 0} players
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Created {new Date(tournament.created_at).toLocaleDateString()}
+                          </p>
+                          <Button
+                            variant="outline"
+                            className="w-full mt-4"
+                            onClick={() => navigate(`/games/jeopardy-1v1?tournament=${tournament.id}`)}
+                          >
+                            <Play className="mr-2 h-4 w-4" />
+                            View Tournament
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
 
       <Footer />
+
+      <CreateTournamentModal
+        open={showCreateTournament}
+        onOpenChange={setShowCreateTournament}
+        classroomId={id!}
+        onSuccess={loadClassroomData}
+      />
     </div>
   );
 };
