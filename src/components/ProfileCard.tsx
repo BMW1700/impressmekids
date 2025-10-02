@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Trophy, Target } from "lucide-react";
 
 interface ProfileCardProps {
-  fullName: string;
+  fullName?: string;
   grade?: number;
   avatarUrl?: string;
   stats?: {
@@ -15,10 +15,12 @@ interface ProfileCardProps {
 
 export const ProfileCard = ({ fullName, grade, avatarUrl, stats }: ProfileCardProps) => {
   const initials = fullName
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase();
+    ? fullName
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+    : '??';
 
   return (
     <Card className="shadow-card">
@@ -31,7 +33,7 @@ export const ProfileCard = ({ fullName, grade, avatarUrl, stats }: ProfileCardPr
             </AvatarFallback>
           </Avatar>
         </div>
-        <CardTitle className="text-2xl">{fullName}</CardTitle>
+        <CardTitle className="text-2xl">{fullName || 'Student'}</CardTitle>
         {grade && (
           <Badge variant="secondary" className="mt-2">
             Grade {grade}
