@@ -11,6 +11,7 @@ import { Loader2, Users, Copy, Trophy, Play, Megaphone } from "lucide-react";
 import { CreateTournamentModal } from "@/components/tournament/CreateTournamentModal";
 import { CreateAnnouncementModal } from "@/components/CreateAnnouncementModal";
 import { AnnouncementCard } from "@/components/AnnouncementCard";
+import { useClassroomPermissions } from "@/hooks/useClassroomPermissions";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -25,6 +26,7 @@ const ClassroomDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isTeacher, isStudent, isLoading: permissionsLoading } = useClassroomPermissions(id);
   const [classroom, setClassroom] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
   const [tournaments, setTournaments] = useState<any[]>([]);
@@ -115,10 +117,28 @@ const ClassroomDetail = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || permissionsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isTeacher && !isStudent) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header showAuthButtons={false} />
+        <main className="flex-1 py-8">
+          <div className="container mx-auto px-4 text-center">
+            <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
+            <p className="text-muted-foreground mb-4">You don't have permission to view this classroom</p>
+            <Button onClick={() => navigate('/')}>
+              Back to Home
+            </Button>
+          </div>
+        </main>
+        <Footer />
       </div>
     );
   }
@@ -156,7 +176,9 @@ const ClassroomDetail = () => {
               <BreadcrumbSeparator />
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
-                  <Link to="/teacher/dashboard">Dashboard</Link>
+                  <Link to={isTeacher ? "/teacher/dashboard" : "/student/dashboard"}>
+                    Dashboard
+                  </Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
@@ -183,36 +205,41 @@ const ClassroomDetail = () => {
                     {students.length} student{students.length !== 1 ? 's' : ''}
                   </span>
                 </div>
-                <Button variant="outline" size="sm" onClick={copyJoinCode}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy Join Code
-                </Button>
+                {isTeacher && (
+                  <Button variant="outline" size="sm" onClick={copyJoinCode}>
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copy Join Code
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
 
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold">Classroom Management</h2>
-            <Button
-              className="bg-gradient-primary hover:opacity-90"
-              onClick={() => setShowCreateAnnouncement(true)}
-            >
-              <Megaphone className="mr-2 h-4 w-4" />
-              Send to Students
-            </Button>
+            <h2 className="text-2xl font-bold">{isTeacher ? 'Classroom Management' : 'Classroom'}</h2>
+            {isTeacher && (
+              <Button
+                className="bg-gradient-primary hover:opacity-90"
+                onClick={() => setShowCreateAnnouncement(true)}
+              >
+                <Megaphone className="mr-2 h-4 w-4" />
+                Send to Students
+              </Button>
+            )}
           </div>
 
-          <Tabs defaultValue="students" className="mb-8">
+          <Tabs defaultValue={isStudent ? "announcements" : "students"} className="mb-8">
             <TabsList className="grid w-full grid-cols-3 max-w-2xl">
-              <TabsTrigger value="students">Students</TabsTrigger>
+              {isTeacher && <TabsTrigger value="students">Students</TabsTrigger>}
               <TabsTrigger value="announcements">Announcements</TabsTrigger>
               <TabsTrigger value="tournaments">Tournaments</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="students" className="mt-6">
-              <div className="mb-4">
-                <h2 className="text-2xl font-bold">Student Roster</h2>
-              </div>
+            {isTeacher && (
+              <TabsContent value="students" className="mt-6">
+                <div className="mb-4">
+                  <h2 className="text-2xl font-bold">Student Roster</h2>
+                </div>
 
               {students.length === 0 ? (
             <Card className="p-12 text-center">
@@ -242,9 +269,10 @@ const ClassroomDetail = () => {
                   </CardContent>
                 </Card>
               ))}
-            </div>
-          )}
-            </TabsContent>
+                </div>
+              )}
+              </TabsContent>
+            )}
 
             <TabsContent value="announcements" className="mt-6">
               <div className="mb-4">
@@ -256,15 +284,19 @@ const ClassroomDetail = () => {
                   <Megaphone className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="text-xl font-bold mb-2">No Announcements Yet</h3>
                   <p className="text-muted-foreground mb-4">
-                    Send messages and assignments to all students in this classroom
+                    {isTeacher 
+                      ? 'Send messages and assignments to all students in this classroom'
+                      : 'Your teacher hasn\'t posted any announcements yet'}
                   </p>
-                  <Button
-                    className="bg-gradient-primary hover:opacity-90"
-                    onClick={() => setShowCreateAnnouncement(true)}
-                  >
-                    <Megaphone className="mr-2 h-4 w-4" />
-                    Send to Students
-                  </Button>
+                  {isTeacher && (
+                    <Button
+                      className="bg-gradient-primary hover:opacity-90"
+                      onClick={() => setShowCreateAnnouncement(true)}
+                    >
+                      <Megaphone className="mr-2 h-4 w-4" />
+                      Send to Students
+                    </Button>
+                  )}
                 </Card>
               ) : (
                 <div className="space-y-4">
@@ -284,22 +316,7 @@ const ClassroomDetail = () => {
             <TabsContent value="tournaments" className="mt-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-2xl font-bold">Tournaments</h2>
-                <Button
-                  className="bg-gradient-primary hover:opacity-90"
-                  onClick={() => setShowCreateTournament(true)}
-                >
-                  <Trophy className="mr-2 h-4 w-4" />
-                  Create Tournament
-                </Button>
-              </div>
-
-              {tournaments.length === 0 ? (
-                <Card className="p-12 text-center">
-                  <Trophy className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-xl font-bold mb-2">No Tournaments Yet</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Create your first Jeopardy Duel tournament for this classroom
-                  </p>
+                {isTeacher && (
                   <Button
                     className="bg-gradient-primary hover:opacity-90"
                     onClick={() => setShowCreateTournament(true)}
@@ -307,6 +324,27 @@ const ClassroomDetail = () => {
                     <Trophy className="mr-2 h-4 w-4" />
                     Create Tournament
                   </Button>
+                )}
+              </div>
+
+              {tournaments.length === 0 ? (
+                <Card className="p-12 text-center">
+                  <Trophy className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-xl font-bold mb-2">No Tournaments Yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    {isTeacher
+                      ? 'Create your first Jeopardy Duel tournament for this classroom'
+                      : 'Your teacher hasn\'t created any tournaments yet'}
+                  </p>
+                  {isTeacher && (
+                    <Button
+                      className="bg-gradient-primary hover:opacity-90"
+                      onClick={() => setShowCreateTournament(true)}
+                    >
+                      <Trophy className="mr-2 h-4 w-4" />
+                      Create Tournament
+                    </Button>
+                  )}
                 </Card>
               ) : (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -352,19 +390,23 @@ const ClassroomDetail = () => {
 
       <Footer />
 
-      <CreateTournamentModal
-        open={showCreateTournament}
-        onOpenChange={setShowCreateTournament}
-        classroomId={id!}
-        onSuccess={loadClassroomData}
-      />
+      {isTeacher && (
+        <>
+          <CreateTournamentModal
+            open={showCreateTournament}
+            onOpenChange={setShowCreateTournament}
+            classroomId={id!}
+            onSuccess={loadClassroomData}
+          />
 
-      <CreateAnnouncementModal
-        open={showCreateAnnouncement}
-        onOpenChange={setShowCreateAnnouncement}
-        classroomId={id!}
-        onSuccess={loadClassroomData}
-      />
+          <CreateAnnouncementModal
+            open={showCreateAnnouncement}
+            onOpenChange={setShowCreateAnnouncement}
+            classroomId={id!}
+            onSuccess={loadClassroomData}
+          />
+        </>
+      )}
     </div>
   );
 };

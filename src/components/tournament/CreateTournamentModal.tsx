@@ -38,6 +38,32 @@ export const CreateTournamentModal = ({
     setIsCreating(true);
 
     try {
+      // Verify user is the teacher of this classroom
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: 'Error',
+          description: 'You must be logged in',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const { data: classroom } = await supabase
+        .from('classrooms')
+        .select('teacher_id')
+        .eq('id', classroomId)
+        .single();
+
+      if (classroom?.teacher_id !== session.user.id) {
+        toast({
+          title: 'Access Denied',
+          description: 'Only the classroom teacher can create tournaments',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       // Create tournament
       const { data: functionData, error: functionError } = await supabase.functions.invoke(
         'start-tournament',

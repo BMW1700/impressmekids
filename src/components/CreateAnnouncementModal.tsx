@@ -53,6 +53,22 @@ export const CreateAnnouncementModal = ({
         return;
       }
 
+      // Verify user is the teacher of this classroom
+      const { data: classroom } = await supabase
+        .from('classrooms')
+        .select('teacher_id')
+        .eq('id', classroomId)
+        .single();
+
+      if (classroom?.teacher_id !== session.user.id) {
+        toast({
+          title: "Access Denied",
+          description: "Only the classroom teacher can send announcements",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from('classroom_announcements')
         .insert({
