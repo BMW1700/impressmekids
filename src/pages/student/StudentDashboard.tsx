@@ -24,41 +24,83 @@ const StudentDashboard = () => {
   }, []);
 
   const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate('/auth');
-      return;
-    }
+    try {
+      console.log('🔍 StudentDashboard: Checking authentication...');
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.log('❌ No session found, redirecting to auth');
+        navigate('/auth');
+        return;
+      }
 
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .single();
+      console.log('✅ Session found:', session.user.id);
 
-    if (profileData?.role === 'teacher') {
-      navigate('/teacher/dashboard');
-      return;
-    }
+      // Fetch user profile with retry logic
+      let profileData = null;
+      let attempts = 0;
+      const maxAttempts = 3;
+      
+      while (attempts < maxAttempts && !profileData) {
+        attempts++;
+        console.log(`📋 Fetching profile (attempt ${attempts}/${maxAttempts})...`);
+        
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
 
-    setProfile(profileData);
+        if (!error && data) {
+          profileData = data;
+          console.log('✅ Profile found:', { id: data.id, role: data.role });
+        } else if (attempts < maxAttempts) {
+          console.log('⏳ Profile not ready, waiting...');
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } else {
+          console.error('❌ Failed to fetch profile:', error);
+        }
+      }
 
-    // Get or create student profile
-    const { data: studentData } = await supabase
-      .from('student_profiles')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .single();
+      if (!profileData) {
+        console.log('❌ No profile found after retries');
+        navigate('/auth');
+        return;
+      }
 
-    if (!studentData) {
-      const { data: newProfile } = await supabase
+      if (profileData.role === 'teacher') {
+        console.log(`⚠️ User role is teacher. Redirecting to teacher dashboard`);
+        navigate('/teacher/dashboard');
+        return;
+      }
+
+      console.log('✅ Student access confirmed');
+      setProfile(profileData);
+
+      // Get or create student profile
+      const { data: studentData } = await supabase
         .from('student_profiles')
-        .insert({ user_id: session.user.id, stats: { games_played: 0, games_won: 0 } })
-        .select()
+        .select('*')
+        .eq('user_id', session.user.id)
         .single();
-      setStudentProfile(newProfile);
-    } else {
-      setStudentProfile(studentData);
+
+      if (!studentData) {
+        console.log('📝 Creating new student profile...');
+        const { data: newProfile } = await supabase
+          .from('student_profiles')
+          .insert({ user_id: session.user.id, stats: { games_played: 0, games_won: 0 } })
+          .select()
+          .single();
+        setStudentProfile(newProfile);
+        console.log('✅ Student profile created');
+      } else {
+        console.log('✅ Student profile found');
+        setStudentProfile(studentData);
+      }
+    } catch (error) {
+      console.error('❌ Auth check error:', error);
+      navigate('/auth');
     }
   };
 

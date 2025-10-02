@@ -24,24 +24,63 @@ const TeacherDashboard = () => {
   }, []);
 
   const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    try {
+      console.log('🔍 TeacherDashboard: Checking authentication...');
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.log('❌ No session found, redirecting to auth');
+        navigate('/auth');
+        return;
+      }
+
+      console.log('✅ Session found:', session.user.id);
+
+      // Fetch user profile with retry logic
+      let profileData = null;
+      let attempts = 0;
+      const maxAttempts = 3;
+      
+      while (attempts < maxAttempts && !profileData) {
+        attempts++;
+        console.log(`📋 Fetching profile (attempt ${attempts}/${maxAttempts})...`);
+        
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (!error && data) {
+          profileData = data;
+          console.log('✅ Profile found:', { id: data.id, role: data.role });
+        } else if (attempts < maxAttempts) {
+          console.log('⏳ Profile not ready, waiting...');
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } else {
+          console.error('❌ Failed to fetch profile:', error);
+        }
+      }
+
+      if (!profileData) {
+        console.log('❌ No profile found after retries');
+        navigate('/auth');
+        return;
+      }
+
+      if (profileData.role !== 'teacher') {
+        console.log(`⚠️ User role is ${profileData.role}, not teacher. Redirecting to student dashboard`);
+        navigate('/student/dashboard');
+        return;
+      }
+
+      console.log('✅ Teacher access confirmed');
+      setProfile(profileData);
+    } catch (error) {
+      console.error('❌ Auth check error:', error);
       navigate('/auth');
-      return;
     }
-
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .single();
-
-    if (profileData?.role !== 'teacher') {
-      navigate('/student/dashboard');
-      return;
-    }
-
-    setProfile(profileData);
   };
 
   const loadDashboardData = async () => {

@@ -45,6 +45,12 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
+      console.log('🔐 Starting signup process...', { email, role, fullName });
+      
+      // Clear any existing sessions first
+      await supabase.auth.signOut();
+      console.log('🧹 Cleared existing sessions');
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -59,18 +65,42 @@ const Auth = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Account created!",
-        description: "Welcome to Impress Me Kids! 🎉",
-      });
+      if (data.user) {
+        console.log('✅ User created:', data.user.id);
+        console.log('📋 User metadata:', data.user.user_metadata);
+        
+        // Wait a moment for the profile trigger to complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Verify the profile was created with correct role
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.user.id)
+          .single();
 
-      // Redirect based on role
-      if (role === 'teacher') {
-        navigate('/teacher/dashboard');
-      } else {
-        navigate('/student/dashboard');
+        if (profileError) {
+          console.error('❌ Profile verification failed:', profileError);
+        } else {
+          console.log('✅ Profile verified with role:', profile.role);
+        }
+
+        toast({
+          title: "Account created!",
+          description: `Welcome to Impress Me Kids as a ${role}! 🎉`,
+        });
+
+        // Navigate to appropriate dashboard
+        if (role === 'teacher') {
+          console.log('🎯 Redirecting to teacher dashboard');
+          navigate('/teacher/dashboard');
+        } else {
+          console.log('🎯 Redirecting to student dashboard');
+          navigate('/student/dashboard');
+        }
       }
     } catch (error: any) {
+      console.error('❌ Signup error:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to create account",
@@ -86,6 +116,8 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
+      console.log('🔐 Starting signin process...', { email });
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -93,25 +125,53 @@ const Auth = () => {
 
       if (error) throw error;
 
-      // Get user profile to determine role
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', data.user.id)
-        .single();
+      if (data.user) {
+        console.log('✅ User signed in:', data.user.id);
+        
+        // Fetch user profile to determine role with retry
+        let profile = null;
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (attempts < maxAttempts && !profile) {
+          attempts++;
+          console.log(`📋 Fetching profile (attempt ${attempts}/${maxAttempts})...`);
+          
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', data.user.id)
+            .single();
 
-      toast({
-        title: "Welcome back!",
-        description: "Successfully signed in 🎮",
-      });
+          if (!profileError && profileData) {
+            profile = profileData;
+            console.log('✅ Profile found with role:', profile.role);
+          } else if (attempts < maxAttempts) {
+            console.log('⏳ Profile not ready, waiting...');
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
 
-      // Redirect based on role
-      if (profile?.role === 'teacher') {
-        navigate('/teacher/dashboard');
-      } else {
-        navigate('/student/dashboard');
+        if (!profile) {
+          throw new Error('Profile not found. Please try again.');
+        }
+
+        toast({
+          title: "Welcome back!",
+          description: `Successfully signed in as ${profile.role}! 🎮`,
+        });
+
+        // Navigate based on role
+        if (profile.role === 'teacher') {
+          console.log('🎯 Redirecting to teacher dashboard');
+          navigate('/teacher/dashboard');
+        } else {
+          console.log('🎯 Redirecting to student dashboard');
+          navigate('/student/dashboard');
+        }
       }
     } catch (error: any) {
+      console.error('❌ Signin error:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to sign in",
