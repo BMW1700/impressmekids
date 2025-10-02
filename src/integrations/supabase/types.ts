@@ -714,6 +714,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      is_classroom_student: {
+        Args: { _classroom_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_classroom_teacher: {
+        Args: { _classroom_id: string; _user_id: string }
+        Returns: boolean
+      }
       submit_answer_tx: {
         Args: {
           p_answer_text: string
