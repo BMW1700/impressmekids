@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      answers: {
+        Row: {
+          answer_text: string
+          correct: boolean
+          created_at: string
+          grading_method: string
+          id: string
+          match_event_id: string
+          points_awarded: number
+          tournament_player_id: string
+        }
+        Insert: {
+          answer_text: string
+          correct: boolean
+          created_at?: string
+          grading_method: string
+          id?: string
+          match_event_id: string
+          points_awarded?: number
+          tournament_player_id: string
+        }
+        Update: {
+          answer_text?: string
+          correct?: boolean
+          created_at?: string
+          grading_method?: string
+          id?: string
+          match_event_id?: string
+          points_awarded?: number
+          tournament_player_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "answers_match_event_id_fkey"
+            columns: ["match_event_id"]
+            isOneToOne: false
+            referencedRelation: "match_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "answers_tournament_player_id_fkey"
+            columns: ["tournament_player_id"]
+            isOneToOne: false
+            referencedRelation: "tournament_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classroom_students: {
         Row: {
           classroom_id: string
@@ -253,6 +301,189 @@ export type Database = {
           },
         ]
       }
+      match_events: {
+        Row: {
+          answer_deadline: string | null
+          answer_text: string | null
+          answered_by_tournament_player_id: string | null
+          buzz_at: string | null
+          buzz_owner_tournament_player_id: string | null
+          correct: boolean | null
+          created_at: string
+          id: string
+          match_id: string
+          question_id: string
+          resolved_at: string | null
+          seq: number
+        }
+        Insert: {
+          answer_deadline?: string | null
+          answer_text?: string | null
+          answered_by_tournament_player_id?: string | null
+          buzz_at?: string | null
+          buzz_owner_tournament_player_id?: string | null
+          correct?: boolean | null
+          created_at?: string
+          id?: string
+          match_id: string
+          question_id: string
+          resolved_at?: string | null
+          seq: number
+        }
+        Update: {
+          answer_deadline?: string | null
+          answer_text?: string | null
+          answered_by_tournament_player_id?: string | null
+          buzz_at?: string | null
+          buzz_owner_tournament_player_id?: string | null
+          correct?: boolean | null
+          created_at?: string
+          id?: string
+          match_id?: string
+          question_id?: string
+          resolved_at?: string | null
+          seq?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_events_answered_by_tournament_player_id_fkey"
+            columns: ["answered_by_tournament_player_id"]
+            isOneToOne: false
+            referencedRelation: "tournament_players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_events_buzz_owner_tournament_player_id_fkey"
+            columns: ["buzz_owner_tournament_player_id"]
+            isOneToOne: false
+            referencedRelation: "tournament_players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_events_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_events_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      match_state: {
+        Row: {
+          accepting_buzz: boolean
+          current_seq: number
+          match_id: string
+          round_ends_at: string | null
+          round_starts_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          accepting_buzz?: boolean
+          current_seq?: number
+          match_id: string
+          round_ends_at?: string | null
+          round_starts_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accepting_buzz?: boolean
+          current_seq?: number
+          match_id?: string
+          round_ends_at?: string | null
+          round_starts_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_state_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: true
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      matches: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          player_a: string
+          player_b: string
+          round: number
+          score_a: number
+          score_b: number
+          started_at: string | null
+          status: Database["public"]["Enums"]["match_status"]
+          tournament_id: string
+          winner_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          player_a: string
+          player_b: string
+          round: number
+          score_a?: number
+          score_b?: number
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["match_status"]
+          tournament_id: string
+          winner_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          player_a?: string
+          player_b?: string
+          round?: number
+          score_a?: number
+          score_b?: number
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["match_status"]
+          tournament_id?: string
+          winner_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matches_player_a_fkey"
+            columns: ["player_a"]
+            isOneToOne: false
+            referencedRelation: "tournament_players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matches_player_b_fkey"
+            columns: ["player_b"]
+            isOneToOne: false
+            referencedRelation: "tournament_players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matches_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matches_winner_id_fkey"
+            columns: ["winner_id"]
+            isOneToOne: false
+            referencedRelation: "tournament_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -280,9 +511,13 @@ export type Database = {
       questions: {
         Row: {
           answer_text: string
+          approved: boolean | null
           audio_url: string | null
+          classroom_id: string | null
           created_at: string
+          created_by: string | null
           difficulty: Database["public"]["Enums"]["difficulty_level"] | null
+          distractor_rationale: string | null
           explanation: string | null
           grade: number
           id: string
@@ -291,13 +526,18 @@ export type Database = {
           options: Json | null
           question_text: string
           question_type: Database["public"]["Enums"]["question_type"] | null
+          source: string | null
           subject: string
         }
         Insert: {
           answer_text: string
+          approved?: boolean | null
           audio_url?: string | null
+          classroom_id?: string | null
           created_at?: string
+          created_by?: string | null
           difficulty?: Database["public"]["Enums"]["difficulty_level"] | null
+          distractor_rationale?: string | null
           explanation?: string | null
           grade: number
           id?: string
@@ -306,13 +546,18 @@ export type Database = {
           options?: Json | null
           question_text: string
           question_type?: Database["public"]["Enums"]["question_type"] | null
+          source?: string | null
           subject: string
         }
         Update: {
           answer_text?: string
+          approved?: boolean | null
           audio_url?: string | null
+          classroom_id?: string | null
           created_at?: string
+          created_by?: string | null
           difficulty?: Database["public"]["Enums"]["difficulty_level"] | null
+          distractor_rationale?: string | null
           explanation?: string | null
           grade?: number
           id?: string
@@ -321,9 +566,18 @@ export type Database = {
           options?: Json | null
           question_text?: string
           question_type?: Database["public"]["Enums"]["question_type"] | null
+          source?: string | null
           subject?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "questions_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       student_profiles: {
         Row: {
@@ -360,13 +614,120 @@ export type Database = {
           },
         ]
       }
+      tournament_players: {
+        Row: {
+          created_at: string
+          eliminated_at: string | null
+          id: string
+          profile_id: string
+          seed: number
+          status: Database["public"]["Enums"]["elimination_status"]
+          tournament_id: string
+        }
+        Insert: {
+          created_at?: string
+          eliminated_at?: string | null
+          id?: string
+          profile_id: string
+          seed: number
+          status?: Database["public"]["Enums"]["elimination_status"]
+          tournament_id: string
+        }
+        Update: {
+          created_at?: string
+          eliminated_at?: string | null
+          id?: string
+          profile_id?: string
+          seed?: number
+          status?: Database["public"]["Enums"]["elimination_status"]
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_players_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tournaments: {
+        Row: {
+          classroom_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          started_at: string | null
+          status: Database["public"]["Enums"]["tournament_status"]
+        }
+        Insert: {
+          classroom_id: string
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["tournament_status"]
+        }
+        Update: {
+          classroom_id?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["tournament_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournaments_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      attempt_buzz: {
+        Args: {
+          p_match_id: string
+          p_seq: number
+          p_tournament_player_id: string
+        }
+        Returns: Json
+      }
+      compute_levenshtein: {
+        Args: { a: string; b: string }
+        Returns: number
+      }
+      daitch_mokotoff: {
+        Args: { "": string }
+        Returns: string[]
+      }
+      dmetaphone: {
+        Args: { "": string }
+        Returns: string
+      }
+      dmetaphone_alt: {
+        Args: { "": string }
+        Returns: string
+      }
       generate_join_code: {
         Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      soundex: {
+        Args: { "": string }
         Returns: string
       }
       submit_answer_tx: {
@@ -378,15 +739,22 @@ export type Database = {
         }
         Returns: Json
       }
+      text_soundex: {
+        Args: { "": string }
+        Returns: string
+      }
     }
     Enums: {
       difficulty_level: "easy" | "medium" | "hard"
+      elimination_status: "active" | "eliminated"
+      match_status: "waiting" | "in_progress" | "completed"
       question_type:
         | "multiple_choice"
         | "true_false"
         | "short_answer"
         | "fill_blank"
         | "matching"
+      tournament_status: "waiting" | "in_progress" | "completed"
       user_role: "teacher" | "student" | "admin"
     }
     CompositeTypes: {
@@ -516,6 +884,8 @@ export const Constants = {
   public: {
     Enums: {
       difficulty_level: ["easy", "medium", "hard"],
+      elimination_status: ["active", "eliminated"],
+      match_status: ["waiting", "in_progress", "completed"],
       question_type: [
         "multiple_choice",
         "true_false",
@@ -523,6 +893,7 @@ export const Constants = {
         "fill_blank",
         "matching",
       ],
+      tournament_status: ["waiting", "in_progress", "completed"],
       user_role: ["teacher", "student", "admin"],
     },
   },
