@@ -7,8 +7,10 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Users, Copy, Trophy, Play } from "lucide-react";
+import { Loader2, Users, Copy, Trophy, Play, Megaphone } from "lucide-react";
 import { CreateTournamentModal } from "@/components/tournament/CreateTournamentModal";
+import { CreateAnnouncementModal } from "@/components/CreateAnnouncementModal";
+import { AnnouncementCard } from "@/components/AnnouncementCard";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -26,8 +28,10 @@ const ClassroomDetail = () => {
   const [classroom, setClassroom] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
   const [tournaments, setTournaments] = useState<any[]>([]);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateTournament, setShowCreateTournament] = useState(false);
+  const [showCreateAnnouncement, setShowCreateAnnouncement] = useState(false);
 
   useEffect(() => {
     loadClassroomData();
@@ -80,6 +84,16 @@ const ClassroomDetail = () => {
 
       if (tournamentsError) throw tournamentsError;
       setTournaments(tournamentsData || []);
+
+      // Load announcements
+      const { data: announcementsData, error: announcementsError } = await supabase
+        .from('classroom_announcements')
+        .select('*')
+        .eq('classroom_id', id)
+        .order('created_at', { ascending: false });
+
+      if (announcementsError) throw announcementsError;
+      setAnnouncements(announcementsData || []);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -177,9 +191,21 @@ const ClassroomDetail = () => {
             </CardContent>
           </Card>
 
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold">Classroom Management</h2>
+            <Button
+              className="bg-gradient-primary hover:opacity-90"
+              onClick={() => setShowCreateAnnouncement(true)}
+            >
+              <Megaphone className="mr-2 h-4 w-4" />
+              Send to Students
+            </Button>
+          </div>
+
           <Tabs defaultValue="students" className="mb-8">
-            <TabsList className="grid w-full grid-cols-2 max-w-md">
+            <TabsList className="grid w-full grid-cols-3 max-w-2xl">
               <TabsTrigger value="students">Students</TabsTrigger>
+              <TabsTrigger value="announcements">Announcements</TabsTrigger>
               <TabsTrigger value="tournaments">Tournaments</TabsTrigger>
             </TabsList>
 
@@ -218,6 +244,41 @@ const ClassroomDetail = () => {
               ))}
             </div>
           )}
+            </TabsContent>
+
+            <TabsContent value="announcements" className="mt-6">
+              <div className="mb-4">
+                <h2 className="text-2xl font-bold">Announcements & Assignments</h2>
+              </div>
+
+              {announcements.length === 0 ? (
+                <Card className="p-12 text-center">
+                  <Megaphone className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-xl font-bold mb-2">No Announcements Yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Send messages and assignments to all students in this classroom
+                  </p>
+                  <Button
+                    className="bg-gradient-primary hover:opacity-90"
+                    onClick={() => setShowCreateAnnouncement(true)}
+                  >
+                    <Megaphone className="mr-2 h-4 w-4" />
+                    Send to Students
+                  </Button>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {announcements.map((announcement) => (
+                    <AnnouncementCard
+                      key={announcement.id}
+                      title={announcement.title}
+                      content={announcement.content}
+                      type={announcement.announcement_type}
+                      createdAt={announcement.created_at}
+                    />
+                  ))}
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="tournaments" className="mt-6">
@@ -294,6 +355,13 @@ const ClassroomDetail = () => {
       <CreateTournamentModal
         open={showCreateTournament}
         onOpenChange={setShowCreateTournament}
+        classroomId={id!}
+        onSuccess={loadClassroomData}
+      />
+
+      <CreateAnnouncementModal
+        open={showCreateAnnouncement}
+        onOpenChange={setShowCreateAnnouncement}
         classroomId={id!}
         onSuccess={loadClassroomData}
       />

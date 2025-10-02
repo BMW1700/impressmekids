@@ -37,54 +37,36 @@ const JoinClass = () => {
         return;
       }
 
-      // Find classroom by join code
-      const { data: classroom, error: classroomError } = await supabase
-        .from('classrooms')
-        .select('id, name')
-        .eq('join_code', joinCode.toUpperCase().trim())
-        .single();
+      // Use secure function to join classroom
+      const { data, error } = await supabase.rpc('join_classroom_by_code', {
+        p_join_code: joinCode.toUpperCase().trim()
+      });
 
-      if (classroomError || !classroom) {
+      if (error) throw error;
+
+      const result = data as { success: boolean; error?: string; already_joined?: boolean; classroom_name?: string };
+
+      if (!result.success) {
         toast({
           title: "Invalid Code",
-          description: "The join code you entered is not valid",
+          description: result.error || "The join code you entered is not valid",
           variant: "destructive",
         });
         setIsLoading(false);
         return;
       }
 
-      // Check if already joined
-      const { data: existing } = await supabase
-        .from('classroom_students')
-        .select('id')
-        .eq('classroom_id', classroom.id)
-        .eq('student_id', session.user.id)
-        .single();
-
-      if (existing) {
+      if (result.already_joined) {
         toast({
           title: "Already Joined",
-          description: `You're already in ${classroom.name}`,
+          description: `You're already in ${result.classroom_name}`,
         });
-        navigate('/student/dashboard');
-        return;
+      } else {
+        toast({
+          title: "Success!",
+          description: `You've joined ${result.classroom_name}`,
+        });
       }
-
-      // Join classroom
-      const { error: joinError } = await supabase
-        .from('classroom_students')
-        .insert({
-          classroom_id: classroom.id,
-          student_id: session.user.id,
-        });
-
-      if (joinError) throw joinError;
-
-      toast({
-        title: "Success!",
-        description: `You've joined ${classroom.name}`,
-      });
 
       navigate('/student/dashboard');
     } catch (error: any) {

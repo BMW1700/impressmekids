@@ -8,12 +8,14 @@ import { ClassroomCard } from "@/components/ClassroomCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Gamepad2, Loader2, UserPlus } from "lucide-react";
+import { Gamepad2, Loader2, UserPlus, Bell } from "lucide-react";
+import { AnnouncementCard } from "@/components/AnnouncementCard";
 
 const StudentDashboard = () => {
   const [profile, setProfile] = useState<any>(null);
   const [studentProfile, setStudentProfile] = useState<any>(null);
   const [classrooms, setClassrooms] = useState<any[]>([]);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -123,7 +125,21 @@ const StudentDashboard = () => {
         .eq('student_id', session.user.id);
 
       if (error) throw error;
-      setClassrooms(classroomsData?.map(item => item.classroom) || []);
+      const classroomsList = classroomsData?.map(item => item.classroom) || [];
+      setClassrooms(classroomsList);
+
+      // Load announcements from all classrooms
+      if (classroomsList.length > 0) {
+        const classroomIds = classroomsList.map((c: any) => c.id);
+        const { data: announcementsData } = await supabase
+          .from('classroom_announcements')
+          .select('*, classrooms(name)')
+          .in('classroom_id', classroomIds)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        setAnnouncements(announcementsData || []);
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -194,6 +210,31 @@ const StudentDashboard = () => {
                   </Button>
                 </CardContent>
               </Card>
+
+              {announcements.length > 0 && (
+                <Card className="mb-6">
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <Bell className="h-5 w-5 text-primary" />
+                      <CardTitle>Recent Announcements</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {announcements.slice(0, 3).map((announcement: any) => (
+                        <AnnouncementCard
+                          key={announcement.id}
+                          title={announcement.title}
+                          content={announcement.content}
+                          type={announcement.announcement_type}
+                          createdAt={announcement.created_at}
+                          classroomName={announcement.classrooms?.name}
+                        />
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               <div>
                 <div className="flex items-center justify-between mb-4">

@@ -62,6 +62,44 @@ export type Database = {
           },
         ]
       }
+      classroom_announcements: {
+        Row: {
+          announcement_type: string
+          classroom_id: string
+          content: string
+          created_at: string
+          id: string
+          teacher_id: string
+          title: string
+        }
+        Insert: {
+          announcement_type?: string
+          classroom_id: string
+          content: string
+          created_at?: string
+          id?: string
+          teacher_id: string
+          title: string
+        }
+        Update: {
+          announcement_type?: string
+          classroom_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          teacher_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "classroom_announcements_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classroom_students: {
         Row: {
           classroom_id: string
@@ -693,6 +731,27 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -714,6 +773,13 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       is_classroom_student: {
         Args: { _classroom_id: string; _user_id: string }
         Returns: boolean
@@ -721,6 +787,10 @@ export type Database = {
       is_classroom_teacher: {
         Args: { _classroom_id: string; _user_id: string }
         Returns: boolean
+      }
+      join_classroom_by_code: {
+        Args: { p_join_code: string }
+        Returns: Json
       }
       submit_answer_tx: {
         Args: {
@@ -733,6 +803,7 @@ export type Database = {
       }
     }
     Enums: {
+      app_role: "admin" | "teacher" | "student"
       difficulty_level: "easy" | "medium" | "hard"
       elimination_status: "active" | "eliminated"
       match_status: "waiting" | "in_progress" | "completed"
@@ -871,6 +942,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "teacher", "student"],
       difficulty_level: ["easy", "medium", "hard"],
       elimination_status: ["active", "eliminated"],
       match_status: ["waiting", "in_progress", "completed"],
