@@ -710,24 +710,8 @@ export type Database = {
         Args: { a: string; b: string }
         Returns: number
       }
-      daitch_mokotoff: {
-        Args: { "": string }
-        Returns: string[]
-      }
-      dmetaphone: {
-        Args: { "": string }
-        Returns: string
-      }
-      dmetaphone_alt: {
-        Args: { "": string }
-        Returns: string
-      }
       generate_join_code: {
         Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      soundex: {
-        Args: { "": string }
         Returns: string
       }
       submit_answer_tx: {
@@ -738,10 +722,6 @@ export type Database = {
           p_tournament_player_id: string
         }
         Returns: Json
-      }
-      text_soundex: {
-        Args: { "": string }
-        Returns: string
       }
     }
     Enums: {
