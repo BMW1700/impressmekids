@@ -369,6 +369,15 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      submit_answer_tx: {
+        Args: {
+          p_answer_text: string
+          p_match_id: string
+          p_seq: number
+          p_tournament_player_id: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       difficulty_level: "easy" | "medium" | "hard"
