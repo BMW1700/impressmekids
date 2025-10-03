@@ -22,7 +22,6 @@ export const CreateTournamentModal = ({
 }: CreateTournamentModalProps) => {
   const [name, setName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
-  const [isSeeding, setIsSeeding] = useState(false);
   const { toast } = useToast();
 
   const handleCreate = async () => {
@@ -78,24 +77,7 @@ export const CreateTournamentModal = ({
 
       toast({
         title: 'Tournament Created!',
-        description: `${name} has been created successfully`,
-      });
-
-      // Seed and create matches
-      setIsSeeding(true);
-
-      const { data: seedData, error: seedError } = await supabase.functions.invoke(
-        'seed-and-create-matches',
-        {
-          body: { tournament_id: tournament.id },
-        }
-      );
-
-      if (seedError) throw seedError;
-
-      toast({
-        title: 'Matches Created!',
-        description: `${seedData.matches} matches created with ${seedData.tournament_players} players`,
+        description: 'Now assign questions and seed players to start matches',
       });
 
       setName('');
@@ -110,7 +92,6 @@ export const CreateTournamentModal = ({
       });
     } finally {
       setIsCreating(false);
-      setIsSeeding(false);
     }
   };
 
@@ -132,18 +113,17 @@ export const CreateTournamentModal = ({
               placeholder="e.g., Math Finals Tournament"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              disabled={isCreating || isSeeding}
+              disabled={isCreating}
             />
           </div>
 
           <Button
             onClick={handleCreate}
             className="w-full"
-            disabled={isCreating || isSeeding}
+            disabled={isCreating}
           >
             {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSeeding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSeeding ? 'Creating Matches...' : isCreating ? 'Creating...' : 'Create Tournament'}
+            {isCreating ? 'Creating...' : 'Create Tournament'}
           </Button>
         </div>
       </DialogContent>
