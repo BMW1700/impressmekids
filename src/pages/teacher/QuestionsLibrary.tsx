@@ -3,12 +3,15 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, BookOpen, Plus, Filter, CheckCircle, XCircle, Edit } from "lucide-react";
-import { GenerateQuestionsModal } from "@/components/tournament/GenerateQuestionsModal";
+import { Loader2, BookOpen, Plus, FolderPlus } from "lucide-react";
+import { CreateQuestionGroupModal } from "@/components/tournament/CreateQuestionGroupModal";
+import { EditQuestionGroupModal } from "@/components/tournament/EditQuestionGroupModal";
+import { GenerateFlashcardsModal } from "@/components/flashcards/GenerateFlashcardsModal";
+import { QuestionGroupCard } from "@/components/tournament/QuestionGroupCard";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -17,34 +20,33 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
+interface QuestionGroup {
+  id: string;
+  title: string;
+  description?: string;
+  subject: string;
+  grade: number;
+  created_at: string;
+  question_count: number;
+}
 
 const QuestionsLibrary = () => {
   const { classroomId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [classroom, setClassroom] = useState<any>(null);
-  const [questions, setQuestions] = useState<any[]>([]);
-  const [filteredQuestions, setFilteredQuestions] = useState<any[]>([]);
+  const [questionGroups, setQuestionGroups] = useState<QuestionGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showGenerateModal, setShowGenerateModal] = useState(false);
-  const [filterSubject, setFilterSubject] = useState<string>("all");
-  const [filterGrade, setFilterGrade] = useState<string>("all");
-  const [filterDifficulty, setFilterDifficulty] = useState<string>("all");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showFlashcardsModal, setShowFlashcardsModal] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<QuestionGroup | null>(null);
 
   useEffect(() => {
     loadData();
   }, [classroomId]);
-
-  useEffect(() => {
-    applyFilters();
-  }, [questions, filterSubject, filterGrade, filterDifficulty]);
 
   const loadData = async () => {
     try {
@@ -74,20 +76,37 @@ const QuestionsLibrary = () => {
 
       setClassroom(classroomData);
 
-      // Load questions for this classroom
-      const { data: questionsData, error: questionsError } = await supabase
-        .from('questions')
+      // Load question groups with question counts
+      const { data: groupsData, error: groupsError } = await supabase
+        .from('question_groups')
         .select('*')
         .eq('classroom_id', classroomId)
         .order('created_at', { ascending: false });
 
-      if (questionsError) throw questionsError;
-      setQuestions(questionsData || []);
+      if (groupsError) throw groupsError;
+
+      // Get question counts for each group
+      const groupsWithCounts = await Promise.all(
+        (groupsData || []).map(async (group) => {
+          const { count } = await supabase
+            .from('questions')
+            .select('*', { count: 'exact', head: true })
+            .eq('group_id', group.id)
+            .eq('approved', true);
+
+          return {
+            ...group,
+            question_count: count || 0,
+          };
+        })
+      );
+
+      setQuestionGroups(groupsWithCounts);
     } catch (error: any) {
-      console.error("Error loading questions:", error);
+      console.error("Error loading question groups:", error);
       toast({
         title: "Error",
-        description: "Failed to load questions",
+        description: "Failed to load question groups",
         variant: "destructive",
       });
     } finally {
@@ -95,51 +114,53 @@ const QuestionsLibrary = () => {
     }
   };
 
-  const applyFilters = () => {
-    let filtered = [...questions];
-
-    if (filterSubject !== "all") {
-      filtered = filtered.filter(q => q.subject === filterSubject);
-    }
-
-    if (filterGrade !== "all") {
-      filtered = filtered.filter(q => q.grade === parseInt(filterGrade));
-    }
-
-    if (filterDifficulty !== "all") {
-      filtered = filtered.filter(q => q.difficulty === filterDifficulty);
-    }
-
-    setFilteredQuestions(filtered);
+  const handleViewQuestions = (groupId: string) => {
+    navigate(`/teacher/questions/${classroomId}/${groupId}`);
   };
 
-  const toggleApproval = async (questionId: string, currentApproval: boolean) => {
+  const handleEdit = (group: QuestionGroup) => {
+    setSelectedGroup(group);
+    setShowEditModal(true);
+  };
+
+  const handleDelete = (group: QuestionGroup) => {
+    setSelectedGroup(group);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedGroup) return;
+
     try {
       const { error } = await supabase
-        .from('questions')
-        .update({ approved: !currentApproval })
-        .eq('id', questionId);
+        .from('question_groups')
+        .delete()
+        .eq('id', selectedGroup.id);
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: `Question ${!currentApproval ? 'approved' : 'unapproved'}`,
+        description: "Question group deleted successfully",
       });
 
+      setShowDeleteModal(false);
+      setSelectedGroup(null);
       loadData();
     } catch (error: any) {
-      console.error("Error updating question:", error);
+      console.error("Error deleting question group:", error);
       toast({
         title: "Error",
-        description: "Failed to update question",
+        description: "Failed to delete question group",
         variant: "destructive",
       });
     }
   };
 
-  const uniqueSubjects = Array.from(new Set(questions.map(q => q.subject)));
-  const uniqueGrades = Array.from(new Set(questions.map(q => q.grade))).sort((a, b) => a - b);
+  const handleGenerateFlashcards = (group: QuestionGroup) => {
+    setSelectedGroup(group);
+    setShowFlashcardsModal(true);
+  };
 
   if (isLoading) {
     return (
@@ -183,140 +204,48 @@ const QuestionsLibrary = () => {
 
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold mb-2">Questions Library</h1>
+              <h1 className="text-3xl font-bold mb-2">Question Groups</h1>
               <p className="text-muted-foreground">{classroom?.name}</p>
             </div>
             <Button
-              className="bg-gradient-primary hover:opacity-90"
-              onClick={() => setShowGenerateModal(true)}
+              onClick={() => setShowCreateModal(true)}
             >
-              <Plus className="mr-2 h-4 w-4" />
-              Generate Questions with AI
+              <FolderPlus className="mr-2 h-4 w-4" />
+              Create Question Group
             </Button>
           </div>
 
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Filter className="h-5 w-5" />
-                Filters
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Subject</label>
-                  <Select value={filterSubject} onValueChange={setFilterSubject}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Subjects" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Subjects</SelectItem>
-                      {uniqueSubjects.map(subject => (
-                        <SelectItem key={subject} value={subject}>{subject}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Grade</label>
-                  <Select value={filterGrade} onValueChange={setFilterGrade}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Grades" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Grades</SelectItem>
-                      {uniqueGrades.map(grade => (
-                        <SelectItem key={grade} value={grade.toString()}>Grade {grade}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Difficulty</label>
-                  <Select value={filterDifficulty} onValueChange={setFilterDifficulty}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Difficulties" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Difficulties</SelectItem>
-                      <SelectItem value="easy">Easy</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="hard">Hard</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {filteredQuestions.length === 0 ? (
+          {questionGroups.length === 0 ? (
             <Card className="p-12 text-center">
               <BookOpen className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-xl font-bold mb-2">No Questions Yet</h3>
+              <h3 className="text-xl font-bold mb-2">No Question Groups Yet</h3>
               <p className="text-muted-foreground mb-4">
-                Generate questions with AI to get started
+                Create your first question group to organize your questions by topic
               </p>
               <Button
-                className="bg-gradient-primary hover:opacity-90"
-                onClick={() => setShowGenerateModal(true)}
+                onClick={() => setShowCreateModal(true)}
               >
-                <Plus className="mr-2 h-4 w-4" />
-                Generate Questions with AI
+                <FolderPlus className="mr-2 h-4 w-4" />
+                Create Question Group
               </Button>
             </Card>
           ) : (
-            <div className="grid gap-4">
-              {filteredQuestions.map((question) => (
-                <Card key={question.id} className="shadow-card">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge variant="outline">{question.subject}</Badge>
-                          <Badge variant="secondary">Grade {question.grade}</Badge>
-                          <Badge variant={
-                            question.difficulty === 'easy' ? 'secondary' :
-                            question.difficulty === 'medium' ? 'default' : 'destructive'
-                          }>
-                            {question.difficulty}
-                          </Badge>
-                          {question.approved ? (
-                            <Badge className="bg-green-500">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Approved
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline">
-                              <XCircle className="h-3 w-3 mr-1" />
-                              Draft
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="font-medium mb-2">{question.question_text}</p>
-                        <p className="text-sm text-muted-foreground">
-                          <strong>Answer:</strong> {question.answer_text}
-                        </p>
-                        {question.explanation && (
-                          <p className="text-sm text-muted-foreground mt-2">
-                            <strong>Explanation:</strong> {question.explanation}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant={question.approved ? "outline" : "default"}
-                          size="sm"
-                          onClick={() => toggleApproval(question.id, question.approved)}
-                        >
-                          {question.approved ? 'Unapprove' : 'Approve'}
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {questionGroups.map((group) => (
+                <QuestionGroupCard
+                  key={group.id}
+                  id={group.id}
+                  title={group.title}
+                  description={group.description}
+                  subject={group.subject}
+                  grade={group.grade}
+                  questionCount={group.question_count}
+                  createdAt={group.created_at}
+                  onViewQuestions={() => handleViewQuestions(group.id)}
+                  onEdit={() => handleEdit(group)}
+                  onDelete={() => handleDelete(group)}
+                  onGenerateFlashcards={() => handleGenerateFlashcards(group)}
+                />
               ))}
             </div>
           )}
@@ -325,12 +254,46 @@ const QuestionsLibrary = () => {
 
       <Footer />
 
-      <GenerateQuestionsModal
-        open={showGenerateModal}
-        onOpenChange={setShowGenerateModal}
+      <CreateQuestionGroupModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
         classroomId={classroomId!}
         onSuccess={loadData}
       />
+
+      {selectedGroup && (
+        <>
+          <EditQuestionGroupModal
+            open={showEditModal}
+            onOpenChange={setShowEditModal}
+            groupId={selectedGroup.id}
+            initialData={{
+              title: selectedGroup.title,
+              description: selectedGroup.description,
+              subject: selectedGroup.subject,
+              grade: selectedGroup.grade,
+            }}
+            onSuccess={loadData}
+          />
+
+          <ConfirmModal
+            open={showDeleteModal}
+            onOpenChange={setShowDeleteModal}
+            title="Delete Question Group"
+            description={`Are you sure you want to delete "${selectedGroup.title}"? This will also remove all questions in this group.`}
+            onConfirm={confirmDelete}
+          />
+
+          <GenerateFlashcardsModal
+            open={showFlashcardsModal}
+            onOpenChange={setShowFlashcardsModal}
+            questionGroupId={selectedGroup.id}
+            groupTitle={selectedGroup.title}
+            questionCount={selectedGroup.question_count}
+            onSuccess={loadData}
+          />
+        </>
+      )}
     </div>
   );
 };

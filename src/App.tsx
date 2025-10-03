@@ -12,6 +12,7 @@ import JeopardyGame from "./pages/games/JeopardyGame";
 import JoinClass from "./pages/JoinClass";
 import ClassroomDetail from "./pages/classrooms/ClassroomDetail";
 import QuestionsLibrary from "./pages/teacher/QuestionsLibrary";
+import QuestionGroupDetail from "./pages/teacher/QuestionGroupDetail";
 import TournamentControl from "./pages/teacher/TournamentControl";
 import NotFound from "./pages/NotFound";
 
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/student/dashboard" element={<StudentDashboard />} />
           <Route path="/classrooms/:id" element={<ClassroomDetail />} />
           <Route path="/teacher/questions/:classroomId" element={<QuestionsLibrary />} />
+          <Route path="/teacher/questions/:classroomId/:groupId" element={<QuestionGroupDetail />} />
           <Route path="/teacher/tournament/control" element={<TournamentControl />} />
           <Route path="/join-class" element={<JoinClass />} />
           <Route path="/games" element={<Games />} />

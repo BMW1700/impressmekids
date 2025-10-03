@@ -13,6 +13,7 @@ interface GenerateQuestionsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   classroomId: string;
+  questionGroupId?: string;
   onSuccess?: () => void;
 }
 
@@ -20,6 +21,7 @@ export const GenerateQuestionsModal = ({
   open,
   onOpenChange,
   classroomId,
+  questionGroupId,
   onSuccess,
 }: GenerateQuestionsModalProps) => {
   const [subject, setSubject] = useState('Math');
@@ -45,6 +47,7 @@ export const GenerateQuestionsModal = ({
       const { data, error } = await supabase.functions.invoke('generate-question-ai', {
         body: {
           classroom_id: classroomId,
+          group_id: questionGroupId,
           subject,
           grade: parseInt(grade),
           difficulty: parseInt(difficulty),

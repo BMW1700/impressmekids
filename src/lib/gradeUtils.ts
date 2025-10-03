@@ -3,6 +3,20 @@
  * Grade 0 = Kindergarten, Grades 1-12 = "1" through "12"
  */
 
+export const SUBJECTS = [
+  'Math',
+  'Science',
+  'English',
+  'History',
+  'Geography',
+  'Art',
+  'Music',
+  'Physical Education',
+  'Computer Science',
+  'Foreign Language',
+  'Other'
+];
+
 export const GRADES_K12 = [
   { value: 0, label: 'Kindergarten', short: 'K' },
   { value: 1, label: 'Grade 1', short: '1' },
@@ -18,6 +32,8 @@ export const GRADES_K12 = [
   { value: 11, label: 'Grade 11', short: '11' },
   { value: 12, label: 'Grade 12', short: '12' },
 ];
+
+export const GRADES = GRADES_K12;
 
 export const getGradeDisplay = (grade: number): string => {
   if (grade === 0) return 'K';

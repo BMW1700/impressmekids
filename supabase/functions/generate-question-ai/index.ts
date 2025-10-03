@@ -36,9 +36,9 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { classroom_id, subject, grade, difficulty, lesson_context } = await req.json();
+    const { classroom_id, group_id, subject, grade, difficulty, lesson_context } = await req.json();
 
-    console.log('Generating AI questions:', { classroom_id, subject, grade, difficulty });
+    console.log('Generating AI questions:', { classroom_id, group_id, subject, grade, difficulty });
 
     // Verify authorization
     const authHeader = req.headers.get('Authorization')!;
@@ -139,6 +139,7 @@ Generate 3 questions following the exact format specified.`;
         .from('questions')
         .insert({
           classroom_id,
+          group_id: group_id || null,
           subject,
           grade,
           question_type: q.type,

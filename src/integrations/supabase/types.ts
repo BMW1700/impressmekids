@@ -168,6 +168,57 @@ export type Database = {
           },
         ]
       }
+      flashcard_sets: {
+        Row: {
+          classroom_id: string
+          created_at: string
+          created_by: string
+          description: string | null
+          flashcards: Json
+          id: string
+          question_group_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          classroom_id: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          flashcards?: Json
+          id?: string
+          question_group_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          classroom_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          flashcards?: Json
+          id?: string
+          question_group_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flashcard_sets_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flashcard_sets_question_group_id_fkey"
+            columns: ["question_group_id"]
+            isOneToOne: false
+            referencedRelation: "question_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_answers: {
         Row: {
           answer_text: string
@@ -546,6 +597,50 @@ export type Database = {
         }
         Relationships: []
       }
+      question_groups: {
+        Row: {
+          classroom_id: string
+          created_at: string
+          created_by: string
+          description: string | null
+          grade: number
+          id: string
+          subject: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          classroom_id: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          grade: number
+          id?: string
+          subject: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          classroom_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          grade?: number
+          id?: string
+          subject?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_groups_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       questions: {
         Row: {
           answer_text: string
@@ -558,6 +653,7 @@ export type Database = {
           distractor_rationale: string | null
           explanation: string | null
           grade: number
+          group_id: string | null
           id: string
           image_url: string | null
           metadata: Json | null
@@ -578,6 +674,7 @@ export type Database = {
           distractor_rationale?: string | null
           explanation?: string | null
           grade: number
+          group_id?: string | null
           id?: string
           image_url?: string | null
           metadata?: Json | null
@@ -598,6 +695,7 @@ export type Database = {
           distractor_rationale?: string | null
           explanation?: string | null
           grade?: number
+          group_id?: string | null
           id?: string
           image_url?: string | null
           metadata?: Json | null
@@ -613,6 +711,13 @@ export type Database = {
             columns: ["classroom_id"]
             isOneToOne: false
             referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "questions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "question_groups"
             referencedColumns: ["id"]
           },
         ]
