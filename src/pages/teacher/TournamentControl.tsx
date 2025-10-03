@@ -62,14 +62,35 @@ const TournamentControl = () => {
         return;
       }
 
-      // Load tournament
-      const { data: tournamentData, error: tournamentError } = await supabase
-        .from('tournaments')
-        .select('*')
-        .eq('id', tournamentId)
-        .single();
+      // Load tournament with retry logic for new tournaments
+      let tournamentData = null;
+      let attempts = 0;
+      const maxAttempts = 15;
+      
+      while (!tournamentData && attempts < maxAttempts) {
+        const { data, error } = await supabase
+          .from('tournaments')
+          .select('*')
+          .eq('id', tournamentId)
+          .maybeSingle();
+        
+        if (error) throw error;
+        
+        if (data) {
+          tournamentData = data;
+          break;
+        }
+        
+        // Wait before retrying (200ms)
+        if (attempts < maxAttempts - 1) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+        attempts++;
+      }
 
-      if (tournamentError) throw tournamentError;
+      if (!tournamentData) {
+        throw new Error('Tournament not found after polling');
+      }
 
       // Load classroom separately to avoid RLS recursion
       const { data: classroomData, error: classroomError } = await supabase
