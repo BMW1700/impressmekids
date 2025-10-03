@@ -29,21 +29,25 @@ export const useClassroomPermissions = (classroomId: string | undefined): Classr
         }
 
         // Check if user is the teacher of this classroom
-        const { data: classroom } = await supabase
+        const { data: classroom, error: classroomError } = await supabase
           .from('classrooms')
           .select('teacher_id')
           .eq('id', classroomId)
-          .single();
+          .maybeSingle();
+
+        console.log('Classroom query result:', { classroom, classroomError, userId: session.user.id });
 
         const isTeacher = classroom?.teacher_id === session.user.id;
 
         // Check if user is a student in this classroom
-        const { data: studentRecord } = await supabase
+        const { data: studentRecord, error: studentError } = await supabase
           .from('classroom_students')
           .select('id')
           .eq('classroom_id', classroomId)
           .eq('student_id', session.user.id)
-          .single();
+          .maybeSingle();
+
+        console.log('Student query result:', { studentRecord, studentError });
 
         const isStudent = !!studentRecord;
 
