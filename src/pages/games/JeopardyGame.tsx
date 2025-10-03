@@ -20,7 +20,7 @@ const JeopardyGame = () => {
   const [tournament, setTournament] = useState<any>(null);
   const [userPlayer, setUserPlayer] = useState<any>(null);
   const [currentMatch, setCurrentMatch] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!!tournamentId);
   const [view, setView] = useState<'lobby' | 'match'>('lobby');
 
   const { tournaments, matches, matchStates } = useTournamentRealtime(tournamentId || undefined);
@@ -28,8 +28,6 @@ const JeopardyGame = () => {
   useEffect(() => {
     if (tournamentId) {
       loadTournamentData();
-    } else {
-      setIsLoading(false);
     }
   }, [tournamentId]);
 
@@ -56,9 +54,13 @@ const JeopardyGame = () => {
   }, [matches, userPlayer]);
 
   const loadTournamentData = async () => {
+    setIsLoading(true);
     try {
+      console.log("Loading tournament data for:", tournamentId);
+      
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
+        console.log("No session found, redirecting to auth");
         navigate('/auth');
         return;
       }
@@ -69,7 +71,12 @@ const JeopardyGame = () => {
         .eq('id', tournamentId)
         .single();
 
-      if (tournamentError) throw tournamentError;
+      if (tournamentError) {
+        console.error("Tournament error:", tournamentError);
+        throw tournamentError;
+      }
+      
+      console.log("Tournament loaded:", tournamentData);
       setTournament(tournamentData);
 
       const { data: playerData } = await supabase
@@ -80,13 +87,16 @@ const JeopardyGame = () => {
         .single();
 
       if (playerData) {
+        console.log("Player found:", playerData);
         setUserPlayer(playerData);
+      } else {
+        console.log("No player record found for this user");
       }
     } catch (error: any) {
       console.error('Error loading tournament:', error);
       toast({
         title: "Error",
-        description: "Failed to load tournament",
+        description: error.message || "Failed to load tournament",
         variant: "destructive",
       });
     } finally {
