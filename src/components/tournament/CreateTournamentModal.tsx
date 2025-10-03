@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,18 +12,17 @@ interface CreateTournamentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   classroomId: string;
-  onSuccess?: (tournamentId: string) => void;
 }
 
 export const CreateTournamentModal = ({
   open,
   onOpenChange,
   classroomId,
-  onSuccess,
 }: CreateTournamentModalProps) => {
   const [name, setName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleCreate = async () => {
     if (!name.trim()) {
@@ -82,7 +82,9 @@ export const CreateTournamentModal = ({
 
       setName('');
       onOpenChange(false);
-      onSuccess?.(tournament.id);
+      
+      // Navigate to tournament control page
+      navigate(`/teacher/tournament/control?tournament=${tournament.id}`);
     } catch (error) {
       console.error('Error creating tournament:', error);
       toast({

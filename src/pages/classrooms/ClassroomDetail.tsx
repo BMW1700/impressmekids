@@ -424,7 +424,6 @@ const ClassroomDetail = () => {
             open={showCreateTournament}
             onOpenChange={setShowCreateTournament}
             classroomId={id!}
-            onSuccess={loadClassroomData}
           />
 
           <CreateAnnouncementModal
