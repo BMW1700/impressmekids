@@ -93,7 +93,10 @@ const ClassroomDetail = () => {
       // Load tournaments
       const { data: tournamentsData, error: tournamentsError } = await supabase
         .from('tournaments')
-        .select('*, tournament_players(count)')
+        .select(`
+          *,
+          tournament_players!left(count)
+        `)
         .eq('classroom_id', id)
         .order('created_at', { ascending: false });
 
