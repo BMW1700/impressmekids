@@ -935,6 +935,18 @@ export type Database = {
         Args: { _classroom_id: string; _user_id: string }
         Returns: boolean
       }
+      is_tournament_classroom_member: {
+        Args: { _tournament_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_tournament_player: {
+        Args: { _tournament_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_tournament_teacher: {
+        Args: { _tournament_id: string; _user_id: string }
+        Returns: boolean
+      }
       join_classroom_by_code: {
         Args: { p_join_code: string }
         Returns: Json
