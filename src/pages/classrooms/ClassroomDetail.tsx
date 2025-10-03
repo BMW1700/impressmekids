@@ -93,10 +93,7 @@ const ClassroomDetail = () => {
       // Load tournaments
       const { data: tournamentsData, error: tournamentsError } = await supabase
         .from('tournaments')
-        .select(`
-          *,
-          tournament_players!left(count)
-        `)
+        .select('*')
         .eq('classroom_id', id)
         .order('created_at', { ascending: false });
 
@@ -389,7 +386,7 @@ const ClassroomDetail = () => {
                       <CardContent>
                         <div className="space-y-2">
                           <p className="text-sm text-muted-foreground">
-                            {tournament.tournament_players?.[0]?.count || 0} players
+                            Tournament created
                           </p>
                           <p className="text-xs text-muted-foreground">
                             Created {new Date(tournament.created_at).toLocaleDateString()}
