@@ -12,6 +12,7 @@ import { MatchPlayground } from "@/components/tournament/MatchPlayground";
 import { useTournamentRealtime } from "@/hooks/useTournamentRealtime";
 import { useToast } from "@/hooks/use-toast";
 import { CreateTournamentModal } from "@/components/tournament/CreateTournamentModal";
+import { SelectGameModal } from "@/components/tournament/SelectGameModal";
 
 const JeopardyGame = () => {
   const [searchParams] = useSearchParams();
@@ -26,6 +27,8 @@ const JeopardyGame = () => {
   const [isTeacher, setIsTeacher] = useState(false);
   const [teacherClassrooms, setTeacherClassrooms] = useState<any[]>([]);
   const [showCreateTournament, setShowCreateTournament] = useState(false);
+  const [showSelectGame, setShowSelectGame] = useState(false);
+  const [selectedGameType, setSelectedGameType] = useState<string>('jeopardy_duel');
   const [selectedClassroomId, setSelectedClassroomId] = useState<string>('');
 
   const { tournaments, matches, matchStates } = useTournamentRealtime(tournamentId || undefined);
@@ -188,7 +191,7 @@ const JeopardyGame = () => {
                           onClick={() => {
                             if (teacherClassrooms.length === 1) {
                               setSelectedClassroomId(teacherClassrooms[0].id);
-                              setShowCreateTournament(true);
+                              setShowSelectGame(true);
                             } else if (teacherClassrooms.length > 1) {
                               toast({
                                 title: "Select a Classroom",
@@ -248,7 +251,7 @@ const JeopardyGame = () => {
                             <Button
                               className="w-full"
                               disabled={!selectedClassroomId}
-                              onClick={() => setShowCreateTournament(true)}
+                              onClick={() => setShowSelectGame(true)}
                             >
                               Create Tournament in Selected Classroom
                             </Button>
@@ -338,13 +341,24 @@ const JeopardyGame = () => {
           </div>
         </main>
         <Footer />
-        {showCreateTournament && selectedClassroomId && (
-          <CreateTournamentModal
-            open={showCreateTournament}
-            onOpenChange={setShowCreateTournament}
-            classroomId={selectedClassroomId}
+        <>
+          <SelectGameModal
+            open={showSelectGame}
+            onOpenChange={setShowSelectGame}
+            onSelectGame={(gameType) => {
+              setSelectedGameType(gameType);
+              setShowCreateTournament(true);
+            }}
           />
-        )}
+          {selectedClassroomId && (
+            <CreateTournamentModal
+              open={showCreateTournament}
+              onOpenChange={setShowCreateTournament}
+              classroomId={selectedClassroomId}
+              gameType={selectedGameType}
+            />
+          )}
+        </>
       </div>
     );
   }

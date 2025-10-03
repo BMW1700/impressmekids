@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen } from "lucide-react";
 import { CreateTournamentModal } from "@/components/tournament/CreateTournamentModal";
+import { SelectGameModal } from "@/components/tournament/SelectGameModal";
 import { CreateAnnouncementModal } from "@/components/CreateAnnouncementModal";
 import { AnnouncementCard } from "@/components/AnnouncementCard";
 import { useClassroomPermissions } from "@/hooks/useClassroomPermissions";
@@ -33,6 +34,8 @@ const ClassroomDetail = () => {
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateTournament, setShowCreateTournament] = useState(false);
+  const [showSelectGame, setShowSelectGame] = useState(false);
+  const [selectedGameType, setSelectedGameType] = useState<string>('jeopardy_duel');
   const [showCreateAnnouncement, setShowCreateAnnouncement] = useState(false);
 
   useEffect(() => {
@@ -341,7 +344,7 @@ const ClassroomDetail = () => {
                 {isTeacher && (
                   <Button
                     className="bg-gradient-primary hover:opacity-90"
-                    onClick={() => setShowCreateTournament(true)}
+                    onClick={() => setShowSelectGame(true)}
                   >
                     <Trophy className="mr-2 h-4 w-4" />
                     Create Tournament
@@ -361,7 +364,7 @@ const ClassroomDetail = () => {
                   {isTeacher && (
                     <Button
                       className="bg-gradient-primary hover:opacity-90"
-                      onClick={() => setShowCreateTournament(true)}
+                      onClick={() => setShowSelectGame(true)}
                     >
                       <Trophy className="mr-2 h-4 w-4" />
                       Create Tournament
@@ -420,10 +423,20 @@ const ClassroomDetail = () => {
 
       {isTeacher && (
         <>
+          <SelectGameModal
+            open={showSelectGame}
+            onOpenChange={setShowSelectGame}
+            onSelectGame={(gameType) => {
+              setSelectedGameType(gameType);
+              setShowCreateTournament(true);
+            }}
+          />
+
           <CreateTournamentModal
             open={showCreateTournament}
             onOpenChange={setShowCreateTournament}
             classroomId={id!}
+            gameType={selectedGameType}
           />
 
           <CreateAnnouncementModal

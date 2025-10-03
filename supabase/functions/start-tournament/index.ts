@@ -17,9 +17,9 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { classroom_id, name } = await req.json();
+    const { classroom_id, name, game_type = 'jeopardy_duel' } = await req.json();
 
-    console.log('Creating tournament:', { classroom_id, name });
+    console.log('Creating tournament:', { classroom_id, name, game_type });
 
     // Verify user has permission (is teacher of classroom)
     const authHeader = req.headers.get('Authorization')!;
@@ -54,7 +54,8 @@ serve(async (req) => {
         classroom_id,
         name,
         created_by: user.id,
-        status: 'waiting'
+        status: 'waiting',
+        game_type
       })
       .select()
       .single();

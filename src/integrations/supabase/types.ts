@@ -735,6 +735,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           created_by: string
+          game_type: string
           id: string
           name: string
           started_at: string | null
@@ -745,6 +746,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           created_by: string
+          game_type?: string
           id?: string
           name: string
           started_at?: string | null
@@ -755,6 +757,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           created_by?: string
+          game_type?: string
           id?: string
           name?: string
           started_at?: string | null

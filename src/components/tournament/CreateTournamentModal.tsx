@@ -12,12 +12,14 @@ interface CreateTournamentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   classroomId: string;
+  gameType?: string;
 }
 
 export const CreateTournamentModal = ({
   open,
   onOpenChange,
   classroomId,
+  gameType = 'jeopardy_duel'
 }: CreateTournamentModalProps) => {
   const [name, setName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
@@ -67,7 +69,11 @@ export const CreateTournamentModal = ({
       const { data: functionData, error: functionError } = await supabase.functions.invoke(
         'start-tournament',
         {
-          body: { classroom_id: classroomId, name: name.trim() },
+          body: { 
+            classroom_id: classroomId, 
+            name: name.trim(),
+            game_type: gameType
+          },
         }
       );
 
@@ -100,12 +106,12 @@ export const CreateTournamentModal = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create New Tournament</DialogTitle>
-          <DialogDescription>
-            Create a new Jeopardy Duel tournament for your classroom
-          </DialogDescription>
-        </DialogHeader>
+      <DialogHeader>
+        <DialogTitle>Create New Tournament</DialogTitle>
+        <DialogDescription>
+          Create a new {gameType === 'jeopardy_duel' ? 'Jeopardy Duel' : gameType.replace(/_/g, ' ')} tournament for your classroom
+        </DialogDescription>
+      </DialogHeader>
 
         <div className="space-y-4">
           <div>
