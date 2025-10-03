@@ -11,6 +11,7 @@ import { TournamentLobby } from "@/components/tournament/TournamentLobby";
 import { MatchPlayground } from "@/components/tournament/MatchPlayground";
 import { useTournamentRealtime } from "@/hooks/useTournamentRealtime";
 import { useToast } from "@/hooks/use-toast";
+import { CreateTournamentModal } from "@/components/tournament/CreateTournamentModal";
 
 const JeopardyGame = () => {
   const [searchParams] = useSearchParams();
@@ -22,14 +23,54 @@ const JeopardyGame = () => {
   const [currentMatch, setCurrentMatch] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(!!tournamentId);
   const [view, setView] = useState<'lobby' | 'match'>('lobby');
+  const [isTeacher, setIsTeacher] = useState(false);
+  const [teacherClassrooms, setTeacherClassrooms] = useState<any[]>([]);
+  const [showCreateTournament, setShowCreateTournament] = useState(false);
+  const [selectedClassroomId, setSelectedClassroomId] = useState<string>('');
 
   const { tournaments, matches, matchStates } = useTournamentRealtime(tournamentId || undefined);
 
   useEffect(() => {
+    checkIfTeacher();
     if (tournamentId) {
       loadTournamentData();
     }
   }, [tournamentId]);
+
+  const checkIfTeacher = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+
+      if (profile?.role === 'teacher') {
+        setIsTeacher(true);
+        loadTeacherClassrooms(session.user.id);
+      }
+    } catch (error) {
+      console.error('Error checking teacher status:', error);
+    }
+  };
+
+  const loadTeacherClassrooms = async (teacherId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('classrooms')
+        .select('*')
+        .eq('teacher_id', teacherId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setTeacherClassrooms(data || []);
+    } catch (error) {
+      console.error('Error loading classrooms:', error);
+    }
+  };
 
   useEffect(() => {
     if (tournaments.length > 0 && tournamentId) {
@@ -118,16 +159,106 @@ const JeopardyGame = () => {
         <Header showAuthButtons={false} />
         <main className="flex-1 py-8">
           <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto text-center">
-              <div className="inline-flex p-4 rounded-full bg-gradient-primary mb-4">
-                <Trophy className="h-12 w-12 text-white" />
+            <div className="max-w-4xl mx-auto">
+              <div className="text-center mb-8">
+                <div className="inline-flex p-4 rounded-full bg-gradient-primary mb-4">
+                  <Trophy className="h-12 w-12 text-white" />
+                </div>
+                <h1 className="text-4xl md:text-5xl font-bold mb-4">
+                  Jeopardy Duel
+                </h1>
+                <p className="text-xl text-muted-foreground mb-8">
+                  Challenge your classmates in epic trivia showdowns!
+                </p>
               </div>
-              <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                Jeopardy Duel
-              </h1>
-              <p className="text-xl text-muted-foreground mb-8">
-                Challenge your classmates in epic trivia showdowns!
-              </p>
+
+              {isTeacher && (
+                <div className="mb-8 space-y-4">
+                  <Card className="shadow-card border-primary/20">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Trophy className="h-5 w-5" />
+                        Teacher Controls
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        <Button
+                          className="bg-gradient-primary hover:opacity-90 w-full"
+                          onClick={() => {
+                            if (teacherClassrooms.length === 1) {
+                              setSelectedClassroomId(teacherClassrooms[0].id);
+                              setShowCreateTournament(true);
+                            } else if (teacherClassrooms.length > 1) {
+                              toast({
+                                title: "Select a Classroom",
+                                description: "Please select which classroom to create the tournament in",
+                              });
+                            } else {
+                              toast({
+                                title: "No Classrooms",
+                                description: "Create a classroom first before creating tournaments",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                        >
+                          Create Tournament
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => navigate('/teacher/questions-library')}
+                          className="w-full"
+                        >
+                          Manage Questions
+                        </Button>
+                      </div>
+
+                      {teacherClassrooms.length > 1 && (
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Select Classroom:</label>
+                          <select
+                            className="w-full p-2 border rounded-md"
+                            value={selectedClassroomId}
+                            onChange={(e) => setSelectedClassroomId(e.target.value)}
+                          >
+                            <option value="">Choose a classroom...</option>
+                            {teacherClassrooms.map((classroom) => (
+                              <option key={classroom.id} value={classroom.id}>
+                                {classroom.name}
+                              </option>
+                            ))}
+                          </select>
+                          <Button
+                            className="w-full"
+                            disabled={!selectedClassroomId}
+                            onClick={() => setShowCreateTournament(true)}
+                          >
+                            Create Tournament in Selected Classroom
+                          </Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {teacherClassrooms.map((classroom) => (
+                    <Card key={classroom.id} className="shadow-card">
+                      <CardHeader>
+                        <CardTitle className="text-lg">{classroom.name}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => navigate(`/classrooms/${classroom.id}`)}
+                        >
+                          View Classroom
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
 
               <Card className="shadow-card mb-6">
                 <CardHeader>
@@ -170,16 +301,25 @@ const JeopardyGame = () => {
                 </CardContent>
               </Card>
 
-              <Button
-                className="bg-gradient-primary hover:opacity-90"
-                onClick={() => navigate('/student/dashboard')}
-              >
-                Go to Dashboard
-              </Button>
+              <div className="text-center">
+                <Button
+                  className="bg-gradient-primary hover:opacity-90"
+                  onClick={() => navigate(isTeacher ? '/teacher/dashboard' : '/student/dashboard')}
+                >
+                  Go to Dashboard
+                </Button>
+              </div>
             </div>
           </div>
         </main>
         <Footer />
+        {showCreateTournament && selectedClassroomId && (
+          <CreateTournamentModal
+            open={showCreateTournament}
+            onOpenChange={setShowCreateTournament}
+            classroomId={selectedClassroomId}
+          />
+        )}
       </div>
     );
   }

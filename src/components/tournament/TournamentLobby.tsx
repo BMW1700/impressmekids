@@ -6,9 +6,10 @@ import { Footer } from "@/components/Footer";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Trophy, Users, Play, Crown } from "lucide-react";
+import { Loader2, Trophy, Users, Play, Crown, Settings, Edit, SkipForward, StopCircle } from "lucide-react";
 import { useTournamentRealtime } from "@/hooks/useTournamentRealtime";
 import { useToast } from "@/hooks/use-toast";
+import { SelectQuestionsModal } from "@/components/tournament/SelectQuestionsModal";
 
 interface TournamentLobbyProps {
   tournament: any;
@@ -24,6 +25,9 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
   const [matches, setMatches] = useState<any[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isTeacher, setIsTeacher] = useState(false);
+  const [questionCount, setQuestionCount] = useState(0);
+  const [isStarting, setIsStarting] = useState(false);
+  const [showSelectQuestions, setShowSelectQuestions] = useState(false);
   
   const { matches: realtimeMatches } = useTournamentRealtime(tournament.id);
 
@@ -45,9 +49,6 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
 
       if (classroomData?.teacher_id === session.user.id) {
         setIsTeacher(true);
-        // Redirect teachers to control panel
-        const tournamentId = searchParams.get('tournament');
-        navigate(`/teacher/tournament/control?tournament=${tournamentId}`);
       }
     } catch (error) {
       console.error("Error checking teacher status:", error);
@@ -94,6 +95,14 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
 
       if (matchesError) throw matchesError;
       setMatches(matchesData || []);
+
+      // Load question count if teacher
+      const { data: questionsData } = await supabase
+        .from('tournament_questions')
+        .select('id')
+        .eq('tournament_id', tournament.id);
+      
+      setQuestionCount(questionsData?.length || 0);
     } catch (error) {
       console.error('Error loading lobby data:', error);
       toast({
@@ -103,6 +112,108 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
       });
     } finally {
       setIsLoadingData(false);
+    }
+  };
+
+  const handleSeedAndStart = async () => {
+    if (questionCount === 0) {
+      toast({
+        title: "No Questions Assigned",
+        description: "Please assign questions to the tournament before starting",
+        variant: "destructive",
+      });
+      setShowSelectQuestions(true);
+      return;
+    }
+
+    if (players.length < 2) {
+      toast({
+        title: "Not Enough Players",
+        description: "At least 2 players are needed to start the tournament",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsStarting(true);
+    try {
+      const { data: seedData, error: seedError } = await supabase.functions.invoke(
+        'seed-and-create-matches',
+        { body: { tournament_id: tournament.id } }
+      );
+
+      if (seedError) throw seedError;
+
+      toast({
+        title: "Tournament Started",
+        description: `Created ${seedData.matches_created} matches. Players can now join!`,
+      });
+
+      loadLobbyData();
+    } catch (error: any) {
+      console.error("Error starting tournament:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start tournament",
+        variant: "destructive",
+      });
+    } finally {
+      setIsStarting(false);
+    }
+  };
+
+  const handleStartRound = async () => {
+    setIsStarting(true);
+    try {
+      const waitingMatches = matches.filter(m => m.status === 'waiting');
+      
+      for (const match of waitingMatches) {
+        const { error } = await supabase.functions.invoke('start-round', {
+          body: { match_id: match.id }
+        });
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Round Started",
+        description: "All matches are now in progress",
+      });
+
+      loadLobbyData();
+    } catch (error: any) {
+      console.error("Error starting round:", error);
+      toast({
+        title: "Error",
+        description: "Failed to start round",
+        variant: "destructive",
+      });
+    } finally {
+      setIsStarting(false);
+    }
+  };
+
+  const handleEndTournament = async () => {
+    try {
+      const { error } = await supabase
+        .from('tournaments')
+        .update({ status: 'completed', completed_at: new Date().toISOString() })
+        .eq('id', tournament.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Tournament Ended",
+        description: "The tournament has been completed",
+      });
+
+      loadLobbyData();
+    } catch (error: any) {
+      console.error("Error ending tournament:", error);
+      toast({
+        title: "Error",
+        description: "Failed to end tournament",
+        variant: "destructive",
+      });
     }
   };
 
@@ -144,6 +255,61 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
                 {tournament.status}
               </Badge>
             </div>
+
+            {isTeacher && (
+              <Card className="mb-8 shadow-card border-primary/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="h-5 w-5" />
+                    Teacher Controls
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={() => setShowSelectQuestions(true)}
+                      disabled={tournament.status !== 'waiting'}
+                    >
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit Questions ({questionCount})
+                    </Button>
+                    
+                    <Button
+                      className="w-full justify-start bg-gradient-primary hover:opacity-90"
+                      onClick={handleSeedAndStart}
+                      disabled={tournament.status !== 'waiting' || isStarting || players.length === 0}
+                    >
+                      {isStarting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      <Play className="mr-2 h-4 w-4" />
+                      Seed & Start
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={handleStartRound}
+                      disabled={tournament.status !== 'in_progress' || isStarting || matches.every(m => m.status !== 'waiting')}
+                    >
+                      {isStarting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      <SkipForward className="mr-2 h-4 w-4" />
+                      Start Round
+                    </Button>
+
+                    <Button
+                      variant="destructive"
+                      className="w-full justify-start"
+                      onClick={handleEndTournament}
+                      disabled={tournament.status === 'completed'}
+                    >
+                      <StopCircle className="mr-2 h-4 w-4" />
+                      End Tournament
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <div className="grid lg:grid-cols-3 gap-6 mb-8">
               <Card>
@@ -279,6 +445,14 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
       </main>
 
       <Footer />
+
+      <SelectQuestionsModal
+        open={showSelectQuestions}
+        onOpenChange={setShowSelectQuestions}
+        tournamentId={tournament.id}
+        classroomId={tournament.classroom_id}
+        onSuccess={loadLobbyData}
+      />
     </div>
   );
 };
