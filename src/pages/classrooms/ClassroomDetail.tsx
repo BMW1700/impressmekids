@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Users, Copy, Trophy, Play, Megaphone } from "lucide-react";
+import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen } from "lucide-react";
 import { CreateTournamentModal } from "@/components/tournament/CreateTournamentModal";
 import { CreateAnnouncementModal } from "@/components/CreateAnnouncementModal";
 import { AnnouncementCard } from "@/components/AnnouncementCard";
@@ -231,13 +231,22 @@ const ClassroomDetail = () => {
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold">{isTeacher ? 'Classroom Management' : 'Classroom'}</h2>
             {isTeacher && (
-              <Button
-                className="bg-gradient-primary hover:opacity-90"
-                onClick={() => setShowCreateAnnouncement(true)}
-              >
-                <Megaphone className="mr-2 h-4 w-4" />
-                Send to Students
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(`/teacher/questions/${id}`)}
+                >
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  Manage Questions
+                </Button>
+                <Button
+                  className="bg-gradient-primary hover:opacity-90"
+                  onClick={() => setShowCreateAnnouncement(true)}
+                >
+                  <Megaphone className="mr-2 h-4 w-4" />
+                  Send to Students
+                </Button>
+              </div>
             )}
           </div>
 
@@ -385,10 +394,16 @@ const ClassroomDetail = () => {
                           <Button
                             variant="outline"
                             className="w-full mt-4"
-                            onClick={() => navigate(`/games/jeopardy-1v1?tournament=${tournament.id}`)}
+                            onClick={() => {
+                              if (isTeacher) {
+                                navigate(`/teacher/tournament/control?tournament=${tournament.id}`);
+                              } else {
+                                navigate(`/games/jeopardy-1v1?tournament=${tournament.id}`);
+                              }
+                            }}
                           >
                             <Play className="mr-2 h-4 w-4" />
-                            View Tournament
+                            {isTeacher ? 'Control Tournament' : 'Join Tournament'}
                           </Button>
                         </div>
                       </CardContent>

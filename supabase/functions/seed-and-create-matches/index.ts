@@ -114,6 +114,44 @@ serve(async (req) => {
 
     console.log('Created matches:', matches.length);
 
+    // Get tournament questions to populate match events
+    const { data: tournamentQuestions, error: questionsError } = await supabase
+      .from('tournament_questions')
+      .select('question_id, sequence')
+      .eq('tournament_id', tournament_id)
+      .order('sequence');
+
+    if (questionsError || !tournamentQuestions || tournamentQuestions.length === 0) {
+      // Clean up created matches if no questions
+      for (const match of matches) {
+        await supabase.from('matches').delete().eq('id', match.id);
+      }
+      return new Response(JSON.stringify({ error: 'No questions assigned to tournament' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Distribute questions across matches and create match_events
+    const questionsPerMatch = Math.floor(tournamentQuestions.length / matches.length);
+    let questionIndex = 0;
+
+    for (const match of matches) {
+      // Create match_events for this match
+      for (let seq = 1; seq <= questionsPerMatch && questionIndex < tournamentQuestions.length; seq++) {
+        await supabase
+          .from('match_events')
+          .insert({
+            match_id: match.id,
+            seq: seq,
+            question_id: tournamentQuestions[questionIndex].question_id
+          });
+        questionIndex++;
+      }
+    }
+
+    console.log('Created match events with', questionIndex, 'questions distributed');
+
     // Update tournament status
     await supabase
       .from('tournaments')
@@ -122,7 +160,8 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ 
       tournament_players: tournamentPlayers.length,
-      matches: matches.length 
+      matches_created: matches.length,
+      questions_assigned: questionIndex
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

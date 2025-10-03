@@ -690,6 +690,45 @@ export type Database = {
           },
         ]
       }
+      tournament_questions: {
+        Row: {
+          created_at: string | null
+          id: string
+          question_id: string
+          sequence: number
+          tournament_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          question_id: string
+          sequence: number
+          tournament_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          question_id?: string
+          sequence?: number
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_questions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_questions_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tournaments: {
         Row: {
           classroom_id: string

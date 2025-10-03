@@ -37,45 +37,28 @@ serve(async (req) => {
 
     const next_seq = matchState.current_seq + 1;
 
-    // Get a random approved question from the classroom
-    const classroom_id = matchState.matches.tournaments.classroom_id;
-    
-    const { data: questions, error: questionsError } = await supabase
-      .from('questions')
-      .select('id')
-      .eq('classroom_id', classroom_id)
-      .eq('approved', true)
-      .limit(10);
-
-    if (questionsError || !questions || questions.length === 0) {
-      return new Response(JSON.stringify({ error: 'No questions available' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Pick random question
-    const randomQuestion = questions[Math.floor(Math.random() * questions.length)];
-
-    // Create match event
+    // Get the next question from match_events (pre-populated questions)
     const { data: matchEvent, error: eventError } = await supabase
       .from('match_events')
-      .insert({
-        match_id,
-        seq: next_seq,
-        question_id: randomQuestion.id,
-        shown_at: new Date().toISOString()
-      })
       .select('*, questions(*)')
+      .eq('match_id', match_id)
+      .eq('seq', next_seq)
       .single();
 
-    if (eventError) {
-      console.error('Error creating match event:', eventError);
-      return new Response(JSON.stringify({ error: eventError.message }), {
-        status: 500,
+    if (eventError || !matchEvent) {
+      return new Response(JSON.stringify({ error: 'No more questions available' }), {
+        status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Update match event with shown timestamp
+    await supabase
+      .from('match_events')
+      .update({
+        shown_at: new Date().toISOString()
+      })
+      .eq('id', matchEvent.id);
 
     // Update match state to accept buzzes
     await supabase
@@ -86,7 +69,7 @@ serve(async (req) => {
       })
       .eq('match_id', match_id);
 
-    console.log('Question shown:', { match_id, seq: next_seq, question_id: randomQuestion.id });
+    console.log('Question shown:', { match_id, seq: next_seq, question_id: matchEvent.question_id });
 
     return new Response(JSON.stringify({ match_event: matchEvent }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

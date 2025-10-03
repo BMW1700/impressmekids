@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -18,16 +18,41 @@ interface TournamentLobbyProps {
 
 export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: TournamentLobbyProps) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [players, setPlayers] = useState<any[]>([]);
   const [matches, setMatches] = useState<any[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [isTeacher, setIsTeacher] = useState(false);
   
   const { matches: realtimeMatches } = useTournamentRealtime(tournament.id);
 
   useEffect(() => {
+    checkIfTeacher();
     loadLobbyData();
   }, [tournament.id]);
+
+  const checkIfTeacher = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data: classroomData } = await supabase
+        .from('classrooms')
+        .select('teacher_id')
+        .eq('id', tournament.classroom_id)
+        .single();
+
+      if (classroomData?.teacher_id === session.user.id) {
+        setIsTeacher(true);
+        // Redirect teachers to control panel
+        const tournamentId = searchParams.get('tournament');
+        navigate(`/teacher/tournament/control?tournament=${tournamentId}`);
+      }
+    } catch (error) {
+      console.error("Error checking teacher status:", error);
+    }
+  };
 
   useEffect(() => {
     if (realtimeMatches.length > 0) {

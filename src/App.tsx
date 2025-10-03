@@ -11,6 +11,8 @@ import Games from "./pages/Games";
 import JeopardyGame from "./pages/games/JeopardyGame";
 import JoinClass from "./pages/JoinClass";
 import ClassroomDetail from "./pages/classrooms/ClassroomDetail";
+import QuestionsLibrary from "./pages/teacher/QuestionsLibrary";
+import TournamentControl from "./pages/teacher/TournamentControl";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +29,8 @@ const App = () => (
           <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
           <Route path="/student/dashboard" element={<StudentDashboard />} />
           <Route path="/classrooms/:id" element={<ClassroomDetail />} />
+          <Route path="/teacher/questions/:classroomId" element={<QuestionsLibrary />} />
+          <Route path="/teacher/tournament/control" element={<TournamentControl />} />
           <Route path="/join-class" element={<JoinClass />} />
           <Route path="/games" element={<Games />} />
           <Route path="/games/jeopardy-1v1" element={<JeopardyGame />} />
