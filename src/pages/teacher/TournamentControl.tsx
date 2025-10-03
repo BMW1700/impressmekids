@@ -65,14 +65,23 @@ const TournamentControl = () => {
       // Load tournament
       const { data: tournamentData, error: tournamentError } = await supabase
         .from('tournaments')
-        .select('*, classrooms(*)')
+        .select('*')
         .eq('id', tournamentId)
         .single();
 
       if (tournamentError) throw tournamentError;
 
+      // Load classroom separately to avoid RLS recursion
+      const { data: classroomData, error: classroomError } = await supabase
+        .from('classrooms')
+        .select('*')
+        .eq('id', tournamentData.classroom_id)
+        .single();
+
+      if (classroomError) throw classroomError;
+
       // Verify teacher ownership
-      if (tournamentData.classrooms.teacher_id !== session.user.id) {
+      if (classroomData.teacher_id !== session.user.id) {
         toast({
           title: "Access Denied",
           description: "Only the classroom teacher can control this tournament",
@@ -83,7 +92,7 @@ const TournamentControl = () => {
       }
 
       setTournament(tournamentData);
-      setClassroom(tournamentData.classrooms);
+      setClassroom(classroomData);
 
       // Load players
       const { data: playersData, error: playersError } = await supabase

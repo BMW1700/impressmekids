@@ -82,33 +82,21 @@ const ClassroomDetail = () => {
         .from('classroom_students')
         .select(`
           *,
-          profiles!student_id (
+          profiles (
             id,
             full_name,
             email
+          ),
+          student_profiles (
+            grade,
+            avatar_url
           )
         `)
         .eq('classroom_id', id);
 
       if (studentsError) throw studentsError;
       
-      // Load student profiles separately for each student
-      const studentsWithProfiles = await Promise.all(
-        (studentsData || []).map(async (student) => {
-          const { data: profileData } = await supabase
-            .from('student_profiles')
-            .select('grade, avatar_url')
-            .eq('user_id', student.student_id)
-            .maybeSingle();
-          
-          return {
-            ...student,
-            student_profiles: profileData ? [profileData] : []
-          };
-        })
-      );
-      
-      setStudents(studentsWithProfiles);
+      setStudents(studentsData || []);
 
       // Load tournaments
       const { data: tournamentsData, error: tournamentsError } = await supabase
