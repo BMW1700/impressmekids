@@ -207,7 +207,22 @@ const JeopardyGame = () => {
                         </Button>
                         <Button
                           variant="outline"
-                          onClick={() => navigate('/teacher/questions-library')}
+                          onClick={() => {
+                            if (teacherClassrooms.length === 1) {
+                              navigate(`/teacher/questions/${teacherClassrooms[0].id}`);
+                            } else if (teacherClassrooms.length > 1) {
+                              toast({
+                                title: "Select a Classroom",
+                                description: "Please select which classroom to manage questions for",
+                              });
+                            } else {
+                              toast({
+                                title: "No Classrooms",
+                                description: "Create a classroom first before managing questions",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
                           className="w-full"
                         >
                           Manage Questions
@@ -229,13 +244,23 @@ const JeopardyGame = () => {
                               </option>
                             ))}
                           </select>
-                          <Button
-                            className="w-full"
-                            disabled={!selectedClassroomId}
-                            onClick={() => setShowCreateTournament(true)}
-                          >
-                            Create Tournament in Selected Classroom
-                          </Button>
+                          <div className="grid sm:grid-cols-2 gap-3">
+                            <Button
+                              className="w-full"
+                              disabled={!selectedClassroomId}
+                              onClick={() => setShowCreateTournament(true)}
+                            >
+                              Create Tournament in Selected Classroom
+                            </Button>
+                            <Button
+                              variant="outline"
+                              className="w-full"
+                              disabled={!selectedClassroomId}
+                              onClick={() => navigate(`/teacher/questions/${selectedClassroomId}`)}
+                            >
+                              Manage Questions in Selected Classroom
+                            </Button>
+                          </div>
                         </div>
                       )}
                     </CardContent>
