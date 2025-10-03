@@ -82,14 +82,14 @@ const ClassroomDetail = () => {
         .from('classroom_students')
         .select(`
           *,
-          profiles (
+          profiles!student_id (
             id,
             full_name,
-            email
-          ),
-          student_profiles (
-            grade,
-            avatar_url
+            email,
+            student_profiles!user_id (
+              grade,
+              avatar_url
+            )
           )
         `)
         .eq('classroom_id', id);
