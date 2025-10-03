@@ -81,6 +81,9 @@ export const CreateTournamentModal = ({
 
       const tournament = functionData.tournament;
 
+      // Brief delay for database consistency
+      await new Promise(resolve => setTimeout(resolve, 300));
+
       toast({
         title: 'Tournament Created!',
         description: 'Now assign questions and seed players to start matches',
