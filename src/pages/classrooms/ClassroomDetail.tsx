@@ -36,8 +36,11 @@ const ClassroomDetail = () => {
   const [showCreateAnnouncement, setShowCreateAnnouncement] = useState(false);
 
   useEffect(() => {
-    loadClassroomData();
-  }, [id]);
+    // Wait for permissions to be determined before loading data
+    if (!permissionsLoading) {
+      loadClassroomData();
+    }
+  }, [id, permissionsLoading]);
 
   const loadClassroomData = async () => {
     try {
@@ -52,9 +55,19 @@ const ClassroomDetail = () => {
         .from('classrooms')
         .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
-      if (classroomError) throw classroomError;
+      if (classroomError) {
+        console.error("Error loading classroom:", classroomError);
+        throw classroomError;
+      }
+      
+      if (!classroomData) {
+        console.error("Classroom not found or access denied");
+        setIsLoading(false);
+        return;
+      }
+      
       setClassroom(classroomData);
 
       // Load students
