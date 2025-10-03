@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, RotateCcw, Lightbulb } from "lucide-react";
+import { ChevronLeft, ChevronRight, RotateCcw, Lightbulb, Shuffle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Flashcard {
@@ -18,12 +18,28 @@ export function FlashcardSetViewer({ flashcards }: FlashcardSetViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [showHint, setShowHint] = useState(false);
+  const [shuffledCards, setShuffledCards] = useState<Flashcard[]>(flashcards);
 
-  const currentCard = flashcards[currentIndex];
+  const currentCard = shuffledCards[currentIndex];
   const hasHint = currentCard?.hint && currentCard.hint.trim().length > 0;
 
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") handlePrevious();
+      if (e.key === "ArrowRight") handleNext();
+      if (e.key === " " || e.key === "Enter") {
+        e.preventDefault();
+        handleFlip();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
+  }, [currentIndex, isFlipped]);
+
   const handleNext = () => {
-    if (currentIndex < flashcards.length - 1) {
+    if (currentIndex < shuffledCards.length - 1) {
       setCurrentIndex(currentIndex + 1);
       setIsFlipped(false);
       setShowHint(false);
@@ -46,6 +62,15 @@ export function FlashcardSetViewer({ flashcards }: FlashcardSetViewerProps) {
     setCurrentIndex(0);
     setIsFlipped(false);
     setShowHint(false);
+    setShuffledCards(flashcards);
+  };
+
+  const handleShuffle = () => {
+    const shuffled = [...flashcards].sort(() => Math.random() - 0.5);
+    setShuffledCards(shuffled);
+    setCurrentIndex(0);
+    setIsFlipped(false);
+    setShowHint(false);
   };
 
   if (!flashcards || flashcards.length === 0) {
@@ -60,12 +85,18 @@ export function FlashcardSetViewer({ flashcards }: FlashcardSetViewerProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <span className="text-sm text-muted-foreground">
-          Card {currentIndex + 1} of {flashcards.length}
+          Card {currentIndex + 1} of {shuffledCards.length}
         </span>
-        <Button variant="ghost" size="sm" onClick={handleReset}>
-          <RotateCcw className="h-4 w-4 mr-2" />
-          Reset
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={handleShuffle}>
+            <Shuffle className="h-4 w-4 mr-2" />
+            Shuffle
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleReset}>
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Reset
+          </Button>
+        </div>
       </div>
 
       <div 
@@ -149,7 +180,7 @@ export function FlashcardSetViewer({ flashcards }: FlashcardSetViewerProps) {
         <Button 
           variant="outline" 
           onClick={handleNext}
-          disabled={currentIndex === flashcards.length - 1}
+          disabled={currentIndex === shuffledCards.length - 1}
         >
           Next
           <ChevronRight className="h-4 w-4 ml-2" />
@@ -159,9 +190,13 @@ export function FlashcardSetViewer({ flashcards }: FlashcardSetViewerProps) {
       <div className="w-full bg-muted rounded-full h-2">
         <div 
           className="bg-primary h-2 rounded-full transition-all duration-300"
-          style={{ width: `${((currentIndex + 1) / flashcards.length) * 100}%` }}
+          style={{ width: `${((currentIndex + 1) / shuffledCards.length) * 100}%` }}
         />
       </div>
+
+      <p className="text-xs text-center text-muted-foreground">
+        💡 Tip: Use arrow keys (←→) to navigate, Space/Enter to flip
+      </p>
     </div>
   );
 }

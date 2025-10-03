@@ -11,6 +11,8 @@ import { Loader2, BookOpen, Plus, Sparkles, Trash2 } from "lucide-react";
 import { GenerateQuestionsModal } from "@/components/tournament/GenerateQuestionsModal";
 import { GenerateFlashcardsModal } from "@/components/flashcards/GenerateFlashcardsModal";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import { CreateQuestionModal } from "@/components/tournament/CreateQuestionModal";
+import { AddQuestionsToGroupModal } from "@/components/tournament/AddQuestionsToGroupModal";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -31,6 +33,8 @@ const QuestionGroupDetail = () => {
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [showFlashcardsModal, setShowFlashcardsModal] = useState(false);
   const [showRemoveModal, setShowRemoveModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showAddQuestionsModal, setShowAddQuestionsModal] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState<any>(null);
 
   useEffect(() => {
@@ -215,10 +219,24 @@ const QuestionGroupDetail = () => {
                     Generate Flashcards
                   </Button>
                   <Button
-                    onClick={() => setShowGenerateModal(true)}
+                    variant="outline"
+                    onClick={() => setShowAddQuestionsModal(true)}
                   >
                     <Plus className="mr-2 h-4 w-4" />
-                    Add Questions with AI
+                    Add Questions
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowCreateModal(true)}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Manually
+                  </Button>
+                  <Button
+                    onClick={() => setShowGenerateModal(true)}
+                  >
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Generate with AI
                   </Button>
                 </div>
               </div>
@@ -310,6 +328,22 @@ const QuestionGroupDetail = () => {
           onSuccess={loadData}
         />
       )}
+
+      <CreateQuestionModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        classroomId={classroomId!}
+        groupId={groupId}
+        onSuccess={loadData}
+      />
+
+      <AddQuestionsToGroupModal
+        open={showAddQuestionsModal}
+        onOpenChange={setShowAddQuestionsModal}
+        classroomId={classroomId!}
+        groupId={groupId!}
+        onSuccess={loadData}
+      />
 
       <ConfirmModal
         open={showRemoveModal}

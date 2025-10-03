@@ -7,7 +7,9 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen } from "lucide-react";
+import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { FlashcardSetViewer } from "@/components/flashcards/FlashcardSetViewer";
 import { CreateTournamentModal } from "@/components/tournament/CreateTournamentModal";
 import { SelectGameModal } from "@/components/tournament/SelectGameModal";
 import { CreateAnnouncementModal } from "@/components/CreateAnnouncementModal";
@@ -37,6 +39,8 @@ const ClassroomDetail = () => {
   const [showSelectGame, setShowSelectGame] = useState(false);
   const [selectedGameType, setSelectedGameType] = useState<string>('jeopardy_duel');
   const [showCreateAnnouncement, setShowCreateAnnouncement] = useState(false);
+  const [flashcardSets, setFlashcardSets] = useState<any[]>([]);
+  const [viewingFlashcardSet, setViewingFlashcardSet] = useState<any>(null);
 
   useEffect(() => {
     // Wait for permissions to be determined before loading data
@@ -112,6 +116,19 @@ const ClassroomDetail = () => {
 
       if (announcementsError) throw announcementsError;
       setAnnouncements(announcementsData || []);
+
+      // Load flashcard sets
+      const { data: flashcardsData, error: flashcardsError } = await supabase
+        .from('flashcard_sets')
+        .select(`
+          *,
+          question_groups(title, subject, grade)
+        `)
+        .eq('classroom_id', id)
+        .order('created_at', { ascending: false });
+
+      if (flashcardsError) throw flashcardsError;
+      setFlashcardSets(flashcardsData || []);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -254,10 +271,11 @@ const ClassroomDetail = () => {
           </div>
 
           <Tabs defaultValue={isStudent ? "announcements" : "students"} className="mb-8">
-            <TabsList className="grid w-full grid-cols-3 max-w-2xl">
+            <TabsList className={cn("grid w-full max-w-2xl", isTeacher ? "grid-cols-4" : "grid-cols-3")}>
               {isTeacher && <TabsTrigger value="students">Students</TabsTrigger>}
               <TabsTrigger value="announcements">Announcements</TabsTrigger>
               <TabsTrigger value="tournaments">Tournaments</TabsTrigger>
+              <TabsTrigger value="study">Study Materials</TabsTrigger>
             </TabsList>
 
             {isTeacher && (
@@ -407,6 +425,79 @@ const ClassroomDetail = () => {
                           >
                             <Play className="mr-2 h-4 w-4" />
                             {isTeacher ? 'Control Tournament' : 'Join Tournament'}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="study" className="mt-6">
+              <div className="mb-4">
+                <h2 className="text-2xl font-bold">Study Materials</h2>
+              </div>
+
+              {viewingFlashcardSet ? (
+                <div>
+                  <Button
+                    variant="outline"
+                    onClick={() => setViewingFlashcardSet(null)}
+                    className="mb-4"
+                  >
+                    ← Back to Study Materials
+                  </Button>
+                  <FlashcardSetViewer flashcards={viewingFlashcardSet.flashcards} />
+                </div>
+              ) : flashcardSets.length === 0 ? (
+                <Card className="p-12 text-center">
+                  <GraduationCap className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-xl font-bold mb-2">No Study Materials Yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    {isTeacher
+                      ? "Generate flashcard sets from your question groups"
+                      : "Your teacher hasn't created any flashcard sets yet"}
+                  </p>
+                </Card>
+              ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {flashcardSets.map((set) => (
+                    <Card key={set.id} className="shadow-card hover:shadow-purple transition-shadow">
+                      <CardHeader>
+                        <CardTitle className="text-lg">{set.title}</CardTitle>
+                        {set.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {set.description}
+                          </p>
+                        )}
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          <div className="flex flex-wrap gap-2">
+                            {set.question_groups?.subject && (
+                              <Badge variant="secondary">{set.question_groups.subject}</Badge>
+                            )}
+                            {set.question_groups?.grade !== undefined && (
+                              <Badge variant="outline">
+                                {set.question_groups.grade === 0
+                                  ? "K"
+                                  : `Grade ${set.question_groups.grade}`}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            <strong>{set.flashcards.length}</strong> flashcards
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Created {new Date(set.created_at).toLocaleDateString()}
+                          </p>
+                          <Button
+                            className="w-full bg-gradient-primary"
+                            onClick={() => setViewingFlashcardSet(set)}
+                          >
+                            <Play className="mr-2 h-4 w-4" />
+                            Study Now
                           </Button>
                         </div>
                       </CardContent>

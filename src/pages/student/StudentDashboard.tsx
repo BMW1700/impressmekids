@@ -8,7 +8,8 @@ import { ClassroomCard } from "@/components/ClassroomCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Gamepad2, Loader2, UserPlus, Bell } from "lucide-react";
+import { Gamepad2, Loader2, UserPlus, Bell, GraduationCap, Play } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { AnnouncementCard } from "@/components/AnnouncementCard";
 
 const StudentDashboard = () => {
@@ -16,6 +17,7 @@ const StudentDashboard = () => {
   const [studentProfile, setStudentProfile] = useState<any>(null);
   const [classrooms, setClassrooms] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [flashcardSets, setFlashcardSets] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -139,6 +141,20 @@ const StudentDashboard = () => {
           .limit(10);
 
         setAnnouncements(announcementsData || []);
+
+        // Load recent flashcard sets
+        const { data: flashcardsData } = await supabase
+          .from('flashcard_sets')
+          .select(`
+            *,
+            classrooms(name),
+            question_groups(title, subject, grade)
+          `)
+          .in('classroom_id', classroomIds)
+          .order('created_at', { ascending: false })
+          .limit(3);
+
+        setFlashcardSets(flashcardsData || []);
       }
     } catch (error: any) {
       toast({
@@ -230,6 +246,55 @@ const StudentDashboard = () => {
                           createdAt={announcement.created_at}
                           classroomName={announcement.classrooms?.name}
                         />
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {flashcardSets.length > 0 && (
+                <Card className="mb-6">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <GraduationCap className="h-5 w-5 text-primary" />
+                        <CardTitle>Study Materials</CardTitle>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate('/student/study')}
+                      >
+                        View All
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-4">
+                      {flashcardSets.map((set: any) => (
+                        <Card key={set.id} className="p-4 hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/student/study')}>
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h4 className="font-semibold mb-1">{set.title}</h4>
+                              <div className="flex flex-wrap gap-2 mb-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {set.classrooms?.name}
+                                </Badge>
+                                {set.question_groups?.subject && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {set.question_groups.subject}
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {set.flashcards.length} flashcards
+                              </p>
+                            </div>
+                            <Button size="sm" variant="ghost">
+                              <Play className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </Card>
                       ))}
                     </div>
                   </CardContent>
