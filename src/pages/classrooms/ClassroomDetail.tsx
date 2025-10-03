@@ -82,20 +82,33 @@ const ClassroomDetail = () => {
         .from('classroom_students')
         .select(`
           *,
-          profiles!classroom_students_student_id_fkey (
+          profiles!student_id (
             id,
             full_name,
             email
-          ),
-          student_profiles (
-            grade,
-            avatar_url
           )
         `)
         .eq('classroom_id', id);
 
       if (studentsError) throw studentsError;
-      setStudents(studentsData || []);
+      
+      // Load student profiles separately for each student
+      const studentsWithProfiles = await Promise.all(
+        (studentsData || []).map(async (student) => {
+          const { data: profileData } = await supabase
+            .from('student_profiles')
+            .select('grade, avatar_url')
+            .eq('user_id', student.student_id)
+            .maybeSingle();
+          
+          return {
+            ...student,
+            student_profiles: profileData ? [profileData] : []
+          };
+        })
+      );
+      
+      setStudents(studentsWithProfiles);
 
       // Load tournaments
       const { data: tournamentsData, error: tournamentsError } = await supabase
@@ -122,7 +135,7 @@ const ClassroomDetail = () => {
         .from('flashcard_sets')
         .select(`
           *,
-          question_groups(title, subject, grade)
+          question_groups!question_group_id (title, subject, grade)
         `)
         .eq('classroom_id', id)
         .order('created_at', { ascending: false });
