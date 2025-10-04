@@ -106,12 +106,26 @@ Generate 3 questions following the exact format specified.`;
 
     console.log('AI response:', content);
 
+    // Strip markdown code fences if present
+    let cleanedContent = content.trim();
+    if (cleanedContent.startsWith('```json')) {
+      cleanedContent = cleanedContent.slice(7); // Remove ```json
+    } else if (cleanedContent.startsWith('```')) {
+      cleanedContent = cleanedContent.slice(3); // Remove ```
+    }
+    if (cleanedContent.endsWith('```')) {
+      cleanedContent = cleanedContent.slice(0, -3); // Remove trailing ```
+    }
+    cleanedContent = cleanedContent.trim();
+
     // Parse and validate AI response
     let parsedQuestions;
     try {
-      parsedQuestions = JSON.parse(content);
+      parsedQuestions = JSON.parse(cleanedContent);
     } catch (e) {
       console.error('Failed to parse AI response:', e);
+      console.error('Raw content:', content);
+      console.error('Cleaned content:', cleanedContent);
       return new Response(JSON.stringify({ error: 'Invalid AI response format' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
