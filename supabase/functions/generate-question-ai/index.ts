@@ -139,6 +139,13 @@ Generate 3 questions following the exact format specified.`;
       });
     }
 
+    // Map numeric difficulty to enum
+    const mapDifficultyToEnum = (difficultyNum: number): string => {
+      if (difficultyNum <= 2) return 'easy';
+      if (difficultyNum <= 3) return 'medium';
+      return 'hard';
+    };
+
     // Insert questions as unapproved
     const insertedQuestions = [];
 
@@ -160,7 +167,7 @@ Generate 3 questions following the exact format specified.`;
           question_text: q.prompt,
           answer_text: String(q.canonical_answer),
           options: q.choices || [],
-          difficulty: q.difficulty || 3,
+          difficulty: q.difficulty ? mapDifficultyToEnum(q.difficulty) : 'medium',
           source: 'ai',
           approved: false,
           created_by: user.id,
