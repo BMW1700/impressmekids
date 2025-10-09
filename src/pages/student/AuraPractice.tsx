@@ -40,14 +40,26 @@ const AuraPractice = () => {
     enabled: !!user,
   });
 
-  const handleTranscriptionComplete = async (text: string, audioUrl: string, durationSeconds: number) => {
+  const handleTranscriptionComplete = async (
+    text: string, 
+    audioUrl: string, 
+    durationSeconds: number,
+    audioFeatures?: any,
+    phonemes?: any[]
+  ) => {
     setIsAnalyzing(true);
     try {
+      console.log('🚀 Sending to AURA AI backend...');
+      console.log('Phonemes detected:', phonemes?.length || 0);
+      console.log('Audio features:', !!audioFeatures);
+      
       const { data, error } = await supabase.functions.invoke('analyze-aura', {
         body: {
           transcript: text,
           durationSeconds,
           audioUrl,
+          audioFeatures,
+          phonemes,
         },
       });
 
@@ -55,7 +67,7 @@ const AuraPractice = () => {
 
       setLatestAnalysis(data.analysis);
       toast({
-        title: "Analysis Complete!",
+        title: "✨ Analysis Complete!",
         description: `Your speaking grade: ${data.analysis.grade}/100`,
       });
       

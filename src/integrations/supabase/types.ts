@@ -914,19 +914,31 @@ export type Database = {
       }
       student_skill_vectors: {
         Row: {
+          fluency_metrics: Json | null
           last_updated: string
+          phoneme_scores: Json | null
+          prosody_metrics: Json | null
           student_id: string
           vector: Json
+          weekly_improvement: number | null
         }
         Insert: {
+          fluency_metrics?: Json | null
           last_updated?: string
+          phoneme_scores?: Json | null
+          prosody_metrics?: Json | null
           student_id: string
           vector?: Json
+          weekly_improvement?: number | null
         }
         Update: {
+          fluency_metrics?: Json | null
           last_updated?: string
+          phoneme_scores?: Json | null
+          prosody_metrics?: Json | null
           student_id?: string
           vector?: Json
+          weekly_improvement?: number | null
         }
         Relationships: [
           {

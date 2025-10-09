@@ -1,21 +1,53 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Mic, StopCircle, Loader2 } from "lucide-react";
+import { Mic, StopCircle, Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { extractAudioFeatures, analyzePauses, calculateProsodyScore, type AudioFeatures } from "@/lib/audioAnalysis";
+import { detectPhonemes, analyzePhonemeAccuracy, initPhonemeRecognizer, type PhonemeResult } from "@/lib/phonemeDetection";
 
 interface VoiceRecorderProps {
-  onTranscriptionComplete: (text: string, audioUrl: string, durationSeconds: number) => void;
+  onTranscriptionComplete: (
+    text: string, 
+    audioUrl: string, 
+    durationSeconds: number,
+    audioFeatures?: AudioFeatures,
+    phonemes?: PhonemeResult[]
+  ) => void;
   isAnalyzing?: boolean;
 }
 
 export const VoiceRecorder = ({ onTranscriptionComplete, isAnalyzing = false }: VoiceRecorderProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isModelLoading, setIsModelLoading] = useState(false);
+  const [modelReady, setModelReady] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const startTimeRef = useRef<number>(0);
   const { toast } = useToast();
+
+  // Preload the phoneme recognition model
+  useEffect(() => {
+    const loadModel = async () => {
+      setIsModelLoading(true);
+      try {
+        await initPhonemeRecognizer();
+        setModelReady(true);
+        console.log('✅ AURA AI models ready');
+      } catch (error) {
+        console.error('Failed to load phoneme model:', error);
+        toast({
+          title: "Model Loading",
+          description: "AI models will load when you start recording.",
+        });
+      } finally {
+        setIsModelLoading(false);
+      }
+    };
+    
+    loadModel();
+  }, [toast]);
 
   const startRecording = async () => {
     try {
@@ -63,6 +95,41 @@ export const VoiceRecorder = ({ onTranscriptionComplete, isAnalyzing = false }: 
   const processAudio = async (audioBlob: Blob, durationSeconds: number) => {
     setIsProcessing(true);
     try {
+      console.log('🎤 Processing audio with AURA AI...');
+      
+      // Step 1: Extract audio features (pitch, energy, prosody)
+      toast({
+        title: "Analyzing Audio Features",
+        description: "Extracting pitch, energy, and prosody...",
+      });
+      
+      const rawAudioFeatures = await extractAudioFeatures(audioBlob);
+      const pauseAnalysis = analyzePauses(rawAudioFeatures, durationSeconds);
+      const prosodyScore = calculateProsodyScore(rawAudioFeatures);
+      
+      const audioFeatures = {
+        ...rawAudioFeatures,
+        ...pauseAnalysis,
+        prosodyScore
+      };
+      
+      console.log('✅ Audio features extracted:', audioFeatures);
+      
+      // Step 2: Detect phonemes using Transformers.js
+      toast({
+        title: "Detecting Phonemes",
+        description: "Analyzing pronunciation patterns...",
+      });
+      
+      const phonemes = await detectPhonemes(audioBlob);
+      console.log('✅ Phonemes detected:', phonemes.length);
+      
+      // Step 3: Transcribe with Whisper
+      toast({
+        title: "Transcribing Speech",
+        description: "Converting speech to text...",
+      });
+      
       const reader = new FileReader();
       reader.readAsDataURL(audioBlob);
       
@@ -78,19 +145,22 @@ export const VoiceRecorder = ({ onTranscriptionComplete, isAnalyzing = false }: 
         if (data?.text) {
           const audioUrl = URL.createObjectURL(audioBlob);
           
+          console.log('✅ Transcription complete:', data.text);
+          
           toast({
-            title: "Transcription Complete",
-            description: "Analyzing your speech...",
+            title: "Analysis Complete",
+            description: "Generating personalized feedback...",
           });
 
-          onTranscriptionComplete(data.text, audioUrl, durationSeconds);
+          // Pass all data to backend for comprehensive analysis
+          onTranscriptionComplete(data.text, audioUrl, durationSeconds, audioFeatures, phonemes);
         }
       };
     } catch (error) {
       console.error('Error processing audio:', error);
       toast({
         title: "Error",
-        description: "Failed to transcribe audio. Please try again.",
+        description: "Failed to analyze audio. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -100,9 +170,23 @@ export const VoiceRecorder = ({ onTranscriptionComplete, isAnalyzing = false }: 
 
   return (
     <div className="flex flex-col items-center gap-4 p-6">
+      {isModelLoading && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Loading AI models...</span>
+        </div>
+      )}
+      
+      {modelReady && !isRecording && !isProcessing && (
+        <div className="flex items-center gap-2 text-sm text-primary mb-2">
+          <Sparkles className="h-4 w-4" />
+          <span>AURA AI ready</span>
+        </div>
+      )}
+      
       <Button
         onClick={isRecording ? stopRecording : startRecording}
-        disabled={isProcessing || isAnalyzing}
+        disabled={isProcessing || isAnalyzing || isModelLoading}
         size="lg"
         variant={isRecording ? "destructive" : "default"}
         className="w-full max-w-xs"
@@ -115,7 +199,7 @@ export const VoiceRecorder = ({ onTranscriptionComplete, isAnalyzing = false }: 
         ) : isProcessing ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Transcribing...
+            Processing with AI...
           </>
         ) : isRecording ? (
           <>
@@ -129,8 +213,19 @@ export const VoiceRecorder = ({ onTranscriptionComplete, isAnalyzing = false }: 
           </>
         )}
       </Button>
+      
       {isRecording && (
-        <p className="text-sm text-muted-foreground animate-pulse">Recording in progress...</p>
+        <p className="text-sm text-muted-foreground animate-pulse">
+          🎤 Recording... Speak clearly and naturally
+        </p>
+      )}
+      
+      {isProcessing && (
+        <div className="text-xs text-muted-foreground space-y-1 text-center">
+          <p>✨ Extracting audio features</p>
+          <p>🔬 Detecting phoneme patterns</p>
+          <p>📝 Transcribing speech</p>
+        </div>
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.58.0";
+import { simpleG2P } from "./_shared/phonemeUtils.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,11 +13,23 @@ serve(async (req) => {
   }
 
   try {
-    const { transcript, durationSeconds, audioUrl, contextText, questionId } = await req.json();
+    const { 
+      transcript, 
+      durationSeconds, 
+      audioUrl, 
+      contextText, 
+      questionId,
+      audioFeatures,
+      phonemes 
+    } = await req.json();
 
     if (!transcript || !durationSeconds) {
       throw new Error('Transcript and duration are required');
     }
+
+    console.log('🎯 AURA AI Analysis Starting...');
+    console.log('Audio features received:', !!audioFeatures);
+    console.log('Phonemes received:', phonemes?.length || 0);
 
     // Initialize Supabase client
     const authHeader = req.headers.get('Authorization')!;
@@ -41,23 +54,98 @@ serve(async (req) => {
     else if (wpm < 160) pace = 4;
     else pace = 5;
 
-    // Estimate pauses and silence
-    const pauseCount = (transcript.match(/[.!?]/g) || []).length;
-    const avgSilenceMs = (durationSeconds * 1000) / Math.max(pauseCount, 1);
+    // Use enhanced pause analysis if available
+    let pauseCount = (transcript.match(/[.!?]/g) || []).length;
+    let avgSilenceMs = (durationSeconds * 1000) / Math.max(pauseCount, 1);
+    
+    if (audioFeatures?.pauseCount) {
+      pauseCount = audioFeatures.pauseCount;
+      avgSilenceMs = audioFeatures.avgSilenceDuration;
+    }
 
-    // Call Lovable AI for deep analysis
-    const aiPrompt = `You are an expert speech coach analyzing a student's oral reading performance.
+    // Analyze phoneme accuracy if available
+    let phonemeAccuracy = 85; // Default baseline
+    let problematicPhonemes: string[] = [];
+    
+    if (phonemes && phonemes.length > 0) {
+      const words = transcript.toLowerCase().split(/\s+/);
+      const expectedPhonemes = words.flatMap((word: string) => simpleG2P(word));
+      const matchCount = Math.min(phonemes.length, expectedPhonemes.length);
+      let correctCount = 0;
+      
+      const phonemeScores: { [key: string]: { correct: number; total: number } } = {};
+      
+      for (let i = 0; i < matchCount; i++) {
+        const detected = phonemes[i]?.phoneme || '';
+        const expected = expectedPhonemes[i] || '';
+        
+        if (!phonemeScores[expected]) {
+          phonemeScores[expected] = { correct: 0, total: 0 };
+        }
+        
+        phonemeScores[expected].total++;
+        
+        if (detected === expected) {
+          correctCount++;
+          phonemeScores[expected].correct++;
+        }
+      }
+      
+      phonemeAccuracy = matchCount > 0 ? (correctCount / matchCount) * 100 : 85;
+      
+      // Identify problematic phonemes (< 70% accuracy)
+      problematicPhonemes = Object.entries(phonemeScores)
+        .filter(([_, scores]) => scores.total > 2 && (scores.correct / scores.total) < 0.7)
+        .map(([phoneme]) => phoneme);
+      
+      console.log('✅ Phoneme accuracy:', phonemeAccuracy.toFixed(1), '%');
+      console.log('⚠️ Problematic phonemes:', problematicPhonemes);
+    }
 
-Transcript: "${transcript}"
-${contextText ? `Context/Question: "${contextText}"` : ''}
+    // Build enhanced AI prompt with phoneme and audio feature data
+    let phonemeSection = '';
+    if (phonemes && phonemes.length > 0) {
+      const phonemeSummary = phonemes.slice(0, 20).map((p: any) => 
+        `${p.phoneme} (${p.timestamp.toFixed(1)}s, conf: ${(p.confidence * 100).toFixed(0)}%)`
+      ).join(', ');
+      
+      phonemeSection = `
+PHONEME ANALYSIS (Browser-side AI detection):
+- Total phonemes detected: ${phonemes.length}
+- Overall phoneme accuracy: ${phonemeAccuracy.toFixed(1)}%
+- Sample phonemes: ${phonemeSummary}
+${problematicPhonemes.length > 0 ? `- Problematic sounds: ${problematicPhonemes.join(', ')}` : ''}
+`;
+    }
 
-Speaking metrics:
+    let audioSection = '';
+    if (audioFeatures) {
+      audioSection = `
+AUDIO FEATURES (Real-time analysis):
+- Average pitch: ${audioFeatures.avgPitch.toFixed(1)} Hz
+- Pitch variance: ${audioFeatures.pitchVariance.toFixed(2)}
+- Average energy: ${audioFeatures.avgEnergy.toFixed(3)}
+- Energy consistency: ${(100 - Math.min(100, (audioFeatures.energyVariance / audioFeatures.avgEnergy) * 100)).toFixed(1)}%
+- Zero crossing rate: ${audioFeatures.zcr.toFixed(2)}
+- Spectral centroid: ${audioFeatures.spectralCentroid.toFixed(1)} Hz
+- Prosody score: ${audioFeatures.prosodyScore || 'N/A'}
+`;
+    }
+
+    // Call Lovable AI for deep analysis with enhanced data
+    const aiPrompt = `You are an expert speech coach with expertise in phonetics, prosody, and public speaking. Analyze this student's speech performance using advanced acoustic and linguistic data.
+
+TRANSCRIPT: "${transcript}"
+${contextText ? `\nCONTEXT/QUESTION: "${contextText}"` : ''}
+
+BASIC METRICS:
 - Duration: ${durationSeconds}s
 - Words: ${words}
-- WPM: ${wpm.toFixed(1)}
-- Pauses: ${pauseCount}
+- Speaking rate: ${wpm.toFixed(1)} WPM
+- Pauses: ${pauseCount} (avg ${avgSilenceMs.toFixed(0)}ms silence)
+${phonemeSection}${audioSection}
 
-Provide a detailed analysis with:
+Based on this comprehensive data, provide a detailed analysis with:
 1. Pronunciation quality (rate 1-5)
 2. Clarity score (rate 1-5)
 3. Confidence level (rate 1-5)
@@ -148,20 +236,54 @@ Format as JSON:
 
     if (insertError) throw insertError;
 
-    // Update student skill vector
+    // Update student skill vector with enhanced metrics
     const { data: existingVector } = await supabase
       .from('student_skill_vectors')
-      .select('vector')
+      .select('*')
       .eq('student_id', user.id)
       .single();
 
     const currentVector = existingVector?.vector || {};
+    const currentPhonemeScores = existingVector?.phoneme_scores || {};
+    const currentProsodyMetrics = existingVector?.prosody_metrics || {};
+    const currentFluencyMetrics = existingVector?.fluency_metrics || {};
+    
+    // Update phoneme scores
+    const updatedPhonemeScores = { ...currentPhonemeScores };
+    if (problematicPhonemes.length > 0) {
+      problematicPhonemes.forEach(phoneme => {
+        updatedPhonemeScores[phoneme] = (updatedPhonemeScores[phoneme] || 0) - 5; // Track struggle
+      });
+    }
+    updatedPhonemeScores['overall'] = phonemeAccuracy;
+    
+    // Update prosody metrics
+    const updatedProsodyMetrics = {
+      ...currentProsodyMetrics,
+      avg_pitch: audioFeatures?.avgPitch || currentProsodyMetrics.avg_pitch,
+      pitch_variance: audioFeatures?.pitchVariance || currentProsodyMetrics.pitch_variance,
+      prosody_score: audioFeatures?.prosodyScore || currentProsodyMetrics.prosody_score,
+    };
+    
+    // Update fluency metrics
+    const updatedFluencyMetrics = {
+      ...currentFluencyMetrics,
+      avg_wpm: wpm,
+      pause_frequency: pauseCount / durationSeconds,
+      avg_silence_ms: avgSilenceMs,
+    };
+    
+    // Calculate weekly improvement
+    const prevGrade = currentVector.last_grade || grade;
+    const weeklyImprovement = grade - prevGrade;
+
     const updatedVector = {
       ...currentVector,
       pronunciation: aiAnalysis.pronunciation,
       clarity: aiAnalysis.clarity,
       confidence: aiAnalysis.confidence,
       pace,
+      phoneme_accuracy: phonemeAccuracy,
       last_grade: grade,
       total_recordings: (currentVector.total_recordings || 0) + 1,
     };
@@ -171,8 +293,14 @@ Format as JSON:
       .upsert({
         student_id: user.id,
         vector: updatedVector,
+        phoneme_scores: updatedPhonemeScores,
+        prosody_metrics: updatedProsodyMetrics,
+        fluency_metrics: updatedFluencyMetrics,
+        weekly_improvement: weeklyImprovement,
         last_updated: new Date().toISOString(),
       });
+      
+    console.log('✅ Skill vector updated with phoneme and prosody data');
 
     return new Response(JSON.stringify({
       success: true,
