@@ -52,8 +52,8 @@ export function RealtimeAnnotationCoach({
 
     // Analyze semantic clustering
     const clusters = analyzeSemanticClusters(highlights, passageText);
-    const conceptCoverage = calculateConceptCoverage(highlights, passageText);
-    const strategy = detectHighlightStrategy(highlights, passageText);
+    const conceptCoverage = calculateConceptCoverage(clusters);
+    const strategy = detectHighlightStrategy(highlights, passageText.length);
 
     // Analyze cognitive depth
     const annotations = highlights.map(h => h.annotation || '').filter(Boolean);

@@ -460,7 +460,7 @@ export default function ReadingAssignment() {
                 
                 <AnnotationSidebar
                   highlights={highlights}
-                  onUpdateAnnotation={updateHighlight}
+                  onUpdateAnnotation={(id, annotation) => updateHighlight({ id, annotation })}
                   onDeleteHighlight={deleteHighlight}
                   onHighlightClick={(highlight) => {
                     setHoveredHighlightId(highlight.id);
