@@ -128,6 +128,7 @@ export default function CompleteAssignment() {
               answerType: currentQuestion.question_type,
               answerData: data,
               status: 'completed',
+              questionData: currentQuestion.question_data, // For auto-grading
             })}
             questionNumber={currentQuestionIndex + 1}
             totalQuestions={questions.length}

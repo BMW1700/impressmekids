@@ -21,10 +21,19 @@ interface Submission {
 interface SubmissionsListProps {
   submissions: Submission[];
   classroomId: string;
+  assignmentType?: string; // 'reading_comprehension' or 'multi_question'
 }
 
-export const SubmissionsList = ({ submissions, classroomId }: SubmissionsListProps) => {
+export const SubmissionsList = ({ submissions, classroomId, assignmentType = 'multi_question' }: SubmissionsListProps) => {
   const navigate = useNavigate();
+
+  const getReviewUrl = (submissionId: string) => {
+    // Route to appropriate review page based on assignment type
+    if (assignmentType === 'reading_comprehension') {
+      return `/teacher/review-submission/${submissionId}?classroom=${classroomId}`;
+    }
+    return `/teacher/assignment/review/${submissionId}?classroom=${classroomId}`;
+  };
 
   const getStatusBadge = (submission: Submission) => {
     if (submission.graded_at) {
@@ -103,9 +112,7 @@ export const SubmissionsList = ({ submissions, classroomId }: SubmissionsListPro
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() =>
-                      navigate(`/teacher/review-submission/${submission.id}?classroom=${classroomId}`)
-                    }
+                    onClick={() => navigate(getReviewUrl(submission.id))}
                   >
                     <Eye className="mr-2 h-4 w-4" />
                     Review

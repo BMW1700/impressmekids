@@ -278,7 +278,7 @@ const ClassroomDetail = () => {
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => setShowCreateAssignment(true)}
+                  onClick={() => navigate(`/teacher/assignment/create/${id}`)}
                 >
                   <FileText className="mr-2 h-4 w-4" />
                   Create Assignment
@@ -344,11 +344,11 @@ const ClassroomDetail = () => {
 
             <TabsContent value="assignments" className="mt-6">
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-2xl font-bold">Reading Assignments</h2>
+                <h2 className="text-2xl font-bold">Assignments</h2>
                 {isTeacher && (
                   <Button
                     className="bg-gradient-primary hover:opacity-90"
-                    onClick={() => setShowCreateAssignment(true)}
+                    onClick={() => navigate(`/teacher/assignment/create/${id}`)}
                   >
                     <FileText className="mr-2 h-4 w-4" />
                     Create Assignment
@@ -362,13 +362,13 @@ const ClassroomDetail = () => {
                   <h3 className="text-xl font-bold mb-2">No Assignments Yet</h3>
                   <p className="text-muted-foreground mb-4">
                     {isTeacher 
-                      ? 'Create reading comprehension assignments with passages for students to annotate'
+                      ? 'Create multi-question assignments with various question types'
                       : 'Your teacher hasn\'t posted any assignments yet'}
                   </p>
                   {isTeacher && (
                     <Button
                       className="bg-gradient-primary hover:opacity-90"
-                      onClick={() => setShowCreateAssignment(true)}
+                      onClick={() => navigate(`/teacher/assignment/create/${id}`)}
                     >
                       <FileText className="mr-2 h-4 w-4" />
                       Create First Assignment
@@ -394,9 +394,16 @@ const ClassroomDetail = () => {
                               {assignment.description}
                             </p>
                           )}
-                          <p className="text-xs text-muted-foreground">
-                            {Math.ceil(assignment.passage_text.split(/\s+/).length)} words
-                          </p>
+                          <div className="flex gap-2">
+                            <Badge variant="outline">
+                              {assignment.question_count || 1} Question{(assignment.question_count || 1) !== 1 ? 's' : ''}
+                            </Badge>
+                            {assignment.timer_minutes && (
+                              <Badge variant="outline">
+                                {assignment.timer_minutes} min
+                              </Badge>
+                            )}
+                          </div>
                           {assignment.due_date && (
                             <p className="text-xs text-muted-foreground">
                               Due: {new Date(assignment.due_date).toLocaleDateString()}
@@ -407,6 +414,16 @@ const ClassroomDetail = () => {
                           </p>
                           
                           {isTeacher && <AssignmentStatsCard assignmentId={assignment.id} />}
+                          
+                          {isTeacher && assignment.status === 'draft' && (
+                            <Button
+                              variant="outline"
+                              className="w-full mt-2"
+                              onClick={() => navigate(`/teacher/assignment/create/${id}?edit=${assignment.id}`)}
+                            >
+                              Edit Draft
+                            </Button>
+                          )}
                           
                           <Button
                             variant="outline"
@@ -670,6 +687,7 @@ const ClassroomDetail = () => {
                   <SubmissionsList 
                     submissions={assignmentSubmissions}
                     classroomId={id!}
+                    assignmentType={assignments.find((a: any) => a.id === viewingAssignmentId)?.assignment_type || 'multi_question'}
                   />
                 </div>
               </DialogContent>

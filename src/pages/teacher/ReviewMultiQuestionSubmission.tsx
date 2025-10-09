@@ -1,0 +1,456 @@
+import { useEffect, useState } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2, ArrowLeft, Save, User, Calendar, CheckCircle2, Volume2 } from "lucide-react";
+import { useAssignmentSubmissions } from "@/hooks/useAssignmentSubmissions";
+import { Separator } from "@/components/ui/separator";
+
+export default function ReviewMultiQuestionSubmission() {
+  const { submissionId } = useParams();
+  const [searchParams] = useSearchParams();
+  const classroomId = searchParams.get('classroom');
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const [assignment, setAssignment] = useState<any>(null);
+  const [submission, setSubmission] = useState<any>(null);
+  const [answers, setAnswers] = useState<any[]>([]);
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [grade, setGrade] = useState("");
+  const [feedback, setFeedback] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  const { gradeSubmission } = useAssignmentSubmissions(assignment?.id);
+
+  useEffect(() => {
+    loadData();
+  }, [submissionId]);
+
+  const loadData = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate('/auth');
+        return;
+      }
+
+      // Load submission with student info
+      const { data: submissionData, error: submissionError } = await supabase
+        .from('assignment_submissions')
+        .select(`
+          *,
+          profiles!student_id (
+            id,
+            full_name,
+            email
+          )
+        `)
+        .eq('id', submissionId)
+        .single();
+
+      if (submissionError) throw submissionError;
+      setSubmission(submissionData);
+
+      // Initialize grade and feedback if already graded
+      if (submissionData.grade !== null) {
+        setGrade(submissionData.grade.toString());
+      }
+      if (submissionData.teacher_feedback) {
+        setFeedback(submissionData.teacher_feedback);
+      }
+
+      // Load assignment with questions
+      const { data: assignmentData, error: assignmentError } = await supabase
+        .from('assignments')
+        .select(`
+          *,
+          assignment_questions(*)
+        `)
+        .eq('id', submissionData.assignment_id)
+        .single();
+
+      if (assignmentError) throw assignmentError;
+      setAssignment(assignmentData);
+      
+      // Sort questions by sequence
+      const sortedQuestions = (assignmentData.assignment_questions || []).sort(
+        (a: any, b: any) => a.sequence - b.sequence
+      );
+      setQuestions(sortedQuestions);
+
+      // Load answers
+      const { data: answersData, error: answersError } = await supabase
+        .from('assignment_answers')
+        .select(`
+          *,
+          aura_records(*)
+        `)
+        .eq('submission_id', submissionId);
+
+      if (answersError) throw answersError;
+      setAnswers(answersData || []);
+
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to load submission",
+        variant: "destructive",
+      });
+      console.error('Load error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveGrade = () => {
+    if (!submissionId) return;
+
+    const gradeValue = parseFloat(grade);
+    if (isNaN(gradeValue) || gradeValue < 0 || gradeValue > 100) {
+      toast({
+        title: "Invalid Grade",
+        description: "Please enter a grade between 0 and 100",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!feedback.trim()) {
+      toast({
+        title: "Missing Feedback",
+        description: "Please provide feedback for the student",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    gradeSubmission(
+      {
+        submissionId,
+        grade: gradeValue,
+        feedback: feedback.trim(),
+      },
+      {
+        onSettled: () => {
+          setIsSaving(false);
+        },
+      }
+    );
+  };
+
+  const getAnswerForQuestion = (questionId: string) => {
+    return answers.find(a => a.question_id === questionId);
+  };
+
+  const renderQuestionAnswer = (question: any, answer: any) => {
+    const questionData = question.question_data;
+    const answerData = answer?.answer_data || {};
+
+    switch (question.question_type) {
+      case 'question_answer':
+        return (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Question: {questionData.question}</p>
+            <p className="text-sm text-muted-foreground">Student Answer:</p>
+            <p className="text-sm bg-muted p-3 rounded">{answerData.answer || 'No answer provided'}</p>
+            {answerData.is_correct !== undefined && (
+              <Badge variant={answerData.is_correct ? "default" : "destructive"}>
+                {answerData.is_correct ? 'Correct' : 'Incorrect'}
+              </Badge>
+            )}
+          </div>
+        );
+
+      case 'reading_comprehension':
+        return (
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-medium mb-2">Passage:</p>
+              <div className="bg-muted p-4 rounded text-sm whitespace-pre-wrap max-h-60 overflow-y-auto">
+                {questionData.passage}
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-medium mb-2">Questions:</p>
+              {questionData.questions?.map((q: any, idx: number) => (
+                <div key={idx} className="mb-3 bg-muted/50 p-3 rounded">
+                  <p className="text-sm font-medium">{idx + 1}. {q.question}</p>
+                  {q.type === 'multiple_choice' ? (
+                    <div className="mt-2 space-y-1">
+                      {q.options?.map((opt: string, optIdx: number) => {
+                        const studentAnswer = answerData.answers?.[idx];
+                        const isSelected = studentAnswer === opt;
+                        const isCorrect = opt === q.correct_answer;
+                        return (
+                          <div
+                            key={optIdx}
+                            className={`text-sm p-2 rounded ${
+                              isSelected && isCorrect ? 'bg-green-100 dark:bg-green-900/30 border border-green-500' :
+                              isSelected ? 'bg-red-100 dark:bg-red-900/30 border border-red-500' :
+                              isCorrect ? 'bg-green-50 dark:bg-green-900/20 border border-green-300' :
+                              'bg-background'
+                            }`}
+                          >
+                            {opt}
+                            {isSelected && <span className="ml-2 text-xs">(Student)</span>}
+                            {isCorrect && <span className="ml-2 text-xs">(Correct)</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="mt-2">
+                      <p className="text-sm text-muted-foreground">Student Answer:</p>
+                      <p className="text-sm bg-background p-2 rounded mt-1">
+                        {answerData.answers?.[idx] || 'No answer'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            {answerData.score !== undefined && (
+              <div className="flex gap-2">
+                <Badge variant="outline">
+                  Score: {answerData.score}/{questionData.questions?.length || 0}
+                </Badge>
+                <Badge variant={answerData.score === questionData.questions?.length ? "default" : "secondary"}>
+                  {Math.round((answerData.score / (questionData.questions?.length || 1)) * 100)}%
+                </Badge>
+              </div>
+            )}
+          </div>
+        );
+
+      case 'speaking':
+        const auraRecord = answer?.aura_records?.[0];
+        return (
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-medium mb-2">Prompt:</p>
+              <p className="text-sm bg-muted p-3 rounded">{questionData.prompt}</p>
+            </div>
+            {answerData.audio_url && (
+              <div>
+                <p className="text-sm font-medium mb-2">Student Recording:</p>
+                <audio controls className="w-full" src={answerData.audio_url}>
+                  Your browser does not support the audio element.
+                </audio>
+              </div>
+            )}
+            {auraRecord && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">AURA AI Analysis:</p>
+                <div className="bg-muted p-4 rounded space-y-2">
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>WPM: {auraRecord.wpm?.toFixed(0)}</div>
+                    <div>Clarity: {auraRecord.clarity}/100</div>
+                    <div>Pace: {auraRecord.pace}/100</div>
+                    <div>Confidence: {auraRecord.confidence}/100</div>
+                  </div>
+                  {auraRecord.transcript && (
+                    <div>
+                      <p className="text-xs font-medium mb-1">Transcript:</p>
+                      <p className="text-xs bg-background p-2 rounded">{auraRecord.transcript}</p>
+                    </div>
+                  )}
+                  {auraRecord.feedback && Array.isArray(auraRecord.feedback) && auraRecord.feedback.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium mb-1">Feedback:</p>
+                      <ul className="text-xs space-y-1">
+                        {auraRecord.feedback.map((fb: any, idx: number) => (
+                          <li key={idx} className="flex items-start gap-2">
+                            <span className="text-muted-foreground">•</span>
+                            <span>{fb.text || fb}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
+      default:
+        return <p className="text-sm text-muted-foreground">Unknown question type</p>;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!assignment || !submission) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header showAuthButtons={false} />
+        <main className="flex-1 py-8">
+          <div className="container mx-auto px-4 text-center">
+            <h1 className="text-2xl font-bold mb-4">Submission Not Found</h1>
+            <Button onClick={() => navigate(`/classrooms/${classroomId}`)}>
+              Back to Classroom
+            </Button>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  const studentName = submission.profiles?.full_name || 'Student';
+  const isGraded = submission.graded_at !== null;
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Header showAuthButtons={false} />
+
+      <main className="flex-1 py-8">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <div className="mb-6">
+            <Button
+              variant="ghost"
+              onClick={() => navigate(`/classrooms/${classroomId}`)}
+              className="mb-4"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Classroom
+            </Button>
+
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h1 className="text-3xl font-bold mb-2">{assignment.title}</h1>
+                <div className="flex items-center gap-4 text-muted-foreground">
+                  <span className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    {studentName}
+                  </span>
+                  {submission.submitted_at && (
+                    <span className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Submitted {new Date(submission.submitted_at).toLocaleString()}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant={isGraded ? "default" : "secondary"} className="text-sm">
+                  {isGraded ? (
+                    <>
+                      <CheckCircle2 className="mr-1 h-3 w-3" />
+                      Graded
+                    </>
+                  ) : (
+                    'Not Graded'
+                  )}
+                </Badge>
+                {isGraded && submission.grade !== null && (
+                  <Badge variant="outline" className="text-lg font-bold">
+                    {submission.grade}/100
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Student Answers */}
+          <div className="space-y-6 mb-6">
+            {questions.map((question, idx) => {
+              const answer = getAnswerForQuestion(question.id);
+              return (
+                <Card key={question.id}>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center justify-between">
+                      <span>Question {idx + 1}</span>
+                      <Badge variant="outline">{question.question_type.replace('_', ' ')}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {answer ? (
+                      renderQuestionAnswer(question, answer)
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No answer submitted</p>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Grading Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Grading & Feedback</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid md:grid-cols-4 gap-4">
+                <div className="md:col-span-1">
+                  <Label htmlFor="grade">Grade (0-100)</Label>
+                  <Input
+                    id="grade"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={grade}
+                    onChange={(e) => setGrade(e.target.value)}
+                    placeholder="85"
+                    disabled={isSaving}
+                  />
+                </div>
+                <div className="md:col-span-3">
+                  <Label htmlFor="feedback">Feedback for Student</Label>
+                  <Textarea
+                    id="feedback"
+                    value={feedback}
+                    onChange={(e) => setFeedback(e.target.value)}
+                    placeholder="Great work! Your answers show good understanding..."
+                    rows={4}
+                    disabled={isSaving}
+                  />
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(`/classrooms/${classroomId}`)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveGrade}
+                  disabled={isSaving || !grade || !feedback.trim()}
+                  className="bg-gradient-primary hover:opacity-90"
+                >
+                  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  <Save className="mr-2 h-4 w-4" />
+                  {isGraded ? 'Update Grade' : 'Save Grade & Feedback'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+
+      <Footer />
+    </div>
+  );
+}

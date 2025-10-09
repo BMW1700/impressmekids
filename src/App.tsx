@@ -18,7 +18,10 @@ import QuestionGroupDetail from "./pages/teacher/QuestionGroupDetail";
 import TournamentControl from "./pages/teacher/TournamentControl";
 import AuraAnalytics from "./pages/teacher/AuraAnalytics";
 import ReadingAssignment from "./pages/student/ReadingAssignment";
+import CompleteAssignment from "./pages/student/CompleteAssignment";
 import ReviewSubmission from "./pages/teacher/ReviewSubmission";
+import ReviewMultiQuestionSubmission from "./pages/teacher/ReviewMultiQuestionSubmission";
+import CreateMultiQuestionAssignment from "./pages/teacher/CreateMultiQuestionAssignment";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,10 +42,12 @@ const App = () => (
           <Route path="/classrooms/:id" element={<ClassroomDetail />} />
           <Route path="/teacher/questions/:classroomId" element={<QuestionsLibrary />} />
           <Route path="/teacher/questions/:classroomId/:groupId" element={<QuestionGroupDetail />} />
+          <Route path="/teacher/assignment/create/:classroomId" element={<CreateMultiQuestionAssignment />} />
           <Route path="/teacher/tournament/control" element={<TournamentControl />} />
           <Route path="/teacher/aura-analytics/:classroomId?" element={<AuraAnalytics />} />
-          <Route path="/student/assignment/:assignmentId" element={<ReadingAssignment />} />
+          <Route path="/student/assignment/:assignmentId" element={<CompleteAssignment />} />
           <Route path="/teacher/review-submission/:submissionId" element={<ReviewSubmission />} />
+          <Route path="/teacher/assignment/review/:submissionId" element={<ReviewMultiQuestionSubmission />} />
           <Route path="/join-class" element={<JoinClass />} />
           <Route path="/games" element={<Games />} />
           <Route path="/games/jeopardy-1v1" element={<JeopardyGame />} />
