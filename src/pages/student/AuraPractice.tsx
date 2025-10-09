@@ -7,6 +7,7 @@ import { Footer } from "@/components/Footer";
 import { VoiceRecorder } from "@/components/aura/VoiceRecorder";
 import AuraFeedbackCard from "@/components/aura/AuraFeedbackCard";
 import AuraProgressChart from "@/components/aura/AuraProgressChart";
+import SpeakerDiarizationView from "@/components/aura/SpeakerDiarizationView";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mic, TrendingUp, BookOpen } from "lucide-react";
@@ -151,7 +152,16 @@ const AuraPractice = () => {
               </Card>
 
               {latestAnalysis && (
-                <AuraFeedbackCard analysis={latestAnalysis} />
+                <>
+                  <AuraFeedbackCard analysis={latestAnalysis} />
+                  
+                  {latestAnalysis.speakerSegments && latestAnalysis.speakerSegments.length > 0 && (
+                    <SpeakerDiarizationView
+                      segments={latestAnalysis.speakerSegments}
+                      diarizationConfidence={latestAnalysis.diarizationConfidence}
+                    />
+                  )}
+                </>
               )}
             </TabsContent>
 

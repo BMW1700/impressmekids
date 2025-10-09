@@ -219,6 +219,7 @@ export type Database = {
           confidence: number
           context_text: string | null
           created_at: string
+          diarization_confidence: number | null
           difficulty_score: number | null
           duration_s: number
           evidence: Json | null
@@ -236,7 +237,9 @@ export type Database = {
           question_id: string | null
           reading_assignment_id: string | null
           reading_type: string | null
+          realtime_feedback: Json | null
           request_id: string
+          speaker_segments: Json | null
           suggested_exercises: Json | null
           transcript: string
           words: number
@@ -252,6 +255,7 @@ export type Database = {
           confidence: number
           context_text?: string | null
           created_at?: string
+          diarization_confidence?: number | null
           difficulty_score?: number | null
           duration_s: number
           evidence?: Json | null
@@ -269,7 +273,9 @@ export type Database = {
           question_id?: string | null
           reading_assignment_id?: string | null
           reading_type?: string | null
+          realtime_feedback?: Json | null
           request_id: string
+          speaker_segments?: Json | null
           suggested_exercises?: Json | null
           transcript: string
           words: number
@@ -285,6 +291,7 @@ export type Database = {
           confidence?: number
           context_text?: string | null
           created_at?: string
+          diarization_confidence?: number | null
           difficulty_score?: number | null
           duration_s?: number
           evidence?: Json | null
@@ -302,7 +309,9 @@ export type Database = {
           question_id?: string | null
           reading_assignment_id?: string | null
           reading_type?: string | null
+          realtime_feedback?: Json | null
           request_id?: string
+          speaker_segments?: Json | null
           suggested_exercises?: Json | null
           transcript?: string
           words?: number
@@ -1074,6 +1083,60 @@ export type Database = {
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "question_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      realtime_practice_sessions: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          ended_at: string | null
+          exercise_id: string | null
+          feedback_events: Json | null
+          id: string
+          realtime_metrics: Json | null
+          started_at: string
+          status: string
+          student_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          exercise_id?: string | null
+          feedback_events?: Json | null
+          id?: string
+          realtime_metrics?: Json | null
+          started_at?: string
+          status?: string
+          student_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          exercise_id?: string | null
+          feedback_events?: Json | null
+          id?: string
+          realtime_metrics?: Json | null
+          started_at?: string
+          status?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "realtime_practice_sessions_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "practice_exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "realtime_practice_sessions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
