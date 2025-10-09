@@ -62,6 +62,131 @@ export type Database = {
           },
         ]
       }
+      aura_processing_failures: {
+        Row: {
+          created_at: string
+          error_json: Json
+          id: string
+          profile_id: string | null
+          request_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_json: Json
+          id?: string
+          profile_id?: string | null
+          request_id: string
+        }
+        Update: {
+          created_at?: string
+          error_json?: Json
+          id?: string
+          profile_id?: string | null
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aura_processing_failures_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aura_records: {
+        Row: {
+          asr_confidence: number
+          audio_url: string
+          avg_silence_ms: number
+          clarity: number
+          confidence: number
+          context_text: string | null
+          created_at: string
+          duration_s: number
+          evidence: Json | null
+          feedback: Json
+          grade: number | null
+          id: string
+          language: string
+          pace: number
+          pause_count: number
+          profile_id: string
+          pronunciation_flags: Json | null
+          question_id: string | null
+          request_id: string
+          suggested_exercises: Json | null
+          transcript: string
+          words: number
+          wpm: number
+        }
+        Insert: {
+          asr_confidence: number
+          audio_url: string
+          avg_silence_ms: number
+          clarity: number
+          confidence: number
+          context_text?: string | null
+          created_at?: string
+          duration_s: number
+          evidence?: Json | null
+          feedback?: Json
+          grade?: number | null
+          id?: string
+          language: string
+          pace: number
+          pause_count: number
+          profile_id: string
+          pronunciation_flags?: Json | null
+          question_id?: string | null
+          request_id: string
+          suggested_exercises?: Json | null
+          transcript: string
+          words: number
+          wpm: number
+        }
+        Update: {
+          asr_confidence?: number
+          audio_url?: string
+          avg_silence_ms?: number
+          clarity?: number
+          confidence?: number
+          context_text?: string | null
+          created_at?: string
+          duration_s?: number
+          evidence?: Json | null
+          feedback?: Json
+          grade?: number | null
+          id?: string
+          language?: string
+          pace?: number
+          pause_count?: number
+          profile_id?: string
+          pronunciation_flags?: Json | null
+          question_id?: string | null
+          request_id?: string
+          suggested_exercises?: Json | null
+          transcript?: string
+          words?: number
+          wpm?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aura_records_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aura_records_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classroom_announcements: {
         Row: {
           announcement_type: string
@@ -167,6 +292,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      curriculum_anchors: {
+        Row: {
+          anchor_meta: Json | null
+          canonical_phonemes: Json
+          created_at: string
+          difficulty: string
+          grade: number
+          id: string
+          word: string
+        }
+        Insert: {
+          anchor_meta?: Json | null
+          canonical_phonemes: Json
+          created_at?: string
+          difficulty: string
+          grade: number
+          id?: string
+          word: string
+        }
+        Update: {
+          anchor_meta?: Json | null
+          canonical_phonemes?: Json
+          created_at?: string
+          difficulty?: string
+          grade?: number
+          id?: string
+          word?: string
+        }
+        Relationships: []
       }
       flashcard_sets: {
         Row: {
@@ -751,6 +906,32 @@ export type Database = {
           {
             foreignKeyName: "student_profiles_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_skill_vectors: {
+        Row: {
+          last_updated: string
+          student_id: string
+          vector: Json
+        }
+        Insert: {
+          last_updated?: string
+          student_id: string
+          vector?: Json
+        }
+        Update: {
+          last_updated?: string
+          student_id?: string
+          vector?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_skill_vectors_student_id_fkey"
+            columns: ["student_id"]
             isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
