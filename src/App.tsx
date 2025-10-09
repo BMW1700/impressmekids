@@ -17,6 +17,7 @@ import QuestionsLibrary from "./pages/teacher/QuestionsLibrary";
 import QuestionGroupDetail from "./pages/teacher/QuestionGroupDetail";
 import TournamentControl from "./pages/teacher/TournamentControl";
 import AuraAnalytics from "./pages/teacher/AuraAnalytics";
+import ReadingAssignment from "./pages/student/ReadingAssignment";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
           <Route path="/teacher/questions/:classroomId/:groupId" element={<QuestionGroupDetail />} />
           <Route path="/teacher/tournament/control" element={<TournamentControl />} />
           <Route path="/teacher/aura-analytics/:classroomId?" element={<AuraAnalytics />} />
+          <Route path="/student/assignment/:assignmentId" element={<ReadingAssignment />} />
           <Route path="/join-class" element={<JoinClass />} />
           <Route path="/games" element={<Games />} />
           <Route path="/games/jeopardy-1v1" element={<JeopardyGame />} />

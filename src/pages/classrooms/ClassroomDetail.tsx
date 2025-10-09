@@ -397,11 +397,7 @@ const ClassroomDetail = () => {
                             variant="outline"
                             className="w-full mt-4"
                             onClick={() => {
-                              // TODO: Navigate to assignment view
-                              toast({
-                                title: "Coming Soon",
-                                description: "Assignment viewing will be available in Phase 4",
-                              });
+                              navigate(`/student/assignment/${assignment.id}?classroom=${id}`);
                             }}
                           >
                             <FileText className="mr-2 h-4 w-4" />
