@@ -187,13 +187,7 @@ export default function CreateMultiQuestionAssignment() {
 
           {/* Questions */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Questions ({questions.length})</h2>
-              <Button onClick={addQuestion} variant="outline">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Question
-              </Button>
-            </div>
+            <h2 className="text-xl font-semibold">Questions ({questions.length})</h2>
 
             <DragDropContext onDragEnd={handleDragEnd}>
               <Droppable droppableId="questions">
@@ -225,6 +219,13 @@ export default function CreateMultiQuestionAssignment() {
                 )}
               </Droppable>
             </DragDropContext>
+
+            <div className="flex justify-center pt-4">
+              <Button onClick={addQuestion} variant="outline">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Question
+              </Button>
+            </div>
           </div>
         </div>
       </main>
