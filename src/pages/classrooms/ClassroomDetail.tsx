@@ -7,14 +7,16 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap } from "lucide-react";
+import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FlashcardSetViewer } from "@/components/flashcards/FlashcardSetViewer";
 import { CreateTournamentModal } from "@/components/tournament/CreateTournamentModal";
 import { SelectGameModal } from "@/components/tournament/SelectGameModal";
 import { CreateAnnouncementModal } from "@/components/CreateAnnouncementModal";
+import { CreateAssignmentModal } from "@/components/CreateAssignmentModal";
 import { AnnouncementCard } from "@/components/AnnouncementCard";
 import { useClassroomPermissions } from "@/hooks/useClassroomPermissions";
+import { useAssignments } from "@/hooks/useAssignments";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -39,8 +41,10 @@ const ClassroomDetail = () => {
   const [showSelectGame, setShowSelectGame] = useState(false);
   const [selectedGameType, setSelectedGameType] = useState<string>('jeopardy_duel');
   const [showCreateAnnouncement, setShowCreateAnnouncement] = useState(false);
+  const [showCreateAssignment, setShowCreateAssignment] = useState(false);
   const [flashcardSets, setFlashcardSets] = useState<any[]>([]);
   const [viewingFlashcardSet, setViewingFlashcardSet] = useState<any>(null);
+  const { assignments } = useAssignments(id);
 
   useEffect(() => {
     // Wait for permissions to be determined before loading data
@@ -261,19 +265,27 @@ const ClassroomDetail = () => {
                   Manage Questions
                 </Button>
                 <Button
+                  variant="outline"
+                  onClick={() => setShowCreateAssignment(true)}
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  Create Assignment
+                </Button>
+                <Button
                   className="bg-gradient-primary hover:opacity-90"
                   onClick={() => setShowCreateAnnouncement(true)}
                 >
                   <Megaphone className="mr-2 h-4 w-4" />
-                  Send to Students
+                  Send Announcement
                 </Button>
               </div>
             )}
           </div>
 
-          <Tabs defaultValue={isStudent ? "announcements" : "students"} className="mb-8">
-            <TabsList className={cn("grid w-full max-w-2xl", isTeacher ? "grid-cols-4" : "grid-cols-3")}>
+          <Tabs defaultValue={isStudent ? "assignments" : "students"} className="mb-8">
+            <TabsList className={cn("grid w-full", isTeacher ? "grid-cols-5" : "grid-cols-4")}>
               {isTeacher && <TabsTrigger value="students">Students</TabsTrigger>}
+              <TabsTrigger value="assignments">Assignments</TabsTrigger>
               <TabsTrigger value="announcements">Announcements</TabsTrigger>
               <TabsTrigger value="tournaments">Tournaments</TabsTrigger>
               <TabsTrigger value="study">Study Materials</TabsTrigger>
@@ -317,6 +329,91 @@ const ClassroomDetail = () => {
               )}
               </TabsContent>
             )}
+
+            <TabsContent value="assignments" className="mt-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-2xl font-bold">Reading Assignments</h2>
+                {isTeacher && (
+                  <Button
+                    className="bg-gradient-primary hover:opacity-90"
+                    onClick={() => setShowCreateAssignment(true)}
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    Create Assignment
+                  </Button>
+                )}
+              </div>
+
+              {!assignments || assignments.length === 0 ? (
+                <Card className="p-12 text-center">
+                  <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-xl font-bold mb-2">No Assignments Yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    {isTeacher 
+                      ? 'Create reading comprehension assignments with passages for students to annotate'
+                      : 'Your teacher hasn\'t posted any assignments yet'}
+                  </p>
+                  {isTeacher && (
+                    <Button
+                      className="bg-gradient-primary hover:opacity-90"
+                      onClick={() => setShowCreateAssignment(true)}
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      Create First Assignment
+                    </Button>
+                  )}
+                </Card>
+              ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {assignments.map((assignment: any) => (
+                    <Card key={assignment.id} className="shadow-card hover:shadow-purple transition-shadow">
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-lg">{assignment.title}</CardTitle>
+                          <Badge variant={assignment.status === 'published' ? 'default' : 'secondary'}>
+                            {assignment.status}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          {assignment.description && (
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {assignment.description}
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            {Math.ceil(assignment.passage_text.split(/\s+/).length)} words
+                          </p>
+                          {assignment.due_date && (
+                            <p className="text-xs text-muted-foreground">
+                              Due: {new Date(assignment.due_date).toLocaleDateString()}
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            Created {new Date(assignment.created_at).toLocaleDateString()}
+                          </p>
+                          <Button
+                            variant="outline"
+                            className="w-full mt-4"
+                            onClick={() => {
+                              // TODO: Navigate to assignment view
+                              toast({
+                                title: "Coming Soon",
+                                description: "Assignment viewing will be available in Phase 4",
+                              });
+                            }}
+                          >
+                            <FileText className="mr-2 h-4 w-4" />
+                            {isTeacher ? 'View Submissions' : 'Start Assignment'}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
 
             <TabsContent value="announcements" className="mt-6">
               <div className="mb-4">
@@ -534,6 +631,13 @@ const ClassroomDetail = () => {
           <CreateAnnouncementModal
             open={showCreateAnnouncement}
             onOpenChange={setShowCreateAnnouncement}
+            classroomId={id!}
+            onSuccess={loadClassroomData}
+          />
+
+          <CreateAssignmentModal
+            open={showCreateAssignment}
+            onOpenChange={setShowCreateAssignment}
             classroomId={id!}
             onSuccess={loadClassroomData}
           />
