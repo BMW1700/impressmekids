@@ -62,6 +62,120 @@ export type Database = {
           },
         ]
       }
+      assignment_submissions: {
+        Row: {
+          assignment_id: string
+          created_at: string
+          grade: number | null
+          graded_at: string | null
+          id: string
+          status: string
+          student_id: string
+          submitted_at: string | null
+          teacher_feedback: string | null
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string
+          grade?: number | null
+          graded_at?: string | null
+          id?: string
+          status?: string
+          student_id: string
+          submitted_at?: string | null
+          teacher_feedback?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string
+          grade?: number | null
+          graded_at?: string | null
+          id?: string
+          status?: string
+          student_id?: string
+          submitted_at?: string | null
+          teacher_feedback?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_submissions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_submissions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignments: {
+        Row: {
+          assignment_type: string
+          classroom_id: string
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          passage_metadata: Json | null
+          passage_text: string
+          status: string
+          teacher_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assignment_type?: string
+          classroom_id: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          passage_metadata?: Json | null
+          passage_text: string
+          status?: string
+          teacher_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assignment_type?: string
+          classroom_id?: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          passage_metadata?: Json | null
+          passage_text?: string
+          status?: string
+          teacher_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignments_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignments_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       aura_processing_failures: {
         Row: {
           created_at: string
@@ -990,6 +1104,60 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      text_highlights: {
+        Row: {
+          annotation: string | null
+          color: string
+          created_at: string
+          end_offset: number
+          highlighted_text: string
+          id: string
+          start_offset: number
+          student_id: string
+          submission_id: string
+          updated_at: string
+        }
+        Insert: {
+          annotation?: string | null
+          color?: string
+          created_at?: string
+          end_offset: number
+          highlighted_text: string
+          id?: string
+          start_offset: number
+          student_id: string
+          submission_id: string
+          updated_at?: string
+        }
+        Update: {
+          annotation?: string | null
+          color?: string
+          created_at?: string
+          end_offset?: number
+          highlighted_text?: string
+          id?: string
+          start_offset?: number
+          student_id?: string
+          submission_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "text_highlights_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "text_highlights_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_submissions"
             referencedColumns: ["id"]
           },
         ]
