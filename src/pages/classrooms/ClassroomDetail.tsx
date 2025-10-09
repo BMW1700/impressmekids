@@ -7,7 +7,13 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText } from "lucide-react";
+import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { FlashcardSetViewer } from "@/components/flashcards/FlashcardSetViewer";
 import { CreateTournamentModal } from "@/components/tournament/CreateTournamentModal";
@@ -18,6 +24,8 @@ import { AnnouncementCard } from "@/components/AnnouncementCard";
 import { useClassroomPermissions } from "@/hooks/useClassroomPermissions";
 import { useAssignments } from "@/hooks/useAssignments";
 import { useAssignmentSubmissions } from "@/hooks/useAssignmentSubmissions";
+import { useMultiQuestionAssignments } from "@/hooks/useMultiQuestionAssignments";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { SubmissionsList } from "@/components/assignments/SubmissionsList";
 import { AssignmentStatsCard } from "@/components/assignments/AssignmentStatsCard";
 import {
@@ -55,8 +63,10 @@ const ClassroomDetail = () => {
   const [viewingAssignmentId, setViewingAssignmentId] = useState<string | null>(null);
   const [flashcardSets, setFlashcardSets] = useState<any[]>([]);
   const [viewingFlashcardSet, setViewingFlashcardSet] = useState<any>(null);
+  const [deleteAssignmentId, setDeleteAssignmentId] = useState<string | null>(null);
   const { assignments } = useAssignments(id);
   const { submissions: assignmentSubmissions } = useAssignmentSubmissions(viewingAssignmentId || undefined);
+  const { deleteAssignment } = useMultiQuestionAssignments(id);
 
   useEffect(() => {
     // Wait for permissions to be determined before loading data
@@ -382,9 +392,29 @@ const ClassroomDetail = () => {
                       <CardHeader>
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-lg">{assignment.title}</CardTitle>
-                          <Badge variant={assignment.status === 'published' ? 'default' : 'secondary'}>
-                            {assignment.status}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={assignment.status === 'published' ? 'default' : 'secondary'}>
+                              {assignment.status}
+                            </Badge>
+                            {isTeacher && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => setDeleteAssignmentId(assignment.id)}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </div>
                         </div>
                       </CardHeader>
                       <CardContent>
@@ -695,6 +725,22 @@ const ClassroomDetail = () => {
               </DialogContent>
             </Dialog>
           )}
+
+          <ConfirmModal
+            open={!!deleteAssignmentId}
+            onOpenChange={(open) => !open && setDeleteAssignmentId(null)}
+            title="Delete Assignment"
+            description="Are you sure you want to delete this assignment? This action cannot be undone."
+            confirmText="Yes"
+            cancelText="No"
+            onConfirm={() => {
+              if (deleteAssignmentId) {
+                deleteAssignment(deleteAssignmentId);
+                setDeleteAssignmentId(null);
+                loadClassroomData();
+              }
+            }}
+          />
         </>
       )}
     </div>

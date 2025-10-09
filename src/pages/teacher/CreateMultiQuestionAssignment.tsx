@@ -26,7 +26,7 @@ export default function CreateMultiQuestionAssignment() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const editId = searchParams.get('edit');
-  const { createAssignment, assignment } = useMultiQuestionAssignments(classroomId, editId || undefined);
+  const { createAssignment, updateAssignment, assignment } = useMultiQuestionAssignments(classroomId, editId || undefined);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -100,18 +100,36 @@ export default function CreateMultiQuestionAssignment() {
   const handleSaveAndClose = () => {
     if (!classroomId) return;
     
-    createAssignment({
-      title,
-      description,
-      classroom_id: classroomId,
-      due_date: dueDate,
-      timer_minutes: timerMinutes,
-      questions: questions.map(q => ({
-        sequence: q.sequence,
-        question_type: q.question_type!,
-        question_data: q.question_data,
-      })),
-    });
+    const questionData = questions.map(q => ({
+      sequence: q.sequence,
+      question_type: q.question_type!,
+      question_data: q.question_data,
+    }));
+
+    if (editId) {
+      // Update existing assignment
+      updateAssignment({
+        id: editId,
+        updates: {
+          title,
+          description,
+          classroom_id: classroomId,
+          due_date: dueDate,
+          timer_minutes: timerMinutes,
+        },
+        questions: questionData,
+      });
+    } else {
+      // Create new assignment
+      createAssignment({
+        title,
+        description,
+        classroom_id: classroomId,
+        due_date: dueDate,
+        timer_minutes: timerMinutes,
+        questions: questionData,
+      });
+    }
 
     navigate(`/classrooms/${classroomId}`);
   };
@@ -123,20 +141,37 @@ export default function CreateMultiQuestionAssignment() {
   const confirmPublish = () => {
     if (!classroomId) return;
     
-    createAssignment({
-      title,
-      description,
-      classroom_id: classroomId,
-      due_date: dueDate,
-      timer_minutes: timerMinutes,
-      questions: questions.map(q => ({
-        sequence: q.sequence,
-        question_type: q.question_type!,
-        question_data: q.question_data,
-      })),
-    });
+    const questionData = questions.map(q => ({
+      sequence: q.sequence,
+      question_type: q.question_type!,
+      question_data: q.question_data,
+    }));
 
-    // After creation, we'd publish it - for now just navigate back
+    if (editId) {
+      // Update and publish existing assignment
+      updateAssignment({
+        id: editId,
+        updates: {
+          title,
+          description,
+          classroom_id: classroomId,
+          due_date: dueDate,
+          timer_minutes: timerMinutes,
+        },
+        questions: questionData,
+      });
+    } else {
+      // Create new assignment
+      createAssignment({
+        title,
+        description,
+        classroom_id: classroomId,
+        due_date: dueDate,
+        timer_minutes: timerMinutes,
+        questions: questionData,
+      });
+    }
+
     navigate(`/classrooms/${classroomId}`);
   };
 

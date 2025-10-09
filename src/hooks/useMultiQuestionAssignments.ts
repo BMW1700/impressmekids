@@ -219,6 +219,40 @@ export const useMultiQuestionAssignments = (classroomId?: string, assignmentId?:
     },
   });
 
+  // Delete assignment
+  const deleteAssignment = useMutation({
+    mutationFn: async (id: string) => {
+      // Delete questions first (cascade should handle this, but explicit is safer)
+      await supabase
+        .from('assignment_questions')
+        .delete()
+        .eq('assignment_id', id);
+
+      // Delete assignment
+      const { error } = await supabase
+        .from('assignments')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['multi-question-assignments'] });
+      toast({
+        title: 'Success',
+        description: 'Assignment deleted successfully',
+      });
+    },
+    onError: (error) => {
+      console.error('Delete assignment error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete assignment',
+        variant: 'destructive',
+      });
+    },
+  });
+
   return {
     assignments: assignments || [],
     assignment,
@@ -226,5 +260,6 @@ export const useMultiQuestionAssignments = (classroomId?: string, assignmentId?:
     createAssignment: createAssignment.mutate,
     updateAssignment: updateAssignment.mutate,
     publishAssignment: publishAssignment.mutate,
+    deleteAssignment: deleteAssignment.mutate,
   };
 };
