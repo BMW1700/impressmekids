@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -24,7 +24,9 @@ interface Question {
 export default function CreateMultiQuestionAssignment() {
   const { classroomId } = useParams();
   const navigate = useNavigate();
-  const { createAssignment } = useMultiQuestionAssignments(classroomId);
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('edit');
+  const { createAssignment, assignment } = useMultiQuestionAssignments(classroomId, editId || undefined);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -34,6 +36,26 @@ export default function CreateMultiQuestionAssignment() {
     { id: uuidv4(), sequence: 1, question_type: null, question_data: {} }
   ]);
   const [showPublishConfirm, setShowPublishConfirm] = useState(false);
+
+  // Load assignment data when editing
+  useEffect(() => {
+    if (assignment) {
+      setTitle(assignment.title || '');
+      setDescription(assignment.description || '');
+      setTimerMinutes(assignment.timer_minutes);
+      setDueDate(assignment.due_date ? new Date(assignment.due_date).toISOString().slice(0, 16) : '');
+      
+      if (assignment.assignment_questions && assignment.assignment_questions.length > 0) {
+        const loadedQuestions = assignment.assignment_questions.map((q: any) => ({
+          id: q.id || uuidv4(),
+          sequence: q.sequence,
+          question_type: q.question_type,
+          question_data: q.question_data,
+        }));
+        setQuestions(loadedQuestions);
+      }
+    }
+  }, [assignment]);
 
   const addQuestion = () => {
     const newQuestion: Question = {
@@ -91,7 +113,7 @@ export default function CreateMultiQuestionAssignment() {
       })),
     });
 
-    navigate(`/classroom/${classroomId}`);
+    navigate(`/classrooms/${classroomId}`);
   };
 
   const handlePublish = () => {
@@ -115,7 +137,7 @@ export default function CreateMultiQuestionAssignment() {
     });
 
     // After creation, we'd publish it - for now just navigate back
-    navigate(`/classroom/${classroomId}`);
+    navigate(`/classrooms/${classroomId}`);
   };
 
   const isValid = title && questions.every(q => q.question_type && Object.keys(q.question_data).length > 0);

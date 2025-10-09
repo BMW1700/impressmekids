@@ -425,20 +425,22 @@ const ClassroomDetail = () => {
                             </Button>
                           )}
                           
-                          <Button
-                            variant="outline"
-                            className="w-full mt-4"
-                            onClick={() => {
-                              if (isTeacher) {
-                                setViewingAssignmentId(assignment.id);
-                              } else {
-                                navigate(`/student/assignment/${assignment.id}?classroom=${id}`);
-                              }
-                            }}
-                          >
-                            <FileText className="mr-2 h-4 w-4" />
-                            {isTeacher ? 'View Submissions' : 'Start Assignment'}
-                          </Button>
+                          {assignment.status === 'published' && (
+                            <Button
+                              variant="outline"
+                              className="w-full mt-4"
+                              onClick={() => {
+                                if (isTeacher) {
+                                  setViewingAssignmentId(assignment.id);
+                                } else {
+                                  navigate(`/student/assignment/${assignment.id}?classroom=${id}`);
+                                }
+                              }}
+                            >
+                              <FileText className="mr-2 h-4 w-4" />
+                              {isTeacher ? 'View Submissions' : 'Start Assignment'}
+                            </Button>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
