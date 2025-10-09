@@ -124,10 +124,10 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY not configured");
     }
 
-    // Fetch student's mastered phonemes from skill vectors
+    // Fetch student's skill vector with difficulty level
     const { data: skillVector } = await supabase
       .from('student_skill_vectors')
-      .select('phoneme_scores')
+      .select('phoneme_scores, current_difficulty_level, performance_trend')
       .eq('student_id', studentId)
       .single();
 
@@ -140,32 +140,76 @@ serve(async (req) => {
       }
     }
 
+    // Fetch recent performance for difficulty calculation
+    const { data: recentRecords } = await supabase
+      .from('aura_records')
+      .select('grade')
+      .eq('profile_id', studentId)
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    const recentGrades = recentRecords?.map(r => r.grade).filter(g => g !== null) || [];
+    const avgGrade = recentGrades.length > 0 
+      ? recentGrades.reduce((a: number, b: number) => a + b, 0) / recentGrades.length
+      : 70;
+
+    // Calculate adaptive difficulty level
+    const currentDifficultyLevel = skillVector?.current_difficulty_level || 1;
+    let targetDifficultyLevel = currentDifficultyLevel;
+
+    // Difficulty scaling logic
+    if (avgGrade >= 85 && recentGrades.length >= 3) {
+      targetDifficultyLevel = Math.min(5, currentDifficultyLevel + 1);
+    } else if (avgGrade < 60 && recentGrades.length >= 3) {
+      targetDifficultyLevel = Math.max(1, currentDifficultyLevel - 1);
+    }
+
+    // Get difficulty parameters
+    const difficultyParams: { [key: number]: any } = {
+      1: { complexity: 'very simple, single-syllable words', vocabulary: 'basic common words', length: 'short (3-5 words)', pacing: 'slow' },
+      2: { complexity: 'simple phrases', vocabulary: 'everyday vocabulary', length: 'medium (5-8 words)', pacing: 'moderate' },
+      3: { complexity: 'multi-syllable words', vocabulary: 'grade-level appropriate', length: 'medium-long (8-12 words)', pacing: 'natural' },
+      4: { complexity: 'complex sentences', vocabulary: 'academic vocabulary', length: 'long (12-15 words)', pacing: 'faster' },
+      5: { complexity: 'intricate tongue twisters', vocabulary: 'advanced and idiomatic', length: 'very long (15+ words)', pacing: 'rapid' },
+    };
+
+    const diffParams = difficultyParams[targetDifficultyLevel] || difficultyParams[3];
+
     // Run transfer learning prediction
     const transferPredictions = predictPhonemeGains(masteredPhonemes, phonemeGaps, grade);
 
     console.log(`Transfer predictions for student ${studentId}:`, transferPredictions.slice(0, 3));
 
-    // Generate exercises using Lovable AI with transfer learning insights
-    const prompt = `Generate 3 fun, age-appropriate practice exercises for a grade ${grade || 5} student.
+    // Generate exercises using Lovable AI with transfer learning + difficulty scaling
+    const prompt = `Generate 3 practice exercises for a grade ${grade || 5} student at DIFFICULTY LEVEL ${targetDifficultyLevel}/5.
 
 PROBLEMATIC PHONEMES: ${phonemeGaps.join(", ")}
 
+🎯 DIFFICULTY LEVEL ${targetDifficultyLevel} REQUIREMENTS:
+- Complexity: ${diffParams.complexity}
+- Vocabulary: ${diffParams.vocabulary}
+- Length: ${diffParams.length}
+- Pacing: ${diffParams.pacing}
+
 🚀 TRANSFER LEARNING INSIGHTS:
-Based on articulatory similarity analysis, this student is predicted to gain mastery of:
 ${transferPredictions.slice(0, 3).map(p => `- /${p.phoneme}/ (${p.transferProbability}% confidence): ${p.reasoning}`).join('\n')}
 
+📊 STUDENT PERFORMANCE CONTEXT:
+- Recent average: ${Math.round(avgGrade)}/100
+- Difficulty trend: ${skillVector?.performance_trend || 0 > 0 ? 'improving' : 'stable'}
+
 INSTRUCTIONS:
-- Focus exercises on problematic phonemes: ${phonemeGaps.join(", ")}
-- Include transfer-ready phonemes (${transferPredictions.slice(0, 2).map(p => p.phoneme).join(', ')}) to accelerate learning
-- Design exercises that leverage known articulatory patterns
-- Make them engaging and educational
+- Focus on problematic phonemes: ${phonemeGaps.join(", ")}
+- Include transfer-ready phonemes (${transferPredictions.slice(0, 2).map(p => p.phoneme).join(', ')})
+- Match the difficulty level EXACTLY - don't make it too easy or too hard
+- Make exercises engaging and age-appropriate
 
 Include:
-1. One tongue twister focusing on these sounds
-2. One short read-aloud passage (3-4 sentences) that naturally includes these phonemes
-3. One creative speaking prompt that encourages use of these sounds
+1. One tongue twister matching the difficulty level
+2. One read-aloud passage (3-4 sentences) with appropriate vocabulary
+3. One creative speaking prompt that encourages use of target sounds
 
-Return ONLY a JSON object with this structure:
+Return ONLY a JSON object:
 {
   "exercises": [
     {
@@ -222,14 +266,21 @@ Return ONLY a JSON object with this structure:
     const generatedContent = aiData.choices[0].message.content;
     const parsed = JSON.parse(generatedContent);
 
-    // Insert exercises into database with transfer predictions
+    // Insert exercises into database with difficulty tracking
     const exercisesToInsert = parsed.exercises.map((ex: any) => ({
       student_id: studentId,
       phoneme_targets: phonemeGaps,
       exercise_type: ex.type,
       content: ex.content,
       completed: false,
-      transfer_predictions: transferPredictions, // NEW: Store predictions for tracking
+      transfer_predictions: transferPredictions,
+      difficulty_level: targetDifficultyLevel, // NEW: Track difficulty
+      adaptive_metadata: {
+        generated_at: new Date().toISOString(),
+        avg_grade: avgGrade,
+        current_level: currentDifficultyLevel,
+        target_level: targetDifficultyLevel,
+      },
     }));
 
     const { data: insertedExercises, error: insertError } = await supabase

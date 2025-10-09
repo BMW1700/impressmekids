@@ -219,6 +219,7 @@ export type Database = {
           confidence: number
           context_text: string | null
           created_at: string
+          difficulty_score: number | null
           duration_s: number
           evidence: Json | null
           feedback: Json
@@ -228,6 +229,7 @@ export type Database = {
           language: string
           pace: number
           pause_count: number
+          performance_metrics: Json | null
           profile_id: string
           pronunciation_flags: Json | null
           prosody_comprehension_correlation: Json | null
@@ -250,6 +252,7 @@ export type Database = {
           confidence: number
           context_text?: string | null
           created_at?: string
+          difficulty_score?: number | null
           duration_s: number
           evidence?: Json | null
           feedback?: Json
@@ -259,6 +262,7 @@ export type Database = {
           language: string
           pace: number
           pause_count: number
+          performance_metrics?: Json | null
           profile_id: string
           pronunciation_flags?: Json | null
           prosody_comprehension_correlation?: Json | null
@@ -281,6 +285,7 @@ export type Database = {
           confidence?: number
           context_text?: string | null
           created_at?: string
+          difficulty_score?: number | null
           duration_s?: number
           evidence?: Json | null
           feedback?: Json
@@ -290,6 +295,7 @@ export type Database = {
           language?: string
           pace?: number
           pause_count?: number
+          performance_metrics?: Json | null
           profile_id?: string
           pronunciation_flags?: Json | null
           prosody_comprehension_correlation?: Json | null
@@ -869,39 +875,48 @@ export type Database = {
       }
       practice_exercises: {
         Row: {
+          adaptive_metadata: Json | null
           completed: boolean | null
           completed_at: string | null
           content: string
           created_at: string | null
+          difficulty_level: number | null
           effectiveness_score: number | null
           exercise_type: string
           id: string
           phoneme_targets: string[]
           student_id: string
+          success_rate: number | null
           transfer_predictions: Json | null
         }
         Insert: {
+          adaptive_metadata?: Json | null
           completed?: boolean | null
           completed_at?: string | null
           content: string
           created_at?: string | null
+          difficulty_level?: number | null
           effectiveness_score?: number | null
           exercise_type: string
           id?: string
           phoneme_targets: string[]
           student_id: string
+          success_rate?: number | null
           transfer_predictions?: Json | null
         }
         Update: {
+          adaptive_metadata?: Json | null
           completed?: boolean | null
           completed_at?: string | null
           content?: string
           created_at?: string | null
+          difficulty_level?: number | null
           effectiveness_score?: number | null
           exercise_type?: string
           id?: string
           phoneme_targets?: string[]
           student_id?: string
+          success_rate?: number | null
           transfer_predictions?: Json | null
         }
         Relationships: [
@@ -1101,8 +1116,12 @@ export type Database = {
       student_skill_vectors: {
         Row: {
           cross_modal_risk_score: number | null
+          current_difficulty_level: number | null
+          difficulty_history: Json | null
           fluency_metrics: Json | null
+          last_difficulty_update: string | null
           last_updated: string
+          performance_trend: number | null
           phoneme_scores: Json | null
           predicted_comprehension_score: number | null
           prosody_metrics: Json | null
@@ -1114,8 +1133,12 @@ export type Database = {
         }
         Insert: {
           cross_modal_risk_score?: number | null
+          current_difficulty_level?: number | null
+          difficulty_history?: Json | null
           fluency_metrics?: Json | null
+          last_difficulty_update?: string | null
           last_updated?: string
+          performance_trend?: number | null
           phoneme_scores?: Json | null
           predicted_comprehension_score?: number | null
           prosody_metrics?: Json | null
@@ -1127,8 +1150,12 @@ export type Database = {
         }
         Update: {
           cross_modal_risk_score?: number | null
+          current_difficulty_level?: number | null
+          difficulty_history?: Json | null
           fluency_metrics?: Json | null
+          last_difficulty_update?: string | null
           last_updated?: string
+          performance_trend?: number | null
           phoneme_scores?: Json | null
           predicted_comprehension_score?: number | null
           prosody_metrics?: Json | null

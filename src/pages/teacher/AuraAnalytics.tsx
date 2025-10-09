@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, ArrowLeft, Sparkles } from "lucide-react";
+import { BarChart3, ArrowLeft, Sparkles, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const AuraAnalytics = () => {
@@ -281,40 +281,88 @@ const AuraAnalytics = () => {
                   </Card>
                 </TabsContent>
 
-                <TabsContent value="transfer" className="mt-6">
+                <TabsContent value="transfer" className="mt-6 space-y-6">
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Sparkles className="h-5 w-5" />
-                        Transfer Learning Insights
+                        Transfer Learning & Difficulty Insights
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       {skillVectors && skillVectors.length > 0 ? (
-                        <div className="space-y-4">
+                        <div className="space-y-6">
+                          {/* Class Difficulty Overview */}
+                          <div className="grid grid-cols-5 gap-3">
+                            {[1, 2, 3, 4, 5].map((level) => {
+                              const studentsAtLevel = skillVectors.filter(sv => sv.current_difficulty_level === level).length;
+                              const percentage = Math.round((studentsAtLevel / skillVectors.length) * 100);
+                              
+                              return (
+                                <Card key={level} className="text-center">
+                                  <CardContent className="pt-4">
+                                    <div className="text-2xl font-bold">{studentsAtLevel}</div>
+                                    <div className="text-xs text-muted-foreground">Level {level}</div>
+                                    <div className="text-xs font-medium">{percentage}%</div>
+                                  </CardContent>
+                                </Card>
+                              );
+                            })}
+                          </div>
+
                           <div className="grid gap-4">
                             {students?.map((studentData: any) => {
                               const student = studentData.profiles;
                               const skillVector = skillVectors.find(sv => sv.student_id === student.id);
                               
-                              if (!skillVector?.transfer_learning_insights) return null;
+                              if (!skillVector) return null;
 
                               const insights = skillVector.transfer_learning_insights as any;
-                              const predictions = insights.predictions || [];
+                              const predictions = insights?.predictions || [];
+                              const difficultyLevel = skillVector.current_difficulty_level || 1;
+                              const performanceTrend = skillVector.performance_trend || 0;
+
+                              const getDifficultyColor = (level: number) => {
+                                const colors = ['green', 'blue', 'purple', 'orange', 'red'];
+                                return colors[level - 1] || 'gray';
+                              };
 
                               return (
                                 <Card key={student.id} className="border-primary/20">
                                   <CardContent className="pt-6">
                                     <div className="space-y-4">
-                                      <div>
-                                        <h4 className="font-semibold">{student.full_name}</h4>
-                                        <p className="text-sm text-muted-foreground">{student.email}</p>
+                                      <div className="flex items-start justify-between">
+                                        <div>
+                                          <h4 className="font-semibold flex items-center gap-2">
+                                            {student.full_name}
+                                            <Badge variant="default" className={`bg-${getDifficultyColor(difficultyLevel)}-500 text-white`}>
+                                              Level {difficultyLevel}
+                                            </Badge>
+                                          </h4>
+                                          <p className="text-sm text-muted-foreground">{student.email}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-sm">
+                                          {performanceTrend > 5 ? (
+                                            <>
+                                              <TrendingUp className="w-4 h-4 text-green-600" />
+                                              <span className="text-green-600 font-medium">+{Math.round(performanceTrend)}%</span>
+                                            </>
+                                          ) : performanceTrend < -5 ? (
+                                            <>
+                                              <Badge variant="outline" className="border-amber-600 text-amber-600">
+                                                Needs Support
+                                              </Badge>
+                                            </>
+                                          ) : (
+                                            <span className="text-muted-foreground">Stable</span>
+                                          )}
+                                        </div>
                                       </div>
 
-                                      {predictions.length > 0 ? (
+                                      {predictions.length > 0 && (
                                         <>
                                           <div>
-                                            <p className="text-sm font-medium mb-2">🚀 Top Predicted Gains:</p>
+                                            <p className="text-sm font-medium mb-2">🚀 Predicted Gains:</p>
                                             <div className="flex flex-wrap gap-2">
                                               {predictions.slice(0, 5).map((pred: any) => (
                                                 <Badge key={pred.phoneme} variant={
@@ -329,29 +377,25 @@ const AuraAnalytics = () => {
 
                                           {predictions[0] && (
                                             <div className="p-3 rounded-lg bg-primary/5 text-sm">
-                                              <p className="font-medium mb-1">Next Phoneme: /{predictions[0].phoneme}/</p>
+                                              <p className="font-medium mb-1">Next Target: /{predictions[0].phoneme}/</p>
                                               <p className="text-muted-foreground">{predictions[0].reasoning}</p>
                                             </div>
                                           )}
+                                        </>
+                                      )}
 
-                                          {insights.accuracy && (
-                                            <div className="flex items-center gap-4 text-sm">
-                                              <div>
-                                                <span className="text-muted-foreground">Prediction Accuracy: </span>
-                                                <span className="font-semibold">{insights.accuracy}%</span>
-                                              </div>
-                                              {insights.totalPredictions && (
-                                                <div className="text-muted-foreground">
-                                                  {insights.correctPredictions || 0} / {insights.totalPredictions} correct
-                                                </div>
-                                              )}
+                                      {insights?.accuracy && (
+                                        <div className="flex items-center gap-4 text-sm border-t pt-3">
+                                          <div>
+                                            <span className="text-muted-foreground">Prediction Accuracy: </span>
+                                            <span className="font-semibold">{insights.accuracy}%</span>
+                                          </div>
+                                          {insights.totalPredictions && (
+                                            <div className="text-muted-foreground">
+                                              {insights.correctPredictions || 0} / {insights.totalPredictions} correct
                                             </div>
                                           )}
-                                        </>
-                                      ) : (
-                                        <p className="text-sm text-muted-foreground">
-                                          No transfer predictions yet. Student needs more practice data.
-                                        </p>
+                                        </div>
                                       )}
                                     </div>
                                   </CardContent>
@@ -363,19 +407,29 @@ const AuraAnalytics = () => {
                           <div className="mt-6 p-4 rounded-lg bg-muted/50">
                             <h4 className="font-semibold mb-2 flex items-center gap-2">
                               <Sparkles className="h-4 w-4" />
-                              About Transfer Learning
+                              About This Feature
                             </h4>
-                            <p className="text-sm text-muted-foreground">
-                              Our AI predicts which phonemes students will master next based on articulatory similarity 
-                              to sounds they've already mastered. This helps personalize practice exercises and accelerate 
-                              learning by targeting phonemes students are ready to learn.
+                            <p className="text-sm text-muted-foreground mb-3">
+                              Our adaptive system combines transfer learning with difficulty scaling to create 
+                              personalized learning pathways. Each student progresses at their own pace, with 
+                              exercises automatically adjusted based on performance.
                             </p>
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div>
+                                <p className="font-medium mb-1">📈 Difficulty Scaling</p>
+                                <p className="text-muted-foreground">Exercises adapt from Level 1 (Beginner) to Level 5 (Expert) based on mastery</p>
+                              </div>
+                              <div>
+                                <p className="font-medium mb-1">🎯 Transfer Learning</p>
+                                <p className="text-muted-foreground">AI predicts next phonemes to master using articulatory similarity</p>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       ) : (
                         <div className="text-center py-8 text-muted-foreground">
                           <Sparkles className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                          <p>No transfer learning data yet. Students need to complete AURA practice sessions.</p>
+                          <p>No data yet. Students need to complete AURA practice sessions.</p>
                         </div>
                       )}
                     </CardContent>

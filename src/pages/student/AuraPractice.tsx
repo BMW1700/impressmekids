@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mic, TrendingUp, BookOpen } from "lucide-react";
 import GeneratedExercises from "@/components/aura/GeneratedExercises";
 import PhonemeMasteryPathway from "@/components/aura/PhonemeMasteryPathway";
+import DifficultyProgressCard from "@/components/aura/DifficultyProgressCard";
 
 const AuraPractice = () => {
   const { toast } = useToast();
@@ -35,6 +36,21 @@ const AuraPractice = () => {
         .eq('profile_id', user!.id)
         .order('created_at', { ascending: false })
         .limit(10);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const { data: skillVector } = useQuery({
+    queryKey: ['skill-vector', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('student_skill_vectors')
+        .select('*')
+        .eq('student_id', user!.id)
+        .maybeSingle();
       
       if (error) throw error;
       return data;
@@ -144,6 +160,15 @@ const AuraPractice = () => {
             </TabsContent>
 
             <TabsContent value="exercises" className="mt-6 space-y-6">
+              {skillVector && (
+                <DifficultyProgressCard
+                  currentLevel={skillVector.current_difficulty_level || 1}
+                  performanceTrend={skillVector.performance_trend || 0}
+                  recentGrades={(records || []).slice(0, 5).map(r => r.grade).filter(g => g !== null)}
+                  difficultyHistory={(skillVector.difficulty_history as any) || []}
+                />
+              )}
+              
               <PhonemeMasteryPathway
                 masteredPhonemes={latestAnalysis?.masteredPhonemes || []}
                 strugglingPhonemes={latestAnalysis?.problematicPhonemes || []}

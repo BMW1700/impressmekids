@@ -174,6 +174,11 @@ const GeneratedExercises = ({ problematicPhonemes, studentGrade = 5 }: Generated
                     <CardTitle className="text-base">
                       {getExerciseLabel(exercise.exercise_type)}
                     </CardTitle>
+                    {exercise.difficulty_level && (
+                      <Badge variant="outline" className="text-xs">
+                        Level {exercise.difficulty_level}
+                      </Badge>
+                    )}
                   </div>
                   {exercise.completed ? (
                     <Badge variant="outline" className="gap-1">
