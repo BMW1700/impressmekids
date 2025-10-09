@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Upload, FileText, Eye, Calendar } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { useAssignments } from "@/hooks/useAssignments";
 
 interface CreateAssignmentModalProps {
@@ -33,6 +34,7 @@ export const CreateAssignmentModal = ({
   const [ocrConfidence, setOcrConfidence] = useState<number | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewMode, setPreviewMode] = useState(false);
+  const [enableRealtimeCoaching, setEnableRealtimeCoaching] = useState(false);
   const { toast } = useToast();
   const { createAssignment } = useAssignments(classroomId);
 
@@ -142,6 +144,7 @@ export const CreateAssignmentModal = ({
         passageMetadata,
         dueDate: dueDate ? new Date(dueDate) : undefined,
         status: 'published',
+        enableRealtimeCoaching, // NEW: Include coaching toggle
       });
 
       // Reset form
@@ -152,6 +155,7 @@ export const CreateAssignmentModal = ({
       setSelectedFile(null);
       setOcrConfidence(null);
       setPreviewMode(false);
+      setEnableRealtimeCoaching(false);
       onOpenChange(false);
       onSuccess?.();
     } catch (error: any) {
@@ -215,6 +219,26 @@ export const CreateAssignmentModal = ({
                 disabled={isLoading}
               />
             </div>
+
+            {/* Real-time Coaching Toggle */}
+            <Card className="p-4 bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label htmlFor="coaching-toggle" className="text-base font-medium">
+                    Enable AI Reading Coach (AURA AI)
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Students receive real-time AI feedback as they highlight and annotate the passage
+                  </p>
+                </div>
+                <Switch
+                  id="coaching-toggle"
+                  checked={enableRealtimeCoaching}
+                  onCheckedChange={setEnableRealtimeCoaching}
+                  disabled={isLoading}
+                />
+              </div>
+            </Card>
 
             <div className="grid gap-2">
               <Label>Reading Passage</Label>

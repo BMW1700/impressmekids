@@ -33,6 +33,7 @@ export const useAssignments = (classroomId?: string) => {
       passageMetadata,
       dueDate,
       status,
+      enableRealtimeCoaching,
     }: {
       classroomId: string;
       teacherId: string;
@@ -42,6 +43,7 @@ export const useAssignments = (classroomId?: string) => {
       passageMetadata?: any;
       dueDate?: Date;
       status: string;
+      enableRealtimeCoaching?: boolean;
     }) => {
       const { data, error } = await supabase
         .from('assignments')
@@ -54,6 +56,7 @@ export const useAssignments = (classroomId?: string) => {
           passage_metadata: passageMetadata || {},
           due_date: dueDate?.toISOString(),
           status,
+          enable_realtime_coaching: enableRealtimeCoaching || false,
         })
         .select()
         .single();

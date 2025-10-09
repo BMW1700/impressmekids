@@ -123,6 +123,7 @@ export type Database = {
           created_at: string
           description: string | null
           due_date: string | null
+          enable_realtime_coaching: boolean | null
           id: string
           passage_metadata: Json | null
           passage_text: string
@@ -137,6 +138,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           due_date?: string | null
+          enable_realtime_coaching?: boolean | null
           id?: string
           passage_metadata?: Json | null
           passage_text: string
@@ -151,6 +153,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           due_date?: string | null
+          enable_realtime_coaching?: boolean | null
           id?: string
           passage_metadata?: Json | null
           passage_text?: string
@@ -214,7 +217,9 @@ export type Database = {
           asr_confidence: number
           audio_url: string
           avg_silence_ms: number
+          bloom_taxonomy_distribution: Json | null
           clarity: number
+          coaching_effectiveness: number | null
           comprehension_score: number | null
           confidence: number
           context_text: string | null
@@ -226,8 +231,10 @@ export type Database = {
           feedback: Json
           grade: number | null
           highlight_count: number | null
+          highlight_patterns: Json | null
           id: string
           language: string
+          literacy_transfer_matrix: Json | null
           pace: number
           pause_count: number
           performance_metrics: Json | null
@@ -239,6 +246,7 @@ export type Database = {
           reading_type: string | null
           realtime_feedback: Json | null
           request_id: string
+          semantic_clusters: Json | null
           speaker_segments: Json | null
           suggested_exercises: Json | null
           transcript: string
@@ -250,7 +258,9 @@ export type Database = {
           asr_confidence: number
           audio_url: string
           avg_silence_ms: number
+          bloom_taxonomy_distribution?: Json | null
           clarity: number
+          coaching_effectiveness?: number | null
           comprehension_score?: number | null
           confidence: number
           context_text?: string | null
@@ -262,8 +272,10 @@ export type Database = {
           feedback?: Json
           grade?: number | null
           highlight_count?: number | null
+          highlight_patterns?: Json | null
           id?: string
           language: string
+          literacy_transfer_matrix?: Json | null
           pace: number
           pause_count: number
           performance_metrics?: Json | null
@@ -275,6 +287,7 @@ export type Database = {
           reading_type?: string | null
           realtime_feedback?: Json | null
           request_id: string
+          semantic_clusters?: Json | null
           speaker_segments?: Json | null
           suggested_exercises?: Json | null
           transcript: string
@@ -286,7 +299,9 @@ export type Database = {
           asr_confidence?: number
           audio_url?: string
           avg_silence_ms?: number
+          bloom_taxonomy_distribution?: Json | null
           clarity?: number
+          coaching_effectiveness?: number | null
           comprehension_score?: number | null
           confidence?: number
           context_text?: string | null
@@ -298,8 +313,10 @@ export type Database = {
           feedback?: Json
           grade?: number | null
           highlight_count?: number | null
+          highlight_patterns?: Json | null
           id?: string
           language?: string
+          literacy_transfer_matrix?: Json | null
           pace?: number
           pause_count?: number
           performance_metrics?: Json | null
@@ -311,6 +328,7 @@ export type Database = {
           reading_type?: string | null
           realtime_feedback?: Json | null
           request_id?: string
+          semantic_clusters?: Json | null
           speaker_segments?: Json | null
           suggested_exercises?: Json | null
           transcript?: string
@@ -1178,10 +1196,12 @@ export type Database = {
       }
       student_skill_vectors: {
         Row: {
+          annotation_sophistication_trend: number | null
           cross_modal_risk_score: number | null
           current_difficulty_level: number | null
           difficulty_history: Json | null
           fluency_metrics: Json | null
+          highlight_strategy_profile: Json | null
           last_difficulty_update: string | null
           last_updated: string
           performance_trend: number | null
@@ -1195,10 +1215,12 @@ export type Database = {
           weekly_improvement: number | null
         }
         Insert: {
+          annotation_sophistication_trend?: number | null
           cross_modal_risk_score?: number | null
           current_difficulty_level?: number | null
           difficulty_history?: Json | null
           fluency_metrics?: Json | null
+          highlight_strategy_profile?: Json | null
           last_difficulty_update?: string | null
           last_updated?: string
           performance_trend?: number | null
@@ -1212,10 +1234,12 @@ export type Database = {
           weekly_improvement?: number | null
         }
         Update: {
+          annotation_sophistication_trend?: number | null
           cross_modal_risk_score?: number | null
           current_difficulty_level?: number | null
           difficulty_history?: Json | null
           fluency_metrics?: Json | null
+          highlight_strategy_profile?: Json | null
           last_difficulty_update?: string | null
           last_updated?: string
           performance_trend?: number | null
