@@ -26,7 +26,8 @@ export interface LiveMetrics {
 export class RealtimeAudioAnalyzer {
   private audioContext: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
-  private dataArray: Uint8Array<ArrayBuffer> = new Uint8Array(new ArrayBuffer(0));
+  private timeDomainData: Uint8Array<ArrayBuffer> = new Uint8Array(new ArrayBuffer(0));
+  private frequencyData: Uint8Array<ArrayBuffer> = new Uint8Array(new ArrayBuffer(0));
   private animationFrame: number | null = null;
   private startTime: number = 0;
   private silenceThreshold = 30; // Amplitude threshold for speech detection
@@ -59,24 +60,29 @@ export class RealtimeAudioAnalyzer {
     source.connect(this.analyser);
     
     const bufferLength = this.analyser.frequencyBinCount;
-    this.dataArray = new Uint8Array(new ArrayBuffer(bufferLength));
+    this.timeDomainData = new Uint8Array(new ArrayBuffer(bufferLength));
+    this.frequencyData = new Uint8Array(new ArrayBuffer(bufferLength));
     
     this.startTime = Date.now();
     this.analyze();
   }
 
   private analyze = () => {
-    if (!this.analyser || this.dataArray.length === 0) return;
+    if (!this.analyser || this.timeDomainData.length === 0) return;
 
-    this.analyser.getByteFrequencyData(this.dataArray);
+    // Get time domain data for volume (amplitude)
+    this.analyser.getByteTimeDomainData(this.timeDomainData);
     
-    // Calculate volume (RMS)
-    const volume = this.calculateVolume(this.dataArray);
+    // Get frequency data for pitch
+    this.analyser.getByteFrequencyData(this.frequencyData);
+    
+    // Calculate volume using time domain data
+    const volume = this.calculateVolume(this.timeDomainData);
     this.volumeHistory.push(volume);
     if (this.volumeHistory.length > 50) this.volumeHistory.shift();
 
-    // Calculate pitch
-    const pitch = this.estimatePitch(this.dataArray);
+    // Calculate pitch using frequency data
+    const pitch = this.estimatePitch(this.frequencyData);
     this.pitchHistory.push(pitch);
     if (this.pitchHistory.length > 50) this.pitchHistory.shift();
 
@@ -118,12 +124,14 @@ export class RealtimeAudioAnalyzer {
   };
 
   private calculateVolume(data: Uint8Array): number {
+    // Time domain data centers around 128, measure deviation
     let sum = 0;
     for (let i = 0; i < data.length; i++) {
-      sum += data[i] * data[i];
+      const normalized = data[i] - 128;
+      sum += normalized * normalized;
     }
     const rms = Math.sqrt(sum / data.length);
-    return Math.min(128, rms);
+    return Math.min(100, rms * 2); // Scale to 0-100 range
   }
 
   private estimatePitch(data: Uint8Array): number {
@@ -222,6 +230,7 @@ export class RealtimeAudioAnalyzer {
       this.audioContext.close();
     }
     this.analyser = null;
-    this.dataArray = new Uint8Array(new ArrayBuffer(0));
+    this.timeDomainData = new Uint8Array(new ArrayBuffer(0));
+    this.frequencyData = new Uint8Array(new ArrayBuffer(0));
   }
 }
