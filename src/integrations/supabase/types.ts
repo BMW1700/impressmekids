@@ -728,6 +728,50 @@ export type Database = {
           },
         ]
       }
+      practice_exercises: {
+        Row: {
+          completed: boolean | null
+          completed_at: string | null
+          content: string
+          created_at: string | null
+          effectiveness_score: number | null
+          exercise_type: string
+          id: string
+          phoneme_targets: string[]
+          student_id: string
+        }
+        Insert: {
+          completed?: boolean | null
+          completed_at?: string | null
+          content: string
+          created_at?: string | null
+          effectiveness_score?: number | null
+          exercise_type: string
+          id?: string
+          phoneme_targets: string[]
+          student_id: string
+        }
+        Update: {
+          completed?: boolean | null
+          completed_at?: string | null
+          content?: string
+          created_at?: string | null
+          effectiveness_score?: number | null
+          exercise_type?: string
+          id?: string
+          phoneme_targets?: string[]
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_exercises_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string

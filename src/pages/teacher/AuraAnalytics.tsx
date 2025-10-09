@@ -5,9 +5,13 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import ClassroomAuraOverview from "@/components/aura/ClassroomAuraOverview";
 import StudentAuraMetrics from "@/components/aura/StudentAuraMetrics";
+import PhonemeHeatmap from "@/components/aura/PhonemeHeatmap";
+import AtRiskAlerts from "@/components/aura/AtRiskAlerts";
+import ProsodyInsights from "@/components/aura/ProsodyInsights";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarChart3, ArrowLeft } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BarChart3, ArrowLeft, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const AuraAnalytics = () => {
@@ -69,6 +73,23 @@ const AuraAnalytics = () => {
     enabled: !!students,
   });
 
+  const { data: skillVectors } = useQuery({
+    queryKey: ['classroom-skill-vectors', classroomId],
+    queryFn: async () => {
+      if (!students) return [];
+
+      const studentIds = students.map(s => s.student_id);
+      const { data, error } = await supabase
+        .from('student_skill_vectors')
+        .select('*')
+        .in('student_id', studentIds);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!students,
+  });
+
   const handleClassroomChange = (newClassroomId: string) => {
     navigate(`/teacher/aura-analytics/${newClassroomId}`);
   };
@@ -111,21 +132,57 @@ const AuraAnalytics = () => {
             </Select>
           </div>
 
-          {classroomId && auraRecords && (
+          {classroomId && auraRecords && skillVectors && (
             <>
               <ClassroomAuraOverview records={auraRecords} students={students || []} />
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Student Performance</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <StudentAuraMetrics 
-                    students={students || []} 
-                    records={auraRecords}
+
+              <Tabs defaultValue="overview" className="space-y-6">
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="overview">Overview</TabsTrigger>
+                  <TabsTrigger value="phonemes" className="gap-1">
+                    <Sparkles className="w-4 h-4" />
+                    Phoneme Analysis
+                  </TabsTrigger>
+                  <TabsTrigger value="alerts">At-Risk Alerts</TabsTrigger>
+                  <TabsTrigger value="prosody">Prosody & Fluency</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="overview" className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Student Performance</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <StudentAuraMetrics 
+                        students={students || []} 
+                        records={auraRecords}
+                      />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="phonemes" className="space-y-6">
+                  <PhonemeHeatmap 
+                    students={students || []}
+                    skillVectors={skillVectors}
                   />
-                </CardContent>
-              </Card>
+                </TabsContent>
+
+                <TabsContent value="alerts" className="space-y-6">
+                  <AtRiskAlerts 
+                    students={students || []}
+                    records={auraRecords}
+                    skillVectors={skillVectors}
+                  />
+                </TabsContent>
+
+                <TabsContent value="prosody" className="space-y-6">
+                  <ProsodyInsights 
+                    records={auraRecords}
+                    skillVectors={skillVectors}
+                  />
+                </TabsContent>
+              </Tabs>
             </>
           )}
 
