@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mic, TrendingUp, BookOpen } from "lucide-react";
 import GeneratedExercises from "@/components/aura/GeneratedExercises";
+import PhonemeMasteryPathway from "@/components/aura/PhonemeMasteryPathway";
 
 const AuraPractice = () => {
   const { toast } = useToast();
@@ -142,7 +143,13 @@ const AuraPractice = () => {
               <AuraProgressChart records={records || []} />
             </TabsContent>
 
-            <TabsContent value="exercises" className="mt-6">
+            <TabsContent value="exercises" className="mt-6 space-y-6">
+              <PhonemeMasteryPathway
+                masteredPhonemes={latestAnalysis?.masteredPhonemes || []}
+                strugglingPhonemes={latestAnalysis?.problematicPhonemes || []}
+                studentGrade={5}
+              />
+              
               <GeneratedExercises 
                 problematicPhonemes={latestAnalysis?.problematicPhonemes || []}
                 studentGrade={5}

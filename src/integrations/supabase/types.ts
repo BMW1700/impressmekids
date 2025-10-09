@@ -878,6 +878,7 @@ export type Database = {
           id: string
           phoneme_targets: string[]
           student_id: string
+          transfer_predictions: Json | null
         }
         Insert: {
           completed?: boolean | null
@@ -889,6 +890,7 @@ export type Database = {
           id?: string
           phoneme_targets: string[]
           student_id: string
+          transfer_predictions?: Json | null
         }
         Update: {
           completed?: boolean | null
@@ -900,6 +902,7 @@ export type Database = {
           id?: string
           phoneme_targets?: string[]
           student_id?: string
+          transfer_predictions?: Json | null
         }
         Relationships: [
           {
@@ -1105,6 +1108,7 @@ export type Database = {
           prosody_metrics: Json | null
           reading_metrics: Json | null
           student_id: string
+          transfer_learning_insights: Json | null
           vector: Json
           weekly_improvement: number | null
         }
@@ -1117,6 +1121,7 @@ export type Database = {
           prosody_metrics?: Json | null
           reading_metrics?: Json | null
           student_id: string
+          transfer_learning_insights?: Json | null
           vector?: Json
           weekly_improvement?: number | null
         }
@@ -1129,6 +1134,7 @@ export type Database = {
           prosody_metrics?: Json | null
           reading_metrics?: Json | null
           student_id?: string
+          transfer_learning_insights?: Json | null
           vector?: Json
           weekly_improvement?: number | null
         }

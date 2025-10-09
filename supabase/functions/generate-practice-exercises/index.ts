@@ -6,6 +6,99 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Transfer learning model (replicated from client-side)
+const phonemeFeatures: { [key: string]: { voicing: number; place: number; manner: number } } = {
+  'b': { voicing: 1, place: 1, manner: 1 }, 'p': { voicing: 0, place: 1, manner: 1 },
+  'd': { voicing: 1, place: 2, manner: 1 }, 't': { voicing: 0, place: 2, manner: 1 },
+  'g': { voicing: 1, place: 3, manner: 1 }, 'ɡ': { voicing: 1, place: 3, manner: 1 },
+  'k': { voicing: 0, place: 3, manner: 1 },
+  'f': { voicing: 0, place: 4, manner: 2 }, 'v': { voicing: 1, place: 4, manner: 2 },
+  'θ': { voicing: 0, place: 5, manner: 2 }, 'ð': { voicing: 1, place: 5, manner: 2 },
+  's': { voicing: 0, place: 2, manner: 2 }, 'z': { voicing: 1, place: 2, manner: 2 },
+  'ʃ': { voicing: 0, place: 6, manner: 2 }, 'ʒ': { voicing: 1, place: 6, manner: 2 },
+  'h': { voicing: 0, place: 7, manner: 2 },
+  'tʃ': { voicing: 0, place: 6, manner: 3 }, 'dʒ': { voicing: 1, place: 6, manner: 3 },
+  'm': { voicing: 1, place: 1, manner: 4 }, 'n': { voicing: 1, place: 2, manner: 4 },
+  'ŋ': { voicing: 1, place: 3, manner: 4 },
+  'l': { voicing: 1, place: 2, manner: 5 }, 'ɹ': { voicing: 1, place: 2, manner: 6 },
+  'w': { voicing: 1, place: 8, manner: 6 }, 'j': { voicing: 1, place: 9, manner: 6 },
+};
+
+const phonemeDistance = (p1: string, p2: string): number => {
+  if (p1 === p2) return 0.0;
+  const f1 = phonemeFeatures[p1];
+  const f2 = phonemeFeatures[p2];
+  if (!f1 || !f2) return 0.9;
+  const voicingDiff = Math.abs(f1.voicing - f2.voicing) * 0.3;
+  const placeDiff = Math.abs(f1.place - f2.place) / 12 * 0.4;
+  const mannerDiff = Math.abs(f1.manner - f2.manner) / 10 * 0.3;
+  return Math.min(1.0, voicingDiff + placeDiff + mannerDiff);
+};
+
+const predictPhonemeGains = (masteredPhonemes: string[], strugglingPhonemes: string[], grade?: number) => {
+  const allPhonemes = Object.keys(phonemeFeatures);
+  const targetPhonemes = allPhonemes.filter(
+    p => !masteredPhonemes.includes(p) && !strugglingPhonemes.includes(p)
+  );
+
+  const predictions: any[] = [];
+
+  for (const targetPhoneme of targetPhonemes) {
+    const distancesToMastered = masteredPhonemes
+      .map(m => phonemeDistance(targetPhoneme, m))
+      .filter(d => d < 0.9);
+    
+    if (distancesToMastered.length === 0) continue;
+
+    const avgDistanceToMastered = distancesToMastered.reduce((a, b) => a + b, 0) / distancesToMastered.length;
+
+    const distancesToStruggling = strugglingPhonemes
+      .map(s => phonemeDistance(targetPhoneme, s))
+      .filter(d => d < 0.9);
+    
+    const minDistanceToStruggling = distancesToStruggling.length > 0 
+      ? Math.min(...distancesToStruggling)
+      : 1.0;
+
+    const similarMastered = masteredPhonemes
+      .map(m => ({ phoneme: m, distance: phonemeDistance(targetPhoneme, m) }))
+      .filter(({ distance }) => distance < 0.4)
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, 3)
+      .map(({ phoneme }) => phoneme);
+
+    let transferProbability = 0;
+    let readinessLevel = 'low';
+    let reasoning = '';
+
+    if (avgDistanceToMastered < 0.25 && minDistanceToStruggling > 0.5) {
+      transferProbability = Math.round((1 - avgDistanceToMastered) * 100);
+      readinessLevel = 'high';
+      reasoning = `Very similar to mastered ${similarMastered.map(p => `/${p}/`).join(', ')}`;
+    } else if (avgDistanceToMastered < 0.4) {
+      transferProbability = Math.round((1 - avgDistanceToMastered) * 80);
+      readinessLevel = 'medium';
+      reasoning = `Shares features with ${similarMastered.map(p => `/${p}/`).join(', ')}`;
+    } else {
+      transferProbability = Math.round((1 - avgDistanceToMastered) * 60);
+      readinessLevel = 'low';
+      reasoning = 'Different from familiar sounds';
+    }
+
+    predictions.push({
+      phoneme: targetPhoneme,
+      transferProbability: Math.min(95, Math.max(5, transferProbability)),
+      reasoning,
+      similarToMastered: similarMastered,
+      readinessLevel,
+    });
+  }
+
+  return predictions
+    .sort((a, b) => b.transferProbability - a.transferProbability)
+    .slice(0, 5);
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -31,15 +124,48 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY not configured");
     }
 
-    // Generate exercises using Lovable AI
-    const prompt = `Generate 3 fun, age-appropriate practice exercises for a grade ${grade || 5} student struggling with these phonemes: ${phonemeGaps.join(", ")}.
+    // Fetch student's mastered phonemes from skill vectors
+    const { data: skillVector } = await supabase
+      .from('student_skill_vectors')
+      .select('phoneme_scores')
+      .eq('student_id', studentId)
+      .single();
+
+    const masteredPhonemes: string[] = [];
+    if (skillVector?.phoneme_scores) {
+      for (const [phoneme, score] of Object.entries(skillVector.phoneme_scores)) {
+        if (typeof score === 'number' && score > 85) {
+          masteredPhonemes.push(phoneme);
+        }
+      }
+    }
+
+    // Run transfer learning prediction
+    const transferPredictions = predictPhonemeGains(masteredPhonemes, phonemeGaps, grade);
+
+    console.log(`Transfer predictions for student ${studentId}:`, transferPredictions.slice(0, 3));
+
+    // Generate exercises using Lovable AI with transfer learning insights
+    const prompt = `Generate 3 fun, age-appropriate practice exercises for a grade ${grade || 5} student.
+
+PROBLEMATIC PHONEMES: ${phonemeGaps.join(", ")}
+
+🚀 TRANSFER LEARNING INSIGHTS:
+Based on articulatory similarity analysis, this student is predicted to gain mastery of:
+${transferPredictions.slice(0, 3).map(p => `- /${p.phoneme}/ (${p.transferProbability}% confidence): ${p.reasoning}`).join('\n')}
+
+INSTRUCTIONS:
+- Focus exercises on problematic phonemes: ${phonemeGaps.join(", ")}
+- Include transfer-ready phonemes (${transferPredictions.slice(0, 2).map(p => p.phoneme).join(', ')}) to accelerate learning
+- Design exercises that leverage known articulatory patterns
+- Make them engaging and educational
 
 Include:
 1. One tongue twister focusing on these sounds
 2. One short read-aloud passage (3-4 sentences) that naturally includes these phonemes
 3. One creative speaking prompt that encourages use of these sounds
 
-Make them engaging, educational, and specifically target the problematic phonemes. Return ONLY a JSON object with this structure:
+Return ONLY a JSON object with this structure:
 {
   "exercises": [
     {
@@ -96,13 +222,14 @@ Make them engaging, educational, and specifically target the problematic phoneme
     const generatedContent = aiData.choices[0].message.content;
     const parsed = JSON.parse(generatedContent);
 
-    // Insert exercises into database
+    // Insert exercises into database with transfer predictions
     const exercisesToInsert = parsed.exercises.map((ex: any) => ({
       student_id: studentId,
       phoneme_targets: phonemeGaps,
       exercise_type: ex.type,
       content: ex.content,
       completed: false,
+      transfer_predictions: transferPredictions, // NEW: Store predictions for tracking
     }));
 
     const { data: insertedExercises, error: insertError } = await supabase

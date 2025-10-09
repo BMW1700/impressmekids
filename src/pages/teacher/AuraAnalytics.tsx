@@ -138,7 +138,7 @@ const AuraAnalytics = () => {
               <ClassroomAuraOverview records={auraRecords} students={students || []} />
 
               <Tabs defaultValue="overview" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-5">
+                <TabsList className="grid w-full grid-cols-6">
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="phonemes" className="gap-1">
                     <Sparkles className="w-4 h-4" />
@@ -149,6 +149,10 @@ const AuraAnalytics = () => {
                   <TabsTrigger value="cross-modal" className="gap-1">
                     <Sparkles className="w-4 h-4" />
                     Cross-Modal
+                  </TabsTrigger>
+                  <TabsTrigger value="transfer" className="gap-1">
+                    <Sparkles className="w-4 h-4" />
+                    Transfer Learning
                   </TabsTrigger>
                 </TabsList>
 
@@ -271,6 +275,107 @@ const AuraAnalytics = () => {
                         <div className="text-center py-8 text-muted-foreground">
                           <Sparkles className="h-12 w-12 mx-auto mb-3 opacity-50" />
                           <p>No cross-modal data yet. Students need to complete both AURA speech practice and reading assignments.</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="transfer" className="mt-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Sparkles className="h-5 w-5" />
+                        Transfer Learning Insights
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {skillVectors && skillVectors.length > 0 ? (
+                        <div className="space-y-4">
+                          <div className="grid gap-4">
+                            {students?.map((studentData: any) => {
+                              const student = studentData.profiles;
+                              const skillVector = skillVectors.find(sv => sv.student_id === student.id);
+                              
+                              if (!skillVector?.transfer_learning_insights) return null;
+
+                              const insights = skillVector.transfer_learning_insights as any;
+                              const predictions = insights.predictions || [];
+
+                              return (
+                                <Card key={student.id} className="border-primary/20">
+                                  <CardContent className="pt-6">
+                                    <div className="space-y-4">
+                                      <div>
+                                        <h4 className="font-semibold">{student.full_name}</h4>
+                                        <p className="text-sm text-muted-foreground">{student.email}</p>
+                                      </div>
+
+                                      {predictions.length > 0 ? (
+                                        <>
+                                          <div>
+                                            <p className="text-sm font-medium mb-2">🚀 Top Predicted Gains:</p>
+                                            <div className="flex flex-wrap gap-2">
+                                              {predictions.slice(0, 5).map((pred: any) => (
+                                                <Badge key={pred.phoneme} variant={
+                                                  pred.readinessLevel === 'high' ? 'default' : 
+                                                  pred.readinessLevel === 'medium' ? 'secondary' : 'outline'
+                                                }>
+                                                  /{pred.phoneme}/ ({pred.transferProbability}%)
+                                                </Badge>
+                                              ))}
+                                            </div>
+                                          </div>
+
+                                          {predictions[0] && (
+                                            <div className="p-3 rounded-lg bg-primary/5 text-sm">
+                                              <p className="font-medium mb-1">Next Phoneme: /{predictions[0].phoneme}/</p>
+                                              <p className="text-muted-foreground">{predictions[0].reasoning}</p>
+                                            </div>
+                                          )}
+
+                                          {insights.accuracy && (
+                                            <div className="flex items-center gap-4 text-sm">
+                                              <div>
+                                                <span className="text-muted-foreground">Prediction Accuracy: </span>
+                                                <span className="font-semibold">{insights.accuracy}%</span>
+                                              </div>
+                                              {insights.totalPredictions && (
+                                                <div className="text-muted-foreground">
+                                                  {insights.correctPredictions || 0} / {insights.totalPredictions} correct
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
+                                        </>
+                                      ) : (
+                                        <p className="text-sm text-muted-foreground">
+                                          No transfer predictions yet. Student needs more practice data.
+                                        </p>
+                                      )}
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              );
+                            })}
+                          </div>
+
+                          <div className="mt-6 p-4 rounded-lg bg-muted/50">
+                            <h4 className="font-semibold mb-2 flex items-center gap-2">
+                              <Sparkles className="h-4 w-4" />
+                              About Transfer Learning
+                            </h4>
+                            <p className="text-sm text-muted-foreground">
+                              Our AI predicts which phonemes students will master next based on articulatory similarity 
+                              to sounds they've already mastered. This helps personalize practice exercises and accelerate 
+                              learning by targeting phonemes students are ready to learn.
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <Sparkles className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                          <p>No transfer learning data yet. Students need to complete AURA practice sessions.</p>
                         </div>
                       )}
                     </CardContent>
