@@ -62,6 +62,102 @@ export type Database = {
           },
         ]
       }
+      assignment_answers: {
+        Row: {
+          answer_data: Json
+          answer_type: Database["public"]["Enums"]["question_type"]
+          aura_record_id: string | null
+          created_at: string
+          id: string
+          question_id: string
+          status: Database["public"]["Enums"]["answer_status"]
+          submission_id: string
+          updated_at: string
+        }
+        Insert: {
+          answer_data?: Json
+          answer_type: Database["public"]["Enums"]["question_type"]
+          aura_record_id?: string | null
+          created_at?: string
+          id?: string
+          question_id: string
+          status?: Database["public"]["Enums"]["answer_status"]
+          submission_id: string
+          updated_at?: string
+        }
+        Update: {
+          answer_data?: Json
+          answer_type?: Database["public"]["Enums"]["question_type"]
+          aura_record_id?: string | null
+          created_at?: string
+          id?: string
+          question_id?: string
+          status?: Database["public"]["Enums"]["answer_status"]
+          submission_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_answers_aura_record_id_fkey"
+            columns: ["aura_record_id"]
+            isOneToOne: false
+            referencedRelation: "aura_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_answers_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignment_questions: {
+        Row: {
+          assignment_id: string
+          created_at: string
+          id: string
+          question_data: Json
+          question_type: Database["public"]["Enums"]["question_type"]
+          sequence: number
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string
+          id?: string
+          question_data?: Json
+          question_type: Database["public"]["Enums"]["question_type"]
+          sequence: number
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string
+          id?: string
+          question_data?: Json
+          question_type?: Database["public"]["Enums"]["question_type"]
+          sequence?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_questions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignment_submissions: {
         Row: {
           assignment_id: string
@@ -69,10 +165,13 @@ export type Database = {
           grade: number | null
           graded_at: string | null
           id: string
+          started_at: string | null
           status: string
           student_id: string
           submitted_at: string | null
           teacher_feedback: string | null
+          time_taken_seconds: number | null
+          timer_expired: boolean | null
           updated_at: string
         }
         Insert: {
@@ -81,10 +180,13 @@ export type Database = {
           grade?: number | null
           graded_at?: string | null
           id?: string
+          started_at?: string | null
           status?: string
           student_id: string
           submitted_at?: string | null
           teacher_feedback?: string | null
+          time_taken_seconds?: number | null
+          timer_expired?: boolean | null
           updated_at?: string
         }
         Update: {
@@ -93,10 +195,13 @@ export type Database = {
           grade?: number | null
           graded_at?: string | null
           id?: string
+          started_at?: string | null
           status?: string
           student_id?: string
           submitted_at?: string | null
           teacher_feedback?: string | null
+          time_taken_seconds?: number | null
+          timer_expired?: boolean | null
           updated_at?: string
         }
         Relationships: [
@@ -127,8 +232,10 @@ export type Database = {
           id: string
           passage_metadata: Json | null
           passage_text: string
+          question_count: number | null
           status: string
           teacher_id: string
+          timer_minutes: number | null
           title: string
           updated_at: string
         }
@@ -142,8 +249,10 @@ export type Database = {
           id?: string
           passage_metadata?: Json | null
           passage_text: string
+          question_count?: number | null
           status?: string
           teacher_id: string
+          timer_minutes?: number | null
           title: string
           updated_at?: string
         }
@@ -157,8 +266,10 @@ export type Database = {
           id?: string
           passage_metadata?: Json | null
           passage_text?: string
+          question_count?: number | null
           status?: string
           teacher_id?: string
+          timer_minutes?: number | null
           title?: string
           updated_at?: string
         }
@@ -1042,7 +1153,6 @@ export type Database = {
           metadata: Json | null
           options: Json | null
           question_text: string
-          question_type: Database["public"]["Enums"]["question_type"] | null
           source: string | null
           subject: string
         }
@@ -1063,7 +1173,6 @@ export type Database = {
           metadata?: Json | null
           options?: Json | null
           question_text: string
-          question_type?: Database["public"]["Enums"]["question_type"] | null
           source?: string | null
           subject: string
         }
@@ -1084,7 +1193,6 @@ export type Database = {
           metadata?: Json | null
           options?: Json | null
           question_text?: string
-          question_type?: Database["public"]["Enums"]["question_type"] | null
           source?: string | null
           subject?: string
         }
@@ -1521,16 +1629,12 @@ export type Database = {
       }
     }
     Enums: {
+      answer_status: "not_attempted" | "in_progress" | "completed"
       app_role: "admin" | "teacher" | "student"
       difficulty_level: "easy" | "medium" | "hard"
       elimination_status: "active" | "eliminated"
       match_status: "waiting" | "in_progress" | "completed"
-      question_type:
-        | "multiple_choice"
-        | "true_false"
-        | "short_answer"
-        | "fill_blank"
-        | "matching"
+      question_type: "question_answer" | "reading_comprehension" | "speaking"
       tournament_status: "waiting" | "in_progress" | "completed"
       user_role: "teacher" | "student" | "admin"
     }
@@ -1660,17 +1764,12 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      answer_status: ["not_attempted", "in_progress", "completed"],
       app_role: ["admin", "teacher", "student"],
       difficulty_level: ["easy", "medium", "hard"],
       elimination_status: ["active", "eliminated"],
       match_status: ["waiting", "in_progress", "completed"],
-      question_type: [
-        "multiple_choice",
-        "true_false",
-        "short_answer",
-        "fill_blank",
-        "matching",
-      ],
+      question_type: ["question_answer", "reading_comprehension", "speaking"],
       tournament_status: ["waiting", "in_progress", "completed"],
       user_role: ["teacher", "student", "admin"],
     },
