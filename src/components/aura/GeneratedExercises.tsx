@@ -70,10 +70,10 @@ const GeneratedExercises = ({ problematicPhonemes, studentGrade = 5 }: Generated
   });
 
   const generateExercises = async () => {
-    if (!user || problematicPhonemes.length === 0) {
+    if (!user) {
       toast({
-        title: "Cannot Generate",
-        description: "Complete a practice session first to identify areas for improvement.",
+        title: "Please log in",
+        description: "You need to be logged in to generate exercises.",
         variant: "destructive",
       });
       return;
@@ -147,7 +147,7 @@ const GeneratedExercises = ({ problematicPhonemes, studentGrade = 5 }: Generated
         </div>
         <Button
           onClick={generateExercises}
-          disabled={isGenerating || problematicPhonemes.length === 0}
+          disabled={isGenerating || !user}
         >
           {isGenerating ? (
             <>
@@ -232,7 +232,7 @@ const GeneratedExercises = ({ problematicPhonemes, studentGrade = 5 }: Generated
             <Sparkles className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
             <p className="text-sm font-medium mb-1">No exercises yet</p>
             <p className="text-xs text-muted-foreground">
-              Complete a practice session to generate personalized exercises
+              Click "Generate New" to create personalized speaking exercises. After practice sessions, exercises will target your specific areas for improvement.
             </p>
           </CardContent>
         </Card>

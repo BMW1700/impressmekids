@@ -54,18 +54,24 @@ const AudioWaveform = ({ stream, isRecording }: AudioWaveformProps) => {
       
       analyser.getByteTimeDomainData(dataArray);
 
+      // Get computed CSS variables
+      const styles = getComputedStyle(document.documentElement);
+      const bgColor = styles.getPropertyValue('--background').trim();
+      const mutedColor = styles.getPropertyValue('--muted').trim();
+      const primaryColor = styles.getPropertyValue('--primary').trim();
+
       // Clear canvas with gradient background
       const gradient = ctx.createLinearGradient(0, 0, 0, canvas.offsetHeight);
-      gradient.addColorStop(0, 'hsl(var(--background))');
-      gradient.addColorStop(1, 'hsl(var(--muted))');
+      gradient.addColorStop(0, `hsl(${bgColor})`);
+      gradient.addColorStop(1, `hsl(${mutedColor})`);
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.offsetWidth, canvas.offsetHeight);
 
       // Draw waveform
       ctx.lineWidth = 2;
-      ctx.strokeStyle = 'hsl(var(--primary))';
+      ctx.strokeStyle = `hsl(${primaryColor})`;
       ctx.shadowBlur = 8;
-      ctx.shadowColor = 'hsl(var(--primary) / 0.5)';
+      ctx.shadowColor = `hsl(${primaryColor} / 0.5)`;
       ctx.beginPath();
 
       const sliceWidth = canvas.offsetWidth / bufferLength;
