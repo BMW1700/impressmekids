@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +23,32 @@ export const useAssignments = (classroomId?: string) => {
     },
     enabled: !!classroomId,
   });
+
+  // Real-time subscription for assignment changes
+  useEffect(() => {
+    if (!classroomId) return;
+
+    const channel = supabase
+      .channel('assignments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'assignments',
+          filter: `classroom_id=eq.${classroomId}`,
+        },
+        (payload) => {
+          console.log('Assignment change detected:', payload);
+          queryClient.invalidateQueries({ queryKey: ['assignments', classroomId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [classroomId, queryClient]);
 
   const createAssignment = useMutation({
     mutationFn: async ({

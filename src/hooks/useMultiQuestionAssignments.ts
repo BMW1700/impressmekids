@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -43,6 +44,32 @@ export const useMultiQuestionAssignments = (classroomId?: string, assignmentId?:
     enabled: !!classroomId,
   });
 
+  // Real-time subscription for assignment changes
+  useEffect(() => {
+    if (!classroomId) return;
+
+    const channel = supabase
+      .channel('multi-question-assignments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'assignments',
+          filter: `classroom_id=eq.${classroomId}`,
+        },
+        (payload) => {
+          console.log('Multi-question assignment change detected:', payload);
+          queryClient.invalidateQueries({ queryKey: ['multi-question-assignments', classroomId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [classroomId, queryClient]);
+
   // Fetch single assignment with questions
   const { data: assignment, isLoading: assignmentLoading } = useQuery({
     queryKey: ['multi-question-assignment', assignmentId],
@@ -69,6 +96,32 @@ export const useMultiQuestionAssignments = (classroomId?: string, assignmentId?:
     },
     enabled: !!assignmentId,
   });
+
+  // Real-time subscription for assignment questions changes
+  useEffect(() => {
+    if (!assignmentId) return;
+
+    const channel = supabase
+      .channel('assignment-questions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'assignment_questions',
+          filter: `assignment_id=eq.${assignmentId}`,
+        },
+        (payload) => {
+          console.log('Assignment questions change detected:', payload);
+          queryClient.invalidateQueries({ queryKey: ['multi-question-assignment', assignmentId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [assignmentId, queryClient]);
 
   // Create assignment with questions
   const createAssignment = useMutation({
