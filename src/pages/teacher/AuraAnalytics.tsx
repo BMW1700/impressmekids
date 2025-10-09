@@ -11,6 +11,7 @@ import ProsodyInsights from "@/components/aura/ProsodyInsights";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { BarChart3, ArrowLeft, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -137,7 +138,7 @@ const AuraAnalytics = () => {
               <ClassroomAuraOverview records={auraRecords} students={students || []} />
 
               <Tabs defaultValue="overview" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="phonemes" className="gap-1">
                     <Sparkles className="w-4 h-4" />
@@ -145,6 +146,10 @@ const AuraAnalytics = () => {
                   </TabsTrigger>
                   <TabsTrigger value="alerts">At-Risk Alerts</TabsTrigger>
                   <TabsTrigger value="prosody">Prosody & Fluency</TabsTrigger>
+                  <TabsTrigger value="cross-modal" className="gap-1">
+                    <Sparkles className="w-4 h-4" />
+                    Cross-Modal
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="overview" className="space-y-6">
@@ -181,6 +186,95 @@ const AuraAnalytics = () => {
                     records={auraRecords}
                     skillVectors={skillVectors}
                   />
+                </TabsContent>
+
+                <TabsContent value="cross-modal" className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-primary" />
+                        Cross-Modal Literacy Insights
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        Unified view of speaking + reading performance
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {skillVectors && skillVectors.length > 0 ? (
+                        <div className="space-y-4">
+                          {students?.map((student) => {
+                            const vector = skillVectors.find(v => v.student_id === student.student_id);
+                            const studentRecords = auraRecords?.filter(r => r.profile_id === student.student_id) || [];
+                            const readingRecords = studentRecords.filter(r => r.reading_type === 'reading');
+                            const speakingRecords = studentRecords.filter(r => r.reading_type === 'speaking');
+
+                            if (!vector) return null;
+
+                            const avgReadingGrade = readingRecords.length > 0
+                              ? Math.round(readingRecords.reduce((sum, r) => sum + (r.grade || 0), 0) / readingRecords.length)
+                              : null;
+                            
+                            const avgSpeakingGrade = speakingRecords.length > 0
+                              ? Math.round(speakingRecords.reduce((sum, r) => sum + (r.grade || 0), 0) / speakingRecords.length)
+                              : null;
+
+                            const crossModalRisk = vector.cross_modal_risk_score || 0;
+                            const predictedComprehension = vector.predicted_comprehension_score || 0;
+
+                            return (
+                              <div key={student.student_id} className="p-4 rounded-lg border bg-muted/30">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div>
+                                    <h4 className="font-semibold">{student.profiles?.full_name}</h4>
+                                    <p className="text-xs text-muted-foreground">{student.profiles?.email}</p>
+                                  </div>
+                                  <Badge variant={crossModalRisk > 50 ? "destructive" : "secondary"}>
+                                    Risk: {crossModalRisk}/100
+                                  </Badge>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-3 text-sm">
+                                  <div className="p-2 rounded bg-background">
+                                    <div className="text-xs text-muted-foreground mb-1">Speaking Avg</div>
+                                    <div className="font-semibold">
+                                      {avgSpeakingGrade !== null ? `${avgSpeakingGrade}/100` : 'No data'}
+                                    </div>
+                                  </div>
+                                  <div className="p-2 rounded bg-background">
+                                    <div className="text-xs text-muted-foreground mb-1">Reading Avg</div>
+                                    <div className="font-semibold">
+                                      {avgReadingGrade !== null ? `${avgReadingGrade}/100` : 'No data'}
+                                    </div>
+                                  </div>
+                                  <div className="p-2 rounded bg-background">
+                                    <div className="text-xs text-muted-foreground mb-1">Predicted</div>
+                                    <div className="font-semibold">
+                                      {predictedComprehension > 0 ? `${predictedComprehension}/100` : 'N/A'}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {avgSpeakingGrade !== null && avgReadingGrade !== null && (
+                                  <div className="mt-3 p-2 rounded bg-primary/5 text-xs">
+                                    {Math.abs(avgSpeakingGrade - avgReadingGrade) > 20 ? (
+                                      <p>⚠️ <strong>Divergent Performance:</strong> {avgSpeakingGrade > avgReadingGrade ? 'Strong speaker, needs reading support' : 'Strong reader, needs speaking practice'}</p>
+                                    ) : (
+                                      <p>✅ <strong>Aligned Performance:</strong> Speaking and reading skills are balanced</p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <Sparkles className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                          <p>No cross-modal data yet. Students need to complete both AURA speech practice and reading assignments.</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 </TabsContent>
               </Tabs>
             </>

@@ -15,6 +15,7 @@ import { useTextHighlights } from "@/hooks/useTextHighlights";
 import { useAssignmentSubmissions } from "@/hooks/useAssignmentSubmissions";
 import { AnnotationSidebar } from "@/components/assignments/AnnotationSidebar";
 import { Separator } from "@/components/ui/separator";
+import { AuraReadingGrader } from "@/components/aura/AuraReadingGrader";
 
 export default function ReviewSubmission() {
   const { submissionId } = useParams();
@@ -282,6 +283,18 @@ export default function ReviewSubmission() {
           <div className="grid lg:grid-cols-3 gap-6">
             {/* Reading Passage with Highlights */}
             <div className="lg:col-span-2 space-y-6">
+              {/* AURA AI Reading Grader */}
+              <AuraReadingGrader
+                assignmentId={assignment.id}
+                highlights={highlights}
+                passageText={assignment.passage_text}
+                studentId={submission.student_id}
+                onGradeGenerated={(aiGrade, aiFeedback) => {
+                  setGrade(aiGrade.toString());
+                  setFeedback(aiFeedback);
+                }}
+              />
+
               <Card>
                 <CardHeader>
                   <CardTitle>Student's Annotated Passage</CardTitle>

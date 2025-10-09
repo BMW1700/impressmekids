@@ -210,10 +210,12 @@ export type Database = {
       }
       aura_records: {
         Row: {
+          annotation_quality_score: number | null
           asr_confidence: number
           audio_url: string
           avg_silence_ms: number
           clarity: number
+          comprehension_score: number | null
           confidence: number
           context_text: string | null
           created_at: string
@@ -221,13 +223,17 @@ export type Database = {
           evidence: Json | null
           feedback: Json
           grade: number | null
+          highlight_count: number | null
           id: string
           language: string
           pace: number
           pause_count: number
           profile_id: string
           pronunciation_flags: Json | null
+          prosody_comprehension_correlation: Json | null
           question_id: string | null
+          reading_assignment_id: string | null
+          reading_type: string | null
           request_id: string
           suggested_exercises: Json | null
           transcript: string
@@ -235,10 +241,12 @@ export type Database = {
           wpm: number
         }
         Insert: {
+          annotation_quality_score?: number | null
           asr_confidence: number
           audio_url: string
           avg_silence_ms: number
           clarity: number
+          comprehension_score?: number | null
           confidence: number
           context_text?: string | null
           created_at?: string
@@ -246,13 +254,17 @@ export type Database = {
           evidence?: Json | null
           feedback?: Json
           grade?: number | null
+          highlight_count?: number | null
           id?: string
           language: string
           pace: number
           pause_count: number
           profile_id: string
           pronunciation_flags?: Json | null
+          prosody_comprehension_correlation?: Json | null
           question_id?: string | null
+          reading_assignment_id?: string | null
+          reading_type?: string | null
           request_id: string
           suggested_exercises?: Json | null
           transcript: string
@@ -260,10 +272,12 @@ export type Database = {
           wpm: number
         }
         Update: {
+          annotation_quality_score?: number | null
           asr_confidence?: number
           audio_url?: string
           avg_silence_ms?: number
           clarity?: number
+          comprehension_score?: number | null
           confidence?: number
           context_text?: string | null
           created_at?: string
@@ -271,13 +285,17 @@ export type Database = {
           evidence?: Json | null
           feedback?: Json
           grade?: number | null
+          highlight_count?: number | null
           id?: string
           language?: string
           pace?: number
           pause_count?: number
           profile_id?: string
           pronunciation_flags?: Json | null
+          prosody_comprehension_correlation?: Json | null
           question_id?: string | null
+          reading_assignment_id?: string | null
+          reading_type?: string | null
           request_id?: string
           suggested_exercises?: Json | null
           transcript?: string
@@ -297,6 +315,13 @@ export type Database = {
             columns: ["question_id"]
             isOneToOne: false
             referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aura_records_reading_assignment_id_fkey"
+            columns: ["reading_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
             referencedColumns: ["id"]
           },
         ]
@@ -1072,28 +1097,37 @@ export type Database = {
       }
       student_skill_vectors: {
         Row: {
+          cross_modal_risk_score: number | null
           fluency_metrics: Json | null
           last_updated: string
           phoneme_scores: Json | null
+          predicted_comprehension_score: number | null
           prosody_metrics: Json | null
+          reading_metrics: Json | null
           student_id: string
           vector: Json
           weekly_improvement: number | null
         }
         Insert: {
+          cross_modal_risk_score?: number | null
           fluency_metrics?: Json | null
           last_updated?: string
           phoneme_scores?: Json | null
+          predicted_comprehension_score?: number | null
           prosody_metrics?: Json | null
+          reading_metrics?: Json | null
           student_id: string
           vector?: Json
           weekly_improvement?: number | null
         }
         Update: {
+          cross_modal_risk_score?: number | null
           fluency_metrics?: Json | null
           last_updated?: string
           phoneme_scores?: Json | null
+          predicted_comprehension_score?: number | null
           prosody_metrics?: Json | null
+          reading_metrics?: Json | null
           student_id?: string
           vector?: Json
           weekly_improvement?: number | null
