@@ -17,6 +17,9 @@ import { CreateAssignmentModal } from "@/components/CreateAssignmentModal";
 import { AnnouncementCard } from "@/components/AnnouncementCard";
 import { useClassroomPermissions } from "@/hooks/useClassroomPermissions";
 import { useAssignments } from "@/hooks/useAssignments";
+import { useAssignmentSubmissions } from "@/hooks/useAssignmentSubmissions";
+import { SubmissionsList } from "@/components/assignments/SubmissionsList";
+import { AssignmentStatsCard } from "@/components/assignments/AssignmentStatsCard";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -26,6 +29,13 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const ClassroomDetail = () => {
   const { id } = useParams();
@@ -42,9 +52,11 @@ const ClassroomDetail = () => {
   const [selectedGameType, setSelectedGameType] = useState<string>('jeopardy_duel');
   const [showCreateAnnouncement, setShowCreateAnnouncement] = useState(false);
   const [showCreateAssignment, setShowCreateAssignment] = useState(false);
+  const [viewingAssignmentId, setViewingAssignmentId] = useState<string | null>(null);
   const [flashcardSets, setFlashcardSets] = useState<any[]>([]);
   const [viewingFlashcardSet, setViewingFlashcardSet] = useState<any>(null);
   const { assignments } = useAssignments(id);
+  const { submissions: assignmentSubmissions } = useAssignmentSubmissions(viewingAssignmentId || undefined);
 
   useEffect(() => {
     // Wait for permissions to be determined before loading data
@@ -393,11 +405,18 @@ const ClassroomDetail = () => {
                           <p className="text-xs text-muted-foreground">
                             Created {new Date(assignment.created_at).toLocaleDateString()}
                           </p>
+                          
+                          {isTeacher && <AssignmentStatsCard assignmentId={assignment.id} />}
+                          
                           <Button
                             variant="outline"
                             className="w-full mt-4"
                             onClick={() => {
-                              navigate(`/student/assignment/${assignment.id}?classroom=${id}`);
+                              if (isTeacher) {
+                                setViewingAssignmentId(assignment.id);
+                              } else {
+                                navigate(`/student/assignment/${assignment.id}?classroom=${id}`);
+                              }
                             }}
                           >
                             <FileText className="mr-2 h-4 w-4" />
@@ -637,6 +656,25 @@ const ClassroomDetail = () => {
             classroomId={id!}
             onSuccess={loadClassroomData}
           />
+
+          {viewingAssignmentId && (
+            <Dialog open={!!viewingAssignmentId} onOpenChange={(open) => !open && setViewingAssignmentId(null)}>
+              <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Student Submissions</DialogTitle>
+                  <DialogDescription>
+                    Review and grade student work for this assignment
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                  <SubmissionsList 
+                    submissions={assignmentSubmissions}
+                    classroomId={id!}
+                  />
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
         </>
       )}
     </div>
