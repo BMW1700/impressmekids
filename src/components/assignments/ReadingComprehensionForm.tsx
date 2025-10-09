@@ -73,9 +73,14 @@ export const ReadingComprehensionForm = ({ data, onChange }: ReadingComprehensio
 
         if (error) throw error;
 
-      if (ocrData.extracted_text) {
-        handleChange('passage_text', ocrData.extracted_text);
-        handleChange('ocr_confidence', ocrData.confidence);
+        if (ocrData.extracted_text) {
+          const updatedData = {
+            ...localData,
+            passage_text: ocrData.extracted_text,
+            ocr_confidence: ocrData.confidence
+          };
+          setLocalData(updatedData);
+          onChange(updatedData);
           toast({
             title: 'Success',
             description: `Text extracted with ${Math.round(ocrData.confidence * 100)}% confidence`,

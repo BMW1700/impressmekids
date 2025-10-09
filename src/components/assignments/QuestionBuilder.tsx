@@ -89,9 +89,18 @@ export const QuestionBuilder = ({ question, onUpdate, onDelete, dragHandleProps 
             {question.question_data.prompt_type === 'text' && (
               <p className="font-medium">{question.question_data.prompt_text}</p>
             )}
-            {question.question_data.prompt_type === 'audio' && question.question_data.prompt_audio_url && (
-              <audio controls src={question.question_data.prompt_audio_url} className="w-full max-w-md" />
-            )}
+            {question.question_data.prompt_type === 'audio' && question.question_data.prompt_audio_url ? (
+              <audio 
+                controls 
+                src={question.question_data.prompt_audio_url} 
+                className="w-full max-w-md"
+                onError={() => console.log('Audio preview loading...')}
+              >
+                Your browser does not support audio playback.
+              </audio>
+            ) : question.question_data.prompt_type === 'audio' ? (
+              <p className="text-sm text-muted-foreground">Audio is being uploaded...</p>
+            ) : null}
             <Button disabled>
               <span className="mr-2">🎤</span>
               Record Audio
