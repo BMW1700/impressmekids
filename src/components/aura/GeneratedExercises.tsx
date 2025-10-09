@@ -45,18 +45,26 @@ const GeneratedExercises = ({ problematicPhonemes, studentGrade = 5 }: Generated
 
   const completeMutation = useMutation({
     mutationFn: async (exerciseId: string) => {
+      // Mark as completed
       const { error } = await supabase
         .from('practice_exercises')
         .update({ completed: true, completed_at: new Date().toISOString() })
         .eq('id', exerciseId);
       
       if (error) throw error;
+
+      // Trigger effectiveness calculation in background
+      if (user) {
+        supabase.functions.invoke('calculate-exercise-effectiveness', {
+          body: { exerciseId, studentId: user.id },
+        }).catch(err => console.error('Effectiveness calc failed:', err));
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['practice-exercises'] });
       toast({
         title: "Exercise Completed! 🎉",
-        description: "Practice again to see your improvement!",
+        description: "Practice again to measure your improvement!",
       });
     },
   });

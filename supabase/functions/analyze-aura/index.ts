@@ -1,7 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.58.0";
-import { simpleG2PFallback } from "./_shared/cmuDictUtils.ts";
+import { simpleG2PFallback, arpabetToIPAPhonemes } from "./_shared/cmuDictUtils.ts";
 import { calculatePhonemeAccuracy } from "./_shared/phonemeDistance.ts";
+import cmudict from "npm:cmu-pronouncing-dictionary@3.0.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -64,13 +65,28 @@ serve(async (req) => {
       avgSilenceMs = audioFeatures.avgSilenceDuration;
     }
 
-    // Analyze phoneme accuracy with FUZZY MATCHING
+    // Analyze phoneme accuracy with CMUDict + FUZZY MATCHING
     let phonemeAccuracy = 85; // Default baseline
     let problematicPhonemes: string[] = [];
+    let perPhonemeAccuracy: Array<{ phoneme: string; accuracy: number }> = [];
     
     if (phonemes && phonemes.length > 0) {
       const words = transcript.toLowerCase().split(/\s+/);
-      const expectedPhonemes = words.flatMap((word: string) => simpleG2PFallback(word));
+      
+      // Use CMUDict for accurate G2P conversion
+      const expectedPhonemes = words.flatMap((word: string) => {
+        const normalized = word.replace(/[^a-z]/g, '');
+        if (!normalized) return [];
+        
+        // Try CMUDict first
+        const arpabet = (cmudict as any)[normalized] as string | undefined;
+        if (arpabet) {
+          return arpabetToIPAPhonemes(arpabet);
+        }
+        
+        // Fallback to simple G2P
+        return simpleG2PFallback(normalized);
+      });
       
       // Use feature-based phoneme distance for fuzzy matching
       const detectedPhonemes = phonemes.map((p: any) => p.phoneme);
@@ -79,8 +95,18 @@ serve(async (req) => {
       phonemeAccuracy = result.accuracy;
       problematicPhonemes = result.problematicPhonemes;
       
-      console.log('✅ Phoneme accuracy (fuzzy):', phonemeAccuracy.toFixed(1), '%');
+      // Calculate per-phoneme accuracy for tracking
+      const uniquePhonemes = [...new Set(expectedPhonemes)] as string[];
+      perPhonemeAccuracy = uniquePhonemes.map((phoneme: string) => {
+        const expectedCount = expectedPhonemes.filter((p: string) => p === phoneme).length;
+        const detectedCount = detectedPhonemes.filter((p: string) => p === phoneme).length;
+        const accuracy = Math.min(100, (detectedCount / expectedCount) * 100);
+        return { phoneme, accuracy };
+      });
+      
+      console.log('✅ Phoneme accuracy (CMUDict + fuzzy):', phonemeAccuracy.toFixed(1), '%');
       console.log('⚠️ Problematic phonemes:', problematicPhonemes);
+      console.log('📊 Per-phoneme accuracy:', perPhonemeAccuracy);
     }
 
     // Build enhanced AI prompt with phoneme and audio feature data
@@ -186,7 +212,7 @@ Format as JSON:
        pace * 0.2) * 20
     );
 
-    // Store in aura_records
+    // Store in aura_records with per-phoneme tracking
     const { data: record, error: insertError } = await supabase
       .from('aura_records')
       .insert({
@@ -202,7 +228,10 @@ Format as JSON:
         confidence: aiAnalysis.confidence,
         pronunciation_flags: aiAnalysis.pronunciationFlags || [],
         feedback: aiAnalysis.feedback || [],
-        evidence: aiAnalysis.evidence || {},
+        evidence: {
+          ...aiAnalysis.evidence,
+          phoneme_accuracy: perPhonemeAccuracy, // Store per-phoneme data for tracking
+        },
         suggested_exercises: aiAnalysis.suggestedExercises || [],
         grade,
         pause_count: pauseCount,
@@ -229,14 +258,18 @@ Format as JSON:
     const currentProsodyMetrics = existingVector?.prosody_metrics || {};
     const currentFluencyMetrics = existingVector?.fluency_metrics || {};
     
-    // Update phoneme scores
+    // Update phoneme scores with ACTUAL ACCURACY PERCENTAGES (not decrements)
     const updatedPhonemeScores = { ...currentPhonemeScores };
-    if (problematicPhonemes.length > 0) {
-      problematicPhonemes.forEach(phoneme => {
-        updatedPhonemeScores[phoneme] = (updatedPhonemeScores[phoneme] || 0) - 5; // Track struggle
-      });
-    }
-    updatedPhonemeScores['overall'] = phonemeAccuracy;
+    
+    // Store per-phoneme accuracy as percentages
+    perPhonemeAccuracy.forEach(({ phoneme, accuracy }) => {
+      // Use exponential moving average for smooth tracking
+      const currentScore = updatedPhonemeScores[phoneme] || 75;
+      const alpha = 0.3; // Weight new data at 30%
+      updatedPhonemeScores[phoneme] = Math.round(alpha * accuracy + (1 - alpha) * currentScore);
+    });
+    
+    updatedPhonemeScores['overall'] = Math.round(phonemeAccuracy);
     
     // Update prosody metrics
     const updatedProsodyMetrics = {
