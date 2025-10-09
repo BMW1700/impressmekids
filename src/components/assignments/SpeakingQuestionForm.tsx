@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -22,6 +22,13 @@ export const SpeakingQuestionForm = ({ data, onChange }: SpeakingQuestionFormPro
     prompt_type: 'text',
     expected_duration_seconds: 60,
   });
+
+  // Update local state when data prop changes (e.g., when editing existing question)
+  useEffect(() => {
+    if (data && Object.keys(data).length > 0) {
+      setLocalData(data);
+    }
+  }, [data]);
 
   const handleChange = (field: keyof SpeakingQuestionData, value: any) => {
     const updated = { ...localData, [field]: value };

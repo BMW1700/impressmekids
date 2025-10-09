@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
@@ -25,6 +25,13 @@ export const ReadingComprehensionForm = ({ data, onChange }: ReadingComprehensio
   });
   const [isExtracting, setIsExtracting] = useState(false);
   const { toast } = useToast();
+
+  // Update local state when data prop changes (e.g., when editing existing question)
+  useEffect(() => {
+    if (data && Object.keys(data).length > 0) {
+      setLocalData(data);
+    }
+  }, [data]);
 
   const handleChange = (field: keyof ReadingComprehensionData, value: any) => {
     const updated = { ...localData, [field]: value };
