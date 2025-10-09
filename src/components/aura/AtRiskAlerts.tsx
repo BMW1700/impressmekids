@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, TrendingDown, Clock, Target } from "lucide-react";
+import { calculateRiskScore, extractFeatures, generateRiskFactors } from "@/lib/riskScoring";
 
 interface AtRiskAlertsProps {
   students: any[];
@@ -19,56 +20,21 @@ interface RiskAssessment {
 }
 
 const AtRiskAlerts = ({ students, records, skillVectors }: AtRiskAlertsProps) => {
-  const calculateRiskScore = (studentId: string): RiskAssessment => {
+  const assessRisk = (studentId: string): RiskAssessment => {
     const studentRecords = records.filter((r) => r.profile_id === studentId);
     const vector = skillVectors.find((v) => v.student_id === studentId);
     const student = students.find((s) => s.student_id === studentId);
 
-    let riskScore = 0;
-    const factors: string[] = [];
-    const recommendations: string[] = [];
+    // Extract ML features
+    const features = extractFeatures(studentRecords, vector, student?.profiles);
+    
+    // Calculate ML-based risk score
+    const riskScore = calculateRiskScore(features);
+    
+    // Generate specific factors and recommendations
+    const { factors, recommendations } = generateRiskFactors(features, riskScore);
 
-    // Factor 1: No improvement in 3+ weeks (40% weight)
-    if (vector?.weekly_improvement !== undefined && vector.weekly_improvement <= 0) {
-      riskScore += 40;
-      factors.push("No improvement in recent weeks");
-      recommendations.push("Schedule 1-on-1 check-in to identify blockers");
-    }
-
-    // Factor 2: Declining trend (30% weight)
-    const recentGrades = studentRecords.slice(0, 5).map((r) => r.grade || 0);
-    if (recentGrades.length >= 3) {
-      const isDecline = recentGrades[0] < recentGrades[2];
-      if (isDecline) {
-        riskScore += 30;
-        factors.push("Declining performance trend");
-        recommendations.push("Review confidence and motivation levels");
-      }
-    }
-
-    // Factor 3: Low practice frequency (20% weight)
-    const recentActivity = studentRecords.filter((r) => {
-      const daysSince = (Date.now() - new Date(r.created_at).getTime()) / (1000 * 60 * 60 * 24);
-      return daysSince <= 14;
-    });
-    if (recentActivity.length < 3) {
-      riskScore += 20;
-      factors.push("Low practice frequency (< 3 sessions in 2 weeks)");
-      recommendations.push("Send practice reminder to student/parent");
-    }
-
-    // Factor 4: Multiple phoneme struggles (10% weight)
-    if (vector?.phoneme_scores) {
-      const strugglingPhonemes = Object.values(vector.phoneme_scores).filter(
-        (score: any) => score < 70
-      );
-      if (strugglingPhonemes.length >= 3) {
-        riskScore += 10;
-        factors.push(`Struggling with ${strugglingPhonemes.length} phonemes`);
-        recommendations.push("Generate targeted practice exercises");
-      }
-    }
-
+    // Determine risk level with adaptive thresholds
     let riskLevel: "urgent" | "monitor" | "on-track" = "on-track";
     if (riskScore >= 70) riskLevel = "urgent";
     else if (riskScore >= 50) riskLevel = "monitor";
@@ -84,7 +50,7 @@ const AtRiskAlerts = ({ students, records, skillVectors }: AtRiskAlertsProps) =>
   };
 
   const assessments = students
-    .map((s) => calculateRiskScore(s.student_id))
+    .map((s) => assessRisk(s.student_id))
     .filter((a) => a.riskLevel !== "on-track")
     .sort((a, b) => b.riskScore - a.riskScore);
 

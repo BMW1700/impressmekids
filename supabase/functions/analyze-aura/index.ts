@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.58.0";
-import { simpleG2P } from "./_shared/phonemeUtils.ts";
+import { simpleG2PFallback } from "./_shared/cmuDictUtils.ts";
+import { calculatePhonemeAccuracy } from "./_shared/phonemeDistance.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -63,42 +64,22 @@ serve(async (req) => {
       avgSilenceMs = audioFeatures.avgSilenceDuration;
     }
 
-    // Analyze phoneme accuracy if available
+    // Analyze phoneme accuracy with FUZZY MATCHING
     let phonemeAccuracy = 85; // Default baseline
     let problematicPhonemes: string[] = [];
     
     if (phonemes && phonemes.length > 0) {
       const words = transcript.toLowerCase().split(/\s+/);
-      const expectedPhonemes = words.flatMap((word: string) => simpleG2P(word));
-      const matchCount = Math.min(phonemes.length, expectedPhonemes.length);
-      let correctCount = 0;
+      const expectedPhonemes = words.flatMap((word: string) => simpleG2PFallback(word));
       
-      const phonemeScores: { [key: string]: { correct: number; total: number } } = {};
+      // Use feature-based phoneme distance for fuzzy matching
+      const detectedPhonemes = phonemes.map((p: any) => p.phoneme);
+      const result = calculatePhonemeAccuracy(detectedPhonemes, expectedPhonemes);
       
-      for (let i = 0; i < matchCount; i++) {
-        const detected = phonemes[i]?.phoneme || '';
-        const expected = expectedPhonemes[i] || '';
-        
-        if (!phonemeScores[expected]) {
-          phonemeScores[expected] = { correct: 0, total: 0 };
-        }
-        
-        phonemeScores[expected].total++;
-        
-        if (detected === expected) {
-          correctCount++;
-          phonemeScores[expected].correct++;
-        }
-      }
+      phonemeAccuracy = result.accuracy;
+      problematicPhonemes = result.problematicPhonemes;
       
-      phonemeAccuracy = matchCount > 0 ? (correctCount / matchCount) * 100 : 85;
-      
-      // Identify problematic phonemes (< 70% accuracy)
-      problematicPhonemes = Object.entries(phonemeScores)
-        .filter(([_, scores]) => scores.total > 2 && (scores.correct / scores.total) < 0.7)
-        .map(([phoneme]) => phoneme);
-      
-      console.log('✅ Phoneme accuracy:', phonemeAccuracy.toFixed(1), '%');
+      console.log('✅ Phoneme accuracy (fuzzy):', phonemeAccuracy.toFixed(1), '%');
       console.log('⚠️ Problematic phonemes:', problematicPhonemes);
     }
 
@@ -314,6 +295,7 @@ Format as JSON:
         feedback: aiAnalysis.feedback,
         pronunciationFlags: aiAnalysis.pronunciationFlags,
         suggestedExercises: aiAnalysis.suggestedExercises,
+        problematicPhonemes, // Add for practice generator
       },
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

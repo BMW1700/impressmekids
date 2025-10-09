@@ -141,7 +141,7 @@ const mapWordsToPhonemes = (chunks: any[]): PhonemeResult[] => {
 
 /**
  * Simple grapheme-to-phoneme mapping for common English sounds
- * This is a simplified version - in production, use a proper G2P model
+ * DEPRECATED: Use cmuDictWrapper.ts for production-grade G2P
  */
 const simpleG2P = (word: string): string[] => {
   const phonemeMap: { [key: string]: string[] } = {

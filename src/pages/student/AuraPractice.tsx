@@ -10,6 +10,7 @@ import AuraProgressChart from "@/components/aura/AuraProgressChart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mic, TrendingUp, BookOpen } from "lucide-react";
+import GeneratedExercises from "@/components/aura/GeneratedExercises";
 
 const AuraPractice = () => {
   const { toast } = useToast();
@@ -142,35 +143,10 @@ const AuraPractice = () => {
             </TabsContent>
 
             <TabsContent value="exercises" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recommended Exercises</CardTitle>
-                  <CardDescription>Based on your recent performance</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {latestAnalysis?.suggestedExercises?.length > 0 ? (
-                    <div className="space-y-4">
-                      {latestAnalysis.suggestedExercises.map((exercise: any, idx: number) => (
-                        <div key={idx} className="p-4 border rounded-lg">
-                          <div className="flex items-start justify-between mb-2">
-                            <h4 className="font-semibold">{exercise.title}</h4>
-                            <span className={`text-xs px-2 py-1 rounded ${
-                              exercise.difficulty === 'easy' ? 'bg-green-100 text-green-800' :
-                              exercise.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
-                              {exercise.difficulty}
-                            </span>
-                          </div>
-                          <p className="text-sm text-muted-foreground">{exercise.description}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">Complete a practice session to get personalized exercise recommendations.</p>
-                  )}
-                </CardContent>
-              </Card>
+              <GeneratedExercises 
+                problematicPhonemes={latestAnalysis?.problematicPhonemes || []}
+                studentGrade={5}
+              />
             </TabsContent>
           </Tabs>
         </div>
