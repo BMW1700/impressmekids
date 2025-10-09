@@ -32,7 +32,7 @@ const PhonemeProgressChart = ({ records, studentName }: PhonemeProgressChartProp
         const phonemeData = record.evidence?.phoneme_accuracy?.find(
           (p: any) => p.phoneme === phoneme
         );
-        dataPoint[phoneme] = phonemeData ? Math.round(phonemeData.accuracy * 100) : null;
+        dataPoint[phoneme] = phonemeData ? Math.round(phonemeData.accuracy) : null;
       });
 
       return dataPoint;
