@@ -238,6 +238,7 @@ export const useMultiQuestionAssignments = (classroomId?: string, assignmentId?:
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['multi-question-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['assignments'] });
       toast({
         title: 'Success',
         description: 'Assignment deleted successfully',

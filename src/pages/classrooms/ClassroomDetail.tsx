@@ -37,6 +37,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useSearchParams } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -48,6 +49,7 @@ import {
 const ClassroomDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { isTeacher, isStudent, isLoading: permissionsLoading } = useClassroomPermissions(id);
   const [classroom, setClassroom] = useState<any>(null);
@@ -304,7 +306,7 @@ const ClassroomDetail = () => {
             )}
           </div>
 
-          <Tabs defaultValue={isStudent ? "assignments" : "students"} className="mb-8">
+          <Tabs defaultValue={searchParams.get('tab') || (isStudent ? "assignments" : "students")} className="mb-8">
             <TabsList className={cn("grid w-full", isTeacher ? "grid-cols-5" : "grid-cols-4")}>
               {isTeacher && <TabsTrigger value="students">Students</TabsTrigger>}
               <TabsTrigger value="assignments">Assignments</TabsTrigger>
@@ -737,7 +739,6 @@ const ClassroomDetail = () => {
               if (deleteAssignmentId) {
                 deleteAssignment(deleteAssignmentId);
                 setDeleteAssignmentId(null);
-                loadClassroomData();
               }
             }}
           />

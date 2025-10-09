@@ -131,7 +131,7 @@ export default function CreateMultiQuestionAssignment() {
       });
     }
 
-    navigate(`/classrooms/${classroomId}`);
+    navigate(`/classrooms/${classroomId}?tab=assignments`);
   };
 
   const handlePublish = () => {
@@ -172,7 +172,7 @@ export default function CreateMultiQuestionAssignment() {
       });
     }
 
-    navigate(`/classrooms/${classroomId}`);
+    navigate(`/classrooms/${classroomId}?tab=assignments`);
   };
 
   const isValid = title && questions.every(q => q.question_type && Object.keys(q.question_data).length > 0);
