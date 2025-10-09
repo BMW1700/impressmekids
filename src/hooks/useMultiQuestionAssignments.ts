@@ -192,28 +192,31 @@ export const useMultiQuestionAssignments = (classroomId?: string, assignmentId?:
     },
   });
 
-  // Publish assignment
-  const publishAssignment = useMutation({
-    mutationFn: async (id: string) => {
+  // Toggle assignment status (publish/unpublish)
+  const toggleAssignmentStatus = useMutation({
+    mutationFn: async ({ id, newStatus }: { id: string; newStatus: 'draft' | 'published' }) => {
       const { error } = await supabase
         .from('assignments')
-        .update({ status: 'published' })
+        .update({ status: newStatus })
         .eq('id', id);
 
       if (error) throw error;
+      return newStatus;
     },
-    onSuccess: () => {
+    onSuccess: (newStatus) => {
       queryClient.invalidateQueries({ queryKey: ['multi-question-assignments'] });
       toast({
         title: 'Success',
-        description: 'Assignment published successfully',
+        description: newStatus === 'published' 
+          ? 'Assignment published - now visible to students' 
+          : 'Assignment unpublished - hidden from students',
       });
     },
     onError: (error) => {
-      console.error('Publish assignment error:', error);
+      console.error('Toggle assignment status error:', error);
       toast({
         title: 'Error',
-        description: 'Failed to publish assignment',
+        description: 'Failed to update assignment status',
         variant: 'destructive',
       });
     },
@@ -260,7 +263,7 @@ export const useMultiQuestionAssignments = (classroomId?: string, assignmentId?:
     isLoading: assignmentsLoading || assignmentLoading,
     createAssignment: createAssignment.mutate,
     updateAssignment: updateAssignment.mutate,
-    publishAssignment: publishAssignment.mutate,
+    toggleAssignmentStatus: toggleAssignmentStatus.mutate,
     deleteAssignment: deleteAssignment.mutate,
   };
 };

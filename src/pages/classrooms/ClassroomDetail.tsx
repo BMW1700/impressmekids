@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic } from "lucide-react";
+import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic, Eye, EyeOff } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,7 +68,7 @@ const ClassroomDetail = () => {
   const [deleteAssignmentId, setDeleteAssignmentId] = useState<string | null>(null);
   const { assignments } = useAssignments(id);
   const { submissions: assignmentSubmissions } = useAssignmentSubmissions(viewingAssignmentId || undefined);
-  const { deleteAssignment } = useMultiQuestionAssignments(id);
+  const { deleteAssignment, toggleAssignmentStatus } = useMultiQuestionAssignments(id);
 
   useEffect(() => {
     // Wait for permissions to be determined before loading data
@@ -177,6 +177,11 @@ const ClassroomDetail = () => {
         description: "Join code copied to clipboard",
       });
     }
+  };
+
+  const handleToggleAssignmentStatus = (assignmentId: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'published' ? 'draft' : 'published';
+    toggleAssignmentStatus({ id: assignmentId, newStatus: newStatus as 'draft' | 'published' });
   };
 
   if (isLoading || permissionsLoading) {
@@ -414,7 +419,17 @@ const ClassroomDetail = () => {
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge variant={assignment.status === 'published' ? 'default' : 'secondary'}>
-                              {assignment.status}
+                              {assignment.status === 'published' ? (
+                                <>
+                                  <Eye className="h-3 w-3 mr-1" />
+                                  Published
+                                </>
+                              ) : (
+                                <>
+                                  <EyeOff className="h-3 w-3 mr-1" />
+                                  Draft
+                                </>
+                              )}
                             </Badge>
                             {isTeacher && (
                               <DropdownMenu>
@@ -424,6 +439,21 @@ const ClassroomDetail = () => {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => handleToggleAssignmentStatus(assignment.id, assignment.status)}
+                                  >
+                                    {assignment.status === 'published' ? (
+                                      <>
+                                        <EyeOff className="mr-2 h-4 w-4" />
+                                        Unpublish
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Eye className="mr-2 h-4 w-4" />
+                                        Publish
+                                      </>
+                                    )}
+                                  </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => setDeleteAssignmentId(assignment.id)}
                                     className="text-destructive focus:text-destructive"
