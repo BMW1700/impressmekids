@@ -1,18 +1,20 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Mic, Square, Loader2 } from "lucide-react";
+import { Mic, StopCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 interface VoiceRecorderProps {
-  onTranscriptionComplete: (text: string) => void;
+  onTranscriptionComplete: (text: string, audioUrl: string, durationSeconds: number) => void;
+  isAnalyzing?: boolean;
 }
 
-export const VoiceRecorder = ({ onTranscriptionComplete }: VoiceRecorderProps) => {
+export const VoiceRecorder = ({ onTranscriptionComplete, isAnalyzing = false }: VoiceRecorderProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const startTimeRef = useRef<number>(0);
   const { toast } = useToast();
 
   const startRecording = async () => {
@@ -23,6 +25,7 @@ export const VoiceRecorder = ({ onTranscriptionComplete }: VoiceRecorderProps) =
       });
 
       audioChunksRef.current = [];
+      startTimeRef.current = Date.now();
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -32,7 +35,8 @@ export const VoiceRecorder = ({ onTranscriptionComplete }: VoiceRecorderProps) =
 
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        await processAudio(audioBlob);
+        const durationSeconds = (Date.now() - startTimeRef.current) / 1000;
+        await processAudio(audioBlob, durationSeconds);
         stream.getTracks().forEach(track => track.stop());
       };
 
@@ -56,7 +60,7 @@ export const VoiceRecorder = ({ onTranscriptionComplete }: VoiceRecorderProps) =
     }
   };
 
-  const processAudio = async (audioBlob: Blob) => {
+  const processAudio = async (audioBlob: Blob, durationSeconds: number) => {
     setIsProcessing(true);
     try {
       const reader = new FileReader();
@@ -72,11 +76,14 @@ export const VoiceRecorder = ({ onTranscriptionComplete }: VoiceRecorderProps) =
         if (error) throw error;
 
         if (data?.text) {
-          onTranscriptionComplete(data.text);
+          const audioUrl = URL.createObjectURL(audioBlob);
+          
           toast({
-            title: "Success",
-            description: "Audio transcribed successfully!",
+            title: "Transcription Complete",
+            description: "Analyzing your speech...",
           });
+
+          onTranscriptionComplete(data.text, audioUrl, durationSeconds);
         }
       };
     } catch (error) {
@@ -92,30 +99,38 @@ export const VoiceRecorder = ({ onTranscriptionComplete }: VoiceRecorderProps) =
   };
 
   return (
-    <div className="flex items-center gap-2">
-      {!isRecording ? (
-        <Button
-          onClick={startRecording}
-          disabled={isProcessing}
-          variant="outline"
-          size="icon"
-          className="rounded-full"
-        >
-          {isProcessing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Mic className="h-4 w-4" />
-          )}
-        </Button>
-      ) : (
-        <Button
-          onClick={stopRecording}
-          variant="destructive"
-          size="icon"
-          className="rounded-full animate-pulse"
-        >
-          <Square className="h-4 w-4" />
-        </Button>
+    <div className="flex flex-col items-center gap-4 p-6">
+      <Button
+        onClick={isRecording ? stopRecording : startRecording}
+        disabled={isProcessing || isAnalyzing}
+        size="lg"
+        variant={isRecording ? "destructive" : "default"}
+        className="w-full max-w-xs"
+      >
+        {isAnalyzing ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Analyzing Speech...
+          </>
+        ) : isProcessing ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Transcribing...
+          </>
+        ) : isRecording ? (
+          <>
+            <StopCircle className="mr-2 h-4 w-4" />
+            Stop Recording
+          </>
+        ) : (
+          <>
+            <Mic className="mr-2 h-4 w-4" />
+            Start Recording
+          </>
+        )}
+      </Button>
+      {isRecording && (
+        <p className="text-sm text-muted-foreground animate-pulse">Recording in progress...</p>
       )}
     </div>
   );
