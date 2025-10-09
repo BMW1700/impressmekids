@@ -9,10 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Send, Save, Calendar } from "lucide-react";
+import { Loader2, ArrowLeft, Send, Save, Calendar, MessageSquare } from "lucide-react";
 import { useTextHighlights } from "@/hooks/useTextHighlights";
 import { useSubmission } from "@/hooks/useSubmission";
 import { AnnotationSidebar } from "@/components/assignments/AnnotationSidebar";
+import { MobileAnnotationDrawer } from "@/components/assignments/MobileAnnotationDrawer";
 import {
   Dialog,
   DialogContent,
@@ -49,6 +50,8 @@ export default function ReadingAssignment() {
   } | null>(null);
   const [annotationText, setAnnotationText] = useState("");
   const [hoveredHighlightId, setHoveredHighlightId] = useState<string | null>(null);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [selectedHighlightIndex, setSelectedHighlightIndex] = useState<number>(-1);
 
   const { submission, createOrUpdateSubmission } = useSubmission(assignmentId, studentId || undefined);
   const { highlights, createHighlight, updateHighlight, deleteHighlight } = useTextHighlights(
@@ -60,6 +63,34 @@ export default function ReadingAssignment() {
   useEffect(() => {
     loadData();
   }, [assignmentId]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    if (isSubmitted || highlights.length === 0) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        const newIndex =
+          e.key === 'ArrowDown'
+            ? Math.min(selectedHighlightIndex + 1, highlights.length - 1)
+            : Math.max(selectedHighlightIndex - 1, 0);
+
+        setSelectedHighlightIndex(newIndex);
+        if (newIndex >= 0) {
+          setHoveredHighlightId(highlights[newIndex].id);
+          scrollToHighlight(highlights[newIndex].id);
+        }
+      } else if (e.key === 'Delete' && selectedHighlightIndex >= 0) {
+        e.preventDefault();
+        deleteHighlight(highlights[selectedHighlightIndex].id);
+        setSelectedHighlightIndex(-1);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSubmitted, highlights, selectedHighlightIndex]);
 
   const loadData = async () => {
     try {
@@ -149,8 +180,26 @@ export default function ReadingAssignment() {
       return;
     }
 
+    // Check for overlapping highlights
     const startOffset = getCharacterOffset(range.startContainer, range.startOffset);
     const endOffset = getCharacterOffset(range.endContainer, range.endOffset);
+
+    const hasOverlap = highlights.some(
+      (h) =>
+        (startOffset >= h.start_offset && startOffset < h.end_offset) ||
+        (endOffset > h.start_offset && endOffset <= h.end_offset) ||
+        (startOffset <= h.start_offset && endOffset >= h.end_offset)
+    );
+
+    if (hasOverlap) {
+      toast({
+        title: "Overlapping highlight",
+        description: "Please select text that doesn't overlap with existing highlights",
+        variant: "destructive",
+      });
+      selection.removeAllRanges();
+      return;
+    }
 
     setPendingSelection({
       text: selectedText,
@@ -380,10 +429,24 @@ export default function ReadingAssignment() {
                   </Button>
                 </div>
               )}
+
+              {/* Mobile Annotations Button */}
+              <Button
+                className="lg:hidden fixed bottom-6 right-6 rounded-full h-14 w-14 shadow-lg z-50"
+                onClick={() => setMobileDrawerOpen(true)}
+                aria-label="View annotations"
+              >
+                <MessageSquare className="h-6 w-6" />
+                {highlights.length > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-6 w-6 rounded-full p-0 flex items-center justify-center">
+                    {highlights.length}
+                  </Badge>
+                )}
+              </Button>
             </div>
 
-            {/* Annotations Sidebar */}
-              <div className="lg:col-span-1">
+            {/* Annotations Sidebar - Desktop Only */}
+            <div className="hidden lg:block lg:col-span-1">
               <div className="sticky top-4">
                 <AnnotationSidebar
                   highlights={highlights}
@@ -400,6 +463,18 @@ export default function ReadingAssignment() {
       </main>
 
       <Footer />
+
+      {/* Mobile Annotations Drawer */}
+      <MobileAnnotationDrawer
+        highlights={highlights}
+        onUpdateAnnotation={(id, annotation) => updateHighlight({ id, annotation })}
+        onDeleteHighlight={deleteHighlight}
+        onHighlightClick={(highlight) => setHoveredHighlightId(highlight.id)}
+        hoveredHighlightId={hoveredHighlightId}
+        isReadOnly={isSubmitted}
+        open={mobileDrawerOpen}
+        onOpenChange={setMobileDrawerOpen}
+      />
 
       {/* Annotation Dialog */}
       <Dialog open={showAnnotationDialog} onOpenChange={setShowAnnotationDialog}>
