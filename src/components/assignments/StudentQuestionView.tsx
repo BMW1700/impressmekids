@@ -4,7 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { AudioRecorder } from '@/components/AudioRecorder';
+import { VoiceRecorder } from '@/components/aura/VoiceRecorder';
+import { supabase } from '@/integrations/supabase/client';
+import type { AudioFeatures } from '@/lib/audioAnalysis';
+import type { PhonemeResult } from '@/lib/phonemeDetection';
 
 interface StudentQuestionViewProps {
   question: any;
@@ -22,10 +25,70 @@ export const StudentQuestionView = ({
   totalQuestions,
 }: StudentQuestionViewProps) => {
   const [localAnswer, setLocalAnswer] = useState(answer?.answer_data || {});
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const handleChange = (data: any) => {
     setLocalAnswer(data);
     onAnswerChange(data);
+  };
+
+  const handleVoiceRecordingComplete = async (
+    text: string,
+    audioUrl: string,
+    durationSeconds: number,
+    audioFeatures?: AudioFeatures,
+    phonemes?: PhonemeResult[]
+  ) => {
+    setIsAnalyzing(true);
+    try {
+      // Upload audio to storage
+      const audioBlob = await fetch(audioUrl).then(r => r.blob());
+      const fileName = `speaking-${Date.now()}.webm`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('assignment-audio')
+        .upload(fileName, audioBlob);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('assignment-audio')
+        .getPublicUrl(fileName);
+
+      // Create AURA record with full analysis
+      const { data: session } = await supabase.auth.getSession();
+      const studentId = session?.session?.user?.id;
+
+      if (!studentId) throw new Error('Not authenticated');
+
+      // Call analyze-aura edge function for full AI analysis
+      const { data: auraData, error: auraError } = await supabase.functions.invoke('analyze-aura', {
+        body: {
+          audioUrl: publicUrl,
+          transcript: text,
+          durationSeconds,
+          audioFeatures,
+          phonemes,
+          contextText: question.question_data?.prompt_text || question.question_data?.prompt || '',
+          studentId,
+        },
+      });
+
+      if (auraError) throw auraError;
+
+      // Store the answer with AURA record ID
+      const answerData = {
+        transcript: text,
+        audio_url: publicUrl,
+        duration_seconds: durationSeconds,
+        aura_record_id: auraData?.auraRecordId,
+      };
+
+      handleChange(answerData);
+    } catch (error) {
+      console.error('Error processing voice recording:', error);
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const renderQuestion = () => {
@@ -95,18 +158,41 @@ export const StudentQuestionView = ({
       case 'speaking':
         return (
           <div className="space-y-4">
-            {qData.prompt_type === 'text' && (
-              <h3 className="text-lg font-semibold">{qData.prompt_text}</h3>
+            {qData.prompt_type === 'text' && qData.prompt_text && (
+              <div className="p-4 bg-muted rounded-lg mb-4">
+                <p className="text-sm font-medium mb-2">📝 Speaking Prompt:</p>
+                <h3 className="text-lg font-semibold">{qData.prompt_text}</h3>
+              </div>
             )}
             
             {qData.prompt_type === 'audio' && qData.prompt_audio_url && (
-              <audio controls src={qData.prompt_audio_url} className="w-full max-w-md" />
+              <div className="mb-4">
+                <p className="text-sm font-medium mb-2">🔊 Listen to the prompt:</p>
+                <audio controls src={qData.prompt_audio_url} className="w-full max-w-md" />
+              </div>
             )}
 
-            <AudioRecorder
-              onAudioReady={(audioUrl, duration) => handleChange({ audio_url: audioUrl, duration_seconds: duration })}
-              uploadPath={`student/answer-${question.id}`}
-            />
+            <div className="border-2 border-dashed border-primary/20 rounded-lg p-6">
+              <p className="text-sm font-medium mb-4 text-center flex items-center justify-center gap-2">
+                <span className="text-2xl">🎤</span>
+                Record your answer with AURA AI
+              </p>
+              <VoiceRecorder
+                onTranscriptionComplete={handleVoiceRecordingComplete}
+                isAnalyzing={isAnalyzing}
+              />
+            </div>
+            
+            {localAnswer && localAnswer.transcript && (
+              <div className="mt-4 p-4 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800">
+                <p className="text-sm font-medium text-green-700 dark:text-green-300 mb-2">
+                  ✓ Recording complete and analyzed with AURA AI!
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Your speech has been transcribed and analyzed for pronunciation, clarity, and fluency.
+                </p>
+              </div>
+            )}
           </div>
         );
 

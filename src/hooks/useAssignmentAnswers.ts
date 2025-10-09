@@ -41,6 +41,8 @@ export const useAssignmentAnswers = (submissionId?: string) => {
     }) => {
       // Auto-grade if it's a reading comprehension with multiple choice
       let finalAnswerData = answerData;
+      let auraRecordId: string | null = null;
+
       if (answerType === 'reading_comprehension' && questionData?.questions) {
         const questions = questionData.questions;
         const answers = answerData.answers || [];
@@ -61,6 +63,18 @@ export const useAssignmentAnswers = (submissionId?: string) => {
         };
       }
 
+      // Extract AURA record ID from speaking answers
+      if (answerType === 'speaking' && typeof answerData === 'string') {
+        try {
+          const parsed = JSON.parse(answerData);
+          if (parsed.auraRecordId) {
+            auraRecordId = parsed.auraRecordId;
+          }
+        } catch (e) {
+          // If not JSON, it's a simple answer
+        }
+      }
+
       const { data, error } = await supabase
         .from('assignment_answers')
         .upsert({
@@ -69,6 +83,7 @@ export const useAssignmentAnswers = (submissionId?: string) => {
           answer_type: answerType,
           answer_data: finalAnswerData,
           status,
+          aura_record_id: auraRecordId,
         })
         .select()
         .single();

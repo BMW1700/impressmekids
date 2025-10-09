@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2 } from "lucide-react";
+import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -393,7 +393,25 @@ const ClassroomDetail = () => {
                     <Card key={assignment.id} className="shadow-card hover:shadow-purple transition-shadow">
                       <CardHeader>
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg">{assignment.title}</CardTitle>
+                          <div className="flex items-center gap-2">
+                            <CardTitle className="text-lg">{assignment.title}</CardTitle>
+                            {assignment.assignment_type === 'speaking' && (
+                              <span title="Speaking Assignment">
+                                <Mic className="h-4 w-4 text-primary" />
+                              </span>
+                            )}
+                            {(assignment.assignment_type === 'reading_comprehension' || 
+                              assignment.assignment_type === 'multi_question') && (
+                              <div className="flex items-center gap-1">
+                                <span title="Reading/Questions">
+                                  <BookOpen className="h-4 w-4 text-primary" />
+                                </span>
+                                <span title="Includes Speaking">
+                                  <Mic className="h-4 w-4 text-primary" />
+                                </span>
+                              </div>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2">
                             <Badge variant={assignment.status === 'published' ? 'default' : 'secondary'}>
                               {assignment.status}
