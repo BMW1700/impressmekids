@@ -8,7 +8,7 @@ import { ClassroomCard } from "@/components/ClassroomCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Gamepad2, Loader2, UserPlus, Bell, GraduationCap, Play } from "lucide-react";
+import { Gamepad2, Loader2, UserPlus, Bell, GraduationCap, Play, Mic } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AnnouncementCard } from "@/components/AnnouncementCard";
 
@@ -223,6 +223,24 @@ const StudentDashboard = () => {
                   >
                     <Gamepad2 className="mr-2 h-4 w-4" />
                     Browse Games
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-purple-500 to-pink-500 text-white">
+                <CardHeader>
+                  <CardTitle className="text-2xl">Practice Speaking with AURA</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="mb-4">
+                    Improve your pronunciation and speaking skills with AI-powered feedback!
+                  </p>
+                  <Button 
+                    className="bg-white text-purple-600 hover:bg-gray-100"
+                    onClick={() => navigate('/student/aura-practice')}
+                  >
+                    <Mic className="mr-2 h-4 w-4" />
+                    Start Practicing
                   </Button>
                 </CardContent>
               </Card>

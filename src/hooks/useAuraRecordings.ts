@@ -7,20 +7,18 @@ export const useAuraRecordings = (studentId?: string) => {
   const queryClient = useQueryClient();
 
   const { data: recordings, isLoading } = useQuery({
-    queryKey: ['aura-recordings', studentId],
+    queryKey: ['aura-records', studentId],
     queryFn: async () => {
-      let query = supabase
-        .from('aura_recordings')
+      if (!studentId) return [];
+
+      const { data, error } = await supabase
+        .from('aura_records')
         .select('*')
+        .eq('profile_id', studentId)
         .order('created_at', { ascending: false });
 
-      if (studentId) {
-        query = query.eq('student_id', studentId);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return data || [];
     },
     enabled: !!studentId,
   });
@@ -36,11 +34,26 @@ export const useAuraRecordings = (studentId?: string) => {
       audioUrl?: string;
     }) => {
       const { data, error } = await supabase
-        .from('aura_recordings')
+        .from('aura_records')
         .insert({
-          student_id: studentId,
-          transcription_text: transcriptionText,
-          audio_url: audioUrl,
+          profile_id: studentId,
+          transcript: transcriptionText,
+          audio_url: audioUrl || '',
+          language: 'en',
+          duration_s: 0,
+          words: 0,
+          wpm: 0,
+          pace: 3,
+          clarity: 3,
+          confidence: 3,
+          pronunciation_flags: [],
+          feedback: [],
+          evidence: {},
+          suggested_exercises: [],
+          pause_count: 0,
+          avg_silence_ms: 0,
+          asr_confidence: 0.95,
+          request_id: crypto.randomUUID(),
         })
         .select()
         .single();
@@ -49,7 +62,7 @@ export const useAuraRecordings = (studentId?: string) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['aura-recordings'] });
+      queryClient.invalidateQueries({ queryKey: ['aura-records'] });
       toast({
         title: "Success",
         description: "Recording saved successfully!",

@@ -8,7 +8,7 @@ import { CreateClassroomModal } from "@/components/CreateClassroomModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, Users, Trophy, BookOpen, Loader2 } from "lucide-react";
+import { PlusCircle, Users, Trophy, BookOpen, Loader2, BarChart3 } from "lucide-react";
 
 const TeacherDashboard = () => {
   const [profile, setProfile] = useState<any>(null);
@@ -220,7 +220,7 @@ const TeacherDashboard = () => {
           </div>
 
           {/* Quick Actions */}
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-3 gap-6">
             <Card className="hover:shadow-purple transition-shadow cursor-pointer" onClick={() => navigate('/games')}>
               <CardHeader>
                 <CardTitle>Browse Games</CardTitle>
@@ -231,6 +231,22 @@ const TeacherDashboard = () => {
                 </p>
                 <Button variant="outline" className="w-full">
                   View Games →
+                </Button>
+              </CardContent>
+            </Card>
+            <Card className="hover:shadow-blue transition-shadow cursor-pointer" onClick={() => navigate('/teacher/aura-analytics')}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  AURA Analytics
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4">
+                  Track student speaking progress and pronunciation skills
+                </p>
+                <Button variant="outline" className="w-full">
+                  View Analytics →
                 </Button>
               </CardContent>
             </Card>
