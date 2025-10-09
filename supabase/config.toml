@@ -38,3 +38,6 @@ verify_jwt = true
 
 [functions.calculate-exercise-effectiveness]
 verify_jwt = false
+
+[functions.extract-text-from-image]
+verify_jwt = true
