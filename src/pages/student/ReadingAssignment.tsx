@@ -14,6 +14,7 @@ import { useTextHighlights } from "@/hooks/useTextHighlights";
 import { useSubmission } from "@/hooks/useSubmission";
 import { AnnotationSidebar } from "@/components/assignments/AnnotationSidebar";
 import { MobileAnnotationDrawer } from "@/components/assignments/MobileAnnotationDrawer";
+import { RealtimeAnnotationCoach } from "@/components/aura/RealtimeAnnotationCoach";
 import {
   Dialog,
   DialogContent,
@@ -447,12 +448,24 @@ export default function ReadingAssignment() {
 
             {/* Annotations Sidebar - Desktop Only */}
             <div className="hidden lg:block lg:col-span-1">
-              <div className="sticky top-4">
+              <div className="sticky top-4 space-y-4">
+                {/* Real-time AI Coach */}
+                {assignment?.enable_realtime_coaching && !isSubmitted && (
+                  <RealtimeAnnotationCoach
+                    highlights={highlights}
+                    passageText={assignment.passage_text}
+                    enabled={true}
+                  />
+                )}
+                
                 <AnnotationSidebar
                   highlights={highlights}
-                  onUpdateAnnotation={(id, annotation) => updateHighlight({ id, annotation })}
+                  onUpdateAnnotation={updateHighlight}
                   onDeleteHighlight={deleteHighlight}
-                  onHighlightClick={(highlight) => setHoveredHighlightId(highlight.id)}
+                  onHighlightClick={(highlight) => {
+                    setHoveredHighlightId(highlight.id);
+                    scrollToHighlight(highlight.id);
+                  }}
                   hoveredHighlightId={hoveredHighlightId}
                   isReadOnly={isSubmitted}
                 />
