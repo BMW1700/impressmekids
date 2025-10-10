@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic, Eye, EyeOff } from "lucide-react";
+import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic, Eye, EyeOff, UserCheck } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +21,7 @@ import { SelectGameModal } from "@/components/tournament/SelectGameModal";
 import { CreateAnnouncementModal } from "@/components/CreateAnnouncementModal";
 import { CreateAssignmentModal } from "@/components/CreateAssignmentModal";
 import { AnnouncementCard } from "@/components/AnnouncementCard";
+import { ParentAccessRequestCard } from "@/components/ParentAccessRequestCard";
 import { useClassroomPermissions } from "@/hooks/useClassroomPermissions";
 import { useAssignments } from "@/hooks/useAssignments";
 import { useAssignmentSubmissions } from "@/hooks/useAssignmentSubmissions";
@@ -57,6 +58,7 @@ const ClassroomDetail = () => {
   const [students, setStudents] = useState<any[]>([]);
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [parentRequests, setParentRequests] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateTournament, setShowCreateTournament] = useState(false);
   const [showSelectGame, setShowSelectGame] = useState(false);
@@ -159,6 +161,22 @@ const ClassroomDetail = () => {
 
       if (flashcardsError) throw flashcardsError;
       setFlashcardSets(flashcardsData || []);
+
+      // Load parent access requests (teachers only)
+      if (classroomData.teacher_id === session.user.id) {
+        const { data: requestsData, error: requestsError } = await supabase
+          .from('parent_access_requests')
+          .select(`
+            *,
+            parent_accounts!parent_id (full_name, email),
+            profiles!student_id (full_name)
+          `)
+          .eq('classroom_id', id)
+          .order('created_at', { ascending: false });
+
+        if (requestsError) throw requestsError;
+        setParentRequests(requestsData || []);
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -183,6 +201,60 @@ const ClassroomDetail = () => {
   const handleToggleAssignmentStatus = (assignmentId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'published' ? 'draft' : 'published';
     toggleAssignmentStatus({ id: assignmentId, newStatus: newStatus as 'draft' | 'published' });
+  };
+
+  const handleApproveParentRequest = async (requestId: string) => {
+    try {
+      const { error } = await supabase
+        .from('parent_access_requests')
+        .update({ 
+          status: 'approved',
+          resolved_at: new Date().toISOString()
+        })
+        .eq('id', requestId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Request Approved",
+        description: "Parent can now view their child's progress",
+      });
+
+      loadClassroomData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to approve request",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDenyParentRequest = async (requestId: string) => {
+    try {
+      const { error } = await supabase
+        .from('parent_access_requests')
+        .update({ 
+          status: 'denied',
+          resolved_at: new Date().toISOString()
+        })
+        .eq('id', requestId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Request Denied",
+        description: "Parent access request has been denied",
+      });
+
+      loadClassroomData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to deny request",
+        variant: "destructive",
+      });
+    }
   };
 
   if (isLoading || permissionsLoading) {
@@ -313,9 +385,22 @@ const ClassroomDetail = () => {
           </div>
 
           <Tabs defaultValue={searchParams.get('tab') || (isStudent ? "assignments" : "students")} className="mb-8">
-            <TabsList className={cn("grid w-full", isTeacher ? "grid-cols-6" : "grid-cols-4")}>
+            <TabsList className={cn("grid w-full", isTeacher ? "grid-cols-7" : "grid-cols-4")}>
               {isTeacher && <TabsTrigger value="students">Students</TabsTrigger>}
               {isTeacher && <TabsTrigger value="ai-insights">AI Insights</TabsTrigger>}
+              {isTeacher && (
+                <TabsTrigger value="parent-requests" className="relative">
+                  Parent Requests
+                  {parentRequests.filter(r => r.status === 'pending').length > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px]"
+                    >
+                      {parentRequests.filter(r => r.status === 'pending').length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              )}
               <TabsTrigger value="assignments">Assignments</TabsTrigger>
               <TabsTrigger value="announcements">Announcements</TabsTrigger>
               <TabsTrigger value="tournaments">Tournaments</TabsTrigger>
@@ -364,6 +449,44 @@ const ClassroomDetail = () => {
             {isTeacher && (
               <TabsContent value="ai-insights" className="mt-6">
                 <ClassroomAIInsights classroomId={id!} />
+              </TabsContent>
+            )}
+
+            {isTeacher && (
+              <TabsContent value="parent-requests" className="mt-6">
+                <div className="mb-4">
+                  <h2 className="text-2xl font-bold">Parent Access Requests</h2>
+                  <p className="text-muted-foreground mt-1">
+                    Approve or deny parent requests to view their child's progress
+                  </p>
+                </div>
+
+                {parentRequests.length === 0 ? (
+                  <Card className="p-12 text-center">
+                    <UserCheck className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="text-xl font-bold mb-2">No Parent Requests</h3>
+                    <p className="text-muted-foreground">
+                      When parents request access to view their child's progress, they'll appear here
+                    </p>
+                  </Card>
+                ) : (
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {parentRequests.map((request) => (
+                      <ParentAccessRequestCard
+                        key={request.id}
+                        id={request.id}
+                        parentName={request.parent_accounts?.full_name || 'Parent'}
+                        parentEmail={request.parent_accounts?.email || ''}
+                        studentName={request.profiles?.full_name || 'Student'}
+                        message={request.message}
+                        status={request.status}
+                        createdAt={request.created_at}
+                        onApprove={handleApproveParentRequest}
+                        onDeny={handleDenyParentRequest}
+                      />
+                    ))}
+                  </div>
+                )}
               </TabsContent>
             )}
 
