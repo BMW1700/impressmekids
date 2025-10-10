@@ -36,12 +36,20 @@ export const useTeacherSummary = (classroomId?: string) => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['teacher-summary', classroomId] });
-      toast({
-        title: "Summary Generated",
-        description: "AI insights have been generated for this classroom.",
-      });
+      
+      if (data.cached) {
+        toast({
+          title: "Using Cached Summary",
+          description: `Generated ${data.hours_ago} hour${data.hours_ago !== 1 ? 's' : ''} ago. Fresh summaries available once per day.`,
+        });
+      } else {
+        toast({
+          title: "Summary Generated",
+          description: "AI insights have been generated for this classroom.",
+        });
+      }
     },
     onError: (error: Error) => {
       toast({

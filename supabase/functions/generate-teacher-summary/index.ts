@@ -64,6 +64,35 @@ serve(async (req) => {
 
     const { classroom_id } = await req.json();
 
+    // Check for recent summary (rate limiting: 1 per day)
+    const { data: recentSummary } = await supabase
+      .from('teacher_summaries')
+      .select('*')
+      .eq('classroom_id', classroom_id)
+      .order('generated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    // If summary exists from last 24 hours, return it
+    if (recentSummary) {
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const summaryDate = new Date(recentSummary.generated_at);
+      
+      if (summaryDate > oneDayAgo) {
+        const hoursAgo = Math.floor((Date.now() - summaryDate.getTime()) / (1000 * 60 * 60));
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            summary: recentSummary,
+            data: recentSummary.summary_data,
+            cached: true,
+            hours_ago: hoursAgo
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // Verify teacher owns classroom
     const { data: classroom, error: classroomError } = await supabase
       .from('classrooms')
@@ -324,9 +353,13 @@ RULES:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'google/gemini-2.5-flash-lite',
         messages: [
-          { role: 'system', content: systemPrompt },
+          { 
+            role: 'system', 
+            content: systemPrompt,
+            cache_control: { type: 'ephemeral' }
+          },
           { role: 'user', content: userPrompt }
         ],
         response_format: { type: 'json_object' }
