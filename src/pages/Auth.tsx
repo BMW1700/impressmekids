@@ -78,7 +78,7 @@ const Auth = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth`,
+          redirectTo: 'https://impress-me-kids.lovable.app/auth',
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -166,7 +166,7 @@ const Auth = () => {
             full_name: fullName,
             role: role,
           },
-          emailRedirectTo: `${window.location.origin}/auth`,
+          emailRedirectTo: 'https://impress-me-kids.lovable.app/auth',
         },
       });
 
