@@ -41,6 +41,7 @@ export function RealtimeAnnotationCoach({
   const [improvementSuggestions, setImprovementSuggestions] = useState<string[]>([]);
 
   useEffect(() => {
+    const analyzeHighlights = async () => {
     if (!enabled || highlights.length === 0) {
       setCoachingFeedback([]);
       return;
@@ -51,7 +52,7 @@ export function RealtimeAnnotationCoach({
     const suggestions: string[] = [];
 
     // Analyze semantic clustering
-    const clusters = analyzeSemanticClusters(highlights, passageText);
+    const clusters = await analyzeSemanticClusters(highlights, passageText);
     const conceptCoverage = calculateConceptCoverage(clusters);
     const strategy = detectHighlightStrategy(highlights, passageText.length);
 
@@ -116,6 +117,9 @@ export function RealtimeAnnotationCoach({
 
     setCoachingFeedback(feedback);
     setImprovementSuggestions(suggestions);
+    };
+    
+    analyzeHighlights();
   }, [highlights, passageText, enabled]);
 
   if (!enabled) {
