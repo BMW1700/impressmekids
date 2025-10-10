@@ -66,6 +66,18 @@ export const ClassroomAIInsights = ({ classroomId }: ClassroomAIInsightsProps) =
         confidence: number;
         feedback: string[];
       };
+      phoneme_analysis?: {
+        struggling_sounds?: string[];
+        accuracy_scores?: Record<string, number>;
+        mastered_sounds?: string[];
+        ready_for_transfer?: string[];
+      };
+      fluency_metrics?: {
+        wpm?: number;
+        wpm_trend?: string;
+        grade_level_comparison?: string;
+        pause_analysis?: string;
+      };
       actionable_recommendations: string[];
     }>;
   };
@@ -238,6 +250,71 @@ export const ClassroomAIInsights = ({ classroomId }: ClassroomAIInsightsProps) =
                       <span className="font-bold">{student.aura_summary.confidence}/5</span>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Phoneme Breakdown */}
+              {student.phoneme_analysis && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">🔤 Phoneme Analysis</p>
+                  
+                  {student.phoneme_analysis.struggling_sounds && student.phoneme_analysis.struggling_sounds.length > 0 && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Struggling Sounds:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {student.phoneme_analysis.struggling_sounds.map((sound, i) => (
+                          <Badge key={i} variant="destructive" className="text-xs">
+                            {sound}
+                            {student.phoneme_analysis?.accuracy_scores?.[sound.split(' ')[0]] && 
+                              ` ${student.phoneme_analysis.accuracy_scores[sound.split(' ')[0]]}%`
+                            }
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {student.phoneme_analysis.mastered_sounds && student.phoneme_analysis.mastered_sounds.length > 0 && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Mastered Sounds:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {student.phoneme_analysis.mastered_sounds.map((sound, i) => (
+                          <Badge key={i} variant="secondary" className="bg-green-50 text-green-700 text-xs">
+                            {sound}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Fluency Metrics */}
+              {student.fluency_metrics && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">📊 Fluency Trends</p>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    {student.fluency_metrics.wpm && (
+                      <div className="p-2 bg-muted rounded">
+                        <span className="text-muted-foreground">WPM:</span>{' '}
+                        <span className="font-semibold">{student.fluency_metrics.wpm}</span>
+                        {student.fluency_metrics.wpm_trend && (
+                          <span className={`ml-1 ${student.fluency_metrics.wpm_trend === 'increasing' ? 'text-green-600' : 'text-orange-600'}`}>
+                            {student.fluency_metrics.wpm_trend === 'increasing' ? '↑' : '↓'}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {student.fluency_metrics.grade_level_comparison && (
+                      <div className="p-2 bg-muted rounded">
+                        <span className="text-muted-foreground">Grade Level:</span>{' '}
+                        <span className="font-semibold text-xs">{student.fluency_metrics.grade_level_comparison}</span>
+                      </div>
+                    )}
+                  </div>
+                  {student.fluency_metrics.pause_analysis && (
+                    <p className="text-xs text-muted-foreground italic">{student.fluency_metrics.pause_analysis}</p>
+                  )}
                 </div>
               )}
 

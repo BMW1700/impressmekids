@@ -218,12 +218,87 @@ export default function StudentProfile() {
 
           {/* Tabs */}
           <Tabs defaultValue="overview" className="mb-8">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="phonemes">Phoneme Mastery</TabsTrigger>
               <TabsTrigger value="progress">Progress Charts</TabsTrigger>
               <TabsTrigger value="timeline">Activity Timeline</TabsTrigger>
               <TabsTrigger value="notes">Teacher Notes</TabsTrigger>
             </TabsList>
+
+            {/* Phoneme Mastery Tab */}
+            <TabsContent value="phonemes" className="mt-6 space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Phoneme Mastery Analysis</CardTitle>
+                  <CardDescription>
+                    Detailed breakdown of sound accuracy and transfer learning opportunities
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {skillVector?.phoneme_scores && Object.keys(skillVector.phoneme_scores).length > 0 ? (
+                    <>
+                      {/* Mastered Sounds */}
+                      <div>
+                        <h4 className="font-semibold text-sm mb-3 text-green-700">✓ Mastered Sounds (≥85% accuracy)</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(skillVector.phoneme_scores)
+                            .filter(([_, score]) => (score as number) >= 85)
+                            .map(([phoneme, score]) => (
+                              <Badge key={phoneme} variant="secondary" className="bg-green-50 text-green-700">
+                                {phoneme}: {score}%
+                              </Badge>
+                            ))}
+                        </div>
+                      </div>
+
+                      {/* In Progress */}
+                      <div>
+                        <h4 className="font-semibold text-sm mb-3 text-yellow-700">⏳ In Progress (70-85% accuracy)</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(skillVector.phoneme_scores)
+                            .filter(([_, score]) => (score as number) >= 70 && (score as number) < 85)
+                            .map(([phoneme, score]) => (
+                              <Badge key={phoneme} variant="secondary" className="bg-yellow-50 text-yellow-700">
+                                {phoneme}: {score}%
+                              </Badge>
+                            ))}
+                        </div>
+                      </div>
+
+                      {/* Struggling */}
+                      <div>
+                        <h4 className="font-semibold text-sm mb-3 text-red-700">⚠️ Needs Practice (&lt;70% accuracy)</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(skillVector.phoneme_scores)
+                            .filter(([_, score]) => (score as number) < 70)
+                            .map(([phoneme, score]) => (
+                              <Badge key={phoneme} variant="destructive">
+                                {phoneme}: {score}%
+                              </Badge>
+                            ))}
+                        </div>
+                      </div>
+
+                      {/* Transfer Learning Opportunities */}
+                      <Card className="bg-blue-50 border-blue-200">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm">🎯 Transfer Learning Opportunities</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm text-muted-foreground">
+                            Based on mastered sounds, this student may be ready to learn similar phonemes through transfer learning.
+                            For example, mastering /k/ often predicts success with /g/ (similar articulation).
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No phoneme data available yet. Student needs to complete AURA speaking exercises.</p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
             <TabsContent value="overview" className="mt-6 space-y-6">
               {/* Quick Stats */}

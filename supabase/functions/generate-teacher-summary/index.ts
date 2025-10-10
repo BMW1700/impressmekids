@@ -25,6 +25,18 @@ interface StudentData {
   profile_id: string;
   name: string;
   assignments: AssignmentWithAura[];
+  skillVector?: {
+    phoneme_scores?: Record<string, number>;
+    prosody_metrics?: any;
+    fluency_metrics?: any;
+  };
+  auraMetrics?: {
+    avgWpm?: number;
+    avgPauseCount?: number;
+    avgSilenceMs?: number;
+    pronunciationFlags?: any[];
+    prosodyData?: any;
+  };
 }
 
 serve(async (req) => {
@@ -117,13 +129,25 @@ serve(async (req) => {
         submissions = result.data;
       }
 
-      // Get AURA records for this student
+      // Get AURA records for this student with detailed metrics
       const { data: auraRecords } = await supabase
         .from('aura_records')
-        .select('clarity, pace, confidence, feedback, question_id')
+        .select(`
+          clarity, pace, confidence, feedback, question_id,
+          wpm, pause_count, avg_silence_ms,
+          pronunciation_flags,
+          prosody_metrics
+        `)
         .eq('profile_id', studentId)
         .order('created_at', { ascending: false })
         .limit(10);
+
+      // Get skill vector for phoneme-level analysis
+      const { data: skillVector } = await supabase
+        .from('student_skill_vectors')
+        .select('phoneme_scores, prosody_metrics, fluency_metrics')
+        .eq('student_id', studentId)
+        .maybeSingle();
 
       const assignments: AssignmentWithAura[] = [];
 
@@ -169,10 +193,28 @@ serve(async (req) => {
         }
       }
 
+      // Calculate aggregate AURA metrics
+      let auraMetrics = undefined;
+      if (auraRecords && auraRecords.length > 0) {
+        const validWpm = auraRecords.filter(r => r.wpm).map(r => r.wpm);
+        const validPauses = auraRecords.filter(r => r.pause_count !== null).map(r => r.pause_count);
+        const validSilence = auraRecords.filter(r => r.avg_silence_ms !== null).map(r => r.avg_silence_ms);
+        
+        auraMetrics = {
+          avgWpm: validWpm.length > 0 ? Math.round(validWpm.reduce((a, b) => a + b, 0) / validWpm.length) : undefined,
+          avgPauseCount: validPauses.length > 0 ? Math.round(validPauses.reduce((a, b) => a + b, 0) / validPauses.length) : undefined,
+          avgSilenceMs: validSilence.length > 0 ? Math.round(validSilence.reduce((a, b) => a + b, 0) / validSilence.length) : undefined,
+          pronunciationFlags: auraRecords.flatMap(r => r.pronunciation_flags || []).slice(0, 5),
+          prosodyData: auraRecords[0]?.prosody_metrics
+        };
+      }
+
       studentsData.push({
         profile_id: studentId,
         name: studentName,
-        assignments
+        assignments,
+        skillVector: skillVector || undefined,
+        auraMetrics
       });
     }
 
@@ -189,12 +231,34 @@ Teacher: ${user.id}
 Students: ${JSON.stringify(studentsData, null, 2)}
 
 TASK:
-For each student, evaluate:
+For each student, analyze their data deeply and provide specific, data-driven insights:
+
+PHONEME-LEVEL ANALYSIS:
+- Use skillVector.phoneme_scores to identify specific struggling sounds (e.g., /θ/, /r/, /ŋ/)
+- Calculate accuracy percentages for each phoneme
+- Identify transfer learning opportunities (mastered sounds vs struggling sounds)
+- Use pronunciation_flags from AURA data for additional context
+
+FLUENCY ANALYSIS:
+- Analyze WPM (words per minute) trends - is it increasing, stable, or decreasing?
+- Evaluate pause patterns - high pause counts may indicate decoding difficulties
+- Compare against grade-level benchmarks (e.g., Grade 3 should be 80-110 WPM)
+- Assess silence duration patterns
+
+ASSIGNMENT & SUBJECT PERFORMANCE:
 - Which subjects/assignments they excel at
 - Which subjects/assignments they struggle with
-- AURA feedback trends (clarity, pace, confidence)
 - Completion trends (missing assignments, on-time vs late)
-- Overall recommendations (specific, actionable)
+
+AURA HOLISTIC METRICS:
+- AURA feedback trends (clarity, pace, confidence)
+- Speaking patterns and prosody
+
+RECOMMENDATIONS:
+- Must be SPECIFIC to the data (e.g., "Practice /θ/ sound - currently at 63% accuracy")
+- Include phoneme-specific interventions when applicable
+- Reference actual WPM numbers and trends
+- Prioritize based on data severity
 
 Also provide class-level insights:
 - Top performers
@@ -226,7 +290,22 @@ Return strict JSON only with the following schema:
         "confidence": 5,
         "feedback": ["Try pausing after commas"]
       },
-      "actionable_recommendations": ["Assign extra reading", "1-on-1 practice"]
+      "phoneme_analysis": {
+        "struggling_sounds": ["/θ/ (th)", "/r/"],
+        "accuracy_scores": {"/θ/": 63, "/k/": 92, "/r/": 71},
+        "mastered_sounds": ["/k/", "/p/", "/t/"],
+        "ready_for_transfer": ["/g/ (similar to /k/)"]
+      },
+      "fluency_metrics": {
+        "wpm": 98,
+        "wpm_trend": "decreasing",
+        "grade_level_comparison": "Below grade 3 benchmark (80-110 WPM)",
+        "pause_analysis": "12 pauses/min suggests decoding difficulties"
+      },
+      "actionable_recommendations": [
+        "Practice /θ/ sound - currently at 63% accuracy",
+        "Focused reading practice to increase WPM from 98 to 110+"
+      ]
     }
   ]
 }
