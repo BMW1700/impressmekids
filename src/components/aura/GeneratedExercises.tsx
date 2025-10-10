@@ -176,7 +176,13 @@ const GeneratedExercises = ({ problematicPhonemes, studentGrade = 5 }: Generated
                     </CardTitle>
                     {exercise.difficulty_level && (
                       <Badge variant="outline" className="text-xs">
-                        Level {exercise.difficulty_level}
+                        Level {exercise.difficulty_level}/5
+                      </Badge>
+                    )}
+                    {(exercise.adaptive_metadata as any)?.version === 'v2_rl_enhanced' && (
+                      <Badge variant="default" className="text-xs gap-1">
+                        <Sparkles className="w-3 h-3" />
+                        RL-Adaptive
                       </Badge>
                     )}
                   </div>
@@ -197,6 +203,16 @@ const GeneratedExercises = ({ problematicPhonemes, studentGrade = 5 }: Generated
                     </Badge>
                   ))}
                 </CardDescription>
+                {(exercise.adaptive_metadata as any)?.difficulty_reasoning && (
+                  <p className="text-xs text-muted-foreground mt-2 italic">
+                    💡 {(exercise.adaptive_metadata as any).difficulty_reasoning}
+                  </p>
+                )}
+                {(exercise.adaptive_metadata as any)?.recommended_rest_minutes > 0 && (
+                  <div className="mt-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded text-xs text-amber-700 dark:text-amber-300">
+                    ⚠️ Rest recommended: {(exercise.adaptive_metadata as any).recommended_rest_minutes} min before practice
+                  </div>
+                )}
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="p-4 bg-muted/50 rounded-lg">

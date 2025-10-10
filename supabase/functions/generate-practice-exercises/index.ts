@@ -127,7 +127,7 @@ serve(async (req) => {
     // Fetch student's skill vector with difficulty level
     const { data: skillVector } = await supabase
       .from('student_skill_vectors')
-      .select('phoneme_scores, current_difficulty_level, performance_trend')
+      .select('phoneme_scores, current_difficulty_level, performance_trend, weekly_improvement')
       .eq('student_id', studentId)
       .single();
 
@@ -153,16 +153,58 @@ serve(async (req) => {
       ? recentGrades.reduce((a: number, b: number) => a + b, 0) / recentGrades.length
       : 70;
 
-    // Calculate adaptive difficulty level
+    // ========== V2: RL + CROSS-MODAL DIFFICULTY SCALING ==========
     const currentDifficultyLevel = skillVector?.current_difficulty_level || 1;
-    let targetDifficultyLevel = currentDifficultyLevel;
+    const performanceTrend = skillVector?.performance_trend || 0;
+    const weeklyImprovement = skillVector?.weekly_improvement || 0;
 
-    // Difficulty scaling logic
-    if (avgGrade >= 85 && recentGrades.length >= 3) {
-      targetDifficultyLevel = Math.min(5, currentDifficultyLevel + 1);
-    } else if (avgGrade < 60 && recentGrades.length >= 3) {
+    let targetDifficultyLevel = currentDifficultyLevel;
+    let difficultyReasoning = 'Maintaining current level';
+    let articulatoryFatigueRisk = 0;
+
+    // Fetch recent practice sessions to estimate fatigue
+    const { data: recentSessions } = await supabase
+      .from('realtime_practice_sessions')
+      .select('duration_seconds, created_at')
+      .eq('student_id', studentId)
+      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Last 24h
+      .order('created_at', { ascending: false });
+
+    const totalPracticeMinutesLast24h = (recentSessions || [])
+      .reduce((sum, s) => sum + (s.duration_seconds || 0), 0) / 60;
+
+    // Estimate fatigue: 0 (none) to 1 (exhausted)
+    articulatoryFatigueRisk = Math.min(1.0, totalPracticeMinutesLast24h / 120); // Max out at 2 hours
+
+    // ENHANCED DIFFICULTY SCALING WITH RL INSIGHTS
+    // Rule 1: High fatigue → reduce difficulty
+    if (articulatoryFatigueRisk > 0.7) {
       targetDifficultyLevel = Math.max(1, currentDifficultyLevel - 1);
+      difficultyReasoning = `Articulatory fatigue detected (${Math.round(articulatoryFatigueRisk * 100)}%). Reducing to prevent burnout.`;
     }
+    // Rule 2: Excellent recent performance + low fatigue → increase
+    else if (avgGrade >= 85 && recentGrades.length >= 3 && articulatoryFatigueRisk < 0.4) {
+      targetDifficultyLevel = Math.min(5, currentDifficultyLevel + 1);
+      difficultyReasoning = `Excellent performance (${Math.round(avgGrade)}/100) with low fatigue. Ready for level ${targetDifficultyLevel}!`;
+    }
+    // Rule 3: Struggling performance → decrease
+    else if (avgGrade < 60 && recentGrades.length >= 3) {
+      targetDifficultyLevel = Math.max(1, currentDifficultyLevel - 1);
+      difficultyReasoning = `Performance struggling (${Math.round(avgGrade)}/100). Lowering for confidence building.`;
+    }
+    // Rule 4: Strong improvement trend → slight increase
+    else if (weeklyImprovement > 15 && avgGrade >= 75) {
+      targetDifficultyLevel = Math.min(5, currentDifficultyLevel + 1);
+      difficultyReasoning = `Strong weekly improvement (+${Math.round(weeklyImprovement)}%). Advancing difficulty.`;
+    }
+    // Rule 5: Maintain for consistency
+    else {
+      targetDifficultyLevel = currentDifficultyLevel;
+      difficultyReasoning = `Stable performance (${Math.round(avgGrade)}/100). Maintaining level ${currentDifficultyLevel}.`;
+    }
+
+    console.log(`🎯 Difficulty Scaling: ${currentDifficultyLevel} → ${targetDifficultyLevel} (${difficultyReasoning})`);
+    console.log(`⚡ Fatigue Risk: ${Math.round(articulatoryFatigueRisk * 100)}% (${Math.round(totalPracticeMinutesLast24h)}min practice in 24h)`);
 
     // Get difficulty parameters
     const difficultyParams: { [key: number]: any } = {
@@ -180,29 +222,36 @@ serve(async (req) => {
 
     console.log(`Transfer predictions for student ${studentId}:`, transferPredictions.slice(0, 3));
 
-    // Generate exercises using Lovable AI with transfer learning + difficulty scaling
+    // Generate exercises using Lovable AI with RL-enhanced scaling
+    const recommendedRestMinutes = articulatoryFatigueRisk > 0.7 
+      ? Math.ceil(articulatoryFatigueRisk * 30) 
+      : 0;
+
     const prompt = `Generate 3 practice exercises for a grade ${grade || 5} student at DIFFICULTY LEVEL ${targetDifficultyLevel}/5.
 
 PROBLEMATIC PHONEMES: ${phonemeGaps.join(", ")}
 
-🎯 DIFFICULTY LEVEL ${targetDifficultyLevel} REQUIREMENTS:
+🎯 DIFFICULTY LEVEL ${targetDifficultyLevel}/5 REQUIREMENTS:
 - Complexity: ${diffParams.complexity}
 - Vocabulary: ${diffParams.vocabulary}
 - Length: ${diffParams.length}
 - Pacing: ${diffParams.pacing}
 
-🚀 TRANSFER LEARNING INSIGHTS:
+🚀 TRANSFER LEARNING INSIGHTS (RL-Based Phoneme Sequencing):
 ${transferPredictions.slice(0, 3).map(p => `- /${p.phoneme}/ (${p.transferProbability}% confidence): ${p.reasoning}`).join('\n')}
 
-📊 STUDENT PERFORMANCE CONTEXT:
+📊 ADAPTIVE STUDENT CONTEXT:
 - Recent average: ${Math.round(avgGrade)}/100
-- Difficulty trend: ${skillVector?.performance_trend || 0 > 0 ? 'improving' : 'stable'}
+- Performance trend: ${performanceTrend > 0 ? 'improving' : performanceTrend < 0 ? 'declining' : 'stable'}
+- Weekly improvement: ${weeklyImprovement > 0 ? '+' : ''}${Math.round(weeklyImprovement)}%
+- Articulatory fatigue: ${Math.round(articulatoryFatigueRisk * 100)}%
+${recommendedRestMinutes > 0 ? `- ⚠️ RECOMMEND ${recommendedRestMinutes}min rest before practice` : ''}
 
-INSTRUCTIONS:
-- Focus on problematic phonemes: ${phonemeGaps.join(", ")}
-- Include transfer-ready phonemes (${transferPredictions.slice(0, 2).map(p => p.phoneme).join(', ')})
-- Match the difficulty level EXACTLY - don't make it too easy or too hard
-- Make exercises engaging and age-appropriate
+⚡ RL-ENHANCED INSTRUCTIONS:
+- Prioritize transfer-ready phonemes for optimal muscle memory: ${transferPredictions.slice(0, 2).map(p => p.phoneme).join(', ')}
+- Sequence exercises to minimize articulatory fatigue
+- ${articulatoryFatigueRisk > 0.5 ? 'IMPORTANT: Keep exercises SHORT to avoid burnout' : 'Student is fresh - can handle full complexity'}
+- Match difficulty level ${targetDifficultyLevel} EXACTLY
 
 Include:
 1. One tongue twister matching the difficulty level
@@ -266,7 +315,7 @@ Return ONLY a JSON object:
     const generatedContent = aiData.choices[0].message.content;
     const parsed = JSON.parse(generatedContent);
 
-    // Insert exercises into database with difficulty tracking
+    // Insert exercises into database with V2 difficulty tracking
     const exercisesToInsert = parsed.exercises.map((ex: any) => ({
       student_id: studentId,
       phoneme_targets: phonemeGaps,
@@ -274,12 +323,19 @@ Return ONLY a JSON object:
       content: ex.content,
       completed: false,
       transfer_predictions: transferPredictions,
-      difficulty_level: targetDifficultyLevel, // NEW: Track difficulty
+      difficulty_level: targetDifficultyLevel,
       adaptive_metadata: {
         generated_at: new Date().toISOString(),
+        version: 'v2_rl_enhanced',
         avg_grade: avgGrade,
         current_level: currentDifficultyLevel,
         target_level: targetDifficultyLevel,
+        difficulty_reasoning: difficultyReasoning,
+        articulatory_fatigue_risk: articulatoryFatigueRisk,
+        recommended_rest_minutes: recommendedRestMinutes,
+        performance_trend: performanceTrend,
+        weekly_improvement: weeklyImprovement,
+        total_practice_minutes_24h: totalPracticeMinutesLast24h,
       },
     }));
 
