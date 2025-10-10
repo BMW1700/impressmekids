@@ -195,7 +195,7 @@ export default function StudentProfile() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-primary" />
-                  {getActionEmoji(nextAction.actionType)} Next Best Action
+                  {nextAction?.actionType ? getActionEmoji(nextAction.actionType) : '💡'} Next Best Action
                 </CardTitle>
                 <CardDescription>
                   AI-recommended intervention based on latest performance data
@@ -203,30 +203,30 @@ export default function StudentProfile() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <h3 className="text-xl font-bold mb-2">{nextAction.title}</h3>
-                  <p className="text-muted-foreground mb-4">{nextAction.description}</p>
+                  <h3 className="text-xl font-bold mb-2">{nextAction?.title || 'Loading...'}</h3>
+                  <p className="text-muted-foreground mb-4">{nextAction?.description || ''}</p>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="bg-muted p-4 rounded-lg">
                     <p className="text-sm font-medium mb-1">💡 Why This Action?</p>
-                    <p className="text-sm text-muted-foreground">{nextAction.reasoning}</p>
+                    <p className="text-sm text-muted-foreground">{nextAction?.reasoning || ''}</p>
                   </div>
                   <div className="bg-muted p-4 rounded-lg">
                     <p className="text-sm font-medium mb-1">🎯 Expected Outcome</p>
-                    <p className="text-sm text-muted-foreground">{nextAction.expectedOutcome}</p>
+                    <p className="text-sm text-muted-foreground">{nextAction?.expectedOutcome || ''}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-4">
                   <Badge variant={nextAction.priority === 'high' ? 'destructive' : 'secondary'}>
-                    {nextAction.priority.toUpperCase()} PRIORITY
+                    {nextAction.priority?.toUpperCase() || 'MEDIUM'} PRIORITY
                   </Badge>
                   <Badge variant="outline">
-                    {nextAction.difficulty.toUpperCase()} DIFFICULTY
+                    {nextAction.difficulty?.toUpperCase() || 'MEDIUM'} DIFFICULTY
                   </Badge>
                   <span className="text-sm text-muted-foreground">
-                    ⏱️ {nextAction.estimatedDuration}
+                    ⏱️ {nextAction.estimatedDuration || 'N/A'}
                   </span>
                 </div>
 
