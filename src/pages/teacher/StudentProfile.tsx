@@ -219,14 +219,14 @@ export default function StudentProfile() {
                 </div>
 
                 <div className="flex items-center gap-4">
-                  <Badge variant={nextAction.priority === 'high' ? 'destructive' : 'secondary'}>
-                    {nextAction.priority?.toUpperCase() || 'MEDIUM'} PRIORITY
+                  <Badge variant={nextAction?.priority === 'high' ? 'destructive' : 'secondary'}>
+                    {nextAction?.priority?.toUpperCase() || 'MEDIUM'} PRIORITY
                   </Badge>
                   <Badge variant="outline">
-                    {nextAction.difficulty?.toUpperCase() || 'MEDIUM'} DIFFICULTY
+                    {nextAction?.difficulty?.toUpperCase() || 'MEDIUM'} DIFFICULTY
                   </Badge>
                   <span className="text-sm text-muted-foreground">
-                    ⏱️ {nextAction.estimatedDuration || 'N/A'}
+                    ⏱️ {nextAction?.estimatedDuration || 'N/A'}
                   </span>
                 </div>
 
