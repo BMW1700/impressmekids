@@ -8,7 +8,13 @@ export const Footer = () => {
           <div className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} Impress Me Kids. All rights reserved.
           </div>
-          <div className="text-sm">
+          <div className="flex items-center gap-4 text-sm">
+            <Link to="/privacy-policy" className="text-muted-foreground hover:text-primary transition-colors">
+              Privacy Policy
+            </Link>
+            <Link to="/terms-of-service" className="text-muted-foreground hover:text-primary transition-colors">
+              Terms of Service
+            </Link>
             <Link 
               to="https://impressme.com" 
               target="_blank"

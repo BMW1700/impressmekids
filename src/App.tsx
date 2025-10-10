@@ -23,6 +23,12 @@ import ReviewSubmission from "./pages/teacher/ReviewSubmission";
 import ReviewMultiQuestionSubmission from "./pages/teacher/ReviewMultiQuestionSubmission";
 import CreateMultiQuestionAssignment from "./pages/teacher/CreateMultiQuestionAssignment";
 import StudentProfile from "./pages/teacher/StudentProfile";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import ParentDashboard from "./pages/parent/ParentDashboard";
+import RequestAccess from "./pages/parent/RequestAccess";
+import ChildDetail from "./pages/parent/ChildDetail";
+import DistrictDashboard from "./pages/district/DistrictDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -53,6 +59,12 @@ const App = () => (
           <Route path="/join-class" element={<JoinClass />} />
           <Route path="/games" element={<Games />} />
           <Route path="/games/jeopardy-1v1" element={<JeopardyGame />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
+          <Route path="/parent/dashboard" element={<ParentDashboard />} />
+          <Route path="/parent/request-access" element={<RequestAccess />} />
+          <Route path="/parent/child/:studentId" element={<ChildDetail />} />
+          <Route path="/district/dashboard" element={<DistrictDashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

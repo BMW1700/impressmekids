@@ -15,7 +15,7 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState<"teacher" | "student">("student");
+  const [role, setRole] = useState<"teacher" | "student" | "parent" | "district_admin">("student");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -32,6 +32,10 @@ const Auth = () => {
         
         if (profile?.role === 'teacher') {
           navigate('/teacher/dashboard');
+        } else if (profile?.role === 'parent') {
+          navigate('/parent/dashboard');
+        } else if (profile?.role === 'district_admin') {
+          navigate('/district/dashboard');
         } else {
           navigate('/student/dashboard');
         }
@@ -94,6 +98,12 @@ const Auth = () => {
         if (role === 'teacher') {
           console.log('🎯 Redirecting to teacher dashboard');
           navigate('/teacher/dashboard');
+        } else if (role === 'parent') {
+          console.log('🎯 Redirecting to parent dashboard');
+          navigate('/parent/dashboard');
+        } else if (role === 'district_admin') {
+          console.log('🎯 Redirecting to district dashboard');
+          navigate('/district/dashboard');
         } else {
           console.log('🎯 Redirecting to student dashboard');
           navigate('/student/dashboard');
@@ -165,6 +175,12 @@ const Auth = () => {
         if (profile.role === 'teacher') {
           console.log('🎯 Redirecting to teacher dashboard');
           navigate('/teacher/dashboard');
+        } else if (profile.role === 'parent') {
+          console.log('🎯 Redirecting to parent dashboard');
+          navigate('/parent/dashboard');
+        } else if (profile.role === 'district_admin') {
+          console.log('🎯 Redirecting to district dashboard');
+          navigate('/district/dashboard');
         } else {
           console.log('🎯 Redirecting to student dashboard');
           navigate('/student/dashboard');
@@ -298,7 +314,7 @@ const Auth = () => {
                   </div>
                   <div className="space-y-2">
                     <Label>I am a...</Label>
-                    <RadioGroup value={role} onValueChange={(value) => setRole(value as "teacher" | "student")}>
+                    <RadioGroup value={role} onValueChange={(value) => setRole(value as "teacher" | "student" | "parent" | "district_admin")}>
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="student" id="student" />
                         <Label htmlFor="student" className="font-normal cursor-pointer">
@@ -309,6 +325,18 @@ const Auth = () => {
                         <RadioGroupItem value="teacher" id="teacher" />
                         <Label htmlFor="teacher" className="font-normal cursor-pointer">
                           Teacher
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="parent" id="parent" />
+                        <Label htmlFor="parent" className="font-normal cursor-pointer">
+                          Parent
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="district_admin" id="district_admin" />
+                        <Label htmlFor="district_admin" className="font-normal cursor-pointer">
+                          District Admin
                         </Label>
                       </div>
                     </RadioGroup>
