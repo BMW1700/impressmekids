@@ -29,6 +29,7 @@ import ParentDashboard from "./pages/parent/ParentDashboard";
 import RequestAccess from "./pages/parent/RequestAccess";
 import ChildDetail from "./pages/parent/ChildDetail";
 import DistrictDashboard from "./pages/district/DistrictDashboard";
+import RegisterDistrict from "./pages/district/RegisterDistrict";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -65,6 +66,7 @@ const App = () => (
           <Route path="/parent/request-access" element={<RequestAccess />} />
           <Route path="/parent/child/:studentId" element={<ChildDetail />} />
           <Route path="/district/dashboard" element={<DistrictDashboard />} />
+          <Route path="/district/register" element={<RegisterDistrict />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

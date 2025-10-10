@@ -633,6 +633,42 @@ export type Database = {
         }
         Relationships: []
       }
+      districts: {
+        Row: {
+          created_at: string
+          email_domains: string[]
+          id: string
+          logo_url: string | null
+          name: string
+          primary_contact_email: string | null
+          slug: string
+          subscription_tier: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email_domains?: string[]
+          id?: string
+          logo_url?: string | null
+          name: string
+          primary_contact_email?: string | null
+          slug: string
+          subscription_tier?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email_domains?: string[]
+          id?: string
+          logo_url?: string | null
+          name?: string
+          primary_contact_email?: string | null
+          slug?: string
+          subscription_tier?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       flashcard_sets: {
         Row: {
           classroom_id: string
@@ -1246,26 +1282,40 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          district_id: string | null
           email: string
           full_name: string
           id: string
           role: Database["public"]["Enums"]["user_role"]
+          signup_domain: string | null
         }
         Insert: {
           created_at?: string
+          district_id?: string | null
           email: string
           full_name: string
           id: string
           role?: Database["public"]["Enums"]["user_role"]
+          signup_domain?: string | null
         }
         Update: {
           created_at?: string
+          district_id?: string | null
           email?: string
           full_name?: string
           id?: string
           role?: Database["public"]["Enums"]["user_role"]
+          signup_domain?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_profiles_district"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       question_groups: {
         Row: {

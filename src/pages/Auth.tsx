@@ -8,7 +8,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles, Loader2, Chrome } from "lucide-react";
+import { detectUserTypeFromEmail } from "@/lib/districtDetection";
+import { RoleSelectionModal } from "@/components/auth/RoleSelectionModal";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -16,33 +18,134 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<"teacher" | "student" | "parent" | "district_admin">("student");
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [pendingDistrictName, setPendingDistrictName] = useState("");
+  const [pendingDistrictId, setPendingDistrictId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const redirectToDashboard = (userRole: string) => {
+    if (userRole === 'teacher') {
+      navigate('/teacher/dashboard');
+    } else if (userRole === 'parent') {
+      navigate('/parent/dashboard');
+    } else if (userRole === 'district_admin') {
+      navigate('/district/dashboard');
+    } else {
+      navigate('/student/dashboard');
+    }
+  };
+
   useEffect(() => {
-    // Check if user is already logged in
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
+        // Check if this is an OAuth callback that needs role selection
+        const urlParams = new URLSearchParams(window.location.search);
+        const isOAuthCallback = urlParams.get('code') || urlParams.get('access_token');
         
-        if (profile?.role === 'teacher') {
-          navigate('/teacher/dashboard');
-        } else if (profile?.role === 'parent') {
-          navigate('/parent/dashboard');
-        } else if (profile?.role === 'district_admin') {
-          navigate('/district/dashboard');
-        } else {
-          navigate('/student/dashboard');
+        if (isOAuthCallback && session.user.email) {
+          const district = await detectUserTypeFromEmail(session.user.email);
+          
+          if (district.requiresRoleSelection && district.districtId) {
+            // District staff needs to choose role
+            setPendingDistrictName(district.districtName || "");
+            setPendingDistrictId(district.districtId);
+            setShowRoleModal(true);
+            return;
+          }
+        }
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", session.user.id)
+          .single();
+
+        if (profile) {
+          redirectToDashboard(profile.role);
         }
       }
     };
+
     checkUser();
-  }, [navigate]);
+  }, []);
+
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        }
+      });
+      
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRoleSelection = async (selectedRole: 'teacher' | 'student') => {
+    setIsLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "Authentication error. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Update profile with selected role and district
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          role: selectedRole,
+          district_id: pendingDistrictId 
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      setShowRoleModal(false);
+      toast({
+        title: "Success",
+        description: `Welcome! You're signed in as a ${selectedRole}.`,
+      });
+      redirectToDashboard(selectedRole);
+    } catch (error: any) {
+      console.error('Error updating role:', error);
+      toast({
+        title: "Error",
+        description: "Failed to set role. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,20 +197,7 @@ const Auth = () => {
           description: `Welcome to Impress Me Kids as a ${role}! 🎉`,
         });
 
-        // Navigate to appropriate dashboard
-        if (role === 'teacher') {
-          console.log('🎯 Redirecting to teacher dashboard');
-          navigate('/teacher/dashboard');
-        } else if (role === 'parent') {
-          console.log('🎯 Redirecting to parent dashboard');
-          navigate('/parent/dashboard');
-        } else if (role === 'district_admin') {
-          console.log('🎯 Redirecting to district dashboard');
-          navigate('/district/dashboard');
-        } else {
-          console.log('🎯 Redirecting to student dashboard');
-          navigate('/student/dashboard');
-        }
+        redirectToDashboard(role);
       }
     } catch (error: any) {
       console.error('❌ Signup error:', error);
@@ -171,20 +261,7 @@ const Auth = () => {
           description: `Successfully signed in as ${profile.role}! 🎮`,
         });
 
-        // Navigate based on role
-        if (profile.role === 'teacher') {
-          console.log('🎯 Redirecting to teacher dashboard');
-          navigate('/teacher/dashboard');
-        } else if (profile.role === 'parent') {
-          console.log('🎯 Redirecting to parent dashboard');
-          navigate('/parent/dashboard');
-        } else if (profile.role === 'district_admin') {
-          console.log('🎯 Redirecting to district dashboard');
-          navigate('/district/dashboard');
-        } else {
-          console.log('🎯 Redirecting to student dashboard');
-          navigate('/student/dashboard');
-        }
+        redirectToDashboard(profile.role);
       }
     } catch (error: any) {
       console.error('❌ Signin error:', error);
@@ -227,6 +304,26 @@ const Auth = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleGoogleSignIn}
+                    disabled={isLoading}
+                  >
+                    <Chrome className="mr-2 h-4 w-4" />
+                    Continue with Google
+                  </Button>
+                  
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground">Or continue with email</span>
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="signin-email">Email</Label>
                     <Input
@@ -278,6 +375,26 @@ const Auth = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleGoogleSignIn}
+                    disabled={isLoading}
+                  >
+                    <Chrome className="mr-2 h-4 w-4" />
+                    Continue with Google
+                  </Button>
+                  
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground">Or sign up with email</span>
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="signup-name">Full Name</Label>
                     <Input
@@ -369,6 +486,12 @@ const Auth = () => {
           </Link>
         </div>
       </div>
+
+      <RoleSelectionModal
+        open={showRoleModal}
+        districtName={pendingDistrictName}
+        onSelectRole={handleRoleSelection}
+      />
     </div>
   );
 };
