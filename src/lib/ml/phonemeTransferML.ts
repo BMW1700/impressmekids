@@ -12,6 +12,7 @@ export interface TransferPrediction {
   reasoning: string;
   readinessLevel: 'high' | 'medium' | 'low';
   expectedGain: number;
+  similarToMastered?: string[]; // Optional for backwards compatibility
 }
 
 /**
@@ -49,7 +50,7 @@ export function predictPhonemeGains(
     
     for (const masteredPhoneme of masteredPhonemes) {
       const interference = calculateInterference(masteredPhoneme, targetPhoneme);
-      const transferScore = (1 - interference.score) * 100; // Lower interference = better transfer
+      const transferScore = (1 - interference.interferenceScore) * 100; // Lower interference = better transfer
       
       if (transferScore > maxTransferScore) {
         maxTransferScore = transferScore;
@@ -84,7 +85,8 @@ export function predictPhonemeGains(
         ? `Transfer from mastered /${bestTransferPhoneme}/ (${Math.round(maxTransferScore)}% compatibility). Q-value: ${qValue.toFixed(2)}`
         : `Direct practice recommended. Q-value: ${qValue.toFixed(2)}`,
       readinessLevel,
-      expectedGain
+      expectedGain,
+      similarToMastered: bestTransferPhoneme ? [bestTransferPhoneme] : []
     });
   }
   

@@ -162,10 +162,10 @@ const PhonemeMasteryPathway = ({
                       <p className="text-sm text-muted-foreground">
                         {prediction.reasoning}
                       </p>
-                      {prediction.similarToMastered.length > 0 && (
+                      {prediction.similarToMastered && prediction.similarToMastered.length > 0 && (
                         <div className="flex items-center gap-1.5 pt-1">
                           <span className="text-xs text-muted-foreground">Similar to:</span>
-                          {prediction.similarToMastered.map(p => (
+                          {prediction.similarToMastered?.map(p => (
                             <Badge key={p} variant="outline" className="text-xs">
                               /{p}/
                             </Badge>

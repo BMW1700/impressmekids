@@ -4,8 +4,6 @@
  */
 
 import { semanticEmbeddingEngine, semanticClusterer, SemanticClusterML } from './semanticEmbeddings';
-import { getAdaptiveClusterBoundaries } from './adaptiveClusterBoundaries';
-import { generateScaffoldingHints } from './scaffoldingHints';
 
 export interface SemanticCluster {
   theme: string;

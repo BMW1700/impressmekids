@@ -88,12 +88,19 @@ export default function StudentProfile() {
     );
   }
 
-  // Generate Next Best Action
-  const nextAction = generateNextBestAction({
-    auraRecords,
-    skillVector,
-    studentProfile,
-    recentAssignments: submissions,
+  // Generate Next Best Action using query
+  const { data: nextAction } = useQuery({
+    queryKey: ['next-action', studentId, auraRecords, skillVector],
+    queryFn: async () => {
+      const action = await generateNextBestAction({
+        auraRecords: auraRecords || [],
+        skillVector: skillVector || null,
+        studentProfile,
+        recentAssignments: submissions || [],
+      });
+      return action;
+    },
+    enabled: !!auraRecords && !!studentProfile,
   });
 
   // Prepare chart data
