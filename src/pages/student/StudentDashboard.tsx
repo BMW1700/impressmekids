@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Gamepad2, Loader2, UserPlus, Bell, GraduationCap, Play, Mic } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AnnouncementCard } from "@/components/AnnouncementCard";
+import NextBestActionCard from "@/components/aura/NextBestActionCard";
 
 const StudentDashboard = () => {
   const [profile, setProfile] = useState<any>(null);
@@ -209,6 +210,9 @@ const StudentDashboard = () => {
             </div>
             
             <div className="lg:col-span-2 space-y-6">
+              {/* AI Next Best Action - Phase 5 Integration */}
+              <NextBestActionCard />
+
               <Card className="bg-gradient-hero text-white">
                 <CardHeader>
                   <CardTitle className="text-2xl">Ready to Play?</CardTitle>

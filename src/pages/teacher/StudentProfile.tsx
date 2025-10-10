@@ -13,6 +13,9 @@ import { useTeacherNotes } from "@/hooks/useTeacherNotes";
 import { generateNextBestAction, getActionEmoji } from "@/lib/nextBestAction";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format } from "date-fns";
+import MLInsightsDashboard from "@/components/aura/MLInsightsDashboard";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -44,6 +47,23 @@ export default function StudentProfile() {
     studentId, 
     classrooms[0]?.classroom_id
   );
+
+  // Fetch recent practice exercises for ML dashboard
+  const { data: recentExercises } = useQuery({
+    queryKey: ['student-exercises', studentId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('practice_exercises')
+        .select('*')
+        .eq('student_id', studentId)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!studentId,
+  });
 
   if (isLoading) {
     return (
@@ -218,13 +238,40 @@ export default function StudentProfile() {
 
           {/* Tabs */}
           <Tabs defaultValue="overview" className="mb-8">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="ml-insights" className="gap-1">
+                <Sparkles className="w-3 h-3" />
+                ML Insights
+              </TabsTrigger>
               <TabsTrigger value="phonemes">Phoneme Mastery</TabsTrigger>
               <TabsTrigger value="progress">Progress Charts</TabsTrigger>
               <TabsTrigger value="timeline">Activity Timeline</TabsTrigger>
               <TabsTrigger value="notes">Teacher Notes</TabsTrigger>
             </TabsList>
+
+            {/* ML Insights Tab - Phase 5 Integration */}
+            <TabsContent value="ml-insights" className="mt-6">
+              {skillVector && auraRecords ? (
+                <MLInsightsDashboard
+                  studentId={studentId!}
+                  studentName={profile?.full_name || 'Student'}
+                  skillVector={skillVector}
+                  auraRecords={auraRecords}
+                  recentExercises={recentExercises || []}
+                />
+              ) : (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <Sparkles className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+                    <p className="text-sm font-medium mb-1">No ML Data Yet</p>
+                    <p className="text-xs text-muted-foreground">
+                      Student needs to complete AURA practice sessions to generate ML insights
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
 
             {/* Phoneme Mastery Tab */}
             <TabsContent value="phonemes" className="mt-6 space-y-6">
