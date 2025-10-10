@@ -9,14 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Lightbulb, TrendingUp, AlertCircle } from "lucide-react";
 import { 
-  classifyAnnotationLevel, 
   calculateCognitiveDistribution 
-} from "@/lib/bloomsTaxonomyClassifier";
+} from "@/lib/ml/bloomsTaxonomyML";
 import { 
   analyzeSemanticClusters, 
   calculateConceptCoverage,
   detectHighlightStrategy 
-} from "@/lib/semanticHighlightAnalysis";
+} from "@/lib/ml/semanticHighlightAnalysisML";
 
 interface RealtimeAnnotationCoachProps {
   highlights: Array<{
@@ -58,7 +57,7 @@ export function RealtimeAnnotationCoach({
 
     // Analyze cognitive depth
     const annotations = highlights.map(h => h.annotation || '').filter(Boolean);
-    const cognitiveDistribution = calculateCognitiveDistribution(annotations);
+    const cognitiveDistribution = await calculateCognitiveDistribution(annotations);
     setCognitiveLevel(cognitiveDistribution.avgLevel);
 
     // Generate real-time feedback

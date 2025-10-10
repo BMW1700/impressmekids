@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, TrendingDown, Minus, Target, Zap, Info } from "lucide-react";
-import { DIFFICULTY_LEVELS } from "@/lib/difficultyScaling";
+import { DIFFICULTY_LEVELS } from "@/lib/difficultyScalingV2";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DifficultyProgressCardProps {

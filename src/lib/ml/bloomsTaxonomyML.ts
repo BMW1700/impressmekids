@@ -1,7 +1,9 @@
 /**
- * PATENTABLE: Bloom's Taxonomy Annotation Classifier
- * AI-powered automatic classification of cognitive depth
+ * ML-ENHANCED: Bloom's Taxonomy Annotation Classifier
+ * Integrates with Patent #2 (Semantic Clustering) for cognitive depth analysis
  */
+
+import { semanticEmbeddingEngine } from './semanticEmbeddings';
 
 export interface BloomLevel {
   level: 1 | 2 | 3 | 4 | 5 | 6;
@@ -25,14 +27,47 @@ const BLOOM_INDICATORS = {
 };
 
 /**
- * Classifies an annotation by Bloom's taxonomy level
+ * ML-ENHANCED: Uses semantic similarity for better classification
  */
-export function classifyAnnotationLevel(annotation: string): number {
+export async function classifyAnnotationLevelML(annotation: string): Promise<number> {
   const text = annotation.toLowerCase().trim();
   
-  if (text.length < 5) return 1; // Too short, likely just identification
+  if (text.length < 5) return 1;
   
-  // Check for higher-order thinking first (more specific patterns)
+  // Use semantic embeddings to find most similar Bloom level
+  if (semanticEmbeddingEngine.isReady()) {
+    try {
+      // Create reference texts for each Bloom level
+      const bloomReferences = [
+        "This defines what the concept is",
+        "This explains how the idea works",
+        "This applies the concept to a new situation",
+        "This analyzes why this is important",
+        "This evaluates the quality of the argument",
+        "This creates a new interpretation"
+      ];
+      
+      const annotationEmbedding = await semanticEmbeddingEngine.generateEmbedding(text);
+      const referenceEmbeddings = await semanticEmbeddingEngine.generateEmbeddings(bloomReferences);
+      
+      let maxSimilarity = -1;
+      let bestLevel = 2;
+      
+      referenceEmbeddings.forEach((refEmbed, idx) => {
+        const similarity = semanticEmbeddingEngine.cosineSimilarity(annotationEmbedding, refEmbed);
+        if (similarity > maxSimilarity) {
+          maxSimilarity = similarity;
+          bestLevel = idx + 1;
+        }
+      });
+      
+      return bestLevel;
+    } catch (error) {
+      console.error('ML classification failed, using rule-based:', error);
+    }
+  }
+  
+  // Fallback: Rule-based classification
   for (let level = 6; level >= 1; level--) {
     const indicators = BLOOM_INDICATORS[level as keyof typeof BLOOM_INDICATORS];
     for (const indicator of indicators) {
@@ -42,16 +77,16 @@ export function classifyAnnotationLevel(annotation: string): number {
     }
   }
   
-  // Default to level 2 (understanding) if no specific indicators
   return 2;
 }
 
 /**
  * Calculates cognitive distribution across all annotations
+ * ENHANCED: Uses ML classification when available
  */
-export function calculateCognitiveDistribution(
+export async function calculateCognitiveDistribution(
   annotations: string[]
-): CognitiveDistribution {
+): Promise<CognitiveDistribution> {
   if (annotations.length === 0) {
     return {
       levels: [],
@@ -60,8 +95,10 @@ export function calculateCognitiveDistribution(
     };
   }
   
-  // Classify each annotation
-  const levels = annotations.map(a => classifyAnnotationLevel(a));
+  // Classify each annotation using ML
+  const levels = await Promise.all(
+    annotations.map(a => classifyAnnotationLevelML(a))
+  );
   
   // Count distribution
   const distribution: Record<number, number> = {};
@@ -90,7 +127,6 @@ export function calculateCognitiveDistribution(
   });
   
   // Calculate sophistication score
-  // Higher levels weighted more: 1=10pts, 2=15pts, 3=20pts, 4=25pts, 5=30pts, 6=35pts
   const weights = [10, 15, 20, 25, 30, 35];
   const sophisticationScore = levels.reduce((sum, level) => sum + weights[level - 1], 0) / annotations.length;
   
@@ -108,9 +144,7 @@ export function generateCognitiveFeedback(distribution: CognitiveDistribution): 
   const feedback: string[] = [];
   const { levels, avgLevel } = distribution;
   
-  // Check for level distribution
   const level1and2 = levels[0].percentage + levels[1].percentage;
-  const level3and4 = levels[2].percentage + levels[3].percentage;
   const level5and6 = levels[4].percentage + levels[5].percentage;
   
   if (avgLevel < 2.5) {

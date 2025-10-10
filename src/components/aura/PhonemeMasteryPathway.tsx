@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Target, TrendingUp, Sparkles, Info } from "lucide-react";
-import { predictPhonemeGains, TransferPrediction } from "@/lib/phonemeTransferModel";
+import { predictPhonemeGains, TransferPrediction } from "@/lib/ml/phonemeTransferML";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface PhonemeMasteryPathwayProps {

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { calculateRiskScore, extractFeatures } from "@/lib/riskScoring";
+import { calculateRiskScore, extractFeatures } from "@/lib/ml/riskScoringML";
 
 export const usePriorityStudents = () => {
   const { data, isLoading } = useQuery({

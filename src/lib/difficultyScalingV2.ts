@@ -5,7 +5,15 @@
 
 import { PhonemeQAgent, type PhonemeState } from './reinforcementLearning/qTable';
 import { CrossModalTransferNetwork, type ReadingFeatures, type SpeakingFeatures } from './ml/crossModalTransferNetwork';
-import { DIFFICULTY_LEVELS } from './difficultyScaling';
+
+// Inline difficulty levels (from old difficultyScaling.ts)
+export const DIFFICULTY_LEVELS = [
+  { level: 1, label: 'Beginner', description: 'Simple words, clear patterns', requirements: ['basic'], color: 'green' },
+  { level: 2, label: 'Intermediate', description: 'Common words, moderate complexity', requirements: ['intermediate'], color: 'blue' },
+  { level: 3, label: 'Advanced', description: 'Challenging vocabulary', requirements: ['advanced'], color: 'yellow' },
+  { level: 4, label: 'Expert', description: 'Complex passages', requirements: ['expert'], color: 'orange' },
+  { level: 5, label: 'Master', description: 'Advanced literature', requirements: ['master'], color: 'red' },
+];
 
 export interface AdaptiveDifficultyResult {
   newLevel: number;

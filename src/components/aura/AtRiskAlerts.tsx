@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, TrendingDown, Clock, Target } from "lucide-react";
-import { calculateRiskScore, extractFeatures, generateRiskFactors } from "@/lib/riskScoring";
+import { calculateRiskScore, extractFeatures, generateRiskFactors } from "@/lib/ml/riskScoringML";
 
 interface AtRiskAlertsProps {
   students: any[];

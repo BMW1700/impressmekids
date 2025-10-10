@@ -5,7 +5,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Brain } from "lucide-react";
-import { BloomLevel, CognitiveDistribution } from "@/lib/bloomsTaxonomyClassifier";
+import { BloomLevel, CognitiveDistribution } from "@/lib/ml/bloomsTaxonomyML";
 
 interface BloomsTaxonomyChartProps {
   distribution: CognitiveDistribution;

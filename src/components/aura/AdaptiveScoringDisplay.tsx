@@ -5,7 +5,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Target, TrendingUp } from "lucide-react";
-import { AdaptiveScore, PassageComplexity } from "@/lib/adaptiveHighlightScoring";
+import { AdaptiveScore, PassageComplexity } from "@/lib/ml/adaptiveHighlightScoringML";
 
 interface AdaptiveScoringDisplayProps {
   adaptiveScore: AdaptiveScore;
@@ -62,7 +62,7 @@ export function AdaptiveScoringDisplay({
           </div>
           <div className="grid grid-cols-3 gap-2 text-center text-sm">
             <div className="p-2 bg-background rounded border">
-              <div className="font-bold">{passageComplexity.fleschKincaid}</div>
+              <div className="text-2xl font-bold">{passageComplexity.fleschKincaidGrade}</div>
               <div className="text-xs text-muted-foreground">Grade Level</div>
             </div>
             <div className="p-2 bg-background rounded border">

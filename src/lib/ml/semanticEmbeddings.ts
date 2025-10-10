@@ -9,6 +9,7 @@
  */
 
 import * as tf from '@tensorflow/tfjs';
+import * as use from '@tensorflow-models/universal-sentence-encoder';
 
 export interface SemanticVector {
   text: string;
@@ -36,60 +37,83 @@ export interface ClusterAnalysis {
  * Uses lightweight model for in-browser inference
  */
 export class SemanticEmbeddingEngine {
-  private model: any = null;
+  private model: use.UniversalSentenceEncoder | null = null;
   private modelReady = false;
   private embeddingDim = 512;  // Universal Sentence Encoder dimension
   
   /**
-   * Initialize embedding model
-   * Using lightweight model for browser deployment
+   * PATENT #2 STRENGTHENING: Universal Sentence Encoder Integration
+   * Using state-of-the-art transformer-based sentence embeddings
    */
   async initialize() {
     try {
-      console.log('🧠 Loading semantic embedding model...');
+      console.log('🧠 Loading Universal Sentence Encoder...');
       
-      // For now, use simple averaging of word vectors as fallback
-      // In production, load Universal Sentence Encoder or similar
-      // await use.load()
+      // Load Universal Sentence Encoder model
+      this.model = await use.load();
       
       this.modelReady = true;
-      console.log('✅ Semantic embedding model ready');
+      console.log('✅ Universal Sentence Encoder ready (Patent #2 strengthened)');
     } catch (error) {
-      console.error('Failed to load embedding model:', error);
+      console.error('Failed to load USE model, falling back to TF-IDF:', error);
       // Fallback to simple TF-IDF-like approach
       this.modelReady = false;
     }
   }
   
   /**
-   * Generate embeddings for text using simple model
-   * In production: replace with Universal Sentence Encoder
+   * Generate embeddings using Universal Sentence Encoder
+   * PATENT #2: Deep semantic understanding with transformer architecture
    */
   async generateEmbedding(text: string): Promise<number[]> {
-    if (!this.modelReady) {
+    if (!this.modelReady || !this.model) {
       // Fallback: Simple word-based embedding
       return this.simpleTfIdfEmbedding(text);
     }
     
-    // Production would use:
-    // const embeddings = await this.model.embed([text]);
-    // return embeddings.arraySync()[0];
-    
-    return this.simpleTfIdfEmbedding(text);
+    try {
+      // Use Universal Sentence Encoder for deep semantic embeddings
+      const embeddings = await this.model.embed([text]);
+      const embeddingArray = await embeddings.array();
+      embeddings.dispose(); // Clean up tensor memory
+      return embeddingArray[0];
+    } catch (error) {
+      console.error('USE embedding failed, using fallback:', error);
+      return this.simpleTfIdfEmbedding(text);
+    }
   }
   
   /**
    * Batch generate embeddings for multiple texts
+   * OPTIMIZED: Uses USE batch processing for efficiency
    */
   async generateEmbeddings(texts: string[]): Promise<number[][]> {
-    const embeddings: number[][] = [];
-    
-    for (const text of texts) {
-      const embedding = await this.generateEmbedding(text);
-      embeddings.push(embedding);
+    if (!this.modelReady || !this.model) {
+      // Fallback: Process individually with TF-IDF
+      const embeddings: number[][] = [];
+      for (const text of texts) {
+        const embedding = await this.generateEmbedding(text);
+        embeddings.push(embedding);
+      }
+      return embeddings;
     }
     
-    return embeddings;
+    try {
+      // USE batch processing (more efficient than individual calls)
+      const embeddings = await this.model.embed(texts);
+      const embeddingArray = await embeddings.array();
+      embeddings.dispose(); // Clean up tensor memory
+      return embeddingArray;
+    } catch (error) {
+      console.error('USE batch embedding failed, using fallback:', error);
+      // Fallback to individual processing
+      const embeddings: number[][] = [];
+      for (const text of texts) {
+        const embedding = await this.generateEmbedding(text);
+        embeddings.push(embedding);
+      }
+      return embeddings;
+    }
   }
   
   /**

@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, TrendingUp, Activity, MessageSquare, Sparkles, ArrowLeft } from "lucide-react";
 import { useStudentProfile } from "@/hooks/useStudentProfile";
 import { useTeacherNotes } from "@/hooks/useTeacherNotes";
-import { generateNextBestAction, getActionEmoji } from "@/lib/nextBestAction";
+import { generateNextBestAction, getActionEmoji } from "@/lib/nextBestActionML";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format } from "date-fns";
 import MLInsightsDashboard from "@/components/aura/MLInsightsDashboard";
