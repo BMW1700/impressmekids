@@ -65,6 +65,21 @@ export default function StudentProfile() {
     enabled: !!studentId,
   });
 
+  // Generate Next Best Action - MUST be called before any early returns
+  const { data: nextAction } = useQuery({
+    queryKey: ['next-action', studentId, auraRecords, skillVector],
+    queryFn: async () => {
+      const action = await generateNextBestAction({
+        auraRecords: auraRecords || [],
+        skillVector: skillVector || null,
+        studentProfile,
+        recentAssignments: submissions || [],
+      });
+      return action;
+    },
+    enabled: !!auraRecords && !!studentProfile && !isLoading,
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -87,21 +102,6 @@ export default function StudentProfile() {
       </div>
     );
   }
-
-  // Generate Next Best Action using query
-  const { data: nextAction } = useQuery({
-    queryKey: ['next-action', studentId, auraRecords, skillVector],
-    queryFn: async () => {
-      const action = await generateNextBestAction({
-        auraRecords: auraRecords || [],
-        skillVector: skillVector || null,
-        studentProfile,
-        recentAssignments: submissions || [],
-      });
-      return action;
-    },
-    enabled: !!auraRecords && !!studentProfile,
-  });
 
   // Prepare chart data
   const clarityChartData = longitudinalMetrics?.clarityOverTime.map((item) => ({
