@@ -82,32 +82,40 @@ serve(async (req) => {
 
     const studentsData: StudentData[] = [];
 
+    // Get all assignment IDs for this classroom first
+    const { data: classroomAssignments } = await supabase
+      .from('assignments')
+      .select('id')
+      .eq('classroom_id', classroom_id);
+
+    const assignmentIds = classroomAssignments?.map(a => a.id) || [];
+
     // For each student, aggregate their data
     for (const student of students) {
       const studentId = student.student_id;
-      const studentName = student.profiles?.full_name || 'Unknown';
+      const profile = Array.isArray(student.profiles) ? student.profiles[0] : student.profiles;
+      const studentName = profile?.full_name || 'Unknown';
 
-      // Get assignments for this student
-      const { data: submissions } = await supabase
-        .from('assignment_submissions')
-        .select(`
-          id,
-          assignment_id,
-          status,
-          grade,
-          assignments (
+      // Get assignments for this student - only if there are assignments in the classroom
+      let submissions = null;
+      if (assignmentIds.length > 0) {
+        const result = await supabase
+          .from('assignment_submissions')
+          .select(`
             id,
-            title,
-            assignment_type
-          )
-        `)
-        .eq('student_id', studentId)
-        .in('assignment_id', 
-          supabase
-            .from('assignments')
-            .select('id')
-            .eq('classroom_id', classroom_id)
-        );
+            assignment_id,
+            status,
+            grade,
+            assignments (
+              id,
+              title,
+              assignment_type
+            )
+          `)
+          .eq('student_id', studentId)
+          .in('assignment_id', assignmentIds);
+        submissions = result.data;
+      }
 
       // Get AURA records for this student
       const { data: auraRecords } = await supabase
@@ -121,7 +129,7 @@ serve(async (req) => {
 
       if (submissions) {
         for (const sub of submissions) {
-          const assignment = sub.assignments;
+          const assignment = Array.isArray(sub.assignments) ? sub.assignments[0] : sub.assignments;
           if (!assignment) continue;
 
           // Find AURA metrics for this assignment if any
