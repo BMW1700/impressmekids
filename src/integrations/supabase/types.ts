@@ -606,6 +606,33 @@ export type Database = {
         }
         Relationships: []
       }
+      district_admins: {
+        Row: {
+          created_at: string
+          district_name: string
+          email: string
+          full_name: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          district_name: string
+          email: string
+          full_name: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          district_name?: string
+          email?: string
+          full_name?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       flashcard_sets: {
         Row: {
           classroom_id: string
@@ -1007,6 +1034,155 @@ export type Database = {
             columns: ["winner_id"]
             isOneToOne: false
             referencedRelation: "tournament_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parent_access_requests: {
+        Row: {
+          classroom_id: string
+          created_at: string
+          id: string
+          message: string | null
+          parent_id: string
+          resolved_at: string | null
+          status: string
+          student_id: string
+          teacher_id: string
+        }
+        Insert: {
+          classroom_id: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          parent_id: string
+          resolved_at?: string | null
+          status?: string
+          student_id: string
+          teacher_id: string
+        }
+        Update: {
+          classroom_id?: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          parent_id?: string
+          resolved_at?: string | null
+          status?: string
+          student_id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_access_requests_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parent_access_requests_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "parent_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parent_accounts: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      parent_consents: {
+        Row: {
+          assignment_data_consent: boolean
+          aura_recording_consent: boolean
+          consent_date: string
+          created_at: string
+          id: string
+          parent_id: string
+          student_id: string
+          third_party_sharing_consent: boolean
+          updated_at: string
+        }
+        Insert: {
+          assignment_data_consent?: boolean
+          aura_recording_consent?: boolean
+          consent_date?: string
+          created_at?: string
+          id?: string
+          parent_id: string
+          student_id: string
+          third_party_sharing_consent?: boolean
+          updated_at?: string
+        }
+        Update: {
+          assignment_data_consent?: boolean
+          aura_recording_consent?: boolean
+          consent_date?: string
+          created_at?: string
+          id?: string
+          parent_id?: string
+          student_id?: string
+          third_party_sharing_consent?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      parent_student_links: {
+        Row: {
+          approved: boolean
+          approved_at: string | null
+          approved_by: string | null
+          id: string
+          parent_id: string
+          requested_at: string
+          student_id: string
+        }
+        Insert: {
+          approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          id?: string
+          parent_id: string
+          requested_at?: string
+          student_id: string
+        }
+        Update: {
+          approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          id?: string
+          parent_id?: string
+          requested_at?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_student_links_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "parent_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -1784,7 +1960,7 @@ export type Database = {
       match_status: "waiting" | "in_progress" | "completed"
       question_type: "question_answer" | "reading_comprehension" | "speaking"
       tournament_status: "waiting" | "in_progress" | "completed"
-      user_role: "teacher" | "student" | "admin"
+      user_role: "teacher" | "student" | "admin" | "district_admin" | "parent"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1919,7 +2095,7 @@ export const Constants = {
       match_status: ["waiting", "in_progress", "completed"],
       question_type: ["question_answer", "reading_comprehension", "speaking"],
       tournament_status: ["waiting", "in_progress", "completed"],
-      user_role: ["teacher", "student", "admin"],
+      user_role: ["teacher", "student", "admin", "district_admin", "parent"],
     },
   },
 } as const
