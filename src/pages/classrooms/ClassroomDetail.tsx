@@ -28,6 +28,7 @@ import { useMultiQuestionAssignments } from "@/hooks/useMultiQuestionAssignments
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { SubmissionsList } from "@/components/assignments/SubmissionsList";
 import { AssignmentStatsCard } from "@/components/assignments/AssignmentStatsCard";
+import { ClassroomAIInsights } from "@/components/teacher/ClassroomAIInsights";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -312,8 +313,9 @@ const ClassroomDetail = () => {
           </div>
 
           <Tabs defaultValue={searchParams.get('tab') || (isStudent ? "assignments" : "students")} className="mb-8">
-            <TabsList className={cn("grid w-full", isTeacher ? "grid-cols-5" : "grid-cols-4")}>
+            <TabsList className={cn("grid w-full", isTeacher ? "grid-cols-6" : "grid-cols-4")}>
               {isTeacher && <TabsTrigger value="students">Students</TabsTrigger>}
+              {isTeacher && <TabsTrigger value="ai-insights">AI Insights</TabsTrigger>}
               <TabsTrigger value="assignments">Assignments</TabsTrigger>
               <TabsTrigger value="announcements">Announcements</TabsTrigger>
               <TabsTrigger value="tournaments">Tournaments</TabsTrigger>
@@ -356,6 +358,12 @@ const ClassroomDetail = () => {
               ))}
                 </div>
               )}
+              </TabsContent>
+            )}
+
+            {isTeacher && (
+              <TabsContent value="ai-insights" className="mt-6">
+                <ClassroomAIInsights classroomId={id!} />
               </TabsContent>
             )}
 

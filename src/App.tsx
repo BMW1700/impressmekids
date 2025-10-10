@@ -22,6 +22,7 @@ import CompleteAssignment from "./pages/student/CompleteAssignment";
 import ReviewSubmission from "./pages/teacher/ReviewSubmission";
 import ReviewMultiQuestionSubmission from "./pages/teacher/ReviewMultiQuestionSubmission";
 import CreateMultiQuestionAssignment from "./pages/teacher/CreateMultiQuestionAssignment";
+import StudentProfile from "./pages/teacher/StudentProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ const App = () => (
           <Route path="/teacher/assignment/create/:classroomId" element={<CreateMultiQuestionAssignment />} />
           <Route path="/teacher/tournament/control" element={<TournamentControl />} />
           <Route path="/teacher/aura-analytics/:classroomId?" element={<AuraAnalytics />} />
+          <Route path="/teacher/student/:studentId" element={<StudentProfile />} />
           <Route path="/student/assignment/:assignmentId" element={<CompleteAssignment />} />
           <Route path="/teacher/review-submission/:submissionId" element={<ReviewSubmission />} />
           <Route path="/teacher/assignment/review/:submissionId" element={<ReviewMultiQuestionSubmission />} />

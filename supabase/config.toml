@@ -1,5 +1,8 @@
 project_id = "sjigkjwkgovculkovcjy"
 
+[functions.generate-teacher-summary]
+verify_jwt = true
+
 [functions.start-tournament]
 verify_jwt = true
 

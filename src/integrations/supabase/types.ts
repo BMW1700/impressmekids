@@ -1370,6 +1370,154 @@ export type Database = {
           },
         ]
       }
+      teacher_action_log: {
+        Row: {
+          action_data: Json
+          action_type: string
+          created_at: string
+          id: string
+          student_id: string
+          teacher_id: string
+        }
+        Insert: {
+          action_data: Json
+          action_type: string
+          created_at?: string
+          id?: string
+          student_id: string
+          teacher_id: string
+        }
+        Update: {
+          action_data?: Json
+          action_type?: string
+          created_at?: string
+          id?: string
+          student_id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_action_log_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_action_log_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teacher_student_notes: {
+        Row: {
+          audio_url: string | null
+          classroom_id: string
+          content: string
+          created_at: string
+          id: string
+          note_type: string
+          read_by_student: boolean | null
+          student_id: string
+          teacher_id: string
+        }
+        Insert: {
+          audio_url?: string | null
+          classroom_id: string
+          content: string
+          created_at?: string
+          id?: string
+          note_type: string
+          read_by_student?: boolean | null
+          student_id: string
+          teacher_id: string
+        }
+        Update: {
+          audio_url?: string | null
+          classroom_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          note_type?: string
+          read_by_student?: boolean | null
+          student_id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_student_notes_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_student_notes_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_student_notes_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teacher_summaries: {
+        Row: {
+          assignments_analyzed: number
+          aura_records_analyzed: number
+          classroom_id: string
+          generated_at: string
+          id: string
+          students_count: number
+          summary_data: Json
+          teacher_id: string
+        }
+        Insert: {
+          assignments_analyzed: number
+          aura_records_analyzed: number
+          classroom_id: string
+          generated_at?: string
+          id?: string
+          students_count: number
+          summary_data: Json
+          teacher_id: string
+        }
+        Update: {
+          assignments_analyzed?: number
+          aura_records_analyzed?: number
+          classroom_id?: string
+          generated_at?: string
+          id?: string
+          students_count?: number
+          summary_data?: Json
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_summaries_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_summaries_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       text_highlights: {
         Row: {
           annotation: string | null
