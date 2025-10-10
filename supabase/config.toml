@@ -44,3 +44,9 @@ verify_jwt = false
 
 [functions.extract-text-from-image]
 verify_jwt = true
+
+[functions.train-ml-models]
+verify_jwt = true
+
+[functions.update-q-learning]
+verify_jwt = false
