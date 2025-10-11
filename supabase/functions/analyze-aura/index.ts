@@ -227,7 +227,13 @@ Format as JSON:
     }
 
     const aiData = await aiResponse.json();
-    const aiAnalysis = JSON.parse(aiData.choices[0].message.content);
+    
+    // Strip markdown code blocks if present (AI sometimes wraps JSON in ```json ... ```)
+    let aiContent = aiData.choices[0].message.content.trim();
+    if (aiContent.startsWith('```')) {
+      aiContent = aiContent.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+    }
+    const aiAnalysis = JSON.parse(aiContent);
 
     // Calculate overall grade (weighted average)
     const grade = Math.round(
