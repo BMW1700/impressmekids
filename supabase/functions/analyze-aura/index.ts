@@ -236,12 +236,20 @@ Format as JSON:
     const aiAnalysis = JSON.parse(aiContent);
 
     // Calculate overall grade (weighted average)
-    const grade = Math.round(
-      (aiAnalysis.pronunciation * 0.3 +
-       aiAnalysis.clarity * 0.3 +
-       aiAnalysis.confidence * 0.2 +
-       pace * 0.2) * 20
-    );
+    // Clamp individual scores to 1-5 range to prevent invalid grades
+    const pronunciation = Math.max(1, Math.min(5, aiAnalysis.pronunciation));
+    const clarity = Math.max(1, Math.min(5, aiAnalysis.clarity));
+    const confidence = Math.max(1, Math.min(5, aiAnalysis.confidence));
+    const paceClamped = Math.max(1, Math.min(5, pace));
+    
+    const grade = Math.max(0, Math.min(100, Math.round(
+      (pronunciation * 0.3 +
+       clarity * 0.3 +
+       confidence * 0.2 +
+       paceClamped * 0.2) * 20
+    )));
+    
+    console.log(`📊 Grade calculation: pronunciation=${pronunciation}, clarity=${clarity}, confidence=${confidence}, pace=${paceClamped}, final grade=${grade}`);
 
     // Store in aura_records with per-phoneme tracking
     const { data: record, error: insertError } = await supabase
