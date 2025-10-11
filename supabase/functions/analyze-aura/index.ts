@@ -83,11 +83,11 @@ serve(async (req) => {
 
     // Use enhanced pause analysis if available
     let pauseCount = (transcript.match(/[.!?]/g) || []).length;
-    let avgSilenceMs = (durationSeconds * 1000) / Math.max(pauseCount, 1);
+    let avgSilenceMs = Math.round((durationSeconds * 1000) / Math.max(pauseCount, 1));
     
     if (audioFeatures?.pauseCount) {
       pauseCount = audioFeatures.pauseCount;
-      avgSilenceMs = audioFeatures.avgSilenceDuration;
+      avgSilenceMs = Math.round(audioFeatures.avgSilenceDuration);
     }
 
     // Analyze phoneme accuracy with CMUDict + FUZZY MATCHING
