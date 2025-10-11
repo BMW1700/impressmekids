@@ -9,6 +9,9 @@ export interface AudioFeatures {
   zcr: number; // Zero crossing rate
   spectralCentroid: number;
   spectralRolloff: number;
+  pauseCount?: number;
+  avgSilenceDuration?: number;
+  prosodyScore?: number;
 }
 
 export interface PhonemeData {

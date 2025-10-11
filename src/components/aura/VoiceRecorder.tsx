@@ -240,67 +240,94 @@ export const VoiceRecorder = ({ onTranscriptionComplete, isAnalyzing = false }: 
       const usedBrowserAPI = useBrowserAPI && finalTranscript.length > 0;
       
       // Step 1: Extract audio features (pitch, energy, prosody)
+      console.log('📊 Step 1: Extracting audio features...');
       toast({
         title: "Analyzing Audio Features",
         description: "Extracting pitch, energy, and prosody...",
       });
       
-      const rawAudioFeatures = await extractAudioFeatures(audioBlob);
-      const pauseAnalysis = analyzePauses(rawAudioFeatures, durationSeconds);
-      const prosodyScore = calculateProsodyScore(rawAudioFeatures);
-      
-      const audioFeatures = {
-        ...rawAudioFeatures,
-        ...pauseAnalysis,
-        prosodyScore
-      };
-      
-      console.log('✅ Audio features extracted:', audioFeatures);
+      let audioFeatures: AudioFeatures | undefined;
+      try {
+        const rawAudioFeatures = await extractAudioFeatures(audioBlob);
+        const pauseAnalysis = analyzePauses(rawAudioFeatures, durationSeconds);
+        const prosodyScore = calculateProsodyScore(rawAudioFeatures);
+        
+        audioFeatures = {
+          ...rawAudioFeatures,
+          ...pauseAnalysis,
+          prosodyScore
+        };
+        
+        console.log('✅ Audio features extracted:', audioFeatures);
+      } catch (featureError) {
+        console.error('⚠️ Audio feature extraction failed (non-fatal):', featureError);
+        // Continue without audio features - they're optional
+        audioFeatures = undefined;
+      }
       
       // Step 2: Detect phonemes using Transformers.js
+      console.log('🔬 Step 2: Detecting phonemes...');
       toast({
         title: "Detecting Phonemes",
         description: "Analyzing pronunciation patterns...",
       });
       
-      const phonemes = await detectPhonemes(audioBlob);
-      console.log('✅ Phonemes detected:', phonemes.length);
+      let phonemes: PhonemeResult[] | undefined;
+      try {
+        phonemes = await detectPhonemes(audioBlob);
+        console.log('✅ Phonemes detected:', phonemes.length);
+      } catch (phonemeError) {
+        console.error('⚠️ Phoneme detection failed (non-fatal):', phonemeError);
+        // Continue without phonemes - they're optional
+        phonemes = undefined;
+      }
       
       // Step 3: Transcribe (use browser transcript or Whisper fallback)
-      if (!usedBrowserAPI) {
+      console.log('📝 Step 3: Transcription...');
+      if (!usedBrowserAPI || finalTranscript.length === 0) {
+        console.log('🔄 Using Whisper fallback...');
         toast({
           title: "Transcribing Speech (Whisper Fallback)",
           description: "Converting speech to text...",
         });
         
-        const reader = new FileReader();
-        reader.readAsDataURL(audioBlob);
-        
-        await new Promise<void>((resolve, reject) => {
-          reader.onloadend = async () => {
-            try {
-              const base64Audio = (reader.result as string).split(',')[1];
+        try {
+          const reader = new FileReader();
+          reader.readAsDataURL(audioBlob);
+          
+          await new Promise<void>((resolve, reject) => {
+            reader.onloadend = async () => {
+              try {
+                const base64Audio = (reader.result as string).split(',')[1];
 
-              const { data, error } = await supabase.functions.invoke('transcribe-audio', {
-                body: { audio: base64Audio },
-              });
+                const { data, error } = await supabase.functions.invoke('transcribe-audio', {
+                  body: { audio: base64Audio },
+                });
 
-              if (error) throw error;
+                if (error) throw error;
 
-              if (data?.text) {
-                finalTranscript = data.text;
-                console.log('✅ Whisper transcription complete:', data.text);
-                resolve();
-              } else {
-                reject(new Error('No transcript returned'));
+                if (data?.text) {
+                  finalTranscript = data.text;
+                  console.log('✅ Whisper transcription complete:', data.text);
+                  resolve();
+                } else {
+                  reject(new Error('No transcript returned'));
+                }
+              } catch (err) {
+                reject(err);
               }
-            } catch (err) {
-              reject(err);
-            }
-          };
-        });
+            };
+          });
+        } catch (transcriptError) {
+          console.error('❌ Transcription failed:', transcriptError);
+          throw new Error(`Transcription failed: ${transcriptError}`);
+        }
       } else {
         console.log('✅ Browser API transcription complete (saved $60/10K students):', finalTranscript);
+      }
+      
+      if (!finalTranscript || finalTranscript.length === 0) {
+        throw new Error('No transcript available - please speak during recording');
       }
       
       const audioUrl = URL.createObjectURL(audioBlob);
