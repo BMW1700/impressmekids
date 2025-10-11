@@ -11,7 +11,7 @@ const Index = () => {
       <Header />
       
       {/* Hero Section */}
-      <section className="bg-gradient-hero text-white py-20">
+      <section className="bg-gradient-hero text-white py-20 animate-fade-in">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             Learn Through Play! 🎮
@@ -37,7 +37,7 @@ const Index = () => {
             Why Kids Love It
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center p-6">
+            <div className="text-center p-6 hover:scale-[1.05] transition-transform duration-200">
               <div className="inline-flex p-4 rounded-full bg-gradient-primary mb-4">
                 <Zap className="h-8 w-8 text-white" />
               </div>
@@ -46,7 +46,7 @@ const Index = () => {
                 Exciting 1v1 games that keep students engaged and motivated
               </p>
             </div>
-            <div className="text-center p-6">
+            <div className="text-center p-6 hover:scale-[1.05] transition-transform duration-200">
               <div className="inline-flex p-4 rounded-full bg-gradient-secondary mb-4">
                 <BookOpen className="h-8 w-8 text-secondary-foreground" />
               </div>
@@ -55,7 +55,7 @@ const Index = () => {
                 Curriculum-aligned questions across Math, Science, English & more
               </p>
             </div>
-            <div className="text-center p-6">
+            <div className="text-center p-6 hover:scale-[1.05] transition-transform duration-200">
               <div className="inline-flex p-4 rounded-full bg-gradient-primary mb-4">
                 <Trophy className="h-8 w-8 text-white" />
               </div>

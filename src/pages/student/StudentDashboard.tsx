@@ -175,8 +175,11 @@ const StudentDashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading your dashboard...</p>
+        </div>
       </div>
     );
   }
@@ -185,7 +188,7 @@ const StudentDashboard = () => {
     <div className="min-h-screen flex flex-col">
       <Header showAuthButtons={false} />
       
-      <main className="flex-1 py-8">
+      <main className="flex-1 py-8 animate-fade-in">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -336,6 +339,9 @@ const StudentDashboard = () => {
                 </div>
                 {classrooms.length === 0 ? (
                   <Card className="p-8 text-center">
+                    <div className="h-24 w-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center">
+                      <UserPlus className="h-12 w-12 text-white" />
+                    </div>
                     <p className="text-muted-foreground mb-4">
                       You haven't joined any classrooms yet. Ask your teacher for a join code!
                     </p>
@@ -350,13 +356,14 @@ const StudentDashboard = () => {
                 ) : (
                   <div className="grid md:grid-cols-2 gap-4">
                     {classrooms.map((classroom: any) => (
-                      <ClassroomCard
-                        key={classroom.id}
-                        id={classroom.id}
-                        name={classroom.name}
-                        teacherName={classroom.teacher?.full_name}
-                        createdAt={classroom.created_at}
-                      />
+                      <div key={classroom.id} className="hover:scale-[1.02] transition-transform duration-200">
+                        <ClassroomCard
+                          id={classroom.id}
+                          name={classroom.name}
+                          teacherName={classroom.teacher?.full_name}
+                          createdAt={classroom.created_at}
+                        />
+                      </div>
                     ))}
                   </div>
                 )}

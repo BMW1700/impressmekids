@@ -12,6 +12,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, Users, Trophy, BookOpen, Loader2, BarChart3, Brain } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const TeacherDashboard = () => {
   const [profile, setProfile] = useState<any>(null);
@@ -119,8 +120,11 @@ const TeacherDashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading your dashboard...</p>
+        </div>
       </div>
     );
   }
@@ -129,7 +133,7 @@ const TeacherDashboard = () => {
     <div className="min-h-screen flex flex-col">
       <Header showAuthButtons={false} />
       
-      <main className="flex-1 py-8">
+      <main className="flex-1 py-8 animate-fade-in">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -148,7 +152,7 @@ const TeacherDashboard = () => {
 
           {/* Quick Stats */}
           <div className="grid md:grid-cols-3 gap-6 mb-8">
-            <Card>
+            <Card className="hover:scale-[1.02] transition-transform duration-200">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">Total Classrooms</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
@@ -157,7 +161,7 @@ const TeacherDashboard = () => {
                 <div className="text-2xl font-bold">{classrooms.length}</div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="hover:scale-[1.02] transition-transform duration-200">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">Total Students</CardTitle>
                 <BookOpen className="h-4 w-4 text-muted-foreground" />
@@ -168,9 +172,12 @@ const TeacherDashboard = () => {
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="hover:scale-[1.02] transition-transform duration-200">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Games Played</CardTitle>
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  Games Played
+                  <Badge variant="secondary" className="text-xs">Coming Soon</Badge>
+                </CardTitle>
                 <Trophy className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -210,7 +217,9 @@ const TeacherDashboard = () => {
               {classrooms.length === 0 ? (
                 <Card className="p-12 text-center">
                   <div className="max-w-md mx-auto">
-                    <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <div className="h-24 w-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center">
+                      <Users className="h-12 w-12 text-white" />
+                    </div>
                     <h3 className="text-xl font-bold mb-2">No Classrooms Yet</h3>
                     <p className="text-muted-foreground mb-4">
                       Create your first classroom to start inviting students and playing games!
@@ -227,14 +236,15 @@ const TeacherDashboard = () => {
               ) : (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {classrooms.map((classroom) => (
-                    <ClassroomCard
-                      key={classroom.id}
-                      id={classroom.id}
-                      name={classroom.name}
-                      joinCode={classroom.join_code}
-                      studentCount={classroom.classroom_students?.[0]?.count || 0}
-                      createdAt={classroom.created_at}
-                    />
+                    <div key={classroom.id} className="hover:scale-[1.02] transition-transform duration-200">
+                      <ClassroomCard
+                        id={classroom.id}
+                        name={classroom.name}
+                        joinCode={classroom.join_code}
+                        studentCount={classroom.classroom_students?.[0]?.count || 0}
+                        createdAt={classroom.created_at}
+                      />
+                    </div>
                   ))}
                 </div>
               )}
@@ -279,8 +289,9 @@ const TeacherDashboard = () => {
                     <p className="text-muted-foreground mb-4">
                       Check out our teacher guides and resources
                     </p>
-                    <Button variant="outline" className="w-full">
-                      View Resources →
+                    <Button variant="outline" className="w-full justify-between">
+                      View Resources
+                      <Badge variant="secondary" className="ml-2">Coming Soon</Badge>
                     </Button>
                   </CardContent>
                 </Card>

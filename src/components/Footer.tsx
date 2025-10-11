@@ -15,13 +15,14 @@ export const Footer = () => {
             <Link to="/terms-of-service" className="text-muted-foreground hover:text-primary transition-colors">
               Terms of Service
             </Link>
-            <Link 
-              to="https://impressme.com" 
+            <a 
+              href="https://impressme.com" 
               target="_blank"
+              rel="noopener noreferrer"
               className="text-primary hover:text-primary-dark transition-colors"
             >
               An Impress Me Family App ✨
-            </Link>
+            </a>
           </div>
         </div>
       </div>
