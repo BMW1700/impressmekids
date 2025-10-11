@@ -107,7 +107,7 @@ const AuraPractice = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
       
-      <main className="flex-1 container mx-auto px-4 py-8">
+      <main className="flex-1 container mx-auto px-4 py-8 animate-fade-in">
         <div className="max-w-6xl mx-auto space-y-6">
           <div className="flex items-center gap-3 mb-8">
             <div className="p-3 rounded-full bg-primary/10">
@@ -121,22 +121,22 @@ const AuraPractice = () => {
 
           <Tabs defaultValue="practice" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="practice">
+              <TabsTrigger value="practice" className="hover:scale-105 transition-transform">
                 <Mic className="h-4 w-4 mr-2" />
                 Practice
               </TabsTrigger>
-              <TabsTrigger value="progress">
+              <TabsTrigger value="progress" className="hover:scale-105 transition-transform">
                 <TrendingUp className="h-4 w-4 mr-2" />
                 Progress
               </TabsTrigger>
-              <TabsTrigger value="exercises">
+              <TabsTrigger value="exercises" className="hover:scale-105 transition-transform">
                 <BookOpen className="h-4 w-4 mr-2" />
                 Exercises
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="practice" className="space-y-6 mt-6">
-              <Card>
+              <Card className="hover:scale-[1.01] transition-transform duration-200">
                 <CardHeader>
                   <CardTitle>Record Your Practice</CardTitle>
                   <CardDescription>
@@ -166,7 +166,19 @@ const AuraPractice = () => {
             </TabsContent>
 
             <TabsContent value="progress" className="mt-6">
-              <AuraProgressChart records={records || []} />
+              {!records || records.length === 0 ? (
+                <Card className="hover:scale-[1.01] transition-transform duration-200">
+                  <CardContent className="text-center py-12">
+                    <div className="h-24 w-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center">
+                      <Mic className="h-12 w-12 text-white" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2">No Practice Sessions Yet</h3>
+                    <p className="text-muted-foreground">Start recording to see your progress!</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <AuraProgressChart records={records} />
+              )}
             </TabsContent>
 
             <TabsContent value="exercises" className="mt-6 space-y-6">
