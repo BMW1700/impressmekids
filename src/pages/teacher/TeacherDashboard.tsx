@@ -6,6 +6,7 @@ import { Footer } from "@/components/Footer";
 import { ClassroomCard } from "@/components/ClassroomCard";
 import { CreateClassroomModal } from "@/components/CreateClassroomModal";
 import { MLModelTraining } from "@/components/teacher/MLModelTraining";
+import { TeacherSuccessBoard } from "@/components/teacher/TeacherSuccessBoard";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -141,6 +142,9 @@ const TeacherDashboard = () => {
               Sign Out
             </Button>
           </div>
+
+          {/* Teacher Success Board */}
+          <TeacherSuccessBoard classroomId={classrooms[0]?.id} />
 
           {/* Quick Stats */}
           <div className="grid md:grid-cols-3 gap-6 mb-8">
