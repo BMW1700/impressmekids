@@ -61,19 +61,47 @@ export const TeacherSuccessBoard = ({ classroomId }: TeacherSuccessBoardProps) =
     );
   }
 
-  const summaryText = summary?.summary_data 
-    ? typeof summary.summary_data === 'string' 
-      ? summary.summary_data 
-      : JSON.stringify(summary.summary_data)
-    : null;
-
-  const recommendations = summaryText
-    ? [summaryText.split('.')[0] + '.'] 
-    : [
+  // Parse AI-generated recommendations from summary_data
+  const recommendations = (() => {
+    if (!summary?.summary_data) {
+      return [
         "Review at-risk students below",
         "Schedule individual check-ins",
         "Monitor pronunciation progress"
       ];
+    }
+
+    try {
+      const data = typeof summary.summary_data === 'string' 
+        ? JSON.parse(summary.summary_data) 
+        : summary.summary_data;
+
+      if (data.students && Array.isArray(data.students)) {
+        return data.students
+          .slice(0, 3)
+          .map((student: any) => {
+            const topRec = student.recommendations?.[0];
+            if (topRec) {
+              return {
+                text: `${student.name}: ${topRec}`,
+                studentId: student.user_id,
+                emoji: student.struggles?.length > 0 ? "🎯" : "✨"
+              };
+            }
+            return null;
+          })
+          .filter(Boolean);
+      }
+    } catch (e) {
+      console.error('Failed to parse summary_data:', e);
+    }
+
+    return [
+      "Review at-risk students below",
+      "Schedule individual check-ins",
+      "Monitor pronunciation progress"
+    ];
+  })();
 
   return (
     <Card className="mb-8 overflow-hidden">
@@ -163,14 +191,19 @@ export const TeacherSuccessBoard = ({ classroomId }: TeacherSuccessBoardProps) =
               Recommended Next Actions
             </div>
             <div className="space-y-2">
-              {recommendations.slice(0, 3).map((rec, idx) => (
-                <div key={idx} className="flex items-start gap-2">
-                  <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary mt-0.5">
-                    {idx + 1}
+              {recommendations.slice(0, 3).map((rec, idx) => {
+                const isAiRec = typeof rec === 'object';
+                return (
+                  <div 
+                    key={idx} 
+                    className={`flex items-start gap-2 ${isAiRec ? 'cursor-pointer hover:bg-accent/50 p-1.5 rounded transition-colors' : ''}`}
+                    onClick={() => isAiRec && rec.studentId && navigate(`/teacher/student/${rec.studentId}`)}
+                  >
+                    <span className="text-sm mt-0.5">{isAiRec ? rec.emoji : `${idx + 1}.`}</span>
+                    <span className="text-sm flex-1">{isAiRec ? rec.text : rec}</span>
                   </div>
-                  <span className="text-sm">{rec}</span>
-                </div>
-              ))}
+                );
+              })}
               {!summary && classroomId && (
                 <Button 
                   variant="outline" 
