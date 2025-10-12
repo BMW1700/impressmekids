@@ -6,7 +6,7 @@ import { useClassroomAssignmentMetrics } from "@/hooks/useClassroomAssignmentMet
 import { usePriorityStudents } from "@/hooks/usePriorityStudents";
 import { useTeacherSummary } from "@/hooks/useTeacherSummary";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { TrendingUp, TrendingDown, AlertTriangle, FileText, Loader2, CheckCircle, ClipboardCheck, BarChart3 } from "lucide-react";
+import { TrendingUp, AlertTriangle, FileText, Loader2, CheckCircle, ClipboardCheck, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface TeacherSuccessBoardProps {
@@ -23,17 +23,15 @@ export const TeacherSuccessBoard = ({ classroomId }: TeacherSuccessBoardProps) =
   const isLoading = metricsLoading || studentsLoading || assignmentMetricsLoading;
 
   const handleExportPDF = () => {
-    // For now, just generate the summary - PDF export would require additional library
     if (!summary && classroomId) {
       generateSummary(classroomId);
     } else {
-      // Simple CSV export for now
       const csvContent = [
         ['Metric', 'Value'],
+        ['Avg Assignment Grade', `${assignmentMetrics?.avgGrade || 0}%`],
+        ['Pending Grading', `${assignmentMetrics?.pendingGradingCount || 0}`],
+        ['Completion Rate', `${assignmentMetrics?.completionRate || 0}%`],
         ['WPM Improvement', `${metrics?.wpmImprovement || 0}%`],
-        ['Current Avg WPM', `${metrics?.recentAvgWpm || 0}`],
-        ['Previous Avg WPM', `${metrics?.olderAvgWpm || 0}`],
-        ['Total Sessions (30 days)', `${metrics?.totalSessions || 0}`],
         ['At-Risk Students', urgentStudents.length],
       ].map(row => row.join(',')).join('\n');
 
@@ -69,7 +67,7 @@ export const TeacherSuccessBoard = ({ classroomId }: TeacherSuccessBoardProps) =
       return [
         "Review at-risk students below",
         "Schedule individual check-ins",
-        "Monitor pronunciation progress"
+        "Monitor assignment progress"
       ];
     }
 
@@ -101,7 +99,7 @@ export const TeacherSuccessBoard = ({ classroomId }: TeacherSuccessBoardProps) =
     return [
       "Review at-risk students below",
       "Schedule individual check-ins",
-      "Monitor pronunciation progress"
+      "Monitor assignment progress"
     ];
   })();
 
@@ -130,22 +128,8 @@ export const TeacherSuccessBoard = ({ classroomId }: TeacherSuccessBoardProps) =
         </div>
       </CardHeader>
       <CardContent className="p-6">
-        {/* Top Row - 4 Metrics */}
+        {/* Top Row - 4 Academic Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {/* WPM Improvement */}
-          <div className="p-4 bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg border border-primary/20">
-            <div className="flex items-center gap-2 mb-1">
-              <TrendingUp className="h-4 w-4 text-primary" />
-              <div className="text-xs text-muted-foreground">WPM Improvement</div>
-            </div>
-            <div className="text-2xl font-bold text-primary">
-              {metrics?.wpmImprovement > 0 ? '+' : ''}{metrics?.wpmImprovement || 0}%
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {metrics?.recentAvgWpm || 0} WPM avg (last 30 days)
-            </div>
-          </div>
-
           {/* Average Assignment Grade */}
           <div className={`p-4 rounded-lg border ${
             (assignmentMetrics?.avgGrade || 0) >= 80 
@@ -229,10 +213,24 @@ export const TeacherSuccessBoard = ({ classroomId }: TeacherSuccessBoardProps) =
               of expected submissions
             </div>
           </div>
+
+          {/* Total Assignments */}
+          <div className="p-4 bg-gradient-to-br from-blue-500/5 to-blue-500/10 rounded-lg border border-blue-500/20">
+            <div className="flex items-center gap-2 mb-1">
+              <FileText className="h-4 w-4 text-blue-500" />
+              <div className="text-xs text-muted-foreground">Total Assignments</div>
+            </div>
+            <div className="text-2xl font-bold text-blue-500">
+              {assignmentMetrics?.totalAssignments || 0}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {assignmentMetrics?.overdueAssignments || 0} overdue
+            </div>
+          </div>
         </div>
 
-        {/* Bottom Row - 2 Columns */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Bottom Row - 3 Columns */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* At-Risk Students */}
           <div className="p-4 bg-gradient-to-br from-red-500/5 to-red-500/10 rounded-lg border border-red-500/20">
             <div className="text-sm font-medium text-muted-foreground mb-3">
@@ -261,7 +259,7 @@ export const TeacherSuccessBoard = ({ classroomId }: TeacherSuccessBoardProps) =
             </div>
           </div>
 
-          {/* Recommended Actions Column */}
+          {/* Recommended Actions */}
           <div className="p-4 bg-gradient-to-br from-blue-500/5 to-blue-500/10 rounded-lg border border-blue-500/20">
             <div className="text-sm font-medium text-muted-foreground mb-3">
               Recommended Next Actions
@@ -298,40 +296,27 @@ export const TeacherSuccessBoard = ({ classroomId }: TeacherSuccessBoardProps) =
             </div>
           </div>
 
-          {/* Recommended Actions Column */}
-          <div className="p-4 bg-gradient-to-br from-blue-500/5 to-blue-500/10 rounded-lg border border-blue-500/20">
+          {/* AURA Performance Summary */}
+          <div className="p-4 bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg border border-primary/20">
             <div className="text-sm font-medium text-muted-foreground mb-3">
-              Recommended Next Actions
+              AURA Performance
             </div>
-            <div className="space-y-2">
-              {recommendations.slice(0, 3).map((rec, idx) => {
-                const isAiRec = typeof rec === 'object';
-                return (
-                  <div 
-                    key={idx} 
-                    className={`flex items-start gap-2 ${isAiRec ? 'cursor-pointer hover:bg-blue-500/10 p-1.5 rounded transition-colors' : ''}`}
-                    onClick={() => isAiRec && rec.studentId && navigate(`/teacher/student/${rec.studentId}`)}
-                  >
-                    <span className="text-sm mt-0.5">{isAiRec ? rec.emoji : `${idx + 1}.`}</span>
-                    <span className="text-sm flex-1">{isAiRec ? rec.text : rec}</span>
-                  </div>
-                );
-              })}
-              {!summary && classroomId && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full mt-2"
-                  onClick={() => generateSummary(classroomId)}
-                  disabled={isGenerating}
-                >
-                  {isGenerating ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    'Generate AI Recommendations'
-                  )}
-                </Button>
-              )}
+            <div className="space-y-3">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  <span className="text-xs text-muted-foreground">WPM Improvement</span>
+                </div>
+                <div className="text-xl font-bold text-primary">
+                  {metrics?.wpmImprovement > 0 ? '+' : ''}{metrics?.wpmImprovement || 0}%
+                </div>
+              </div>
+              <div className="pt-2 border-t border-primary/10">
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div>Current: {metrics?.recentAvgWpm || 0} WPM</div>
+                  <div>Sessions: {metrics?.totalSessions || 0}</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
