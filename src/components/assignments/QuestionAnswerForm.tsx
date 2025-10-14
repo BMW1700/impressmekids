@@ -5,7 +5,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Button } from '@/components/ui/button';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Upload, Link as LinkIcon } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface QuestionAnswerData {
   subject?: string;
@@ -24,10 +28,13 @@ interface QuestionAnswerFormProps {
 }
 
 export const QuestionAnswerForm = ({ data, onChange }: QuestionAnswerFormProps) => {
+  const { toast } = useToast();
   const [localData, setLocalData] = useState<QuestionAnswerData>(data || {
     question_type: 'short_answer',
     options: [],
   });
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadMethod, setUploadMethod] = useState<'url' | 'file'>('file');
 
   // Initialize multiple choice with 2 options
   useEffect(() => {
@@ -63,6 +70,77 @@ export const QuestionAnswerForm = ({ data, onChange }: QuestionAnswerFormProps) 
   const removeOption = (index: number) => {
     const options = (localData.options || []).filter((_, i) => i !== index);
     handleChange('options', options);
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please upload a JPG, PNG, GIF, or WebP image",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB for question images)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: "Please upload an image smaller than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      // Generate unique filename
+      const timestamp = Date.now();
+      const extension = file.name.split('.').pop();
+      const fileName = `question-${timestamp}.${extension}`;
+
+      // Upload to Supabase storage
+      const { data, error } = await supabase.storage
+        .from('assignment-question-images')
+        .upload(fileName, file, {
+          contentType: file.type,
+          upsert: false,
+        });
+
+      if (error) throw error;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('assignment-question-images')
+        .getPublicUrl(data.path);
+
+      // Update form data with the public URL
+      handleChange('image_url', publicUrl);
+
+      toast({
+        title: "Success",
+        description: "Image uploaded successfully",
+      });
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Could not upload image. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const clearImage = () => {
+    handleChange('image_url', '');
   };
 
   return (
@@ -169,23 +247,91 @@ export const QuestionAnswerForm = ({ data, onChange }: QuestionAnswerFormProps) 
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label>Image URL (Optional)</Label>
-          <Input 
-            value={localData.image_url || ''} 
-            onChange={(e) => handleChange('image_url', e.target.value)}
-            placeholder="https://..."
-          />
-        </div>
-        <div>
-          <Label>Audio URL (Optional)</Label>
-          <Input 
-            value={localData.audio_url || ''} 
-            onChange={(e) => handleChange('audio_url', e.target.value)}
-            placeholder="https://..."
-          />
-        </div>
+      <div>
+        <Label>Question Image (Optional)</Label>
+        <Tabs value={uploadMethod} onValueChange={(v) => setUploadMethod(v as 'url' | 'file')} className="mt-2">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="file">
+              <Upload className="h-4 w-4 mr-2" />
+              Upload Image
+            </TabsTrigger>
+            <TabsTrigger value="url">
+              <LinkIcon className="h-4 w-4 mr-2" />
+              Image URL
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="file" className="space-y-2">
+            {localData.image_url ? (
+              <Card className="p-4 space-y-2">
+                <div className="relative">
+                  <img 
+                    src={localData.image_url} 
+                    alt="Question preview" 
+                    className="w-full max-h-48 object-contain rounded border"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2"
+                    onClick={clearImage}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">Image uploaded successfully</p>
+              </Card>
+            ) : (
+              <div className="space-y-2">
+                <Input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                  onChange={handleImageUpload}
+                  disabled={isUploading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Upload a JPG, PNG, GIF, or WebP image (max 5MB)
+                </p>
+                {isUploading && (
+                  <p className="text-xs text-primary">Uploading...</p>
+                )}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="url" className="space-y-2">
+            <Input 
+              value={localData.image_url || ''} 
+              onChange={(e) => handleChange('image_url', e.target.value)}
+              placeholder="https://example.com/image.jpg"
+            />
+            <p className="text-xs text-muted-foreground">
+              Paste a direct link to an image
+            </p>
+            {localData.image_url && (
+              <Card className="p-2">
+                <img 
+                  src={localData.image_url} 
+                  alt="Question preview" 
+                  className="w-full max-h-48 object-contain rounded"
+                  onError={(e) => {
+                    e.currentTarget.src = '/placeholder.svg';
+                  }}
+                />
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      <div>
+        <Label>Audio URL (Optional)</Label>
+        <Input 
+          value={localData.audio_url || ''} 
+          onChange={(e) => handleChange('audio_url', e.target.value)}
+          placeholder="https://..."
+        />
       </div>
     </div>
   );
