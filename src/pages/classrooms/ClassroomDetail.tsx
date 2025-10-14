@@ -260,6 +260,30 @@ const ClassroomDetail = () => {
     }
   };
 
+  const handleDeleteTournament = async (tournamentId: string) => {
+    try {
+      const { error } = await supabase
+        .from('tournaments')
+        .delete()
+        .eq('id', tournamentId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Tournament deleted successfully",
+      });
+
+      loadClassroomData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete tournament",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading || permissionsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
