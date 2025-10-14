@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic, Eye, EyeOff, UserCheck } from "lucide-react";
+import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic, Eye, EyeOff, UserCheck, BarChart3 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +30,7 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 import { SubmissionsList } from "@/components/assignments/SubmissionsList";
 import { AssignmentStatsCard } from "@/components/assignments/AssignmentStatsCard";
 import { ClassroomAIInsights } from "@/components/teacher/ClassroomAIInsights";
+import { TeacherSuccessBoard } from "@/components/teacher/TeacherSuccessBoard";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -69,6 +70,7 @@ const ClassroomDetail = () => {
   const [flashcardSets, setFlashcardSets] = useState<any[]>([]);
   const [viewingFlashcardSet, setViewingFlashcardSet] = useState<any>(null);
   const [deleteAssignmentId, setDeleteAssignmentId] = useState<string | null>(null);
+  const [showClassGlance, setShowClassGlance] = useState(false);
   const { assignments } = useAssignments(id);
   const { submissions: assignmentSubmissions } = useAssignmentSubmissions(viewingAssignmentId || undefined);
   const { deleteAssignment, toggleAssignmentStatus } = useMultiQuestionAssignments(id);
@@ -346,10 +348,21 @@ const ClassroomDetail = () => {
                   </span>
                 </div>
                 {isTeacher && (
-                  <Button variant="outline" size="sm" onClick={copyJoinCode}>
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copy Join Code
-                  </Button>
+                  <>
+                    <Button variant="outline" size="sm" onClick={copyJoinCode}>
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copy Join Code
+                    </Button>
+                    <Button 
+                      variant="default" 
+                      size="sm" 
+                      onClick={() => setShowClassGlance(true)}
+                      className="bg-gradient-primary"
+                    >
+                      <BarChart3 className="mr-2 h-4 w-4" />
+                      Your Class at a Glance
+                    </Button>
+                  </>
                 )}
               </div>
             </CardContent>
@@ -906,6 +919,16 @@ const ClassroomDetail = () => {
               </DialogContent>
             </Dialog>
           )}
+
+          {/* Class at a Glance Dialog */}
+          <Dialog open={showClassGlance} onOpenChange={setShowClassGlance}>
+            <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Your Class at a Glance - {classroom?.name}</DialogTitle>
+              </DialogHeader>
+              <TeacherSuccessBoard classroomId={id!} />
+            </DialogContent>
+          </Dialog>
 
           <ConfirmModal
             open={!!deleteAssignmentId}

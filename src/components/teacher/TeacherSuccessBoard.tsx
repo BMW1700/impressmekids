@@ -10,11 +10,11 @@ import { TrendingUp, AlertTriangle, FileText, Loader2, CheckCircle, ClipboardChe
 import { useNavigate } from "react-router-dom";
 
 interface TeacherSuccessBoardProps {
-  classroomId?: string;
+  classroomId: string;
 }
 
 export const TeacherSuccessBoard = ({ classroomId }: TeacherSuccessBoardProps) => {
-  const { metrics, isLoading: metricsLoading } = useClassroomMetrics();
+  const { metrics, isLoading: metricsLoading } = useClassroomMetrics(classroomId);
   const { metrics: assignmentMetrics, isLoading: assignmentMetricsLoading } = useClassroomAssignmentMetrics(classroomId);
   const { urgentStudents, isLoading: studentsLoading } = usePriorityStudents();
   const { summary, generateSummary, isGenerating } = useTeacherSummary(classroomId);

@@ -2,28 +2,18 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { subDays } from "date-fns";
 
-export const useClassroomMetrics = () => {
+export const useClassroomMetrics = (classroomId: string) => {
   const { data, isLoading } = useQuery({
-    queryKey: ['classroom-metrics'],
+    queryKey: ['classroom-metrics', classroomId],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
+      if (!user || !classroomId) return null;
 
-      // Get teacher's classrooms
-      const { data: classrooms } = await supabase
-        .from('classrooms')
-        .select('id')
-        .eq('teacher_id', user.id);
-
-      if (!classrooms || classrooms.length === 0) return null;
-
-      const classroomIds = classrooms.map(c => c.id);
-
-      // Get all students in classrooms
+      // Get students ONLY in this specific classroom
       const { data: students } = await supabase
         .from('classroom_students')
         .select('student_id')
-        .in('classroom_id', classroomIds);
+        .eq('classroom_id', classroomId);
 
       if (!students || students.length === 0) return null;
 
