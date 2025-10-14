@@ -70,6 +70,7 @@ const ClassroomDetail = () => {
   const [flashcardSets, setFlashcardSets] = useState<any[]>([]);
   const [viewingFlashcardSet, setViewingFlashcardSet] = useState<any>(null);
   const [deleteAssignmentId, setDeleteAssignmentId] = useState<string | null>(null);
+  const [deleteTournamentId, setDeleteTournamentId] = useState<string | null>(null);
   const [showClassGlance, setShowClassGlance] = useState(false);
   const { assignments } = useAssignments(id);
   const { submissions: assignmentSubmissions } = useAssignmentSubmissions(viewingAssignmentId || undefined);
@@ -752,12 +753,32 @@ const ClassroomDetail = () => {
                       <CardHeader>
                         <div className="flex items-center justify-between">
                           <CardTitle>{tournament.name}</CardTitle>
-                          <Badge variant={
-                            tournament.status === 'completed' ? 'secondary' :
-                            tournament.status === 'in_progress' ? 'default' : 'outline'
-                          }>
-                            {tournament.status}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={
+                              tournament.status === 'completed' ? 'secondary' :
+                              tournament.status === 'in_progress' ? 'default' : 'outline'
+                            }>
+                              {tournament.status}
+                            </Badge>
+                            {isTeacher && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => setDeleteTournamentId(tournament.id)}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </div>
                         </div>
                       </CardHeader>
                       <CardContent>
@@ -941,6 +962,21 @@ const ClassroomDetail = () => {
               if (deleteAssignmentId) {
                 deleteAssignment(deleteAssignmentId);
                 setDeleteAssignmentId(null);
+              }
+            }}
+          />
+
+          <ConfirmModal
+            open={!!deleteTournamentId}
+            onOpenChange={(open) => !open && setDeleteTournamentId(null)}
+            title="Delete Tournament"
+            description="Are you sure you want to delete this tournament? This will also delete all associated matches and player data. This action cannot be undone."
+            confirmText="Yes, Delete"
+            cancelText="Cancel"
+            onConfirm={() => {
+              if (deleteTournamentId) {
+                handleDeleteTournament(deleteTournamentId);
+                setDeleteTournamentId(null);
               }
             }}
           />
