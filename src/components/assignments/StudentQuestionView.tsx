@@ -109,13 +109,36 @@ export const StudentQuestionView = ({
             )}
 
             {qData.question_type === 'multiple_choice' && (
-              <RadioGroup value={localAnswer.answer_text} onValueChange={(v) => handleChange({ answer_text: v })}>
-                {qData.options?.map((option: string, idx: number) => (
-                  <div key={idx} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option} id={`option-${idx}`} />
-                    <Label htmlFor={`option-${idx}`} className="font-normal cursor-pointer">{option}</Label>
-                  </div>
-                ))}
+              <RadioGroup 
+                value={localAnswer.answer_text} 
+                onValueChange={(v) => handleChange({ answer_text: v })}
+                className="space-y-3"
+              >
+                {qData.options?.map((option: any, idx: number) => {
+                  const optionText = typeof option === 'string' ? option : option.text;
+                  const optionImage = typeof option === 'object' ? option.image_url : undefined;
+                  
+                  return (
+                    <Card key={idx} className="p-3 cursor-pointer hover:bg-accent transition-colors">
+                      <div className="flex items-start space-x-3">
+                        <RadioGroupItem value={optionText} id={`option-${idx}`} className="mt-1" />
+                        <Label 
+                          htmlFor={`option-${idx}`} 
+                          className="flex-1 font-normal cursor-pointer space-y-2"
+                        >
+                          <div>{optionText}</div>
+                          {optionImage && (
+                            <img 
+                              src={optionImage} 
+                              alt={`Option ${idx + 1}`}
+                              className="w-full max-h-40 object-contain rounded border"
+                            />
+                          )}
+                        </Label>
+                      </div>
+                    </Card>
+                  );
+                })}
               </RadioGroup>
             )}
 

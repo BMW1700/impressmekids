@@ -11,6 +11,11 @@ import { Card } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+interface OptionData {
+  text: string;
+  image_url?: string;
+}
+
 interface QuestionAnswerData {
   subject?: string;
   question_type?: 'short_answer' | 'multiple_choice' | 'true_false';
@@ -19,7 +24,7 @@ interface QuestionAnswerData {
   explanation?: string;
   image_url?: string;
   audio_url?: string;
-  options?: string[]; // For multiple choice
+  options?: OptionData[]; // For multiple choice
 }
 
 interface QuestionAnswerFormProps {
@@ -35,11 +40,27 @@ export const QuestionAnswerForm = ({ data, onChange }: QuestionAnswerFormProps) 
   });
   const [isUploading, setIsUploading] = useState(false);
   const [uploadMethod, setUploadMethod] = useState<'url' | 'file'>('file');
+  const [uploadingOptionIndex, setUploadingOptionIndex] = useState<number | null>(null);
 
   // Initialize multiple choice with 2 options
   useEffect(() => {
-    if (localData.question_type === 'multiple_choice' && (!localData.options || localData.options.length === 0)) {
-      handleChange('options', ['', '']);
+    if (localData.question_type === 'multiple_choice') {
+      if (!localData.options || localData.options.length === 0) {
+        handleChange('options', [
+          { text: '', image_url: '' },
+          { text: '', image_url: '' }
+        ]);
+      } else {
+        // Auto-migrate old string[] format to new OptionData[] format
+        const firstOption = localData.options[0];
+        if (typeof firstOption === 'string') {
+          const migratedOptions = (localData.options as any[]).map((opt: any) => ({
+            text: opt,
+            image_url: ''
+          }));
+          handleChange('options', migratedOptions);
+        }
+      }
     }
   }, [localData.question_type]);
 
@@ -57,19 +78,97 @@ export const QuestionAnswerForm = ({ data, onChange }: QuestionAnswerFormProps) 
   };
 
   const addOption = () => {
-    const options = [...(localData.options || []), ''];
+    const options = [...(localData.options || []), { text: '', image_url: '' }];
     handleChange('options', options);
   };
 
-  const updateOption = (index: number, value: string) => {
+  const updateOptionText = (index: number, text: string) => {
     const options = [...(localData.options || [])];
-    options[index] = value;
+    options[index] = { ...options[index], text };
     handleChange('options', options);
   };
 
   const removeOption = (index: number) => {
     const options = (localData.options || []).filter((_, i) => i !== index);
     handleChange('options', options);
+  };
+
+  const handleOptionImageUpload = async (
+    index: number, 
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please upload a JPG, PNG, GIF, or WebP image",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: "Please upload an image smaller than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploadingOptionIndex(index);
+
+    try {
+      const timestamp = Date.now();
+      const extension = file.name.split('.').pop();
+      const fileName = `option-${timestamp}-${index}.${extension}`;
+
+      const { data, error } = await supabase.storage
+        .from('assignment-question-images')
+        .upload(fileName, file, {
+          contentType: file.type,
+          upsert: false,
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('assignment-question-images')
+        .getPublicUrl(data.path);
+
+      const updatedOptions = [...(localData.options || [])];
+      updatedOptions[index] = {
+        ...updatedOptions[index],
+        image_url: publicUrl
+      };
+      handleChange('options', updatedOptions);
+
+      toast({
+        title: "Success",
+        description: "Option image uploaded successfully",
+      });
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Could not upload image",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingOptionIndex(null);
+    }
+  };
+
+  const clearOptionImage = (index: number) => {
+    const updatedOptions = [...(localData.options || [])];
+    updatedOptions[index] = {
+      ...updatedOptions[index],
+      image_url: ''
+    };
+    handleChange('options', updatedOptions);
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -179,35 +278,90 @@ export const QuestionAnswerForm = ({ data, onChange }: QuestionAnswerFormProps) 
       </div>
 
       {localData.question_type === 'multiple_choice' && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <Label>Answer Options</Label>
-          <RadioGroup value={localData.answer_text} onValueChange={(v) => handleChange('answer_text', v)}>
+          <RadioGroup 
+            value={localData.answer_text} 
+            onValueChange={(v) => handleChange('answer_text', v)}
+          >
             {(localData.options || []).map((option, index) => (
-              <div key={index} className="flex gap-2 items-center">
-                <RadioGroupItem value={option} id={`option-${index}`} disabled={!option} />
-                <Input 
-                  value={option}
-                  onChange={(e) => updateOption(index, e.target.value)}
-                  placeholder={`Option ${index + 1}`}
-                  className="flex-1"
-                />
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => removeOption(index)}
-                  disabled={(localData.options || []).length <= 2}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
+              <Card key={index} className="p-4 space-y-3">
+                <div className="flex gap-2 items-start">
+                  <RadioGroupItem 
+                    value={option.text} 
+                    id={`option-${index}`} 
+                    disabled={!option.text}
+                    className="mt-2"
+                  />
+                  <div className="flex-1 space-y-2">
+                    <div className="flex gap-2">
+                      <Input 
+                        value={option.text}
+                        onChange={(e) => updateOptionText(index, e.target.value)}
+                        placeholder={`Option ${index + 1} text`}
+                        className="flex-1"
+                      />
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => removeOption(index)}
+                        disabled={(localData.options || []).length <= 2}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {option.image_url ? (
+                        <div className="relative">
+                          <img 
+                            src={option.image_url} 
+                            alt={`Option ${index + 1}`}
+                            className="w-full max-h-32 object-contain rounded border"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            className="absolute top-1 right-1"
+                            onClick={() => clearOptionImage(index)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="file"
+                            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                            onChange={(e) => handleOptionImageUpload(index, e)}
+                            disabled={uploadingOptionIndex === index}
+                            className="text-xs"
+                            id={`option-image-${index}`}
+                          />
+                          <Label 
+                            htmlFor={`option-image-${index}`}
+                            className="text-xs text-muted-foreground cursor-pointer flex items-center gap-1"
+                          >
+                            <Upload className="h-3 w-3" />
+                            {uploadingOptionIndex === index ? 'Uploading...' : 'Add image (optional)'}
+                          </Label>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </Card>
             ))}
           </RadioGroup>
           <Button type="button" variant="outline" size="sm" onClick={addOption}>
             <Plus className="h-4 w-4 mr-2" />
             Add Option
           </Button>
-          <p className="text-xs text-muted-foreground">Select the radio button next to the correct answer</p>
+          <p className="text-xs text-muted-foreground">
+            Select the radio button next to the correct answer. Add images to options for visual questions.
+          </p>
         </div>
       )}
 
