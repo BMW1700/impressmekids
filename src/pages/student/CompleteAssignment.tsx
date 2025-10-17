@@ -193,7 +193,7 @@ export default function CompleteAssignment() {
       description: timeRemaining === 0 ? "Time's up. Your work has been submitted." : 'Your assignment has been submitted successfully.',
     });
 
-    navigate('/student/dashboard');
+    navigate(`/classrooms/${assignment.classroom_id}?tab=assignments`);
   }
 
   // 1. FIRST: Check if assignment is loading
