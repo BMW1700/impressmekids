@@ -341,6 +341,7 @@ export default function CompleteAssignment() {
                 answerData: data,
                 status: 'completed',
                 questionData: currentQuestion.question_data, // For auto-grading
+                questionPoints: currentQuestion.points || 10, // Points for grading
               });
             }}
             questionNumber={currentQuestionIndex + 1}

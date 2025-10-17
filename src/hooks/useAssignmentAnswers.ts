@@ -31,6 +31,7 @@ export const useAssignmentAnswers = (submissionId?: string) => {
       answerData,
       status,
       questionData,
+      questionPoints,
     }: {
       submissionId: string;
       questionId: string;
@@ -38,6 +39,7 @@ export const useAssignmentAnswers = (submissionId?: string) => {
       answerData: any;
       status: 'not_attempted' | 'in_progress' | 'completed';
       questionData?: any;
+      questionPoints?: number;
     }) => {
       console.log('📝 [useAssignmentAnswers] Saving answer:', {
         submissionId,
@@ -45,11 +47,15 @@ export const useAssignmentAnswers = (submissionId?: string) => {
         answerType,
         status,
         hasQuestionData: !!questionData,
+        questionPoints,
       });
-      // Auto-grade if it's a reading comprehension with multiple choice
+      
       let finalAnswerData = answerData;
       let auraRecordId: string | null = null;
+      let isCorrect: boolean | null = null;
+      let pointsEarned: number | null = null;
 
+      // Auto-grade reading comprehension questions
       if (answerType === 'reading_comprehension' && questionData?.questions) {
         const questions = questionData.questions;
         const answers = answerData.answers || [];
@@ -63,11 +69,31 @@ export const useAssignmentAnswers = (submissionId?: string) => {
           }
         });
 
+        const totalQuestions = questions.length;
+        const percentCorrect = totalQuestions > 0 ? correctCount / totalQuestions : 0;
+        
+        isCorrect = percentCorrect >= 0.7; // 70% or higher is considered correct
+        pointsEarned = questionPoints ? Math.round(questionPoints * percentCorrect) : null;
+
         finalAnswerData = {
           ...answerData,
           score: correctCount,
-          total: questions.length,
+          total: totalQuestions,
         };
+      }
+
+      // Auto-grade multiple choice and true/false questions
+      if (answerType === 'question_answer' && questionData) {
+        const questionType = questionData.question_type;
+        const correctAnswer = questionData.answer_text;
+        const studentAnswer = answerData.answer_text;
+
+        if (questionType === 'multiple_choice' || questionType === 'true_false') {
+          // Exact match for multiple choice and true/false
+          isCorrect = studentAnswer?.trim().toLowerCase() === correctAnswer?.trim().toLowerCase();
+          pointsEarned = isCorrect && questionPoints ? questionPoints : 0;
+        }
+        // Short answer questions remain null (manual grading required)
       }
 
       // Extract AURA record ID from speaking answers
@@ -91,6 +117,8 @@ export const useAssignmentAnswers = (submissionId?: string) => {
           answer_data: finalAnswerData,
           status,
           aura_record_id: auraRecordId,
+          is_correct: isCorrect,
+          points_earned: pointsEarned,
         })
         .select()
         .single();

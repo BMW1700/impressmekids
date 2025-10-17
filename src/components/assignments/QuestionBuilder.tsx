@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Grip, Trash2 } from 'lucide-react';
 import { QuestionAnswerForm } from './QuestionAnswerForm';
@@ -12,6 +14,7 @@ interface Question {
   sequence: number;
   question_type: 'question_answer' | 'reading_comprehension' | 'speaking' | null;
   question_data: any;
+  points?: number;
 }
 
 interface QuestionBuilderProps {
@@ -125,18 +128,32 @@ export const QuestionBuilder = ({ question, onUpdate, onDelete, dragHandleProps 
       </CardHeader>
       
       <CardContent className="space-y-6">
-        <div>
-          <label className="text-sm font-medium mb-2 block">Choose Response Format</label>
-          <Select value={question.question_type || ''} onValueChange={handleTypeChange}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select question type..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="question_answer">Question / Answer</SelectItem>
-              <SelectItem value="reading_comprehension">Reading Comprehension</SelectItem>
-              <SelectItem value="speaking">Speaking</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm font-medium mb-2 block">Choose Response Format</label>
+            <Select value={question.question_type || ''} onValueChange={handleTypeChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select question type..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="question_answer">Question / Answer</SelectItem>
+                <SelectItem value="reading_comprehension">Reading Comprehension</SelectItem>
+                <SelectItem value="speaking">Speaking</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor={`points-${question.id}`}>Points Worth</Label>
+            <Input
+              id={`points-${question.id}`}
+              type="number"
+              min="1"
+              max="100"
+              value={question.points || 10}
+              onChange={(e) => onUpdate({ ...question, points: parseInt(e.target.value) || 10 })}
+              placeholder="10"
+            />
+          </div>
         </div>
 
         {question.question_type && (

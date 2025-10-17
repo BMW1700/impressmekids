@@ -29,6 +29,7 @@ export default function ReviewMultiQuestionSubmission() {
   const [grade, setGrade] = useState("");
   const [feedback, setFeedback] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [manualGrades, setManualGrades] = useState<Record<string, number>>({});
 
   const { gradeSubmission } = useAssignmentSubmissions(assignment?.id);
 
@@ -112,18 +113,56 @@ export default function ReviewMultiQuestionSubmission() {
     }
   };
 
+  const calculateTotalScore = () => {
+    let totalPoints = 0;
+    let earnedPoints = 0;
+
+    questions.forEach((question) => {
+      const questionPoints = question.points || 10;
+      totalPoints += questionPoints;
+
+      const answer = getAnswerForQuestion(question.id);
+      if (answer?.points_earned !== null && answer?.points_earned !== undefined) {
+        earnedPoints += answer.points_earned;
+      } else if (manualGrades[question.id] !== undefined) {
+        earnedPoints += manualGrades[question.id];
+      }
+    });
+
+    return { totalPoints, earnedPoints };
+  };
+
+  const handleSaveManualGrade = async (questionId: string, answerId: string, points: number) => {
+    try {
+      const { error } = await supabase
+        .from('assignment_answers')
+        .update({ points_earned: points })
+        .eq('id', answerId);
+
+      if (error) throw error;
+
+      setManualGrades(prev => ({ ...prev, [questionId]: points }));
+      toast({
+        title: "Grade Saved",
+        description: "Question grade has been updated",
+      });
+      
+      // Reload data to refresh
+      loadData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to save grade",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSaveGrade = () => {
     if (!submissionId) return;
 
-    const gradeValue = parseFloat(grade);
-    if (isNaN(gradeValue) || gradeValue < 0 || gradeValue > 100) {
-      toast({
-        title: "Invalid Grade",
-        description: "Please enter a grade between 0 and 100",
-        variant: "destructive",
-      });
-      return;
-    }
+    const { totalPoints, earnedPoints } = calculateTotalScore();
+    const gradePercentage = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
 
     if (!feedback.trim()) {
       toast({
@@ -138,7 +177,7 @@ export default function ReviewMultiQuestionSubmission() {
     gradeSubmission(
       {
         submissionId,
-        grade: gradeValue,
+        grade: gradePercentage,
         feedback: feedback.trim(),
       },
       {
@@ -156,19 +195,61 @@ export default function ReviewMultiQuestionSubmission() {
   const renderQuestionAnswer = (question: any, answer: any) => {
     const questionData = question.question_data;
     const answerData = answer?.answer_data || {};
+    const questionPoints = question.points || 10;
+    const isAutoGraded = answer?.is_correct !== null && answer?.is_correct !== undefined;
+    const needsManualGrading = !isAutoGraded && answerData.answer_text;
 
     switch (question.question_type) {
       case 'question_answer':
         return (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <p className="text-sm font-medium">Question: {questionData.question_text}</p>
             <p className="text-sm text-muted-foreground">Student Answer:</p>
             <p className="text-sm bg-muted p-3 rounded">{answerData.answer_text || 'No answer provided'}</p>
-            {answerData.is_correct !== undefined && (
-              <Badge variant={answerData.is_correct ? "default" : "destructive"}>
-                {answerData.is_correct ? 'Correct' : 'Incorrect'}
-              </Badge>
-            )}
+            
+            <div className="flex items-center gap-3 flex-wrap">
+              {isAutoGraded && (
+                <>
+                  <Badge variant={answer.is_correct ? "default" : "destructive"}>
+                    {answer.is_correct ? 'Correct' : 'Incorrect'}
+                  </Badge>
+                  <Badge variant="outline">
+                    {answer.points_earned}/{questionPoints} points
+                  </Badge>
+                </>
+              )}
+              
+              {needsManualGrading && (
+                <div className="flex items-center gap-2">
+                  <Label htmlFor={`grade-${answer.id}`} className="text-sm">Grade:</Label>
+                  <Input
+                    id={`grade-${answer.id}`}
+                    type="number"
+                    min="0"
+                    max={questionPoints}
+                    value={manualGrades[question.id] ?? answer?.points_earned ?? ''}
+                    onChange={(e) => setManualGrades(prev => ({ 
+                      ...prev, 
+                      [question.id]: parseFloat(e.target.value) || 0 
+                    }))}
+                    className="w-20"
+                    placeholder="0"
+                  />
+                  <span className="text-sm text-muted-foreground">/ {questionPoints}</span>
+                  <Button
+                    size="sm"
+                    onClick={() => handleSaveManualGrade(question.id, answer.id, manualGrades[question.id] || 0)}
+                    disabled={manualGrades[question.id] === undefined}
+                  >
+                    Save
+                  </Button>
+                </div>
+              )}
+              
+              {!answerData.answer_text && (
+                <Badge variant="secondary">Not Attempted</Badge>
+              )}
+            </div>
           </div>
         );
 
@@ -220,16 +301,23 @@ export default function ReviewMultiQuestionSubmission() {
                 </div>
               ))}
             </div>
-            {answerData.score !== undefined && (
-              <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              {answerData.score !== undefined && (
+                <>
+                  <Badge variant="outline">
+                    Score: {answerData.score}/{questionData.questions?.length || 0}
+                  </Badge>
+                  <Badge variant={answerData.score === questionData.questions?.length ? "default" : "secondary"}>
+                    {Math.round((answerData.score / (questionData.questions?.length || 1)) * 100)}%
+                  </Badge>
+                </>
+              )}
+              {answer?.points_earned !== null && answer?.points_earned !== undefined && (
                 <Badge variant="outline">
-                  Score: {answerData.score}/{questionData.questions?.length || 0}
+                  {answer.points_earned}/{questionPoints} points
                 </Badge>
-                <Badge variant={answerData.score === questionData.questions?.length ? "default" : "secondary"}>
-                  {Math.round((answerData.score / (questionData.questions?.length || 1)) * 100)}%
-                </Badge>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         );
 
@@ -316,6 +404,7 @@ export default function ReviewMultiQuestionSubmission() {
 
   const studentName = submission.profiles?.full_name || 'Student';
   const isGraded = submission.graded_at !== null;
+  const { totalPoints, earnedPoints } = calculateTotalScore();
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -378,7 +467,10 @@ export default function ReviewMultiQuestionSubmission() {
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center justify-between">
                       <span>Question {idx + 1}</span>
-                      <Badge variant="outline">{question.question_type.replace('_', ' ')}</Badge>
+                      <div className="flex gap-2">
+                        <Badge variant="outline">{question.question_type.replace('_', ' ')}</Badge>
+                        <Badge variant="secondary">{question.points || 10} pts</Badge>
+                      </div>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -399,31 +491,31 @@ export default function ReviewMultiQuestionSubmission() {
               <CardTitle>Grading & Feedback</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid md:grid-cols-4 gap-4">
-                <div className="md:col-span-1">
-                  <Label htmlFor="grade">Grade (0-100)</Label>
-                  <Input
-                    id="grade"
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={grade}
-                    onChange={(e) => setGrade(e.target.value)}
-                    placeholder="85"
-                    disabled={isSaving}
-                  />
+              <div className="bg-muted p-4 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Total Score</span>
+                  <span className="text-2xl font-bold">
+                    {earnedPoints} / {totalPoints} points
+                  </span>
                 </div>
-                <div className="md:col-span-3">
-                  <Label htmlFor="feedback">Feedback for Student</Label>
-                  <Textarea
-                    id="feedback"
-                    value={feedback}
-                    onChange={(e) => setFeedback(e.target.value)}
-                    placeholder="Great work! Your answers show good understanding..."
-                    rows={4}
-                    disabled={isSaving}
-                  />
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Percentage</span>
+                  <span className="text-lg font-semibold">
+                    {totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0}%
+                  </span>
                 </div>
+              </div>
+
+              <div>
+                <Label htmlFor="feedback">Feedback for Student</Label>
+                <Textarea
+                  id="feedback"
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                  placeholder="Great work! Your answers show good understanding..."
+                  rows={4}
+                  disabled={isSaving}
+                />
               </div>
 
               <Separator />
@@ -437,7 +529,7 @@ export default function ReviewMultiQuestionSubmission() {
                 </Button>
                 <Button
                   onClick={handleSaveGrade}
-                  disabled={isSaving || !grade || !feedback.trim()}
+                  disabled={isSaving || !feedback.trim()}
                   className="bg-gradient-primary hover:opacity-90"
                 >
                   {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

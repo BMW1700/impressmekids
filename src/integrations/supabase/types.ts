@@ -69,6 +69,8 @@ export type Database = {
           aura_record_id: string | null
           created_at: string
           id: string
+          is_correct: boolean | null
+          points_earned: number | null
           question_id: string
           status: Database["public"]["Enums"]["answer_status"]
           submission_id: string
@@ -80,6 +82,8 @@ export type Database = {
           aura_record_id?: string | null
           created_at?: string
           id?: string
+          is_correct?: boolean | null
+          points_earned?: number | null
           question_id: string
           status?: Database["public"]["Enums"]["answer_status"]
           submission_id: string
@@ -91,6 +95,8 @@ export type Database = {
           aura_record_id?: string | null
           created_at?: string
           id?: string
+          is_correct?: boolean | null
+          points_earned?: number | null
           question_id?: string
           status?: Database["public"]["Enums"]["answer_status"]
           submission_id?: string
@@ -125,6 +131,7 @@ export type Database = {
           assignment_id: string
           created_at: string
           id: string
+          points: number
           question_data: Json
           question_type: Database["public"]["Enums"]["question_type"]
           sequence: number
@@ -134,6 +141,7 @@ export type Database = {
           assignment_id: string
           created_at?: string
           id?: string
+          points?: number
           question_data?: Json
           question_type: Database["public"]["Enums"]["question_type"]
           sequence: number
@@ -143,6 +151,7 @@ export type Database = {
           assignment_id?: string
           created_at?: string
           id?: string
+          points?: number
           question_data?: Json
           question_type?: Database["public"]["Enums"]["question_type"]
           sequence?: number
