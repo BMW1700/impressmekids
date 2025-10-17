@@ -55,6 +55,28 @@ export default function CompleteAssignment() {
     }
   }, [hasStarted, assignment, submissionId]);
 
+  // Auto-navigate to first unanswered question when answers load
+  useEffect(() => {
+    // Safety checks - only run if we have all required data
+    if (!hasStarted || !assignment || !submissionId || answers.length === 0) {
+      return;
+    }
+    
+    const questions = assignment.assignment_questions || [];
+    if (questions.length === 0) {
+      return;
+    }
+    
+    const firstUnanswered = questions.findIndex(q => 
+      !answers.find((a: any) => a.question_id === q.id && a.status === 'completed')
+    );
+    
+    if (firstUnanswered !== -1 && firstUnanswered !== currentQuestionIndex) {
+      console.log('📍 [CompleteAssignment] Jumping to first unanswered question:', firstUnanswered + 1);
+      setCurrentQuestionIndex(firstUnanswered);
+    }
+  }, [answers.length, hasStarted, assignment, submissionId, currentQuestionIndex]);
+
   const checkForExistingSubmission = async () => {
     const { data: session } = await supabase.auth.getSession();
     
@@ -248,19 +270,6 @@ export default function CompleteAssignment() {
   const currentQuestion = questions[currentQuestionIndex];
   const allAnswered = answers.length === questions.length && answers.every((a: any) => a.status === 'completed');
 
-  // Auto-navigate to first unanswered question when answers load
-  useEffect(() => {
-    if (answers.length > 0 && hasStarted) {
-      const firstUnanswered = questions.findIndex(q => 
-        !answers.find((a: any) => a.question_id === q.id && a.status === 'completed')
-      );
-      if (firstUnanswered !== -1 && firstUnanswered !== currentQuestionIndex) {
-        console.log('📍 [CompleteAssignment] Jumping to first unanswered question:', firstUnanswered + 1);
-        setCurrentQuestionIndex(firstUnanswered);
-      }
-    }
-  }, [answers.length, hasStarted]);
-
   // Verify current question exists
   if (!currentQuestion) {
     console.error('❌ [CompleteAssignment] Current question is undefined', {
@@ -280,10 +289,13 @@ export default function CompleteAssignment() {
     );
   }
 
-  console.log('✅ [CompleteAssignment] Rendering question view', {
+  console.log('✅ [CompleteAssignment] About to render assignment UI', {
+    hasStarted,
+    submissionId,
+    questionsCount: questions.length,
     currentQuestionIndex,
-    questionId: currentQuestion.id,
-    submissionId
+    answersCount: answers.length,
+    currentQuestionId: currentQuestion.id
   });
 
   return (
