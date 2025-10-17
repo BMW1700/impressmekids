@@ -29,13 +29,22 @@ export default function CompleteAssignment() {
     autoStart: hasStarted,
   });
 
+  // Check for existing submission on mount (resume functionality)
   useEffect(() => {
     if (assignment && !submissionId) {
-      loadOrCreateSubmission();
+      checkForExistingSubmission();
     }
   }, [assignment]);
 
-  const loadOrCreateSubmission = async () => {
+  // Create new submission when student clicks "Start Assignment"
+  useEffect(() => {
+    if (hasStarted && !submissionId && assignment) {
+      console.log('📋 [CompleteAssignment] Student started assignment, creating submission');
+      createSubmission();
+    }
+  }, [hasStarted]);
+
+  const checkForExistingSubmission = async () => {
     const { data: session } = await supabase.auth.getSession();
     
     if (!session.session?.user.id || !assignmentId) {
@@ -68,9 +77,6 @@ export default function CompleteAssignment() {
         title: 'Resuming Assignment',
         description: 'Your previous progress has been loaded.',
       });
-    } else if (hasStarted) {
-      console.log('📋 [CompleteAssignment] No existing submission, creating new one');
-      createSubmission();
     }
   };
 
