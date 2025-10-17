@@ -704,7 +704,7 @@ const ClassroomDetail = () => {
               ) : (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {assignments.map((assignment: any) => (
-                    isStudent && assignment.status === 'published' ? (
+                    !isTeacher && isStudent && assignment.status === 'published' ? (
                       <StudentAssignmentCard 
                         key={assignment.id} 
                         assignment={assignment} 
