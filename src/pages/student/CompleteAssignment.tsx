@@ -205,22 +205,6 @@ export default function CompleteAssignment() {
     );
   }
 
-  const currentQuestion = questions[currentQuestionIndex];
-  const allAnswered = answers.length === questions.length && answers.every((a: any) => a.status === 'completed');
-
-  // Auto-navigate to first unanswered question when answers load
-  useEffect(() => {
-    if (answers.length > 0 && hasStarted) {
-      const firstUnanswered = questions.findIndex(q => 
-        !answers.find((a: any) => a.question_id === q.id && a.status === 'completed')
-      );
-      if (firstUnanswered !== -1 && firstUnanswered !== currentQuestionIndex) {
-        console.log('📍 [CompleteAssignment] Jumping to first unanswered question:', firstUnanswered + 1);
-        setCurrentQuestionIndex(firstUnanswered);
-      }
-    }
-  }, [answers.length, hasStarted]);
-
   // 4. FOURTH: Show start screen if student hasn't started yet
   if (!hasStarted) {
     return (
@@ -259,6 +243,23 @@ export default function CompleteAssignment() {
       </div>
     );
   }
+
+  // 6. NOW SAFE: Calculate variables for assignment UI
+  const currentQuestion = questions[currentQuestionIndex];
+  const allAnswered = answers.length === questions.length && answers.every((a: any) => a.status === 'completed');
+
+  // Auto-navigate to first unanswered question when answers load
+  useEffect(() => {
+    if (answers.length > 0 && hasStarted) {
+      const firstUnanswered = questions.findIndex(q => 
+        !answers.find((a: any) => a.question_id === q.id && a.status === 'completed')
+      );
+      if (firstUnanswered !== -1 && firstUnanswered !== currentQuestionIndex) {
+        console.log('📍 [CompleteAssignment] Jumping to first unanswered question:', firstUnanswered + 1);
+        setCurrentQuestionIndex(firstUnanswered);
+      }
+    }
+  }, [answers.length, hasStarted]);
 
   // Verify current question exists
   if (!currentQuestion) {
