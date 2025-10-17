@@ -30,10 +30,49 @@ export default function CompleteAssignment() {
   });
 
   useEffect(() => {
-    if (assignment && hasStarted && !submissionId) {
+    if (assignment && !submissionId) {
+      loadOrCreateSubmission();
+    }
+  }, [assignment]);
+
+  const loadOrCreateSubmission = async () => {
+    const { data: session } = await supabase.auth.getSession();
+    
+    if (!session.session?.user.id || !assignmentId) {
+      console.error('❌ [CompleteAssignment] Missing user ID or assignment ID');
+      return;
+    }
+
+    console.log('🔍 [CompleteAssignment] Checking for existing submission');
+
+    // Check if student has an existing submission for this assignment
+    const { data: existingSubmission, error: fetchError } = await supabase
+      .from('assignment_submissions')
+      .select('*')
+      .eq('assignment_id', assignmentId)
+      .eq('student_id', session.session.user.id)
+      .eq('status', 'in_progress')
+      .maybeSingle();
+
+    if (fetchError) {
+      console.error('❌ [CompleteAssignment] Error checking for existing submission:', fetchError);
+      return;
+    }
+
+    if (existingSubmission) {
+      console.log('✅ [CompleteAssignment] Found existing submission, resuming:', existingSubmission.id);
+      setSubmissionId(existingSubmission.id);
+      setHasStarted(true);
+      
+      toast({
+        title: 'Resuming Assignment',
+        description: 'Your previous progress has been loaded.',
+      });
+    } else if (hasStarted) {
+      console.log('📋 [CompleteAssignment] No existing submission, creating new one');
       createSubmission();
     }
-  }, [assignment, hasStarted]);
+  };
 
   const createSubmission = async () => {
     const { data: session } = await supabase.auth.getSession();
@@ -51,7 +90,7 @@ export default function CompleteAssignment() {
       .insert({
         assignment_id: assignmentId,
         student_id: session.session.user.id,
-        status: 'not_started',
+        status: 'in_progress',
         started_at: new Date().toISOString(),
       })
       .select()
@@ -104,6 +143,19 @@ export default function CompleteAssignment() {
   const questions = assignment.assignment_questions || [];
   const currentQuestion = questions[currentQuestionIndex];
   const allAnswered = answers.length === questions.length && answers.every((a: any) => a.status === 'completed');
+
+  // Auto-navigate to first unanswered question when answers load
+  useEffect(() => {
+    if (answers.length > 0 && hasStarted) {
+      const firstUnanswered = questions.findIndex(q => 
+        !answers.find((a: any) => a.question_id === q.id && a.status === 'completed')
+      );
+      if (firstUnanswered !== -1 && firstUnanswered !== currentQuestionIndex) {
+        console.log('📍 [CompleteAssignment] Jumping to first unanswered question:', firstUnanswered + 1);
+        setCurrentQuestionIndex(firstUnanswered);
+      }
+    }
+  }, [answers.length, hasStarted]);
 
   if (!hasStarted) {
     return (
