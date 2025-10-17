@@ -85,12 +85,14 @@ const ClassroomDetail = () => {
 
   const loadClassroomData = async () => {
     try {
+      console.log('🔍 loadClassroomData: Starting...');
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         navigate('/auth');
         return;
       }
 
+      console.log('📚 loadClassroomData: Loading classroom...');
       // Load classroom
       const { data: classroomData, error: classroomError } = await supabase
         .from('classrooms')
@@ -99,18 +101,20 @@ const ClassroomDetail = () => {
         .maybeSingle();
 
       if (classroomError) {
-        console.error("Error loading classroom:", classroomError);
+        console.error("❌ Error loading classroom:", classroomError);
         throw classroomError;
       }
       
       if (!classroomData) {
-        console.error("Classroom not found or access denied");
+        console.error("❌ Classroom not found or access denied");
         setIsLoading(false);
         return;
       }
       
+      console.log('✅ Classroom loaded successfully');
       setClassroom(classroomData);
 
+      console.log('👥 loadClassroomData: Loading students...');
       // Load students
       const { data: studentsData, error: studentsError } = await supabase
         .from('classroom_students')
@@ -128,10 +132,15 @@ const ClassroomDetail = () => {
         `)
         .eq('classroom_id', id);
 
-      if (studentsError) throw studentsError;
+      if (studentsError) {
+        console.error("❌ Error loading students:", studentsError);
+        throw studentsError;
+      }
       
+      console.log('✅ Students loaded successfully:', studentsData?.length || 0);
       setStudents(studentsData || []);
 
+      console.log('🏆 loadClassroomData: Loading tournaments...');
       // Load tournaments
       const { data: tournamentsData, error: tournamentsError } = await supabase
         .from('tournaments')
@@ -139,9 +148,14 @@ const ClassroomDetail = () => {
         .eq('classroom_id', id)
         .order('created_at', { ascending: false });
 
-      if (tournamentsError) throw tournamentsError;
+      if (tournamentsError) {
+        console.error("❌ Error loading tournaments:", tournamentsError);
+        throw tournamentsError;
+      }
+      console.log('✅ Tournaments loaded successfully:', tournamentsData?.length || 0);
       setTournaments(tournamentsData || []);
 
+      console.log('📢 loadClassroomData: Loading announcements...');
       // Load announcements
       const { data: announcementsData, error: announcementsError } = await supabase
         .from('classroom_announcements')
@@ -149,9 +163,14 @@ const ClassroomDetail = () => {
         .eq('classroom_id', id)
         .order('created_at', { ascending: false });
 
-      if (announcementsError) throw announcementsError;
+      if (announcementsError) {
+        console.error("❌ Error loading announcements:", announcementsError);
+        throw announcementsError;
+      }
+      console.log('✅ Announcements loaded successfully:', announcementsData?.length || 0);
       setAnnouncements(announcementsData || []);
 
+      console.log('🎴 loadClassroomData: Loading flashcard sets...');
       // Load flashcard sets
       const { data: flashcardsData, error: flashcardsError } = await supabase
         .from('flashcard_sets')
@@ -162,11 +181,16 @@ const ClassroomDetail = () => {
         .eq('classroom_id', id)
         .order('created_at', { ascending: false });
 
-      if (flashcardsError) throw flashcardsError;
+      if (flashcardsError) {
+        console.error("❌ Error loading flashcard sets:", flashcardsError);
+        throw flashcardsError;
+      }
+      console.log('✅ Flashcard sets loaded successfully:', flashcardsData?.length || 0);
       setFlashcardSets(flashcardsData || []);
 
       // Load parent access requests (teachers only)
       if (classroomData.teacher_id === session.user.id) {
+        console.log('👨‍👩‍👧 loadClassroomData: Loading parent access requests...');
         const { data: requestsData, error: requestsError } = await supabase
           .from('parent_access_requests')
           .select(`
@@ -177,10 +201,17 @@ const ClassroomDetail = () => {
           .eq('classroom_id', id)
           .order('created_at', { ascending: false });
 
-        if (requestsError) throw requestsError;
+        if (requestsError) {
+          console.error("❌ Error loading parent access requests:", requestsError);
+          throw requestsError;
+        }
+        console.log('✅ Parent requests loaded successfully:', requestsData?.length || 0);
         setParentRequests(requestsData || []);
       }
+
+      console.log('🎉 loadClassroomData: All data loaded successfully!');
     } catch (error: any) {
+      console.error('❌ loadClassroomData: Fatal error:', error);
       toast({
         title: "Error",
         description: "Failed to load classroom data",

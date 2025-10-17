@@ -1976,6 +1976,10 @@ export type Database = {
         Args: { _classroom_id: string; _user_id: string }
         Returns: boolean
       }
+      is_submission_teacher: {
+        Args: { _submission_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_tournament_classroom_member: {
         Args: { _tournament_id: string; _user_id: string }
         Returns: boolean
