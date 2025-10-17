@@ -84,141 +84,249 @@ const ClassroomDetail = () => {
   }, [id, permissionsLoading]);
 
   const loadClassroomData = async () => {
+    console.log('🔍 ============================================');
+    console.log('🔍 loadClassroomData: STARTING');
+    console.log('🔍 Classroom ID:', id);
+    console.log('🔍 ============================================');
+    
     try {
-      console.log('🔍 loadClassroomData: Starting...');
-      const { data: { session } } = await supabase.auth.getSession();
+      // Get session with detailed logging
+      console.log('🔐 Step 1: Getting session...');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('❌ Session error:', JSON.stringify(sessionError, null, 2));
+        throw sessionError;
+      }
+      
       if (!session) {
+        console.error('❌ No session found, redirecting to auth');
         navigate('/auth');
         return;
       }
-
-      console.log('📚 loadClassroomData: Loading classroom...');
-      // Load classroom
-      const { data: classroomData, error: classroomError } = await supabase
-        .from('classrooms')
-        .select('*')
-        .eq('id', id)
-        .maybeSingle();
-
-      if (classroomError) {
-        console.error("❌ Error loading classroom:", classroomError);
-        throw classroomError;
-      }
       
-      if (!classroomData) {
-        console.error("❌ Classroom not found or access denied");
-        setIsLoading(false);
-        return;
-      }
+      console.log('✅ Session found. User ID:', session.user.id);
+      console.log('📧 User email:', session.user.email);
+
+      // Query 1: Load classroom
+      console.log('\n📚 Step 2: Loading classroom...');
+      console.log('Query: classrooms table, id =', id);
       
-      console.log('✅ Classroom loaded successfully');
-      setClassroom(classroomData);
+      try {
+        const { data: classroomData, error: classroomError } = await supabase
+          .from('classrooms')
+          .select('*')
+          .eq('id', id)
+          .maybeSingle();
 
-      console.log('👥 loadClassroomData: Loading students...');
-      // Load students
-      const { data: studentsData, error: studentsError } = await supabase
-        .from('classroom_students')
-        .select(`
-          *,
-          profiles!student_id (
-            id,
-            full_name,
-            email,
-            student_profiles!user_id (
-              grade,
-              avatar_url
-            )
-          )
-        `)
-        .eq('classroom_id', id);
-
-      if (studentsError) {
-        console.error("❌ Error loading students:", studentsError);
-        throw studentsError;
+        if (classroomError) {
+          console.error('❌ CLASSROOM QUERY FAILED');
+          console.error('Error code:', classroomError.code);
+          console.error('Error message:', classroomError.message);
+          console.error('Error details:', classroomError.details);
+          console.error('Error hint:', classroomError.hint);
+          console.error('Full error object:', JSON.stringify(classroomError, null, 2));
+          throw classroomError;
+        }
+        
+        if (!classroomData) {
+          console.error('❌ Classroom not found or access denied');
+          setIsLoading(false);
+          return;
+        }
+        
+        console.log('✅ Classroom loaded:', classroomData.name);
+        console.log('   Teacher ID:', classroomData.teacher_id);
+        console.log('   Join code:', classroomData.join_code);
+        setClassroom(classroomData);
+      } catch (err: any) {
+        console.error('❌ FATAL: Classroom query exception:', err);
+        throw err;
       }
+
+      // Query 2: Load students
+      console.log('\n👥 Step 3: Loading students...');
+      console.log('Query: classroom_students, classroom_id =', id);
       
-      console.log('✅ Students loaded successfully:', studentsData?.length || 0);
-      setStudents(studentsData || []);
-
-      console.log('🏆 loadClassroomData: Loading tournaments...');
-      // Load tournaments
-      const { data: tournamentsData, error: tournamentsError } = await supabase
-        .from('tournaments')
-        .select('*')
-        .eq('classroom_id', id)
-        .order('created_at', { ascending: false });
-
-      if (tournamentsError) {
-        console.error("❌ Error loading tournaments:", tournamentsError);
-        throw tournamentsError;
-      }
-      console.log('✅ Tournaments loaded successfully:', tournamentsData?.length || 0);
-      setTournaments(tournamentsData || []);
-
-      console.log('📢 loadClassroomData: Loading announcements...');
-      // Load announcements
-      const { data: announcementsData, error: announcementsError } = await supabase
-        .from('classroom_announcements')
-        .select('*')
-        .eq('classroom_id', id)
-        .order('created_at', { ascending: false });
-
-      if (announcementsError) {
-        console.error("❌ Error loading announcements:", announcementsError);
-        throw announcementsError;
-      }
-      console.log('✅ Announcements loaded successfully:', announcementsData?.length || 0);
-      setAnnouncements(announcementsData || []);
-
-      console.log('🎴 loadClassroomData: Loading flashcard sets...');
-      // Load flashcard sets
-      const { data: flashcardsData, error: flashcardsError } = await supabase
-        .from('flashcard_sets')
-        .select(`
-          *,
-          question_groups!question_group_id (title, subject, grade)
-        `)
-        .eq('classroom_id', id)
-        .order('created_at', { ascending: false });
-
-      if (flashcardsError) {
-        console.error("❌ Error loading flashcard sets:", flashcardsError);
-        throw flashcardsError;
-      }
-      console.log('✅ Flashcard sets loaded successfully:', flashcardsData?.length || 0);
-      setFlashcardSets(flashcardsData || []);
-
-      // Load parent access requests (teachers only)
-      if (classroomData.teacher_id === session.user.id) {
-        console.log('👨‍👩‍👧 loadClassroomData: Loading parent access requests...');
-        const { data: requestsData, error: requestsError } = await supabase
-          .from('parent_access_requests')
+      try {
+        const { data: studentsData, error: studentsError } = await supabase
+          .from('classroom_students')
           .select(`
             *,
-            parent_accounts!parent_id (full_name, email),
-            profiles!student_id (full_name)
+            profiles!student_id (
+              id,
+              full_name,
+              email,
+              student_profiles!user_id (
+                grade,
+                avatar_url
+              )
+            )
+          `)
+          .eq('classroom_id', id);
+
+        if (studentsError) {
+          console.error('❌ STUDENTS QUERY FAILED');
+          console.error('Error code:', studentsError.code);
+          console.error('Error message:', studentsError.message);
+          console.error('Error details:', studentsError.details);
+          console.error('Error hint:', studentsError.hint);
+          console.error('Full error object:', JSON.stringify(studentsError, null, 2));
+          throw studentsError;
+        }
+        
+        console.log('✅ Students loaded:', studentsData?.length || 0, 'students');
+        setStudents(studentsData || []);
+      } catch (err: any) {
+        console.error('❌ FATAL: Students query exception:', err);
+        throw err;
+      }
+
+      // Query 3: Load tournaments
+      console.log('\n🏆 Step 4: Loading tournaments...');
+      console.log('Query: tournaments, classroom_id =', id);
+      
+      try {
+        const { data: tournamentsData, error: tournamentsError } = await supabase
+          .from('tournaments')
+          .select('*')
+          .eq('classroom_id', id)
+          .order('created_at', { ascending: false });
+
+        if (tournamentsError) {
+          console.error('❌ TOURNAMENTS QUERY FAILED');
+          console.error('Error code:', tournamentsError.code);
+          console.error('Error message:', tournamentsError.message);
+          console.error('Error details:', tournamentsError.details);
+          console.error('Error hint:', tournamentsError.hint);
+          console.error('Full error object:', JSON.stringify(tournamentsError, null, 2));
+          throw tournamentsError;
+        }
+        
+        console.log('✅ Tournaments loaded:', tournamentsData?.length || 0, 'tournaments');
+        setTournaments(tournamentsData || []);
+      } catch (err: any) {
+        console.error('❌ FATAL: Tournaments query exception:', err);
+        throw err;
+      }
+
+      // Query 4: Load announcements
+      console.log('\n📢 Step 5: Loading announcements...');
+      console.log('Query: classroom_announcements, classroom_id =', id);
+      
+      try {
+        const { data: announcementsData, error: announcementsError } = await supabase
+          .from('classroom_announcements')
+          .select('*')
+          .eq('classroom_id', id)
+          .order('created_at', { ascending: false });
+
+        if (announcementsError) {
+          console.error('❌ ANNOUNCEMENTS QUERY FAILED');
+          console.error('Error code:', announcementsError.code);
+          console.error('Error message:', announcementsError.message);
+          console.error('Error details:', announcementsError.details);
+          console.error('Error hint:', announcementsError.hint);
+          console.error('Full error object:', JSON.stringify(announcementsError, null, 2));
+          throw announcementsError;
+        }
+        
+        console.log('✅ Announcements loaded:', announcementsData?.length || 0, 'announcements');
+        setAnnouncements(announcementsData || []);
+      } catch (err: any) {
+        console.error('❌ FATAL: Announcements query exception:', err);
+        throw err;
+      }
+
+      // Query 5: Load flashcard sets
+      console.log('\n🎴 Step 6: Loading flashcard sets...');
+      console.log('Query: flashcard_sets, classroom_id =', id);
+      
+      try {
+        const { data: flashcardsData, error: flashcardsError } = await supabase
+          .from('flashcard_sets')
+          .select(`
+            *,
+            question_groups!question_group_id (title, subject, grade)
           `)
           .eq('classroom_id', id)
           .order('created_at', { ascending: false });
 
-        if (requestsError) {
-          console.error("❌ Error loading parent access requests:", requestsError);
-          throw requestsError;
+        if (flashcardsError) {
+          console.error('❌ FLASHCARDS QUERY FAILED');
+          console.error('Error code:', flashcardsError.code);
+          console.error('Error message:', flashcardsError.message);
+          console.error('Error details:', flashcardsError.details);
+          console.error('Error hint:', flashcardsError.hint);
+          console.error('Full error object:', JSON.stringify(flashcardsError, null, 2));
+          throw flashcardsError;
         }
-        console.log('✅ Parent requests loaded successfully:', requestsData?.length || 0);
-        setParentRequests(requestsData || []);
+        
+        console.log('✅ Flashcard sets loaded:', flashcardsData?.length || 0, 'sets');
+        setFlashcardSets(flashcardsData || []);
+      } catch (err: any) {
+        console.error('❌ FATAL: Flashcards query exception:', err);
+        throw err;
       }
 
-      console.log('🎉 loadClassroomData: All data loaded successfully!');
+      // Query 6: Load parent access requests (teachers only)
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (currentSession && classroom?.teacher_id === currentSession.user.id) {
+        console.log('\n👨‍👩‍👧 Step 7: Loading parent access requests...');
+        console.log('Query: parent_access_requests, classroom_id =', id);
+        
+        try {
+          const { data: requestsData, error: requestsError } = await supabase
+            .from('parent_access_requests')
+            .select(`
+              *,
+              parent_accounts!parent_id (full_name, email),
+              profiles!student_id (full_name)
+            `)
+            .eq('classroom_id', id)
+            .order('created_at', { ascending: false });
+
+          if (requestsError) {
+            console.error('❌ PARENT REQUESTS QUERY FAILED');
+            console.error('Error code:', requestsError.code);
+            console.error('Error message:', requestsError.message);
+            console.error('Error details:', requestsError.details);
+            console.error('Error hint:', requestsError.hint);
+            console.error('Full error object:', JSON.stringify(requestsError, null, 2));
+            throw requestsError;
+          }
+          
+          console.log('✅ Parent requests loaded:', requestsData?.length || 0, 'requests');
+          setParentRequests(requestsData || []);
+        } catch (err: any) {
+          console.error('❌ FATAL: Parent requests query exception:', err);
+          throw err;
+        }
+      } else {
+        console.log('\n⏭️ Step 7: Skipping parent requests (not teacher or no classroom)');
+      }
+
+      console.log('\n🎉 ============================================');
+      console.log('🎉 ALL DATA LOADED SUCCESSFULLY!');
+      console.log('🎉 ============================================');
     } catch (error: any) {
-      console.error('❌ loadClassroomData: Fatal error:', error);
+      console.error('\n💥 ============================================');
+      console.error('💥 FATAL ERROR IN loadClassroomData');
+      console.error('💥 ============================================');
+      console.error('Error name:', error?.name);
+      console.error('Error message:', error?.message);
+      console.error('Error stack:', error?.stack);
+      console.error('Full error:', error);
+      console.error('💥 ============================================');
+      
       toast({
         title: "Error",
-        description: "Failed to load classroom data",
+        description: `Failed to load classroom data: ${error?.message || 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
+      console.log('🏁 loadClassroomData: FINISHED (loading=false)');
     }
   };
 
