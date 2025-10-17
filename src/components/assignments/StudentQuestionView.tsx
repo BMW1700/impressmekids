@@ -27,6 +27,21 @@ export const StudentQuestionView = ({
   const [localAnswer, setLocalAnswer] = useState(answer?.answer_data || {});
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+  // Early return if question is not loaded yet
+  if (!question) {
+    console.error('❌ [StudentQuestionView] Question is undefined');
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Loading Question...</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">Please wait while the question loads...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const handleChange = (data: any) => {
     console.log('📝 [StudentQuestionView] Answer changed:', { questionId: question.id, data });
     setLocalAnswer(data);

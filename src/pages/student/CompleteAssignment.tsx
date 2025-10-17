@@ -22,6 +22,11 @@ export default function CompleteAssignment() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [hasStarted, setHasStarted] = useState(false);
 
+  // Debug log component mount
+  useEffect(() => {
+    console.log('🎯 [CompleteAssignment] Component mounted', { assignmentId, hasStarted });
+  }, []);
+
   const { timeRemaining, formatTime, stopTimer } = useAssignmentTimer({
     assignmentId: assignmentId || '',
     timerMinutes: assignment?.timer_minutes || null,
@@ -31,6 +36,12 @@ export default function CompleteAssignment() {
 
   // Check for existing submission on mount (resume functionality)
   useEffect(() => {
+    console.log('🔄 [CompleteAssignment] Assignment data changed:', { 
+      hasAssignment: !!assignment, 
+      hasSubmissionId: !!submissionId,
+      questionsCount: assignment?.assignment_questions?.length || 0
+    });
+    
     if (assignment && !submissionId) {
       checkForExistingSubmission();
     }
@@ -42,7 +53,7 @@ export default function CompleteAssignment() {
       console.log('📋 [CompleteAssignment] Student started assignment, creating submission');
       createSubmission();
     }
-  }, [hasStarted]);
+  }, [hasStarted, assignment, submissionId]);
 
   const checkForExistingSubmission = async () => {
     const { data: session } = await supabase.auth.getSession();
@@ -143,10 +154,19 @@ export default function CompleteAssignment() {
     navigate('/student/dashboard');
   }
 
-  if (isLoading) return <div>Loading...</div>;
-  if (!assignment) return <div>Assignment not found</div>;
+  if (isLoading) {
+    console.log('⏳ [CompleteAssignment] Loading assignment...');
+    return <div>Loading...</div>;
+  }
+  
+  if (!assignment) {
+    console.log('❌ [CompleteAssignment] Assignment not found');
+    return <div>Assignment not found</div>;
+  }
 
   const questions = assignment.assignment_questions || [];
+  console.log('📚 [CompleteAssignment] Questions loaded:', questions.length);
+  
   const currentQuestion = questions[currentQuestionIndex];
   const allAnswered = answers.length === questions.length && answers.every((a: any) => a.status === 'completed');
 
@@ -185,6 +205,50 @@ export default function CompleteAssignment() {
     );
   }
 
+  // Show loading state if questions haven't loaded yet or submission isn't created
+  if (questions.length === 0 || !submissionId) {
+    console.log('⏳ [CompleteAssignment] Waiting for questions or submission...', {
+      questionsLength: questions.length,
+      hasSubmissionId: !!submissionId
+    });
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 container mx-auto px-4 py-8">
+          <div className="max-w-2xl mx-auto text-center">
+            <p>Loading assignment questions...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Verify current question exists
+  if (!currentQuestion) {
+    console.error('❌ [CompleteAssignment] Current question is undefined', {
+      currentQuestionIndex,
+      questionsLength: questions.length
+    });
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 container mx-auto px-4 py-8">
+          <div className="max-w-2xl mx-auto text-center">
+            <p>Error: Question not found. Please refresh the page.</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  console.log('✅ [CompleteAssignment] Rendering question view', {
+    currentQuestionIndex,
+    questionId: currentQuestion.id,
+    submissionId
+  });
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -201,7 +265,7 @@ export default function CompleteAssignment() {
 
           <StudentQuestionView
             question={currentQuestion}
-            answer={answers.find((a: any) => a.question_id === currentQuestion.id)}
+            answer={answers.find((a: any) => a.question_id === currentQuestion?.id)}
             onAnswerChange={(data) => {
               console.log('🔄 [CompleteAssignment] Answer changed for question:', currentQuestion.id);
               
