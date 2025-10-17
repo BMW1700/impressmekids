@@ -37,7 +37,14 @@ export default function CompleteAssignment() {
 
   const createSubmission = async () => {
     const { data: session } = await supabase.auth.getSession();
-    if (!session.session?.user.id || !assignmentId) return;
+    
+    console.log('📋 [CompleteAssignment] Creating submission for assignment:', assignmentId);
+    console.log('👤 [CompleteAssignment] User ID:', session.session?.user.id);
+    
+    if (!session.session?.user.id || !assignmentId) {
+      console.error('❌ [CompleteAssignment] Missing user ID or assignment ID');
+      return;
+    }
 
     const { data, error } = await supabase
       .from('assignment_submissions')
@@ -50,7 +57,22 @@ export default function CompleteAssignment() {
       .select()
       .single();
 
-    if (!error && data) {
+    if (error) {
+      console.error('❌ [CompleteAssignment] Submission creation failed:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+      });
+      toast({
+        title: 'Failed to Start Assignment',
+        description: error?.message || 'Unable to start the assignment. Please try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (data) {
+      console.log('✅ [CompleteAssignment] Submission created:', data.id);
       setSubmissionId(data.id);
     }
   };
@@ -122,14 +144,34 @@ export default function CompleteAssignment() {
           <StudentQuestionView
             question={currentQuestion}
             answer={answers.find((a: any) => a.question_id === currentQuestion.id)}
-            onAnswerChange={(data) => saveAnswer({
-              submissionId: submissionId!,
-              questionId: currentQuestion.id,
-              answerType: currentQuestion.question_type,
-              answerData: data,
-              status: 'completed',
-              questionData: currentQuestion.question_data, // For auto-grading
-            })}
+            onAnswerChange={(data) => {
+              console.log('🔄 [CompleteAssignment] Answer changed for question:', currentQuestion.id);
+              
+              if (!submissionId) {
+                console.error('❌ [CompleteAssignment] No submission ID available');
+                toast({
+                  title: 'Error',
+                  description: 'Assignment not started properly. Please refresh and try again.',
+                  variant: 'destructive',
+                });
+                return;
+              }
+              
+              console.log('💾 [CompleteAssignment] Saving answer:', {
+                submissionId,
+                questionId: currentQuestion.id,
+                questionType: currentQuestion.question_type,
+              });
+              
+              saveAnswer({
+                submissionId: submissionId,
+                questionId: currentQuestion.id,
+                answerType: currentQuestion.question_type,
+                answerData: data,
+                status: 'completed',
+                questionData: currentQuestion.question_data, // For auto-grading
+              });
+            }}
             questionNumber={currentQuestionIndex + 1}
             totalQuestions={questions.length}
           />

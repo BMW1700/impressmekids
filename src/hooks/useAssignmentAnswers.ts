@@ -39,6 +39,13 @@ export const useAssignmentAnswers = (submissionId?: string) => {
       status: 'not_attempted' | 'in_progress' | 'completed';
       questionData?: any;
     }) => {
+      console.log('📝 [useAssignmentAnswers] Saving answer:', {
+        submissionId,
+        questionId,
+        answerType,
+        status,
+        hasQuestionData: !!questionData,
+      });
       // Auto-grade if it's a reading comprehension with multiple choice
       let finalAnswerData = answerData;
       let auraRecordId: string | null = null;
@@ -88,17 +95,28 @@ export const useAssignmentAnswers = (submissionId?: string) => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [useAssignmentAnswers] Save failed:', error);
+        throw error;
+      }
+      
+      console.log('✅ [useAssignmentAnswers] Answer saved successfully');
       return data;
     },
     onSuccess: () => {
+      console.log('✅ [useAssignmentAnswers] Answer saved, invalidating queries');
       queryClient.invalidateQueries({ queryKey: ['assignment-answers'] });
     },
-    onError: (error) => {
-      console.error('Save answer error:', error);
+    onError: (error: any) => {
+      console.error('❌ [useAssignmentAnswers] Save answer error:', {
+        message: error?.message,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint,
+      });
       toast({
-        title: 'Error',
-        description: 'Failed to save answer',
+        title: 'Failed to Save Answer',
+        description: error?.message || 'Unable to save your answer. Please try again.',
         variant: 'destructive',
       });
     },

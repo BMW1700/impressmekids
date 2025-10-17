@@ -28,6 +28,7 @@ export const StudentQuestionView = ({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const handleChange = (data: any) => {
+    console.log('📝 [StudentQuestionView] Answer changed:', { questionId: question.id, data });
     setLocalAnswer(data);
     onAnswerChange(data);
   };
