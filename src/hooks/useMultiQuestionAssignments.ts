@@ -16,6 +16,7 @@ interface CreateAssignmentData {
   classroom_id: string;
   due_date?: string;
   timer_minutes?: number;
+  max_attempts?: number;
   questions: Omit<Question, 'id'>[];
 }
 
@@ -139,6 +140,7 @@ export const useMultiQuestionAssignments = (classroomId?: string, assignmentId?:
           teacher_id: session.session.user.id,
           due_date: data.due_date,
           timer_minutes: data.timer_minutes,
+          max_attempts: data.max_attempts || 1,
           question_count: data.questions.length,
           status: 'draft',
           assignment_type: 'multi_question',
@@ -195,6 +197,7 @@ export const useMultiQuestionAssignments = (classroomId?: string, assignmentId?:
       if (updates.description !== undefined) updateData.description = updates.description;
       if (updates.due_date !== undefined) updateData.due_date = updates.due_date;
       if (updates.timer_minutes !== undefined) updateData.timer_minutes = updates.timer_minutes;
+      if (updates.max_attempts !== undefined) updateData.max_attempts = updates.max_attempts;
       if (questions !== undefined) updateData.question_count = questions.length;
 
       const { error: assignmentError } = await supabase

@@ -170,6 +170,7 @@ export type Database = {
       assignment_submissions: {
         Row: {
           assignment_id: string
+          attempt_number: number
           created_at: string
           grade: number | null
           graded_at: string | null
@@ -185,6 +186,7 @@ export type Database = {
         }
         Insert: {
           assignment_id: string
+          attempt_number?: number
           created_at?: string
           grade?: number | null
           graded_at?: string | null
@@ -200,6 +202,7 @@ export type Database = {
         }
         Update: {
           assignment_id?: string
+          attempt_number?: number
           created_at?: string
           grade?: number | null
           graded_at?: string | null
@@ -239,6 +242,7 @@ export type Database = {
           due_date: string | null
           enable_realtime_coaching: boolean | null
           id: string
+          max_attempts: number
           passage_metadata: Json | null
           passage_text: string
           question_count: number | null
@@ -256,6 +260,7 @@ export type Database = {
           due_date?: string | null
           enable_realtime_coaching?: boolean | null
           id?: string
+          max_attempts?: number
           passage_metadata?: Json | null
           passage_text: string
           question_count?: number | null
@@ -273,6 +278,7 @@ export type Database = {
           due_date?: string | null
           enable_realtime_coaching?: boolean | null
           id?: string
+          max_attempts?: number
           passage_metadata?: Json | null
           passage_text?: string
           question_count?: number | null

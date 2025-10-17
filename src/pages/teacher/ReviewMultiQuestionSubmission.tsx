@@ -23,6 +23,8 @@ export default function ReviewMultiQuestionSubmission() {
 
   const [assignment, setAssignment] = useState<any>(null);
   const [submission, setSubmission] = useState<any>(null);
+  const [allSubmissions, setAllSubmissions] = useState<any[]>([]);
+  const [selectedAttemptNumber, setSelectedAttemptNumber] = useState<number | null>(null);
   const [answers, setAnswers] = useState<any[]>([]);
   const [questions, setQuestions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,7 +37,7 @@ export default function ReviewMultiQuestionSubmission() {
 
   useEffect(() => {
     loadData();
-  }, [submissionId]);
+  }, [submissionId, selectedAttemptNumber]);
 
   const loadData = async () => {
     try {
@@ -45,8 +47,8 @@ export default function ReviewMultiQuestionSubmission() {
         return;
       }
 
-      // Load submission with student info
-      const { data: submissionData, error: submissionError } = await supabase
+      // Load initial submission to get student and assignment info
+      const { data: initialSubmission, error: initialError } = await supabase
         .from('assignment_submissions')
         .select(`
           *,
@@ -59,15 +61,48 @@ export default function ReviewMultiQuestionSubmission() {
         .eq('id', submissionId)
         .single();
 
-      if (submissionError) throw submissionError;
-      setSubmission(submissionData);
+      if (initialError) throw initialError;
+
+      // Load ALL submissions for this student+assignment
+      const { data: allSubmissionsData, error: allSubmissionsError } = await supabase
+        .from('assignment_submissions')
+        .select('*')
+        .eq('assignment_id', initialSubmission.assignment_id)
+        .eq('student_id', initialSubmission.student_id)
+        .order('attempt_number', { ascending: false });
+
+      if (allSubmissionsError) throw allSubmissionsError;
+      setAllSubmissions(allSubmissionsData || []);
+
+      // If no attempt selected, default to most recent
+      if (!selectedAttemptNumber && allSubmissionsData && allSubmissionsData.length > 0) {
+        setSelectedAttemptNumber(allSubmissionsData[0].attempt_number);
+      }
+
+      // Find the submission for the selected attempt
+      const targetSubmission = selectedAttemptNumber
+        ? allSubmissionsData?.find(s => s.attempt_number === selectedAttemptNumber)
+        : allSubmissionsData?.[0];
+
+      if (!targetSubmission) throw new Error('Submission not found');
+
+      // Create merged submission object with student info
+      const mergedSubmission = {
+        ...targetSubmission,
+        profiles: initialSubmission.profiles
+      };
+      setSubmission(mergedSubmission);
 
       // Initialize grade and feedback if already graded
-      if (submissionData.grade !== null) {
-        setGrade(submissionData.grade.toString());
+      if (mergedSubmission.grade !== null) {
+        setGrade(mergedSubmission.grade.toString());
+      } else {
+        setGrade("");
       }
-      if (submissionData.teacher_feedback) {
-        setFeedback(submissionData.teacher_feedback);
+      if (mergedSubmission.teacher_feedback) {
+        setFeedback(mergedSubmission.teacher_feedback);
+      } else {
+        setFeedback("");
       }
 
       // Load assignment with questions
@@ -77,7 +112,7 @@ export default function ReviewMultiQuestionSubmission() {
           *,
           assignment_questions(*)
         `)
-        .eq('id', submissionData.assignment_id)
+        .eq('id', targetSubmission.assignment_id)
         .single();
 
       if (assignmentError) throw assignmentError;
@@ -89,14 +124,14 @@ export default function ReviewMultiQuestionSubmission() {
       );
       setQuestions(sortedQuestions);
 
-      // Load answers
+      // Load answers for the selected submission
       const { data: answersData, error: answersError } = await supabase
         .from('assignment_answers')
         .select(`
           *,
           aura_records(*)
         `)
-        .eq('submission_id', submissionId);
+        .eq('submission_id', targetSubmission.id);
 
       if (answersError) throw answersError;
       setAnswers(answersData || []);
@@ -423,9 +458,9 @@ export default function ReviewMultiQuestionSubmission() {
             </Button>
 
             <div className="flex items-start justify-between mb-4">
-              <div>
+              <div className="flex-1">
                 <h1 className="text-3xl font-bold mb-2">{assignment.title}</h1>
-                <div className="flex items-center gap-4 text-muted-foreground">
+                <div className="flex items-center gap-4 text-muted-foreground flex-wrap">
                   <span className="flex items-center gap-2">
                     <User className="h-4 w-4" />
                     {studentName}
@@ -435,6 +470,23 @@ export default function ReviewMultiQuestionSubmission() {
                       <Calendar className="h-4 w-4" />
                       Submitted {new Date(submission.submitted_at).toLocaleString()}
                     </span>
+                  )}
+                  {allSubmissions.length > 1 && (
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="attempt-select" className="text-sm">Viewing:</Label>
+                      <select
+                        id="attempt-select"
+                        value={selectedAttemptNumber || ''}
+                        onChange={(e) => setSelectedAttemptNumber(parseInt(e.target.value))}
+                        className="bg-background border border-input rounded-md px-3 py-1 text-sm"
+                      >
+                        {allSubmissions.map(s => (
+                          <option key={s.id} value={s.attempt_number}>
+                            Attempt {s.attempt_number} of {assignment.max_attempts}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   )}
                 </div>
               </div>

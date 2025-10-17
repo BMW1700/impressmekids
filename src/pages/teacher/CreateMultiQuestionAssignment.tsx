@@ -32,6 +32,7 @@ export default function CreateMultiQuestionAssignment() {
   const [description, setDescription] = useState('');
   const [timerMinutes, setTimerMinutes] = useState<number | undefined>();
   const [dueDate, setDueDate] = useState('');
+  const [maxAttempts, setMaxAttempts] = useState<number>(1);
   const [questions, setQuestions] = useState<Question[]>([
     { id: uuidv4(), sequence: 1, question_type: null, question_data: {} }
   ]);
@@ -44,6 +45,7 @@ export default function CreateMultiQuestionAssignment() {
       setDescription(assignment.description || '');
       setTimerMinutes(assignment.timer_minutes);
       setDueDate(assignment.due_date ? new Date(assignment.due_date).toISOString().slice(0, 16) : '');
+      setMaxAttempts(assignment.max_attempts || 1);
       
       if (assignment.assignment_questions && assignment.assignment_questions.length > 0) {
         const loadedQuestions = assignment.assignment_questions.map((q: any) => ({
@@ -116,6 +118,7 @@ export default function CreateMultiQuestionAssignment() {
           classroom_id: classroomId,
           due_date: dueDate,
           timer_minutes: timerMinutes,
+          max_attempts: maxAttempts,
         },
         questions: questionData,
       });
@@ -127,6 +130,7 @@ export default function CreateMultiQuestionAssignment() {
         classroom_id: classroomId,
         due_date: dueDate,
         timer_minutes: timerMinutes,
+        max_attempts: maxAttempts,
         questions: questionData,
       });
     }
@@ -157,6 +161,7 @@ export default function CreateMultiQuestionAssignment() {
           classroom_id: classroomId,
           due_date: dueDate,
           timer_minutes: timerMinutes,
+          max_attempts: maxAttempts,
         },
         questions: questionData,
       });
@@ -168,6 +173,7 @@ export default function CreateMultiQuestionAssignment() {
         classroom_id: classroomId,
         due_date: dueDate,
         timer_minutes: timerMinutes,
+        max_attempts: maxAttempts,
         questions: questionData,
       });
     }
@@ -219,7 +225,7 @@ export default function CreateMultiQuestionAssignment() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label>Completion Timer (minutes, optional)</Label>
                   <Input 
@@ -237,6 +243,17 @@ export default function CreateMultiQuestionAssignment() {
                     value={dueDate} 
                     onChange={(e) => setDueDate(e.target.value)}
                   />
+                </div>
+                <div>
+                  <Label>Maximum Attempts</Label>
+                  <Input 
+                    type="number" 
+                    value={maxAttempts} 
+                    onChange={(e) => setMaxAttempts(Math.max(1, parseInt(e.target.value) || 1))}
+                    placeholder="1"
+                    min={1}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">How many times can students attempt this?</p>
                 </div>
               </div>
             </div>

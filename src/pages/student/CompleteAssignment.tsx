@@ -18,6 +18,7 @@ export default function CompleteAssignment() {
   const { toast } = useToast();
   const { assignment, isLoading } = useMultiQuestionAssignments(undefined, assignmentId);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
+  const [currentSubmission, setCurrentSubmission] = useState<any>(null);
   const { answers, saveAnswer } = useAssignmentAnswers(submissionId || undefined);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [hasStarted, setHasStarted] = useState(false);
@@ -39,7 +40,8 @@ export default function CompleteAssignment() {
     console.log('🔄 [CompleteAssignment] Assignment data changed:', { 
       hasAssignment: !!assignment, 
       hasSubmissionId: !!submissionId,
-      questionsCount: assignment?.assignment_questions?.length || 0
+      questionsCount: assignment?.assignment_questions?.length || 0,
+      maxAttempts: assignment?.max_attempts || 1
     });
     
     if (assignment && !submissionId) {
@@ -104,6 +106,7 @@ export default function CompleteAssignment() {
     if (existingSubmission) {
       console.log('✅ [CompleteAssignment] Found existing submission, resuming:', existingSubmission.id);
       setSubmissionId(existingSubmission.id);
+      setCurrentSubmission(existingSubmission);
       setHasStarted(true);
       
       toast({
@@ -124,12 +127,28 @@ export default function CompleteAssignment() {
       return;
     }
 
+    // Get next attempt number
+    const { data: existingSubmissions } = await supabase
+      .from('assignment_submissions')
+      .select('attempt_number')
+      .eq('assignment_id', assignmentId)
+      .eq('student_id', session.session.user.id)
+      .order('attempt_number', { ascending: false })
+      .limit(1);
+
+    const nextAttemptNumber = existingSubmissions && existingSubmissions.length > 0 
+      ? (existingSubmissions[0].attempt_number || 0) + 1 
+      : 1;
+
+    console.log('🔢 [CompleteAssignment] Next attempt number:', nextAttemptNumber);
+
     const { data, error } = await supabase
       .from('assignment_submissions')
       .insert({
         assignment_id: assignmentId,
         student_id: session.session.user.id,
         status: 'in_progress',
+        attempt_number: nextAttemptNumber,
         started_at: new Date().toISOString(),
       })
       .select()
@@ -150,8 +169,9 @@ export default function CompleteAssignment() {
     }
 
     if (data) {
-      console.log('✅ [CompleteAssignment] Submission created:', data.id);
+      console.log('✅ [CompleteAssignment] Submission created:', data.id, 'Attempt:', data.attempt_number);
       setSubmissionId(data.id);
+      setCurrentSubmission(data);
     }
   };
 
@@ -241,6 +261,9 @@ export default function CompleteAssignment() {
               {assignment.timer_minutes && (
                 <p><strong>Time Limit:</strong> {assignment.timer_minutes} minutes</p>
               )}
+              {assignment.max_attempts && assignment.max_attempts > 1 && (
+                <p><strong>Attempts Allowed:</strong> {assignment.max_attempts}</p>
+              )}
             </div>
             <Button size="lg" onClick={() => setHasStarted(true)}>Start Assignment</Button>
           </Card>
@@ -304,7 +327,14 @@ export default function CompleteAssignment() {
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold">{assignment.title}</h1>
+            <div>
+              <h1 className="text-2xl font-bold">{assignment.title}</h1>
+              {currentSubmission?.attempt_number && assignment?.max_attempts && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Attempt {currentSubmission.attempt_number} of {assignment.max_attempts}
+                </p>
+              )}
+            </div>
             {formatTime && (
               <div className="text-lg font-semibold">
                 Time Remaining: {formatTime}

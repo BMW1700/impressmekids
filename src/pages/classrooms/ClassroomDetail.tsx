@@ -29,6 +29,7 @@ import { useMultiQuestionAssignments } from "@/hooks/useMultiQuestionAssignments
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { SubmissionsList } from "@/components/assignments/SubmissionsList";
 import { AssignmentStatsCard } from "@/components/assignments/AssignmentStatsCard";
+import { StudentAssignmentCard } from "@/components/assignments/StudentAssignmentCard";
 import { ClassroomAIInsights } from "@/components/teacher/ClassroomAIInsights";
 import { TeacherSuccessBoard } from "@/components/teacher/TeacherSuccessBoard";
 import {
@@ -703,135 +704,137 @@ const ClassroomDetail = () => {
               ) : (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {assignments.map((assignment: any) => (
-                    <Card key={assignment.id} className="shadow-card hover:shadow-purple transition-shadow">
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <CardTitle className="text-lg">{assignment.title}</CardTitle>
-                            {assignment.assignment_type === 'speaking' && (
-                              <span title="Speaking Assignment">
-                                <Mic className="h-4 w-4 text-primary" />
-                              </span>
-                            )}
-                            {(assignment.assignment_type === 'reading_comprehension' || 
-                              assignment.assignment_type === 'multi_question') && (
-                              <div className="flex items-center gap-1">
-                                <span title="Reading/Questions">
-                                  <BookOpen className="h-4 w-4 text-primary" />
-                                </span>
-                                <span title="Includes Speaking">
+                    isStudent && assignment.status === 'published' ? (
+                      <StudentAssignmentCard 
+                        key={assignment.id} 
+                        assignment={assignment} 
+                        classroomId={id!} 
+                      />
+                    ) : (
+                      <Card key={assignment.id} className="shadow-card hover:shadow-purple transition-shadow">
+                        <CardHeader>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <CardTitle className="text-lg">{assignment.title}</CardTitle>
+                              {assignment.assignment_type === 'speaking' && (
+                                <span title="Speaking Assignment">
                                   <Mic className="h-4 w-4 text-primary" />
                                 </span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant={assignment.status === 'published' ? 'default' : 'secondary'}>
-                              {assignment.status === 'published' ? (
-                                <>
-                                  <Eye className="h-3 w-3 mr-1" />
-                                  Published
-                                </>
-                              ) : (
-                                <>
-                                  <EyeOff className="h-3 w-3 mr-1" />
-                                  Draft
-                                </>
                               )}
-                            </Badge>
-                            {isTeacher && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={() => handleToggleAssignmentStatus(assignment.id, assignment.status)}
-                                  >
-                                    {assignment.status === 'published' ? (
-                                      <>
-                                        <EyeOff className="mr-2 h-4 w-4" />
-                                        Unpublish
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Eye className="mr-2 h-4 w-4" />
-                                        Publish
-                                      </>
-                                    )}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => setDeleteAssignmentId(assignment.id)}
-                                    className="text-destructive focus:text-destructive"
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          {assignment.description && (
-                            <p className="text-sm text-muted-foreground line-clamp-2">
-                              {assignment.description}
-                            </p>
-                          )}
-                          <div className="flex gap-2">
-                            <Badge variant="outline">
-                              {assignment.question_count || 1} Question{(assignment.question_count || 1) !== 1 ? 's' : ''}
-                            </Badge>
-                            {assignment.timer_minutes && (
-                              <Badge variant="outline">
-                                {assignment.timer_minutes} min
+                              {(assignment.assignment_type === 'reading_comprehension' || 
+                                assignment.assignment_type === 'multi_question') && (
+                                <div className="flex items-center gap-1">
+                                  <span title="Reading/Questions">
+                                    <BookOpen className="h-4 w-4 text-primary" />
+                                  </span>
+                                  <span title="Includes Speaking">
+                                    <Mic className="h-4 w-4 text-primary" />
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={assignment.status === 'published' ? 'default' : 'secondary'}>
+                                {assignment.status === 'published' ? (
+                                  <>
+                                    <Eye className="h-3 w-3 mr-1" />
+                                    Published
+                                  </>
+                                ) : (
+                                  <>
+                                    <EyeOff className="h-3 w-3 mr-1" />
+                                    Draft
+                                  </>
+                                )}
                               </Badge>
+                              {isTeacher && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="bg-background z-50">
+                                    <DropdownMenuItem
+                                      onClick={() => handleToggleAssignmentStatus(assignment.id, assignment.status)}
+                                    >
+                                      {assignment.status === 'published' ? (
+                                        <>
+                                          <EyeOff className="mr-2 h-4 w-4" />
+                                          Unpublish
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Eye className="mr-2 h-4 w-4" />
+                                          Publish
+                                        </>
+                                      )}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => setDeleteAssignmentId(assignment.id)}
+                                      className="text-destructive focus:text-destructive"
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            {assignment.description && (
+                              <p className="text-sm text-muted-foreground line-clamp-2">
+                                {assignment.description}
+                              </p>
+                            )}
+                            <div className="flex gap-2">
+                              <Badge variant="outline">
+                                {assignment.question_count || 1} Question{(assignment.question_count || 1) !== 1 ? 's' : ''}
+                              </Badge>
+                              {assignment.timer_minutes && (
+                                <Badge variant="outline">
+                                  {assignment.timer_minutes} min
+                                </Badge>
+                              )}
+                            </div>
+                            {assignment.due_date && (
+                              <p className="text-xs text-muted-foreground">
+                                Due: {new Date(assignment.due_date).toLocaleDateString()}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                              Created {new Date(assignment.created_at).toLocaleDateString()}
+                            </p>
+                            
+                            {isTeacher && <AssignmentStatsCard assignmentId={assignment.id} />}
+                            
+                            {isTeacher && assignment.status === 'draft' && (
+                              <Button
+                                variant="outline"
+                                className="w-full mt-2"
+                                onClick={() => navigate(`/teacher/assignment/create/${id}?edit=${assignment.id}`)}
+                              >
+                                Edit Draft
+                              </Button>
+                            )}
+                            
+                            {assignment.status === 'published' && isTeacher && (
+                              <Button
+                                variant="outline"
+                                className="w-full mt-4"
+                                onClick={() => setViewingAssignmentId(assignment.id)}
+                              >
+                                <FileText className="mr-2 h-4 w-4" />
+                                View Submissions
+                              </Button>
                             )}
                           </div>
-                          {assignment.due_date && (
-                            <p className="text-xs text-muted-foreground">
-                              Due: {new Date(assignment.due_date).toLocaleDateString()}
-                            </p>
-                          )}
-                          <p className="text-xs text-muted-foreground">
-                            Created {new Date(assignment.created_at).toLocaleDateString()}
-                          </p>
-                          
-                          {isTeacher && <AssignmentStatsCard assignmentId={assignment.id} />}
-                          
-                          {isTeacher && assignment.status === 'draft' && (
-                            <Button
-                              variant="outline"
-                              className="w-full mt-2"
-                              onClick={() => navigate(`/teacher/assignment/create/${id}?edit=${assignment.id}`)}
-                            >
-                              Edit Draft
-                            </Button>
-                          )}
-                          
-                          {assignment.status === 'published' && (
-                            <Button
-                              variant="outline"
-                              className="w-full mt-4"
-                              onClick={() => {
-                                if (isTeacher) {
-                                  setViewingAssignmentId(assignment.id);
-                                } else {
-                                  navigate(`/student/assignment/${assignment.id}?classroom=${id}`);
-                                }
-                              }}
-                            >
-                              <FileText className="mr-2 h-4 w-4" />
-                              {isTeacher ? 'View Submissions' : 'Start Assignment'}
-                            </Button>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </CardContent>
+                      </Card>
+                    )
                   ))}
                 </div>
               )}
