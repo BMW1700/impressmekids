@@ -130,20 +130,15 @@ const TeacherDashboard = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header showAuthButtons={false} />
+      <Header showAuthButtons={false} onSignOut={handleSignOut} />
       
       <main className="flex-1 py-8 animate-fade-in">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">
-                Welcome, {profile?.full_name}! 👋
-              </h1>
-              <p className="text-muted-foreground">Teacher Dashboard</p>
-            </div>
-            <Button variant="outline" onClick={handleSignOut}>
-              Sign Out
-            </Button>
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold mb-2">
+              Welcome, {profile?.full_name}! 👋
+            </h1>
+            <p className="text-muted-foreground">Teacher Dashboard</p>
           </div>
 
           {/* Quick Stats */}
