@@ -161,9 +161,9 @@ export default function ReviewMultiQuestionSubmission() {
       case 'question_answer':
         return (
           <div className="space-y-2">
-            <p className="text-sm font-medium">Question: {questionData.question}</p>
+            <p className="text-sm font-medium">Question: {questionData.question_text}</p>
             <p className="text-sm text-muted-foreground">Student Answer:</p>
-            <p className="text-sm bg-muted p-3 rounded">{answerData.answer || 'No answer provided'}</p>
+            <p className="text-sm bg-muted p-3 rounded">{answerData.answer_text || 'No answer provided'}</p>
             {answerData.is_correct !== undefined && (
               <Badge variant={answerData.is_correct ? "default" : "destructive"}>
                 {answerData.is_correct ? 'Correct' : 'Incorrect'}
