@@ -25,7 +25,26 @@ export const useAssignmentSubmissions = (assignmentId?: string) => {
         .order('submitted_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      
+      // Filter to latest attempt per student
+      const submissionsMap = new Map<string, any>();
+      (data || []).forEach((submission: any) => {
+        const studentId = submission.student_id;
+        const existing = submissionsMap.get(studentId);
+        
+        // Keep submission with highest attempt_number
+        if (!existing || submission.attempt_number > existing.attempt_number) {
+          submissionsMap.set(studentId, submission);
+        }
+      });
+
+      return Array.from(submissionsMap.values())
+        .sort((a, b) => {
+          // Sort by submission date, most recent first
+          if (!a.submitted_at) return 1;
+          if (!b.submitted_at) return -1;
+          return new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime();
+        });
     },
     enabled: !!assignmentId,
   });

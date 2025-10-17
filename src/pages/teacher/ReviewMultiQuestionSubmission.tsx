@@ -471,41 +471,50 @@ export default function ReviewMultiQuestionSubmission() {
                       Submitted {new Date(submission.submitted_at).toLocaleString()}
                     </span>
                   )}
-                  {allSubmissions.length > 1 && (
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor="attempt-select" className="text-sm">Viewing:</Label>
-                      <select
-                        id="attempt-select"
-                        value={selectedAttemptNumber || ''}
-                        onChange={(e) => setSelectedAttemptNumber(parseInt(e.target.value))}
-                        className="bg-background border border-input rounded-md px-3 py-1 text-sm"
-                      >
-                        {allSubmissions.map(s => (
-                          <option key={s.id} value={s.attempt_number}>
-                            Attempt {s.attempt_number} of {assignment.max_attempts}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge variant={isGraded ? "default" : "secondary"} className="text-sm">
-                  {isGraded ? (
-                    <>
-                      <CheckCircle2 className="mr-1 h-3 w-3" />
-                      Graded
-                    </>
-                  ) : (
-                    'Not Graded'
-                  )}
-                </Badge>
-                {isGraded && submission.grade !== null && (
-                  <Badge variant="outline" className="text-lg font-bold">
-                    {submission.grade}/100
-                  </Badge>
+              
+              {/* TOP RIGHT SECTION - Dropdown + Badge */}
+              <div className="flex flex-col items-end gap-2">
+                {/* Attempt Dropdown - Only show if multiple attempts exist */}
+                {allSubmissions.length > 1 && (
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="attempt-select" className="text-sm text-muted-foreground">
+                      Viewing:
+                    </Label>
+                    <select
+                      id="attempt-select"
+                      value={selectedAttemptNumber || ''}
+                      onChange={(e) => setSelectedAttemptNumber(parseInt(e.target.value))}
+                      className="bg-background border border-input rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      {allSubmissions.map(s => (
+                        <option key={s.id} value={s.attempt_number}>
+                          Attempt {s.attempt_number} of {assignment.max_attempts}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 )}
+                
+                {/* Grading Status Badge */}
+                <div className="flex items-center gap-2">
+                  <Badge variant={isGraded ? "default" : "secondary"} className="text-sm">
+                    {isGraded ? (
+                      <>
+                        <CheckCircle2 className="mr-1 h-3 w-3" />
+                        Graded
+                      </>
+                    ) : (
+                      'Not Graded'
+                    )}
+                  </Badge>
+                  {isGraded && submission.grade !== null && (
+                    <Badge variant="outline" className="text-lg font-bold">
+                      {submission.grade}/100
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
           </div>
