@@ -154,19 +154,57 @@ export default function CompleteAssignment() {
     navigate('/student/dashboard');
   }
 
+  // 1. FIRST: Check if assignment is loading
   if (isLoading) {
     console.log('⏳ [CompleteAssignment] Loading assignment...');
-    return <div>Loading...</div>;
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 container mx-auto px-4 py-8">
+          <div className="max-w-2xl mx-auto text-center">
+            <p>Loading assignment...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
   }
   
+  // 2. SECOND: Check if assignment exists
   if (!assignment) {
     console.log('❌ [CompleteAssignment] Assignment not found');
-    return <div>Assignment not found</div>;
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 container mx-auto px-4 py-8">
+          <div className="max-w-2xl mx-auto text-center">
+            <p>Assignment not found</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
   }
 
   const questions = assignment.assignment_questions || [];
   console.log('📚 [CompleteAssignment] Questions loaded:', questions.length);
   
+  // 3. THIRD: Check if questions are loaded
+  if (questions.length === 0) {
+    console.log('⏳ [CompleteAssignment] Waiting for questions to load...');
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 container mx-auto px-4 py-8">
+          <div className="max-w-2xl mx-auto text-center">
+            <p>Loading assignment questions...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   const currentQuestion = questions[currentQuestionIndex];
   const allAnswered = answers.length === questions.length && answers.every((a: any) => a.status === 'completed');
 
@@ -183,6 +221,7 @@ export default function CompleteAssignment() {
     }
   }, [answers.length, hasStarted]);
 
+  // 4. FOURTH: Show start screen if student hasn't started yet
   if (!hasStarted) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -205,18 +244,15 @@ export default function CompleteAssignment() {
     );
   }
 
-  // Show loading state if questions haven't loaded yet or submission isn't created
-  if (questions.length === 0 || !submissionId) {
-    console.log('⏳ [CompleteAssignment] Waiting for questions or submission...', {
-      questionsLength: questions.length,
-      hasSubmissionId: !!submissionId
-    });
+  // 5. FIFTH: Check if submission is created (needed after student clicks start)
+  if (!submissionId) {
+    console.log('⏳ [CompleteAssignment] Waiting for submission to be created...');
     return (
       <div className="min-h-screen flex flex-col">
         <Header />
         <main className="flex-1 container mx-auto px-4 py-8">
           <div className="max-w-2xl mx-auto text-center">
-            <p>Loading assignment questions...</p>
+            <p>Starting assignment...</p>
           </div>
         </main>
         <Footer />
