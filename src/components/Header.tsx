@@ -15,22 +15,31 @@ export const Header = ({ showAuthButtons = true }: HeaderProps) => {
     const checkUserRole = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
-        
-        if (profile) {
-          if (profile.role === 'teacher') {
-            setDashboardPath('/teacher-dashboard');
-          } else if (profile.role === 'student') {
-            setDashboardPath('/student-dashboard');
-          } else if (profile.role === 'parent') {
-            setDashboardPath('/parent-dashboard');
-          }
+      if (!session?.user) {
+        // Not signed in - go to home page
+        setDashboardPath('/');
+        return;
+      }
+
+      // Signed in - check role and set appropriate dashboard
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+      
+      if (profile) {
+        if (profile.role === 'teacher') {
+          setDashboardPath('/teacher-dashboard');
+        } else if (profile.role === 'student') {
+          setDashboardPath('/student-dashboard');
+        } else if (profile.role === 'parent') {
+          setDashboardPath('/parent-dashboard');
+        } else {
+          setDashboardPath('/');
         }
+      } else {
+        setDashboardPath('/');
       }
     };
     
