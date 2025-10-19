@@ -100,21 +100,21 @@ const StudentDashboard = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
+      // Fetch classrooms using security definer function to bypass RLS
       const { data: classroomsData, error } = await supabase
-        .from('classroom_students')
-        .select(`
-          classroom:classrooms(
-            id,
-            name,
-            join_code,
-            created_at,
-            teacher:profiles!classrooms_teacher_id_fkey(full_name)
-          )
-        `)
-        .eq('student_id', session.user.id);
+        .rpc('get_student_classrooms', { _user_id: session.user.id });
 
       if (error) throw error;
-      const classroomsList = classroomsData?.map(item => item.classroom) || [];
+      
+      // Transform data to match expected format
+      const classroomsList = classroomsData?.map((classroom: any) => ({
+        id: classroom.id,
+        name: classroom.name,
+        join_code: classroom.join_code,
+        created_at: classroom.created_at,
+        teacher: { full_name: classroom.teacher_name }
+      })) || [];
+      
       setClassrooms(classroomsList);
 
       // Load announcements from all classrooms
