@@ -40,37 +40,24 @@ const TeacherDashboard = () => {
 
       console.log('✅ Session found:', session.user.id);
 
-      // Fetch user profile with retry logic
-      let profileData = null;
-      let attempts = 0;
-      const maxAttempts = 3;
-      
-      while (attempts < maxAttempts && !profileData) {
-        attempts++;
-        console.log(`📋 Fetching profile (attempt ${attempts}/${maxAttempts})...`);
-        
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
+      // Fetch user profile using security definer function
+      const { data: profileResult, error: profileError } = await supabase
+        .rpc('get_user_profile', { _user_id: session.user.id });
 
-        if (!error && data) {
-          profileData = data;
-          console.log('✅ Profile found:', { id: data.id, role: data.role });
-        } else if (attempts < maxAttempts) {
-          console.log('⏳ Profile not ready, waiting...');
-          await new Promise(resolve => setTimeout(resolve, 500));
-        } else {
-          console.error('❌ Failed to fetch profile:', error);
-        }
-      }
-
-      if (!profileData) {
-        console.log('❌ No profile found after retries');
+      if (profileError) {
+        console.error('❌ Failed to fetch profile:', profileError);
         navigate('/auth');
         return;
       }
+
+      if (!profileResult || profileResult.length === 0) {
+        console.log('❌ No profile found');
+        navigate('/auth');
+        return;
+      }
+
+      const profileData = profileResult[0];
+      console.log('✅ Profile found:', { id: profileData.id, role: profileData.role });
 
       if (profileData.role !== 'teacher') {
         console.log(`⚠️ User role is ${profileData.role}, not teacher. Redirecting to student dashboard`);
