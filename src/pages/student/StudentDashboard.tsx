@@ -97,14 +97,25 @@ const StudentDashboard = () => {
 
   const loadDashboardData = async () => {
     try {
+      console.log('📊 StudentDashboard: Loading dashboard data...');
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) {
+        console.log('❌ No session found');
+        return;
+      }
 
+      console.log('🔍 Fetching classrooms for user:', session.user.id);
+      
       // Fetch classrooms using security definer function to bypass RLS
       const { data: classroomsData, error } = await supabase
         .rpc('get_student_classrooms', { _user_id: session.user.id });
 
-      if (error) throw error;
+      console.log('📚 Classrooms RPC result:', { data: classroomsData, error });
+
+      if (error) {
+        console.error('❌ Error loading classrooms:', error);
+        throw error;
+      }
       
       // Transform data to match ClassroomCard props format
       const classroomsList = classroomsData?.map((classroom: any) => ({
@@ -116,10 +127,12 @@ const StudentDashboard = () => {
         studentCount: Number(classroom.student_count) || 0
       })) || [];
       
+      console.log('✅ Transformed classrooms:', classroomsList);
       setClassrooms(classroomsList);
 
       // Load announcements from all classrooms
       if (classroomsList.length > 0) {
+        console.log('📢 Loading announcements for', classroomsList.length, 'classrooms');
         const classroomIds = classroomsList.map((c: any) => c.id);
         const { data: announcementsData } = await supabase
           .from('classroom_announcements')
@@ -128,9 +141,13 @@ const StudentDashboard = () => {
           .order('created_at', { ascending: false })
           .limit(10);
 
+        console.log('✅ Loaded announcements:', announcementsData?.length || 0);
         setAnnouncements(announcementsData || []);
+      } else {
+        console.log('ℹ️ No classrooms to load announcements for');
       }
     } catch (error: any) {
+      console.error('❌ Fatal error loading dashboard data:', error);
       toast({
         title: "Error",
         description: "Failed to load dashboard data",
