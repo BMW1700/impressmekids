@@ -79,12 +79,7 @@ const TeacherDashboard = () => {
       if (!session) return;
 
       const { data: classroomsData, error } = await supabase
-        .from('classrooms')
-        .select(`
-          *,
-          classroom_students(count)
-        `)
-        .eq('teacher_id', session.user.id);
+        .rpc('get_teacher_classrooms', { _user_id: session.user.id });
 
       if (error) throw error;
       setClassrooms(classroomsData || []);
@@ -219,7 +214,7 @@ const TeacherDashboard = () => {
                         id={classroom.id}
                         name={classroom.name}
                         joinCode={classroom.join_code}
-                        studentCount={classroom.classroom_students?.[0]?.count || 0}
+                        studentCount={Number(classroom.student_count) || 0}
                         createdAt={classroom.created_at}
                       />
                     </div>

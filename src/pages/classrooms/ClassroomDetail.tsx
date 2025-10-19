@@ -109,33 +109,32 @@ const ClassroomDetail = () => {
       console.log('✅ Session found. User ID:', session.user.id);
       console.log('📧 User email:', session.user.email);
 
-      // Query 1: Load classroom
+      // Query 1: Load classroom using security definer function
       console.log('\n📚 Step 2: Loading classroom...');
-      console.log('Query: classrooms table, id =', id);
+      console.log('Query: get_classroom_detail RPC, classroom_id =', id);
       
       try {
-        const { data: classroomData, error: classroomError } = await supabase
-          .from('classrooms')
-          .select('*')
-          .eq('id', id)
-          .maybeSingle();
+        const { data: classroomResult, error: classroomError } = await supabase
+          .rpc('get_classroom_detail', {
+            _user_id: session.user.id,
+            _classroom_id: id
+          });
 
         if (classroomError) {
           console.error('❌ CLASSROOM QUERY FAILED');
           console.error('Error code:', classroomError.code);
           console.error('Error message:', classroomError.message);
-          console.error('Error details:', classroomError.details);
-          console.error('Error hint:', classroomError.hint);
           console.error('Full error object:', JSON.stringify(classroomError, null, 2));
           throw classroomError;
         }
         
-        if (!classroomData) {
+        if (!classroomResult || classroomResult.length === 0) {
           console.error('❌ Classroom not found or access denied');
           setIsLoading(false);
           return;
         }
         
+        const classroomData = classroomResult[0];
         console.log('✅ Classroom loaded:', classroomData.name);
         console.log('   Teacher ID:', classroomData.teacher_id);
         console.log('   Join code:', classroomData.join_code);
@@ -145,39 +144,42 @@ const ClassroomDetail = () => {
         throw err;
       }
 
-      // Query 2: Load students
+      // Query 2: Load students using security definer function
       console.log('\n👥 Step 3: Loading students...');
-      console.log('Query: classroom_students, classroom_id =', id);
+      console.log('Query: get_classroom_students RPC, classroom_id =', id);
       
       try {
-        const { data: studentsData, error: studentsError } = await supabase
-          .from('classroom_students')
-          .select(`
-            *,
-            profiles!student_id (
-              id,
-              full_name,
-              email,
-              student_profiles!user_id (
-                grade,
-                avatar_url
-              )
-            )
-          `)
-          .eq('classroom_id', id);
+        const { data: studentsResult, error: studentsError } = await supabase
+          .rpc('get_classroom_students', {
+            _user_id: session.user.id,
+            _classroom_id: id
+          });
 
         if (studentsError) {
           console.error('❌ STUDENTS QUERY FAILED');
           console.error('Error code:', studentsError.code);
           console.error('Error message:', studentsError.message);
-          console.error('Error details:', studentsError.details);
-          console.error('Error hint:', studentsError.hint);
           console.error('Full error object:', JSON.stringify(studentsError, null, 2));
           throw studentsError;
         }
         
-        console.log('✅ Students loaded:', studentsData?.length || 0, 'students');
-        setStudents(studentsData || []);
+        // Transform data to match the expected format
+        const studentsData = studentsResult?.map((student: any) => ({
+          student_id: student.student_id,
+          joined_at: student.joined_at,
+          profiles: {
+            id: student.student_id,
+            full_name: student.full_name,
+            email: student.email,
+            student_profiles: student.grade ? [{
+              grade: student.grade,
+              avatar_url: student.avatar_url
+            }] : []
+          }
+        })) || [];
+        
+        console.log('✅ Students loaded:', studentsData.length, 'students');
+        setStudents(studentsData);
       } catch (err: any) {
         console.error('❌ FATAL: Students query exception:', err);
         throw err;

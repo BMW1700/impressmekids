@@ -26,9 +26,7 @@ const AuraAnalytics = () => {
       if (!user) throw new Error('Not authenticated');
 
       const { data, error } = await supabase
-        .from('classrooms')
-        .select('*')
-        .eq('teacher_id', user.id);
+        .rpc('get_teacher_classrooms', { _user_id: user.id });
 
       if (error) throw error;
       return data;
@@ -38,20 +36,26 @@ const AuraAnalytics = () => {
   const { data: students } = useQuery({
     queryKey: ['classroom-students', classroomId],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const { data, error } = await supabase
-        .from('classroom_students')
-        .select(`
-          student_id,
-          profiles (
-            id,
-            full_name,
-            email
-          )
-        `)
-        .eq('classroom_id', classroomId!);
+        .rpc('get_classroom_students', {
+          _user_id: user.id,
+          _classroom_id: classroomId!
+        });
 
       if (error) throw error;
-      return data;
+      
+      // Transform to match expected format
+      return data?.map((student: any) => ({
+        student_id: student.student_id,
+        profiles: {
+          id: student.student_id,
+          full_name: student.full_name,
+          email: student.email
+        }
+      })) || [];
     },
     enabled: !!classroomId,
   });

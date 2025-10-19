@@ -1976,6 +1976,29 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_classroom_detail: {
+        Args: { _classroom_id: string; _user_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          join_code: string
+          name: string
+          teacher_email: string
+          teacher_id: string
+          teacher_name: string
+        }[]
+      }
+      get_classroom_students: {
+        Args: { _classroom_id: string; _user_id: string }
+        Returns: {
+          avatar_url: string
+          email: string
+          full_name: string
+          grade: number
+          joined_at: string
+          student_id: string
+        }[]
+      }
       get_student_classrooms: {
         Args: { _user_id: string }
         Returns: {
@@ -1985,6 +2008,16 @@ export type Database = {
           name: string
           student_count: number
           teacher_name: string
+        }[]
+      }
+      get_teacher_classrooms: {
+        Args: { _user_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          join_code: string
+          name: string
+          student_count: number
         }[]
       }
       get_user_profile: {
