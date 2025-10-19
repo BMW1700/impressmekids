@@ -56,14 +56,18 @@ const Auth = () => {
           }
         }
 
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("role")
           .eq("id", session.user.id)
-          .single();
+          .maybeSingle();
 
-        if (profile) {
+        if (profileError) {
+          console.error('Profile fetch error:', profileError);
+        } else if (profile) {
           redirectToDashboard(profile.role);
+        } else {
+          console.warn('Profile not found for user:', session.user.id);
         }
       }
     };
@@ -282,14 +286,19 @@ const Auth = () => {
             .from('profiles')
             .select('role')
             .eq('id', data.user.id)
-            .single();
+            .maybeSingle();
 
-          if (!profileError && profileData) {
+          if (profileError) {
+            console.error('Profile fetch error:', profileError);
+          } else if (profileData) {
             profile = profileData;
             console.log('✅ Profile found with role:', profile.role);
-          } else if (attempts < maxAttempts) {
-            console.log('⏳ Profile not ready, waiting...');
-            await new Promise(resolve => setTimeout(resolve, 500));
+          } else {
+            console.warn('Profile not found for user:', data.user.id);
+            if (attempts < maxAttempts) {
+              console.log('⏳ Profile not ready, waiting...');
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
           }
         }
 
