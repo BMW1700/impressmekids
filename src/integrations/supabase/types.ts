@@ -2015,6 +2015,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_parent_id: {
+        Args: { _user_id: string }
+        Returns: string
+      }
       get_parent_student_links: {
         Args: { _user_id: string }
         Returns: {
@@ -2074,6 +2078,10 @@ export type Database = {
       }
       is_classroom_teacher: {
         Args: { _classroom_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_parent: {
+        Args: { _user_id: string }
         Returns: boolean
       }
       is_parent_of_student: {
