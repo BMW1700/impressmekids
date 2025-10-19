@@ -46,50 +46,62 @@ const ParentDashboard = () => {
   }, []);
 
   const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      navigate("/auth");
-      return;
-    }
-
-    // Check if parent account exists
-    const { data: parentAccount, error: parentError } = await supabase
-      .from("parent_accounts")
-      .select("*")
-      .eq("user_id", session.user.id)
-      .maybeSingle();
-
-    if (parentError) {
-      console.error("Error fetching parent account:", parentError);
-      toast.error("Error loading parent account");
-      return;
-    }
-
-    if (!parentAccount) {
-      // Create parent account if it doesn't exist
-      const { data: newParent, error: createError } = await supabase
-        .from("parent_accounts")
-        .insert({
-          user_id: session.user.id,
-          email: session.user.email || "",
-          full_name: session.user.user_metadata?.full_name || "Parent"
-        })
-        .select()
-        .single();
-
-      if (createError) {
-        console.error("Error creating parent account:", createError);
-        toast.error("Error creating parent account");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        navigate("/auth");
         return;
       }
 
-      setParentId(newParent.id);
-    } else {
-      setParentId(parentAccount.id);
-    }
+      // Check if parent account exists
+      const { data: parentAccount, error: parentError } = await supabase
+        .from("parent_accounts")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
 
-    loadChildren(parentAccount?.id || "");
+      if (parentError) {
+        console.error("Error fetching parent account:", parentError);
+        toast.error("Error loading parent account");
+        setLoading(false);
+        return;
+      }
+
+      let accountId: string;
+
+      if (!parentAccount) {
+        // Create parent account if it doesn't exist
+        const { data: newParent, error: createError } = await supabase
+          .from("parent_accounts")
+          .insert({
+            user_id: session.user.id,
+            email: session.user.email || "",
+            full_name: session.user.user_metadata?.full_name || "Parent"
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error("Error creating parent account:", createError);
+          toast.error("Error creating parent account");
+          setLoading(false);
+          return;
+        }
+
+        accountId = newParent.id;
+        setParentId(newParent.id);
+      } else {
+        accountId = parentAccount.id;
+        setParentId(parentAccount.id);
+      }
+
+      await loadChildren(accountId);
+    } catch (error) {
+      console.error("Error in checkAuth:", error);
+      toast.error("Failed to load parent dashboard");
+      setLoading(false);
+    }
   };
 
   const loadChildren = async (pId: string) => {
