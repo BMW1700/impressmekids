@@ -7,7 +7,6 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import StudentDashboard from "./pages/student/StudentDashboard";
-import StudyMaterials from "./pages/student/StudyMaterials";
 import AuraPractice from "./pages/student/AuraPractice";
 import Games from "./pages/Games";
 import JeopardyGame from "./pages/games/JeopardyGame";
@@ -45,7 +44,6 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
           <Route path="/student/dashboard" element={<StudentDashboard />} />
-          <Route path="/student/study" element={<StudyMaterials />} />
           <Route path="/student/aura-practice" element={<AuraPractice />} />
           <Route path="/classrooms/:id" element={<ClassroomDetail />} />
           <Route path="/teacher/questions/:classroomId" element={<QuestionsLibrary />} />
