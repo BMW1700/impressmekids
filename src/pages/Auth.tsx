@@ -213,21 +213,8 @@ const Auth = () => {
         console.log('✅ User created:', data.user.id);
         console.log('📋 User metadata:', data.user.user_metadata);
         
-        // Wait a moment for the profile trigger to complete
+        // Wait for the profile and role to be created by trigger
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Verify the profile was created with correct role
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', data.user.id)
-          .single();
-
-        if (profileError) {
-          console.error('❌ Profile verification failed:', profileError);
-        } else {
-          console.log('✅ Profile verified with role:', profile.role);
-        }
 
         toast({
           title: "Account created!",
