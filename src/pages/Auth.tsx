@@ -119,16 +119,23 @@ const Auth = () => {
         return;
       }
 
-      // Update profile with selected role and district
-      const { error } = await supabase
+      // Insert role into user_roles table (profiles.role is kept for backward compatibility only)
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({ 
+          user_id: user.id,
+          role: selectedRole
+        });
+
+      if (roleError) throw roleError;
+
+      // Also update district in profiles
+      const { error: profileError } = await supabase
         .from('profiles')
-        .update({ 
-          role: selectedRole,
-          district_id: pendingDistrictId 
-        })
+        .update({ district_id: pendingDistrictId })
         .eq('id', user.id);
 
-      if (error) throw error;
+      if (profileError) throw profileError;
 
       setShowRoleModal(false);
       toast({

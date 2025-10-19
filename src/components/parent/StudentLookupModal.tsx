@@ -48,7 +48,14 @@ export const StudentLookupModal = ({ open, onOpenChange, parentId, onSuccess }: 
         return;
       }
 
-      if (studentProfile.role !== "student") {
+      // Verify the user has student role using user_roles table
+      const { data: roleCheck } = await supabase
+        .rpc('has_role', { 
+          _user_id: studentProfile.id, 
+          _role: 'student' 
+        });
+
+      if (!roleCheck) {
         toast.error("The email provided is not associated with a student account.");
         setLoading(false);
         return;

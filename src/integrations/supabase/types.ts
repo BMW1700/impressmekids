@@ -1667,6 +1667,7 @@ export type Database = {
           read_by_student: boolean | null
           student_id: string
           teacher_id: string
+          visible_to_student: boolean | null
         }
         Insert: {
           audio_url?: string | null
@@ -1678,6 +1679,7 @@ export type Database = {
           read_by_student?: boolean | null
           student_id: string
           teacher_id: string
+          visible_to_student?: boolean | null
         }
         Update: {
           audio_url?: string | null
@@ -1689,6 +1691,7 @@ export type Database = {
           read_by_student?: boolean | null
           student_id?: string
           teacher_id?: string
+          visible_to_student?: boolean | null
         }
         Relationships: [
           {
