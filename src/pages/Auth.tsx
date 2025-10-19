@@ -154,6 +154,23 @@ const Auth = () => {
     try {
       console.log('🔐 Starting signup process...', { email, role, fullName });
       
+      // Check if email already exists in profiles table
+      const { data: profileCheck } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('email', email.toLowerCase().trim())
+        .maybeSingle();
+      
+      if (profileCheck) {
+        toast({
+          title: "Email already registered",
+          description: "This email is already in use. Please sign in instead.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+      
       // Clear any existing sessions first
       await supabase.auth.signOut();
       console.log('🧹 Cleared existing sessions');
@@ -170,7 +187,19 @@ const Auth = () => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Handle duplicate email error from Supabase
+        if (error.message.includes('already registered') || error.message.includes('duplicate')) {
+          toast({
+            title: "Email already registered",
+            description: "This email is already in use. Please sign in instead.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+        throw error;
+      }
 
       if (data.user) {
         console.log('✅ User created:', data.user.id);
@@ -201,9 +230,21 @@ const Auth = () => {
       }
     } catch (error: any) {
       console.error('❌ Signup error:', error);
+      
+      // Provide user-friendly error messages
+      let errorMessage = error.message || "Failed to create account";
+      
+      if (error.message?.includes('already registered') || error.message?.includes('duplicate')) {
+        errorMessage = "This email is already registered. Please sign in instead or use a different email.";
+      } else if (error.message?.includes('password')) {
+        errorMessage = "Password must be at least 6 characters long.";
+      } else if (error.message?.includes('email')) {
+        errorMessage = "Please enter a valid email address.";
+      }
+      
       toast({
         title: "Error",
-        description: error.message || "Failed to create account",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -265,9 +306,19 @@ const Auth = () => {
       }
     } catch (error: any) {
       console.error('❌ Signin error:', error);
+      
+      // Provide user-friendly error messages
+      let errorMessage = error.message || "Failed to sign in";
+      
+      if (error.message?.includes('Invalid login credentials')) {
+        errorMessage = "Invalid email or password. Please check your credentials and try again.";
+      } else if (error.message?.includes('Email not confirmed')) {
+        errorMessage = "Please confirm your email address before signing in.";
+      }
+      
       toast({
         title: "Error",
-        description: error.message || "Failed to sign in",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
