@@ -6,9 +6,10 @@ import { Footer } from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, UserPlus, CheckCircle, Clock, GraduationCap } from "lucide-react";
+import { Loader2, UserPlus, CheckCircle, Clock, GraduationCap, Search } from "lucide-react";
 import { toast } from "sonner";
 import { StudentClassroomCard } from "@/components/parent/StudentClassroomCard";
+import { StudentLookupModal } from "@/components/parent/StudentLookupModal";
 
 interface ClassroomInfo {
   id: string;
@@ -36,6 +37,7 @@ const ParentDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [children, setChildren] = useState<ChildLink[]>([]);
   const [parentId, setParentId] = useState<string | null>(null);
+  const [lookupModalOpen, setLookupModalOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -221,9 +223,9 @@ const ParentDashboard = () => {
             <h1 className="text-3xl font-bold">Parent Dashboard</h1>
             <p className="text-muted-foreground">View your children's progress</p>
           </div>
-          <Button onClick={() => navigate("/parent/request-access")}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            Link Child Account
+          <Button onClick={() => setLookupModalOpen(true)}>
+            <Search className="mr-2 h-4 w-4" />
+            Student Lookup
           </Button>
         </div>
 
@@ -305,6 +307,15 @@ const ParentDashboard = () => {
               </Card>
             ))}
           </div>
+        )}
+
+        {parentId && (
+          <StudentLookupModal
+            open={lookupModalOpen}
+            onOpenChange={setLookupModalOpen}
+            parentId={parentId}
+            onSuccess={() => loadChildren(parentId)}
+          />
         )}
       </main>
       <Footer />
