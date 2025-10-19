@@ -28,28 +28,34 @@ export const useClassroomPermissions = (classroomId: string | undefined): Classr
           return;
         }
 
-        // Check if user is the teacher of this classroom
-        const { data: classroom, error: classroomError } = await supabase
-          .from('classrooms')
-          .select('teacher_id')
-          .eq('id', classroomId)
-          .maybeSingle();
+        console.log('🔐 Checking permissions for user:', session.user.id, 'classroom:', classroomId);
 
-        console.log('Classroom query result:', { classroom, classroomError, userId: session.user.id });
+        // Use security definer function to bypass RLS
+        const { data: classroomResult, error: classroomError } = await supabase
+          .rpc('get_classroom_detail', {
+            _user_id: session.user.id,
+            _classroom_id: classroomId
+          });
 
+        console.log('Classroom RPC result:', { classroomResult, classroomError });
+
+        const classroom = classroomResult?.[0];
         const isTeacher = classroom?.teacher_id === session.user.id;
 
-        // Check if user is a student in this classroom
-        const { data: studentRecord, error: studentError } = await supabase
-          .from('classroom_students')
-          .select('id')
-          .eq('classroom_id', classroomId)
-          .eq('student_id', session.user.id)
-          .maybeSingle();
+        // Use security definer function to check student status
+        const { data: studentsResult, error: studentError } = await supabase
+          .rpc('get_classroom_students', {
+            _user_id: session.user.id,
+            _classroom_id: classroomId
+          });
 
-        console.log('Student query result:', { studentRecord, studentError });
+        console.log('Students RPC result:', { studentsResult, studentError });
 
-        const isStudent = !!studentRecord;
+        // If we got results, we're either the teacher or a student
+        // Check if current user is in the students list
+        const isStudent = studentsResult?.some((s: any) => s.student_id === session.user.id) || false;
+
+        console.log('✅ Permissions determined:', { isTeacher, isStudent });
 
         setPermissions({
           isTeacher,
@@ -57,7 +63,7 @@ export const useClassroomPermissions = (classroomId: string | undefined): Classr
           isLoading: false,
         });
       } catch (error) {
-        console.error("Error checking permissions:", error);
+        console.error("❌ Error checking permissions:", error);
         setPermissions({ isTeacher: false, isStudent: false, isLoading: false });
       }
     };
