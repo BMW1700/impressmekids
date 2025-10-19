@@ -10,6 +10,7 @@ import { Loader2, UserPlus, CheckCircle, Clock, GraduationCap, Search } from "lu
 import { toast } from "sonner";
 import { StudentClassroomCard } from "@/components/parent/StudentClassroomCard";
 import { StudentLookupModal } from "@/components/parent/StudentLookupModal";
+import { ParentNotificationBell } from "@/components/parent/ParentNotificationBell";
 
 interface ClassroomInfo {
   id: string;
@@ -216,7 +217,9 @@ const ParentDashboard = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Header />
+      <Header>
+        {parentId && <ParentNotificationBell parentId={parentId} />}
+      </Header>
       <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
         <div className="flex justify-between items-center mb-6">
           <div>

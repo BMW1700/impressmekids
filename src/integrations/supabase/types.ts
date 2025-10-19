@@ -1096,6 +1096,7 @@ export type Database = {
           id: string
           message: string | null
           parent_id: string
+          parent_notified: boolean
           resolved_at: string | null
           status: string
           student_id: string
@@ -1107,6 +1108,7 @@ export type Database = {
           id?: string
           message?: string | null
           parent_id: string
+          parent_notified?: boolean
           resolved_at?: string | null
           status?: string
           student_id: string
@@ -1118,6 +1120,7 @@ export type Database = {
           id?: string
           message?: string | null
           parent_id?: string
+          parent_notified?: boolean
           resolved_at?: string | null
           status?: string
           student_id?: string
