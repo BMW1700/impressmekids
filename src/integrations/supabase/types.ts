@@ -2002,6 +2002,28 @@ export type Database = {
           student_id: string
         }[]
       }
+      get_parent_account: {
+        Args: { _user_id: string }
+        Returns: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          user_id: string
+        }[]
+      }
+      get_parent_student_links: {
+        Args: { _user_id: string }
+        Returns: {
+          approved: boolean
+          link_id: string
+          requested_at: string
+          student_email: string
+          student_grade: number
+          student_id: string
+          student_name: string
+        }[]
+      }
       get_student_classrooms: {
         Args: { _user_id: string }
         Returns: {

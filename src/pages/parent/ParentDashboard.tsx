@@ -54,12 +54,9 @@ const ParentDashboard = () => {
         return;
       }
 
-      // Check if parent account exists
+      // Use security definer function to get parent account
       const { data: parentAccount, error: parentError } = await supabase
-        .from("parent_accounts")
-        .select("*")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
+        .rpc("get_parent_account", { _user_id: session.user.id });
 
       if (parentError) {
         console.error("Error fetching parent account:", parentError);
@@ -70,7 +67,7 @@ const ParentDashboard = () => {
 
       let accountId: string;
 
-      if (!parentAccount) {
+      if (!parentAccount || parentAccount.length === 0) {
         // Create parent account if it doesn't exist
         const { data: newParent, error: createError } = await supabase
           .from("parent_accounts")
@@ -92,11 +89,11 @@ const ParentDashboard = () => {
         accountId = newParent.id;
         setParentId(newParent.id);
       } else {
-        accountId = parentAccount.id;
-        setParentId(parentAccount.id);
+        accountId = parentAccount[0].id;
+        setParentId(parentAccount[0].id);
       }
 
-      await loadChildren(accountId);
+      await loadChildren(session.user.id);
     } catch (error) {
       console.error("Error in checkAuth:", error);
       toast.error("Failed to load parent dashboard");
@@ -104,21 +101,10 @@ const ParentDashboard = () => {
     }
   };
 
-  const loadChildren = async (pId: string) => {
+  const loadChildren = async (userId: string) => {
+    // Use security definer function to get student links
     const { data, error } = await supabase
-      .from("parent_student_links")
-      .select(`
-        id,
-        student_id,
-        approved,
-        requested_at,
-        student:student_id (
-          full_name:profiles!inner(full_name),
-          email:profiles!inner(email)
-        )
-      `)
-      .eq("parent_id", pId)
-      .order("requested_at", { ascending: false });
+      .rpc("get_parent_student_links", { _user_id: userId });
 
     if (error) {
       console.error("Error loading children:", error);
@@ -131,13 +117,13 @@ const ParentDashboard = () => {
     const transformed = await Promise.all(
       (data || []).map(async (link: any) => {
         const childLink: ChildLink = {
-          id: link.id,
+          id: link.link_id,
           student_id: link.student_id,
           approved: link.approved,
           requested_at: link.requested_at,
           student: {
-            full_name: link.student[0]?.full_name || "Unknown",
-            email: link.student[0]?.email || "Unknown"
+            full_name: link.student_name || "Unknown",
+            email: link.student_email || "Unknown"
           },
           classrooms: []
         };
@@ -329,7 +315,7 @@ const ParentDashboard = () => {
             open={lookupModalOpen}
             onOpenChange={setLookupModalOpen}
             parentId={parentId}
-            onSuccess={() => loadChildren(parentId)}
+            onSuccess={checkAuth}
           />
         )}
       </main>
