@@ -106,13 +106,14 @@ const StudentDashboard = () => {
 
       if (error) throw error;
       
-      // Transform data to match expected format
+      // Transform data to match ClassroomCard props format
       const classroomsList = classroomsData?.map((classroom: any) => ({
         id: classroom.id,
         name: classroom.name,
-        join_code: classroom.join_code,
-        created_at: classroom.created_at,
-        teacher: { full_name: classroom.teacher_name }
+        joinCode: classroom.join_code,
+        createdAt: classroom.created_at,
+        teacherName: classroom.teacher_name,
+        studentCount: Number(classroom.student_count) || 0
       })) || [];
       
       setClassrooms(classroomsList);
@@ -278,8 +279,10 @@ const StudentDashboard = () => {
                         <ClassroomCard
                           id={classroom.id}
                           name={classroom.name}
-                          teacherName={classroom.teacher?.full_name}
-                          createdAt={classroom.created_at}
+                          joinCode={classroom.joinCode}
+                          teacherName={classroom.teacherName}
+                          studentCount={classroom.studentCount}
+                          createdAt={classroom.createdAt}
                         />
                       </div>
                     ))}
