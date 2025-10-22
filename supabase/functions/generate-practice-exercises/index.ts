@@ -105,19 +105,71 @@ serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('[AUTH] Missing authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // SECURITY: Use ANON key with RLS
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.error('[AUTH] Invalid token:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { studentId, phonemeGaps, grade } = await req.json();
 
-    if (!studentId || !phonemeGaps || phonemeGaps.length === 0) {
+    // SECURITY: Input validation
+    if (!studentId || typeof studentId !== 'string') {
+      console.error('[VALIDATION] Invalid studentId');
+      return new Response(
+        JSON.stringify({ error: "Invalid input" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!phonemeGaps || !Array.isArray(phonemeGaps) || phonemeGaps.length === 0) {
+      console.error('[VALIDATION] Invalid phonemeGaps');
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    // CRITICAL SECURITY: Verify user is authorized to generate exercises for this student
+    // User must be either the student themselves OR their teacher
+    const isOwnData = user.id === studentId;
+    
+    let isTeacher = false;
+    if (!isOwnData) {
+      const { data: classrooms } = await supabase
+        .from('classroom_students')
+        .select('classroom_id, classrooms!inner(teacher_id)')
+        .eq('student_id', studentId);
+      
+      isTeacher = classrooms?.some((cs: any) => cs.classrooms.teacher_id === user.id) || false;
+    }
+
+    if (!isOwnData && !isTeacher) {
+      console.error('[AUTH] User not authorized for student:', { userId: user.id, studentId });
+      return new Response(
+        JSON.stringify({ error: 'Not authorized' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {

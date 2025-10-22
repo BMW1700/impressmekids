@@ -12,17 +12,28 @@ serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('[AUTH] Missing authorization header');
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // SECURITY: Use ANON key with RLS
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
     
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
     
-    const authHeader = req.headers.get('Authorization')!;
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user } } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    if (!user) {
+    if (authError || !user) {
+      console.error('[AUTH] Invalid token:', authError);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -31,8 +42,10 @@ serve(async (req) => {
 
     const { question_group_id, title, description } = await req.json();
 
-    if (!question_group_id) {
-      return new Response(JSON.stringify({ error: 'question_group_id is required' }), {
+    // SECURITY: Input validation
+    if (!question_group_id || typeof question_group_id !== 'string') {
+      console.error('[VALIDATION] Invalid question_group_id');
+      return new Response(JSON.stringify({ error: 'Invalid input' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

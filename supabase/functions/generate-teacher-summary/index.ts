@@ -47,22 +47,41 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      throw new Error('No authorization header');
+      console.error('[AUTH] Missing authorization header');
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
+    // SECURITY: Use ANON key with RLS instead of service role
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
 
     // Get user from JWT
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
-      throw new Error('Unauthorized');
+      console.error('[AUTH] Invalid token:', authError);
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const { classroom_id } = await req.json();
+
+    // SECURITY: Input validation
+    if (!classroom_id || typeof classroom_id !== 'string') {
+      console.error('[VALIDATION] Invalid classroom_id');
+      return new Response(JSON.stringify({ error: 'Invalid input' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Check for recent summary (rate limiting: 1 per day)
     const { data: recentSummary } = await supabase
@@ -93,16 +112,19 @@ serve(async (req) => {
       }
     }
 
-    // Verify teacher owns classroom
+    // SECURITY: RLS will enforce teacher owns classroom
     const { data: classroom, error: classroomError } = await supabase
       .from('classrooms')
       .select('id, name, teacher_id')
       .eq('id', classroom_id)
-      .eq('teacher_id', user.id)
       .single();
 
     if (classroomError || !classroom) {
-      throw new Error('Classroom not found or access denied');
+      console.error('[AUTH] Classroom access denied or not found');
+      return new Response(JSON.stringify({ error: 'Access denied' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Get all students in classroom

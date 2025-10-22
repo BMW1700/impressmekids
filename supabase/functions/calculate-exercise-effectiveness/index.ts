@@ -12,24 +12,26 @@ serve(async (req) => {
   }
 
   try {
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // SECURITY: Verify user authentication
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('[AUTH] Missing authorization header');
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    // SECURITY: Use ANON key with RLS
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
+      console.error('[AUTH] Invalid token:', authError);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -38,8 +40,21 @@ serve(async (req) => {
 
     const { exerciseId, studentId } = await req.json();
 
-    if (!exerciseId || !studentId) {
-      throw new Error('exerciseId and studentId are required');
+    // SECURITY: Input validation
+    if (!exerciseId || typeof exerciseId !== 'string') {
+      console.error('[VALIDATION] Invalid exerciseId');
+      return new Response(JSON.stringify({ error: 'Invalid input' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!studentId || typeof studentId !== 'string') {
+      console.error('[VALIDATION] Invalid studentId');
+      return new Response(JSON.stringify({ error: 'Invalid input' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // SECURITY: Verify user is either the student or their teacher
