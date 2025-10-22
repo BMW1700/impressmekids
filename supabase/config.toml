@@ -13,7 +13,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.show-next-question]
-verify_jwt = false
+verify_jwt = true
 
 [functions.buzz-in]
 verify_jwt = true
@@ -40,7 +40,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.calculate-exercise-effectiveness]
-verify_jwt = false
+verify_jwt = true
 
 [functions.extract-text-from-image]
 verify_jwt = true
@@ -49,4 +49,4 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.update-q-learning]
-verify_jwt = false
+verify_jwt = true

@@ -17,20 +17,53 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // SECURITY: Verify user authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { match_id } = await req.json();
 
-    console.log('Showing next question for match:', match_id);
+    console.log('Showing next question for match:', match_id, 'user:', user.id);
 
-    // Get match state
+    // Get match state and verify user is a player in this match
     const { data: matchState, error: stateError } = await supabase
       .from('match_state')
-      .select('*, matches!inner(tournament_id, classrooms:tournaments!inner(classroom_id))')
+      .select('*, matches!inner(tournament_id, player_a, player_b, classrooms:tournaments!inner(classroom_id))')
       .eq('match_id', match_id)
       .single();
 
     if (stateError) {
       return new Response(JSON.stringify({ error: 'Match not found' }), {
         status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // SECURITY: Verify user is a player in this tournament
+    const { data: isPlayer } = await supabase
+      .rpc('is_tournament_player', { 
+        _user_id: user.id, 
+        _tournament_id: matchState.matches.tournament_id 
+      });
+
+    if (!isPlayer) {
+      return new Response(JSON.stringify({ error: 'Not authorized - must be a player in this tournament' }), {
+        status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
