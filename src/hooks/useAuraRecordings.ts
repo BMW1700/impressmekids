@@ -18,6 +18,16 @@ export const useAuraRecordings = (studentId?: string) => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+
+      // SECURITY: Log AURA record access for COPPA compliance
+      if (data && data.length > 0) {
+        console.log('[AUDIT] AURA records accessed:', {
+          student_id: studentId,
+          record_count: data.length,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
       return data || [];
     },
     enabled: !!studentId,

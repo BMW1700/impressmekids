@@ -19,6 +19,15 @@ serve(async (req) => {
 
     const { tournament_id, round_number } = await req.json();
 
+    // SECURITY: Input validation
+    if (!tournament_id || round_number === undefined) {
+      console.error('[VALIDATION] Missing required fields');
+      return new Response(JSON.stringify({ error: 'Invalid input' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     console.log('Starting round:', { tournament_id, round_number });
 
     // Verify authorization
@@ -91,9 +100,8 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error in start-round:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    console.error('[ERROR] start-round exception:', error);
+    return new Response(JSON.stringify({ error: 'Operation failed' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

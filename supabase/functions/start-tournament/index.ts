@@ -19,6 +19,15 @@ serve(async (req) => {
 
     const { classroom_id, name, game_type = 'jeopardy_duel' } = await req.json();
 
+    // SECURITY: Input validation
+    if (!classroom_id || !name) {
+      console.error('[VALIDATION] Missing required fields');
+      return new Response(JSON.stringify({ error: 'Invalid input' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     console.log('Creating tournament:', { classroom_id, name, game_type });
 
     // Verify user has permission (is teacher of classroom)
@@ -33,15 +42,15 @@ serve(async (req) => {
       });
     }
 
-    // Verify user is teacher of classroom
-    const { data: classroom, error: classroomError } = await supabase
-      .from('classrooms')
-      .select('teacher_id')
-      .eq('id', classroom_id)
-      .single();
+    // SECURITY: Verify using security definer function
+    const { data: isTeacher, error: authCheckError } = await supabase.rpc('is_classroom_teacher', {
+      _user_id: user.id,
+      _classroom_id: classroom_id
+    });
 
-    if (classroomError || classroom.teacher_id !== user.id) {
-      return new Response(JSON.stringify({ error: 'Not authorized for this classroom' }), {
+    if (authCheckError || !isTeacher) {
+      console.error('[SECURITY] Unauthorized tournament creation:', { user_id: user.id, classroom_id });
+      return new Response(JSON.stringify({ error: 'Access denied' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -61,8 +70,8 @@ serve(async (req) => {
       .single();
 
     if (tournamentError) {
-      console.error('Error creating tournament:', tournamentError);
-      return new Response(JSON.stringify({ error: tournamentError.message }), {
+      console.error('[ERROR] Tournament creation failed:', tournamentError);
+      return new Response(JSON.stringify({ error: 'Failed to create tournament' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -74,9 +83,8 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error in start-tournament:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    console.error('[ERROR] start-tournament exception:', error);
+    return new Response(JSON.stringify({ error: 'Operation failed' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

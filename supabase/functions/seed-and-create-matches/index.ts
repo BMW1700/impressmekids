@@ -19,6 +19,15 @@ serve(async (req) => {
 
     const { tournament_id } = await req.json();
 
+    // SECURITY: Input validation
+    if (!tournament_id) {
+      console.error('[VALIDATION] Missing tournament_id');
+      return new Response(JSON.stringify({ error: 'Invalid input' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     console.log('Seeding and creating matches for tournament:', tournament_id);
 
     // Get tournament and verify ownership
@@ -39,8 +48,9 @@ serve(async (req) => {
       .eq('id', tournament_id)
       .single();
 
-    if (tournamentError || tournament.classrooms.teacher_id !== user.id) {
-      return new Response(JSON.stringify({ error: 'Not authorized' }), {
+    if (tournamentError || !tournament || tournament.classrooms.teacher_id !== user.id) {
+      console.error('[SECURITY] Unauthorized match creation:', { user_id: user.id, tournament_id });
+      return new Response(JSON.stringify({ error: 'Access denied' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -166,9 +176,8 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error in seed-and-create-matches:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    console.error('[ERROR] seed-and-create-matches exception:', error);
+    return new Response(JSON.stringify({ error: 'Operation failed' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

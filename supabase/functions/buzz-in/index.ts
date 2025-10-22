@@ -19,6 +19,15 @@ serve(async (req) => {
 
     const { match_id, seq, tournament_player_id } = await req.json();
 
+    // SECURITY: Input validation
+    if (!match_id || seq === undefined || !tournament_player_id) {
+      console.error('[VALIDATION] Missing required fields');
+      return new Response(JSON.stringify({ error: 'Invalid input' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     console.log('Buzz in attempt:', { match_id, seq, tournament_player_id });
 
     // Verify user authorization
@@ -40,8 +49,9 @@ serve(async (req) => {
       .eq('id', tournament_player_id)
       .single();
 
-    if (playerError || player.profile_id !== user.id) {
-      return new Response(JSON.stringify({ error: 'Not authorized for this match' }), {
+    if (playerError || !player || player.profile_id !== user.id) {
+      console.error('[SECURITY] Unauthorized buzz attempt:', { user_id: user.id, tournament_player_id });
+      return new Response(JSON.stringify({ error: 'Access denied' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -56,8 +66,8 @@ serve(async (req) => {
       });
 
     if (rpcError) {
-      console.error('RPC error:', rpcError);
-      return new Response(JSON.stringify({ error: rpcError.message }), {
+      console.error('[ERROR] Buzz RPC failed:', rpcError);
+      return new Response(JSON.stringify({ error: 'Buzz failed' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -69,9 +79,8 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error in buzz-in:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    console.error('[ERROR] buzz-in exception:', error);
+    return new Response(JSON.stringify({ error: 'Operation failed' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
