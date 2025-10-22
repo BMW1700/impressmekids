@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { seedMatchesSchema, validateInput } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,16 +18,18 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { tournament_id } = await req.json();
+    const requestData = await req.json();
 
-    // SECURITY: Input validation
-    if (!tournament_id) {
-      console.error('[VALIDATION] Missing tournament_id');
-      return new Response(JSON.stringify({ error: 'Invalid input' }), {
+    // Validate input with Zod
+    const validation = validateInput(seedMatchesSchema, requestData);
+    if (!validation.success) {
+      return new Response(JSON.stringify({ error: validation.error }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    const { tournament_id } = validation.data;
 
     console.log('Seeding and creating matches for tournament:', tournament_id);
 

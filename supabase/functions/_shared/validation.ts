@@ -48,6 +48,66 @@ export const submitAnswerSchema = z.object({
   answer_text: z.string().min(1).max(500),
 });
 
+export const buzzInSchema = z.object({
+  match_id: uuidSchema,
+  seq: z.number().int().min(0).max(1000),
+  tournament_player_id: uuidSchema,
+});
+
+export const startTournamentSchema = z.object({
+  tournament_id: uuidSchema,
+});
+
+export const seedMatchesSchema = z.object({
+  tournament_id: uuidSchema,
+  round_number: z.number().int().min(0).max(20),
+});
+
+export const startRoundSchema = z.object({
+  tournament_id: uuidSchema,
+  round_number: z.number().int().min(0).max(20),
+});
+
+export const showNextQuestionSchema = z.object({
+  match_id: uuidSchema,
+});
+
+export const endRoundSchema = z.object({
+  tournament_id: uuidSchema,
+  round_number: z.number().int().min(0).max(20),
+});
+
+export const transcribeAudioSchema = z.object({
+  audio: z.string().min(100).max(10000000), // base64 string, reasonable size limits
+});
+
+export const extractTextSchema = z.object({
+  image: z.string().min(100).max(10000000), // base64 or URL
+});
+
+export const trainMLSchema = z.object({
+  force: z.boolean().optional(),
+});
+
+export const generateQuestionSchema = z.object({
+  classroom_id: uuidSchema,
+  group_id: uuidSchema.optional(),
+  lesson_context: z.string().min(10).max(5000),
+  subject: z.string().min(1).max(100),
+  grade: z.number().int().min(1).max(12),
+  difficulty: z.enum(['easy', 'medium', 'hard']),
+  count: z.number().int().min(1).max(10).optional(),
+});
+
+export const updateQLearningSchema = z.object({
+  exerciseId: uuidSchema,
+  studentId: uuidSchema,
+  performance: z.object({
+    success_rate: z.number().min(0).max(1),
+    completed_phonemes: z.array(z.string().min(1).max(10)).min(0).max(50),
+  }),
+});
+
 // Validation helper
 export function validateInput<T>(schema: z.ZodSchema<T>, data: unknown): { success: true; data: T } | { success: false; error: string } {
   try {

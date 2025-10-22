@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { showNextQuestionSchema, validateInput } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,7 +37,18 @@ serve(async (req) => {
       });
     }
 
-    const { match_id } = await req.json();
+    const requestData = await req.json();
+
+    // Validate input with Zod
+    const validation = validateInput(showNextQuestionSchema, requestData);
+    if (!validation.success) {
+      return new Response(JSON.stringify({ error: validation.error }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { match_id } = validation.data;
 
     console.log('Showing next question for match:', match_id, 'user:', user.id);
 

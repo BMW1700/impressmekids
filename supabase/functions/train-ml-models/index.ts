@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { trainMLSchema, validateInput } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,14 +13,65 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Auth check
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Verify user has admin or teacher role
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .in('role', ['admin', 'teacher'])
+      .single();
+
+    if (!roles) {
+      return new Response(JSON.stringify({ error: 'Access denied - admin or teacher required' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const requestData = await req.json();
+    
+    // Validate input with Zod
+    const validation = validateInput(trainMLSchema, requestData);
+    if (!validation.success) {
+      return new Response(JSON.stringify({ error: validation.error }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     console.log('Starting ML model training pipeline...');
 
+    // Use service role for bulk data access (with proper auth check above)
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
     // Collect training data from aura_records and assignment_submissions
-    const { data: auraRecords, error: auraError } = await supabase
+    const { data: auraRecords, error: auraError } = await supabaseAdmin
       .from('aura_records')
       .select('*')
       .not('literacy_transfer_matrix', 'is', null)
@@ -27,7 +79,7 @@ serve(async (req) => {
 
     if (auraError) throw auraError;
 
-    const { data: submissions, error: submissionError } = await supabase
+    const { data: submissions, error: submissionError } = await supabaseAdmin
       .from('assignment_submissions')
       .select(`
         *,
@@ -128,7 +180,7 @@ serve(async (req) => {
     console.error('Training error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: 'ML training failed. Please try again later.',
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

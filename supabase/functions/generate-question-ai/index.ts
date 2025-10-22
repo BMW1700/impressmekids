@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { generateQuestionSchema, validateInput } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,7 +37,18 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { classroom_id, group_id, subject, grade, difficulty, lesson_context } = await req.json();
+    const requestData = await req.json();
+
+    // Validate input with Zod
+    const validation = validateInput(generateQuestionSchema, requestData);
+    if (!validation.success) {
+      return new Response(JSON.stringify({ error: validation.error }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { classroom_id, group_id, subject, grade, difficulty, lesson_context } = validation.data;
 
     console.log('Generating AI questions:', { classroom_id, group_id, subject, grade, difficulty });
 

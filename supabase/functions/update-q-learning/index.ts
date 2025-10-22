@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { updateQLearningSchema, validateInput } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -35,11 +36,18 @@ serve(async (req) => {
       });
     }
 
-    const { exerciseId, studentId, performance } = await req.json();
+    const requestData = await req.json();
 
-    if (!exerciseId || !studentId || !performance) {
-      throw new Error('Missing required fields: exerciseId, studentId, performance');
+    // Validate input with Zod
+    const validation = validateInput(updateQLearningSchema, requestData);
+    if (!validation.success) {
+      return new Response(JSON.stringify({ error: validation.error }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
+
+    const { exerciseId, studentId, performance } = validation.data;
 
     // SECURITY: Verify user is either the student or their teacher
     const isOwnData = user.id === studentId;
