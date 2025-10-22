@@ -61,49 +61,61 @@ export const StudentLookupModal = ({ open, onOpenChange, parentId, onSuccess }: 
         return;
       }
 
-      // Check if link already exists
-      const { data: existingLink, error: linkCheckError } = await supabase
-        .from("parent_student_links")
-        .select("id, approved")
-        .eq("parent_id", parentId)
-        .eq("student_id", studentProfile.id)
-        .maybeSingle();
+      // Get all classrooms the student is enrolled in
+      const { data: classrooms, error: classroomError } = await supabase
+        .from("classroom_students")
+        .select("classroom_id, classrooms!inner(teacher_id)")
+        .eq("student_id", studentProfile.id);
 
-      if (linkCheckError) {
-        console.error("Error checking existing link:", linkCheckError);
-        toast.error("Error checking student link");
+      if (classroomError) {
+        console.error("Error fetching classrooms:", classroomError);
+        toast.error("Error checking student enrollment");
         setLoading(false);
         return;
       }
 
-      if (existingLink) {
-        if (existingLink.approved) {
-          toast.info("This student is already linked to your account.");
-        } else {
-          toast.info("A link request for this student is already pending approval.");
-        }
+      if (!classrooms || classrooms.length === 0) {
+        toast.error("This student is not enrolled in any classrooms yet. Please contact their teacher.");
+        setLoading(false);
+        return;
+      }
+
+      // Check for existing requests
+      const { data: existingRequests } = await supabase
+        .from("parent_access_requests")
+        .select("id, status")
+        .eq("parent_id", parentId)
+        .eq("student_id", studentProfile.id);
+
+      if (existingRequests && existingRequests.some(req => req.status === 'pending')) {
+        toast.info("Access requests for this student are already pending teacher approval.");
         setLoading(false);
         onOpenChange(false);
         return;
       }
 
-      // Create new parent_student_link with pending status
-      const { error: insertError } = await supabase
-        .from("parent_student_links")
-        .insert({
-          parent_id: parentId,
-          student_id: studentProfile.id,
-          approved: false
-        });
+      // Create access requests for each classroom (teacher approval required)
+      const accessRequests = classrooms.map(classroom => ({
+        parent_id: parentId,
+        student_id: studentProfile.id,
+        classroom_id: classroom.classroom_id,
+        teacher_id: (classroom.classrooms as any).teacher_id,
+        status: 'pending',
+        message: `Parent requesting access to view ${studentName}'s academic progress`
+      }));
 
-      if (insertError) {
-        console.error("Error creating student link:", insertError);
-        toast.error("Error creating student link");
+      const { error: requestError } = await supabase
+        .from("parent_access_requests")
+        .insert(accessRequests);
+
+      if (requestError) {
+        console.error("Error creating access requests:", requestError);
+        toast.error("Error submitting access requests");
         setLoading(false);
         return;
       }
 
-      toast.success("Student link request submitted! Waiting for teacher approval.");
+      toast.success(`Access requests sent to ${classrooms.length} teacher(s)! Teachers will review and approve your request.`);
       setStudentName("");
       setStudentEmail("");
       onOpenChange(false);

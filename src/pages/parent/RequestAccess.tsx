@@ -115,23 +115,7 @@ const RequestAccess = () => {
         return;
       }
 
-      // Create the parent-student link (will be approved by teacher)
-      const { error: linkError } = await supabase
-        .from("parent_student_links")
-        .insert({
-          parent_id: parentAccount.id,
-          student_id: studentProfile.id,
-          approved: false
-        });
-
-      if (linkError) {
-        console.error("Error creating link:", linkError);
-        toast.error("Error creating student link");
-        setLoading(false);
-        return;
-      }
-
-      toast.success("Access request sent! Waiting for teacher approval.");
+      toast.success(`Access request sent to ${classrooms.length} teacher(s)! Waiting for approval.`);
       navigate("/parent/dashboard");
 
     } catch (error) {
