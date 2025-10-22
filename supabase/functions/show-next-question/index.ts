@@ -71,7 +71,24 @@ serve(async (req) => {
 
     console.log('Question shown:', { match_id, seq: next_seq, question_id: matchEvent.question_id });
 
-    return new Response(JSON.stringify({ match_event: matchEvent }), {
+    // SECURITY: Filter out sensitive fields before returning to client
+    // Students should NOT see answer_text or explanation until after they submit
+    const safeQuestion = matchEvent.questions ? {
+      id: matchEvent.questions.id,
+      question_text: matchEvent.questions.question_text,
+      question_type: matchEvent.questions.question_type,
+      options: matchEvent.questions.options,
+      image_url: matchEvent.questions.image_url,
+      difficulty: matchEvent.questions.difficulty,
+      // NEVER include: answer_text, explanation
+    } : null;
+
+    const safeMatchEvent = {
+      ...matchEvent,
+      questions: safeQuestion
+    };
+
+    return new Response(JSON.stringify({ match_event: safeMatchEvent }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
