@@ -920,6 +920,7 @@ export type Database = {
           question_id: string
           resolved_at: string | null
           seq: number
+          shown_at: string | null
         }
         Insert: {
           answer_deadline?: string | null
@@ -934,6 +935,7 @@ export type Database = {
           question_id: string
           resolved_at?: string | null
           seq: number
+          shown_at?: string | null
         }
         Update: {
           answer_deadline?: string | null
@@ -948,6 +950,7 @@ export type Database = {
           question_id?: string
           resolved_at?: string | null
           seq?: number
+          shown_at?: string | null
         }
         Relationships: [
           {
