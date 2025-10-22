@@ -8,24 +8,48 @@ export const useStudentProfile = (studentId?: string) => {
     queryFn: async () => {
       if (!studentId) return null;
 
-      // Fetch profile
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
+      // Get current user to determine access level
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Check if current user is parent of this student
+      const { data: parentChildInfo } = await supabase.rpc(
+        'get_parent_child_info',
+        { _parent_user_id: user.id, _student_id: studentId }
+      );
+
+      // If parent has access, use that data; otherwise use own profile
+      let profile;
+      if (parentChildInfo && parentChildInfo.length > 0) {
+        profile = {
+          id: parentChildInfo[0].student_id,
+          full_name: parentChildInfo[0].full_name,
+          email: parentChildInfo[0].email,
+        };
+      } else if (user.id === studentId) {
+        // User viewing their own profile
+        const { data: ownProfile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .eq('id', studentId)
+          .single();
+        
+        if (profileError) throw profileError;
+        profile = ownProfile;
+      } else {
+        // No access to sensitive data
+        profile = null;
+      }
+
+      // Fetch public profile (display info only)
+      const { data: publicProfile, error: publicProfileError } = await supabase
+        .from('public_profiles')
         .select('*')
         .eq('id', studentId)
-        .single();
-
-      if (profileError) throw profileError;
-
-      // Fetch student profile details
-      const { data: studentProfile, error: studentProfileError } = await supabase
-        .from('student_profiles')
-        .select('*')
-        .eq('user_id', studentId)
         .maybeSingle();
 
-      if (studentProfileError && studentProfileError.code !== 'PGRST116') {
-        throw studentProfileError;
+      if (publicProfileError && publicProfileError.code !== 'PGRST116') {
+        throw publicProfileError;
       }
 
       // Fetch skill vector
@@ -86,7 +110,7 @@ export const useStudentProfile = (studentId?: string) => {
 
       return {
         profile,
-        studentProfile,
+        studentProfile: publicProfile,
         skillVector,
         auraRecords: auraRecords || [],
         submissions: submissions || [],

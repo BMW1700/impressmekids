@@ -53,20 +53,25 @@ const ChildDetail = () => {
   const loadChildData = async () => {
     if (!studentId) return;
 
-    // Get child profile
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name, email")
-      .eq("id", studentId)
-      .single();
-
-    if (profile) {
-      setChild(profile);
-    }
-
-    // Get parent ID
+    // Get parent user ID
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
+
+    // Get child profile using secure function
+    const { data: childInfo } = await supabase.rpc(
+      'get_parent_child_info',
+      { 
+        _parent_user_id: session.user.id,
+        _student_id: studentId 
+      }
+    );
+
+    if (childInfo && childInfo.length > 0) {
+      setChild({
+        full_name: childInfo[0].full_name,
+        email: childInfo[0].email
+      });
+    }
 
     const { data: parentAccount } = await supabase
       .from("parent_accounts")

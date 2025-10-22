@@ -19,7 +19,7 @@ interface Notification {
   resolved_at: string | null;
   message: string | null;
   student: {
-    full_name: string;
+    display_name: string;
   };
   classroom: {
     name: string;
@@ -90,8 +90,8 @@ export const ParentNotificationBell = ({ parentId }: ParentNotificationBellProps
       (data || []).map(async (notification: any) => {
         const [studentResult, classroomResult] = await Promise.all([
           supabase
-            .from('profiles')
-            .select('full_name')
+            .from('public_profiles')
+            .select('display_name')
             .eq('id', notification.student_id)
             .single(),
           supabase
@@ -103,7 +103,7 @@ export const ParentNotificationBell = ({ parentId }: ParentNotificationBellProps
 
         return {
           ...notification,
-          student: studentResult.data || { full_name: 'Unknown Student' },
+          student: studentResult.data || { display_name: 'Unknown Student' },
           classroom: classroomResult.data || { name: 'Unknown Classroom' }
         };
       })
@@ -230,7 +230,7 @@ export const ParentNotificationBell = ({ parentId }: ParentNotificationBellProps
                           {getStatusText(notification.status)}
                         </div>
                         <p className="text-sm font-medium">
-                          {notification.student?.full_name}
+                          {notification.student?.display_name}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {notification.classroom?.name}

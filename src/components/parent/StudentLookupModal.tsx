@@ -28,10 +28,10 @@ export const StudentLookupModal = ({ open, onOpenChange, parentId, onSuccess }: 
     setLoading(true);
 
     try {
-      // Find student by email
+      // Find student by email (only ID needed for verification)
       const { data: studentProfile, error: profileError } = await supabase
         .from("profiles")
-        .select("id, full_name, email, role")
+        .select("id")
         .eq("email", studentEmail.trim().toLowerCase())
         .maybeSingle();
 

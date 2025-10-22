@@ -1335,6 +1335,33 @@ export type Database = {
           },
         ]
       }
+      public_profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string
+          grade: number | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name: string
+          grade?: number | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string
+          grade?: number | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       question_groups: {
         Row: {
           classroom_id: string
@@ -2036,6 +2063,16 @@ export type Database = {
           teacher_name: string
         }[]
       }
+      get_classroom_student_display_info: {
+        Args: { _classroom_id: string; _requesting_user_id: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          grade: number
+          joined_at: string
+          student_id: string
+        }[]
+      }
       get_classroom_students: {
         Args: { _classroom_id: string; _user_id: string }
         Returns: {
@@ -2055,6 +2092,16 @@ export type Database = {
           full_name: string
           id: string
           user_id: string
+        }[]
+      }
+      get_parent_child_info: {
+        Args: { _parent_user_id: string; _student_id: string }
+        Returns: {
+          avatar_url: string
+          email: string
+          full_name: string
+          grade: number
+          student_id: string
         }[]
       }
       get_parent_id: {
