@@ -12,13 +12,56 @@ serve(async (req) => {
   }
 
   try {
-    const { exerciseId, studentId, performance } = await req.json();
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log('Updating Q-learning for exercise:', exerciseId);
+    // SECURITY: Verify user authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { exerciseId, studentId, performance } = await req.json();
+
+    if (!exerciseId || !studentId || !performance) {
+      throw new Error('Missing required fields: exerciseId, studentId, performance');
+    }
+
+    // SECURITY: Verify user is either the student or their teacher
+    const isOwnData = user.id === studentId;
+    
+    let isTeacher = false;
+    if (!isOwnData) {
+      const { data: classrooms } = await supabase
+        .from('classroom_students')
+        .select('classroom_id, classrooms!inner(teacher_id)')
+        .eq('student_id', studentId);
+      
+      isTeacher = classrooms?.some((cs: any) => cs.classrooms.teacher_id === user.id) || false;
+    }
+
+    if (!isOwnData && !isTeacher) {
+      return new Response(JSON.stringify({ error: 'Not authorized - must be the student or their teacher' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log('Updating Q-learning for exercise:', exerciseId, 'user:', user.id, 'authorized:', isOwnData ? 'self' : 'teacher');
 
     // Get exercise details
     const { data: exercise, error: exerciseError } = await supabase
