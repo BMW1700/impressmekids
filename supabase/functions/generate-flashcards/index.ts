@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.58.0";
+import { questionGroupSchema, validateInput } from "../_shared/validation.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -40,16 +41,19 @@ serve(async (req) => {
       });
     }
 
-    const { question_group_id, title, description } = await req.json();
+    const body = await req.json();
 
-    // SECURITY: Input validation
-    if (!question_group_id || typeof question_group_id !== 'string') {
-      console.error('[VALIDATION] Invalid question_group_id');
-      return new Response(JSON.stringify({ error: 'Invalid input' }), {
+    // SECURITY: Zod validation
+    const validation = validateInput(questionGroupSchema, body);
+    if (!validation.success) {
+      console.error('[VALIDATION] Input validation failed:', validation.error);
+      return new Response(JSON.stringify({ error: validation.error }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    const { question_group_id, title, description } = validation.data;
 
     // Fetch the question group and verify ownership
     const { data: group, error: groupError } = await supabase

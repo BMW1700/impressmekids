@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { classroomIdSchema, validateInput } from "../_shared/validation.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -72,16 +73,19 @@ serve(async (req) => {
       });
     }
 
-    const { classroom_id } = await req.json();
+    const body = await req.json();
 
-    // SECURITY: Input validation
-    if (!classroom_id || typeof classroom_id !== 'string') {
-      console.error('[VALIDATION] Invalid classroom_id');
-      return new Response(JSON.stringify({ error: 'Invalid input' }), {
+    // SECURITY: Zod validation
+    const validation = validateInput(classroomIdSchema, body);
+    if (!validation.success) {
+      console.error('[VALIDATION] Input validation failed:', validation.error);
+      return new Response(JSON.stringify({ error: validation.error }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    const { classroom_id } = validation.data;
 
     // Check for recent summary (rate limiting: 1 per day)
     const { data: recentSummary } = await supabase

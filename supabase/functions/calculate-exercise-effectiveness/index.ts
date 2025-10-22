@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.58.0";
+import { exerciseEffectivenessSchema, validateInput } from "../_shared/validation.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -38,24 +39,19 @@ serve(async (req) => {
       });
     }
 
-    const { exerciseId, studentId } = await req.json();
+    const body = await req.json();
 
-    // SECURITY: Input validation
-    if (!exerciseId || typeof exerciseId !== 'string') {
-      console.error('[VALIDATION] Invalid exerciseId');
-      return new Response(JSON.stringify({ error: 'Invalid input' }), {
+    // SECURITY: Zod validation
+    const validation = validateInput(exerciseEffectivenessSchema, body);
+    if (!validation.success) {
+      console.error('[VALIDATION] Input validation failed:', validation.error);
+      return new Response(JSON.stringify({ error: validation.error }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    if (!studentId || typeof studentId !== 'string') {
-      console.error('[VALIDATION] Invalid studentId');
-      return new Response(JSON.stringify({ error: 'Invalid input' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const { exerciseId, studentId } = validation.data;
 
     // SECURITY: Verify user is either the student or their teacher
     const isOwnData = user.id === studentId;

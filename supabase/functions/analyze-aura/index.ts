@@ -251,6 +251,18 @@ Format as JSON:
     
     console.log(`📊 Grade calculation: pronunciation=${pronunciation}, clarity=${clarity}, confidence=${confidence}, pace=${paceClamped}, final grade=${grade}`);
 
+    // COPPA COMPLIANCE: Log AURA record creation for audit trail
+    const auditLogResult = await supabase.rpc('log_aura_access', {
+      p_student_id: user.id,
+      p_record_id: null, // Will be set after insert
+      p_access_type: 'create',
+      p_access_context: readingMode ? 'reading_comprehension' : 'speaking_analysis'
+    });
+    
+    if (auditLogResult.error) {
+      console.warn('[AUDIT] Audit log failed (non-critical):', auditLogResult.error);
+    }
+
     // Store in aura_records with per-phoneme tracking
     const { data: record, error: insertError } = await supabase
       .from('aura_records')

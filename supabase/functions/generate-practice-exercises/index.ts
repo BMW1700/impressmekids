@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { generateExercisesSchema, validateInput } from "../_shared/validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -130,24 +131,19 @@ serve(async (req) => {
       );
     }
 
-    const { studentId, phonemeGaps, grade } = await req.json();
+    const body = await req.json();
 
-    // SECURITY: Input validation
-    if (!studentId || typeof studentId !== 'string') {
-      console.error('[VALIDATION] Invalid studentId');
+    // SECURITY: Zod validation
+    const validation = validateInput(generateExercisesSchema, body);
+    if (!validation.success) {
+      console.error('[VALIDATION] Input validation failed:', validation.error);
       return new Response(
-        JSON.stringify({ error: "Invalid input" }),
+        JSON.stringify({ error: validation.error }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (!phonemeGaps || !Array.isArray(phonemeGaps) || phonemeGaps.length === 0) {
-      console.error('[VALIDATION] Invalid phonemeGaps');
-      return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const { studentId, phonemeGaps, grade } = validation.data;
 
     // CRITICAL SECURITY: Verify user is authorized to generate exercises for this student
     // User must be either the student themselves OR their teacher

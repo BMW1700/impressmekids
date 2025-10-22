@@ -305,6 +305,42 @@ export type Database = {
           },
         ]
       }
+      aura_access_log: {
+        Row: {
+          access_context: string | null
+          access_type: string
+          accessed_by: string
+          accessed_student: string
+          created_at: string
+          id: string
+          ip_address: unknown
+          record_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          access_context?: string | null
+          access_type: string
+          accessed_by: string
+          accessed_student: string
+          created_at?: string
+          id?: string
+          ip_address?: unknown
+          record_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          access_context?: string | null
+          access_type?: string
+          accessed_by?: string
+          accessed_student?: string
+          created_at?: string
+          id?: string
+          ip_address?: unknown
+          record_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       aura_processing_failures: {
         Row: {
           created_at: string
@@ -1546,7 +1582,7 @@ export type Database = {
           action_type: string
           created_at: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           metadata: Json | null
           record_id: string | null
           table_name: string
@@ -1559,7 +1595,7 @@ export type Database = {
           action_type: string
           created_at?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           metadata?: Json | null
           record_id?: string | null
           table_name: string
@@ -1572,7 +1608,7 @@ export type Database = {
           action_type?: string
           created_at?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           metadata?: Json | null
           record_id?: string | null
           table_name?: string
@@ -2046,14 +2082,8 @@ export type Database = {
         }
         Returns: Json
       }
-      compute_levenshtein: {
-        Args: { a: string; b: string }
-        Returns: number
-      }
-      generate_join_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      compute_levenshtein: { Args: { a: string; b: string }; Returns: number }
+      generate_join_code: { Args: never; Returns: string }
       get_classroom_detail: {
         Args: { _classroom_id: string; _user_id: string }
         Returns: {
@@ -2107,10 +2137,7 @@ export type Database = {
           student_id: string
         }[]
       }
-      get_parent_id: {
-        Args: { _user_id: string }
-        Returns: string
-      }
+      get_parent_id: { Args: { _user_id: string }; Returns: string }
       get_parent_student_links: {
         Args: { _user_id: string }
         Returns: {
@@ -2180,10 +2207,7 @@ export type Database = {
         Args: { _classroom_id: string; _user_id: string }
         Returns: boolean
       }
-      is_parent: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
+      is_parent: { Args: { _user_id: string }; Returns: boolean }
       is_parent_of_student: {
         Args: { _student_id: string; _user_id: string }
         Returns: boolean
@@ -2204,9 +2228,15 @@ export type Database = {
         Args: { _tournament_id: string; _user_id: string }
         Returns: boolean
       }
-      join_classroom_by_code: {
-        Args: { p_join_code: string }
-        Returns: Json
+      join_classroom_by_code: { Args: { p_join_code: string }; Returns: Json }
+      log_aura_access: {
+        Args: {
+          p_access_context?: string
+          p_access_type: string
+          p_record_id: string
+          p_student_id: string
+        }
+        Returns: undefined
       }
       submit_answer_tx: {
         Args: {
