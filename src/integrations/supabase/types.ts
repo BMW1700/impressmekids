@@ -2076,7 +2076,12 @@ export type Database = {
         }
         Returns: Json
       }
+      check_email_exists_secure: { Args: { p_email: string }; Returns: boolean }
       compute_levenshtein: { Args: { a: string; b: string }; Returns: number }
+      find_student_by_email_secure: {
+        Args: { p_email: string }
+        Returns: string
+      }
       generate_join_code: { Args: never; Returns: string }
       get_classroom_detail: {
         Args: { _classroom_id: string; _user_id: string }
@@ -2143,6 +2148,14 @@ export type Database = {
           student_id: string
           student_name: string
         }[]
+      }
+      get_signed_audio_url: {
+        Args: {
+          p_audio_path: string
+          p_expires_in?: number
+          p_student_id: string
+        }
+        Returns: string
       }
       get_student_classrooms: {
         Args: { _user_id: string }
@@ -2240,6 +2253,10 @@ export type Database = {
           p_tournament_player_id: string
         }
         Returns: Json
+      }
+      update_user_district: {
+        Args: { p_district_id: string; p_user_id: string }
+        Returns: undefined
       }
     }
     Enums: {

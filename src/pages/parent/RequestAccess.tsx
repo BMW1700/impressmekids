@@ -42,14 +42,13 @@ const RequestAccess = () => {
         return;
       }
 
-      // Find student by email securely
-      const { data: studentProfile, error: studentError } = await supabase
+      // Find student by email securely (returns UUID directly)
+      const { data: studentId, error: studentError } = await supabase
         .rpc('find_student_by_email_secure', { 
           p_email: childEmail.trim().toLowerCase() 
-        })
-        .maybeSingle();
+        });
 
-      if (studentError || !studentProfile) {
+      if (studentError || !studentId) {
         toast.error("Student not found with this email");
         setLoading(false);
         return;
@@ -58,7 +57,7 @@ const RequestAccess = () => {
       // Verify the user has student role using user_roles table
       const { data: roleCheck } = await supabase
         .rpc('has_role', { 
-          _user_id: studentProfile.id, 
+          _user_id: studentId, 
           _role: 'student' 
         });
 
@@ -73,7 +72,7 @@ const RequestAccess = () => {
         .from("parent_student_links")
         .select("*")
         .eq("parent_id", parentAccount.id)
-        .eq("student_id", studentProfile.id)
+        .eq("student_id", studentId)
         .maybeSingle();
 
       if (existingLink) {
@@ -86,7 +85,7 @@ const RequestAccess = () => {
       const { data: classrooms } = await supabase
         .from("classroom_students")
         .select("classroom_id, classrooms(teacher_id)")
-        .eq("student_id", studentProfile.id);
+        .eq("student_id", studentId);
 
       if (!classrooms || classrooms.length === 0) {
         toast.error("Student is not enrolled in any classrooms");
@@ -97,7 +96,7 @@ const RequestAccess = () => {
       // Create access requests for each classroom
       const requests = classrooms.map((cs: any) => ({
         parent_id: parentAccount.id,
-        student_id: studentProfile.id,
+        student_id: studentId,
         classroom_id: cs.classroom_id,
         teacher_id: cs.classrooms.teacher_id,
         status: "pending",

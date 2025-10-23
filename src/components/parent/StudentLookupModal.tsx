@@ -28,13 +28,11 @@ export const StudentLookupModal = ({ open, onOpenChange, parentId, onSuccess }: 
     setLoading(true);
 
     try {
-      // SECURITY: Use secure function to find student by email
-      // This prevents email enumeration attacks
-      const { data: studentProfile, error: profileError } = await supabase
+      // SECURITY: Use secure function to find student by email (returns UUID directly)
+      const { data: studentId, error: profileError } = await supabase
         .rpc('find_student_by_email_secure', { 
           p_email: studentEmail.trim().toLowerCase() 
-        })
-        .maybeSingle();
+        });
 
       if (profileError) {
         console.error("Error finding student:", profileError);
@@ -43,7 +41,7 @@ export const StudentLookupModal = ({ open, onOpenChange, parentId, onSuccess }: 
         return;
       }
 
-      if (!studentProfile) {
+      if (!studentId) {
         toast.error("The email entered is invalid. No student found with that email.");
         setLoading(false);
         return;
@@ -52,7 +50,7 @@ export const StudentLookupModal = ({ open, onOpenChange, parentId, onSuccess }: 
       // Verify the user has student role using user_roles table
       const { data: roleCheck } = await supabase
         .rpc('has_role', { 
-          _user_id: studentProfile.id, 
+          _user_id: studentId, 
           _role: 'student' 
         });
 
@@ -66,7 +64,7 @@ export const StudentLookupModal = ({ open, onOpenChange, parentId, onSuccess }: 
       const { data: classrooms, error: classroomError } = await supabase
         .from("classroom_students")
         .select("classroom_id, classrooms!inner(teacher_id)")
-        .eq("student_id", studentProfile.id);
+        .eq("student_id", studentId);
 
       if (classroomError) {
         console.error("Error fetching classrooms:", classroomError);
@@ -86,7 +84,7 @@ export const StudentLookupModal = ({ open, onOpenChange, parentId, onSuccess }: 
         .from("parent_access_requests")
         .select("id, status")
         .eq("parent_id", parentId)
-        .eq("student_id", studentProfile.id);
+        .eq("student_id", studentId);
 
       if (existingRequests && existingRequests.some(req => req.status === 'pending')) {
         toast.info("Access requests for this student are already pending teacher approval.");
@@ -98,7 +96,7 @@ export const StudentLookupModal = ({ open, onOpenChange, parentId, onSuccess }: 
       // Create access requests for each classroom (teacher approval required)
       const accessRequests = classrooms.map(classroom => ({
         parent_id: parentId,
-        student_id: studentProfile.id,
+        student_id: studentId,
         classroom_id: classroom.classroom_id,
         teacher_id: (classroom.classrooms as any).teacher_id,
         status: 'pending',
