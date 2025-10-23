@@ -251,6 +251,39 @@ const Auth = () => {
     }
   };
 
+  const handleResetPassword = async () => {
+    if (!email) {
+      toast({
+        title: "Email required",
+        description: "Please enter your email address first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'https://impress-me-kids.lovable.app/auth',
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Check your email",
+        description: "We've sent you a password reset link.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send reset email",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -388,7 +421,18 @@ const Auth = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signin-password">Password</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="signin-password">Password</Label>
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="px-0 h-auto text-xs text-muted-foreground hover:text-primary"
+                        onClick={handleResetPassword}
+                        disabled={isLoading}
+                      >
+                        Forgot Password?
+                      </Button>
+                    </div>
                     <Input
                       id="signin-password"
                       type="password"
