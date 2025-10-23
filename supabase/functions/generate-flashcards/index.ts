@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.58.0";
 import { questionGroupSchema, validateInput } from "../_shared/validation.ts";
+import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "../_shared/rateLimiter.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -38,6 +39,23 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // SECURITY: Rate limiting (100 requests per minute per user)
+    const rateLimitResult = await checkRateLimit(user.id, 'generate-flashcards', RATE_LIMITS.AI_FUNCTION);
+    if (!rateLimitResult.allowed) {
+      console.warn('[RATE_LIMIT] Rate limit exceeded:', user.id);
+      return new Response(JSON.stringify({ 
+        error: 'Rate limit exceeded. Please try again later.',
+        resetAt: rateLimitResult.resetAt,
+      }), {
+        status: 429,
+        headers: { 
+          ...corsHeaders, 
+          ...getRateLimitHeaders(rateLimitResult, RATE_LIMITS.AI_FUNCTION),
+          'Content-Type': 'application/json',
+        },
       });
     }
 

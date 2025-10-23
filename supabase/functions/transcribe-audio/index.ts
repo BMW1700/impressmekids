@@ -2,7 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { transcribeAudioSchema, validateInput } from '../_shared/validation.ts';
-import { checkRateLimit, getRateLimitHeaders } from '../_shared/rateLimiter.ts';
+import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from '../_shared/rateLimiter.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -78,7 +78,7 @@ serve(async (req) => {
         status: 429,
         headers: { 
           ...corsHeaders, 
-          ...getRateLimitHeaders(rateLimitResult),
+          ...getRateLimitHeaders(rateLimitResult, RATE_LIMITS.AI_FUNCTION),
           'Content-Type': 'application/json',
         },
       });

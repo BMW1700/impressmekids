@@ -1,8 +1,14 @@
 // Deno KV-based rate limiter for edge functions
-// Implements 100 requests per minute per user
+// Configurable rate limits per function type
 
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute in milliseconds
-const MAX_REQUESTS_PER_WINDOW = 100;
+
+// Default limits by function category
+export const RATE_LIMITS = {
+  AI_FUNCTION: 100,        // AI functions: 100 req/min
+  ML_TRAINING: 10,         // Expensive ML operations: 10 req/min
+  TOURNAMENT: 1000,        // Rapid-fire tournament: 1000 req/min
+} as const;
 
 export interface RateLimitResult {
   allowed: boolean;
@@ -14,11 +20,13 @@ export interface RateLimitResult {
  * Check if a user has exceeded their rate limit
  * @param userId - User ID to check
  * @param functionName - Name of the function being rate-limited
+ * @param maxRequests - Maximum requests per window (defaults to 100)
  * @returns RateLimitResult indicating if request is allowed
  */
 export async function checkRateLimit(
   userId: string,
-  functionName: string
+  functionName: string,
+  maxRequests: number = RATE_LIMITS.AI_FUNCTION
 ): Promise<RateLimitResult> {
   try {
     const kv = await Deno.openKv();
@@ -36,7 +44,7 @@ export async function checkRateLimit(
       
       return {
         allowed: true,
-        remainingRequests: MAX_REQUESTS_PER_WINDOW - 1,
+        remainingRequests: maxRequests - 1,
         resetAt: new Date(now + RATE_LIMIT_WINDOW),
       };
     }
@@ -53,13 +61,13 @@ export async function checkRateLimit(
       
       return {
         allowed: true,
-        remainingRequests: MAX_REQUESTS_PER_WINDOW - 1,
+        remainingRequests: maxRequests - 1,
         resetAt: new Date(now + RATE_LIMIT_WINDOW),
       };
     }
 
     // Check if limit exceeded
-    if (count >= MAX_REQUESTS_PER_WINDOW) {
+    if (count >= maxRequests) {
       return {
         allowed: false,
         remainingRequests: 0,
@@ -74,7 +82,7 @@ export async function checkRateLimit(
 
     return {
       allowed: true,
-      remainingRequests: MAX_REQUESTS_PER_WINDOW - count - 1,
+      remainingRequests: maxRequests - count - 1,
       resetAt: new Date(windowStart + RATE_LIMIT_WINDOW),
     };
   } catch (error) {
@@ -82,7 +90,7 @@ export async function checkRateLimit(
     // Fail open - allow request if rate limiting system fails
     return {
       allowed: true,
-      remainingRequests: MAX_REQUESTS_PER_WINDOW,
+      remainingRequests: maxRequests,
       resetAt: new Date(Date.now() + RATE_LIMIT_WINDOW),
     };
   }
@@ -91,9 +99,9 @@ export async function checkRateLimit(
 /**
  * Create rate limit response headers
  */
-export function getRateLimitHeaders(result: RateLimitResult): Record<string, string> {
+export function getRateLimitHeaders(result: RateLimitResult, maxRequests: number): Record<string, string> {
   return {
-    'X-RateLimit-Limit': MAX_REQUESTS_PER_WINDOW.toString(),
+    'X-RateLimit-Limit': maxRequests.toString(),
     'X-RateLimit-Remaining': result.remainingRequests.toString(),
     'X-RateLimit-Reset': result.resetAt.toISOString(),
   };
