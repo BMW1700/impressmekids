@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { validateInput, submitAnswerSchema } from "../_shared/validation.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,16 +18,19 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { match_id, seq, tournament_player_id, answer_text } = await req.json();
+    const requestData = await req.json();
 
-    // SECURITY: Input validation
-    if (!match_id || seq === undefined || !tournament_player_id || !answer_text) {
-      console.error('[VALIDATION] Missing required fields');
+    // SECURITY: Zod input validation
+    const validation = validateInput(submitAnswerSchema, requestData);
+    if (!validation.success) {
+      console.error('[VALIDATION] Invalid input:', validation.error);
       return new Response(JSON.stringify({ error: 'Invalid input' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    const { match_id, seq, tournament_player_id, answer_text } = validation.data;
 
     console.log('Submit answer:', { match_id, seq, tournament_player_id });
 
