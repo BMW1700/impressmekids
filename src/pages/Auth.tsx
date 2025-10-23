@@ -129,11 +129,12 @@ const Auth = () => {
 
       if (roleError) throw roleError;
 
-      // Also update district in profiles
+      // Update district via secure function
       const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ district_id: pendingDistrictId })
-        .eq('id', user.id);
+        .rpc('update_user_district', { 
+          p_user_id: user.id,
+          p_district_id: pendingDistrictId 
+        });
 
       if (profileError) throw profileError;
 
@@ -162,14 +163,17 @@ const Auth = () => {
     try {
       console.log('🔐 Starting signup process...', { email, role, fullName });
       
-      // Check if email already exists in profiles table
-      const { data: profileCheck } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('email', email.toLowerCase().trim())
-        .maybeSingle();
+      // Check if email exists via secure function (prevents email enumeration)
+      const { data: profileCheck, error: checkError } = await supabase
+        .rpc('check_email_exists_secure', { 
+          p_email: email.toLowerCase().trim() 
+        });
       
-      if (profileCheck) {
+      if (checkError) {
+        console.error('Email check error:', checkError);
+      }
+      
+      if (profileCheck === true) {
         toast({
           title: "Email already registered",
           description: "This email is already in use. Please sign in instead.",

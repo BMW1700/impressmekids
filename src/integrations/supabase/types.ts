@@ -1621,25 +1621,19 @@ export type Database = {
       }
       student_profiles: {
         Row: {
-          avatar_url: string | null
           created_at: string
-          grade: number | null
           id: string
           stats: Json | null
           user_id: string
         }
         Insert: {
-          avatar_url?: string | null
           created_at?: string
-          grade?: number | null
           id?: string
           stats?: Json | null
           user_id: string
         }
         Update: {
-          avatar_url?: string | null
           created_at?: string
-          grade?: number | null
           id?: string
           stats?: Json | null
           user_id?: string

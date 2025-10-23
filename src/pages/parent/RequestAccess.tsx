@@ -42,14 +42,14 @@ const RequestAccess = () => {
         return;
       }
 
-      // Find student by email
-      const { data: studentProfile } = await supabase
-        .from("profiles")
-        .select("id, role")
-        .eq("email", childEmail.trim())
-        .single();
+      // Find student by email securely
+      const { data: studentProfile, error: studentError } = await supabase
+        .rpc('find_student_by_email_secure', { 
+          p_email: childEmail.trim().toLowerCase() 
+        })
+        .maybeSingle();
 
-      if (!studentProfile) {
+      if (studentError || !studentProfile) {
         toast.error("Student not found with this email");
         setLoading(false);
         return;

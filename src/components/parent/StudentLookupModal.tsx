@@ -28,11 +28,12 @@ export const StudentLookupModal = ({ open, onOpenChange, parentId, onSuccess }: 
     setLoading(true);
 
     try {
-      // Find student by email (only ID needed for verification)
+      // SECURITY: Use secure function to find student by email
+      // This prevents email enumeration attacks
       const { data: studentProfile, error: profileError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("email", studentEmail.trim().toLowerCase())
+        .rpc('find_student_by_email_secure', { 
+          p_email: studentEmail.trim().toLowerCase() 
+        })
         .maybeSingle();
 
       if (profileError) {

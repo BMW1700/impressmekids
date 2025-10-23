@@ -45,13 +45,11 @@ const JeopardyGame = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', session.user.id)
-        .single();
+      // Use secure function to check role
+      const { data: userRole } = await supabase
+        .rpc('get_user_role', { _user_id: session.user.id });
 
-      if (profile?.role === 'teacher') {
+      if (userRole === 'teacher') {
         setIsTeacher(true);
         loadTeacherClassrooms(session.user.id);
       }

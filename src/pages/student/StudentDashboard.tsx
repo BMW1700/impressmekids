@@ -69,10 +69,17 @@ const StudentDashboard = () => {
       console.log('✅ Student access confirmed');
       setProfile(profileData);
 
-      // Get or create student profile
+      // Get public profile (display-safe info only)
+      const { data: publicProfile } = await supabase
+        .from('public_profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+
+      // Get student stats from student_profiles
       const { data: studentData } = await supabase
         .from('student_profiles')
-        .select('*')
+        .select('stats')
         .eq('user_id', session.user.id)
         .single();
 
@@ -83,11 +90,11 @@ const StudentDashboard = () => {
           .insert({ user_id: session.user.id, stats: { games_played: 0, games_won: 0 } })
           .select()
           .single();
-        setStudentProfile(newProfile);
+        setStudentProfile({ ...publicProfile, stats: newProfile?.stats });
         console.log('✅ Student profile created');
       } else {
         console.log('✅ Student profile found');
-        setStudentProfile(studentData);
+        setStudentProfile({ ...publicProfile, stats: studentData.stats });
       }
     } catch (error) {
       console.error('❌ Auth check error:', error);
@@ -190,7 +197,7 @@ const StudentDashboard = () => {
           <div className="grid lg:grid-cols-3 gap-6 mb-8">
             <div className="lg:col-span-1">
               <ProfileCard
-                fullName={profile?.full_name}
+                fullName={studentProfile?.display_name || profile?.full_name}
                 grade={studentProfile?.grade}
                 avatarUrl={studentProfile?.avatar_url}
                 stats={studentProfile?.stats}

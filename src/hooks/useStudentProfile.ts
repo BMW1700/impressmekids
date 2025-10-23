@@ -27,15 +27,12 @@ export const useStudentProfile = (studentId?: string) => {
           email: parentChildInfo[0].email,
         };
       } else if (user.id === studentId) {
-        // User viewing their own profile
+        // User viewing their own profile - full access
         const { data: ownProfile, error: profileError } = await supabase
-          .from('profiles')
-          .select('id, full_name, email')
-          .eq('id', studentId)
-          .single();
+          .rpc('get_user_profile', { _user_id: studentId });
         
         if (profileError) throw profileError;
-        profile = ownProfile;
+        profile = ownProfile?.[0] || null;
       } else {
         // No access to sensitive data
         profile = null;
