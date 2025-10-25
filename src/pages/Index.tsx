@@ -12,17 +12,17 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const checkAuthAndRedirect = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session) {
+        // User is authenticated, redirect to their dashboard
         const { data: profileData } = await supabase
           .rpc('get_user_profile', { _user_id: session.user.id });
-        
+
         if (profileData && profileData.length > 0) {
           const userRole = profileData[0].role;
           
-          // Redirect to appropriate dashboard
           if (userRole === 'teacher') {
             navigate('/teacher/dashboard');
           } else if (userRole === 'parent') {
@@ -35,8 +35,8 @@ const Index = () => {
         }
       }
     };
-    
-    checkAuth();
+
+    checkAuthAndRedirect();
   }, [navigate]);
 
   return (
