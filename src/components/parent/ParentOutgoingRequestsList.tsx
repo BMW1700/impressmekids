@@ -22,10 +22,11 @@ export const ParentOutgoingRequestsList = ({ parentId }: ParentOutgoingRequestsL
   const { data: requests, isLoading } = useQuery({
     queryKey: ["parent-access-requests", parentId],
     queryFn: async () => {
+      // RLS policy already filters by parent_id using get_parent_id(auth.uid())
+      // No need to add redundant filter here
       const { data: requestsData, error: requestsError } = await supabase
         .from("parent_access_requests")
         .select("id, student_id, status, message, created_at")
-        .eq("parent_id", parentId)
         .order("created_at", { ascending: false });
 
       if (requestsError) throw requestsError;
