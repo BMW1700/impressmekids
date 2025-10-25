@@ -60,61 +60,43 @@ export const StudentLookupModal = ({ open, onOpenChange, parentId, onSuccess }: 
         return;
       }
 
-      // Get all classrooms the student is enrolled in
-      const { data: classrooms, error: classroomError } = await supabase
-        .from("classroom_students")
-        .select("classroom_id, classrooms!inner(teacher_id)")
-        .eq("student_id", studentId);
-
-      if (classroomError) {
-        console.error("Error fetching classrooms:", classroomError);
-        toast.error("Error checking student enrollment");
-        setLoading(false);
-        return;
-      }
-
-      if (!classrooms || classrooms.length === 0) {
-        toast.error("This student is not enrolled in any classrooms yet. Please contact their teacher.");
-        setLoading(false);
-        return;
-      }
-
       // Check for existing requests
       const { data: existingRequests } = await supabase
         .from("parent_access_requests")
         .select("id, status")
         .eq("parent_id", parentId)
-        .eq("student_id", studentId);
+        .eq("student_id", studentId)
+        .eq("approval_type", "admin");
 
       if (existingRequests && existingRequests.some(req => req.status === 'pending')) {
-        toast.info("Access requests for this student are already pending teacher approval.");
+        toast.info("An access request for this student is already pending admin approval.");
         setLoading(false);
         onOpenChange(false);
         return;
       }
 
-      // Create access requests for each classroom (teacher approval required)
-      const accessRequests = classrooms.map(classroom => ({
-        parent_id: parentId,
-        student_id: studentId,
-        classroom_id: classroom.classroom_id,
-        teacher_id: (classroom.classrooms as any).teacher_id,
-        status: 'pending',
-        message: `Parent requesting access to view ${studentName}'s academic progress`
-      }));
-
+      // Create a single admin-approval request
       const { error: requestError } = await supabase
         .from("parent_access_requests")
-        .insert(accessRequests);
+        .insert({
+          parent_id: parentId,
+          student_id: studentId,
+          classroom_id: null,
+          teacher_id: null,
+          admin_id: null,
+          approval_type: "admin",
+          status: 'pending',
+          message: `Parent requesting access to view ${studentName}'s academic progress`
+        });
 
       if (requestError) {
-        console.error("Error creating access requests:", requestError);
-        toast.error("Error submitting access requests");
+        console.error("Error creating access request:", requestError);
+        toast.error("Error submitting access request");
         setLoading(false);
         return;
       }
 
-      toast.success(`Access requests sent to ${classrooms.length} teacher(s)! Teachers will review and approve your request.`);
+      toast.success("Access request sent to admin for approval! You will be notified once it's reviewed.");
       setStudentName("");
       setStudentEmail("");
       onOpenChange(false);

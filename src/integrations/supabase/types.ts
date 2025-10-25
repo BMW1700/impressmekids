@@ -1130,7 +1130,9 @@ export type Database = {
       }
       parent_access_requests: {
         Row: {
-          classroom_id: string
+          admin_id: string | null
+          approval_type: string | null
+          classroom_id: string | null
           created_at: string
           id: string
           message: string | null
@@ -1139,10 +1141,12 @@ export type Database = {
           resolved_at: string | null
           status: string
           student_id: string
-          teacher_id: string
+          teacher_id: string | null
         }
         Insert: {
-          classroom_id: string
+          admin_id?: string | null
+          approval_type?: string | null
+          classroom_id?: string | null
           created_at?: string
           id?: string
           message?: string | null
@@ -1151,10 +1155,12 @@ export type Database = {
           resolved_at?: string | null
           status?: string
           student_id: string
-          teacher_id: string
+          teacher_id?: string | null
         }
         Update: {
-          classroom_id?: string
+          admin_id?: string | null
+          approval_type?: string | null
+          classroom_id?: string | null
           created_at?: string
           id?: string
           message?: string | null
@@ -1163,7 +1169,7 @@ export type Database = {
           resolved_at?: string | null
           status?: string
           student_id?: string
-          teacher_id?: string
+          teacher_id?: string | null
         }
         Relationships: [
           {

@@ -88,23 +88,26 @@ export const ParentNotificationBell = ({ parentId }: ParentNotificationBellProps
     // Fetch student and classroom details separately
     const enrichedData = await Promise.all(
       (data || []).map(async (notification: any) => {
-        const [studentResult, classroomResult] = await Promise.all([
-          supabase
-            .from('public_profiles')
-            .select('display_name')
-            .eq('id', notification.student_id)
-            .single(),
-          supabase
+        const studentResult = await supabase
+          .from('public_profiles')
+          .select('display_name')
+          .eq('id', notification.student_id)
+          .single();
+
+        // Only fetch classroom if classroom_id exists (for teacher-type requests)
+        let classroomResult = null;
+        if (notification.classroom_id) {
+          classroomResult = await supabase
             .from('classrooms')
             .select('name')
             .eq('id', notification.classroom_id)
-            .single()
-        ]);
+            .single();
+        }
 
         return {
           ...notification,
           student: studentResult.data || { display_name: 'Unknown Student' },
-          classroom: classroomResult.data || { name: 'Unknown Classroom' }
+          classroom: classroomResult?.data || { name: 'Admin Approved' }
         };
       })
     );
