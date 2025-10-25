@@ -27,23 +27,68 @@ export const ParentAccessRequestsList = () => {
   const queryClient = useQueryClient();
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  const { data: requests, isLoading } = useQuery({
+  const { data: requests, isLoading, error } = useQuery({
     queryKey: ["admin-parent-access-requests"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      console.log("🔍 Fetching admin parent access requests...");
+      
+      // First fetch the requests
+      const { data: requestsData, error: requestsError } = await supabase
         .from("parent_access_requests")
-        .select(`
-          *,
-          parent_accounts!parent_id (full_name, email),
-          student:profiles!student_id (full_name)
-        `)
+        .select("*")
         .eq("approval_type", "admin")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      return data as unknown as ParentAccessRequest[];
+      if (requestsError) {
+        console.error("❌ Error fetching requests:", requestsError);
+        throw requestsError;
+      }
+
+      console.log("✅ Fetched requests:", requestsData?.length || 0);
+
+      if (!requestsData || requestsData.length === 0) {
+        return [];
+      }
+
+      // Fetch parent account details for each request
+      const parentIds = [...new Set(requestsData.map(r => r.parent_id))];
+      const { data: parentsData, error: parentsError } = await supabase
+        .from("parent_accounts")
+        .select("id, full_name, email")
+        .in("id", parentIds);
+
+      if (parentsError) {
+        console.error("❌ Error fetching parents:", parentsError);
+        throw parentsError;
+      }
+
+      // Fetch student profiles
+      const studentIds = [...new Set(requestsData.map(r => r.student_id))];
+      const { data: studentsData, error: studentsError } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", studentIds);
+
+      if (studentsError) {
+        console.error("❌ Error fetching students:", studentsError);
+        throw studentsError;
+      }
+
+      // Combine the data
+      const enrichedRequests = requestsData.map(request => ({
+        ...request,
+        parent_accounts: parentsData?.find(p => p.id === request.parent_id) || { full_name: "Unknown", email: "Unknown" },
+        student: studentsData?.find(s => s.id === request.student_id) || { full_name: "Unknown" }
+      }));
+
+      console.log("✅ Enriched requests:", enrichedRequests);
+      return enrichedRequests as unknown as ParentAccessRequest[];
     },
   });
+
+  if (error) {
+    console.error("❌ Query error:", error);
+  }
 
   const handleApprove = async (requestId: string, parentId: string, studentId: string) => {
     setProcessingId(requestId);
