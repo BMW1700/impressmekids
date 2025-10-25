@@ -2082,6 +2082,10 @@ export type Database = {
         }
         Returns: Json
       }
+      can_parent_view_student_profile: {
+        Args: { _student_id: string; _user_id: string }
+        Returns: boolean
+      }
       check_email_exists_secure: { Args: { p_email: string }; Returns: boolean }
       compute_levenshtein: { Args: { a: string; b: string }; Returns: number }
       find_student_by_email_secure: {
