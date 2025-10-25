@@ -24,6 +24,27 @@ const ParentDashboard = () => {
         return;
       }
 
+      // Verify user is a parent
+      const { data: profileData } = await supabase
+        .rpc("get_user_profile", { _user_id: session.user.id });
+      
+      if (!profileData || profileData.length === 0 || profileData[0].role !== 'parent') {
+        // Not a parent, redirect to appropriate dashboard
+        if (profileData && profileData.length > 0) {
+          const userRole = profileData[0].role;
+          if (userRole === 'teacher') {
+            navigate('/teacher/dashboard');
+          } else if (userRole === 'district_admin') {
+            navigate('/district/dashboard');
+          } else {
+            navigate('/student/dashboard');
+          }
+        } else {
+          navigate('/auth');
+        }
+        return;
+      }
+
       // Use security definer function to get parent account
       const { data: parentAccount } = await supabase
         .rpc("get_parent_account", { _user_id: session.user.id });

@@ -1,3 +1,6 @@
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { GameTile } from "@/components/GameTile";
@@ -6,6 +9,36 @@ import { Link } from "react-router-dom";
 import { Zap, Users, Trophy, BookOpen } from "lucide-react";
 
 const Index = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        const { data: profileData } = await supabase
+          .rpc('get_user_profile', { _user_id: session.user.id });
+        
+        if (profileData && profileData.length > 0) {
+          const userRole = profileData[0].role;
+          
+          // Redirect to appropriate dashboard
+          if (userRole === 'teacher') {
+            navigate('/teacher/dashboard');
+          } else if (userRole === 'parent') {
+            navigate('/parent/dashboard');
+          } else if (userRole === 'district_admin') {
+            navigate('/district/dashboard');
+          } else {
+            navigate('/student/dashboard');
+          }
+        }
+      }
+    };
+    
+    checkAuth();
+  }, [navigate]);
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
