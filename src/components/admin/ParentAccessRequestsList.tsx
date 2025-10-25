@@ -93,30 +93,53 @@ export const ParentAccessRequestsList = () => {
       const parentIds = [...new Set(requestsData.map(r => r.parent_id))];
       console.log("👪 [ADMIN REQUESTS] Fetching parent accounts for IDs:", parentIds);
       
-      const { data: parentsData, error: parentsError } = await supabase
+      const { data: parentsDataRaw, error: parentsError } = await supabase
         .from("parent_accounts")
         .select("id, full_name, email")
         .in("id", parentIds);
 
+      let parentsData = parentsDataRaw;
+
       console.log("👪 [ADMIN REQUESTS] Parent accounts result:", {
         parentsCount: parentsData?.length || 0,
         parentsData,
-        parentsError
+        parentsError,
+        errorDetails: parentsError ? {
+          message: parentsError.message,
+          code: parentsError.code,
+          details: parentsError.details,
+          hint: parentsError.hint
+        } : null
       });
 
       if (parentsError) {
-        console.error("❌ [ADMIN REQUESTS] Error fetching parents:", parentsError);
-        throw parentsError;
+        console.error("❌ [ADMIN REQUESTS] Error fetching parents:", {
+          error: parentsError,
+          message: parentsError.message,
+          code: parentsError.code,
+          details: parentsError.details,
+          hint: parentsError.hint
+        });
+        
+        // Don't throw - instead use fallback data
+        console.warn("⚠️ [ADMIN REQUESTS] Using fallback for parent accounts");
+        parentsData = requestsData.map(r => ({
+          id: r.parent_id,
+          full_name: "Parent",
+          email: "Email unavailable"
+        }));
       }
 
       // Fetch student profiles
       const studentIds = [...new Set(requestsData.map(r => r.student_id))];
       console.log("🎓 [ADMIN REQUESTS] Fetching student profiles for IDs:", studentIds);
       
-      const { data: studentsData, error: studentsError } = await supabase
+      const { data: studentsDataRaw, error: studentsError } = await supabase
         .from("profiles")
         .select("id, full_name")
         .in("id", studentIds);
+
+      let studentsData = studentsDataRaw;
 
       console.log("🎓 [ADMIN REQUESTS] Student profiles result:", {
         studentsCount: studentsData?.length || 0,
@@ -126,7 +149,13 @@ export const ParentAccessRequestsList = () => {
 
       if (studentsError) {
         console.error("❌ [ADMIN REQUESTS] Error fetching students:", studentsError);
-        throw studentsError;
+        
+        // Don't throw - instead use fallback data
+        console.warn("⚠️ [ADMIN REQUESTS] Using fallback for student profiles");
+        studentsData = requestsData.map(r => ({
+          id: r.student_id,
+          full_name: "Student"
+        }));
       }
 
       // Combine the data
