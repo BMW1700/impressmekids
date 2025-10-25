@@ -30,47 +30,102 @@ export const ParentAccessRequestsList = () => {
   const { data: requests, isLoading, error } = useQuery({
     queryKey: ["admin-parent-access-requests"],
     queryFn: async () => {
-      console.log("🔍 Fetching admin parent access requests...");
+      console.log("🔍 [ADMIN REQUESTS] Starting fetch...");
       
+      // Check authentication
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log("👤 [ADMIN REQUESTS] Session check:", {
+        hasSession: !!session,
+        userId: session?.user?.id,
+        sessionError
+      });
+
+      if (!session) {
+        console.error("❌ [ADMIN REQUESTS] No session found!");
+        throw new Error("Not authenticated");
+      }
+
+      // Check user role
+      const { data: roleData, error: roleError } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id);
+      
+      console.log("🔑 [ADMIN REQUESTS] User roles:", {
+        roles: roleData,
+        roleError,
+        hasAdminRole: roleData?.some(r => r.role === 'admin')
+      });
+
       // First fetch the requests
+      console.log("📊 [ADMIN REQUESTS] Fetching parent_access_requests...");
       const { data: requestsData, error: requestsError } = await supabase
         .from("parent_access_requests")
         .select("*")
         .eq("approval_type", "admin")
         .order("created_at", { ascending: false });
 
+      console.log("📋 [ADMIN REQUESTS] Query result:", {
+        requestsCount: requestsData?.length || 0,
+        requestsData,
+        error: requestsError,
+        errorDetails: requestsError ? {
+          message: requestsError.message,
+          code: requestsError.code,
+          details: requestsError.details,
+          hint: requestsError.hint
+        } : null
+      });
+
       if (requestsError) {
-        console.error("❌ Error fetching requests:", requestsError);
+        console.error("❌ [ADMIN REQUESTS] Error fetching requests:", requestsError);
         throw requestsError;
       }
 
-      console.log("✅ Fetched requests:", requestsData?.length || 0);
-
       if (!requestsData || requestsData.length === 0) {
+        console.log("📭 [ADMIN REQUESTS] No requests found, returning empty array");
         return [];
       }
 
+      console.log("✅ [ADMIN REQUESTS] Found requests:", requestsData.length);
+
       // Fetch parent account details for each request
       const parentIds = [...new Set(requestsData.map(r => r.parent_id))];
+      console.log("👪 [ADMIN REQUESTS] Fetching parent accounts for IDs:", parentIds);
+      
       const { data: parentsData, error: parentsError } = await supabase
         .from("parent_accounts")
         .select("id, full_name, email")
         .in("id", parentIds);
 
+      console.log("👪 [ADMIN REQUESTS] Parent accounts result:", {
+        parentsCount: parentsData?.length || 0,
+        parentsData,
+        parentsError
+      });
+
       if (parentsError) {
-        console.error("❌ Error fetching parents:", parentsError);
+        console.error("❌ [ADMIN REQUESTS] Error fetching parents:", parentsError);
         throw parentsError;
       }
 
       // Fetch student profiles
       const studentIds = [...new Set(requestsData.map(r => r.student_id))];
+      console.log("🎓 [ADMIN REQUESTS] Fetching student profiles for IDs:", studentIds);
+      
       const { data: studentsData, error: studentsError } = await supabase
         .from("profiles")
         .select("id, full_name")
         .in("id", studentIds);
 
+      console.log("🎓 [ADMIN REQUESTS] Student profiles result:", {
+        studentsCount: studentsData?.length || 0,
+        studentsData,
+        studentsError
+      });
+
       if (studentsError) {
-        console.error("❌ Error fetching students:", studentsError);
+        console.error("❌ [ADMIN REQUESTS] Error fetching students:", studentsError);
         throw studentsError;
       }
 
@@ -81,13 +136,21 @@ export const ParentAccessRequestsList = () => {
         student: studentsData?.find(s => s.id === request.student_id) || { full_name: "Unknown" }
       }));
 
-      console.log("✅ Enriched requests:", enrichedRequests);
+      console.log("✅ [ADMIN REQUESTS] Final enriched requests:", enrichedRequests);
       return enrichedRequests as unknown as ParentAccessRequest[];
     },
   });
 
+  console.log("📊 [ADMIN REQUESTS] Component render state:", {
+    isLoading,
+    hasError: !!error,
+    error,
+    requestsCount: requests?.length || 0,
+    requests
+  });
+
   if (error) {
-    console.error("❌ Query error:", error);
+    console.error("❌ [ADMIN REQUESTS] Query error:", error);
   }
 
   const handleApprove = async (requestId: string, parentId: string, studentId: string) => {
