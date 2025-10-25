@@ -19,9 +19,11 @@ interface ParentAccessRequest {
 }
 
 export const ParentOutgoingRequestsList = ({ parentId }: ParentOutgoingRequestsListProps) => {
-  const { data: requests, isLoading } = useQuery({
+  const { data: requests, isLoading, error, refetch } = useQuery({
     queryKey: ["parent-access-requests", parentId],
     queryFn: async () => {
+      console.log("🔍 Fetching parent access requests for parentId:", parentId);
+      
       // RLS policy already filters by parent_id using get_parent_id(auth.uid())
       // No need to add redundant filter here
       const { data: requestsData, error: requestsError } = await supabase
@@ -29,8 +31,17 @@ export const ParentOutgoingRequestsList = ({ parentId }: ParentOutgoingRequestsL
         .select("id, student_id, status, message, created_at")
         .order("created_at", { ascending: false });
 
-      if (requestsError) throw requestsError;
-      if (!requestsData) return [];
+      if (requestsError) {
+        console.error("❌ Error fetching parent access requests:", requestsError);
+        throw requestsError;
+      }
+      
+      console.log("✅ Fetched requests:", requestsData?.length || 0, "requests");
+      
+      if (!requestsData || requestsData.length === 0) {
+        console.log("📭 No requests found");
+        return [];
+      }
 
       // Fetch student names for each request
       const studentIds = requestsData.map(r => r.student_id);
@@ -39,15 +50,24 @@ export const ParentOutgoingRequestsList = ({ parentId }: ParentOutgoingRequestsL
         .select("id, full_name")
         .in("id", studentIds);
 
-      if (studentsError) throw studentsError;
+      if (studentsError) {
+        console.error("❌ Error fetching student profiles:", studentsError);
+        throw studentsError;
+      }
 
       const studentMap = new Map(studentsData?.map(s => [s.id, s.full_name]) || []);
 
-      return requestsData.map(request => ({
+      const enrichedRequests = requestsData.map(request => ({
         ...request,
         student_name: studentMap.get(request.student_id) || "Unknown Student"
       })) as ParentAccessRequest[];
+      
+      console.log("✅ Enriched requests with student names:", enrichedRequests);
+      
+      return enrichedRequests;
     },
+    refetchOnMount: true, // Force fresh fetch on mount to bust stale cache
+    retry: 1, // Retry once if RLS fails
   });
 
   const getStatusBadge = (status: string) => {
@@ -86,13 +106,42 @@ export const ParentOutgoingRequestsList = ({ parentId }: ParentOutgoingRequestsL
     );
   }
 
+  if (error) {
+    console.error("💥 Error displaying requests:", error);
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center space-y-4">
+            <p className="text-destructive">
+              Failed to load access requests: {error.message}
+            </p>
+            <button 
+              onClick={() => refetch()} 
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+            >
+              Try Again
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (!requests || requests.length === 0) {
     return (
       <Card>
         <CardContent className="pt-6">
-          <p className="text-center text-muted-foreground">
-            No student access requests yet. Click "Link Student" to get started.
-          </p>
+          <div className="text-center space-y-4">
+            <p className="text-muted-foreground">
+              No student access requests yet. Click "Link Student" to get started.
+            </p>
+            <button 
+              onClick={() => refetch()} 
+              className="text-sm text-muted-foreground hover:text-foreground underline"
+            >
+              Refresh
+            </button>
+          </div>
         </CardContent>
       </Card>
     );
