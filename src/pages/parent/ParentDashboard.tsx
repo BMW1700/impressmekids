@@ -78,6 +78,11 @@ const ParentDashboard = () => {
     }
   };
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate('/');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -88,7 +93,7 @@ const ParentDashboard = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Header>
+      <Header showAuthButtons={false} onSignOut={handleSignOut}>
         {parentId && <ParentNotificationBell parentId={parentId} />}
       </Header>
       <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
