@@ -6,6 +6,7 @@ import { Footer } from "@/components/Footer";
 import { Loader2, UserPlus } from "lucide-react";
 import { ParentNotificationBell } from "@/components/parent/ParentNotificationBell";
 import { StudentLookupModal } from "@/components/parent/StudentLookupModal";
+import { ParentOutgoingRequestsList } from "@/components/parent/ParentOutgoingRequestsList";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -98,6 +99,7 @@ const ParentDashboard = () => {
 
   const handleLookupSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ["parent-student-links"] });
+    queryClient.invalidateQueries({ queryKey: ["parent-access-requests", parentId] });
   };
 
   return (
@@ -118,6 +120,13 @@ const ParentDashboard = () => {
             </Button>
           )}
         </div>
+
+        {parentId && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-semibold mb-4">My Student Access Requests</h2>
+            <ParentOutgoingRequestsList parentId={parentId} />
+          </div>
+        )}
       </main>
       <Footer />
 
