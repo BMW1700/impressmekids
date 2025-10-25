@@ -19,7 +19,9 @@ interface ParentAccessRequest {
 }
 
 export const ParentOutgoingRequestsList = ({ parentId }: ParentOutgoingRequestsListProps) => {
-  const { data: requests, isLoading, error, refetch } = useQuery({
+  console.log("🎨 ParentOutgoingRequestsList RENDER - parentId:", parentId);
+  
+  const { data: requests, isLoading, error, refetch, dataUpdatedAt, isStale, fetchStatus, isFetching } = useQuery({
     queryKey: ["parent-access-requests", parentId],
     queryFn: async () => {
       console.log("🔍 Fetching parent access requests for parentId:", parentId);
@@ -70,6 +72,18 @@ export const ParentOutgoingRequestsList = ({ parentId }: ParentOutgoingRequestsL
     retry: 1, // Retry once if RLS fails
   });
 
+  // Log complete React Query state
+  console.log("📊 React Query State:", {
+    isLoading,
+    isFetching,
+    isStale,
+    fetchStatus,
+    dataUpdatedAt: dataUpdatedAt ? new Date(dataUpdatedAt).toISOString() : null,
+    requestsCount: requests?.length ?? null,
+    requests: requests,
+    error: error?.message
+  });
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
@@ -99,6 +113,7 @@ export const ParentOutgoingRequestsList = ({ parentId }: ParentOutgoingRequestsL
   };
 
   if (isLoading) {
+    console.log("⏳ RENDERING: Loading state");
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -108,6 +123,7 @@ export const ParentOutgoingRequestsList = ({ parentId }: ParentOutgoingRequestsL
 
   if (error) {
     console.error("💥 Error displaying requests:", error);
+    console.log("🚨 RENDERING: Error state");
     return (
       <Card>
         <CardContent className="pt-6">
@@ -127,7 +143,10 @@ export const ParentOutgoingRequestsList = ({ parentId }: ParentOutgoingRequestsL
     );
   }
 
+  console.log("🔍 Checking empty state - requests:", requests, "length:", requests?.length);
+  
   if (!requests || requests.length === 0) {
+    console.log("📭 RENDERING: Empty state (no requests)");
     return (
       <Card>
         <CardContent className="pt-6">
@@ -147,6 +166,8 @@ export const ParentOutgoingRequestsList = ({ parentId }: ParentOutgoingRequestsL
     );
   }
 
+  console.log("✅ RENDERING: Success state with", requests.length, "requests");
+  
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {requests.map((request) => (

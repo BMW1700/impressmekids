@@ -74,6 +74,7 @@ const ParentDashboard = () => {
           setParentId(newParent.id);
         }
       } else {
+        console.log("✅ Parent account found:", parentAccount[0].id);
         setParentId(parentAccount[0].id);
       }
 
@@ -97,7 +98,10 @@ const ParentDashboard = () => {
     );
   }
 
+  console.log("🔗 ParentDashboard rendering with parentId:", parentId);
+
   const handleLookupSuccess = () => {
+    console.log("🔄 Invalidating queries after lookup success for parentId:", parentId);
     queryClient.invalidateQueries({ queryKey: ["parent-student-links"] });
     queryClient.invalidateQueries({ queryKey: ["parent-access-requests", parentId] });
   };
