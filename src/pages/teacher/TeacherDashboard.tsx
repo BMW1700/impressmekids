@@ -79,7 +79,7 @@ const TeacherDashboard = () => {
       if (!session) return;
 
       const { data: classroomsData, error } = await supabase
-        .rpc('get_teacher_classrooms', { _user_id: session.user.id });
+        .rpc('get_teacher_classrooms', { p_teacher_id: session.user.id });
 
       if (error) throw error;
       setClassrooms(classroomsData || []);

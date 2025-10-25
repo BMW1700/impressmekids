@@ -2083,6 +2083,36 @@ export type Database = {
         Returns: string
       }
       generate_join_code: { Args: never; Returns: string }
+      get_all_admins: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+        }[]
+      }
+      get_all_students: {
+        Args: never
+        Returns: {
+          classroom_count: number
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          parent_count: number
+        }[]
+      }
+      get_all_teachers: {
+        Args: never
+        Returns: {
+          classroom_count: number
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+        }[]
+      }
       get_classroom_detail: {
         Args: { _classroom_id: string; _user_id: string }
         Returns: {
@@ -2112,6 +2142,15 @@ export type Database = {
           email: string
           full_name: string
           grade: number
+          joined_at: string
+          student_id: string
+        }[]
+      }
+      get_classroom_students_admin: {
+        Args: { p_classroom_id: string }
+        Returns: {
+          email: string
+          full_name: string
           joined_at: string
           student_id: string
         }[]
@@ -2168,8 +2207,28 @@ export type Database = {
           teacher_name: string
         }[]
       }
+      get_student_classrooms_admin: {
+        Args: { p_student_id: string }
+        Returns: {
+          classroom_id: string
+          classroom_name: string
+          join_code: string
+          joined_at: string
+          teacher_name: string
+        }[]
+      }
+      get_student_parents_admin: {
+        Args: { p_student_id: string }
+        Returns: {
+          approved: boolean
+          approved_at: string
+          parent_email: string
+          parent_id: string
+          parent_name: string
+        }[]
+      }
       get_teacher_classrooms: {
-        Args: { _user_id: string }
+        Args: { p_teacher_id: string }
         Returns: {
           created_at: string
           id: string

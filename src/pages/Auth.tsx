@@ -31,6 +31,8 @@ const Auth = () => {
       navigate('/parent/dashboard');
     } else if (userRole === 'district_admin') {
       navigate('/district/dashboard');
+    } else if (userRole === 'admin') {
+      navigate('/admin/dashboard');
     } else {
       navigate('/student/dashboard');
     }

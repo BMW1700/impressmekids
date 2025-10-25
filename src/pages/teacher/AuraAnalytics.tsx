@@ -26,7 +26,7 @@ const AuraAnalytics = () => {
       if (!user) throw new Error('Not authenticated');
 
       const { data, error } = await supabase
-        .rpc('get_teacher_classrooms', { _user_id: user.id });
+        .rpc('get_teacher_classrooms', { p_teacher_id: user.id });
 
       if (error) throw error;
       return data;

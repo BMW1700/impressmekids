@@ -1,0 +1,281 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2, Users, GraduationCap, Shield } from "lucide-react";
+import { useAdminData } from "@/hooks/useAdminData";
+import { TeacherListCard } from "@/components/admin/TeacherListCard";
+import { StudentListCard } from "@/components/admin/StudentListCard";
+import { AdminListCard } from "@/components/admin/AdminListCard";
+import { TeacherClassroomsList } from "@/components/admin/TeacherClassroomsList";
+import { ClassroomStudentsList } from "@/components/admin/ClassroomStudentsList";
+import { StudentClassroomsList } from "@/components/admin/StudentClassroomsList";
+import { StudentParentsList } from "@/components/admin/StudentParentsList";
+import { toast } from "sonner";
+
+export default function AdminDashboard() {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const { teachers, students, admins, isLoading } = useAdminData();
+
+  // Teacher classrooms modal state
+  const [teacherClassroomsOpen, setTeacherClassroomsOpen] = useState(false);
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
+  const [selectedTeacherName, setSelectedTeacherName] = useState("");
+
+  // Classroom students modal state
+  const [classroomStudentsOpen, setClassroomStudentsOpen] = useState(false);
+  const [selectedClassroomId, setSelectedClassroomId] = useState<string | null>(null);
+  const [selectedClassroomName, setSelectedClassroomName] = useState("");
+
+  // Student classrooms modal state
+  const [studentClassroomsOpen, setStudentClassroomsOpen] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [selectedStudentName, setSelectedStudentName] = useState("");
+
+  // Student parents modal state
+  const [studentParentsOpen, setStudentParentsOpen] = useState(false);
+  const [selectedStudentIdForParents, setSelectedStudentIdForParents] = useState<string | null>(null);
+  const [selectedStudentNameForParents, setSelectedStudentNameForParents] = useState("");
+
+  useEffect(() => {
+    checkAdminAccess();
+  }, []);
+
+  const checkAdminAccess = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        navigate("/auth");
+        return;
+      }
+
+      const { data: userRole } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .single();
+
+      if (userRole?.role !== "admin") {
+        toast.error("Access denied. Admin privileges required.");
+        navigate("/");
+        return;
+      }
+
+      setLoading(false);
+    } catch (error) {
+      console.error("Error checking admin access:", error);
+      navigate("/auth");
+    }
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
+  };
+
+  const handleViewTeacherClassrooms = (teacherId: string, teacherName: string) => {
+    setSelectedTeacherId(teacherId);
+    setSelectedTeacherName(teacherName);
+    setTeacherClassroomsOpen(true);
+  };
+
+  const handleViewClassroomStudents = (classroomId: string, classroomName: string) => {
+    setSelectedClassroomId(classroomId);
+    setSelectedClassroomName(classroomName);
+    setClassroomStudentsOpen(true);
+  };
+
+  const handleViewStudentClassrooms = (studentId: string, studentName: string) => {
+    setSelectedStudentId(studentId);
+    setSelectedStudentName(studentName);
+    setStudentClassroomsOpen(true);
+  };
+
+  const handleViewStudentParents = (studentId: string, studentName: string) => {
+    setSelectedStudentIdForParents(studentId);
+    setSelectedStudentNameForParents(studentName);
+    setStudentParentsOpen(true);
+  };
+
+  if (loading || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col bg-background">
+      <Header showAuthButtons={false} onSignOut={handleSignOut} />
+      
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+            <p className="text-muted-foreground mt-1">
+              Platform-wide user management and oversight
+            </p>
+          </div>
+
+          {/* Statistics Cards */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Teachers</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{teachers?.length || 0}</div>
+                <p className="text-xs text-muted-foreground">Total teachers on platform</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Students</CardTitle>
+                <GraduationCap className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{students?.length || 0}</div>
+                <p className="text-xs text-muted-foreground">Total students enrolled</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Admins</CardTitle>
+                <Shield className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{admins?.length || 0}</div>
+                <p className="text-xs text-muted-foreground">Platform administrators</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Main Content Tabs */}
+          <Tabs defaultValue="teachers" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="teachers">Teachers</TabsTrigger>
+              <TabsTrigger value="students">Students</TabsTrigger>
+              <TabsTrigger value="admins">Admins</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="teachers" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>All Teachers</CardTitle>
+                  <CardDescription>
+                    Manage and view all teachers on the platform
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {!teachers || teachers.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">No teachers found</p>
+                  ) : (
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {teachers.map((teacher) => (
+                        <TeacherListCard
+                          key={teacher.id}
+                          teacher={teacher}
+                          onViewClassrooms={handleViewTeacherClassrooms}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="students" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>All Students</CardTitle>
+                  <CardDescription>
+                    Manage and view all students on the platform
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {!students || students.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">No students found</p>
+                  ) : (
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {students.map((student) => (
+                        <StudentListCard
+                          key={student.id}
+                          student={student}
+                          onViewClassrooms={handleViewStudentClassrooms}
+                          onViewParents={handleViewStudentParents}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="admins" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>All Admins</CardTitle>
+                  <CardDescription>
+                    View all platform administrators
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {!admins || admins.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">No admins found</p>
+                  ) : (
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {admins.map((admin) => (
+                        <AdminListCard key={admin.id} admin={admin} />
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </main>
+
+      <Footer />
+
+      {/* Modals */}
+      <TeacherClassroomsList
+        open={teacherClassroomsOpen}
+        onClose={() => setTeacherClassroomsOpen(false)}
+        teacherId={selectedTeacherId}
+        teacherName={selectedTeacherName}
+        onViewStudents={handleViewClassroomStudents}
+      />
+
+      <ClassroomStudentsList
+        open={classroomStudentsOpen}
+        onClose={() => setClassroomStudentsOpen(false)}
+        classroomId={selectedClassroomId}
+        classroomName={selectedClassroomName}
+      />
+
+      <StudentClassroomsList
+        open={studentClassroomsOpen}
+        onClose={() => setStudentClassroomsOpen(false)}
+        studentId={selectedStudentId}
+        studentName={selectedStudentName}
+      />
+
+      <StudentParentsList
+        open={studentParentsOpen}
+        onClose={() => setStudentParentsOpen(false)}
+        studentId={selectedStudentIdForParents}
+        studentName={selectedStudentNameForParents}
+      />
+    </div>
+  );
+}

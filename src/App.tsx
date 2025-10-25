@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import AdminDashboard from "./pages/admin/AdminDashboard";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import AuraPractice from "./pages/student/AuraPractice";
@@ -63,6 +64,7 @@ const App = () => (
           <Route path="/parent/dashboard" element={<ParentDashboard />} />
           <Route path="/parent/request-access" element={<RequestAccess />} />
           <Route path="/parent/child/:studentId" element={<ChildDetail />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/district/dashboard" element={<DistrictDashboard />} />
           <Route path="/district/register" element={<RegisterDistrict />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
