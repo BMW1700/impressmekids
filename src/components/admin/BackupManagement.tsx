@@ -1,0 +1,228 @@
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2, Download, AlertCircle, CheckCircle2, Database, Calendar } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
+
+interface Backup {
+  id: string;
+  backup_name: string;
+  backup_size_bytes: number;
+  tables_included: string[];
+  record_count: number;
+  backup_timestamp: string;
+  storage_provider: string;
+  status: string;
+  metadata: any;
+}
+
+interface HealthStatus {
+  health_status: string;
+  latest_backup: Backup | null;
+  total_backups: number;
+  hours_since_last_backup: number | null;
+  recent_failed_operations: number;
+  recommendations: string[];
+}
+
+export const BackupManagement = () => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isCreating, setIsCreating] = useState(false);
+
+  // Fetch health status
+  const { data: healthData, isLoading: healthLoading } = useQuery<HealthStatus>({
+    queryKey: ['backup-health'],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('check-backup-health');
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: 60000, // Refresh every minute
+  });
+
+  // Fetch backups list
+  const { data: backupsData, isLoading: backupsLoading } = useQuery<{ backups: Backup[] }>({
+    queryKey: ['cold-storage-backups'],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('list-cold-storage-backups');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Create backup mutation
+  const createBackupMutation = useMutation({
+    mutationFn: async () => {
+      setIsCreating(true);
+      const { data, error } = await supabase.functions.invoke('create-cold-storage-backup');
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Backup Created",
+        description: "Cold storage backup completed successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ['cold-storage-backups'] });
+      queryClient.invalidateQueries({ queryKey: ['backup-health'] });
+      setIsCreating(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Backup Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      setIsCreating(false);
+    },
+  });
+
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  const isHealthy = healthData?.health_status === 'healthy';
+
+  return (
+    <div className="space-y-6">
+      {/* Health Status Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            {healthLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : isHealthy ? (
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+            ) : (
+              <AlertCircle className="h-5 w-5 text-yellow-500" />
+            )}
+            Backup System Health
+          </CardTitle>
+          <CardDescription>
+            Monitor backup status and system health
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {healthLoading ? (
+            <div className="flex justify-center p-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 border rounded-lg">
+                  <div className="text-sm text-muted-foreground">Total Backups</div>
+                  <div className="text-2xl font-bold">{healthData?.total_backups || 0}</div>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <div className="text-sm text-muted-foreground">Last Backup</div>
+                  <div className="text-2xl font-bold">
+                    {healthData?.hours_since_last_backup !== null
+                      ? `${Math.round(healthData.hours_since_last_backup)}h ago`
+                      : 'Never'}
+                  </div>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <div className="text-sm text-muted-foreground">Failed Operations</div>
+                  <div className="text-2xl font-bold text-red-500">
+                    {healthData?.recent_failed_operations || 0}
+                  </div>
+                </div>
+              </div>
+
+              {healthData?.recommendations && healthData.recommendations.length > 0 && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <ul className="list-disc list-inside">
+                      {healthData.recommendations.map((rec, idx) => (
+                        <li key={idx}>{rec}</li>
+                      ))}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Create Backup Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Create New Backup</CardTitle>
+          <CardDescription>
+            Manually trigger a full database backup to cold storage
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            onClick={() => createBackupMutation.mutate()}
+            disabled={isCreating}
+            className="w-full md:w-auto"
+          >
+            {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Database className="mr-2 h-4 w-4" />
+            Create Backup Now
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Backups List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Backup History</CardTitle>
+          <CardDescription>
+            View and manage all cold storage backups
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {backupsLoading ? (
+            <div className="flex justify-center p-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          ) : backupsData?.backups && backupsData.backups.length > 0 ? (
+            <div className="space-y-4">
+              {backupsData.backups.map((backup) => (
+                <div key={backup.id} className="border rounded-lg p-4">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <div className="font-medium">{backup.backup_name}</div>
+                      <div className="text-sm text-muted-foreground flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        {format(new Date(backup.backup_timestamp), 'PPpp')}
+                      </div>
+                      <div className="text-sm">
+                        {formatBytes(backup.backup_size_bytes)} • {backup.record_count.toLocaleString()} records
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {backup.tables_included.length} tables: {backup.tables_included.join(', ')}
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm">
+                      <Download className="mr-2 h-4 w-4" />
+                      Restore
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              No backups found. Create your first backup to get started.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};

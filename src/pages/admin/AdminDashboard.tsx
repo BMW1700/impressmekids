@@ -15,6 +15,7 @@ import { ClassroomStudentsList } from "@/components/admin/ClassroomStudentsList"
 import { StudentClassroomsList } from "@/components/admin/StudentClassroomsList";
 import { StudentParentsList } from "@/components/admin/StudentParentsList";
 import { ParentAccessRequestsList } from "@/components/admin/ParentAccessRequestsList";
+import { BackupManagement } from "@/components/admin/BackupManagement";
 import { toast } from "sonner";
 
 export default function AdminDashboard() {
@@ -162,11 +163,12 @@ export default function AdminDashboard() {
 
           {/* Main Content Tabs */}
           <Tabs defaultValue="teachers" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="teachers">Teachers</TabsTrigger>
               <TabsTrigger value="students">Students</TabsTrigger>
               <TabsTrigger value="admins">Admins</TabsTrigger>
               <TabsTrigger value="parent-requests">Parent Requests</TabsTrigger>
+              <TabsTrigger value="backups">Backups</TabsTrigger>
             </TabsList>
 
             <TabsContent value="teachers" className="space-y-4">
@@ -256,6 +258,10 @@ export default function AdminDashboard() {
                   <ParentAccessRequestsList />
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="backups" className="space-y-4">
+              <BackupManagement />
             </TabsContent>
           </Tabs>
         </div>

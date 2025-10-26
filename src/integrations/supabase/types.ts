@@ -521,6 +521,47 @@ export type Database = {
           },
         ]
       }
+      backup_audit_log: {
+        Row: {
+          action_details: Json | null
+          action_type: string
+          backup_id: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          performed_by: string | null
+          status: string
+        }
+        Insert: {
+          action_details?: Json | null
+          action_type: string
+          backup_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          performed_by?: string | null
+          status: string
+        }
+        Update: {
+          action_details?: Json | null
+          action_type?: string
+          backup_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          performed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backup_audit_log_backup_id_fkey"
+            columns: ["backup_id"]
+            isOneToOne: false
+            referencedRelation: "cold_storage_backups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classroom_announcements: {
         Row: {
           announcement_type: string
@@ -626,6 +667,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      cold_storage_backups: {
+        Row: {
+          backup_name: string
+          backup_size_bytes: number
+          backup_timestamp: string
+          backup_type: string
+          created_at: string
+          created_by: string | null
+          encryption_method: string
+          id: string
+          metadata: Json | null
+          record_count: number
+          status: string
+          storage_location: string
+          storage_provider: string
+          tables_included: string[]
+        }
+        Insert: {
+          backup_name: string
+          backup_size_bytes: number
+          backup_timestamp?: string
+          backup_type?: string
+          created_at?: string
+          created_by?: string | null
+          encryption_method?: string
+          id?: string
+          metadata?: Json | null
+          record_count: number
+          status?: string
+          storage_location: string
+          storage_provider?: string
+          tables_included: string[]
+        }
+        Update: {
+          backup_name?: string
+          backup_size_bytes?: number
+          backup_timestamp?: string
+          backup_type?: string
+          created_at?: string
+          created_by?: string | null
+          encryption_method?: string
+          id?: string
+          metadata?: Json | null
+          record_count?: number
+          status?: string
+          storage_location?: string
+          storage_provider?: string
+          tables_included?: string[]
+        }
+        Relationships: []
       }
       curriculum_anchors: {
         Row: {

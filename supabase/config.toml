@@ -1,5 +1,17 @@
 project_id = "sjigkjwkgovculkovcjy"
 
+[functions.create-cold-storage-backup]
+verify_jwt = true
+
+[functions.list-cold-storage-backups]
+verify_jwt = true
+
+[functions.restore-cold-storage-backup]
+verify_jwt = true
+
+[functions.check-backup-health]
+verify_jwt = true
+
 [functions.generate-teacher-summary]
 verify_jwt = true
 
