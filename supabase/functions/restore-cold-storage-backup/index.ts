@@ -1,9 +1,23 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/rateLimiter.ts';
+import { S3Client, GetObjectCommand } from 'https://esm.sh/@aws-sdk/client-s3@3';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 const BACKUP_ENCRYPTION_KEY = Deno.env.get('BACKUP_ENCRYPTION_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+// Initialize S3 client
+const s3Client = new S3Client({
+  region: Deno.env.get('COLD_STORAGE_REGION') || 'us-east-1',
+  credentials: {
+    accessKeyId: Deno.env.get('COLD_STORAGE_ACCESS_KEY')!,
+    secretAccessKey: Deno.env.get('COLD_STORAGE_SECRET_KEY')!,
+  },
+});
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -62,26 +76,46 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Download encrypted backup from S3
-    const downloadResponse = await fetch(backup.storage_location);
-    if (!downloadResponse.ok) {
-      throw new Error(`Failed to download backup: ${downloadResponse.statusText}`);
+    // Download from S3 using AWS SDK
+    const s3Key = backup.backup_name;
+    const getCommand = new GetObjectCommand({
+      Bucket: Deno.env.get('COLD_STORAGE_BUCKET')!,
+      Key: s3Key,
+    });
+
+    const s3Response = await s3Client.send(getCommand);
+    const encryptedDataArray = await s3Response.Body?.transformToByteArray();
+    
+    if (!encryptedDataArray) {
+      throw new Error('Failed to download backup data from S3');
     }
 
-    const encryptedData = new Uint8Array(await downloadResponse.arrayBuffer());
-
-    // Decrypt data
+    // Decrypt using AES-256-GCM
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
-    const keyBytes = encoder.encode(BACKUP_ENCRYPTION_KEY);
-    const decryptedData = new Uint8Array(encryptedData.length);
+    const encryptionKeyMaterial = encoder.encode(BACKUP_ENCRYPTION_KEY!);
     
-    for (let i = 0; i < encryptedData.length; i++) {
-      decryptedData[i] = encryptedData[i] ^ keyBytes[i % keyBytes.length];
-    }
+    // Import decryption key
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      encryptionKeyMaterial.slice(0, 32),
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['decrypt']
+    );
 
-    const jsonString = decoder.decode(decryptedData);
-    const backupData = JSON.parse(jsonString);
+    // Extract IV (first 12 bytes) and encrypted data
+    const iv = encryptedDataArray.slice(0, 12);
+    const encryptedContent = encryptedDataArray.slice(12);
+
+    // Decrypt
+    const decryptedBuffer = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv },
+      cryptoKey,
+      encryptedContent
+    );
+
+    const backupData = JSON.parse(decoder.decode(decryptedBuffer));
 
     // Log audit trail
     await supabaseAdmin.from('backup_audit_log').insert({
@@ -111,7 +145,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Restore backup error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: (error as Error).message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

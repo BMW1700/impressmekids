@@ -1,12 +1,27 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/rateLimiter.ts';
+import { S3Client, PutObjectCommand } from 'https://esm.sh/@aws-sdk/client-s3@3';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 const COLD_STORAGE_ACCESS_KEY = Deno.env.get('COLD_STORAGE_ACCESS_KEY');
 const COLD_STORAGE_SECRET_KEY = Deno.env.get('COLD_STORAGE_SECRET_KEY');
 const COLD_STORAGE_BUCKET = Deno.env.get('COLD_STORAGE_BUCKET');
+const COLD_STORAGE_REGION = Deno.env.get('COLD_STORAGE_REGION') || 'us-east-1';
 const BACKUP_ENCRYPTION_KEY = Deno.env.get('BACKUP_ENCRYPTION_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+// Initialize S3 client
+const s3Client = new S3Client({
+  region: COLD_STORAGE_REGION,
+  credentials: {
+    accessKeyId: COLD_STORAGE_ACCESS_KEY!,
+    secretAccessKey: COLD_STORAGE_SECRET_KEY!,
+  },
+});
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -65,32 +80,55 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Convert to JSON and encrypt
+    // Convert to JSON
     const jsonData = JSON.stringify(backupData);
     const encoder = new TextEncoder();
     const dataBytes = encoder.encode(jsonData);
 
-    // Simple encryption (in production, use proper AES-256-GCM)
-    const keyBytes = encoder.encode(BACKUP_ENCRYPTION_KEY);
-    const encryptedData = new Uint8Array(dataBytes.length);
-    for (let i = 0; i < dataBytes.length; i++) {
-      encryptedData[i] = dataBytes[i] ^ keyBytes[i % keyBytes.length];
-    }
+    // Proper AES-256-GCM encryption
+    const encryptionKeyMaterial = encoder.encode(BACKUP_ENCRYPTION_KEY!);
+    
+    // Import key for AES-GCM
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      encryptionKeyMaterial.slice(0, 32), // Use first 32 bytes for AES-256
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt']
+    );
 
-    // Upload to S3-compatible storage
-    const s3Endpoint = `https://s3.amazonaws.com/${COLD_STORAGE_BUCKET}/${backupName}`;
-    const uploadResponse = await fetch(s3Endpoint, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/octet-stream',
-        'x-amz-acl': 'private',
+    // Generate random IV
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    
+    // Encrypt data
+    const encryptedBuffer = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      cryptoKey,
+      dataBytes
+    );
+
+    // Combine IV + encrypted data for storage
+    const encryptedData = new Uint8Array(iv.length + encryptedBuffer.byteLength);
+    encryptedData.set(iv, 0);
+    encryptedData.set(new Uint8Array(encryptedBuffer), iv.length);
+
+    // Upload to S3 using AWS SDK
+    const uploadCommand = new PutObjectCommand({
+      Bucket: COLD_STORAGE_BUCKET!,
+      Key: backupName,
+      Body: encryptedData,
+      ContentType: 'application/octet-stream',
+      ServerSideEncryption: 'AES256',
+      Metadata: {
+        'encryption-method': 'AES-256-GCM',
+        'iv-length': '12',
+        'created-at': new Date().toISOString(),
       },
-      body: encryptedData,
     });
 
-    if (!uploadResponse.ok) {
-      throw new Error(`S3 upload failed: ${uploadResponse.statusText}`);
-    }
+    await s3Client.send(uploadCommand);
+    
+    const s3Location = `s3://${COLD_STORAGE_BUCKET}/${backupName}`;
 
     // Record backup in database
     const { data: backupRecord, error: insertError } = await supabaseAdmin
@@ -100,12 +138,13 @@ Deno.serve(async (req) => {
         backup_size_bytes: encryptedData.length,
         tables_included: tablesToBackup,
         record_count: totalRecords,
-        storage_location: s3Endpoint,
+        storage_location: s3Location,
         created_by: user.id,
         metadata: {
           tables_count: tablesToBackup.length,
           compression: 'none',
-          encryption_verified: true,
+          encryption: 'AES-256-GCM',
+          iv_length: 12,
         },
       })
       .select()
@@ -144,7 +183,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Backup creation error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: (error as Error).message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
