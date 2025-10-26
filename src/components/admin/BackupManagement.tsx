@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Download, AlertCircle, CheckCircle2, Database, Calendar } from "lucide-react";
+import { Loader2, Download, AlertCircle, CheckCircle2, Database, Calendar, Trash2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -33,6 +33,7 @@ export const BackupManagement = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isCreating, setIsCreating] = useState(false);
+  const [isCleaning, setIsCleaning] = useState(false);
 
   // Fetch health status
   const { data: healthData, isLoading: healthLoading } = useQuery<HealthStatus>({
@@ -79,6 +80,33 @@ export const BackupManagement = () => {
         variant: "destructive",
       });
       setIsCreating(false);
+    },
+  });
+
+  // Cleanup old backups mutation
+  const cleanupBackupsMutation = useMutation({
+    mutationFn: async () => {
+      setIsCleaning(true);
+      const { data, error } = await supabase.functions.invoke('cleanup-old-backups');
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Cleanup Complete",
+        description: data.message || `Deleted ${data.deleted_count} old backups`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['cold-storage-backups'] });
+      queryClient.invalidateQueries({ queryKey: ['backup-health'] });
+      setIsCleaning(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Cleanup Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      setIsCleaning(false);
     },
   });
 
@@ -156,24 +184,41 @@ export const BackupManagement = () => {
         </CardContent>
       </Card>
 
-      {/* Create Backup Card */}
+      {/* Backup Actions Card */}
       <Card>
         <CardHeader>
-          <CardTitle>Create New Backup</CardTitle>
+          <CardTitle>Backup Management</CardTitle>
           <CardDescription>
-            Manually trigger a full database backup to cold storage
+            Manually trigger backups or cleanup old data
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button
-            onClick={() => createBackupMutation.mutate()}
-            disabled={isCreating}
-            className="w-full md:w-auto"
-          >
-            {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            <Database className="mr-2 h-4 w-4" />
-            Create Backup Now
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              onClick={() => createBackupMutation.mutate()}
+              disabled={isCreating}
+              className="flex-1"
+            >
+              {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Database className="mr-2 h-4 w-4" />
+              Create Backup Now
+            </Button>
+            
+            <Button
+              onClick={() => cleanupBackupsMutation.mutate()}
+              disabled={isCleaning}
+              variant="outline"
+              className="flex-1"
+            >
+              {isCleaning && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Trash2 className="mr-2 h-4 w-4" />
+              Cleanup Old Backups (90d)
+            </Button>
+          </div>
+          
+          <p className="text-sm text-muted-foreground mt-3">
+            Backups older than 90 days are automatically deleted daily at 3 AM UTC
+          </p>
         </CardContent>
       </Card>
 

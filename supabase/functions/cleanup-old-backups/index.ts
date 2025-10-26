@@ -150,7 +150,7 @@ Deno.serve(async (req) => {
         errors.push({
           backup_id: backup.id,
           backup_name: backup.backup_name,
-          error: error.message,
+          error: error instanceof Error ? error.message : 'Unknown error',
         });
       }
     }
@@ -184,7 +184,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Cleanup error:', error);
     return new Response(JSON.stringify({
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
       details: 'Failed to cleanup old backups',
     }), {
       status: 500,
