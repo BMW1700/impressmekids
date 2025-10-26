@@ -12,6 +12,9 @@ verify_jwt = true
 [functions.check-backup-health]
 verify_jwt = true
 
+[functions.cleanup-old-backups]
+verify_jwt = true
+
 [functions.generate-teacher-summary]
 verify_jwt = true
 
