@@ -55,6 +55,8 @@ async function signAwsRequest(
   const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
   const dateStamp = amzDate.substring(0, 8);
   
+  console.log('🔐 Creating canonical request...');
+  
   // Create canonical headers
   const canonicalHeaders = Object.entries(headers)
     .map(([k, v]) => `${k.toLowerCase()}:${v.trim()}\n`)
@@ -66,8 +68,11 @@ async function signAwsRequest(
     .sort()
     .join(';');
   
-  // Hash the payload
-  const payloadHash = await sha256Hash(Array.from(body).map(b => String.fromCharCode(b)).join(''));
+  console.log(`📋 Signed headers: ${signedHeaders}`);
+  
+  // Use the payload hash from headers (already calculated)
+  const payloadHash = headers['x-amz-content-sha256'] || 
+    await sha256Hash(Array.from(body).map(b => String.fromCharCode(b)).join(''));
   
   // Create canonical request
   const canonicalRequest = [
@@ -80,6 +85,7 @@ async function signAwsRequest(
   ].join('\n');
   
   const canonicalRequestHash = await sha256Hash(canonicalRequest);
+  console.log(`🎯 Canonical request hash: ${canonicalRequestHash.substring(0, 16)}...`);
   
   // Create string to sign
   const credentialScope = `${dateStamp}/${region}/s3/aws4_request`;
@@ -90,12 +96,16 @@ async function signAwsRequest(
     canonicalRequestHash
   ].join('\n');
   
+  console.log('🔏 String to sign created');
+  
   // Calculate signature
   const signingKey = await getSignatureKey(secretKey, dateStamp, region, 's3');
   const signatureBytes = await hmacSha256(signingKey, stringToSign);
   const signature = Array.from(signatureBytes)
     .map(b => b.toString(16).padStart(2, '0'))
     .join('');
+  
+  console.log(`✍️ Signature: ${signature.substring(0, 16)}...`);
   
   // Add authorization header
   const authorizationHeader = `AWS4-HMAC-SHA256 Credential=${accessKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
@@ -229,6 +239,15 @@ Deno.serve(async (req) => {
 
     // Upload to S3 using direct REST API
     console.log('🚀 Uploading to S3...');
+    
+    // Calculate payload hash BEFORE creating headers
+    console.log('📊 Calculating payload hash...');
+    console.log(`📏 Payload size: ${encryptedData.length} bytes`);
+    const payloadHashHex = await sha256Hash(
+      Array.from(encryptedData).map(b => String.fromCharCode(b)).join('')
+    );
+    console.log(`🔑 Payload hash: ${payloadHashHex.substring(0, 16)}...`);
+    
     const host = `${COLD_STORAGE_BUCKET}.s3.${COLD_STORAGE_REGION}.amazonaws.com`;
     const path = `/${backupName}`;
     const uploadUrl = `https://${host}${path}`;
@@ -237,6 +256,7 @@ Deno.serve(async (req) => {
       'Host': host,
       'Content-Type': 'application/octet-stream',
       'Content-Length': encryptedData.length.toString(),
+      'x-amz-content-sha256': payloadHashHex,  // CRITICAL: Required by AWS S3
       'x-amz-server-side-encryption': 'AES256',
       'x-amz-meta-encryption-method': 'AES-256-GCM',
       'x-amz-meta-iv-length': '12',
@@ -244,6 +264,7 @@ Deno.serve(async (req) => {
     };
 
     console.log('🔐 Signing S3 request...');
+    console.log(`📋 Headers to sign: ${Object.keys(s3Headers).join(', ')}`);
     const signedHeaders = await signAwsRequest(
       'PUT',
       host,
@@ -254,17 +275,24 @@ Deno.serve(async (req) => {
       COLD_STORAGE_SECRET_KEY!,
       COLD_STORAGE_REGION
     );
+    console.log(`✅ Request signed successfully`);
+    console.log(`📋 Final headers: ${Object.keys(signedHeaders).join(', ')}`);
 
     console.log('📤 Sending PUT request to S3...');
+    console.log(`🌐 URL: ${uploadUrl}`);
     const s3Response = await fetch(uploadUrl, {
       method: 'PUT',
       headers: signedHeaders,
       body: encryptedData,
     });
 
+    console.log(`📬 S3 Response status: ${s3Response.status} ${s3Response.statusText}`);
+    console.log(`📋 S3 Response headers: ${JSON.stringify(Object.fromEntries(s3Response.headers))}`);
+
     if (!s3Response.ok) {
       const errorText = await s3Response.text();
       console.error('❌ S3 upload failed:', s3Response.status, errorText);
+      console.error(`📋 Request headers used:`, JSON.stringify(signedHeaders, null, 2));
       throw new Error(`S3 upload failed: ${s3Response.status} - ${errorText}`);
     }
 
