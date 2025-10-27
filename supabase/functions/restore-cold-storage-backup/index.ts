@@ -10,15 +10,6 @@ const BACKUP_ENCRYPTION_KEY = Deno.env.get('BACKUP_ENCRYPTION_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-// Initialize S3 client
-const s3Client = new S3Client({
-  region: Deno.env.get('COLD_STORAGE_REGION') || 'us-east-1',
-  credentials: {
-    accessKeyId: Deno.env.get('COLD_STORAGE_ACCESS_KEY')!,
-    secretAccessKey: Deno.env.get('COLD_STORAGE_SECRET_KEY')!,
-  },
-});
-
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -52,6 +43,15 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Initialize S3 client (lazy initialization to avoid boot-time fs access)
+    const s3Client = new S3Client({
+      region: Deno.env.get('COLD_STORAGE_REGION') || 'us-east-1',
+      credentials: {
+        accessKeyId: Deno.env.get('COLD_STORAGE_ACCESS_KEY')!,
+        secretAccessKey: Deno.env.get('COLD_STORAGE_SECRET_KEY')!,
+      },
+    });
 
     const { backup_id, execute_restore = false, tables = [] } = await req.json();
 
