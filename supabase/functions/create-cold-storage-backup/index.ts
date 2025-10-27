@@ -51,11 +51,15 @@ async function signAwsRequest(
   secretKey: string,
   region: string
 ): Promise<Record<string, string>> {
-  const now = new Date();
-  const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
+  // Extract x-amz-date from headers (must be provided by caller)
+  const amzDate = headers['x-amz-date'];
+  if (!amzDate) {
+    throw new Error('x-amz-date header is required in input headers');
+  }
   const dateStamp = amzDate.substring(0, 8);
   
   console.log('🔐 Creating canonical request...');
+  console.log(`📅 Using x-amz-date: ${amzDate}`);
   
   // Create canonical headers
   const canonicalHeaders = Object.entries(headers)
@@ -110,9 +114,9 @@ async function signAwsRequest(
   // Add authorization header
   const authorizationHeader = `AWS4-HMAC-SHA256 Credential=${accessKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
   
+  // Return headers with authorization (x-amz-date already in input headers)
   return {
     ...headers,
-    'x-amz-date': amzDate,
     'Authorization': authorizationHeader,
   };
 }
@@ -252,11 +256,17 @@ Deno.serve(async (req) => {
     const path = `/${backupName}`;
     const uploadUrl = `https://${host}${path}`;
     
+    // Calculate x-amz-date BEFORE signing (must be included in signature)
+    const now = new Date();
+    const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
+    console.log(`📅 Generated x-amz-date: ${amzDate}`);
+    
     const s3Headers = {
       'Host': host,
       'Content-Type': 'application/octet-stream',
       'Content-Length': encryptedData.length.toString(),
       'x-amz-content-sha256': payloadHashHex,  // CRITICAL: Required by AWS S3
+      'x-amz-date': amzDate,  // CRITICAL: Must be included BEFORE signing
       'x-amz-server-side-encryption': 'AES256',
       'x-amz-meta-encryption-method': 'AES-256-GCM',
       'x-amz-meta-iv-length': '12',
