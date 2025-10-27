@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
 
     console.log('Starting cleanup of old backups (>90 days)...');
 
-    // Initialize S3 client
+    // Initialize S3 client (lazy initialization to avoid boot-time fs access)
     const s3Client = new S3Client({
       region: Deno.env.get('COLD_STORAGE_REGION') || 'us-east-1',
       credentials: {
