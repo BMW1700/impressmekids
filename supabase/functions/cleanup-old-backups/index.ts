@@ -5,6 +5,79 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// AWS Signature V4 signing helper functions
+async function hmacSha256(key: Uint8Array, data: string): Promise<Uint8Array> {
+  const keyBuffer = key.buffer.slice(key.byteOffset, key.byteOffset + key.byteLength) as ArrayBuffer;
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    keyBuffer,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await crypto.subtle.sign('HMAC', cryptoKey, new TextEncoder().encode(data));
+  return new Uint8Array(signature);
+}
+
+async function sha256Hash(data: string | Uint8Array): Promise<string> {
+  let buffer: ArrayBuffer;
+  if (typeof data === 'string') {
+    const encoded = new TextEncoder().encode(data);
+    buffer = encoded.buffer.slice(encoded.byteOffset, encoded.byteOffset + encoded.byteLength) as ArrayBuffer;
+  } else {
+    buffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
+  }
+  
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function getSignatureKey(key: string, dateStamp: string, regionName: string, serviceName: string): Promise<Uint8Array> {
+  const kDate = hmacSha256(new TextEncoder().encode('AWS4' + key), dateStamp);
+  return kDate.then(k => hmacSha256(k, regionName))
+    .then(k => hmacSha256(k, serviceName))
+    .then(k => hmacSha256(k, 'aws4_request'));
+}
+
+async function signAwsRequest(
+  method: string,
+  host: string,
+  path: string,
+  headers: Record<string, string>,
+  accessKey: string,
+  secretKey: string,
+  region: string
+): Promise<Record<string, string>> {
+  const amzDate = headers['x-amz-date'];
+  if (!amzDate) throw new Error('x-amz-date header required');
+  
+  const dateStamp = amzDate.substring(0, 8);
+  const canonicalHeaders = Object.entries(headers)
+    .map(([k, v]) => `${k.toLowerCase()}:${v.trim()}\n`)
+    .sort()
+    .join('');
+  const signedHeaders = Object.keys(headers).map(k => k.toLowerCase()).sort().join(';');
+  const payloadHash = await sha256Hash('');
+  const canonicalRequest = `${method}\n${path}\n\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
+  const canonicalRequestHash = await sha256Hash(canonicalRequest);
+  
+  const credentialScope = `${dateStamp}/${region}/s3/aws4_request`;
+  const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${credentialScope}\n${canonicalRequestHash}`;
+  
+  const signingKey = await getSignatureKey(secretKey, dateStamp, region, 's3');
+  const signatureBytes = await hmacSha256(signingKey, stringToSign);
+  const signature = Array.from(signatureBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  const authorizationHeader = `AWS4-HMAC-SHA256 Credential=${accessKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+  
+  return {
+    ...headers,
+    'Authorization': authorizationHeader,
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -52,19 +125,10 @@ Deno.serve(async (req) => {
 
     console.log('Starting cleanup of old backups (>90 days)...');
 
-    // Dynamic import to avoid boot-time filesystem access
-    const { S3Client, DeleteObjectCommand } = await import('https://esm.sh/@aws-sdk/client-s3@3.515.0');
-    
-    // Initialize S3 client (lazy initialization to avoid boot-time fs access)
-    const s3Client = new S3Client({
-      region: Deno.env.get('COLD_STORAGE_REGION') || 'us-east-1',
-      credentials: {
-        accessKeyId: Deno.env.get('COLD_STORAGE_ACCESS_KEY')!,
-        secretAccessKey: Deno.env.get('COLD_STORAGE_SECRET_KEY')!,
-      },
-    });
-
-    const bucketName = Deno.env.get('COLD_STORAGE_BUCKET')!;
+    const accessKey = Deno.env.get('COLD_STORAGE_ACCESS_KEY')!;
+    const secretKey = Deno.env.get('COLD_STORAGE_SECRET_KEY')!;
+    const bucket = Deno.env.get('COLD_STORAGE_BUCKET')!;
+    const region = Deno.env.get('COLD_STORAGE_REGION') || 'us-east-1';
 
     // Calculate cutoff date (90 days ago)
     const cutoffDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
@@ -84,7 +148,6 @@ Deno.serve(async (req) => {
     if (!oldBackups || oldBackups.length === 0) {
       console.log('No backups older than 90 days found');
       
-      // Log the cleanup action
       await supabase.from('backup_audit_log').insert({
         user_id: user.id,
         action_type: 'cleanup',
@@ -118,13 +181,29 @@ Deno.serve(async (req) => {
       try {
         console.log(`Deleting backup: ${backup.backup_name}`);
 
-        // Delete from S3
-        const deleteCommand = new DeleteObjectCommand({
-          Bucket: bucketName,
-          Key: backup.s3_key,
+        // Delete from S3 using raw HTTP with AWS Signature V4
+        const host = `${bucket}.s3.${region}.amazonaws.com`;
+        const path = `/${backup.s3_key}`;
+        const now = new Date();
+        const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
+        
+        const deleteHeaders = {
+          'host': host,
+          'x-amz-date': amzDate,
+          'x-amz-content-sha256': await sha256Hash(''),
+        };
+        
+        const signedDeleteHeaders = await signAwsRequest('DELETE', host, path, deleteHeaders, accessKey, secretKey, region);
+        
+        const deleteResponse = await fetch(`https://${host}${path}`, {
+          method: 'DELETE',
+          headers: signedDeleteHeaders,
         });
-
-        await s3Client.send(deleteCommand);
+        
+        if (!deleteResponse.ok) {
+          throw new Error(`S3 DELETE failed: ${deleteResponse.status}`);
+        }
+        
         console.log(`Deleted from S3: ${backup.s3_key}`);
 
         // Delete from database

@@ -9,6 +9,79 @@ const BACKUP_ENCRYPTION_KEY = Deno.env.get('BACKUP_ENCRYPTION_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+// AWS Signature V4 signing helper functions
+async function hmacSha256(key: Uint8Array, data: string): Promise<Uint8Array> {
+  const keyBuffer = key.buffer.slice(key.byteOffset, key.byteOffset + key.byteLength) as ArrayBuffer;
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    keyBuffer,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await crypto.subtle.sign('HMAC', cryptoKey, new TextEncoder().encode(data));
+  return new Uint8Array(signature);
+}
+
+async function sha256Hash(data: string | Uint8Array): Promise<string> {
+  let buffer: ArrayBuffer;
+  if (typeof data === 'string') {
+    const encoded = new TextEncoder().encode(data);
+    buffer = encoded.buffer.slice(encoded.byteOffset, encoded.byteOffset + encoded.byteLength) as ArrayBuffer;
+  } else {
+    buffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
+  }
+  
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function getSignatureKey(key: string, dateStamp: string, regionName: string, serviceName: string): Promise<Uint8Array> {
+  const kDate = hmacSha256(new TextEncoder().encode('AWS4' + key), dateStamp);
+  return kDate.then(k => hmacSha256(k, regionName))
+    .then(k => hmacSha256(k, serviceName))
+    .then(k => hmacSha256(k, 'aws4_request'));
+}
+
+async function signAwsRequest(
+  method: string,
+  host: string,
+  path: string,
+  headers: Record<string, string>,
+  accessKey: string,
+  secretKey: string,
+  region: string
+): Promise<Record<string, string>> {
+  const amzDate = headers['x-amz-date'];
+  if (!amzDate) throw new Error('x-amz-date header required');
+  
+  const dateStamp = amzDate.substring(0, 8);
+  const canonicalHeaders = Object.entries(headers)
+    .map(([k, v]) => `${k.toLowerCase()}:${v.trim()}\n`)
+    .sort()
+    .join('');
+  const signedHeaders = Object.keys(headers).map(k => k.toLowerCase()).sort().join(';');
+  const payloadHash = await sha256Hash('');
+  const canonicalRequest = `${method}\n${path}\n\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
+  const canonicalRequestHash = await sha256Hash(canonicalRequest);
+  
+  const credentialScope = `${dateStamp}/${region}/s3/aws4_request`;
+  const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${credentialScope}\n${canonicalRequestHash}`;
+  
+  const signingKey = await getSignatureKey(secretKey, dateStamp, region, 's3');
+  const signatureBytes = await hmacSha256(signingKey, stringToSign);
+  const signature = Array.from(signatureBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  const authorizationHeader = `AWS4-HMAC-SHA256 Credential=${accessKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+  
+  return {
+    ...headers,
+    'Authorization': authorizationHeader,
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -43,17 +116,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Dynamic import to avoid boot-time filesystem access
-    const { S3Client, GetObjectCommand } = await import('https://esm.sh/@aws-sdk/client-s3@3');
-    
-    // Initialize S3 client (lazy initialization to avoid boot-time fs access)
-    const s3Client = new S3Client({
-      region: Deno.env.get('COLD_STORAGE_REGION') || 'us-east-1',
-      credentials: {
-        accessKeyId: Deno.env.get('COLD_STORAGE_ACCESS_KEY')!,
-        secretAccessKey: Deno.env.get('COLD_STORAGE_SECRET_KEY')!,
-      },
-    });
+    const accessKey = Deno.env.get('COLD_STORAGE_ACCESS_KEY')!;
+    const secretKey = Deno.env.get('COLD_STORAGE_SECRET_KEY')!;
+    const bucket = Deno.env.get('COLD_STORAGE_BUCKET')!;
+    const region = Deno.env.get('COLD_STORAGE_REGION') || 'us-east-1';
 
     const { backup_id, execute_restore = false, tables = [] } = await req.json();
 
@@ -78,26 +144,37 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Download from S3 using AWS SDK
+    // Download from S3 using raw HTTP with AWS Signature V4
     const s3Key = backup.backup_name;
-    const getCommand = new GetObjectCommand({
-      Bucket: Deno.env.get('COLD_STORAGE_BUCKET')!,
-      Key: s3Key,
-    });
-
-    const s3Response = await s3Client.send(getCommand);
-    const encryptedDataArray = await s3Response.Body?.transformToByteArray();
+    const host = `${bucket}.s3.${region}.amazonaws.com`;
+    const path = `/${s3Key}`;
+    const now = new Date();
+    const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
     
-    if (!encryptedDataArray) {
-      throw new Error('Failed to download backup data from S3');
+    const getHeaders = {
+      'host': host,
+      'x-amz-date': amzDate,
+      'x-amz-content-sha256': await sha256Hash(''),
+    };
+    
+    const signedGetHeaders = await signAwsRequest('GET', host, path, getHeaders, accessKey, secretKey, region);
+    
+    const s3Response = await fetch(`https://${host}${path}`, {
+      method: 'GET',
+      headers: signedGetHeaders,
+    });
+    
+    if (!s3Response.ok) {
+      throw new Error(`S3 GET failed: ${s3Response.status} ${await s3Response.text()}`);
     }
+    
+    const encryptedDataArray = new Uint8Array(await s3Response.arrayBuffer());
 
     // Decrypt using AES-256-GCM
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
     const encryptionKeyMaterial = encoder.encode(BACKUP_ENCRYPTION_KEY!);
     
-    // Import decryption key
     const cryptoKey = await crypto.subtle.importKey(
       'raw',
       encryptionKeyMaterial.slice(0, 32),
@@ -106,11 +183,9 @@ Deno.serve(async (req) => {
       ['decrypt']
     );
 
-    // Extract IV (first 12 bytes) and encrypted data
     const iv = encryptedDataArray.slice(0, 12);
     const encryptedContent = encryptedDataArray.slice(12);
 
-    // Decrypt
     const decryptedBuffer = await crypto.subtle.decrypt(
       { name: 'AES-GCM', iv },
       cryptoKey,
@@ -119,9 +194,8 @@ Deno.serve(async (req) => {
 
     const backupData = JSON.parse(decoder.decode(decryptedBuffer));
 
-    // If not executing restore, just return the data for viewing
+    // If not executing restore, just return data for viewing
     if (!execute_restore) {
-      // Log view action
       await supabaseAdmin.from('backup_audit_log').insert({
         backup_id: backup.id,
         action_type: 'VIEW_BACKUP',
@@ -159,7 +233,6 @@ Deno.serve(async (req) => {
       let recordsRestored = 0;
 
       try {
-        // Insert records (will skip duplicates if ID exists)
         for (const record of records) {
           const { error: insertError } = await supabaseAdmin
             .from(tableName)
@@ -190,7 +263,7 @@ Deno.serve(async (req) => {
       status: 'success',
     });
 
-    console.log(`✅ Backup restored: ${backup.backup_name}, ${totalRecordsRestored} records across ${restoredTables.length} tables`);
+    console.log(`✅ Backup restored: ${backup.backup_name}, ${totalRecordsRestored} records`);
 
     return new Response(
       JSON.stringify({
