@@ -7,6 +7,7 @@ import { Loader2, Download, AlertCircle, CheckCircle2, Database, Calendar, Trash
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { RestoreBackupDialog } from "./RestoreBackupDialog";
 
 interface Backup {
   id: string;
@@ -34,6 +35,10 @@ export const BackupManagement = () => {
   const queryClient = useQueryClient();
   const [isCreating, setIsCreating] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
+  const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
+  const [selectedBackup, setSelectedBackup] = useState<Backup | null>(null);
+  const [restoredData, setRestoredData] = useState<any>(null);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   // Fetch health status
   const { data: healthData, isLoading: healthLoading } = useQuery<HealthStatus>({
@@ -109,6 +114,36 @@ export const BackupManagement = () => {
       setIsCleaning(false);
     },
   });
+
+  // Restore backup handler
+  const handleRestoreBackup = async (backup: Backup) => {
+    setSelectedBackup(backup);
+    setRestoreDialogOpen(true);
+    setIsRestoring(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('restore-cold-storage-backup', {
+        body: { backup_id: backup.id }
+      });
+      
+      if (error) throw error;
+      
+      setRestoredData(data);
+      toast({
+        title: "Backup Restored",
+        description: `Successfully decrypted ${data.record_count?.toLocaleString()} records`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Restore Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      setRestoreDialogOpen(false);
+    } finally {
+      setIsRestoring(false);
+    }
+  };
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -253,7 +288,11 @@ export const BackupManagement = () => {
                         {backup.tables_included.length} tables: {backup.tables_included.join(', ')}
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleRestoreBackup(backup)}
+                    >
                       <Download className="mr-2 h-4 w-4" />
                       Restore
                     </Button>
@@ -268,6 +307,16 @@ export const BackupManagement = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Restore Dialog */}
+      <RestoreBackupDialog
+        open={restoreDialogOpen}
+        onOpenChange={setRestoreDialogOpen}
+        backupData={restoredData}
+        isLoading={isRestoring}
+        backupName={selectedBackup?.backup_name || ''}
+        recordCount={selectedBackup?.record_count || 0}
+      />
     </div>
   );
 };
