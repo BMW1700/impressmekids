@@ -1,5 +1,4 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { S3Client, GetObjectCommand } from 'https://esm.sh/@aws-sdk/client-s3@3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -44,6 +43,9 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Dynamic import to avoid boot-time filesystem access
+    const { S3Client, GetObjectCommand } = await import('https://esm.sh/@aws-sdk/client-s3@3');
+    
     // Initialize S3 client (lazy initialization to avoid boot-time fs access)
     const s3Client = new S3Client({
       region: Deno.env.get('COLD_STORAGE_REGION') || 'us-east-1',

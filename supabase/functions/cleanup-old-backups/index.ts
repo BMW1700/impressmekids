@@ -1,5 +1,4 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-import { S3Client, DeleteObjectCommand } from 'https://esm.sh/@aws-sdk/client-s3@3.515.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -53,6 +52,9 @@ Deno.serve(async (req) => {
 
     console.log('Starting cleanup of old backups (>90 days)...');
 
+    // Dynamic import to avoid boot-time filesystem access
+    const { S3Client, DeleteObjectCommand } = await import('https://esm.sh/@aws-sdk/client-s3@3.515.0');
+    
     // Initialize S3 client (lazy initialization to avoid boot-time fs access)
     const s3Client = new S3Client({
       region: Deno.env.get('COLD_STORAGE_REGION') || 'us-east-1',
