@@ -1,5 +1,3 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -86,9 +84,8 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Authenticate user
+    // Authenticate user using direct REST API
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'No authorization header' }), {
@@ -98,25 +95,47 @@ Deno.serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
-    if (authError || !user) {
-      console.error('Auth error:', authError);
+    // Direct REST API call for authentication
+    const userResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'apikey': supabaseServiceKey,
+      },
+    });
+    
+    if (!userResponse.ok) {
+      console.error('Auth error:', await userResponse.text());
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    
+    const user = await userResponse.json();
 
-    // Check if user is admin
-    const { data: userRole, error: roleError } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
+    // Check if user is admin using direct REST API
+    const roleResponse = await fetch(
+      `${supabaseUrl}/rest/v1/user_roles?user_id=eq.${user.id}&select=role`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'apikey': supabaseServiceKey,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
-    if (roleError || userRole?.role !== 'admin') {
-      console.error('Role check failed:', roleError);
+    if (!roleResponse.ok) {
+      console.error('Role check failed:', await roleResponse.text());
+      return new Response(JSON.stringify({ error: 'Failed to check role' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const roleData = await roleResponse.json();
+    if (!roleData || roleData.length === 0 || roleData[0].role !== 'admin') {
       return new Response(JSON.stringify({ error: 'Admin access required' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -134,29 +153,47 @@ Deno.serve(async (req) => {
     const cutoffDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
     console.log('Cutoff date for cleanup:', cutoffDate.toISOString());
 
-    // Find backups older than 90 days
-    const { data: oldBackups, error: fetchError } = await supabase
-      .from('cold_storage_backups')
-      .select('*')
-      .lt('backup_timestamp', cutoffDate.toISOString());
+    // Find backups older than 90 days using direct REST API
+    const backupsResponse = await fetch(
+      `${supabaseUrl}/rest/v1/cold_storage_backups?backup_timestamp=lt.${cutoffDate.toISOString()}&select=*`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'apikey': supabaseServiceKey,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
-    if (fetchError) {
-      console.error('Error fetching old backups:', fetchError);
-      throw new Error(`Failed to fetch old backups: ${fetchError.message}`);
+    if (!backupsResponse.ok) {
+      console.error('Error fetching old backups:', await backupsResponse.text());
+      throw new Error('Failed to fetch old backups');
     }
+
+    const oldBackups = await backupsResponse.json();
 
     if (!oldBackups || oldBackups.length === 0) {
       console.log('No backups older than 90 days found');
       
-      await supabase.from('backup_audit_log').insert({
-        user_id: user.id,
-        action_type: 'cleanup',
-        status: 'success',
-        action_details: {
-          deleted_count: 0,
-          freed_space_bytes: 0,
-          cutoff_date: cutoffDate.toISOString(),
+      // Log using direct REST API
+      await fetch(`${supabaseUrl}/rest/v1/backup_audit_log`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'apikey': supabaseServiceKey,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal',
         },
+        body: JSON.stringify({
+          user_id: user.id,
+          action_type: 'cleanup',
+          status: 'success',
+          action_details: {
+            deleted_count: 0,
+            freed_space_bytes: 0,
+            cutoff_date: cutoffDate.toISOString(),
+          },
+        }),
       });
 
       return new Response(JSON.stringify({
@@ -206,18 +243,25 @@ Deno.serve(async (req) => {
         
         console.log(`Deleted from S3: ${backup.s3_key}`);
 
-        // Delete from database
-        const { error: deleteError } = await supabase
-          .from('cold_storage_backups')
-          .delete()
-          .eq('id', backup.id);
+        // Delete from database using direct REST API
+        const dbDeleteResponse = await fetch(
+          `${supabaseUrl}/rest/v1/cold_storage_backups?id=eq.${backup.id}`,
+          {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'apikey': supabaseServiceKey,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
 
-        if (deleteError) {
-          console.error(`Failed to delete backup from DB: ${backup.id}`, deleteError);
+        if (!dbDeleteResponse.ok) {
+          console.error(`Failed to delete backup from DB: ${backup.id}`, await dbDeleteResponse.text());
           errors.push({
             backup_id: backup.id,
             backup_name: backup.backup_name,
-            error: deleteError.message,
+            error: 'Failed to delete from database',
           });
           continue;
         }
@@ -238,17 +282,26 @@ Deno.serve(async (req) => {
 
     console.log(`Cleanup completed. Deleted ${deletedCount} backups, freed ${freedSpaceBytes} bytes`);
 
-    // Log the cleanup action
-    await supabase.from('backup_audit_log').insert({
-      user_id: user.id,
-      action_type: 'cleanup',
-      status: errors.length > 0 ? 'partial_success' : 'success',
-      action_details: {
-        deleted_count: deletedCount,
-        freed_space_bytes: freedSpaceBytes,
-        cutoff_date: cutoffDate.toISOString(),
-        errors: errors.length > 0 ? errors : undefined,
+    // Log the cleanup action using direct REST API
+    await fetch(`${supabaseUrl}/rest/v1/backup_audit_log`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'apikey': supabaseServiceKey,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
       },
+      body: JSON.stringify({
+        user_id: user.id,
+        action_type: 'cleanup',
+        status: errors.length > 0 ? 'partial_success' : 'success',
+        action_details: {
+          deleted_count: deletedCount,
+          freed_space_bytes: freedSpaceBytes,
+          cutoff_date: cutoffDate.toISOString(),
+          errors: errors.length > 0 ? errors : undefined,
+        },
+      }),
     });
 
     return new Response(JSON.stringify({

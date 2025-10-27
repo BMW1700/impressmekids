@@ -1,5 +1,3 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -88,28 +86,55 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    
-    // Verify admin role
-    const authHeader = req.headers.get('Authorization')!;
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-    
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+    // Authenticate user using direct REST API
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'No authorization header' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Check admin role
-    const { data: roleData } = await supabaseAdmin
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
+    const token = authHeader.replace('Bearer ', '');
+    
+    // Direct REST API call for authentication
+    const userResponse = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'apikey': SUPABASE_SERVICE_ROLE_KEY,
+      },
+    });
+    
+    if (!userResponse.ok) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    const user = await userResponse.json();
 
-    if (!roleData || roleData.role !== 'admin') {
+    // Check admin role using direct REST API
+    const roleResponse = await fetch(
+      `${SUPABASE_URL}/rest/v1/user_roles?user_id=eq.${user.id}&select=role`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!roleResponse.ok) {
+      return new Response(JSON.stringify({ error: 'Failed to check role' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const roleData = await roleResponse.json();
+    if (!roleData || roleData.length === 0 || roleData[0].role !== 'admin') {
       return new Response(JSON.stringify({ error: 'Admin access required' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -130,19 +155,34 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get backup metadata
-    const { data: backup, error: backupError } = await supabaseAdmin
-      .from('cold_storage_backups')
-      .select('*')
-      .eq('id', backup_id)
-      .single();
+    // Get backup metadata using direct REST API
+    const backupResponse = await fetch(
+      `${SUPABASE_URL}/rest/v1/cold_storage_backups?id=eq.${backup_id}&select=*`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
-    if (backupError || !backup) {
+    if (!backupResponse.ok) {
+      return new Response(JSON.stringify({ error: 'Failed to fetch backup' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const backupData = await backupResponse.json();
+    if (!backupData || backupData.length === 0) {
       return new Response(JSON.stringify({ error: 'Backup not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    const backup = backupData[0];
 
     // Download from S3 using raw HTTP with AWS Signature V4
     const s3Key = backup.backup_name;
@@ -192,19 +232,29 @@ Deno.serve(async (req) => {
       encryptedContent
     );
 
-    const backupData = JSON.parse(decoder.decode(decryptedBuffer));
+    const decryptedData = JSON.parse(decoder.decode(decryptedBuffer));
 
     // If not executing restore, just return data for viewing
     if (!execute_restore) {
-      await supabaseAdmin.from('backup_audit_log').insert({
-        backup_id: backup.id,
-        action_type: 'VIEW_BACKUP',
-        performed_by: user.id,
-        action_details: {
-          tables: Object.keys(backupData),
-          record_count: backup.record_count,
+      // Log using direct REST API
+      await fetch(`${SUPABASE_URL}/rest/v1/backup_audit_log`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal',
         },
-        status: 'success',
+        body: JSON.stringify({
+          backup_id: backup.id,
+          action_type: 'VIEW_BACKUP',
+          performed_by: user.id,
+          action_details: {
+            tables: Object.keys(decryptedData),
+            record_count: backup.record_count,
+          },
+          status: 'success',
+        }),
       });
 
       console.log(`👁️ Backup viewed: ${backup.backup_name}`);
@@ -213,23 +263,26 @@ Deno.serve(async (req) => {
         JSON.stringify({
           success: true,
           message: 'Backup data retrieved for viewing',
-          tables: Object.keys(backupData),
+          tables: Object.keys(decryptedData),
           record_count: backup.record_count,
-          backup_data: backupData,
+          backup_data: decryptedData,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Execute actual restore
-    const tablesToRestore = tables.length > 0 ? tables : Object.keys(backupData);
+    // Execute actual restore - here we need Supabase client for upsert operations
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    const tablesToRestore = tables.length > 0 ? tables : Object.keys(decryptedData);
     const restoredTables: string[] = [];
     let totalRecordsRestored = 0;
 
     for (const tableName of tablesToRestore) {
-      if (!backupData[tableName]) continue;
+      if (!decryptedData[tableName]) continue;
 
-      const records = backupData[tableName];
+      const records = decryptedData[tableName];
       let recordsRestored = 0;
 
       try {
