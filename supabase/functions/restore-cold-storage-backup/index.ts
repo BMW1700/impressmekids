@@ -220,7 +220,7 @@ Deno.serve(async (req) => {
     const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
     
     const getHeaders = {
-      'host': host,
+      'Host': host,  // Capital H to match working create function
       'x-amz-date': amzDate,
       'x-amz-content-sha256': await sha256Hash(''),
     };
