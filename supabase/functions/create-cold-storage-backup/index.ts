@@ -14,21 +14,31 @@ const BACKUP_ENCRYPTION_KEY = Deno.env.get('BACKUP_ENCRYPTION_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-// Initialize S3 client
-const s3Client = new S3Client({
-  region: COLD_STORAGE_REGION,
-  credentials: {
-    accessKeyId: COLD_STORAGE_ACCESS_KEY!,
-    secretAccessKey: COLD_STORAGE_SECRET_KEY!,
-  },
-});
-
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // Validate AWS credentials are present
+    if (!COLD_STORAGE_ACCESS_KEY || !COLD_STORAGE_SECRET_KEY || !COLD_STORAGE_BUCKET) {
+      console.error('Missing AWS credentials');
+      return new Response(
+        JSON.stringify({ error: 'Missing AWS credentials. Please configure COLD_STORAGE_ACCESS_KEY, COLD_STORAGE_SECRET_KEY, and COLD_STORAGE_BUCKET secrets.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Initialize S3 client with explicit configuration to avoid filesystem access
+    const s3Client = new S3Client({
+      region: COLD_STORAGE_REGION,
+      credentials: {
+        accessKeyId: COLD_STORAGE_ACCESS_KEY,
+        secretAccessKey: COLD_STORAGE_SECRET_KEY,
+      },
+      forcePathStyle: true,
+    });
+
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
     // Verify admin role
