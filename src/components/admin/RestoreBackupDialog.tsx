@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-interface RestoreBackupDialogProps {
+interface ViewBackupDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   backupData: any;
@@ -16,14 +16,14 @@ interface RestoreBackupDialogProps {
   recordCount: number;
 }
 
-export const RestoreBackupDialog = ({
+export const ViewBackupDialog = ({
   open,
   onOpenChange,
   backupData,
   isLoading,
   backupName,
   recordCount,
-}: RestoreBackupDialogProps) => {
+}: ViewBackupDialogProps) => {
   const { toast } = useToast();
   const [expandedTables, setExpandedTables] = useState<Set<string>>(new Set());
 

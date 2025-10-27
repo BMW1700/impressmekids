@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { backup_id } = await req.json();
+    const { backup_id, execute_restore = false, tables = [] } = await req.json();
 
     if (!backup_id) {
       return new Response(JSON.stringify({ error: 'backup_id required' }), {
@@ -117,27 +117,85 @@ Deno.serve(async (req) => {
 
     const backupData = JSON.parse(decoder.decode(decryptedBuffer));
 
-    // Log audit trail
+    // If not executing restore, just return the data for viewing
+    if (!execute_restore) {
+      // Log view action
+      await supabaseAdmin.from('backup_audit_log').insert({
+        backup_id: backup.id,
+        action_type: 'VIEW_BACKUP',
+        performed_by: user.id,
+        action_details: {
+          tables: Object.keys(backupData),
+          record_count: backup.record_count,
+        },
+        status: 'success',
+      });
+
+      console.log(`👁️ Backup viewed: ${backup.backup_name}`);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'Backup data retrieved for viewing',
+          tables: Object.keys(backupData),
+          record_count: backup.record_count,
+          backup_data: backupData,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Execute actual restore
+    const tablesToRestore = tables.length > 0 ? tables : Object.keys(backupData);
+    const restoredTables: string[] = [];
+    let totalRecordsRestored = 0;
+
+    for (const tableName of tablesToRestore) {
+      if (!backupData[tableName]) continue;
+
+      const records = backupData[tableName];
+      let recordsRestored = 0;
+
+      try {
+        // Insert records (will skip duplicates if ID exists)
+        for (const record of records) {
+          const { error: insertError } = await supabaseAdmin
+            .from(tableName)
+            .upsert(record, { onConflict: 'id', ignoreDuplicates: false });
+
+          if (!insertError) {
+            recordsRestored++;
+          }
+        }
+
+        restoredTables.push(tableName);
+        totalRecordsRestored += recordsRestored;
+        console.log(`✅ Restored ${recordsRestored} records to ${tableName}`);
+      } catch (error) {
+        console.error(`❌ Error restoring ${tableName}:`, error);
+      }
+    }
+
+    // Log restore action
     await supabaseAdmin.from('backup_audit_log').insert({
       backup_id: backup.id,
       action_type: 'RESTORE_BACKUP',
       performed_by: user.id,
       action_details: {
-        tables: Object.keys(backupData),
-        record_count: backup.record_count,
+        tables: restoredTables,
+        record_count: totalRecordsRestored,
       },
       status: 'success',
     });
 
-    console.log(`✅ Backup restored: ${backup.backup_name}, ${backup.record_count} records`);
+    console.log(`✅ Backup restored: ${backup.backup_name}, ${totalRecordsRestored} records across ${restoredTables.length} tables`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Backup data retrieved and decrypted',
-        tables: Object.keys(backupData),
-        record_count: backup.record_count,
-        backup_data: backupData,
+        message: 'Backup restored successfully',
+        restored_tables: restoredTables,
+        total_records: totalRecordsRestored,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
