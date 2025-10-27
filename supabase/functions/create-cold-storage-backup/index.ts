@@ -90,6 +90,7 @@ async function signAwsRequest(
   
   const canonicalRequestHash = await sha256Hash(canonicalRequest);
   console.log(`🎯 Canonical request hash: ${canonicalRequestHash.substring(0, 16)}...`);
+  console.log(`📋 Canonical request (first 200 chars):\n${canonicalRequest.substring(0, 200)}...`);
   
   // Create string to sign
   const credentialScope = `${dateStamp}/${region}/s3/aws4_request`;
@@ -252,7 +253,13 @@ Deno.serve(async (req) => {
     );
     console.log(`🔑 Payload hash: ${payloadHashHex.substring(0, 16)}...`);
     
-    const host = `${COLD_STORAGE_BUCKET}.s3.${COLD_STORAGE_REGION}.amazonaws.com`;
+    // CRITICAL: Normalize bucket name to lowercase for proper AWS signature
+    const normalizedBucket = COLD_STORAGE_BUCKET!.toLowerCase();
+    if (COLD_STORAGE_BUCKET !== normalizedBucket) {
+      console.warn(`⚠️ Bucket name normalized: ${COLD_STORAGE_BUCKET} -> ${normalizedBucket}`);
+    }
+    
+    const host = `${normalizedBucket}.s3.${COLD_STORAGE_REGION}.amazonaws.com`;
     const path = `/${backupName}`;
     const uploadUrl = `https://${host}${path}`;
     
