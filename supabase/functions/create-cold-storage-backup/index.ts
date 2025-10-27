@@ -15,10 +15,9 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 // AWS Signature V4 signing helper functions
 async function hmacSha256(key: Uint8Array, data: string): Promise<Uint8Array> {
-  const arrayBuffer = key.buffer.slice(key.byteOffset, key.byteOffset + key.byteLength) as ArrayBuffer;
   const cryptoKey = await crypto.subtle.importKey(
     'raw',
-    arrayBuffer,
+    key, // Direct use - crypto.subtle accepts BufferSource (Uint8Array)
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign']
@@ -28,14 +27,9 @@ async function hmacSha256(key: Uint8Array, data: string): Promise<Uint8Array> {
 }
 
 async function sha256Hash(data: string | Uint8Array): Promise<string> {
-  let buffer: ArrayBuffer;
-  
-  if (typeof data === 'string') {
-    buffer = new TextEncoder().encode(data).buffer;
-  } else {
-    // For Uint8Array, get the underlying ArrayBuffer
-    buffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
-  }
+  const buffer = typeof data === 'string' 
+    ? new TextEncoder().encode(data)
+    : data; // Direct use - crypto.subtle accepts BufferSource (Uint8Array)
   
   const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
   return Array.from(new Uint8Array(hashBuffer))
