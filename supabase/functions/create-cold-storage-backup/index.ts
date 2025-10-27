@@ -27,8 +27,17 @@ async function hmacSha256(key: Uint8Array, data: string): Promise<Uint8Array> {
   return new Uint8Array(signature);
 }
 
-async function sha256Hash(data: string): Promise<string> {
-  const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
+async function sha256Hash(data: string | Uint8Array): Promise<string> {
+  let buffer: ArrayBuffer;
+  
+  if (typeof data === 'string') {
+    buffer = new TextEncoder().encode(data).buffer;
+  } else {
+    // For Uint8Array, get the underlying ArrayBuffer
+    buffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
+  }
+  
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
   return Array.from(new Uint8Array(hashBuffer))
     .map(b => b.toString(16).padStart(2, '0'))
     .join('');
@@ -75,8 +84,7 @@ async function signAwsRequest(
   console.log(`📋 Signed headers: ${signedHeaders}`);
   
   // Use the payload hash from headers (already calculated)
-  const payloadHash = headers['x-amz-content-sha256'] || 
-    await sha256Hash(Array.from(body).map(b => String.fromCharCode(b)).join(''));
+  const payloadHash = headers['x-amz-content-sha256'] || await sha256Hash(body);
   
   // Create canonical request
   const canonicalRequest = [
@@ -245,12 +253,10 @@ Deno.serve(async (req) => {
     // Upload to S3 using direct REST API
     console.log('🚀 Uploading to S3...');
     
-    // Calculate payload hash BEFORE creating headers
+    // Calculate payload hash BEFORE creating headers (hash raw bytes directly)
     console.log('📊 Calculating payload hash...');
     console.log(`📏 Payload size: ${encryptedData.length} bytes`);
-    const payloadHashHex = await sha256Hash(
-      Array.from(encryptedData).map(b => String.fromCharCode(b)).join('')
-    );
+    const payloadHashHex = await sha256Hash(encryptedData);
     console.log(`🔑 Payload hash: ${payloadHashHex.substring(0, 16)}...`);
     
     // CRITICAL: Normalize bucket name to lowercase for proper AWS signature
