@@ -1,5 +1,4 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { S3Client, PutObjectCommand } from 'https://esm.sh/@aws-sdk/client-s3@3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,45 +13,136 @@ const BACKUP_ENCRYPTION_KEY = Deno.env.get('BACKUP_ENCRYPTION_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+// AWS Signature V4 signing helper functions
+async function hmacSha256(key: Uint8Array, data: string): Promise<Uint8Array> {
+  const arrayBuffer = key.buffer.slice(key.byteOffset, key.byteOffset + key.byteLength) as ArrayBuffer;
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    arrayBuffer,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await crypto.subtle.sign('HMAC', cryptoKey, new TextEncoder().encode(data));
+  return new Uint8Array(signature);
+}
+
+async function sha256Hash(data: string): Promise<string> {
+  const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
+  return Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function getSignatureKey(key: string, dateStamp: string, regionName: string, serviceName: string): Promise<Uint8Array> {
+  const kDate = hmacSha256(new TextEncoder().encode('AWS4' + key), dateStamp);
+  return kDate.then(k => hmacSha256(k, regionName))
+    .then(k => hmacSha256(k, serviceName))
+    .then(k => hmacSha256(k, 'aws4_request'));
+}
+
+async function signAwsRequest(
+  method: string,
+  host: string,
+  path: string,
+  headers: Record<string, string>,
+  body: Uint8Array,
+  accessKey: string,
+  secretKey: string,
+  region: string
+): Promise<Record<string, string>> {
+  const now = new Date();
+  const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
+  const dateStamp = amzDate.substring(0, 8);
+  
+  // Create canonical headers
+  const canonicalHeaders = Object.entries(headers)
+    .map(([k, v]) => `${k.toLowerCase()}:${v.trim()}\n`)
+    .sort()
+    .join('');
+  
+  const signedHeaders = Object.keys(headers)
+    .map(k => k.toLowerCase())
+    .sort()
+    .join(';');
+  
+  // Hash the payload
+  const payloadHash = await sha256Hash(Array.from(body).map(b => String.fromCharCode(b)).join(''));
+  
+  // Create canonical request
+  const canonicalRequest = [
+    method,
+    path,
+    '', // query string (empty for PUT)
+    canonicalHeaders,
+    signedHeaders,
+    payloadHash
+  ].join('\n');
+  
+  const canonicalRequestHash = await sha256Hash(canonicalRequest);
+  
+  // Create string to sign
+  const credentialScope = `${dateStamp}/${region}/s3/aws4_request`;
+  const stringToSign = [
+    'AWS4-HMAC-SHA256',
+    amzDate,
+    credentialScope,
+    canonicalRequestHash
+  ].join('\n');
+  
+  // Calculate signature
+  const signingKey = await getSignatureKey(secretKey, dateStamp, region, 's3');
+  const signatureBytes = await hmacSha256(signingKey, stringToSign);
+  const signature = Array.from(signatureBytes)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+  
+  // Add authorization header
+  const authorizationHeader = `AWS4-HMAC-SHA256 Credential=${accessKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+  
+  return {
+    ...headers,
+    'x-amz-date': amzDate,
+    'Authorization': authorizationHeader,
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log('🔍 Validating AWS credentials...');
     // Validate AWS credentials are present
     if (!COLD_STORAGE_ACCESS_KEY || !COLD_STORAGE_SECRET_KEY || !COLD_STORAGE_BUCKET) {
-      console.error('Missing AWS credentials');
+      console.error('❌ Missing AWS credentials');
       return new Response(
         JSON.stringify({ error: 'Missing AWS credentials. Please configure COLD_STORAGE_ACCESS_KEY, COLD_STORAGE_SECRET_KEY, and COLD_STORAGE_BUCKET secrets.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    console.log('✅ AWS credentials validated');
 
-    // Initialize S3 client with explicit configuration to avoid filesystem access
-    const s3Client = new S3Client({
-      region: COLD_STORAGE_REGION,
-      credentials: {
-        accessKeyId: COLD_STORAGE_ACCESS_KEY,
-        secretAccessKey: COLD_STORAGE_SECRET_KEY,
-      },
-      forcePathStyle: true,
-    });
-
+    console.log('🔧 Initializing Supabase admin client...');
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
+    console.log('🔐 Verifying user authentication...');
     // Verify admin role
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
     
     if (authError || !user) {
+      console.error('❌ Authentication failed:', authError);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    console.log('✅ User authenticated:', user.id);
 
+    console.log('🔍 Checking admin role...');
     // Check admin role
     const { data: roleData } = await supabaseAdmin
       .from('user_roles')
@@ -61,14 +151,17 @@ Deno.serve(async (req) => {
       .single();
 
     if (!roleData || roleData.role !== 'admin') {
+      console.error('❌ User is not admin:', roleData?.role);
       return new Response(JSON.stringify({ error: 'Admin access required' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    console.log('✅ Admin role verified');
 
     const backupTimestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupName = `backup-${backupTimestamp}.enc`;
+    console.log(`📋 Creating backup: ${backupName}`);
 
     // Tables to backup (excluding system tables)
     const tablesToBackup = [
@@ -81,21 +174,29 @@ Deno.serve(async (req) => {
     let totalRecords = 0;
     const backupData: any = {};
 
+    console.log(`📊 Fetching data from ${tablesToBackup.length} tables...`);
     // Fetch data from all tables
     for (const table of tablesToBackup) {
       const { data, error } = await supabaseAdmin.from(table).select('*');
       if (!error && data) {
         backupData[table] = data;
         totalRecords += data.length;
+        console.log(`  ✓ ${table}: ${data.length} records`);
+      } else if (error) {
+        console.warn(`  ⚠ ${table}: ${error.message}`);
       }
     }
+    console.log(`✅ Data collection complete: ${totalRecords} total records`);
 
     // Convert to JSON
+    console.log('🔄 Converting data to JSON...');
     const jsonData = JSON.stringify(backupData);
     const encoder = new TextEncoder();
     const dataBytes = encoder.encode(jsonData);
+    console.log(`📏 Data size: ${dataBytes.length} bytes`);
 
     // Proper AES-256-GCM encryption
+    console.log('🔐 Encrypting backup data...');
     const encryptionKeyMaterial = encoder.encode(BACKUP_ENCRYPTION_KEY!);
     
     // Import key for AES-GCM
@@ -109,6 +210,7 @@ Deno.serve(async (req) => {
 
     // Generate random IV
     const iv = crypto.getRandomValues(new Uint8Array(12));
+    console.log('🎲 Generated random IV');
     
     // Encrypt data
     const encryptedBuffer = await crypto.subtle.encrypt(
@@ -116,31 +218,61 @@ Deno.serve(async (req) => {
       cryptoKey,
       dataBytes
     );
+    console.log('✅ Data encrypted successfully');
 
     // Combine IV + encrypted data for storage
     const encryptedData = new Uint8Array(iv.length + encryptedBuffer.byteLength);
     encryptedData.set(iv, 0);
     encryptedData.set(new Uint8Array(encryptedBuffer), iv.length);
 
-    // Upload to S3 using AWS SDK
-    const uploadCommand = new PutObjectCommand({
-      Bucket: COLD_STORAGE_BUCKET!,
-      Key: backupName,
-      Body: encryptedData,
-      ContentType: 'application/octet-stream',
-      ServerSideEncryption: 'AES256',
-      Metadata: {
-        'encryption-method': 'AES-256-GCM',
-        'iv-length': '12',
-        'created-at': new Date().toISOString(),
-      },
+    console.log(`📦 Prepared encrypted backup: ${encryptedData.length} bytes`);
+
+    // Upload to S3 using direct REST API
+    console.log('🚀 Uploading to S3...');
+    const host = `${COLD_STORAGE_BUCKET}.s3.${COLD_STORAGE_REGION}.amazonaws.com`;
+    const path = `/${backupName}`;
+    const uploadUrl = `https://${host}${path}`;
+    
+    const s3Headers = {
+      'Host': host,
+      'Content-Type': 'application/octet-stream',
+      'Content-Length': encryptedData.length.toString(),
+      'x-amz-server-side-encryption': 'AES256',
+      'x-amz-meta-encryption-method': 'AES-256-GCM',
+      'x-amz-meta-iv-length': '12',
+      'x-amz-meta-created-at': new Date().toISOString(),
+    };
+
+    console.log('🔐 Signing S3 request...');
+    const signedHeaders = await signAwsRequest(
+      'PUT',
+      host,
+      path,
+      s3Headers,
+      encryptedData,
+      COLD_STORAGE_ACCESS_KEY!,
+      COLD_STORAGE_SECRET_KEY!,
+      COLD_STORAGE_REGION
+    );
+
+    console.log('📤 Sending PUT request to S3...');
+    const s3Response = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: signedHeaders,
+      body: encryptedData,
     });
 
-    await s3Client.send(uploadCommand);
-    
+    if (!s3Response.ok) {
+      const errorText = await s3Response.text();
+      console.error('❌ S3 upload failed:', s3Response.status, errorText);
+      throw new Error(`S3 upload failed: ${s3Response.status} - ${errorText}`);
+    }
+
+    console.log('✅ Successfully uploaded to S3');
     const s3Location = `s3://${COLD_STORAGE_BUCKET}/${backupName}`;
 
     // Record backup in database
+    console.log('💾 Recording backup in database...');
     const { data: backupRecord, error: insertError } = await supabaseAdmin
       .from('cold_storage_backups')
       .insert({
@@ -161,10 +293,13 @@ Deno.serve(async (req) => {
       .single();
 
     if (insertError) {
-      console.error('Failed to record backup:', insertError);
+      console.error('❌ Failed to record backup:', insertError);
+    } else {
+      console.log('✅ Backup recorded in database:', backupRecord.id);
     }
 
     // Log audit trail
+    console.log('📝 Creating audit log entry...');
     await supabaseAdmin.from('backup_audit_log').insert({
       backup_id: backupRecord?.id,
       action_type: 'CREATE_BACKUP',
