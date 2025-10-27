@@ -56,22 +56,50 @@ async function signAwsRequest(
   if (!amzDate) throw new Error('x-amz-date header required');
   
   const dateStamp = amzDate.substring(0, 8);
+  
+  // Create canonical headers
   const canonicalHeaders = Object.entries(headers)
     .map(([k, v]) => `${k.toLowerCase()}:${v.trim()}\n`)
     .sort()
     .join('');
-  const signedHeaders = Object.keys(headers).map(k => k.toLowerCase()).sort().join(';');
-  const payloadHash = await sha256Hash('');
-  const canonicalRequest = `${method}\n${path}\n\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
+  
+  const signedHeaders = Object.keys(headers)
+    .map(k => k.toLowerCase())
+    .sort()
+    .join(';');
+  
+  // Use the payload hash from headers
+  const payloadHash = headers['x-amz-content-sha256'];
+  
+  // Create canonical request with proper format
+  const canonicalRequest = [
+    method,
+    path,
+    '', // query string (empty for GET)
+    canonicalHeaders,
+    signedHeaders,
+    payloadHash
+  ].join('\n');
+  
   const canonicalRequestHash = await sha256Hash(canonicalRequest);
   
+  // Create string to sign
   const credentialScope = `${dateStamp}/${region}/s3/aws4_request`;
-  const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${credentialScope}\n${canonicalRequestHash}`;
+  const stringToSign = [
+    'AWS4-HMAC-SHA256',
+    amzDate,
+    credentialScope,
+    canonicalRequestHash
+  ].join('\n');
   
+  // Calculate signature
   const signingKey = await getSignatureKey(secretKey, dateStamp, region, 's3');
   const signatureBytes = await hmacSha256(signingKey, stringToSign);
-  const signature = Array.from(signatureBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  const signature = Array.from(signatureBytes)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
   
+  // Add authorization header
   const authorizationHeader = `AWS4-HMAC-SHA256 Credential=${accessKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
   
   return {
