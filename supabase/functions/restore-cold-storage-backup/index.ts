@@ -228,8 +228,14 @@ Deno.serve(async (req) => {
     const backup = backupData[0];
 
     // Download from S3 using raw HTTP with AWS Signature V4
+    // CRITICAL: Normalize bucket name to lowercase for proper AWS signature
+    const normalizedBucket = bucket.toLowerCase();
+    if (bucket !== normalizedBucket) {
+      console.warn(`⚠️ Bucket name normalized: ${bucket} -> ${normalizedBucket}`);
+    }
+    
     const s3Key = backup.backup_name;
-    const host = `${bucket}.s3.${region}.amazonaws.com`;
+    const host = `${normalizedBucket}.s3.${region}.amazonaws.com`;
     const path = `/${s3Key}`;
     const now = new Date();
     const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
