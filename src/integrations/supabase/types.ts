@@ -2163,7 +2163,14 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      security_summary: {
+        Row: {
+          category: string | null
+          last_activity: string | null
+          total_records: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       attempt_buzz: {
@@ -2405,6 +2412,10 @@ export type Database = {
           p_student_id: string
         }
         Returns: undefined
+      }
+      mask_email: {
+        Args: { email: string; viewer_id: string }
+        Returns: string
       }
       submit_answer_tx: {
         Args: {
