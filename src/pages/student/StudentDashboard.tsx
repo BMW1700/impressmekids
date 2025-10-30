@@ -12,6 +12,7 @@ import { Gamepad2, Loader2, UserPlus, Bell, Mic } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AnnouncementCard } from "@/components/AnnouncementCard";
 import NextBestActionCard from "@/components/aura/NextBestActionCard";
+import { CalendarWidget } from "@/components/calendar/CalendarWidget";
 
 const StudentDashboard = () => {
   const [profile, setProfile] = useState<any>(null);
@@ -205,6 +206,14 @@ const StudentDashboard = () => {
             </div>
             
             <div className="lg:col-span-2 space-y-6">
+              {/* Calendar Widget */}
+              {profile && (
+                <CalendarWidget 
+                  userId={profile.id} 
+                  userRole="student"
+                />
+              )}
+              
               {/* AI Next Best Action - Phase 5 Integration */}
               <NextBestActionCard />
 

@@ -242,6 +242,7 @@ export type Database = {
           due_date: string | null
           enable_realtime_coaching: boolean | null
           id: string
+          is_posted: boolean | null
           max_attempts: number
           passage_metadata: Json | null
           passage_text: string
@@ -260,6 +261,7 @@ export type Database = {
           due_date?: string | null
           enable_realtime_coaching?: boolean | null
           id?: string
+          is_posted?: boolean | null
           max_attempts?: number
           passage_metadata?: Json | null
           passage_text: string
@@ -278,6 +280,7 @@ export type Database = {
           due_date?: string | null
           enable_realtime_coaching?: boolean | null
           id?: string
+          is_posted?: boolean | null
           max_attempts?: number
           passage_metadata?: Json | null
           passage_text?: string
@@ -639,23 +642,38 @@ export type Database = {
       classrooms: {
         Row: {
           created_at: string
+          end_time: string | null
           id: string
           join_code: string
+          location: string | null
+          meeting_days: string[] | null
           name: string
+          schedule_start_date: string | null
+          start_time: string | null
           teacher_id: string
         }
         Insert: {
           created_at?: string
+          end_time?: string | null
           id?: string
           join_code: string
+          location?: string | null
+          meeting_days?: string[] | null
           name: string
+          schedule_start_date?: string | null
+          start_time?: string | null
           teacher_id: string
         }
         Update: {
           created_at?: string
+          end_time?: string | null
           id?: string
           join_code?: string
+          location?: string | null
+          meeting_days?: string[] | null
           name?: string
+          schedule_start_date?: string | null
+          start_time?: string | null
           teacher_id?: string
         }
         Relationships: [
@@ -885,6 +903,74 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      events: {
+        Row: {
+          attachments: Json | null
+          category: Database["public"]["Enums"]["event_category"]
+          classroom_id: string
+          created_at: string | null
+          description: string | null
+          end_time: string
+          event_date: string
+          id: string
+          is_posted: boolean | null
+          is_repeating: boolean | null
+          location: string | null
+          repeat_days: string[] | null
+          repeat_end_date: string | null
+          start_time: string
+          teacher_id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          attachments?: Json | null
+          category?: Database["public"]["Enums"]["event_category"]
+          classroom_id: string
+          created_at?: string | null
+          description?: string | null
+          end_time: string
+          event_date: string
+          id?: string
+          is_posted?: boolean | null
+          is_repeating?: boolean | null
+          location?: string | null
+          repeat_days?: string[] | null
+          repeat_end_date?: string | null
+          start_time: string
+          teacher_id: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          attachments?: Json | null
+          category?: Database["public"]["Enums"]["event_category"]
+          classroom_id?: string
+          created_at?: string | null
+          description?: string | null
+          end_time?: string
+          event_date?: string
+          id?: string
+          is_posted?: boolean | null
+          is_repeating?: boolean | null
+          location?: string | null
+          repeat_days?: string[] | null
+          repeat_end_date?: string | null
+          start_time?: string
+          teacher_id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       flashcard_sets: {
         Row: {
@@ -1749,6 +1835,81 @@ export type Database = {
           },
         ]
       }
+      school_events: {
+        Row: {
+          blocks_classes: boolean | null
+          created_at: string | null
+          created_by: string
+          description: string | null
+          end_time: string | null
+          event_date: string
+          event_type: Database["public"]["Enums"]["school_event_type"]
+          id: string
+          start_time: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          blocks_classes?: boolean | null
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          end_time?: string | null
+          event_date: string
+          event_type: Database["public"]["Enums"]["school_event_type"]
+          id?: string
+          start_time?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          blocks_classes?: boolean | null
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          end_time?: string | null
+          event_date?: string
+          event_type?: Database["public"]["Enums"]["school_event_type"]
+          id?: string
+          start_time?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      school_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          school_day_end: string | null
+          school_day_start: string | null
+          school_year_end: string
+          school_year_start: string
+          timezone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          school_day_end?: string | null
+          school_day_start?: string | null
+          school_year_end: string
+          school_year_start: string
+          timezone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          school_day_end?: string | null
+          school_day_start?: string | null
+          school_year_end?: string
+          school_year_start?: string
+          timezone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       security_audit_log: {
         Row: {
           action_type: string
@@ -2510,8 +2671,25 @@ export type Database = {
       app_role: "admin" | "teacher" | "student"
       difficulty_level: "easy" | "medium" | "hard"
       elimination_status: "active" | "eliminated"
+      event_category:
+        | "quiz"
+        | "test"
+        | "field_trip"
+        | "guest_speaker"
+        | "homework_due"
+        | "project_presentation"
+        | "parent_teacher_conference"
+        | "other"
       match_status: "waiting" | "in_progress" | "completed"
       question_type: "question_answer" | "reading_comprehension" | "speaking"
+      school_event_type:
+        | "holiday"
+        | "school_break"
+        | "assembly"
+        | "testing_day"
+        | "early_dismissal"
+        | "picture_day"
+        | "other"
       tournament_status: "waiting" | "in_progress" | "completed"
       user_role: "teacher" | "student" | "admin" | "district_admin" | "parent"
     }
@@ -2645,8 +2823,27 @@ export const Constants = {
       app_role: ["admin", "teacher", "student"],
       difficulty_level: ["easy", "medium", "hard"],
       elimination_status: ["active", "eliminated"],
+      event_category: [
+        "quiz",
+        "test",
+        "field_trip",
+        "guest_speaker",
+        "homework_due",
+        "project_presentation",
+        "parent_teacher_conference",
+        "other",
+      ],
       match_status: ["waiting", "in_progress", "completed"],
       question_type: ["question_answer", "reading_comprehension", "speaking"],
+      school_event_type: [
+        "holiday",
+        "school_break",
+        "assembly",
+        "testing_day",
+        "early_dismissal",
+        "picture_day",
+        "other",
+      ],
       tournament_status: ["waiting", "in_progress", "completed"],
       user_role: ["teacher", "student", "admin", "district_admin", "parent"],
     },

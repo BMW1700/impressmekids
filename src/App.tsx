@@ -9,6 +9,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import AuraPractice from "./pages/student/AuraPractice";
+import Calendar from "./pages/student/Calendar";
 import Games from "./pages/Games";
 import JeopardyGame from "./pages/games/JeopardyGame";
 import JoinClass from "./pages/JoinClass";
@@ -46,6 +47,7 @@ const App = () => (
           <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
           <Route path="/student/dashboard" element={<StudentDashboard />} />
           <Route path="/student/aura-practice" element={<AuraPractice />} />
+          <Route path="/calendar" element={<Calendar />} />
           <Route path="/classrooms/:id" element={<ClassroomDetail />} />
           <Route path="/teacher/questions/:classroomId" element={<QuestionsLibrary />} />
           <Route path="/teacher/questions/:classroomId/:groupId" element={<QuestionGroupDetail />} />
