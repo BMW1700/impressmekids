@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
+import TeacherCalendar from "./pages/teacher/Calendar";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import AuraPractice from "./pages/student/AuraPractice";
 import Calendar from "./pages/student/Calendar";
@@ -45,6 +46,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
+          <Route path="/teacher/calendar" element={<TeacherCalendar />} />
           <Route path="/student/dashboard" element={<StudentDashboard />} />
           <Route path="/student/aura-practice" element={<AuraPractice />} />
           <Route path="/calendar" element={<Calendar />} />

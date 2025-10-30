@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, Users, Trophy, BookOpen, Loader2, BarChart3, Brain } from "lucide-react";
+import { PlusCircle, Users, Trophy, BookOpen, Loader2, BarChart3, Brain, Calendar as CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const TeacherDashboard = () => {
@@ -160,10 +160,14 @@ const TeacherDashboard = () => {
           </div>
 
           <Tabs defaultValue="classrooms" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="classrooms">
                 <Users className="h-4 w-4 mr-2" />
                 Classrooms
+              </TabsTrigger>
+              <TabsTrigger value="calendar" onClick={() => navigate('/teacher/calendar')}>
+                <CalendarIcon className="h-4 w-4 mr-2" />
+                Calendar
               </TabsTrigger>
               <TabsTrigger value="actions">
                 <BookOpen className="h-4 w-4 mr-2" />

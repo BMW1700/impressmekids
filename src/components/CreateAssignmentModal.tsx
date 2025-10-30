@@ -35,6 +35,7 @@ export const CreateAssignmentModal = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewMode, setPreviewMode] = useState(false);
   const [enableRealtimeCoaching, setEnableRealtimeCoaching] = useState(false);
+  const [isPosted, setIsPosted] = useState(true);
   const { toast } = useToast();
   const { createAssignment } = useAssignments(classroomId);
 
@@ -143,8 +144,8 @@ export const CreateAssignmentModal = ({
         passageText: passageText.trim(),
         passageMetadata,
         dueDate: dueDate ? new Date(dueDate) : undefined,
-        status: 'published',
-        enableRealtimeCoaching, // NEW: Include coaching toggle
+        status: isPosted ? 'published' : 'draft',
+        enableRealtimeCoaching,
       });
 
       // Reset form
@@ -156,6 +157,7 @@ export const CreateAssignmentModal = ({
       setOcrConfidence(null);
       setPreviewMode(false);
       setEnableRealtimeCoaching(false);
+      setIsPosted(true);
       onOpenChange(false);
       onSuccess?.();
     } catch (error: any) {
@@ -235,6 +237,26 @@ export const CreateAssignmentModal = ({
                   id="coaching-toggle"
                   checked={enableRealtimeCoaching}
                   onCheckedChange={setEnableRealtimeCoaching}
+                  disabled={isLoading}
+                />
+              </div>
+            </Card>
+
+            {/* Post Assignment Toggle */}
+            <Card className="p-4 bg-muted/30 border-primary/20">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label htmlFor="post-toggle" className="text-base font-medium">
+                    Post Assignment to Students
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {isPosted ? "Students can see and complete this assignment" : "Save as draft - students won't see it yet"}
+                  </p>
+                </div>
+                <Switch
+                  id="post-toggle"
+                  checked={isPosted}
+                  onCheckedChange={setIsPosted}
                   disabled={isLoading}
                 />
               </div>
@@ -353,7 +375,7 @@ export const CreateAssignmentModal = ({
             </Button>
             <Button type="submit" disabled={isLoading || !title.trim() || !passageText.trim()}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Assignment
+              {isPosted ? "Create & Post Assignment" : "Save as Draft"}
             </Button>
           </div>
         </form>
