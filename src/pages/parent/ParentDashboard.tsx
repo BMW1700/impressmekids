@@ -3,12 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { Loader2, UserPlus } from "lucide-react";
+import { Loader2, UserPlus, Calendar as CalendarIcon } from "lucide-react";
 import { ParentNotificationBell } from "@/components/parent/ParentNotificationBell";
 import { StudentLookupModal } from "@/components/parent/StudentLookupModal";
 import { ParentOutgoingRequestsList } from "@/components/parent/ParentOutgoingRequestsList";
 import { Button } from "@/components/ui/button";
-import { useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CalendarWidget } from "@/components/calendar/CalendarWidget";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 
 const ParentDashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -100,11 +102,37 @@ const ParentDashboard = () => {
 
   console.log("🔗 ParentDashboard rendering with parentId:", parentId);
 
+  // Get current session
+  const { data: session } = useQuery({
+    queryKey: ["session"],
+    queryFn: async () => {
+      const { data } = await supabase.auth.getSession();
+      return data.session;
+    },
+  });
+
   const handleLookupSuccess = () => {
     console.log("🔄 Invalidating queries after lookup success for parentId:", parentId);
     queryClient.invalidateQueries({ queryKey: ["parent-student-links"] });
     queryClient.invalidateQueries({ queryKey: ["parent-access-requests", parentId] });
   };
+
+  // Get first approved child for calendar widget
+  const { data: approvedChildren } = useQuery({
+    queryKey: ["parent-children", parentId],
+    queryFn: async () => {
+      if (!parentId) return [];
+      const { data } = await supabase
+        .from("parent_student_links")
+        .select("student_id")
+        .eq("parent_id", parentId)
+        .eq("approved", true);
+      return data || [];
+    },
+    enabled: !!parentId,
+  });
+
+  const firstChildId = approvedChildren?.[0]?.student_id;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -115,14 +143,58 @@ const ParentDashboard = () => {
         <div className="mb-6 flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold">Hey Parent C! 🎮</h1>
-            <p className="text-muted-foreground">Ready to play and learn?</p>
+            <p className="text-muted-foreground">Monitor your children's progress</p>
           </div>
-          {parentId && (
-            <Button onClick={() => setLookupModalOpen(true)} className="gap-2">
-              <UserPlus className="h-4 w-4" />
-              Link Student
-            </Button>
+          <div className="flex gap-2">
+            {parentId && firstChildId && (
+              <Button variant="outline" onClick={() => navigate("/parent/calendar")} className="gap-2">
+                <CalendarIcon className="h-4 w-4" />
+                Calendar
+              </Button>
+            )}
+            {parentId && (
+              <Button onClick={() => setLookupModalOpen(true)} className="gap-2">
+                <UserPlus className="h-4 w-4" />
+                Link Student
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {/* Calendar Widget */}
+          {parentId && firstChildId && session?.user?.id && (
+            <CalendarWidget
+              userId={session.user.id}
+              userRole="parent"
+              childId={firstChildId}
+            />
           )}
+
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => navigate("/parent/calendar")}
+              >
+                <CalendarIcon className="h-4 w-4 mr-2" />
+                View Full Calendar
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => setLookupModalOpen(true)}
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Link Another Student
+              </Button>
+            </CardContent>
+          </Card>
         </div>
 
         {parentId && (

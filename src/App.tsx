@@ -30,6 +30,7 @@ import StudentProfile from "./pages/teacher/StudentProfile";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import ParentDashboard from "./pages/parent/ParentDashboard";
+import ParentCalendar from "./pages/parent/ParentCalendar";
 import RequestAccess from "./pages/parent/RequestAccess";
 import ChildDetail from "./pages/parent/ChildDetail";
 import DistrictDashboard from "./pages/district/DistrictDashboard";
@@ -68,6 +69,7 @@ const App = () => (
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />
           <Route path="/parent/dashboard" element={<ParentDashboard />} />
+          <Route path="/parent/calendar" element={<ParentCalendar />} />
           <Route path="/parent/request-access" element={<RequestAccess />} />
           <Route path="/parent/child/:studentId" element={<ChildDetail />} />
           <Route path="/admin" element={<AdminDashboard />} />
