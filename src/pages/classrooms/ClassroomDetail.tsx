@@ -32,6 +32,7 @@ import { AssignmentStatsCard } from "@/components/assignments/AssignmentStatsCar
 import { StudentAssignmentCard } from "@/components/assignments/StudentAssignmentCard";
 import { ClassroomAIInsights } from "@/components/teacher/ClassroomAIInsights";
 import { TeacherSuccessBoard } from "@/components/teacher/TeacherSuccessBoard";
+import { EditClassroomModal } from "@/components/EditClassroomModal";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -73,6 +74,7 @@ const ClassroomDetail = () => {
   const [deleteAssignmentId, setDeleteAssignmentId] = useState<string | null>(null);
   const [deleteTournamentId, setDeleteTournamentId] = useState<string | null>(null);
   const [showClassGlance, setShowClassGlance] = useState(false);
+  const [showEditClassroom, setShowEditClassroom] = useState(false);
   const { assignments } = useAssignments(id);
   const { submissions: assignmentSubmissions } = useAssignmentSubmissions(viewingAssignmentId || undefined);
   const { deleteAssignment, toggleAssignmentStatus } = useMultiQuestionAssignments(id);
@@ -519,6 +521,13 @@ const ClassroomDetail = () => {
                     <Button variant="outline" size="sm" onClick={copyJoinCode}>
                       <Copy className="mr-2 h-4 w-4" />
                       Copy Join Code
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setShowEditClassroom(true)}
+                    >
+                      Edit Classroom
                     </Button>
                     <Button 
                       variant="default" 
@@ -1156,6 +1165,13 @@ const ClassroomDetail = () => {
                 setDeleteTournamentId(null);
               }
             }}
+          />
+
+          <EditClassroomModal
+            open={showEditClassroom}
+            onOpenChange={setShowEditClassroom}
+            onSuccess={loadClassroomData}
+            classroom={classroom}
           />
         </>
       )}
