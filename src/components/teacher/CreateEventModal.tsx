@@ -114,11 +114,11 @@ export const CreateEventModal = ({ open, onOpenChange, classroomId, teacherId, e
       .single();
 
     if (settings) {
-      if (startTime < settings.school_day_start) {
-        warnings.push(`Event starts before normal school hours (${settings.school_day_start})`);
+      if (startTime < settings.school_start_time) {
+        warnings.push(`Event starts before normal school hours (${settings.school_start_time})`);
       }
-      if (endTime > settings.school_day_end) {
-        warnings.push(`Event ends after normal school hours (${settings.school_day_end})`);
+      if (endTime > settings.school_end_time) {
+        warnings.push(`Event ends after normal school hours (${settings.school_end_time})`);
       }
     }
 

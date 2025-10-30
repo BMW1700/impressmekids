@@ -1879,34 +1879,37 @@ export type Database = {
       }
       school_settings: {
         Row: {
-          created_at: string | null
+          created_at: string
           id: string
-          school_day_end: string | null
-          school_day_start: string | null
+          school_end_time: string
+          school_start_time: string
           school_year_end: string
           school_year_start: string
-          timezone: string | null
-          updated_at: string | null
+          timezone: string
+          updated_at: string
+          updated_by: string | null
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           id?: string
-          school_day_end?: string | null
-          school_day_start?: string | null
-          school_year_end: string
-          school_year_start: string
-          timezone?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          school_day_end?: string | null
-          school_day_start?: string | null
+          school_end_time?: string
+          school_start_time?: string
           school_year_end?: string
           school_year_start?: string
-          timezone?: string | null
-          updated_at?: string | null
+          timezone?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          school_end_time?: string
+          school_start_time?: string
+          school_year_end?: string
+          school_year_start?: string
+          timezone?: string
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }

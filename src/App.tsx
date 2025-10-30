@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminCalendar from "./pages/admin/AdminCalendar";
+import SchoolSettings from "./pages/admin/SchoolSettings";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import TeacherCalendar from "./pages/teacher/Calendar";
 import StudentDashboard from "./pages/student/StudentDashboard";
@@ -68,7 +70,9 @@ const App = () => (
           <Route path="/parent/dashboard" element={<ParentDashboard />} />
           <Route path="/parent/request-access" element={<RequestAccess />} />
           <Route path="/parent/child/:studentId" element={<ChildDetail />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/calendar" element={<AdminCalendar />} />
+          <Route path="/admin/settings" element={<SchoolSettings />} />
           <Route path="/district/dashboard" element={<DistrictDashboard />} />
           <Route path="/district/register" element={<RegisterDistrict />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

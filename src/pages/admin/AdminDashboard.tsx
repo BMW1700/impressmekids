@@ -5,7 +5,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Users, GraduationCap, Shield } from "lucide-react";
+import { Loader2, Users, GraduationCap, Shield, Calendar, Settings } from "lucide-react";
 import { useAdminData } from "@/hooks/useAdminData";
 import { TeacherListCard } from "@/components/admin/TeacherListCard";
 import { StudentListCard } from "@/components/admin/StudentListCard";
@@ -16,6 +16,8 @@ import { StudentClassroomsList } from "@/components/admin/StudentClassroomsList"
 import { StudentParentsList } from "@/components/admin/StudentParentsList";
 import { ParentAccessRequestsList } from "@/components/admin/ParentAccessRequestsList";
 import { BackupManagement } from "@/components/admin/BackupManagement";
+import { SchoolEventManager } from "@/components/admin/SchoolEventManager";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 export default function AdminDashboard() {
@@ -163,12 +165,14 @@ export default function AdminDashboard() {
 
           {/* Main Content Tabs */}
           <Tabs defaultValue="teachers" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="teachers">Teachers</TabsTrigger>
               <TabsTrigger value="students">Students</TabsTrigger>
               <TabsTrigger value="admins">Admins</TabsTrigger>
               <TabsTrigger value="parent-requests">Parent Requests</TabsTrigger>
               <TabsTrigger value="backups">Backups</TabsTrigger>
+              <TabsTrigger value="calendar">Calendar</TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
 
             <TabsContent value="teachers" className="space-y-4">
@@ -262,6 +266,42 @@ export default function AdminDashboard() {
 
             <TabsContent value="backups" className="space-y-4">
               <BackupManagement />
+            </TabsContent>
+
+            <TabsContent value="calendar" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    School Calendar Management
+                  </CardTitle>
+                  <CardDescription>
+                    Manage school-wide events, holidays, and calendar settings
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <SchoolEventManager />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="settings" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="h-5 w-5" />
+                    School Settings
+                  </CardTitle>
+                  <CardDescription>
+                    Configure school year, timezone, and daily schedule
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button onClick={() => navigate("/admin/settings")}>
+                    Open Settings
+                  </Button>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </div>
