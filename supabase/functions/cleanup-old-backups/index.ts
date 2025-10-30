@@ -113,62 +113,64 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    // Authenticate user using direct REST API
+    // Handle authentication - allow both cron calls (no auth header) and manual admin calls
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'No authorization header' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    let userId: string | null = null;
+    let token: string | null = null;
 
-    const token = authHeader.replace('Bearer ', '');
-    
-    // Direct REST API call for authentication
-    const userResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'apikey': supabaseServiceKey,
-      },
-    });
-    
-    if (!userResponse.ok) {
-      console.error('Auth error:', await userResponse.text());
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    
-    const user = await userResponse.json();
-
-    // Check if user is admin using direct REST API
-    const roleResponse = await fetch(
-      `${supabaseUrl}/rest/v1/user_roles?user_id=eq.${user.id}&select=role`,
-      {
+    // If Authorization header exists, this is a manual call - verify admin role
+    if (authHeader) {
+      token = authHeader.replace('Bearer ', '');
+      
+      // Direct REST API call for authentication
+      const userResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'apikey': supabaseServiceKey,
-          'Content-Type': 'application/json',
         },
+      });
+      
+      if (!userResponse.ok) {
+        console.error('Auth error:', await userResponse.text());
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
-    );
+      
+      const user = await userResponse.json();
+      userId = user.id;
 
-    if (!roleResponse.ok) {
-      console.error('Role check failed:', await roleResponse.text());
-      return new Response(JSON.stringify({ error: 'Failed to check role' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+      // Check if user is admin using direct REST API
+      const roleResponse = await fetch(
+        `${supabaseUrl}/rest/v1/user_roles?user_id=eq.${user.id}&select=role`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'apikey': supabaseServiceKey,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
-    const roleData = await roleResponse.json();
-    if (!roleData || roleData.length === 0 || roleData[0].role !== 'admin') {
-      return new Response(JSON.stringify({ error: 'Admin access required' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      if (!roleResponse.ok) {
+        console.error('Role check failed:', await roleResponse.text());
+        return new Response(JSON.stringify({ error: 'Failed to check role' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const roleData = await roleResponse.json();
+      if (!roleData || roleData.length === 0 || roleData[0].role !== 'admin') {
+        return new Response(JSON.stringify({ error: 'Admin access required' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
+    // If no Authorization header, this is a cron job call - proceed without authentication
+    console.log(authHeader ? 'Manual cleanup initiated by admin' : 'Automated cleanup via cron job');
 
     console.log('Starting cleanup of old backups (>180 days)...');
 
@@ -186,7 +188,7 @@ Deno.serve(async (req) => {
       `${supabaseUrl}/rest/v1/cold_storage_backups?backup_timestamp=lt.${cutoffDate.toISOString()}&select=*`,
       {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': token ? `Bearer ${token}` : `Bearer ${supabaseServiceKey}`,
           'apikey': supabaseServiceKey,
           'Content-Type': 'application/json',
         },
@@ -207,13 +209,13 @@ Deno.serve(async (req) => {
       await fetch(`${supabaseUrl}/rest/v1/backup_audit_log`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': token ? `Bearer ${token}` : `Bearer ${supabaseServiceKey}`,
           'apikey': supabaseServiceKey,
           'Content-Type': 'application/json',
           'Prefer': 'return=minimal',
         },
         body: JSON.stringify({
-          user_id: user.id,
+          user_id: userId,
           action_type: 'cleanup',
           status: 'success',
           action_details: {
@@ -277,7 +279,7 @@ Deno.serve(async (req) => {
           {
             method: 'DELETE',
             headers: {
-              'Authorization': `Bearer ${token}`,
+              'Authorization': token ? `Bearer ${token}` : `Bearer ${supabaseServiceKey}`,
               'apikey': supabaseServiceKey,
               'Content-Type': 'application/json',
             },
@@ -314,13 +316,13 @@ Deno.serve(async (req) => {
     await fetch(`${supabaseUrl}/rest/v1/backup_audit_log`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Authorization': token ? `Bearer ${token}` : `Bearer ${supabaseServiceKey}`,
         'apikey': supabaseServiceKey,
         'Content-Type': 'application/json',
         'Prefer': 'return=minimal',
       },
       body: JSON.stringify({
-        user_id: user.id,
+        user_id: userId,
         action_type: 'cleanup',
         status: errors.length > 0 ? 'partial_success' : 'success',
         action_details: {
