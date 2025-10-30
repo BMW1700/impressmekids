@@ -151,37 +151,46 @@ Deno.serve(async (req) => {
     console.log('🔧 Initializing Supabase admin client...');
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
-    console.log('🔐 Verifying user authentication...');
-    // Verify admin role
-    const authHeader = req.headers.get('Authorization')!;
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-    
-    if (authError || !user) {
-      console.error('❌ Authentication failed:', authError);
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    console.log('✅ User authenticated:', user.id);
+    console.log('🔐 Verifying authentication...');
+    const authHeader = req.headers.get('Authorization');
+    let userId: string | null = null;
 
-    console.log('🔍 Checking admin role...');
-    // Check admin role
-    const { data: roleData } = await supabaseAdmin
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
+    // If no auth header, this is a cron job - proceed with backup
+    if (!authHeader) {
+      console.log('📅 Cron job detected - proceeding with automated backup');
+      userId = null; // Cron jobs have no specific user
+    } else {
+      // Manual call - verify admin role
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+      
+      if (authError || !user) {
+        console.error('❌ Authentication failed:', authError);
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      console.log('✅ User authenticated:', user.id);
+      userId = user.id;
 
-    if (!roleData || roleData.role !== 'admin') {
-      console.error('❌ User is not admin:', roleData?.role);
-      return new Response(JSON.stringify({ error: 'Admin access required' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      console.log('🔍 Checking admin role...');
+      // Check admin role
+      const { data: roleData } = await supabaseAdmin
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!roleData || roleData.role !== 'admin') {
+        console.error('❌ User is not admin:', roleData?.role);
+        return new Response(JSON.stringify({ error: 'Admin access required' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      console.log('✅ Admin role verified');
     }
-    console.log('✅ Admin role verified');
 
     const backupTimestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupName = `backup-${backupTimestamp}.enc`;
@@ -333,7 +342,7 @@ Deno.serve(async (req) => {
         tables_included: tablesToBackup,
         record_count: totalRecords,
         storage_location: s3Location,
-        created_by: user.id,
+        created_by: userId, // Will be null for cron jobs
         metadata: {
           tables_count: tablesToBackup.length,
           compression: 'none',
@@ -355,7 +364,7 @@ Deno.serve(async (req) => {
     await supabaseAdmin.from('backup_audit_log').insert({
       backup_id: backupRecord?.id,
       action_type: 'CREATE_BACKUP',
-      performed_by: user.id,
+      performed_by: userId, // Will be null for cron jobs
       action_details: {
         tables: tablesToBackup,
         record_count: totalRecords,
