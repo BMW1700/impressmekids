@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,8 @@ export default function Calendar() {
     assignments: true,
     schoolEvents: true,
   });
+  const [focusedDateIndex, setFocusedDateIndex] = useState<number | null>(null);
+  const calendarGridRef = useRef<HTMLDivElement>(null);
 
   const { data: session } = useQuery({
     queryKey: ["session"],
@@ -112,14 +114,68 @@ export default function Calendar() {
     window.print();
   };
 
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (view !== "month" || focusedDateIndex === null) return;
+      
+      const days = getCalendarMonthDays(currentDate);
+      let newIndex = focusedDateIndex;
+
+      switch (e.key) {
+        case "ArrowLeft":
+          e.preventDefault();
+          newIndex = Math.max(0, focusedDateIndex - 1);
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          newIndex = Math.min(days.length - 1, focusedDateIndex + 1);
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          newIndex = Math.max(0, focusedDateIndex - 7);
+          break;
+        case "ArrowDown":
+          e.preventDefault();
+          newIndex = Math.min(days.length - 1, focusedDateIndex + 7);
+          break;
+        case "Enter":
+        case " ":
+          e.preventDefault();
+          const dayItems = getItemsForDate(filteredItems, days[focusedDateIndex]);
+          if (dayItems.length > 0) {
+            setSelectedItem(dayItems[0]);
+          }
+          break;
+        case "Escape":
+          setFocusedDateIndex(null);
+          break;
+        default:
+          return;
+      }
+
+      setFocusedDateIndex(newIndex);
+    };
+
+    if (focusedDateIndex !== null) {
+      window.addEventListener("keydown", handleKeyDown);
+      return () => window.removeEventListener("keydown", handleKeyDown);
+    }
+  }, [focusedDateIndex, view, currentDate, filteredItems]);
+
   const renderMonthView = () => {
     const days = getCalendarMonthDays(currentDate);
     const today = new Date();
 
     return (
-      <div className="grid grid-cols-7 gap-2">
+      <div 
+        className="grid grid-cols-7 gap-2" 
+        ref={calendarGridRef}
+        role="grid"
+        aria-label="Calendar month view"
+      >
         {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day) => (
-          <div key={day} className="text-center font-semibold text-sm py-2 text-muted-foreground">
+          <div key={day} className="text-center font-semibold text-sm py-2 text-muted-foreground" role="columnheader">
             {day}
           </div>
         ))}
@@ -127,13 +183,27 @@ export default function Calendar() {
           const dayItems = getItemsForDate(filteredItems, day);
           const isToday = format(day, "yyyy-MM-dd") === format(today, "yyyy-MM-dd");
           const isCurrentMonth = format(day, "M") === format(currentDate, "M");
+          const isFocused = focusedDateIndex === i;
 
           return (
             <Card
               key={i}
-              className={`min-h-[120px] p-2 cursor-pointer hover:shadow-md transition-shadow ${
+              tabIndex={0}
+              role="gridcell"
+              aria-label={`${format(day, "MMMM d, yyyy")}, ${dayItems.length} items`}
+              aria-selected={isFocused}
+              onClick={() => {
+                setFocusedDateIndex(i);
+                if (dayItems.length > 0) {
+                  setSelectedItem(dayItems[0]);
+                }
+              }}
+              onFocus={() => setFocusedDateIndex(i)}
+              className={`min-h-[120px] p-2 cursor-pointer hover:shadow-md transition-all ${
                 !isCurrentMonth ? "opacity-40" : ""
-              } ${isToday ? "ring-2 ring-primary" : ""}`}
+              } ${isToday ? "ring-2 ring-primary" : ""} ${
+                isFocused ? "ring-2 ring-primary ring-offset-2 shadow-lg" : ""
+              }`}
             >
               <div className="font-semibold text-sm mb-1">
                 {format(day, "d")}
@@ -147,8 +217,17 @@ export default function Calendar() {
                   return (
                     <div
                       key={item.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${item.title}, ${item.type}, ${format(day, "MMMM d")}`}
                       onClick={() => setSelectedItem(item)}
-                      className={`text-xs p-1 rounded truncate ${categoryColor.bg} ${categoryColor.text} hover:opacity-80`}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSelectedItem(item);
+                        }
+                      }}
+                      className={`text-xs p-1 rounded truncate ${categoryColor.bg} ${categoryColor.text} hover:opacity-80 focus:ring-2 focus:ring-primary focus:ring-offset-1`}
                     >
                       <span className="mr-1">{getCategoryIcon(item.category)}</span>
                       {item.title}
@@ -195,8 +274,17 @@ export default function Calendar() {
                 return (
                   <div
                     key={item.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${item.title}, ${item.type}, ${format(new Date(item.date), "MMMM d, yyyy")}`}
                     onClick={() => setSelectedItem(item)}
-                    className={`p-3 rounded-lg cursor-pointer hover:shadow-md transition-shadow border ${categoryColor.border}`}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelectedItem(item);
+                      }
+                    }}
+                    className={`p-3 rounded-lg cursor-pointer hover:shadow-md transition-shadow border ${categoryColor.border} focus:ring-2 focus:ring-primary focus:ring-offset-2`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">

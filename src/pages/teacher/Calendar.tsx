@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -31,6 +31,8 @@ const TeacherCalendar = () => {
     schoolEvents: true,
     drafts: true,
   });
+  const [focusedDateIndex, setFocusedDateIndex] = useState<number | null>(null);
+  const calendarGridRef = useRef<HTMLDivElement>(null);
 
   // Get user profile
   const { data: profile } = useQuery({
@@ -77,6 +79,56 @@ const TeacherCalendar = () => {
 
   const monthDays = getCalendarMonthDays(selectedDate);
   const itemsForSelectedDate = getItemsForDate(filteredItems, selectedDate);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (view !== "month" || focusedDateIndex === null) return;
+      
+      let newIndex = focusedDateIndex;
+
+      switch (e.key) {
+        case "ArrowLeft":
+          e.preventDefault();
+          newIndex = Math.max(0, focusedDateIndex - 1);
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          newIndex = Math.min(monthDays.length - 1, focusedDateIndex + 1);
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          newIndex = Math.max(0, focusedDateIndex - 7);
+          break;
+        case "ArrowDown":
+          e.preventDefault();
+          newIndex = Math.min(monthDays.length - 1, focusedDateIndex + 7);
+          break;
+        case "Enter":
+        case " ":
+          e.preventDefault();
+          const dayItems = getItemsForDate(filteredItems, monthDays[focusedDateIndex]);
+          if (dayItems.length > 0) {
+            setSelectedItem(dayItems[0]);
+          } else {
+            setSelectedDate(monthDays[focusedDateIndex]);
+          }
+          break;
+        case "Escape":
+          setFocusedDateIndex(null);
+          break;
+        default:
+          return;
+      }
+
+      setFocusedDateIndex(newIndex);
+    };
+
+    if (focusedDateIndex !== null) {
+      window.addEventListener("keydown", handleKeyDown);
+      return () => window.removeEventListener("keydown", handleKeyDown);
+    }
+  }, [focusedDateIndex, view, monthDays, filteredItems]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -166,9 +218,14 @@ const TeacherCalendar = () => {
 
             <TabsContent value="month" className="mt-6">
               <Card className="p-6">
-                <div className="grid grid-cols-7 gap-2">
+                <div 
+                  className="grid grid-cols-7 gap-2" 
+                  ref={calendarGridRef}
+                  role="grid"
+                  aria-label="Teacher calendar month view"
+                >
                   {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-                    <div key={day} className="text-center font-semibold text-sm text-muted-foreground py-2">
+                    <div key={day} className="text-center font-semibold text-sm text-muted-foreground py-2" role="columnheader">
                       {day}
                     </div>
                   ))}
@@ -176,16 +233,26 @@ const TeacherCalendar = () => {
                     const itemsForDay = getItemsForDate(filteredItems, date);
                     const isCurrentMonth = date.getMonth() === selectedDate.getMonth();
                     const isToday = date.toDateString() === new Date().toDateString();
+                    const isFocused = focusedDateIndex === idx;
                     
                     return (
                       <div
                         key={idx}
-                        onClick={() => setSelectedDate(date)}
+                        tabIndex={0}
+                        role="gridcell"
+                        aria-label={`${date.toLocaleDateString()}, ${itemsForDay.length} items`}
+                        aria-selected={isFocused}
+                        onClick={() => {
+                          setFocusedDateIndex(idx);
+                          setSelectedDate(date);
+                        }}
+                        onFocus={() => setFocusedDateIndex(idx)}
                         className={`
                           min-h-24 p-2 border rounded-lg cursor-pointer transition-all
                           ${isCurrentMonth ? "bg-card" : "bg-muted/30"}
                           ${isToday ? "border-primary ring-2 ring-primary/20" : "border-border"}
                           ${date.toDateString() === selectedDate.toDateString() ? "ring-2 ring-primary" : ""}
+                          ${isFocused ? "ring-2 ring-primary ring-offset-2 shadow-lg" : ""}
                           hover:border-primary/50
                         `}
                       >
@@ -198,11 +265,21 @@ const TeacherCalendar = () => {
                             return (
                               <div
                                 key={i}
+                                role="button"
+                                tabIndex={0}
+                                aria-label={`${item.isDraft ? "Draft: " : ""}${item.title}, ${item.type}`}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setSelectedItem(item);
                                 }}
-                                className={`text-xs p-1 rounded truncate ${colors.bg} ${colors.text} hover:opacity-80 transition-opacity`}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setSelectedItem(item);
+                                  }
+                                }}
+                                className={`text-xs p-1 rounded truncate ${colors.bg} ${colors.text} hover:opacity-80 transition-opacity focus:ring-2 focus:ring-primary focus:ring-offset-1`}
                               >
                                 {item.isDraft && "📝 "}
                                 {item.title}
@@ -232,8 +309,17 @@ const TeacherCalendar = () => {
                       return (
                         <div
                           key={item.id}
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`${item.isDraft ? "Draft: " : ""}${item.title}, ${item.type}, ${item.startTime ? formatTime(item.startTime) : ""}`}
                           onClick={() => setSelectedItem(item)}
-                          className={`p-4 rounded-lg cursor-pointer transition-all hover:scale-[1.02] ${colors.bg} border border-border`}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setSelectedItem(item);
+                            }
+                          }}
+                          className={`p-4 rounded-lg cursor-pointer transition-all hover:scale-[1.02] ${colors.bg} border border-border focus:ring-2 focus:ring-primary focus:ring-offset-2`}
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
@@ -276,8 +362,17 @@ const TeacherCalendar = () => {
                       return (
                         <div
                           key={item.id}
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`${item.isDraft ? "Draft: " : ""}${item.title}, ${new Date(item.date).toLocaleDateString()}`}
                           onClick={() => setSelectedItem(item)}
-                          className={`p-4 rounded-lg cursor-pointer transition-all hover:scale-[1.01] ${colors.bg} border border-border`}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setSelectedItem(item);
+                            }
+                          }}
+                          className={`p-4 rounded-lg cursor-pointer transition-all hover:scale-[1.01] ${colors.bg} border border-border focus:ring-2 focus:ring-primary focus:ring-offset-2`}
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
