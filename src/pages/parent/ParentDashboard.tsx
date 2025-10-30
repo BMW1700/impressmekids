@@ -153,10 +153,15 @@ const ParentDashboard = () => {
               </Button>
             )}
             {parentId && (
-              <Button onClick={() => setLookupModalOpen(true)} className="gap-2">
-                <UserPlus className="h-4 w-4" />
-                Link Student
-              </Button>
+              <>
+                <Button variant="outline" onClick={() => navigate("/parent/notification-settings")} className="gap-2">
+                  Notifications
+                </Button>
+                <Button onClick={() => setLookupModalOpen(true)} className="gap-2">
+                  <UserPlus className="h-4 w-4" />
+                  Link Student
+                </Button>
+              </>
             )}
           </div>
         </div>

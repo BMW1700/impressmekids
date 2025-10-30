@@ -1,5 +1,8 @@
 project_id = "sjigkjwkgovculkovcjy"
 
+[functions.send-calendar-notifications]
+verify_jwt = false
+
 [functions.create-cold-storage-backup]
 verify_jwt = true
 

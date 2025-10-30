@@ -1500,6 +1500,103 @@ export type Database = {
         }
         Relationships: []
       }
+      parent_notification_preferences: {
+        Row: {
+          created_at: string | null
+          email_enabled: boolean | null
+          id: string
+          in_app_enabled: boolean | null
+          notification_days_before: number | null
+          notify_assignments: boolean | null
+          notify_events: boolean | null
+          notify_tests: boolean | null
+          parent_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email_enabled?: boolean | null
+          id?: string
+          in_app_enabled?: boolean | null
+          notification_days_before?: number | null
+          notify_assignments?: boolean | null
+          notify_events?: boolean | null
+          notify_tests?: boolean | null
+          parent_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email_enabled?: boolean | null
+          id?: string
+          in_app_enabled?: boolean | null
+          notification_days_before?: number | null
+          notify_assignments?: boolean | null
+          notify_events?: boolean | null
+          notify_tests?: boolean | null
+          parent_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_notification_preferences_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: true
+            referencedRelation: "parent_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parent_notifications: {
+        Row: {
+          child_id: string
+          classroom_name: string | null
+          created_at: string | null
+          event_date: string
+          id: string
+          item_description: string | null
+          item_id: string
+          item_title: string
+          item_type: string
+          parent_id: string
+          read: boolean | null
+        }
+        Insert: {
+          child_id: string
+          classroom_name?: string | null
+          created_at?: string | null
+          event_date: string
+          id?: string
+          item_description?: string | null
+          item_id: string
+          item_title: string
+          item_type: string
+          parent_id: string
+          read?: boolean | null
+        }
+        Update: {
+          child_id?: string
+          classroom_name?: string | null
+          created_at?: string | null
+          event_date?: string
+          id?: string
+          item_description?: string | null
+          item_id?: string
+          item_title?: string
+          item_type?: string
+          parent_id?: string
+          read?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_notifications_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "parent_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parent_student_links: {
         Row: {
           approved: boolean

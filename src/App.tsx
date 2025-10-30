@@ -32,6 +32,7 @@ import TermsOfService from "./pages/TermsOfService";
 import ParentDashboard from "./pages/parent/ParentDashboard";
 import ParentCalendar from "./pages/parent/ParentCalendar";
 import RequestAccess from "./pages/parent/RequestAccess";
+import NotificationSettings from "./pages/parent/NotificationSettings";
 import ChildDetail from "./pages/parent/ChildDetail";
 import DistrictDashboard from "./pages/district/DistrictDashboard";
 import RegisterDistrict from "./pages/district/RegisterDistrict";
@@ -71,6 +72,7 @@ const App = () => (
           <Route path="/parent/dashboard" element={<ParentDashboard />} />
           <Route path="/parent/calendar" element={<ParentCalendar />} />
           <Route path="/parent/request-access" element={<RequestAccess />} />
+          <Route path="/parent/notification-settings" element={<NotificationSettings />} />
           <Route path="/parent/child/:studentId" element={<ChildDetail />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/calendar" element={<AdminCalendar />} />
