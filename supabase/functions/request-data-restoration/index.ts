@@ -1,9 +1,12 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { Resend } from 'https://esm.sh/resend@2.0.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string);
 
 interface RestorationRequest {
   backup_id: string;
@@ -126,9 +129,102 @@ Deno.serve(async (req) => {
       contact: requestData.contact_email,
     });
 
-    // TODO: Send email notification to Impress Me Kids support
-    // Future enhancement: Integrate with Resend or SendGrid
-    console.log('📧 Email notification would be sent to: support@impressmekids.com');
+    // Get admin details for the email
+    const { data: adminProfile } = await supabase
+      .from('profiles')
+      .select('full_name, email')
+      .eq('id', user.id)
+      .single();
+
+    const adminName = adminProfile?.full_name || 'Unknown Admin';
+    const adminEmail = adminProfile?.email || 'Unknown';
+
+    // Format urgency with color coding for email
+    const urgencyColors = {
+      critical: '#DC2626',
+      high: '#EA580C',
+      medium: '#F59E0B',
+      low: '#10B981'
+    };
+
+    const urgencyColor = urgencyColors[requestData.urgency];
+
+    // Send email notification
+    try {
+      const { error: emailError } = await resend.emails.send({
+        from: 'Impress Me Kids Backups <onboarding@resend.dev>',
+        to: ['admin@meapphq.com'],
+        subject: `🚨 Data Restoration Request - ${requestData.urgency.toUpperCase()} Priority`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #1F2937;">🔄 Data Restoration Request Received</h2>
+            
+            <div style="background-color: ${urgencyColor}; color: white; padding: 12px; border-radius: 6px; margin: 16px 0;">
+              <strong>Urgency Level: ${requestData.urgency.toUpperCase()}</strong>
+            </div>
+
+            <div style="background-color: #F3F4F6; padding: 16px; border-radius: 8px; margin: 16px 0;">
+              <h3 style="margin-top: 0;">Request Details</h3>
+              <p><strong>Request ID:</strong> ${request.id}</p>
+              <p><strong>Submitted:</strong> ${new Date().toLocaleString()}</p>
+              <p><strong>Backup Name:</strong> ${backup.backup_name}</p>
+              <p><strong>Backup Date:</strong> ${new Date(backup.backup_timestamp).toLocaleString()}</p>
+            </div>
+
+            <div style="background-color: #F3F4F6; padding: 16px; border-radius: 8px; margin: 16px 0;">
+              <h3 style="margin-top: 0;">Requester Information</h3>
+              <p><strong>Admin Name:</strong> ${adminName}</p>
+              <p><strong>Admin Email:</strong> ${adminEmail}</p>
+              ${requestData.school_name ? `<p><strong>School:</strong> ${requestData.school_name}</p>` : ''}
+              <p><strong>Contact Email:</strong> ${requestData.contact_email}</p>
+              ${requestData.contact_phone ? `<p><strong>Contact Phone:</strong> ${requestData.contact_phone}</p>` : ''}
+            </div>
+
+            <div style="background-color: #FEF3C7; padding: 16px; border-radius: 8px; margin: 16px 0;">
+              <h3 style="margin-top: 0;">Reason for Restoration</h3>
+              <p style="white-space: pre-wrap;">${requestData.reason}</p>
+            </div>
+
+            <div style="background-color: #F3F4F6; padding: 16px; border-radius: 8px; margin: 16px 0;">
+              <h3 style="margin-top: 0;">Tables Requested</h3>
+              <ul>
+                ${(requestData.tables_requested || backup.tables_included).map((table: string) => 
+                  `<li>${table}</li>`
+                ).join('')}
+              </ul>
+            </div>
+
+            <div style="margin-top: 24px; padding: 16px; background-color: #DBEAFE; border-left: 4px solid #3B82F6; border-radius: 4px;">
+              <h3 style="margin-top: 0; color: #1E40AF;">⚡ Action Required</h3>
+              <p>Please review this restoration request and contact the requester within the expected timeframe based on urgency:</p>
+              <ul>
+                <li><strong>Critical:</strong> Within 4 hours</li>
+                <li><strong>High:</strong> Within 24 hours</li>
+                <li><strong>Medium:</strong> Within 48 hours</li>
+                <li><strong>Low:</strong> Within 72 hours</li>
+              </ul>
+              <p>To process this request, access the admin dashboard and update the request status.</p>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 24px 0;">
+            
+            <p style="color: #6B7280; font-size: 12px;">
+              This is an automated notification from the Impress Me Kids backup system.<br>
+              Request ID: ${request.id}<br>
+              Timestamp: ${new Date().toISOString()}
+            </p>
+          </div>
+        `,
+      });
+
+      if (emailError) {
+        console.error('❌ Failed to send email notification:', emailError);
+      } else {
+        console.log('✅ Email notification sent to admin@meapphq.com');
+      }
+    } catch (emailSendError) {
+      console.error('❌ Exception sending email:', emailSendError);
+    }
 
     return new Response(
       JSON.stringify({
@@ -136,9 +232,9 @@ Deno.serve(async (req) => {
         message: 'Data restoration request submitted successfully',
         request_id: request.id,
         status: 'pending',
-        next_steps: 'Our team will review your request within 24-48 hours and contact you at the provided email.',
+        next_steps: 'Our team has been notified and will review your request based on urgency level. You will be contacted at the provided email.',
         contact_info: {
-          email: 'support@impressmekids.com',
+          email: 'admin@meapphq.com',
           expected_response: '24-48 hours',
         },
       }),
