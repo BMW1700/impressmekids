@@ -1,387 +1,64 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const BACKUP_ENCRYPTION_KEY = Deno.env.get('BACKUP_ENCRYPTION_KEY');
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-// AWS Signature V4 signing helper functions
-async function hmacSha256(key: Uint8Array, data: string): Promise<Uint8Array> {
-  const keyBuffer = key.buffer.slice(key.byteOffset, key.byteOffset + key.byteLength) as ArrayBuffer;
-  const cryptoKey = await crypto.subtle.importKey(
-    'raw',
-    keyBuffer,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const signature = await crypto.subtle.sign('HMAC', cryptoKey, new TextEncoder().encode(data));
-  return new Uint8Array(signature);
-}
-
-async function sha256Hash(data: string | Uint8Array): Promise<string> {
-  let buffer: ArrayBuffer;
-  if (typeof data === 'string') {
-    const encoded = new TextEncoder().encode(data);
-    buffer = encoded.buffer.slice(encoded.byteOffset, encoded.byteOffset + encoded.byteLength) as ArrayBuffer;
-  } else {
-    buffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
-  }
-  
-  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-function getSignatureKey(key: string, dateStamp: string, regionName: string, serviceName: string): Promise<Uint8Array> {
-  const kDate = hmacSha256(new TextEncoder().encode('AWS4' + key), dateStamp);
-  return kDate.then(k => hmacSha256(k, regionName))
-    .then(k => hmacSha256(k, serviceName))
-    .then(k => hmacSha256(k, 'aws4_request'));
-}
-
-async function signAwsRequest(
-  method: string,
-  host: string,
-  path: string,
-  headers: Record<string, string>,
-  body: Uint8Array,
-  accessKey: string,
-  secretKey: string,
-  region: string
-): Promise<Record<string, string>> {
-  // Extract x-amz-date from headers (must be provided by caller)
-  const amzDate = headers['x-amz-date'];
-  if (!amzDate) {
-    throw new Error('x-amz-date header is required in input headers');
-  }
-  const dateStamp = amzDate.substring(0, 8);
-  
-  console.log('🔐 Creating canonical request...');
-  console.log(`📅 Using x-amz-date: ${amzDate}`);
-  
-  // Create canonical headers
-  const canonicalHeaders = Object.entries(headers)
-    .map(([k, v]) => `${k.toLowerCase()}:${v.trim()}\n`)
-    .sort()
-    .join('');
-  
-  const signedHeaders = Object.keys(headers)
-    .map(k => k.toLowerCase())
-    .sort()
-    .join(';');
-  
-  console.log(`📋 Signed headers: ${signedHeaders}`);
-  
-  // Use the payload hash from headers (already calculated)
-  const payloadHash = headers['x-amz-content-sha256'] || await sha256Hash(body);
-  
-  // Create canonical request
-  const canonicalRequest = [
-    method,
-    path,
-    '', // query string (empty for PUT)
-    canonicalHeaders,
-    signedHeaders,
-    payloadHash
-  ].join('\n');
-  
-  const canonicalRequestHash = await sha256Hash(canonicalRequest);
-  console.log(`🎯 Canonical request hash: ${canonicalRequestHash.substring(0, 16)}...`);
-  console.log(`📋 Canonical request (first 200 chars):\n${canonicalRequest.substring(0, 200)}...`);
-  
-  // Create string to sign
-  const credentialScope = `${dateStamp}/${region}/s3/aws4_request`;
-  const stringToSign = [
-    'AWS4-HMAC-SHA256',
-    amzDate,
-    credentialScope,
-    canonicalRequestHash
-  ].join('\n');
-  
-  console.log('🔏 String to sign created');
-  
-  // Calculate signature
-  const signingKey = await getSignatureKey(secretKey, dateStamp, region, 's3');
-  const signatureBytes = await hmacSha256(signingKey, stringToSign);
-  const signature = Array.from(signatureBytes)
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-  
-  console.log(`✍️ Signature: ${signature.substring(0, 16)}...`);
-  
-  // Add authorization header
-  const authorizationHeader = `AWS4-HMAC-SHA256 Credential=${accessKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
-  
-  // Return headers with authorization (x-amz-date already in input headers)
-  return {
-    ...headers,
-    'Authorization': authorizationHeader,
-  };
-}
-
 Deno.serve(async (req) => {
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // SECURITY BLOCK: Direct restoration has been disabled
+  console.log('🚫 Direct restoration blocked - redirecting to request system');
+  
+  // Log the blocked attempt
   try {
-    // Authenticate user using direct REST API
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'No authorization header' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    
-    // Direct REST API call for authentication
-    const userResponse = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'apikey': SUPABASE_SERVICE_ROLE_KEY,
-      },
-    });
-    
-    if (!userResponse.ok) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    
-    const user = await userResponse.json();
-
-    // Check admin role using direct REST API
-    const roleResponse = await fetch(
-      `${SUPABASE_URL}/rest/v1/user_roles?user_id=eq.${user.id}&select=role`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'apikey': SUPABASE_SERVICE_ROLE_KEY,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    if (!roleResponse.ok) {
-      return new Response(JSON.stringify({ error: 'Failed to check role' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const roleData = await roleResponse.json();
-    if (!roleData || roleData.length === 0 || roleData[0].role !== 'admin') {
-      return new Response(JSON.stringify({ error: 'Admin access required' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const accessKey = Deno.env.get('COLD_STORAGE_ACCESS_KEY')!;
-    const secretKey = Deno.env.get('COLD_STORAGE_SECRET_KEY')!;
-    const bucket = Deno.env.get('COLD_STORAGE_BUCKET')!;
-    const region = Deno.env.get('COLD_STORAGE_REGION') || 'us-east-1';
-
-    const { backup_id, execute_restore = false, tables = [] } = await req.json();
-
-    if (!backup_id) {
-      return new Response(JSON.stringify({ error: 'backup_id required' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Get backup metadata using direct REST API
-    const backupResponse = await fetch(
-      `${SUPABASE_URL}/rest/v1/cold_storage_backups?id=eq.${backup_id}&select=*`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'apikey': SUPABASE_SERVICE_ROLE_KEY,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    if (!backupResponse.ok) {
-      return new Response(JSON.stringify({ error: 'Failed to fetch backup' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const backupData = await backupResponse.json();
-    if (!backupData || backupData.length === 0) {
-      return new Response(JSON.stringify({ error: 'Backup not found' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const backup = backupData[0];
-
-    // Download from S3 using raw HTTP with AWS Signature V4
-    // CRITICAL: Normalize bucket name to lowercase for proper AWS signature
-    const normalizedBucket = bucket.toLowerCase();
-    if (bucket !== normalizedBucket) {
-      console.warn(`⚠️ Bucket name normalized: ${bucket} -> ${normalizedBucket}`);
-    }
-    
-    const s3Key = backup.backup_name;
-    const host = `${normalizedBucket}.s3.${region}.amazonaws.com`;
-    const path = `/${s3Key}`;
-    const now = new Date();
-    const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
-    
-    const getHeaders = {
-      'Host': host,  // Capital H to match working create function
-      'x-amz-date': amzDate,
-      'x-amz-content-sha256': await sha256Hash(''),
-    };
-    
-    const signedGetHeaders = await signAwsRequest('GET', host, path, getHeaders, new Uint8Array(0), accessKey, secretKey, region);
-    
-    const s3Response = await fetch(`https://${host}${path}`, {
-      method: 'GET',
-      headers: signedGetHeaders,
-    });
-    
-    if (!s3Response.ok) {
-      throw new Error(`S3 GET failed: ${s3Response.status} ${await s3Response.text()}`);
-    }
-    
-    const encryptedDataArray = new Uint8Array(await s3Response.arrayBuffer());
-
-    // Decrypt using AES-256-GCM
-    const encoder = new TextEncoder();
-    const decoder = new TextDecoder();
-    const encryptionKeyMaterial = encoder.encode(BACKUP_ENCRYPTION_KEY!);
-    
-    const cryptoKey = await crypto.subtle.importKey(
-      'raw',
-      encryptionKeyMaterial.slice(0, 32),
-      { name: 'AES-GCM', length: 256 },
-      false,
-      ['decrypt']
-    );
-
-    const iv = encryptedDataArray.slice(0, 12);
-    const encryptedContent = encryptedDataArray.slice(12);
-
-    const decryptedBuffer = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv },
-      cryptoKey,
-      encryptedContent
-    );
-
-    const decryptedData = JSON.parse(decoder.decode(decryptedBuffer));
-
-    // If not executing restore, just return data for viewing
-    if (!execute_restore) {
-      // Log using direct REST API
-      await fetch(`${SUPABASE_URL}/rest/v1/backup_audit_log`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'apikey': SUPABASE_SERVICE_ROLE_KEY,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal',
-        },
-        body: JSON.stringify({
-          backup_id: backup.id,
-          action_type: 'VIEW_BACKUP',
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user } } = await supabase.auth.getUser(token);
+      
+      if (user) {
+        // Log the blocked attempt to backup_audit_log
+        await supabase.from('backup_audit_log').insert({
+          action_type: 'RESTORE_BACKUP_BLOCKED',
           performed_by: user.id,
+          status: 'blocked',
+          error_message: 'Direct restoration has been disabled for security. Use Request Restoration instead.',
           action_details: {
-            tables: Object.keys(decryptedData),
-            record_count: backup.record_count,
+            timestamp: new Date().toISOString(),
+            ip_address: req.headers.get('x-forwarded-for') || 'unknown',
           },
-          status: 'success',
-        }),
-      });
-
-      console.log(`👁️ Backup viewed: ${backup.backup_name}`);
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: 'Backup data retrieved for viewing',
-          tables: Object.keys(decryptedData),
-          record_count: backup.record_count,
-          backup_data: decryptedData,
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Execute actual restore - here we need Supabase client for upsert operations
-    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-    const tablesToRestore = tables.length > 0 ? tables : Object.keys(decryptedData);
-    const restoredTables: string[] = [];
-    let totalRecordsRestored = 0;
-
-    for (const tableName of tablesToRestore) {
-      if (!decryptedData[tableName]) continue;
-
-      const records = decryptedData[tableName];
-      let recordsRestored = 0;
-
-      try {
-        for (const record of records) {
-          const { error: insertError } = await supabaseAdmin
-            .from(tableName)
-            .upsert(record, { onConflict: 'id', ignoreDuplicates: false });
-
-          if (!insertError) {
-            recordsRestored++;
-          }
-        }
-
-        restoredTables.push(tableName);
-        totalRecordsRestored += recordsRestored;
-        console.log(`✅ Restored ${recordsRestored} records to ${tableName}`);
-      } catch (error) {
-        console.error(`❌ Error restoring ${tableName}:`, error);
+        });
       }
     }
-
-    // Log restore action
-    await supabaseAdmin.from('backup_audit_log').insert({
-      backup_id: backup.id,
-      action_type: 'RESTORE_BACKUP',
-      performed_by: user.id,
-      action_details: {
-        tables: restoredTables,
-        record_count: totalRecordsRestored,
-      },
-      status: 'success',
-    });
-
-    console.log(`✅ Backup restored: ${backup.backup_name}, ${totalRecordsRestored} records`);
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'Backup restored successfully',
-        restored_tables: restoredTables,
-        total_records: totalRecordsRestored,
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
   } catch (error) {
-    console.error('Restore backup error:', error);
-    return new Response(
-      JSON.stringify({ error: (error as Error).message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error('Error logging blocked attempt:', error);
   }
+
+  return new Response(
+    JSON.stringify({
+      error: 'Direct backup restoration has been disabled for security',
+      message: 'For the security of your student data, direct backup viewing and restoration is no longer available. Please submit a restoration request through the admin dashboard.',
+      action_required: 'Use the "Request Restoration" button in the Backup Management section',
+      support_email: 'support@impressmekids.com',
+      next_steps: [
+        '1. Click "Request Restoration" button next to the backup',
+        '2. Fill out the restoration request form with reason and contact info',
+        '3. Our team will review your request within 24-48 hours',
+        '4. We will contact you at your provided email to complete the restoration'
+      ],
+    }),
+    { 
+      status: 403, 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    }
+  );
 });

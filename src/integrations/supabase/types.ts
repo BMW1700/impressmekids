@@ -749,6 +749,80 @@ export type Database = {
         }
         Relationships: []
       }
+      data_restoration_requests: {
+        Row: {
+          backup_id: string
+          backup_name: string
+          backup_timestamp: string
+          contact_email: string
+          contact_phone: string | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          reason: string
+          requested_at: string
+          requested_by: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          school_name: string | null
+          status: string
+          tables_requested: string[] | null
+          updated_at: string
+          urgency: string
+        }
+        Insert: {
+          backup_id: string
+          backup_name: string
+          backup_timestamp: string
+          contact_email: string
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          reason: string
+          requested_at?: string
+          requested_by: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          school_name?: string | null
+          status?: string
+          tables_requested?: string[] | null
+          updated_at?: string
+          urgency: string
+        }
+        Update: {
+          backup_id?: string
+          backup_name?: string
+          backup_timestamp?: string
+          contact_email?: string
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          reason?: string
+          requested_at?: string
+          requested_by?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          school_name?: string | null
+          status?: string
+          tables_requested?: string[] | null
+          updated_at?: string
+          urgency?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_restoration_requests_backup_id_fkey"
+            columns: ["backup_id"]
+            isOneToOne: false
+            referencedRelation: "cold_storage_backups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       district_admins: {
         Row: {
           created_at: string

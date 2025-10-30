@@ -7,8 +7,9 @@ import { Loader2, Download, AlertCircle, CheckCircle2, Database, Calendar, Trash
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ViewBackupDialog } from "./RestoreBackupDialog";
-import { RestoreConfirmationDialog } from "./RestoreConfirmationDialog";
+import { RequestRestorationDialog, RestorationRequestData } from "./RequestRestorationDialog";
+import { RestorationRequestsList } from "./RestorationRequestsList";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Backup {
   id: string;
@@ -36,11 +37,8 @@ export const BackupManagement = () => {
   const queryClient = useQueryClient();
   const [isCreating, setIsCreating] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
-  const [isViewing, setIsViewing] = useState(false);
-  const [isRestoring, setIsRestoring] = useState(false);
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
-  const [viewedData, setViewedData] = useState<any>(null);
+  const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
   const [selectedBackup, setSelectedBackup] = useState<{ id: string; name: string; count: number; tables: string[] } | null>(null);
 
   // Fetch health status
@@ -118,90 +116,51 @@ export const BackupManagement = () => {
     },
   });
 
-  // View backup handler
-  const handleViewBackup = async (backup: Backup) => {
-    setIsViewing(true);
+  // Request restoration handler
+  const handleRequestRestoration = (backup: Backup) => {
     setSelectedBackup({ 
       id: backup.id, 
       name: backup.backup_name, 
       count: backup.record_count, 
       tables: backup.tables_included 
     });
-    setViewDialogOpen(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('restore-cold-storage-backup', {
-        body: { backup_id: backup.id, execute_restore: false }
-      });
-
-      if (error) throw error;
-
-      setViewedData(data);
-      toast({
-        title: "Backup Loaded",
-        description: "Backup data retrieved for viewing",
-      });
-    } catch (error: any) {
-      console.error('Error viewing backup:', error);
-      toast({
-        title: "View Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-      setViewDialogOpen(false);
-      setViewedData(null);
-      setSelectedBackup(null);
-    } finally {
-      setIsViewing(false);
-    }
+    setRequestDialogOpen(true);
   };
 
-  // Restore backup handler
-  const handleRestoreBackup = (backup: Backup) => {
-    setSelectedBackup({ 
-      id: backup.id, 
-      name: backup.backup_name, 
-      count: backup.record_count, 
-      tables: backup.tables_included 
-    });
-    setRestoreDialogOpen(true);
-  };
-
-  // Confirm restore
-  const handleConfirmRestore = async (selectedTables: string[]) => {
+  // Confirm restoration request
+  const handleConfirmRequest = async (requestData: RestorationRequestData) => {
     if (!selectedBackup) return;
 
-    setIsRestoring(true);
+    setIsSubmittingRequest(true);
     try {
-      const { data, error } = await supabase.functions.invoke('restore-cold-storage-backup', {
+      const { data, error } = await supabase.functions.invoke('request-data-restoration', {
         body: { 
-          backup_id: selectedBackup.id, 
-          execute_restore: true,
-          tables: selectedTables
+          backup_id: selectedBackup.id,
+          ...requestData
         }
       });
 
       if (error) throw error;
 
       toast({
-        title: "Restore Complete",
-        description: `Restored ${data.total_records?.toLocaleString()} records across ${data.restored_tables?.length} tables`,
+        title: "Request Submitted",
+        description: "Your restoration request has been submitted successfully. Our team will contact you within 24-48 hours.",
       });
-      setRestoreDialogOpen(false);
+      
+      setRequestDialogOpen(false);
       setSelectedBackup(null);
       
-      // Refresh backup list
-      queryClient.invalidateQueries({ queryKey: ['cold-storage-backups'] });
-      queryClient.invalidateQueries({ queryKey: ['backup-health'] });
+      // Refresh requests list
+      queryClient.invalidateQueries({ queryKey: ['restoration-requests'] });
     } catch (error: any) {
-      console.error('Error restoring backup:', error);
+      console.error('Error submitting restoration request:', error);
       toast({
-        title: "Restore Failed",
+        title: "Request Failed",
         description: error.message,
         variant: "destructive",
       });
     } finally {
-      setIsRestoring(false);
+      setIsSubmittingRequest(false);
     }
   };
 
@@ -216,9 +175,15 @@ export const BackupManagement = () => {
   const isHealthy = healthData?.health_status === 'healthy';
 
   return (
-    <div className="space-y-6">
-      {/* Health Status Card */}
-      <Card>
+    <Tabs defaultValue="backups" className="space-y-6">
+      <TabsList>
+        <TabsTrigger value="backups">Backups</TabsTrigger>
+        <TabsTrigger value="requests">Restoration Requests</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="backups" className="space-y-6">
+        {/* Health Status Card */}
+        <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             {healthLoading ? (
@@ -351,19 +316,10 @@ export const BackupManagement = () => {
                     <div className="flex gap-2">
                       <Button
                         size="sm"
-                        variant="outline"
-                        onClick={() => handleViewBackup(backup)}
+                        onClick={() => handleRequestRestoration(backup)}
                       >
-                        <Eye className="h-4 w-4 mr-2" />
-                        View
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleRestoreBackup(backup)}
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Restore
+                        <AlertCircle className="h-4 w-4 mr-2" />
+                        Request Restoration
                       </Button>
                     </div>
                   </div>
@@ -377,27 +333,23 @@ export const BackupManagement = () => {
           )}
         </CardContent>
       </Card>
+      </TabsContent>
 
-      {/* View Dialog */}
-      <ViewBackupDialog
-        open={viewDialogOpen}
-        onOpenChange={setViewDialogOpen}
-        backupData={viewedData}
-        isLoading={isViewing}
-        backupName={selectedBackup?.name || ''}
-        recordCount={selectedBackup?.count || 0}
-      />
+      <TabsContent value="requests">
+        <RestorationRequestsList />
+      </TabsContent>
 
-      {/* Restore Confirmation Dialog */}
-      <RestoreConfirmationDialog
-        open={restoreDialogOpen}
-        onOpenChange={setRestoreDialogOpen}
-        onConfirm={handleConfirmRestore}
-        isRestoring={isRestoring}
+      {/* Request Restoration Dialog */}
+      <RequestRestorationDialog
+        open={requestDialogOpen}
+        onOpenChange={setRequestDialogOpen}
+        onConfirm={handleConfirmRequest}
+        isSubmitting={isSubmittingRequest}
         backupName={selectedBackup?.name || ''}
+        backupId={selectedBackup?.id || ''}
         recordCount={selectedBackup?.count || 0}
         tables={selectedBackup?.tables || []}
       />
-    </div>
+    </Tabs>
   );
 };

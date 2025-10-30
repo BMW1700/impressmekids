@@ -9,6 +9,9 @@ verify_jwt = true
 [functions.restore-cold-storage-backup]
 verify_jwt = true
 
+[functions.request-data-restoration]
+verify_jwt = true
+
 [functions.check-backup-health]
 verify_jwt = true
 
