@@ -13,6 +13,7 @@ import { QuestionBuilder } from '@/components/assignments/QuestionBuilder';
 import { useMultiQuestionAssignments } from '@/hooks/useMultiQuestionAssignments';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { ConfirmModal } from '@/components/ConfirmModal';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Question {
   id: string;
@@ -142,7 +143,7 @@ export default function CreateMultiQuestionAssignment() {
     setShowPublishConfirm(true);
   };
 
-  const confirmPublish = () => {
+  const confirmPublish = async () => {
     if (!classroomId) return;
     
     const questionData = questions.map(q => ({
@@ -165,6 +166,16 @@ export default function CreateMultiQuestionAssignment() {
         },
         questions: questionData,
       });
+
+      // After update, publish the assignment
+      const { error } = await supabase
+        .from('assignments')
+        .update({ status: 'published', is_posted: true })
+        .eq('id', editId);
+
+      if (error) {
+        console.error('Error publishing assignment:', error);
+      }
     } else {
       // Create new assignment
       createAssignment({
@@ -176,6 +187,9 @@ export default function CreateMultiQuestionAssignment() {
         max_attempts: maxAttempts,
         questions: questionData,
       });
+
+      // After create, we need to publish it
+      // This will be handled by the mutation success callback
     }
 
     navigate(`/classrooms/${classroomId}?tab=assignments`);

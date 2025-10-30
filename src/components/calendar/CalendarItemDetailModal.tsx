@@ -1,11 +1,14 @@
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, Clock, MapPin, User, FileText, ExternalLink } from "lucide-react";
+import { CalendarIcon, Clock, MapPin, User, FileText, ExternalLink, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { CalendarItem } from "@/hooks/useCalendarData";
 import { getCategoryColor, getCategoryIcon, formatTime, getTypeColor } from "@/lib/calendarUtils";
 import { useNavigate } from "react-router-dom";
+import { EditEventModal } from "@/components/teacher/EditEventModal";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CalendarItemDetailModalProps {
   item: CalendarItem;
@@ -17,10 +20,32 @@ export const CalendarItemDetailModal = ({ item, onClose, userRole }: CalendarIte
   const navigate = useNavigate();
   const categoryColor = getCategoryColor(item.category);
   const typeColor = getTypeColor(item.type);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [eventData, setEventData] = useState<any>(null);
+  const [teacherId, setTeacherId] = useState<string>("");
 
   const handleViewAssignment = () => {
     if (item.type === "assignment") {
       navigate(`/complete-assignment/${item.id}`);
+    }
+  };
+
+  const handleEdit = async () => {
+    if (item.type === "event") {
+      // Fetch full event data
+      const { data } = await supabase
+        .from("events")
+        .select("*")
+        .eq("id", item.id)
+        .single();
+
+      if (data) {
+        setEventData(data);
+        setTeacherId(data.teacher_id);
+        setShowEditModal(true);
+      }
+    } else if (item.type === "assignment") {
+      navigate(`/classrooms/${item.classroomId}?tab=assignments&edit=${item.id}`);
     }
   };
 
@@ -146,29 +171,40 @@ export const CalendarItemDetailModal = ({ item, onClose, userRole }: CalendarIte
           )}
 
           {/* Action Buttons */}
-          {item.type === "assignment" && !item.isSubmitted && userRole === "student" && (
-            <Button onClick={handleViewAssignment} className="w-full" size="lg">
-              Start Assignment
-            </Button>
-          )}
-          {item.type === "assignment" && item.isSubmitted && userRole === "student" && (
-            <Button onClick={handleViewAssignment} variant="outline" className="w-full" size="lg">
-              View Submission
-            </Button>
-          )}
-          {userRole === "teacher" && (item.type === "event" || item.type === "assignment") && (
-            <Button onClick={() => {
-              if (item.type === "event") {
-                navigate(`/teacher/events/${item.id}`);
-              } else {
-                navigate(`/teacher/assignments/${item.id}`);
-              }
-            }} variant="outline" className="w-full">
-              Edit {item.type === "event" ? "Event" : "Assignment"}
-            </Button>
-          )}
+          <div className="space-y-2">
+            {item.type === "assignment" && !item.isSubmitted && userRole === "student" && (
+              <Button onClick={handleViewAssignment} className="w-full" size="lg">
+                Start Assignment
+              </Button>
+            )}
+            {item.type === "assignment" && item.isSubmitted && userRole === "student" && (
+              <Button onClick={handleViewAssignment} variant="outline" className="w-full" size="lg">
+                View Submission
+              </Button>
+            )}
+            {userRole === "teacher" && (item.type === "event" || item.type === "assignment") && (
+              <Button onClick={handleEdit} className="w-full gap-2">
+                <Edit className="h-4 w-4" />
+                Edit {item.type === "event" ? "Event" : "Assignment"}
+              </Button>
+            )}
+          </div>
         </div>
       </DialogContent>
+
+      {/* Edit Event Modal */}
+      {showEditModal && eventData && (
+        <EditEventModal
+          open={showEditModal}
+          onOpenChange={(open) => {
+            setShowEditModal(open);
+            if (!open) onClose();
+          }}
+          event={eventData}
+          classroomId={eventData.classroom_id}
+          teacherId={teacherId}
+        />
+      )}
     </Dialog>
   );
 };
