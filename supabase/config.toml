@@ -4,7 +4,7 @@ project_id = "sjigkjwkgovculkovcjy"
 verify_jwt = false
 
 [functions.create-cold-storage-backup]
-verify_jwt = true
+verify_jwt = false
 
 [functions.list-cold-storage-backups]
 verify_jwt = true
