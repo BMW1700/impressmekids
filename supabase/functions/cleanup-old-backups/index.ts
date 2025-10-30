@@ -170,7 +170,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log('Starting cleanup of old backups (>90 days)...');
+    console.log('Starting cleanup of old backups (>180 days)...');
 
     const accessKey = Deno.env.get('COLD_STORAGE_ACCESS_KEY')!;
     const secretKey = Deno.env.get('COLD_STORAGE_SECRET_KEY')!;
@@ -178,10 +178,10 @@ Deno.serve(async (req) => {
     const region = Deno.env.get('COLD_STORAGE_REGION') || 'us-east-1';
 
     // Calculate cutoff date (90 days ago)
-    const cutoffDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+    const cutoffDate = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
     console.log('Cutoff date for cleanup:', cutoffDate.toISOString());
 
-    // Find backups older than 90 days using direct REST API
+    // Find backups older than 180 days using direct REST API
     const backupsResponse = await fetch(
       `${supabaseUrl}/rest/v1/cold_storage_backups?backup_timestamp=lt.${cutoffDate.toISOString()}&select=*`,
       {
@@ -201,7 +201,7 @@ Deno.serve(async (req) => {
     const oldBackups = await backupsResponse.json();
 
     if (!oldBackups || oldBackups.length === 0) {
-      console.log('No backups older than 90 days found');
+      console.log('No backups older than 180 days found');
       
       // Log using direct REST API
       await fetch(`${supabaseUrl}/rest/v1/backup_audit_log`, {
@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
         success: true,
         deleted_count: 0,
         freed_space_bytes: 0,
-        message: 'No backups older than 90 days found',
+        message: 'No backups older than 180 days found',
       }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
