@@ -39,18 +39,43 @@ export const EditClassroomModal = ({ open, onOpenChange, onSuccess, classroom }:
   ];
 
   useEffect(() => {
-    if (classroom && open) {
-      console.log('Loading classroom data:', classroom);
-      setName(classroom.name || "");
-      // Note: grade and subject are UI-only fields, not stored in DB
-      setGrade("");
-      setSubject("");
-      setLocation(classroom.location || "");
-      setStartTime(classroom.start_time || "");
-      setEndTime(classroom.end_time || "");
-      setScheduleStartDate(classroom.schedule_start_date || "");
-      setMeetingDays(classroom.meeting_days || []);
-    }
+    const loadFullClassroomData = async () => {
+      if (classroom && open) {
+        console.log('Loading classroom data:', classroom);
+        
+        // Fetch full classroom data to ensure we have all fields
+        const { data: fullClassroom, error } = await supabase
+          .from('classrooms')
+          .select('*')
+          .eq('id', classroom.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Error loading full classroom data:', error);
+          // Fall back to using the passed classroom data
+          setName(classroom.name || "");
+          setLocation(classroom.location || "");
+          setStartTime(classroom.start_time || "");
+          setEndTime(classroom.end_time || "");
+          setScheduleStartDate(classroom.schedule_start_date || "");
+          setMeetingDays(classroom.meeting_days || []);
+        } else if (fullClassroom) {
+          console.log('Full classroom data loaded:', fullClassroom);
+          setName(fullClassroom.name || "");
+          setLocation(fullClassroom.location || "");
+          setStartTime(fullClassroom.start_time || "");
+          setEndTime(fullClassroom.end_time || "");
+          setScheduleStartDate(fullClassroom.schedule_start_date || "");
+          setMeetingDays(fullClassroom.meeting_days || []);
+        }
+        
+        // Note: grade and subject are UI-only fields, not stored in DB
+        setGrade("");
+        setSubject("");
+      }
+    };
+
+    loadFullClassroomData();
   }, [classroom, open]);
 
   const toggleMeetingDay = (day: string) => {
