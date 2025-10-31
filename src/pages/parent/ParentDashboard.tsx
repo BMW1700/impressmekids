@@ -19,6 +19,36 @@ const ParentDashboard = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  const handleLookupSuccess = () => {
+    console.log("🔄 Invalidating queries after lookup success for parentId:", parentId);
+    queryClient.invalidateQueries({ queryKey: ["parent-student-links"] });
+    queryClient.invalidateQueries({ queryKey: ["parent-access-requests", parentId] });
+  };
+
+  // Get current session
+  const { data: session } = useQuery({
+    queryKey: ["session"],
+    queryFn: async () => {
+      const { data } = await supabase.auth.getSession();
+      return data.session;
+    },
+  });
+
+  // Get first approved child for calendar widget
+  const { data: approvedChildren } = useQuery({
+    queryKey: ["parent-children", parentId],
+    queryFn: async () => {
+      if (!parentId) return [];
+      const { data } = await supabase
+        .from("parent_student_links")
+        .select("student_id")
+        .eq("parent_id", parentId)
+        .eq("approved", true);
+      return data || [];
+    },
+    enabled: !!parentId,
+  });
+
   useEffect(() => {
     checkAuth();
   }, []);
@@ -101,36 +131,6 @@ const ParentDashboard = () => {
   }
 
   console.log("🔗 ParentDashboard rendering with parentId:", parentId);
-
-  // Get current session
-  const { data: session } = useQuery({
-    queryKey: ["session"],
-    queryFn: async () => {
-      const { data } = await supabase.auth.getSession();
-      return data.session;
-    },
-  });
-
-  const handleLookupSuccess = () => {
-    console.log("🔄 Invalidating queries after lookup success for parentId:", parentId);
-    queryClient.invalidateQueries({ queryKey: ["parent-student-links"] });
-    queryClient.invalidateQueries({ queryKey: ["parent-access-requests", parentId] });
-  };
-
-  // Get first approved child for calendar widget
-  const { data: approvedChildren } = useQuery({
-    queryKey: ["parent-children", parentId],
-    queryFn: async () => {
-      if (!parentId) return [];
-      const { data } = await supabase
-        .from("parent_student_links")
-        .select("student_id")
-        .eq("parent_id", parentId)
-        .eq("approved", true);
-      return data || [];
-    },
-    enabled: !!parentId,
-  });
 
   const firstChildId = approvedChildren?.[0]?.student_id;
 
