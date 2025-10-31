@@ -79,8 +79,6 @@ export const EditClassroomModal = ({ open, onOpenChange, onSuccess, classroom }:
         .from('classrooms')
         .update({
           name: name.trim(),
-          grade: grade || null,
-          subject: subject.trim() || null,
           meeting_days: meetingDays.length > 0 ? meetingDays : null,
           start_time: startTime || null,
           end_time: endTime || null,
