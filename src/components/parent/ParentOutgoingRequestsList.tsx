@@ -148,9 +148,12 @@ export const ParentOutgoingRequestsList = ({ parentId }: ParentOutgoingRequestsL
   if (!requests || requests.length === 0) {
     console.log("📭 RENDERING: Empty state (no requests)");
     return (
-      <Card>
+      <Card className="border shadow-sm bg-card/50">
         <CardContent className="pt-6">
-          <div className="text-center space-y-4">
+          <div className="text-center space-y-4 py-8">
+            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+              <Clock className="h-6 w-6 text-muted-foreground" />
+            </div>
             <p className="text-muted-foreground">
               No student access requests yet. Click "Link Student" to get started.
             </p>
@@ -171,7 +174,7 @@ export const ParentOutgoingRequestsList = ({ parentId }: ParentOutgoingRequestsL
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {requests.map((request) => (
-        <Card key={request.id}>
+        <Card key={request.id} className="border shadow-sm hover:shadow-md transition-all bg-card/80 backdrop-blur-sm">
           <CardHeader>
             <div className="flex items-start justify-between">
               <CardTitle className="text-lg">

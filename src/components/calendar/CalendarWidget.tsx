@@ -108,7 +108,7 @@ export const CalendarWidget = ({ userId, userRole, childId }: CalendarWidgetProp
   }
 
   return (
-    <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate("/calendar")}>
+    <Card className="cursor-pointer hover:shadow-lg transition-shadow border shadow-sm bg-card/80 backdrop-blur-sm" onClick={() => navigate("/calendar")}>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
