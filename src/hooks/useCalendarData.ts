@@ -174,7 +174,7 @@ export const useCalendarData = ({ startDate, endDate, userId, userRole, childId 
         .from("events")
         .select(`
           *,
-          classrooms!inner(name, profiles!classrooms_teacher_id_fkey(full_name))
+          classrooms(name, profiles!classrooms_teacher_id_fkey(full_name))
         `)
         .gte("event_date", format(startDate, "yyyy-MM-dd"))
         .lte("event_date", format(endDate, "yyyy-MM-dd"));
@@ -183,9 +183,29 @@ export const useCalendarData = ({ startDate, endDate, userId, userRole, childId 
       if (userRole === "teacher") {
         eventsQuery = eventsQuery.eq("teacher_id", userId);
       } else if (userRole === "student") {
-        eventsQuery = eventsQuery.eq("is_posted", true);
+        // Students only see posted events in their classrooms
+        const { data: studentClassrooms } = await supabase
+          .from("classroom_students")
+          .select("classroom_id")
+          .eq("student_id", effectiveUserId);
+        
+        const classroomIds = studentClassrooms?.map(c => c.classroom_id) || [];
+        eventsQuery = eventsQuery
+          .eq("is_posted", true)
+          .not("classroom_id", "is", null)
+          .in("classroom_id", classroomIds);
       } else if (userRole === "parent" && childId) {
-        eventsQuery = eventsQuery.eq("is_posted", true);
+        // Parents only see posted events for their children's classrooms
+        const { data: childClassrooms } = await supabase
+          .from("classroom_students")
+          .select("classroom_id")
+          .eq("student_id", childId);
+        
+        const classroomIds = childClassrooms?.map(c => c.classroom_id) || [];
+        eventsQuery = eventsQuery
+          .eq("is_posted", true)
+          .not("classroom_id", "is", null)
+          .in("classroom_id", classroomIds);
       }
 
       const { data: events } = await eventsQuery;

@@ -985,7 +985,7 @@ export type Database = {
         Row: {
           attachments: Json | null
           category: Database["public"]["Enums"]["event_category"]
-          classroom_id: string
+          classroom_id: string | null
           created_at: string | null
           description: string | null
           end_time: string
@@ -1004,7 +1004,7 @@ export type Database = {
         Insert: {
           attachments?: Json | null
           category?: Database["public"]["Enums"]["event_category"]
-          classroom_id: string
+          classroom_id?: string | null
           created_at?: string | null
           description?: string | null
           end_time: string
@@ -1023,7 +1023,7 @@ export type Database = {
         Update: {
           attachments?: Json | null
           category?: Database["public"]["Enums"]["event_category"]
-          classroom_id?: string
+          classroom_id?: string | null
           created_at?: string | null
           description?: string | null
           end_time?: string

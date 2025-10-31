@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,6 @@ import { cn } from "@/lib/utils";
 interface CreateEventModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  classroomId: string;
   teacherId: string;
   event?: any; // For editing existing events
 }
@@ -36,9 +35,13 @@ const EVENT_CATEGORIES = [
 
 const DAYS_OF_WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-export const CreateEventModal = ({ open, onOpenChange, classroomId, teacherId, event }: CreateEventModalProps) => {
+export const CreateEventModal = ({ open, onOpenChange, teacherId, event }: CreateEventModalProps) => {
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
+  const [classrooms, setClassrooms] = useState<any[]>([]);
+  const [selectedClassroomIds, setSelectedClassroomIds] = useState<string[]>(
+    event?.classroom_id ? [event.classroom_id] : []
+  );
   
   const [title, setTitle] = useState(event?.title || "");
   const [description, setDescription] = useState(event?.description || "");
@@ -63,6 +66,25 @@ export const CreateEventModal = ({ open, onOpenChange, classroomId, teacherId, e
   const [conflicts, setConflicts] = useState<string[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
 
+  // Fetch teacher's classrooms
+  useEffect(() => {
+    const fetchClassrooms = async () => {
+      const { data } = await supabase
+        .from("classrooms")
+        .select("id, name")
+        .eq("teacher_id", teacherId)
+        .order("name");
+      
+      if (data) {
+        setClassrooms(data);
+      }
+    };
+    
+    if (open) {
+      fetchClassrooms();
+    }
+  }, [open, teacherId]);
+
   const checkConflicts = async () => {
     if (!eventDate || !startTime || !endTime) return;
 
@@ -85,26 +107,29 @@ export const CreateEventModal = ({ open, onOpenChange, classroomId, teacherId, e
       });
     }
 
-    // Check for other events in the same classroom
-    const { data: existingEvents } = await supabase
-      .from("events")
-      .select("*")
-      .eq("classroom_id", classroomId)
-      .eq("event_date", format(eventDate, "yyyy-MM-dd"))
-      .neq("id", event?.id || "");
+    // Check for other events in the selected classrooms
+    if (selectedClassroomIds.length > 0) {
+      const { data: existingEvents } = await supabase
+        .from("events")
+        .select("*")
+        .in("classroom_id", selectedClassroomIds)
+        .eq("event_date", format(eventDate, "yyyy-MM-dd"))
+        .neq("id", event?.id || "");
 
-    if (existingEvents && existingEvents.length > 0) {
-      existingEvents.forEach(e => {
-        const existingStart = e.start_time;
-        const existingEnd = e.end_time;
-        
-        // Check for time overlap
-        if ((startTime >= existingStart && startTime < existingEnd) ||
-            (endTime > existingStart && endTime <= existingEnd) ||
-            (startTime <= existingStart && endTime >= existingEnd)) {
-          conflicts.push(`Conflicts with event "${e.title}" (${existingStart} - ${existingEnd})`);
-        }
-      });
+      if (existingEvents && existingEvents.length > 0) {
+        existingEvents.forEach(e => {
+          const existingStart = e.start_time;
+          const existingEnd = e.end_time;
+          
+          // Check for time overlap
+          if ((startTime >= existingStart && startTime < existingEnd) ||
+              (endTime > existingStart && endTime <= existingEnd) ||
+              (startTime <= existingStart && endTime >= existingEnd)) {
+            const classroom = classrooms.find(c => c.id === e.classroom_id);
+            conflicts.push(`Conflicts with event "${e.title}" in ${classroom?.name || 'classroom'} (${existingStart} - ${existingEnd})`);
+          }
+        });
+      }
     }
 
     // Check school hours
@@ -158,37 +183,55 @@ export const CreateEventModal = ({ open, onOpenChange, classroomId, teacherId, e
     setIsLoading(true);
 
     try {
-      const eventData = {
-        classroom_id: classroomId,
-        teacher_id: teacherId,
-        title,
-        description,
-        event_date: format(eventDate, "yyyy-MM-dd"),
-        start_time: startTime,
-        end_time: endTime,
-        location,
-        category,
-        is_repeating: isRepeating,
-        repeat_days: isRepeating ? repeatDays : [],
-        repeat_end_date: isRepeating && repeatEndDate ? format(repeatEndDate, "yyyy-MM-dd") : null,
-        attachments,
-        is_posted: !isDraft,
-      };
+      // Create events for each selected classroom, or one teacher-only event
+      const eventsToCreate = selectedClassroomIds.length > 0
+        ? selectedClassroomIds.map(classroomId => ({
+            classroom_id: classroomId,
+            teacher_id: teacherId,
+            title,
+            description,
+            event_date: format(eventDate, "yyyy-MM-dd"),
+            start_time: startTime,
+            end_time: endTime,
+            location,
+            category,
+            is_repeating: isRepeating,
+            repeat_days: isRepeating ? repeatDays : [],
+            repeat_end_date: isRepeating && repeatEndDate ? format(repeatEndDate, "yyyy-MM-dd") : null,
+            attachments,
+            is_posted: !isDraft,
+          }))
+        : [{
+            classroom_id: null, // Teacher-only event
+            teacher_id: teacherId,
+            title,
+            description,
+            event_date: format(eventDate, "yyyy-MM-dd"),
+            start_time: startTime,
+            end_time: endTime,
+            location,
+            category,
+            is_repeating: isRepeating,
+            repeat_days: isRepeating ? repeatDays : [],
+            repeat_end_date: isRepeating && repeatEndDate ? format(repeatEndDate, "yyyy-MM-dd") : null,
+            attachments,
+            is_posted: !isDraft,
+          }];
 
       if (event) {
         // Update existing event
         const { error } = await supabase
           .from("events")
-          .update(eventData)
+          .update(eventsToCreate[0])
           .eq("id", event.id);
 
         if (error) throw error;
         toast.success(`Event ${isDraft ? "saved as draft" : "posted"} successfully`);
       } else {
-        // Create new event
+        // Create new event(s)
         const { error } = await supabase
           .from("events")
-          .insert(eventData);
+          .insert(eventsToCreate);
 
         if (error) throw error;
         toast.success(`Event ${isDraft ? "saved as draft" : "posted"} successfully`);
@@ -233,6 +276,39 @@ export const CreateEventModal = ({ open, onOpenChange, classroomId, teacherId, e
               placeholder="Provide details about the event..."
               rows={3}
             />
+          </div>
+
+          {/* Classroom Selection */}
+          <div className="space-y-2">
+            <Label>Classroom(s)</Label>
+            <div className="p-4 border rounded-lg space-y-2 max-h-48 overflow-y-auto">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <Checkbox
+                  checked={selectedClassroomIds.length === 0}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedClassroomIds([]);
+                    }
+                  }}
+                />
+                <span className="font-medium">Personal (teacher-only event)</span>
+              </label>
+              {classrooms.map((classroom) => (
+                <label key={classroom.id} className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox
+                    checked={selectedClassroomIds.includes(classroom.id)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedClassroomIds([...selectedClassroomIds, classroom.id]);
+                      } else {
+                        setSelectedClassroomIds(selectedClassroomIds.filter(id => id !== classroom.id));
+                      }
+                    }}
+                  />
+                  <span>{classroom.name}</span>
+                </label>
+              ))}
+            </div>
           </div>
 
           {/* Category */}

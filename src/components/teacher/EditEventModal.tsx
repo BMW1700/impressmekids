@@ -53,7 +53,6 @@ interface EditEventModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   event: any;
-  classroomId: string;
   teacherId: string;
 }
 
@@ -74,13 +73,16 @@ export const EditEventModal = ({
   open,
   onOpenChange,
   event,
-  classroomId,
   teacherId,
 }: EditEventModalProps) => {
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteScope, setDeleteScope] = useState<"this" | "future" | "all">("this");
+  const [classrooms, setClassrooms] = useState<any[]>([]);
+  const [selectedClassroomId, setSelectedClassroomId] = useState<string | null>(
+    event?.classroom_id || null
+  );
 
   const [title, setTitle] = useState(event?.title || "");
   const [description, setDescription] = useState(event?.description || "");
@@ -108,6 +110,25 @@ export const EditEventModal = ({
   const [conflicts, setConflicts] = useState<string[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
 
+  // Fetch teacher's classrooms
+  useEffect(() => {
+    const fetchClassrooms = async () => {
+      const { data } = await supabase
+        .from("classrooms")
+        .select("id, name")
+        .eq("teacher_id", teacherId)
+        .order("name");
+      
+      if (data) {
+        setClassrooms(data);
+      }
+    };
+    
+    if (open) {
+      fetchClassrooms();
+    }
+  }, [open, teacherId]);
+
   useEffect(() => {
     if (event) {
       setTitle(event.title || "");
@@ -123,6 +144,7 @@ export const EditEventModal = ({
         event.repeat_end_date ? new Date(event.repeat_end_date) : undefined
       );
       setAttachments(event.attachments || []);
+      setSelectedClassroomId(event.classroom_id || null);
     }
   }, [event]);
 
@@ -151,29 +173,31 @@ export const EditEventModal = ({
     }
 
     // Check for other events in the same classroom
-    const { data: existingEvents } = await supabase
-      .from("events")
-      .select("*")
-      .eq("classroom_id", classroomId)
-      .eq("event_date", format(eventDate, "yyyy-MM-dd"))
-      .neq("id", event?.id || "");
+    if (selectedClassroomId) {
+      const { data: existingEvents } = await supabase
+        .from("events")
+        .select("*")
+        .eq("classroom_id", selectedClassroomId)
+        .eq("event_date", format(eventDate, "yyyy-MM-dd"))
+        .neq("id", event?.id || "");
 
-    if (existingEvents && existingEvents.length > 0) {
-      existingEvents.forEach((e) => {
-        const existingStart = e.start_time;
-        const existingEnd = e.end_time;
+      if (existingEvents && existingEvents.length > 0) {
+        existingEvents.forEach((e) => {
+          const existingStart = e.start_time;
+          const existingEnd = e.end_time;
 
-        // Check for time overlap
-        if (
-          (startTime >= existingStart && startTime < existingEnd) ||
-          (endTime > existingStart && endTime <= existingEnd) ||
-          (startTime <= existingStart && endTime >= existingEnd)
-        ) {
-          conflicts.push(
-            `Conflicts with event "${e.title}" (${existingStart} - ${existingEnd})`
-          );
-        }
-      });
+          // Check for time overlap
+          if (
+            (startTime >= existingStart && startTime < existingEnd) ||
+            (endTime > existingStart && endTime <= existingEnd) ||
+            (startTime <= existingStart && endTime >= existingEnd)
+          ) {
+            conflicts.push(
+              `Conflicts with event "${e.title}" (${existingStart} - ${existingEnd})`
+            );
+          }
+        });
+      }
     }
 
     // Check school hours
@@ -232,7 +256,7 @@ export const EditEventModal = ({
 
     try {
       const eventData = {
-        classroom_id: classroomId,
+        classroom_id: selectedClassroomId,
         teacher_id: teacherId,
         title,
         description,
@@ -404,6 +428,37 @@ export const EditEventModal = ({
                 placeholder="Provide details about the event..."
                 rows={3}
               />
+            </div>
+
+            {/* Classroom Selection */}
+            <div className="space-y-2">
+              <Label>Classroom</Label>
+              <div className="p-4 border rounded-lg space-y-2 max-h-48 overflow-y-auto">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox
+                    checked={selectedClassroomId === null}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedClassroomId(null);
+                      }
+                    }}
+                  />
+                  <span className="font-medium">Personal (teacher-only event)</span>
+                </label>
+                {classrooms.map((classroom) => (
+                  <label key={classroom.id} className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={selectedClassroomId === classroom.id}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedClassroomId(classroom.id);
+                        }
+                      }}
+                    />
+                    <span>{classroom.name}</span>
+                  </label>
+                ))}
+              </div>
             </div>
 
             {/* Category */}

@@ -201,7 +201,6 @@ export const CalendarItemDetailModal = ({ item, onClose, userRole }: CalendarIte
             if (!open) onClose();
           }}
           event={eventData}
-          classroomId={eventData.classroom_id}
           teacherId={teacherId}
         />
       )}

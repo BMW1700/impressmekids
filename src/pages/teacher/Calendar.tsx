@@ -422,7 +422,6 @@ const TeacherCalendar = () => {
           open={showCreateEvent}
           onOpenChange={setShowCreateEvent}
           teacherId={profile.id}
-          classroomId=""
         />
       )}
     </div>
