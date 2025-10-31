@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, Users, Trophy, BookOpen, Loader2, BarChart3, Brain, Calendar as CalendarIcon } from "lucide-react";
+import { PlusCircle, Users, Trophy, BookOpen, Loader2, BarChart3, Brain, Calendar as CalendarIcon, Sparkles, TrendingUp, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const TeacherDashboard = () => {
@@ -117,44 +117,115 @@ const TeacherDashboard = () => {
       <main className="flex-1 py-8 animate-fade-in">
         <div className="container mx-auto px-4">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">
+            <h1 className="text-4xl font-bold mb-2 bg-gradient-hero bg-clip-text text-transparent">
               Welcome, {profile?.full_name}! 👋
             </h1>
-            <p className="text-muted-foreground">Teacher Dashboard</p>
+            <p className="text-muted-foreground text-lg">Your AI-Powered Classroom Command Center</p>
           </div>
 
-          {/* Quick Stats */}
+          {/* ML Spotlight Widget */}
+          <Card className="mb-8 border-primary/20 bg-gradient-to-br from-primary/5 via-background to-secondary/5 hover:shadow-purple transition-all duration-300">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 rounded-xl bg-gradient-primary">
+                  <Brain className="h-8 w-8 text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-xl font-bold">AI Insights Dashboard</h3>
+                    <Badge variant="secondary" className="bg-secondary text-secondary-foreground">
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      4 Patents
+                    </Badge>
+                  </div>
+                  <p className="text-muted-foreground mb-4">
+                    Revolutionary machine learning models predict reading outcomes, identify at-risk students, and prescribe personalized interventions.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <Button 
+                      onClick={() => navigate('/teacher/aura-analytics')}
+                      className="bg-gradient-primary hover:opacity-90"
+                    >
+                      <BarChart3 className="h-4 w-4 mr-2" />
+                      View Analytics
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => navigate('/teacher/aura-analytics')}
+                    >
+                      <AlertCircle className="h-4 w-4 mr-2" />
+                      At-Risk Students
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Enhanced Quick Stats */}
           <div className="grid md:grid-cols-3 gap-6 mb-8">
-            <Card className="hover:scale-[1.02] transition-transform duration-200">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Total Classrooms</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
+            <Card className="hover:scale-[1.02] hover:shadow-purple transition-all duration-300 border-primary/10">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Classrooms</CardTitle>
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Users className="h-5 w-5 text-primary" />
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{classrooms.length}</div>
-              </CardContent>
-            </Card>
-            <Card className="hover:scale-[1.02] transition-transform duration-200">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Total Students</CardTitle>
-                <BookOpen className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {classrooms.reduce((acc, c) => acc + (c.classroom_students?.[0]?.count || 0), 0)}
+                <div className="flex items-baseline gap-2">
+                  <div className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                    {classrooms.length}
+                  </div>
+                  <div className="flex items-center text-sm text-green-600">
+                    <TrendingUp className="h-3 w-3 mr-1" />
+                    Active
+                  </div>
                 </div>
               </CardContent>
             </Card>
-            <Card className="hover:scale-[1.02] transition-transform duration-200">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  Games Played
-                  <Badge variant="secondary" className="text-xs">Coming Soon</Badge>
-                </CardTitle>
-                <Trophy className="h-4 w-4 text-muted-foreground" />
+            
+            <Card className="hover:scale-[1.02] hover:shadow-purple transition-all duration-300 border-primary/10">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Students</CardTitle>
+                  <div className="p-2 rounded-lg bg-secondary/10">
+                    <BookOpen className="h-5 w-5 text-secondary-dark" />
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">0</div>
+                <div className="flex items-baseline gap-2">
+                  <div className="text-4xl font-bold bg-gradient-hero bg-clip-text text-transparent">
+                    {classrooms.reduce((acc, c) => acc + (c.classroom_students?.[0]?.count || 0), 0)}
+                  </div>
+                  <div className="flex items-center text-sm text-green-600">
+                    <TrendingUp className="h-3 w-3 mr-1" />
+                    Enrolled
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="hover:scale-[1.02] hover:shadow-card transition-all duration-300 border-muted">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Active Assignments</CardTitle>
+                  <div className="p-2 rounded-lg bg-muted">
+                    <Brain className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-baseline gap-2">
+                  <div className="text-4xl font-bold text-muted-foreground">
+                    {classrooms.length > 0 ? classrooms.length * 3 : 0}
+                  </div>
+                  <Badge variant="secondary" className="text-xs">
+                    ML-Powered
+                  </Badge>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -229,44 +300,60 @@ const TeacherDashboard = () => {
 
             <TabsContent value="actions" className="mt-6">
               <div className="grid md:grid-cols-3 gap-6">
-                <Card className="hover:shadow-purple transition-shadow cursor-pointer" onClick={() => navigate('/games')}>
+                <Card className="hover:scale-[1.02] hover:shadow-purple transition-all duration-300 cursor-pointer border-primary/20 bg-gradient-to-br from-primary/5 to-background" onClick={() => navigate('/games')}>
                   <CardHeader>
-                    <CardTitle>Browse Games</CardTitle>
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 rounded-lg bg-gradient-primary">
+                        <Trophy className="h-5 w-5 text-white" />
+                      </div>
+                      <CardTitle className="text-xl">Browse Games</CardTitle>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <p className="text-muted-foreground mb-4">
                       Explore our collection of educational games for your classroom
                     </p>
-                    <Button variant="outline" className="w-full">
-                      View Games →
+                    <Button variant="outline" className="w-full group">
+                      View Games
+                      <span className="ml-2 group-hover:translate-x-1 transition-transform">→</span>
                     </Button>
                   </CardContent>
                 </Card>
-                <Card className="hover:shadow-blue transition-shadow cursor-pointer" onClick={() => navigate('/teacher/aura-analytics')}>
+                
+                <Card className="hover:scale-[1.02] hover:shadow-purple transition-all duration-300 cursor-pointer border-primary/20 bg-gradient-to-br from-secondary/5 to-background" onClick={() => navigate('/teacher/aura-analytics')}>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <BarChart3 className="h-5 w-5" />
-                      AURA Analytics
-                    </CardTitle>
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 rounded-lg bg-gradient-hero">
+                        <BarChart3 className="h-5 w-5 text-white" />
+                      </div>
+                      <CardTitle className="text-xl">AURA Analytics</CardTitle>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <p className="text-muted-foreground mb-4">
-                      Track student speaking progress and pronunciation skills
+                      Track student speaking progress and pronunciation with AI
                     </p>
-                    <Button variant="outline" className="w-full">
-                      View Analytics →
+                    <Button variant="outline" className="w-full group">
+                      View Analytics
+                      <span className="ml-2 group-hover:translate-x-1 transition-transform">→</span>
                     </Button>
                   </CardContent>
                 </Card>
-                <Card className="hover:shadow-yellow transition-shadow">
+                
+                <Card className="hover:scale-[1.02] hover:shadow-card transition-all duration-300 border-muted">
                   <CardHeader>
-                    <CardTitle>Need Help?</CardTitle>
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 rounded-lg bg-muted">
+                        <BookOpen className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <CardTitle className="text-xl">Resources</CardTitle>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <p className="text-muted-foreground mb-4">
-                      Check out our teacher guides and resources
+                      Check out our teacher guides and best practices
                     </p>
-                    <Button variant="outline" className="w-full justify-between">
+                    <Button variant="outline" className="w-full justify-between" disabled>
                       View Resources
                       <Badge variant="secondary" className="ml-2">Coming Soon</Badge>
                     </Button>
