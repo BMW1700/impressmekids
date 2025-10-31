@@ -67,6 +67,8 @@ export const CreateClassroomModal = ({ open, onOpenChange, onSuccess }: CreateCl
           name: name.trim(),
           teacher_id: session.user.id,
           join_code: generateJoinCode(),
+          grade: grade ? parseInt(grade) : null,
+          subject: subject.trim() || null,
           meeting_days: meetingDays.length > 0 ? meetingDays : null,
           start_time: startTime || null,
           end_time: endTime || null,

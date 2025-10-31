@@ -720,6 +720,7 @@ export type Database = {
         Row: {
           created_at: string
           end_time: string | null
+          grade: number | null
           id: string
           join_code: string
           location: string | null
@@ -727,11 +728,13 @@ export type Database = {
           name: string
           schedule_start_date: string | null
           start_time: string | null
+          subject: string | null
           teacher_id: string
         }
         Insert: {
           created_at?: string
           end_time?: string | null
+          grade?: number | null
           id?: string
           join_code: string
           location?: string | null
@@ -739,11 +742,13 @@ export type Database = {
           name: string
           schedule_start_date?: string | null
           start_time?: string | null
+          subject?: string | null
           teacher_id: string
         }
         Update: {
           created_at?: string
           end_time?: string | null
+          grade?: number | null
           id?: string
           join_code?: string
           location?: string | null
@@ -751,6 +756,7 @@ export type Database = {
           name?: string
           schedule_start_date?: string | null
           start_time?: string | null
+          subject?: string | null
           teacher_id?: string
         }
         Relationships: [

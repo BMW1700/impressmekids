@@ -62,16 +62,14 @@ export const EditClassroomModal = ({ open, onOpenChange, onSuccess, classroom }:
         } else if (fullClassroom) {
           console.log('Full classroom data loaded:', fullClassroom);
           setName(fullClassroom.name || "");
+          setGrade(fullClassroom.grade?.toString() || "");
+          setSubject(fullClassroom.subject || "");
           setLocation(fullClassroom.location || "");
           setStartTime(fullClassroom.start_time || "");
           setEndTime(fullClassroom.end_time || "");
           setScheduleStartDate(fullClassroom.schedule_start_date || "");
           setMeetingDays(fullClassroom.meeting_days || []);
         }
-        
-        // Note: grade and subject are UI-only fields, not stored in DB
-        setGrade("");
-        setSubject("");
       }
     };
 
@@ -106,6 +104,8 @@ export const EditClassroomModal = ({ open, onOpenChange, onSuccess, classroom }:
         .from('classrooms')
         .update({
           name: name.trim(),
+          grade: grade ? parseInt(grade) : null,
+          subject: subject.trim() || null,
           meeting_days: meetingDays.length > 0 ? meetingDays : null,
           start_time: startTime || null,
           end_time: endTime || null,
