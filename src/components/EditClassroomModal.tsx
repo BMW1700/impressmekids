@@ -40,9 +40,11 @@ export const EditClassroomModal = ({ open, onOpenChange, onSuccess, classroom }:
 
   useEffect(() => {
     if (classroom && open) {
+      console.log('Loading classroom data:', classroom);
       setName(classroom.name || "");
-      setGrade(classroom.grade?.toString() || "");
-      setSubject(classroom.subject || "");
+      // Note: grade and subject are UI-only fields, not stored in DB
+      setGrade("");
+      setSubject("");
       setLocation(classroom.location || "");
       setStartTime(classroom.start_time || "");
       setEndTime(classroom.end_time || "");
