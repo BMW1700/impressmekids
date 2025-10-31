@@ -3,10 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { GameTile } from "@/components/GameTile";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Zap, Users, Trophy, BookOpen } from "lucide-react";
+import { Brain, Target, TrendingUp, ArrowRight, CheckCircle } from "lucide-react";
+import { StatsSection } from "@/components/landing/StatsSection";
+import { TestimonialSection } from "@/components/landing/TestimonialSection";
+import { TrustSection } from "@/components/landing/TrustSection";
+import { ResearchSection } from "@/components/landing/ResearchSection";
+import { Badge } from "@/components/ui/badge";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -46,122 +50,138 @@ const Index = () => {
       <Header />
       
       {/* Hero Section */}
-      <section className="bg-gradient-hero text-white py-20 animate-fade-in">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            Learn Through Play! 🎮
-          </h1>
-          <p className="text-xl md:text-2xl mb-8 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150">
-            Educational games that make learning fun and exciting for kids
-          </p>
-          <div className="flex gap-4 justify-center animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
-            <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary-light" asChild>
-              <Link to="/auth">Get Started Free</Link>
-            </Button>
-            <Button size="lg" variant="outline" className="bg-white/10 text-white border-white hover:bg-white/20" asChild>
-              <Link to="/games">Explore Games</Link>
-            </Button>
+      <section className="bg-gradient-hero text-white py-24 md:py-32 animate-fade-in relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItaDJWMzRoLTJ6bTAgNGgydjJoLTJ2LTJ6bTAtOGgydjJoLTJ2LTJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
+        
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="max-w-4xl mx-auto text-center">
+            <Badge variant="secondary" className="mb-6 px-4 py-2 text-sm font-semibold animate-in fade-in slide-in-from-bottom-4 duration-700">
+              4 Patent-Pending AI Innovations
+            </Badge>
+            
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100 leading-tight">
+              AI-Powered Literacy Platform That Closes Reading Gaps <span className="text-secondary">3x Faster</span>
+            </h1>
+            
+            <p className="text-lg md:text-xl lg:text-2xl mb-8 opacity-95 max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
+              Revolutionary machine learning technology predicts reading outcomes, identifies at-risk students early, and prescribes personalized interventions with scientific precision
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
+              <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary-light text-lg px-8 py-6" asChild>
+                <Link to="/auth">
+                  Request a Demo
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
+              <Button size="lg" variant="outline" className="bg-white/10 text-white border-2 border-white hover:bg-white hover:text-primary text-lg px-8 py-6" asChild>
+                <Link to="/auth">
+                  Start Free Trial
+                </Link>
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap justify-center gap-6 text-sm animate-in fade-in slide-in-from-bottom-4 duration-700 delay-400">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5" />
+                <span>No credit card required</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5" />
+                <span>FERPA & COPPA compliant</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5" />
+                <span>20+ partner schools</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
+
+      {/* Stats Section */}
+      <StatsSection />
 
       {/* Features Section */}
-      <section className="py-16 bg-background">
+      <section className="py-20 bg-background">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
-            Why Kids Love It
-          </h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center p-6 hover:scale-[1.05] transition-transform duration-200">
-              <div className="inline-flex p-4 rounded-full bg-gradient-primary mb-4">
-                <Zap className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Fast-Paced Fun</h3>
-              <p className="text-muted-foreground">
-                Exciting 1v1 games that keep students engaged and motivated
-              </p>
-            </div>
-            <div className="text-center p-6 hover:scale-[1.05] transition-transform duration-200">
-              <div className="inline-flex p-4 rounded-full bg-gradient-secondary mb-4">
-                <BookOpen className="h-8 w-8 text-secondary-foreground" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Educational Content</h3>
-              <p className="text-muted-foreground">
-                Curriculum-aligned questions across Math, Science, English & more
-              </p>
-            </div>
-            <div className="text-center p-6 hover:scale-[1.05] transition-transform duration-200">
-              <div className="inline-flex p-4 rounded-full bg-gradient-primary mb-4">
-                <Trophy className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Track Progress</h3>
-              <p className="text-muted-foreground">
-                Teachers and students can see stats and celebrate achievements
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Games Hub Preview */}
-      <section className="py-16 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
+          <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Available Games
+              Outcomes That Matter
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Choose from our growing collection of educational games
+              Our AI doesn't just measure—it predicts, intervenes, and accelerates learning
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-            <GameTile
-              title="Jeopardy Duel"
-              description="Challenge your classmates in a fast-paced trivia battle!"
-              gradeRange="Grades 3-6"
-              path="/games/jeopardy-1v1"
-              icon={<Zap className="h-6 w-6 text-white" />}
-            />
-            <GameTile
-              title="Math Race"
-              description="Solve problems faster than your opponent to win!"
-              gradeRange="Grades 2-5"
-              path="/games"
-              icon={<Trophy className="h-6 w-6 text-white" />}
-              isComingSoon
-            />
-            <GameTile
-              title="Word Builder"
-              description="Create words and outscore your competition!"
-              gradeRange="Grades 3-6"
-              path="/games"
-              icon={<BookOpen className="h-6 w-6 text-white" />}
-              isComingSoon
-            />
-          </div>
-
-          <div className="text-center mt-8">
-            <Button size="lg" asChild>
-              <Link to="/games">View All Games</Link>
-            </Button>
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <div className="text-center p-8 rounded-xl bg-card border-2 border-border hover:border-primary hover:shadow-card transition-all duration-300">
+              <div className="inline-flex p-4 rounded-full bg-gradient-primary mb-6">
+                <Brain className="h-10 w-10 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold mb-3">Predictive Intelligence</h3>
+              <p className="text-muted-foreground">
+                ML models identify struggling readers weeks before traditional assessments, enabling early intervention when it matters most
+              </p>
+            </div>
+            
+            <div className="text-center p-8 rounded-xl bg-card border-2 border-border hover:border-primary hover:shadow-card transition-all duration-300">
+              <div className="inline-flex p-4 rounded-full bg-gradient-primary mb-6">
+                <Target className="h-10 w-10 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold mb-3">Personalized Pathways</h3>
+              <p className="text-muted-foreground">
+                Q-learning algorithms continuously optimize instruction for each student, prescribing the perfect next exercise every time
+              </p>
+            </div>
+            
+            <div className="text-center p-8 rounded-xl bg-card border-2 border-border hover:border-primary hover:shadow-card transition-all duration-300">
+              <div className="inline-flex p-4 rounded-full bg-gradient-primary mb-6">
+                <TrendingUp className="h-10 w-10 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold mb-3">Measurable Impact</h3>
+              <p className="text-muted-foreground">
+                Real-time dashboards show exactly what's working, with 92% of students showing measurable literacy improvement
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
+      {/* Research & Innovation Section */}
+      <ResearchSection />
+
+      {/* Testimonials */}
+      <TestimonialSection />
+
+      {/* Trust & Security */}
+      <TrustSection />
+
       {/* CTA Section */}
-      <section className="py-16 bg-gradient-hero text-white">
-        <div className="container mx-auto px-4 text-center">
-          <Users className="h-16 w-16 mx-auto mb-6 opacity-90" />
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Ready to Transform Your Classroom?
-          </h2>
-          <p className="text-xl mb-8 max-w-2xl mx-auto">
-            Join teachers and students who are making learning fun!
-          </p>
-          <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary-light" asChild>
-            <Link to="/auth">Start Playing Now</Link>
-          </Button>
+      <section className="py-20 bg-gradient-hero text-white">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-3xl md:text-5xl font-bold mb-6">
+              Ready to See 3x Faster Reading Growth?
+            </h2>
+            <p className="text-xl mb-8 opacity-95 max-w-2xl mx-auto">
+              Join 20+ partner schools using AI-powered insights to transform literacy outcomes
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary-light text-lg px-8 py-6" asChild>
+                <Link to="/auth">
+                  Schedule Demo
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
+              <Button size="lg" variant="outline" className="bg-white text-primary hover:bg-white/90 text-lg px-8 py-6" asChild>
+                <Link to="/auth">Start Free Trial</Link>
+              </Button>
+            </div>
+            <p className="mt-6 text-sm opacity-75">
+              No credit card required • Setup in minutes • FERPA & COPPA compliant
+            </p>
+          </div>
         </div>
       </section>
 
