@@ -75,6 +75,7 @@ const App = () => (
           <Route path="/parent/notification-settings" element={<NotificationSettings />} />
           <Route path="/parent/child/:studentId" element={<ChildDetail />} />
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/calendar" element={<AdminCalendar />} />
           <Route path="/admin/settings" element={<SchoolSettings />} />
           <Route path="/district/dashboard" element={<DistrictDashboard />} />
