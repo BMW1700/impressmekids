@@ -6,13 +6,14 @@ import { Footer } from "@/components/Footer";
 import ClassroomAuraOverview from "@/components/aura/ClassroomAuraOverview";
 import StudentAuraMetrics from "@/components/aura/StudentAuraMetrics";
 import PhonemeHeatmap from "@/components/aura/PhonemeHeatmap";
+import CrossModalScatterPlot from "@/components/aura/CrossModalScatterPlot";
 import AtRiskAlerts from "@/components/aura/AtRiskAlerts";
 import ProsodyInsights from "@/components/aura/ProsodyInsights";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, ArrowLeft, Sparkles, TrendingUp } from "lucide-react";
+import { BarChart3, ArrowLeft, Sparkles, TrendingUp, Brain, Users, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const AuraAnalytics = () => {
@@ -114,12 +115,18 @@ const AuraAnalytics = () => {
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <div className="p-3 rounded-full bg-primary/10">
-                <BarChart3 className="h-6 w-6 text-primary" />
+              <div className="p-3 rounded-full bg-gradient-primary shadow-card">
+                <BarChart3 className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold">AURA Analytics</h1>
-                <p className="text-muted-foreground">Track student speaking progress</p>
+                <h1 className="text-3xl font-bold flex items-center gap-2">
+                  AURA Analytics
+                  <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 animate-pulse">
+                    <Brain className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-semibold text-primary">AI Powered</span>
+                  </div>
+                </h1>
+                <p className="text-muted-foreground">Track student speaking progress with ML insights</p>
               </div>
             </div>
 
@@ -136,6 +143,58 @@ const AuraAnalytics = () => {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Quick Stats Bar */}
+          {classroomId && auraRecords && students && (
+            <div className="grid grid-cols-4 gap-4 mb-6 animate-fade-in">
+              <Card className="border-2 border-primary/20">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Active This Week</p>
+                      <p className="text-2xl font-bold">{students.filter(s => auraRecords.some(r => r.profile_id === s.student_id)).length}</p>
+                    </div>
+                    <Users className="h-8 w-8 text-primary opacity-50" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-2 border-primary/20">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">ML Predictions</p>
+                      <p className="text-2xl font-bold">{skillVectors?.length || 0}</p>
+                    </div>
+                    <Brain className="h-8 w-8 text-primary opacity-50" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-2 border-primary/20">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Practice Sessions</p>
+                      <p className="text-2xl font-bold">{auraRecords?.length || 0}</p>
+                    </div>
+                    <Activity className="h-8 w-8 text-primary opacity-50" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-2 border-primary/20">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Avg Class Score</p>
+                      <p className="text-2xl font-bold">
+                        {auraRecords?.length ? Math.round(auraRecords.reduce((sum, r) => sum + (r.grade || 0), 0) / auraRecords.length) : 0}
+                      </p>
+                    </div>
+                    <TrendingUp className="h-8 w-8 text-primary opacity-50" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {classroomId && auraRecords && skillVectors && (
             <>
@@ -197,15 +256,18 @@ const AuraAnalytics = () => {
                 </TabsContent>
 
                 <TabsContent value="cross-modal" className="space-y-6">
+                  <CrossModalScatterPlot 
+                    students={students || []}
+                    skillVectors={skillVectors || []}
+                    auraRecords={auraRecords || []}
+                  />
+                  
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Sparkles className="h-5 w-5 text-primary" />
-                        Cross-Modal Literacy Insights
+                        Individual Student Analysis
                       </CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        Unified view of speaking + reading performance
-                      </p>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       {skillVectors && skillVectors.length > 0 ? (

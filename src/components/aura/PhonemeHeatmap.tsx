@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Sparkles, TrendingUp } from "lucide-react";
 import { useState } from "react";
 
 interface PhonemeHeatmapProps {
@@ -31,10 +32,10 @@ const PhonemeHeatmap = ({ students, skillVectors }: PhonemeHeatmapProps) => {
   };
 
   const getCellColor = (score: number | null) => {
-    if (score === null) return "bg-muted";
-    if (score >= 90) return "bg-green-500/20 hover:bg-green-500/30";
-    if (score >= 70) return "bg-yellow-500/20 hover:bg-yellow-500/30";
-    return "bg-red-500/20 hover:bg-red-500/30";
+    if (score === null) return "bg-muted hover:bg-muted/80";
+    if (score >= 90) return "bg-gradient-to-br from-green-500/30 to-green-600/20 hover:from-green-500/40 hover:to-green-600/30 border-green-500/20";
+    if (score >= 70) return "bg-gradient-to-br from-yellow-500/30 to-yellow-600/20 hover:from-yellow-500/40 hover:to-yellow-600/30 border-yellow-500/20";
+    return "bg-gradient-to-br from-red-500/30 to-red-600/20 hover:from-red-500/40 hover:to-red-600/30 border-red-500/20";
   };
 
   const getScoreBadgeVariant = (score: number | null): "default" | "secondary" | "destructive" => {
@@ -55,45 +56,66 @@ const PhonemeHeatmap = ({ students, skillVectors }: PhonemeHeatmapProps) => {
   };
 
   return (
-    <Card>
+    <Card className="shadow-elegant border-2 border-primary/20">
       <CardHeader>
-        <CardTitle>Phoneme Struggle Heatmap</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Click any cell to see recordings with that phoneme issue
-        </p>
+        <div className="flex items-center gap-3">
+          <div className="p-3 rounded-xl bg-gradient-primary shadow-card">
+            <Sparkles className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <CardTitle className="text-2xl">Phoneme Mastery Heatmap</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Interactive view of student phoneme accuracy • Click cells for details
+            </p>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-lg border-2 border-primary/10">
           <table className="w-full border-collapse">
-            <thead>
+            <thead className="bg-gradient-to-r from-primary/10 to-primary/5">
               <tr>
-                <th className="p-2 text-left border font-medium">Student</th>
-                {COMMON_PHONEMES.map((p) => (
-                  <th key={p.symbol} className="p-2 text-center border font-medium min-w-[60px]">
-                    <div className="text-xs">{p.label}</div>
-                    <div className="text-xs text-muted-foreground">{p.symbol}</div>
+                <th className="p-4 text-left border-2 border-primary/10 font-semibold text-base">Student</th>
+                {COMMON_PHONEMES.map((p, idx) => (
+                  <th 
+                    key={p.symbol} 
+                    className="p-4 text-center border-2 border-primary/10 font-semibold min-w-[80px] animate-fade-in"
+                    style={{ animationDelay: `${idx * 50}ms` }}
+                  >
+                    <div className="text-sm font-bold">{p.label}</div>
+                    <div className="text-xs text-muted-foreground font-mono">{p.symbol}</div>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {students.map((student) => (
-                <tr key={student.student_id}>
-                  <td className="p-2 border font-medium">
-                    {student.profiles?.full_name || "Unknown"}
+              {students.map((student, studentIdx) => (
+                <tr 
+                  key={student.student_id} 
+                  className="hover:bg-muted/30 transition-colors animate-fade-in"
+                  style={{ animationDelay: `${studentIdx * 100}ms` }}
+                >
+                  <td className="p-4 border-2 border-primary/10 font-semibold text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                      {student.profiles?.full_name || "Unknown"}
+                    </div>
                   </td>
                   {COMMON_PHONEMES.map((p) => {
                     const score = getPhonemeScore(student.student_id, p.symbol);
                     return (
                       <td
                         key={p.symbol}
-                        className={`p-2 border text-center cursor-pointer transition-colors ${getCellColor(score)}`}
+                        className={`p-4 border-2 text-center cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-md ${getCellColor(score)}`}
                         onClick={() => setSelectedCell({ studentId: student.student_id, phoneme: p.symbol })}
                       >
                         {score !== null ? (
-                          <Badge variant={getScoreBadgeVariant(score)} className="text-xs">
-                            {score}%
-                          </Badge>
+                          <div className="flex flex-col items-center gap-1">
+                            <Badge variant={getScoreBadgeVariant(score)} className="text-xs font-bold px-2">
+                              {score}%
+                            </Badge>
+                            {score >= 90 && <TrendingUp className="h-3 w-3 text-green-600" />}
+                          </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">-</span>
                         )}
@@ -103,14 +125,19 @@ const PhonemeHeatmap = ({ students, skillVectors }: PhonemeHeatmapProps) => {
                 </tr>
               ))}
               {/* Class Average Row */}
-              <tr className="bg-muted/50 font-bold">
-                <td className="p-2 border">Class Average</td>
+              <tr className="bg-gradient-to-r from-primary/20 to-primary/10 font-bold border-t-4 border-primary/30">
+                <td className="p-4 border-2 border-primary/20 text-base">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    Class Average
+                  </div>
+                </td>
                 {COMMON_PHONEMES.map((p) => {
                   const avg = getClassAverage(p.symbol);
                   return (
-                    <td key={p.symbol} className="p-2 border text-center">
+                    <td key={p.symbol} className="p-4 border-2 border-primary/20 text-center">
                       {avg !== null ? (
-                        <Badge variant={getScoreBadgeVariant(avg)} className="text-xs">
+                        <Badge variant={getScoreBadgeVariant(avg)} className="text-sm font-bold px-3 shadow-md">
                           {avg}%
                         </Badge>
                       ) : (
@@ -125,13 +152,26 @@ const PhonemeHeatmap = ({ students, skillVectors }: PhonemeHeatmapProps) => {
         </div>
 
         {selectedCell && (
-          <div className="mt-4 p-4 border rounded-lg bg-muted/50">
-            <p className="text-sm">
-              Selected: <strong>{students.find(s => s.student_id === selectedCell.studentId)?.profiles?.full_name}</strong> - Phoneme: <strong>{selectedCell.phoneme}</strong>
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              (Future: Show student's recordings with this phoneme issue)
-            </p>
+          <div className="mt-6 p-4 border-2 border-primary rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg animate-fade-in">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 rounded-full bg-primary/20">
+                <Sparkles className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold">
+                  Selected: <strong>{students.find(s => s.student_id === selectedCell.studentId)?.profiles?.full_name}</strong>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Phoneme: <strong className="font-mono text-primary">{selectedCell.phoneme}</strong>
+                </p>
+              </div>
+            </div>
+            <div className="p-3 rounded-lg bg-muted/50 text-xs">
+              <p className="font-medium mb-1">📊 Detailed Analysis:</p>
+              <p className="text-muted-foreground">
+                View student's practice recordings, identify error patterns, and generate targeted exercises for this phoneme.
+              </p>
+            </div>
           </div>
         )}
       </CardContent>
