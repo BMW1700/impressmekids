@@ -126,6 +126,67 @@ export type Database = {
           },
         ]
       }
+      assignment_group_members: {
+        Row: {
+          group_id: string
+          id: string
+          joined_at: string | null
+          student_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          joined_at?: string | null
+          student_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          joined_at?: string | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignment_groups: {
+        Row: {
+          assignment_id: string
+          created_at: string | null
+          group_name: string
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string | null
+          group_name: string
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string | null
+          group_name?: string
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_groups_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignment_questions: {
         Row: {
           assignment_id: string
@@ -174,11 +235,13 @@ export type Database = {
           created_at: string
           grade: number | null
           graded_at: string | null
+          group_id: string | null
           id: string
           started_at: string | null
           status: string
           student_id: string
           submitted_at: string | null
+          submitted_by: string | null
           teacher_feedback: string | null
           time_taken_seconds: number | null
           timer_expired: boolean | null
@@ -190,11 +253,13 @@ export type Database = {
           created_at?: string
           grade?: number | null
           graded_at?: string | null
+          group_id?: string | null
           id?: string
           started_at?: string | null
           status?: string
           student_id: string
           submitted_at?: string | null
+          submitted_by?: string | null
           teacher_feedback?: string | null
           time_taken_seconds?: number | null
           timer_expired?: boolean | null
@@ -206,11 +271,13 @@ export type Database = {
           created_at?: string
           grade?: number | null
           graded_at?: string | null
+          group_id?: string | null
           id?: string
           started_at?: string | null
           status?: string
           student_id?: string
           submitted_at?: string | null
+          submitted_by?: string | null
           teacher_feedback?: string | null
           time_taken_seconds?: number | null
           timer_expired?: boolean | null
@@ -222,6 +289,13 @@ export type Database = {
             columns: ["assignment_id"]
             isOneToOne: false
             referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_submissions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_groups"
             referencedColumns: ["id"]
           },
           {
@@ -242,6 +316,7 @@ export type Database = {
           due_date: string | null
           enable_realtime_coaching: boolean | null
           id: string
+          is_group_assignment: boolean | null
           is_posted: boolean | null
           max_attempts: number
           passage_metadata: Json | null
@@ -261,6 +336,7 @@ export type Database = {
           due_date?: string | null
           enable_realtime_coaching?: boolean | null
           id?: string
+          is_group_assignment?: boolean | null
           is_posted?: boolean | null
           max_attempts?: number
           passage_metadata?: Json | null
@@ -280,6 +356,7 @@ export type Database = {
           due_date?: string | null
           enable_realtime_coaching?: boolean | null
           id?: string
+          is_group_assignment?: boolean | null
           is_posted?: boolean | null
           max_attempts?: number
           passage_metadata?: Json | null
@@ -1190,6 +1267,38 @@ export type Database = {
             columns: ["classroom_id"]
             isOneToOne: false
             referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_chat_messages: {
+        Row: {
+          created_at: string | null
+          group_id: string
+          id: string
+          message: string
+          student_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          group_id: string
+          id?: string
+          message: string
+          student_id: string
+        }
+        Update: {
+          created_at?: string | null
+          group_id?: string
+          id?: string
+          message?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_chat_messages_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_groups"
             referencedColumns: ["id"]
           },
         ]

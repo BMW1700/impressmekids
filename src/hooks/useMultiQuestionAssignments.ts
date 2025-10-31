@@ -17,6 +17,7 @@ interface CreateAssignmentData {
   due_date?: string;
   timer_minutes?: number;
   max_attempts?: number;
+  is_group_assignment?: boolean;
   questions: Omit<Question, 'id'>[];
 }
 

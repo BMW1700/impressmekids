@@ -8,9 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
-import { Plus, Save } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Plus, Save, Users } from 'lucide-react';
 import { QuestionBuilder } from '@/components/assignments/QuestionBuilder';
+import { GroupManagementModal } from '@/components/assignments/GroupManagementModal';
 import { useMultiQuestionAssignments } from '@/hooks/useMultiQuestionAssignments';
+import { useAssignmentGroups } from '@/hooks/useAssignmentGroups';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,10 +37,42 @@ export default function CreateMultiQuestionAssignment() {
   const [timerMinutes, setTimerMinutes] = useState<number | undefined>();
   const [dueDate, setDueDate] = useState('');
   const [maxAttempts, setMaxAttempts] = useState<number>(1);
+  const [isGroupAssignment, setIsGroupAssignment] = useState(false);
+  const [showGroupModal, setShowGroupModal] = useState(false);
+  const [classroomStudents, setClassroomStudents] = useState<Array<{ id: string; full_name: string }>>([]);
   const [questions, setQuestions] = useState<Question[]>([
     { id: uuidv4(), sequence: 1, question_type: null, question_data: {} }
   ]);
   const [showPublishConfirm, setShowPublishConfirm] = useState(false);
+  
+  const { groups } = useAssignmentGroups(editId || undefined);
+
+  // Load classroom students
+  useEffect(() => {
+    if (classroomId) {
+      loadClassroomStudents();
+    }
+  }, [classroomId]);
+
+  const loadClassroomStudents = async () => {
+    const { data, error } = await supabase
+      .from('classroom_students')
+      .select(`
+        student_id,
+        profiles:student_id (
+          full_name
+        )
+      `)
+      .eq('classroom_id', classroomId);
+
+    if (!error && data) {
+      const students = data.map((s: any) => ({
+        id: s.student_id,
+        full_name: s.profiles?.full_name || 'Unknown',
+      }));
+      setClassroomStudents(students);
+    }
+  };
 
   // Load assignment data when editing
   useEffect(() => {
@@ -47,6 +82,7 @@ export default function CreateMultiQuestionAssignment() {
       setTimerMinutes(assignment.timer_minutes);
       setDueDate(assignment.due_date ? new Date(assignment.due_date).toISOString().slice(0, 16) : '');
       setMaxAttempts(assignment.max_attempts || 1);
+      setIsGroupAssignment(assignment.is_group_assignment || false);
       
       if (assignment.assignment_questions && assignment.assignment_questions.length > 0) {
         const loadedQuestions = assignment.assignment_questions.map((q: any) => ({
@@ -120,6 +156,7 @@ export default function CreateMultiQuestionAssignment() {
           due_date: dueDate,
           timer_minutes: timerMinutes,
           max_attempts: maxAttempts,
+          is_group_assignment: isGroupAssignment,
         },
         questions: questionData,
       });
@@ -132,6 +169,7 @@ export default function CreateMultiQuestionAssignment() {
         due_date: dueDate,
         timer_minutes: timerMinutes,
         max_attempts: maxAttempts,
+        is_group_assignment: isGroupAssignment,
         questions: questionData,
       });
     }
@@ -163,6 +201,7 @@ export default function CreateMultiQuestionAssignment() {
           due_date: dueDate,
           timer_minutes: timerMinutes,
           max_attempts: maxAttempts,
+          is_group_assignment: isGroupAssignment,
         },
         questions: questionData,
       });
@@ -185,6 +224,7 @@ export default function CreateMultiQuestionAssignment() {
         due_date: dueDate,
         timer_minutes: timerMinutes,
         max_attempts: maxAttempts,
+        is_group_assignment: isGroupAssignment,
         questions: questionData,
       });
 
@@ -270,6 +310,46 @@ export default function CreateMultiQuestionAssignment() {
                   <p className="text-xs text-muted-foreground mt-1">How many times can students attempt this?</p>
                 </div>
               </div>
+
+              {/* Group Assignment Option */}
+              <div className="border-t pt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="isGroupAssignment"
+                      checked={isGroupAssignment}
+                      onCheckedChange={(checked) => setIsGroupAssignment(checked as boolean)}
+                    />
+                    <Label htmlFor="isGroupAssignment" className="cursor-pointer">
+                      This is a group assignment
+                    </Label>
+                  </div>
+                  
+                  {isGroupAssignment && editId && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowGroupModal(true)}
+                    >
+                      <Users className="mr-2 h-4 w-4" />
+                      Manage Groups {groups && groups.length > 0 && `(${groups.length})`}
+                    </Button>
+                  )}
+                </div>
+                
+                {isGroupAssignment && !editId && (
+                  <p className="text-sm text-muted-foreground">
+                    💡 Save the assignment as a draft first, then you can create groups
+                  </p>
+                )}
+                
+                {isGroupAssignment && groups && groups.length > 0 && (
+                  <p className="text-sm text-green-600">
+                    ✓ {groups.length} group{groups.length !== 1 ? 's' : ''} created
+                  </p>
+                )}
+              </div>
             </div>
           </Card>
 
@@ -326,6 +406,13 @@ export default function CreateMultiQuestionAssignment() {
         title="Post Assignment?"
         description="Are you sure you want to post this assignment? Students will be able to see and complete it."
         onConfirm={confirmPublish}
+      />
+      
+      <GroupManagementModal
+        open={showGroupModal}
+        onOpenChange={setShowGroupModal}
+        assignmentId={editId || ''}
+        students={classroomStudents}
       />
     </div>
   );
