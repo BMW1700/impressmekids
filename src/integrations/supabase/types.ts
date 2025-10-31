@@ -2516,6 +2516,10 @@ export type Database = {
         }
         Returns: Json
       }
+      can_parent_view_classroom: {
+        Args: { _classroom_id: string; _user_id: string }
+        Returns: boolean
+      }
       can_parent_view_student_profile: {
         Args: { _student_id: string; _user_id: string }
         Returns: boolean
