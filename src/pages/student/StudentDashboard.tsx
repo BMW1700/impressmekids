@@ -217,38 +217,56 @@ const StudentDashboard = () => {
               {/* AI Next Best Action - Phase 5 Integration */}
               <NextBestActionCard />
 
-              <Card className="bg-gradient-hero text-white">
-                <CardHeader>
-                  <CardTitle className="text-2xl">Ready to Play?</CardTitle>
+              <Card className="bg-gradient-hero text-white shadow-elegant hover:shadow-yellow transition-all duration-300 border-none overflow-hidden relative">
+                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-30"></div>
+                <CardHeader className="relative z-10">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
+                      <Gamepad2 className="h-6 w-6" />
+                    </div>
+                    <CardTitle className="text-3xl font-bold">Ready to Play?</CardTitle>
+                  </div>
                 </CardHeader>
-                <CardContent>
-                  <p className="mb-4">
-                    Challenge your friends and show off your knowledge!
+                <CardContent className="relative z-10 space-y-4">
+                  <p className="text-lg text-white/90 leading-relaxed">
+                    Challenge your friends and show off your knowledge in exciting games!
                   </p>
                   <Button 
-                    className="bg-secondary text-secondary-foreground hover:bg-secondary-light"
+                    size="lg"
+                    className="bg-white text-primary hover:bg-white/90 shadow-lg hover:scale-105 transition-all duration-300 text-base px-6 py-6"
                     onClick={() => navigate('/games')}
                   >
-                    <Gamepad2 className="mr-2 h-4 w-4" />
+                    <Gamepad2 className="mr-2 h-5 w-5" />
                     Browse Games
                   </Button>
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-purple-500 to-pink-500 text-white">
-                <CardHeader>
-                  <CardTitle className="text-2xl">Practice Speaking with AURA</CardTitle>
+              <Card className="bg-gradient-to-br from-purple-600 via-purple-500 to-pink-500 text-white shadow-elegant hover:shadow-yellow transition-all duration-300 border-none overflow-hidden relative">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 w-40 h-40 bg-pink-300/20 rounded-full blur-3xl"></div>
+                <CardHeader className="relative z-10">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                      <Mic className="h-6 w-6" />
+                    </div>
+                    <CardTitle className="text-3xl font-bold">Practice with AURA</CardTitle>
+                  </div>
+                  <Badge className="bg-white/20 text-white border-white/30 w-fit">
+                    🧠 AI-Powered Speaking Coach
+                  </Badge>
                 </CardHeader>
-                <CardContent>
-                  <p className="mb-4">
-                    Improve your pronunciation and speaking skills with AI-powered feedback!
+                <CardContent className="relative z-10 space-y-4">
+                  <p className="text-lg text-white/90 leading-relaxed">
+                    Master pronunciation and speaking skills with real-time AI feedback powered by patented ML technology!
                   </p>
                   <Button 
-                    className="bg-white text-purple-600 hover:bg-gray-100"
+                    size="lg"
+                    className="bg-white text-purple-600 hover:bg-white/90 shadow-lg hover:scale-105 transition-all duration-300 text-base px-6 py-6"
                     onClick={() => navigate('/student/aura-practice')}
                   >
-                    <Mic className="mr-2 h-4 w-4" />
-                    Start Practicing
+                    <Mic className="mr-2 h-5 w-5" />
+                    Start Practicing Now
                   </Button>
                 </CardContent>
               </Card>

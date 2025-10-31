@@ -129,66 +129,89 @@ const NextBestActionCard = () => {
   } as const;
 
   return (
-    <Card className="border-primary/50 bg-gradient-to-br from-primary/5 to-transparent relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl" />
+    <Card className="border-primary/50 bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5 relative overflow-hidden shadow-elegant">
+      <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute bottom-0 left-0 w-48 h-48 bg-secondary/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
       
-      <CardHeader>
+      <CardHeader className="pb-4">
         <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
-            <div className="text-2xl">{getActionEmoji(actionData.actionType)}</div>
+          <div className="flex items-center gap-3">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-primary flex items-center justify-center text-4xl shadow-lg animate-scale-in">
+              {getActionEmoji(actionData.actionType)}
+            </div>
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-primary" />
-                Next Best Action
+              <CardTitle className="flex items-center gap-2 text-2xl">
+                <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+                Your Next Best Action
               </CardTitle>
-              <CardDescription>AI-powered personalized recommendation</CardDescription>
+              <CardDescription className="text-base">AI-powered personalized path to mastery</CardDescription>
             </div>
           </div>
-          <Badge variant={priorityColors[actionData.priority]}>
-            {actionData.priority} priority
+          <Badge variant={priorityColors[actionData.priority]} className="text-sm px-3 py-1">
+            {actionData.priority.toUpperCase()}
           </Badge>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        <div>
-          <h3 className="text-lg font-semibold mb-2">{actionData.title}</h3>
-          <p className="text-sm text-muted-foreground mb-3">{actionData.description}</p>
+      <CardContent className="space-y-6 relative z-10">
+        <div className="p-5 rounded-xl bg-gradient-to-br from-background to-muted/20 border-2 border-primary/20 shadow-card">
+          <h3 className="text-xl font-bold mb-3 flex items-center gap-2">
+            <Target className="w-5 h-5 text-primary" />
+            {actionData.title}
+          </h3>
+          <p className="text-base text-muted-foreground leading-relaxed">{actionData.description}</p>
         </div>
 
-        <div className="p-3 rounded-lg bg-muted/50 border border-primary/20">
-          <p className="text-xs font-medium mb-1 text-primary">💡 Why this matters:</p>
-          <p className="text-xs text-muted-foreground italic">{actionData.reasoning}</p>
-        </div>
-
-        <div className="flex items-center gap-4 text-sm">
-          <div className="flex items-center gap-1.5">
-            <Clock className="w-4 h-4 text-muted-foreground" />
-            <span className="text-muted-foreground">{actionData.estimatedDuration}</span>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="w-5 h-5 text-primary" />
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Duration</span>
+            </div>
+            <p className="text-lg font-bold">{actionData.estimatedDuration}</p>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Target className="w-4 h-4 text-muted-foreground" />
-            <Badge variant="outline" className={`text-${difficultyColors[actionData.difficulty]}-600 border-${difficultyColors[actionData.difficulty]}-300`}>
+          <div className="p-4 rounded-xl bg-secondary/5 border border-secondary/20">
+            <div className="flex items-center gap-2 mb-2">
+              <Target className="w-5 h-5 text-secondary" />
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Difficulty</span>
+            </div>
+            <Badge variant="outline" className="text-base px-3 py-1.5 font-semibold">
               {actionData.difficulty}
             </Badge>
           </div>
         </div>
 
-        <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-          <p className="text-xs font-medium mb-1">🎯 Expected Outcome:</p>
-          <p className="text-xs">{actionData.expectedOutcome}</p>
+        <div className="p-5 rounded-xl bg-gradient-to-br from-accent/10 to-accent/5 border border-accent/20">
+          <p className="text-sm font-bold mb-2 text-accent flex items-center gap-2">
+            <span className="text-lg">💡</span>
+            Why This Matters:
+          </p>
+          <p className="text-sm leading-relaxed italic">{actionData.reasoning}</p>
+        </div>
+
+        <div className="p-5 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20">
+          <p className="text-sm font-bold mb-2 flex items-center gap-2">
+            <span className="text-lg">🎯</span>
+            Expected Outcome:
+          </p>
+          <p className="text-sm leading-relaxed">{actionData.expectedOutcome}</p>
         </div>
 
         <Button 
-          className="w-full bg-gradient-primary hover:opacity-90"
+          size="lg"
+          className="w-full bg-gradient-primary hover:opacity-90 text-lg py-6 shadow-elegant hover:shadow-yellow transition-all duration-300 hover:scale-[1.02]"
           onClick={handleTakeAction}
         >
+          <Sparkles className="mr-2 w-5 h-5" />
           Start Now
         </Button>
 
-        <p className="text-xs text-center text-muted-foreground">
-          Powered by 4 patented ML models: Transfer Learning • Cross-Modal Prediction • RL Agent • Adaptive Clustering
-        </p>
+        <div className="text-center pt-2">
+          <p className="text-xs font-medium text-muted-foreground mb-1">🧠 Powered by Patented ML Technology</p>
+          <p className="text-xs text-muted-foreground">
+            Transfer Learning • Cross-Modal Prediction • RL Agent • Adaptive Clustering
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

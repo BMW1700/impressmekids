@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Users, TrendingUp, Award, AlertTriangle } from "lucide-react";
+import { Users, TrendingUp, Award, AlertTriangle, BarChart3 } from "lucide-react";
 
 interface ClassroomAuraOverviewProps {
   records: any[];
@@ -36,82 +36,131 @@ const ClassroomAuraOverview = ({ records, students }: ClassroomAuraOverviewProps
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card className="shadow-card hover:shadow-elegant transition-all duration-300 hover:scale-[1.02] bg-gradient-to-br from-primary/5 to-primary/10 border-2 border-primary/20">
           <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-full bg-primary/10">
-                <Users className="h-5 w-5 text-primary" />
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div className="p-4 rounded-2xl bg-primary/20 shadow-card">
+                  <Users className="h-7 w-7 text-primary" />
+                </div>
+                <div className="text-right">
+                  <div className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-1">
+                    {activeStudents}
+                  </div>
+                  <div className="text-sm text-muted-foreground">of {students.length}</div>
+                </div>
               </div>
-              <div>
-                <div className="text-2xl font-bold">{activeStudents}/{students.length}</div>
-                <div className="text-sm text-muted-foreground">Active Students</div>
-              </div>
+              <div className="text-sm font-semibold text-primary">Active Students</div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="shadow-card hover:shadow-elegant transition-all duration-300 hover:scale-[1.02] bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/50 border-2 border-green-200 dark:border-green-800">
           <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-full bg-green-100">
-                <TrendingUp className="h-5 w-5 text-green-600" />
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div className="p-4 rounded-2xl bg-green-200/50 dark:bg-green-800/50 shadow-card">
+                  <TrendingUp className="h-7 w-7 text-green-600 dark:text-green-400" />
+                </div>
+                <div className="text-right">
+                  <div className="text-4xl font-bold text-green-600 dark:text-green-400 mb-1">
+                    {classAvgGrade}
+                  </div>
+                  <div className="text-sm text-muted-foreground">out of 100</div>
+                </div>
               </div>
-              <div>
-                <div className="text-2xl font-bold">{classAvgGrade}</div>
-                <div className="text-sm text-muted-foreground">Class Average</div>
-              </div>
+              <div className="text-sm font-semibold text-green-700 dark:text-green-300">Class Average</div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="shadow-card hover:shadow-elegant transition-all duration-300 hover:scale-[1.02] bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950/50 dark:to-yellow-900/50 border-2 border-yellow-200 dark:border-yellow-800">
           <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-full bg-yellow-100">
-                <Award className="h-5 w-5 text-yellow-600" />
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div className="p-4 rounded-2xl bg-yellow-200/50 dark:bg-yellow-800/50 shadow-card">
+                  <Award className="h-7 w-7 text-yellow-600 dark:text-yellow-400" />
+                </div>
+                <div className="text-right">
+                  <div className="text-4xl font-bold text-yellow-600 dark:text-yellow-400 mb-1">
+                    {topPerformers}
+                  </div>
+                  <div className="text-sm text-muted-foreground">students</div>
+                </div>
               </div>
-              <div>
-                <div className="text-2xl font-bold">{topPerformers}</div>
-                <div className="text-sm text-muted-foreground">Top Performers</div>
-              </div>
+              <div className="text-sm font-semibold text-yellow-700 dark:text-yellow-300">Top Performers</div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="shadow-card hover:shadow-elegant transition-all duration-300 hover:scale-[1.02] bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/50 border-2 border-red-200 dark:border-red-800">
           <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-full bg-red-100">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div className="p-4 rounded-2xl bg-red-200/50 dark:bg-red-800/50 shadow-card">
+                  <AlertTriangle className="h-7 w-7 text-red-600 dark:text-red-400" />
+                </div>
+                <div className="text-right">
+                  <div className="text-4xl font-bold text-red-600 dark:text-red-400 mb-1">
+                    {strugglingStudents}
+                  </div>
+                  <div className="text-sm text-muted-foreground">students</div>
+                </div>
               </div>
-              <div>
-                <div className="text-2xl font-bold">{strugglingStudents}</div>
-                <div className="text-sm text-muted-foreground">Need Support</div>
-              </div>
+              <div className="text-sm font-semibold text-red-700 dark:text-red-300">Need Support</div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
+      <Card className="shadow-elegant border-2 border-primary/10">
         <CardHeader>
-          <CardTitle>Student Performance Comparison</CardTitle>
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-gradient-primary shadow-card">
+              <BarChart3 className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-2xl">Student Performance Comparison</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">Top 10 students by average AURA grade</p>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
-                <YAxis domain={[0, 100]} />
-                <Tooltip />
-                <Bar dataKey="avgGrade" fill="hsl(var(--primary))" name="Average Grade" />
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
+                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                <XAxis 
+                  dataKey="name" 
+                  angle={-45} 
+                  textAnchor="end" 
+                  height={100}
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '2px solid hsl(var(--primary))',
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                  }}
+                />
+                <Bar 
+                  dataKey="avgGrade" 
+                  fill="hsl(var(--primary))" 
+                  name="Average Grade"
+                  radius={[8, 8, 0, 0]}
+                  animationDuration={1000}
+                />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-              No student practice data available yet
+            <div className="h-[400px] flex flex-col items-center justify-center text-muted-foreground">
+              <Users className="h-16 w-16 mb-4 opacity-20" />
+              <p className="text-lg font-medium">No student practice data available yet</p>
+              <p className="text-sm">Students will appear here after completing AURA practice sessions</p>
             </div>
           )}
         </CardContent>

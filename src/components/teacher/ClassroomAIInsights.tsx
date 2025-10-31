@@ -84,37 +84,52 @@ export const ClassroomAIInsights = ({ classroomId }: ClassroomAIInsightsProps) =
 
   return (
     <div className="space-y-6">
-      {/* Header with Refresh */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">AI Insights</h2>
-          <p className="text-sm text-muted-foreground">
-            Generated {new Date(summary.generated_at).toLocaleDateString()} • 
-            {summary.students_count} students analyzed
-          </p>
+      {/* Enhanced Header with AI Processing Indicator */}
+      <div className="flex items-center justify-between p-6 rounded-2xl bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 border-2 border-primary/20 shadow-elegant">
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-lg">
+              <Sparkles className="h-8 w-8 text-white animate-pulse" />
+            </div>
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-background animate-pulse"></div>
+          </div>
+          <div>
+            <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">AI Insights Dashboard</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              🧠 Generated {new Date(summary.generated_at).toLocaleDateString()} • 
+              {summary.students_count} students analyzed • Powered by 4 Patented ML Models
+            </p>
+          </div>
         </div>
         <Button 
           onClick={() => generateSummary(classroomId)}
           disabled={isGenerating}
-          variant="outline"
+          size="lg"
+          className="bg-gradient-primary hover:opacity-90 shadow-card"
         >
-          {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isGenerating && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+          <Sparkles className="mr-2 h-5 w-5" />
           Refresh Insights
         </Button>
       </div>
 
-      {/* Class Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Class Summary</CardTitle>
+      {/* Enhanced Class Summary */}
+      <Card className="shadow-elegant border-2 border-primary/10">
+        <CardHeader className="bg-gradient-to-br from-muted/30 to-muted/10">
+          <CardTitle className="text-2xl flex items-center gap-2">
+            <BookOpen className="h-6 w-6 text-primary" />
+            Class Overview
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-3">
-            {/* Top Performers */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-green-600" />
+        <CardContent className="space-y-6 pt-6">
+          <div className="grid gap-6 md:grid-cols-3">
+            {/* Top Performers - Enhanced */}
+            <Card className="shadow-card hover:shadow-elegant transition-all duration-300 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/30 border-2 border-green-200 dark:border-green-800">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-green-200/50 dark:bg-green-800/50">
+                    <TrendingUp className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  </div>
                   Top Performers
                 </CardTitle>
               </CardHeader>
@@ -122,8 +137,8 @@ export const ClassroomAIInsights = ({ classroomId }: ClassroomAIInsightsProps) =
                 {summaryData.class_summary.top_performers.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {summaryData.class_summary.top_performers.map((name) => (
-                      <Badge key={name} variant="secondary" className="bg-green-100 text-green-800">
-                        {name}
+                      <Badge key={name} className="bg-green-600 text-white hover:bg-green-700 px-3 py-1.5 text-sm">
+                        🌟 {name}
                       </Badge>
                     ))}
                   </div>
@@ -133,11 +148,13 @@ export const ClassroomAIInsights = ({ classroomId }: ClassroomAIInsightsProps) =
               </CardContent>
             </Card>
 
-            {/* At Risk */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-orange-600" />
+            {/* At Risk - Enhanced */}
+            <Card className="shadow-card hover:shadow-elegant transition-all duration-300 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/30 border-2 border-orange-200 dark:border-orange-800">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-orange-200/50 dark:bg-orange-800/50">
+                    <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                  </div>
                   Students At Risk
                 </CardTitle>
               </CardHeader>
@@ -145,42 +162,56 @@ export const ClassroomAIInsights = ({ classroomId }: ClassroomAIInsightsProps) =
                 {summaryData.class_summary.students_at_risk.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {summaryData.class_summary.students_at_risk.map((name) => (
-                      <Badge key={name} variant="secondary" className="bg-orange-100 text-orange-800">
-                        {name}
+                      <Badge key={name} className="bg-orange-600 text-white hover:bg-orange-700 px-3 py-1.5 text-sm">
+                        ⚠️ {name}
                       </Badge>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">All students on track</p>
+                  <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <span className="text-2xl">✅</span>
+                    <p className="text-sm font-medium">All students on track</p>
+                  </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Subject Trends */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <BookOpen className="h-4 w-4 text-primary" />
+            {/* Subject Trends - Enhanced */}
+            <Card className="shadow-card hover:shadow-elegant transition-all duration-300 bg-gradient-to-br from-primary/5 to-primary/10 border-2 border-primary/20">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-primary/20">
+                    <BookOpen className="h-5 w-5 text-primary" />
+                  </div>
                   Subject Trends
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2 text-sm">
-                  {Object.entries(summaryData.class_summary.subject_trends || {}).map(([subject, data]) => (
-                    <div key={subject} className="flex justify-between">
-                      <span>{subject}</span>
-                      <span className="font-medium">{data.average_score}%</span>
-                    </div>
-                  ))}
-                </div>
+                {Object.entries(summaryData.class_summary.subject_trends || {}).length > 0 ? (
+                  <div className="space-y-3">
+                    {Object.entries(summaryData.class_summary.subject_trends || {}).map(([subject, data]) => (
+                      <div key={subject} className="flex justify-between items-center p-2 rounded-lg bg-background/50">
+                        <span className="text-sm font-medium">{subject}</span>
+                        <Badge variant="outline" className="font-bold text-base">
+                          {data.average_score}%
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No subject data available</p>
+                )}
               </CardContent>
             </Card>
           </div>
 
-          {/* General Notes */}
-          <Card className="bg-muted/50">
-            <CardContent className="pt-4">
-              <p className="text-sm">{summaryData.class_summary.general_notes}</p>
+          {/* General Notes - Enhanced */}
+          <Card className="bg-gradient-to-br from-accent/10 to-accent/5 border-2 border-accent/20 shadow-card">
+            <CardContent className="pt-6">
+              <div className="flex gap-3">
+                <div className="text-2xl">📊</div>
+                <p className="text-base leading-relaxed">{summaryData.class_summary.general_notes}</p>
+              </div>
             </CardContent>
           </Card>
         </CardContent>

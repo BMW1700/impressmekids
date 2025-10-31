@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic, Eye, EyeOff, UserCheck, BarChart3 } from "lucide-react";
+import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic, Eye, EyeOff, UserCheck, BarChart3, Calendar } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -499,44 +499,57 @@ const ClassroomDetail = () => {
             </BreadcrumbList>
           </Breadcrumb>
 
-          <Card className="mb-8">
-            <CardHeader>
+          {/* Enhanced Classroom Header */}
+          <Card className="mb-8 shadow-elegant border-2 border-primary/10 overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
+            <CardHeader className="bg-gradient-to-br from-muted/30 to-muted/10 relative z-10">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-3xl">{classroom.name}</CardTitle>
-                <Badge variant="outline" className="font-mono text-lg px-4 py-2">
+                <div>
+                  <CardTitle className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
+                    {classroom.name}
+                  </CardTitle>
+                  <div className="flex items-center gap-4 text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-5 w-5" />
+                      <span className="font-medium">
+                        {students.length} student{students.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <Badge variant="outline" className="font-mono text-xl px-6 py-3 border-2 border-primary/30 bg-background/80 backdrop-blur-sm">
                   {classroom.join_code}
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-muted-foreground">
-                    {students.length} student{students.length !== 1 ? 's' : ''}
-                  </span>
-                </div>
+            <CardContent className="pt-6 relative z-10">
+              <div className="flex items-center gap-3 flex-wrap">
                 {isTeacher && (
                   <>
-                    <Button variant="outline" size="sm" onClick={copyJoinCode}>
-                      <Copy className="mr-2 h-4 w-4" />
+                    <Button 
+                      variant="outline" 
+                      size="lg"
+                      onClick={copyJoinCode}
+                      className="hover:bg-primary/5 hover:border-primary/30"
+                    >
+                      <Copy className="mr-2 h-5 w-5" />
                       Copy Join Code
                     </Button>
                     <Button 
                       variant="outline" 
-                      size="sm" 
+                      size="lg"
                       onClick={() => setShowEditClassroom(true)}
+                      className="hover:bg-primary/5 hover:border-primary/30"
                     >
                       Edit Classroom
                     </Button>
                     <Button 
-                      variant="default" 
-                      size="sm" 
+                      size="lg"
                       onClick={() => setShowClassGlance(true)}
-                      className="bg-gradient-primary"
+                      className="bg-gradient-primary hover:opacity-90 shadow-card text-base"
                     >
-                      <BarChart3 className="mr-2 h-4 w-4" />
-                      Your Class at a Glance
+                      <BarChart3 className="mr-2 h-5 w-5" />
+                      🧠 AI Class Insights
                     </Button>
                   </>
                 )}
@@ -544,89 +557,153 @@ const ClassroomDetail = () => {
             </CardContent>
           </Card>
 
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold">{isTeacher ? 'Classroom Management' : 'Classroom'}</h2>
-            {isTeacher && (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => navigate(`/teacher/questions/${id}`)}
-                >
-                  <BookOpen className="mr-2 h-4 w-4" />
-                  Manage Questions
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => navigate(`/teacher/assignment/create/${id}`)}
-                >
-                  <FileText className="mr-2 h-4 w-4" />
-                  Create Assignment
-                </Button>
-                <Button
-                  className="bg-gradient-primary hover:opacity-90"
-                  onClick={() => setShowCreateAnnouncement(true)}
-                >
-                  <Megaphone className="mr-2 h-4 w-4" />
-                  Send Announcement
-                </Button>
+          {/* Quick Actions Section */}
+          {isTeacher && (
+            <div className="mb-8 p-6 rounded-2xl bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5 border-2 border-primary/10 shadow-card">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold mb-1">Quick Actions</h2>
+                  <p className="text-sm text-muted-foreground">Manage your classroom content and activities</p>
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={() => navigate(`/teacher/questions/${id}`)}
+                    className="hover:bg-primary/5 hover:border-primary/30"
+                  >
+                    <BookOpen className="mr-2 h-5 w-5" />
+                    Manage Questions
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={() => navigate(`/teacher/assignment/create/${id}`)}
+                    className="hover:bg-secondary/5 hover:border-secondary/30"
+                  >
+                    <FileText className="mr-2 h-5 w-5" />
+                    Create Assignment
+                  </Button>
+                  <Button
+                    size="lg"
+                    className="bg-gradient-primary hover:opacity-90 shadow-card"
+                    onClick={() => setShowCreateAnnouncement(true)}
+                  >
+                    <Megaphone className="mr-2 h-5 w-5" />
+                    Send Announcement
+                  </Button>
+                </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           <Tabs defaultValue={searchParams.get('tab') || (isStudent ? "assignments" : "students")} className="mb-8">
-            <TabsList className={cn("grid w-full", isTeacher ? "grid-cols-7" : "grid-cols-4")}>
-              {isTeacher && <TabsTrigger value="students">Students</TabsTrigger>}
-              {isTeacher && <TabsTrigger value="ai-insights">AI Insights</TabsTrigger>}
+            <TabsList className={cn("grid w-full h-auto p-2 bg-muted/50 rounded-xl", isTeacher ? "grid-cols-7 gap-2" : "grid-cols-4 gap-2")}>
               {isTeacher && (
-                <TabsTrigger value="parent-requests" className="relative">
+                <TabsTrigger 
+                  value="students" 
+                  className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
+                >
+                  <Users className="mr-2 h-4 w-4" />
+                  Students
+                </TabsTrigger>
+              )}
+              {isTeacher && (
+                <TabsTrigger 
+                  value="ai-insights"
+                  className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
+                >
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  AI Insights
+                </TabsTrigger>
+              )}
+              {isTeacher && (
+                <TabsTrigger 
+                  value="parent-requests" 
+                  className="relative data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
+                >
+                  <UserCheck className="mr-2 h-4 w-4" />
                   Parent Requests
                   {parentRequests.filter(r => r.status === 'pending').length > 0 && (
                     <Badge 
                       variant="destructive" 
-                      className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px]"
+                      className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-[10px]"
                     >
                       {parentRequests.filter(r => r.status === 'pending').length}
                     </Badge>
                   )}
                 </TabsTrigger>
               )}
-              <TabsTrigger value="assignments">Assignments</TabsTrigger>
-              <TabsTrigger value="announcements">Announcements</TabsTrigger>
-              <TabsTrigger value="tournaments">Tournaments</TabsTrigger>
-              <TabsTrigger value="study">Study Materials</TabsTrigger>
+              <TabsTrigger 
+                value="assignments"
+                className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Assignments
+              </TabsTrigger>
+              <TabsTrigger 
+                value="announcements"
+                className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
+              >
+                <Megaphone className="mr-2 h-4 w-4" />
+                Announcements
+              </TabsTrigger>
+              <TabsTrigger 
+                value="tournaments"
+                className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
+              >
+                <Trophy className="mr-2 h-4 w-4" />
+                Tournaments
+              </TabsTrigger>
+              <TabsTrigger 
+                value="study"
+                className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
+              >
+                <BookOpen className="mr-2 h-4 w-4" />
+                Study Materials
+              </TabsTrigger>
             </TabsList>
 
             {isTeacher && (
               <TabsContent value="students" className="mt-6">
-                <div className="mb-4">
-                  <h2 className="text-2xl font-bold">Student Roster</h2>
+                <div className="mb-6">
+                  <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Student Roster</h2>
+                  <p className="text-muted-foreground mt-1">Manage and view your classroom students</p>
                 </div>
 
               {students.length === 0 ? (
-            <Card className="p-12 text-center">
-              <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-xl font-bold mb-2">No Students Yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Share the join code <span className="font-mono font-bold">{classroom.join_code}</span> with your students
+            <Card className="p-16 text-center shadow-elegant border-2 border-primary/10 bg-gradient-to-br from-background to-muted/20">
+              <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-primary/10 flex items-center justify-center">
+                <Users className="h-12 w-12 text-primary" />
+              </div>
+              <h3 className="text-2xl font-bold mb-3">No Students Yet</h3>
+              <p className="text-muted-foreground mb-6 text-lg">
+                Share the join code with your students to get started
               </p>
+              <Badge variant="outline" className="font-mono text-2xl px-6 py-3 border-2 border-primary/30">
+                {classroom.join_code}
+              </Badge>
             </Card>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {students.map((student) => (
-                <Card key={student.id} className="shadow-card">
-                  <CardHeader>
-                    <CardTitle>{student.profiles?.full_name || 'Student'}</CardTitle>
+                <Card key={student.id} className="shadow-card hover:shadow-elegant transition-all duration-300 hover:scale-[1.02] border-2 border-primary/10 hover:border-primary/30">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-xl">{student.profiles?.full_name || 'Student'}</CardTitle>
                     {student.profiles?.email && (
                       <p className="text-sm text-muted-foreground">{student.profiles.email}</p>
                     )}
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-3">
                     {student.student_profiles?.[0]?.grade && (
-                      <Badge variant="secondary">Grade {student.student_profiles[0].grade}</Badge>
+                      <Badge variant="secondary" className="text-base px-3 py-1">
+                        📚 Grade {student.student_profiles[0].grade}
+                      </Badge>
                     )}
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Joined {new Date(student.joined_at).toLocaleDateString()}
-                    </p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Calendar className="h-3 w-3" />
+                      <span>Joined {new Date(student.joined_at).toLocaleDateString()}</span>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
