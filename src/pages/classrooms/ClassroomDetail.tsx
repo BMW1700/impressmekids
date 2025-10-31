@@ -92,6 +92,8 @@ const ClassroomDetail = () => {
     console.log('🔍 Classroom ID:', id);
     console.log('🔍 ============================================');
     
+    let classroomData: any = null;
+    
     try {
       // Get session with detailed logging
       console.log('🔐 Step 1: Getting session...');
@@ -136,7 +138,7 @@ const ClassroomDetail = () => {
           return;
         }
         
-        const classroomData = classroomResult[0];
+        classroomData = classroomResult[0];
         console.log('✅ Classroom loaded:', classroomData.name);
         console.log('   Teacher ID:', classroomData.teacher_id);
         console.log('   Join code:', classroomData.join_code);
@@ -275,8 +277,8 @@ const ClassroomDetail = () => {
       }
 
       // Query 6: Load parent access requests (teachers only)
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      if (currentSession && classroom?.teacher_id === currentSession.user.id) {
+      // Check using the just-loaded classroom data, not the state
+      if (classroomData?.teacher_id === session.user.id) {
         console.log('\n👨‍👩‍👧 Step 7: Loading parent access requests...');
         console.log('Query: parent_access_requests, classroom_id =', id);
         
@@ -285,8 +287,7 @@ const ClassroomDetail = () => {
             .from('parent_access_requests')
             .select(`
               *,
-              parent_accounts!parent_id (full_name, email),
-              profiles!student_id (full_name)
+              parent_accounts!parent_id (full_name, email)
             `)
             .eq('classroom_id', id)
             .order('created_at', { ascending: false });
@@ -301,8 +302,24 @@ const ClassroomDetail = () => {
             throw requestsError;
           }
           
-          console.log('✅ Parent requests loaded:', requestsData?.length || 0, 'requests');
-          setParentRequests(requestsData || []);
+          // Manually fetch student names for each request
+          const enrichedRequests = await Promise.all(
+            (requestsData || []).map(async (request: any) => {
+              const { data: studentData } = await supabase
+                .from('profiles')
+                .select('full_name')
+                .eq('id', request.student_id)
+                .single();
+              
+              return {
+                ...request,
+                profiles: studentData
+              };
+            })
+          );
+
+          console.log('✅ Parent requests loaded:', enrichedRequests.length, 'requests');
+          setParentRequests(enrichedRequests);
         } catch (err: any) {
           console.error('❌ FATAL: Parent requests query exception:', err);
           throw err;
