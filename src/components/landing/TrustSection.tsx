@@ -5,23 +5,23 @@ export const TrustSection = () => {
   const certifications = [
     {
       icon: <Shield className="h-6 w-6" />,
-      title: "FERPA Compliant",
-      description: "Full compliance with student privacy regulations"
+      title: "FERPA Aligned",
+      description: "Designed for student privacy compliance"
     },
     {
       icon: <Lock className="h-6 w-6" />,
-      title: "COPPA Certified",
-      description: "Protecting children's online privacy"
+      title: "COPPA Ready",
+      description: "Built with children's privacy in mind"
     },
     {
       icon: <FileCheck className="h-6 w-6" />,
-      title: "SOC 2 Type II",
-      description: "Enterprise-grade security standards"
+      title: "Enterprise Security",
+      description: "Industry-standard security practices"
     },
     {
       icon: <Eye className="h-6 w-6" />,
-      title: "GDPR Ready",
-      description: "International data protection compliance"
+      title: "Privacy First",
+      description: "Data protection by design"
     }
   ];
 
@@ -30,13 +30,13 @@ export const TrustSection = () => {
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <Badge variant="outline" className="mb-4 px-4 py-2">
-            Security & Compliance
+            Our Security Commitment
           </Badge>
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Enterprise-Grade Security You Can Trust
+            Privacy & Security Built In From Day One
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            We take student data privacy seriously. Our platform meets the highest security standards.
+            We take student data privacy seriously. Our platform is designed with compliance and security as core priorities.
           </p>
         </div>
 
@@ -57,7 +57,7 @@ export const TrustSection = () => {
 
         <div className="mt-12 text-center">
           <p className="text-sm text-muted-foreground">
-            All student data is encrypted in transit and at rest. We never sell or share student information.
+            All student data is encrypted in transit and at rest. We never sell or share student information. Working toward full FERPA, COPPA, and SOC 2 certification.
           </p>
         </div>
       </div>

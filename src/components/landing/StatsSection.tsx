@@ -4,27 +4,27 @@ export const StatsSection = () => {
   const stats = [
     {
       icon: <TrendingUp className="h-8 w-8" />,
-      value: "3x Faster",
-      label: "Reading Gap Closure",
-      description: "vs traditional interventions"
+      value: "4 Novel",
+      label: "AI Algorithms",
+      description: "Proprietary ML technology"
     },
     {
       icon: <Users className="h-8 w-8" />,
-      value: "20+",
-      label: "Partner Schools",
-      description: "Across multiple districts"
+      value: "Real-Time",
+      label: "Predictions",
+      description: "Identify at-risk students early"
     },
     {
       icon: <Award className="h-8 w-8" />,
-      value: "92%",
-      label: "Student Improvement",
-      description: "Show measurable progress"
+      value: "Evidence",
+      label: "Based Design",
+      description: "Science of reading aligned"
     },
     {
       icon: <Sparkles className="h-8 w-8" />,
-      value: "4 Patents",
-      label: "AI Innovations",
-      description: "Revolutionary ML technology"
+      value: "$7K+",
+      label: "Monthly Savings",
+      description: "vs traditional cloud AI"
     }
   ];
 

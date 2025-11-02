@@ -56,15 +56,15 @@ const Index = () => {
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
             <Badge variant="secondary" className="mb-6 px-4 py-2 text-sm font-semibold animate-in fade-in slide-in-from-bottom-4 duration-700">
-              4 Patent-Pending AI Innovations
+              Revolutionary AI Technology
             </Badge>
             
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100 leading-tight">
-              AI-Powered Literacy Platform That Closes Reading Gaps <span className="text-secondary">3x Faster</span>
+              AI-Powered Literacy Platform Built for <span className="text-secondary">Measurable Results</span>
             </h1>
             
             <p className="text-lg md:text-xl lg:text-2xl mb-8 opacity-95 max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
-              Revolutionary machine learning technology predicts reading outcomes, identifies at-risk students early, and prescribes personalized interventions with scientific precision
+              Proprietary machine learning predicts reading outcomes, identifies at-risk students early, and delivers personalized interventions with scientific precision
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
@@ -88,11 +88,11 @@ const Index = () => {
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5" />
-                <span>FERPA & COPPA compliant</span>
+                <span>Privacy-first design</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5" />
-                <span>20+ partner schools</span>
+                <span>Built for K-12 educators</span>
               </div>
             </div>
           </div>
@@ -141,7 +141,7 @@ const Index = () => {
               </div>
               <h3 className="text-2xl font-bold mb-3">Measurable Impact</h3>
               <p className="text-muted-foreground">
-                Real-time dashboards show exactly what's working, with 92% of students showing measurable literacy improvement
+                Real-time dashboards show exactly what's working, tracking progress with precision and actionable insights
               </p>
             </div>
           </div>
@@ -162,10 +162,10 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-3xl md:text-5xl font-bold mb-6">
-              Ready to See 3x Faster Reading Growth?
+              Ready to Transform Literacy Outcomes?
             </h2>
             <p className="text-xl mb-8 opacity-95 max-w-2xl mx-auto">
-              Join 20+ partner schools using AI-powered insights to transform literacy outcomes
+              Join educators using AI-powered insights to accelerate reading growth
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary-light text-lg px-8 py-6" asChild>
@@ -179,7 +179,7 @@ const Index = () => {
               </Button>
             </div>
             <p className="mt-6 text-sm opacity-75">
-              No credit card required • Setup in minutes • FERPA & COPPA compliant
+              No credit card required • Setup in minutes • Privacy-first platform
             </p>
           </div>
         </div>

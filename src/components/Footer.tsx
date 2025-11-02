@@ -11,26 +11,26 @@ export const Footer = () => {
           <div className="flex flex-col items-center gap-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Shield className="h-4 w-4 text-primary" />
-              <span className="font-medium">Trusted by 20+ Schools</span>
+              <span className="font-medium">Privacy-First Platform</span>
               <span className="text-muted-foreground/60">•</span>
-              <span className="font-medium text-primary">4 Patent-Pending ML Algorithms</span>
+              <span className="font-medium text-primary">4 Proprietary ML Algorithms</span>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-3">
               <Badge variant="outline" className="px-3 py-1.5 border-primary/20 hover:border-primary/40 transition-colors">
                 <FileCheck className="h-3.5 w-3.5 mr-1.5 text-primary" />
-                FERPA Compliant
+                FERPA Aligned
               </Badge>
               <Badge variant="outline" className="px-3 py-1.5 border-primary/20 hover:border-primary/40 transition-colors">
                 <Shield className="h-3.5 w-3.5 mr-1.5 text-primary" />
-                COPPA Compliant
+                COPPA Ready
               </Badge>
               <Badge variant="outline" className="px-3 py-1.5 border-primary/20 hover:border-primary/40 transition-colors">
                 <Lock className="h-3.5 w-3.5 mr-1.5 text-primary" />
-                SOC 2 Type II
+                Enterprise Security
               </Badge>
               <Badge variant="outline" className="px-3 py-1.5 border-primary/20 hover:border-primary/40 transition-colors">
                 <Globe className="h-3.5 w-3.5 mr-1.5 text-primary" />
-                GDPR Ready
+                Privacy First
               </Badge>
             </div>
           </div>

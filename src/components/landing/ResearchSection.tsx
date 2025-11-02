@@ -8,25 +8,25 @@ export const ResearchSection = () => {
       icon: <Brain className="h-8 w-8" />,
       title: "Cross-Modal Learning Network",
       description: "Analyzes phoneme production, prosody, and semantic understanding to predict reading outcomes with unprecedented accuracy",
-      patent: "Patent Pending"
+      patent: "Proprietary Technology"
     },
     {
       icon: <LineChart className="h-8 w-8" />,
       title: "Adaptive Risk Scoring",
       description: "Real-time ML models identify at-risk students weeks before traditional assessments, enabling early intervention",
-      patent: "Patent Pending"
+      patent: "Proprietary Technology"
     },
     {
       icon: <Network className="h-8 w-8" />,
       title: "Phoneme Transfer Learning",
       description: "Predicts which phonemes a student will master next based on articulatory relationships and cognitive load patterns",
-      patent: "Patent Pending"
+      patent: "Proprietary Technology"
     },
     {
       icon: <Target className="h-8 w-8" />,
       title: "Next Best Action Engine",
       description: "Q-learning algorithm continuously optimizes instructional sequences for each individual learner",
-      patent: "Patent Pending"
+      patent: "Proprietary Technology"
     }
   ];
 
@@ -38,7 +38,7 @@ export const ResearchSection = () => {
             Revolutionary AI Technology
           </Badge>
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            4 Patent-Pending Innovations That Change Everything
+            4 Proprietary Innovations Built In-House
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             Our ML platform doesn't just track progress—it predicts outcomes, identifies risks, and prescribes interventions with scientific precision
