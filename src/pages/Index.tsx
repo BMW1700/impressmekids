@@ -89,7 +89,7 @@ const Index = () => {
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5" />
-                <span>Built for K-12 educators</span>
+                <span>Built for K-12 educatorNo credit card requireds</span>
               </div>
             </div>
           </div>
