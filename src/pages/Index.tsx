@@ -11,22 +11,24 @@ import { TestimonialSection } from "@/components/landing/TestimonialSection";
 import { TrustSection } from "@/components/landing/TrustSection";
 import { ResearchSection } from "@/components/landing/ResearchSection";
 import { Badge } from "@/components/ui/badge";
-
 const Index = () => {
   const navigate = useNavigate();
-
   useEffect(() => {
     const checkAuthAndRedirect = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      const {
+        data: {
+          session
+        }
+      } = await supabase.auth.getSession();
       if (session) {
         // User is authenticated, redirect to their dashboard
-        const { data: profileData } = await supabase
-          .rpc('get_user_profile', { _user_id: session.user.id });
-
+        const {
+          data: profileData
+        } = await supabase.rpc('get_user_profile', {
+          _user_id: session.user.id
+        });
         if (profileData && profileData.length > 0) {
           const userRole = profileData[0].role;
-          
           if (userRole === 'teacher') {
             navigate('/teacher/dashboard');
           } else if (userRole === 'parent') {
@@ -41,12 +43,9 @@ const Index = () => {
         }
       }
     };
-
     checkAuthAndRedirect();
   }, [navigate]);
-
-  return (
-    <div className="min-h-screen flex flex-col">
+  return <div className="min-h-screen flex flex-col">
       <Header />
       
       {/* Hero Section */}
@@ -63,9 +62,7 @@ const Index = () => {
               AI-Powered Literacy Platform Built for <span className="text-secondary">Measurable Results</span>
             </h1>
             
-            <p className="text-lg md:text-xl lg:text-2xl mb-8 opacity-95 max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
-              Proprietary machine learning predicts reading outcomes, identifies at-risk students early, and delivers personalized interventions with scientific precision
-            </p>
+            <p className="text-lg md:text-xl lg:text-2xl mb-8 opacity-95 max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">Proprietary machine learning predicts reading outcomes, identifies at-risk students early, and delivers personalized interventions witth scientific precision</p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
               <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary-light text-lg px-8 py-6" asChild>
@@ -186,8 +183,6 @@ const Index = () => {
       </section>
 
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
