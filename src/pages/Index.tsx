@@ -5,7 +5,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Brain, Target, TrendingUp, ArrowRight, CheckCircle } from "lucide-react";
+import { ClipboardList, Trophy, Users2, BookOpen, ArrowRight, CheckCircle, GraduationCap, MessageSquare, LayoutDashboard } from "lucide-react";
 import { StatsSection } from "@/components/landing/StatsSection";
 import { TestimonialSection } from "@/components/landing/TestimonialSection";
 import { TrustSection } from "@/components/landing/TrustSection";
@@ -55,14 +55,14 @@ const Index = () => {
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
             <Badge variant="secondary" className="mb-6 px-4 py-2 text-sm font-semibold animate-in fade-in slide-in-from-bottom-4 duration-700">
-              Revolutionary AI Technology
+              Complete Classroom Solution
             </Badge>
             
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100 leading-tight">
-              AI-Powered Literacy Platform Built for <span className="text-secondary">Measurable Results</span>
+              Your Complete Platform for <span className="text-secondary">Teaching & Learning</span>
             </h1>
             
-            <p className="text-lg md:text-xl lg:text-2xl mb-8 opacity-95 max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">Proprietary machine learning predicts reading outcomes, identifies at-risk students early, and delivers personalized interventions witth scientific precision</p>
+            <p className="text-lg md:text-xl lg:text-2xl mb-8 opacity-95 max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">Everything teachers and students need in one place—assignments, games, communication, literacy tools, and powerful AI-driven insights</p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
               <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary-light text-lg px-8 py-6" asChild>
@@ -104,42 +104,114 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Outcomes That Matter
+              Everything You Need in One Place
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Our AI doesn't just measure—it predicts, intervenes, and accelerates learning
+              A comprehensive platform that brings together all your classroom tools
             </p>
           </div>
           
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             <div className="text-center p-8 rounded-xl bg-card border-2 border-border hover:border-primary hover:shadow-card transition-all duration-300">
               <div className="inline-flex p-4 rounded-full bg-gradient-primary mb-6">
-                <Brain className="h-10 w-10 text-white" />
+                <ClipboardList className="h-10 w-10 text-white" />
               </div>
-              <h3 className="text-2xl font-bold mb-3">Predictive Intelligence</h3>
+              <h3 className="text-2xl font-bold mb-3">Assignment Management</h3>
               <p className="text-muted-foreground">
-                ML models identify struggling readers weeks before traditional assessments, enabling early intervention when it matters most
+                Create, publish, and grade assignments with ease. Track submissions and provide detailed feedback to every student
               </p>
             </div>
             
             <div className="text-center p-8 rounded-xl bg-card border-2 border-border hover:border-primary hover:shadow-card transition-all duration-300">
               <div className="inline-flex p-4 rounded-full bg-gradient-primary mb-6">
-                <Target className="h-10 w-10 text-white" />
+                <Trophy className="h-10 w-10 text-white" />
               </div>
-              <h3 className="text-2xl font-bold mb-3">Personalized Pathways</h3>
+              <h3 className="text-2xl font-bold mb-3">Interactive Games</h3>
               <p className="text-muted-foreground">
-                Q-learning algorithms continuously optimize instruction for each student, prescribing the perfect next exercise every time
+                Engage students with educational games, tournaments, and practice exercises that make learning fun and competitive
               </p>
             </div>
             
             <div className="text-center p-8 rounded-xl bg-card border-2 border-border hover:border-primary hover:shadow-card transition-all duration-300">
               <div className="inline-flex p-4 rounded-full bg-gradient-primary mb-6">
-                <TrendingUp className="h-10 w-10 text-white" />
+                <Users2 className="h-10 w-10 text-white" />
               </div>
-              <h3 className="text-2xl font-bold mb-3">Measurable Impact</h3>
+              <h3 className="text-2xl font-bold mb-3">Communication Hub</h3>
               <p className="text-muted-foreground">
-                Real-time dashboards show exactly what's working, tracking progress with precision and actionable insights
+                Connect teachers, students, and parents. Share announcements, manage directories, and keep everyone informed
               </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Platform Features Section */}
+      <section className="py-20 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Built for Every Role
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Powerful features tailored for teachers, students, parents, and administrators
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+            <div className="p-6 rounded-xl bg-card hover:shadow-card transition-all duration-300">
+              <div className="inline-flex p-3 rounded-full bg-gradient-primary mb-4">
+                <GraduationCap className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">For Teachers</h3>
+              <ul className="text-sm text-muted-foreground space-y-2">
+                <li>• Create & grade assignments</li>
+                <li>• Track student progress</li>
+                <li>• Generate AI insights</li>
+                <li>• Manage classrooms</li>
+                <li>• Schedule events</li>
+              </ul>
+            </div>
+            
+            <div className="p-6 rounded-xl bg-card hover:shadow-card transition-all duration-300">
+              <div className="inline-flex p-3 rounded-full bg-gradient-primary mb-4">
+                <BookOpen className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">For Students</h3>
+              <ul className="text-sm text-muted-foreground space-y-2">
+                <li>• Complete assignments</li>
+                <li>• Play educational games</li>
+                <li>• Track your progress</li>
+                <li>• Practice reading skills</li>
+                <li>• View your calendar</li>
+              </ul>
+            </div>
+            
+            <div className="p-6 rounded-xl bg-card hover:shadow-card transition-all duration-300">
+              <div className="inline-flex p-3 rounded-full bg-gradient-primary mb-4">
+                <MessageSquare className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">For Parents</h3>
+              <ul className="text-sm text-muted-foreground space-y-2">
+                <li>• Monitor child progress</li>
+                <li>• View assignments</li>
+                <li>• Connect with teachers</li>
+                <li>• Track schedules</li>
+                <li>• Get notifications</li>
+              </ul>
+            </div>
+            
+            <div className="p-6 rounded-xl bg-card hover:shadow-card transition-all duration-300">
+              <div className="inline-flex p-3 rounded-full bg-gradient-primary mb-4">
+                <LayoutDashboard className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">For Admins</h3>
+              <ul className="text-sm text-muted-foreground space-y-2">
+                <li>• Manage school users</li>
+                <li>• Oversee classrooms</li>
+                <li>• Schedule events</li>
+                <li>• Handle backups</li>
+                <li>• View analytics</li>
+              </ul>
             </div>
           </div>
         </div>
@@ -159,10 +231,10 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-3xl md:text-5xl font-bold mb-6">
-              Ready to Transform Literacy Outcomes?
+              Ready to Simplify Your Classroom?
             </h2>
             <p className="text-xl mb-8 opacity-95 max-w-2xl mx-auto">
-              Join educators using AI-powered insights to accelerate reading growth
+              Join educators using our complete platform to manage assignments, engage students, and drive learning outcomes
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary-light text-lg px-8 py-6" asChild>

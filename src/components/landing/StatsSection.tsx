@@ -1,30 +1,30 @@
-import { TrendingUp, Users, Award, Sparkles } from "lucide-react";
+import { ClipboardCheck, Gamepad2, Users, Sparkles } from "lucide-react";
 
 export const StatsSection = () => {
   const stats = [
     {
-      icon: <TrendingUp className="h-8 w-8" />,
-      value: "4 Novel",
-      label: "AI Algorithms",
-      description: "Proprietary ML technology"
+      icon: <ClipboardCheck className="h-8 w-8" />,
+      value: "All-in-One",
+      label: "Platform",
+      description: "Complete classroom solution"
+    },
+    {
+      icon: <Gamepad2 className="h-8 w-8" />,
+      value: "Interactive",
+      label: "Learning Games",
+      description: "Engaging educational tools"
     },
     {
       icon: <Users className="h-8 w-8" />,
-      value: "Real-Time",
-      label: "Predictions",
-      description: "Identify at-risk students early"
-    },
-    {
-      icon: <Award className="h-8 w-8" />,
-      value: "Evidence",
-      label: "Based Design",
-      description: "Science of reading aligned"
+      value: "Teachers &",
+      label: "Students",
+      description: "Built for everyone"
     },
     {
       icon: <Sparkles className="h-8 w-8" />,
-      value: "$7K+",
-      label: "Monthly Savings",
-      description: "vs traditional cloud AI"
+      value: "AI-Powered",
+      label: "Literacy Tools",
+      description: "Advanced reading analysis"
     }
   ];
 
