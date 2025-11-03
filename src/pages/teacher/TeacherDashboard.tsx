@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, Users, Trophy, BookOpen, Loader2, BarChart3, Brain, Calendar as CalendarIcon, Sparkles, TrendingUp, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Directory } from "@/components/Directory";
 
 const TeacherDashboard = () => {
   const [profile, setProfile] = useState<any>(null);
@@ -231,7 +232,7 @@ const TeacherDashboard = () => {
           </div>
 
           <Tabs defaultValue="classrooms" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="classrooms">
                 <Users className="h-4 w-4 mr-2" />
                 Classrooms
@@ -239,6 +240,10 @@ const TeacherDashboard = () => {
               <TabsTrigger value="calendar" onClick={() => navigate('/teacher/calendar')}>
                 <CalendarIcon className="h-4 w-4 mr-2" />
                 Calendar
+              </TabsTrigger>
+              <TabsTrigger value="directory">
+                <Users className="h-4 w-4 mr-2" />
+                Directory
               </TabsTrigger>
               <TabsTrigger value="actions">
                 <BookOpen className="h-4 w-4 mr-2" />
@@ -296,6 +301,10 @@ const TeacherDashboard = () => {
                   ))}
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="directory" className="mt-6">
+              <Directory />
             </TabsContent>
 
             <TabsContent value="actions" className="mt-6">

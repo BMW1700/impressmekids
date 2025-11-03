@@ -2718,6 +2718,22 @@ export type Database = {
           student_id: string
         }[]
       }
+      get_directory_admins: {
+        Args: never
+        Returns: {
+          email: string
+          full_name: string
+          id: string
+        }[]
+      }
+      get_directory_teachers: {
+        Args: never
+        Returns: {
+          email: string
+          full_name: string
+          id: string
+        }[]
+      }
       get_parent_account: {
         Args: { _user_id: string }
         Returns: {

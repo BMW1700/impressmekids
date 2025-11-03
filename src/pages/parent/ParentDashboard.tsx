@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarWidget } from "@/components/calendar/CalendarWidget";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { Directory } from "@/components/Directory";
 
 const ParentDashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -328,6 +329,11 @@ const ParentDashboard = () => {
             <ParentOutgoingRequestsList parentId={parentId} />
           </div>
         )}
+
+        {/* Directory */}
+        <div className="mb-8">
+          <Directory />
+        </div>
       </main>
       <Footer />
 

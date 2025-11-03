@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { AnnouncementCard } from "@/components/AnnouncementCard";
 import NextBestActionCard from "@/components/aura/NextBestActionCard";
 import { CalendarWidget } from "@/components/calendar/CalendarWidget";
+import { Directory } from "@/components/Directory";
 
 const StudentDashboard = () => {
   const [profile, setProfile] = useState<any>(null);
@@ -216,6 +217,9 @@ const StudentDashboard = () => {
               
               {/* AI Next Best Action - Phase 5 Integration */}
               <NextBestActionCard />
+
+              {/* Directory */}
+              <Directory />
 
               <Card className="bg-gradient-hero text-white shadow-elegant hover:shadow-yellow transition-all duration-300 border-none overflow-hidden relative">
                 <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-30"></div>
