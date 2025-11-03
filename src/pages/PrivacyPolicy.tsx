@@ -48,6 +48,7 @@ const PrivacyPolicy = () => {
               <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
                 <li>Providing personalized learning experiences</li>
                 <li>Generating AI-powered insights for teachers</li>
+                <li>Processing through AI models for real-time educational insights (data not retained or used for training)</li>
                 <li>Tracking student progress and identifying learning gaps</li>
                 <li>Improving platform functionality</li>
               </ul>
@@ -75,9 +76,76 @@ const PrivacyPolicy = () => {
               <p className="text-muted-foreground mb-2">We use the following FERPA-compliant third-party services:</p>
               <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
                 <li>Lovable Cloud (database and authentication infrastructure)</li>
-                <li>OpenAI Whisper API (speech transcription - audio is not stored)</li>
+                <li>Google Gemini AI via Lovable AI Gateway (educational content generation and analysis):
+                  <ul className="list-circle list-inside ml-4 mt-1 space-y-1 text-xs">
+                    <li>Speech analysis and phoneme detection</li>
+                    <li>Educational content generation (flashcards, practice exercises, quiz questions)</li>
+                    <li>Image text extraction for assignments</li>
+                    <li>Teacher performance summaries</li>
+                    <li>Student data is NOT used for model training</li>
+                    <li>Processed data is not retained beyond immediate educational use</li>
+                  </ul>
+                </li>
+                <li>OpenAI Whisper API (speech transcription with zero data retention):
+                  <ul className="list-circle list-inside ml-4 mt-1 space-y-1 text-xs">
+                    <li>Audio is processed in real-time for transcription only</li>
+                    <li>Audio files are not stored or used for model training</li>
+                    <li>Immediate deletion after processing</li>
+                  </ul>
+                </li>
                 <li>Google OAuth (optional single sign-on - no data shared)</li>
               </ul>
+              <p className="text-muted-foreground mt-3 text-xs">
+                All AI services operate under strict data protection policies that prohibit training on student data and require immediate deletion of processed content. We do not share student data with AI providers for any purpose other than real-time educational processing.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold mb-3">AI Processing & Transparency</h2>
+              <p className="text-muted-foreground mb-2">
+                We use artificial intelligence (AI) to enhance learning experiences, not replace human teaching. 
+                AI is used to analyze student work, generate personalized practice materials, and provide insights to teachers.
+              </p>
+              
+              <div className="space-y-3 mt-3">
+                <div>
+                  <h3 className="font-semibold text-muted-foreground mb-1">What AI Sees:</h3>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4 text-xs">
+                    <li>Student speech recordings (for phoneme analysis only)</li>
+                    <li>Assignment submissions and answers</li>
+                    <li>Practice exercise performance data</li>
+                    <li>Teacher-provided classroom context for content generation</li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h3 className="font-semibold text-muted-foreground mb-1">What AI Does NOT Do:</h3>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4 text-xs">
+                    <li>Store or retain student data after processing</li>
+                    <li>Use student data to train AI models</li>
+                    <li>Share student information with third parties</li>
+                    <li>Make automated decisions about student grades or placement</li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h3 className="font-semibold text-muted-foreground mb-1">AI Data Retention:</h3>
+                  <p className="text-muted-foreground text-xs ml-4">
+                    AI processing happens in real-time. Student data sent to AI services is immediately deleted 
+                    after processing (within seconds). No student information is retained by AI providers beyond 
+                    the time needed to generate educational insights.
+                  </p>
+                </div>
+                
+                <div>
+                  <h3 className="font-semibold text-muted-foreground mb-1">Compliance with 2025 COPPA AI Rule:</h3>
+                  <p className="text-muted-foreground text-xs ml-4">
+                    We comply with the FTC's updated COPPA Rule (effective June 23, 2025) requiring explicit 
+                    parental consent for AI processing of children's data. Parents are informed about AI usage 
+                    during enrollment and can withdraw consent at any time.
+                  </p>
+                </div>
+              </div>
             </section>
 
             <section>
@@ -88,6 +156,8 @@ const PrivacyPolicy = () => {
                 <li>Request corrections to inaccurate data</li>
                 <li>Request deletion of their child's data</li>
                 <li>Withdraw consent for AURA recording collection</li>
+                <li>Withdraw consent for AI processing of their child's data</li>
+                <li>Request details about AI usage on their child's work</li>
                 <li>Receive notifications of data breaches</li>
               </ul>
             </section>
