@@ -6,7 +6,6 @@ import { useStudentSubmissionAttempts } from "@/hooks/useStudentSubmissionAttemp
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { PrintAssignment } from "./PrintAssignment";
 
 interface StudentAssignmentCardProps {
   assignment: any;
@@ -124,13 +123,6 @@ export function StudentAssignmentCard({ assignment, classroomId }: StudentAssign
           </p>
           
           {renderButton()}
-
-          {/* Print button for published assignments */}
-          {assignment.status === 'published' && (
-            <div className="mt-2">
-              <PrintAssignment assignmentId={assignment.id} variant="outline" size="sm" className="w-full" />
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>

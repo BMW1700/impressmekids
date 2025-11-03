@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic, Eye, EyeOff, UserCheck, BarChart3, Calendar, Printer } from "lucide-react";
+import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic, Eye, EyeOff, UserCheck, BarChart3, Calendar } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,7 +33,6 @@ import { StudentAssignmentCard } from "@/components/assignments/StudentAssignmen
 import { ClassroomAIInsights } from "@/components/teacher/ClassroomAIInsights";
 import { TeacherSuccessBoard } from "@/components/teacher/TeacherSuccessBoard";
 import { EditClassroomModal } from "@/components/EditClassroomModal";
-import { PrintAssignment } from "@/components/assignments/PrintAssignment";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -922,19 +921,14 @@ const ClassroomDetail = () => {
                               )}
                               
                               {assignment.status === 'published' && (
-                                <>
-                                  <Button
-                                    variant="outline"
-                                    className="w-full mt-4"
-                                    onClick={() => setViewingAssignmentId(assignment.id)}
-                                  >
-                                    <FileText className="mr-2 h-4 w-4" />
-                                    View Submissions
-                                  </Button>
-                                  <div className="mt-2">
-                                    <PrintAssignment assignmentId={assignment.id} variant="outline" size="sm" className="w-full" />
-                                  </div>
-                                </>
+                                <Button
+                                  variant="outline"
+                                  className="w-full mt-4"
+                                  onClick={() => setViewingAssignmentId(assignment.id)}
+                                >
+                                  <FileText className="mr-2 h-4 w-4" />
+                                  View Submissions
+                                </Button>
                               )}
                             </div>
                           </CardContent>
