@@ -18,6 +18,7 @@ interface CreateAssignmentData {
   timer_minutes?: number;
   max_attempts?: number;
   is_group_assignment?: boolean;
+  status?: 'draft' | 'published';
   questions: Omit<Question, 'id'>[];
 }
 
@@ -143,7 +144,8 @@ export const useMultiQuestionAssignments = (classroomId?: string, assignmentId?:
           timer_minutes: data.timer_minutes,
           max_attempts: data.max_attempts || 1,
           question_count: data.questions.length,
-          status: 'draft',
+          status: data.status || 'draft',
+          is_posted: data.status === 'published',
           assignment_type: 'multi_question',
           passage_text: '', // Required field for backward compatibility
         } as any)

@@ -216,7 +216,7 @@ export default function CreateMultiQuestionAssignment() {
         console.error('Error publishing assignment:', error);
       }
     } else {
-      // Create new assignment
+      // Create and publish new assignment
       createAssignment({
         title,
         description,
@@ -225,11 +225,9 @@ export default function CreateMultiQuestionAssignment() {
         timer_minutes: timerMinutes,
         max_attempts: maxAttempts,
         is_group_assignment: isGroupAssignment,
+        status: 'published',
         questions: questionData,
       });
-
-      // After create, we need to publish it
-      // This will be handled by the mutation success callback
     }
 
     navigate(`/classrooms/${classroomId}?tab=assignments`);
