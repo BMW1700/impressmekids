@@ -12,30 +12,70 @@ export const useStudentProfile = (studentId?: string) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Check if current user is parent of this student
-      const { data: parentChildInfo } = await supabase.rpc(
-        'get_parent_child_info',
-        { _parent_user_id: user.id, _student_id: studentId }
-      );
-
-      // If parent has access, use that data; otherwise use own profile
       let profile;
-      if (parentChildInfo && parentChildInfo.length > 0) {
-        profile = {
-          id: parentChildInfo[0].student_id,
-          full_name: parentChildInfo[0].full_name,
-          email: parentChildInfo[0].email,
-        };
-      } else if (user.id === studentId) {
-        // User viewing their own profile - full access
+      
+      // Priority 1: User viewing their own profile - full access
+      if (user.id === studentId) {
         const { data: ownProfile, error: profileError } = await supabase
           .rpc('get_user_profile', { _user_id: studentId });
         
         if (profileError) throw profileError;
         profile = ownProfile?.[0] || null;
       } else {
-        // No access to sensitive data
-        profile = null;
+        // Priority 2: Check if current user is a teacher of this student
+        const { data: teacherAccess } = await supabase
+          .from('classroom_students')
+          .select(`
+            classroom_id,
+            classrooms!inner (
+              teacher_id
+            )
+          `)
+          .eq('student_id', studentId)
+          .eq('classrooms.teacher_id', user.id)
+          .limit(1)
+          .maybeSingle();
+
+        if (teacherAccess) {
+          // Teacher has access - get full profile via security definer function
+          const { data: studentProfile, error: profileError } = await supabase
+            .rpc('get_user_profile', { _user_id: studentId });
+          
+          if (profileError) throw profileError;
+          profile = studentProfile?.[0] || null;
+
+          // Log teacher access for audit trail
+          if (profile) {
+            await supabase.from('security_audit_log').insert({
+              user_id: user.id,
+              action_type: 'SELECT',
+              table_name: 'profiles',
+              record_id: studentId,
+              metadata: {
+                action: 'teacher_view_student_profile',
+                student_id: studentId,
+                classroom_id: teacherAccess.classroom_id
+              }
+            });
+          }
+        } else {
+          // Priority 3: Check if current user is parent of this student
+          const { data: parentChildInfo } = await supabase.rpc(
+            'get_parent_child_info',
+            { _parent_user_id: user.id, _student_id: studentId }
+          );
+
+          if (parentChildInfo && parentChildInfo.length > 0) {
+            profile = {
+              id: parentChildInfo[0].student_id,
+              full_name: parentChildInfo[0].full_name,
+              email: parentChildInfo[0].email,
+            };
+          } else {
+            // No access to sensitive data
+            profile = null;
+          }
+        }
       }
 
       // Fetch public profile (display info only)
