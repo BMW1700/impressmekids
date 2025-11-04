@@ -114,23 +114,34 @@ serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    // If summary exists from last 24 hours, return it
+    // If summary exists from last 24 hours, validate structure before returning
     if (recentSummary) {
       const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
       const summaryDate = new Date(recentSummary.generated_at);
       
       if (summaryDate > oneDayAgo) {
-        const hoursAgo = Math.floor((Date.now() - summaryDate.getTime()) / (1000 * 60 * 60));
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            summary: recentSummary,
-            data: recentSummary.summary_data,
-            cached: true,
-            hours_ago: hoursAgo
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        // SMART CACHE INVALIDATION: Check if cached summary has correct structure
+        const summaryData = recentSummary.summary_data as any;
+        
+        // Validate that the summary has the required class_summary field
+        if (summaryData && summaryData.class_summary) {
+          const hoursAgo = Math.floor((Date.now() - summaryDate.getTime()) / (1000 * 60 * 60));
+          console.log(`[CACHE] Returning valid cached summary from ${hoursAgo}h ago for classroom ${classroom_id}`);
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              summary: recentSummary,
+              data: recentSummary.summary_data,
+              cached: true,
+              hours_ago: hoursAgo
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } else {
+          // Cached summary has outdated structure - regenerate
+          console.warn(`[CACHE] Invalidating cached summary with outdated structure for classroom ${classroom_id}`);
+        }
       }
     }
 
