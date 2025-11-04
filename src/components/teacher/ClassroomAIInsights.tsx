@@ -48,7 +48,7 @@ export const ClassroomAIInsights = ({ classroomId }: ClassroomAIInsightsProps) =
   }
 
   const summaryData = summary.summary_data as {
-    class_summary: {
+    class_summary?: {
       top_performers: string[];
       students_at_risk: string[];
       subject_trends: Record<string, { average_score: number; students_struggling: string[] }>;
@@ -81,6 +81,34 @@ export const ClassroomAIInsights = ({ classroomId }: ClassroomAIInsightsProps) =
       actionable_recommendations: string[];
     }>;
   };
+
+  // Add fallback if class_summary is missing
+  if (!summaryData.class_summary) {
+    console.error('AI returned invalid structure, missing class_summary:', summaryData);
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            AI-Powered Insights
+          </CardTitle>
+          <CardDescription>
+            The summary data is incomplete. Please regenerate the insights.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            onClick={() => generateSummary(classroomId)}
+            disabled={isGenerating}
+            size="lg"
+          >
+            {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Regenerate AI Summary
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">

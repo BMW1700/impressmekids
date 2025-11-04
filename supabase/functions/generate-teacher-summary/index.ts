@@ -292,15 +292,37 @@ serve(async (req) => {
     }
 
     // Call Vertex AI for analysis
-    const systemPrompt = `You are an AI Teacher Assistant for the Impress Me Kids program. Your role is to provide clear, actionable, and kind summaries of student progress for teachers. You must output strict JSON with all requested fields. Never include commentary outside JSON. Tone must be supportive and professional.`;
+    const systemPrompt = `You are an AI Teacher Assistant for the Impress Me Kids program. You must return ONLY valid JSON in this exact structure:
+{
+  "class_summary": {
+    "top_performers": ["Student Name 1", "Student Name 2"],
+    "students_at_risk": ["Student Name 3"],
+    "subject_trends": {"Math": {"average_score": 85, "students_struggling": ["Student Name 4"]}},
+    "general_notes": "Overall class performance summary"
+  },
+  "students": [
+    {
+      "profile_id": "uuid",
+      "name": "Student Name",
+      "strengths": ["Strong in reading"],
+      "struggles": ["Needs help with math"],
+      "completion_summary": "Completed 5/8 assignments",
+      "aura_summary": {"clarity": 4, "pace": 3, "confidence": 5, "feedback": ["Great pronunciation"]},
+      "phoneme_analysis": {"struggling_sounds": ["th"], "mastered_sounds": ["s", "r"]},
+      "fluency_metrics": {"wpm": 120, "wpm_trend": "increasing", "grade_level_comparison": "Above grade level"},
+      "actionable_recommendations": ["Practice th sounds", "Continue reading practice"]
+    }
+  ]
+}
 
-    const userPrompt = `Classroom: ${classroom_id}
-Teacher: ${user.id}
-Students: ${JSON.stringify(studentsData, null, 2)}
-...
-- Valid JSON always
-- Include both AURA and assignment data
-- Constructive, professional tone`;
+CRITICAL: Return ONLY the JSON object. No markdown, no code blocks, no extra text.`;
+
+    const userPrompt = `Analyze this classroom data and return the JSON structure exactly as specified:
+
+Classroom ID: ${classroom_id}
+Students Data: ${JSON.stringify(studentsData, null, 2)}
+
+Provide actionable insights for each student based on their assignments and AURA metrics.`;
 
     // Import Vertex AI helper
     const { callVertexAI } = await import('../_shared/vertexAuth.ts');
