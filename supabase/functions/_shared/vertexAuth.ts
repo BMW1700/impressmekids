@@ -87,16 +87,12 @@ export async function getVertexAccessToken(): Promise<string> {
     throw new Error('GOOGLE_VERTEX_AI_KEY not configured');
   }
 
-  // Handle both stringified JSON and plain string private keys
-  let serviceAccount: ServiceAccount;
-  try {
-    serviceAccount = JSON.parse(googleCredentials);
-  } catch (e) {
-    // If JSON parse fails, try to parse as a string with escaped newlines
-    const cleanedCredentials = googleCredentials
-      .replace(/\\n/g, '\n')  // Replace literal \n with actual newlines
-      .replace(/\\\\/g, '\\'); // Replace double backslashes
-    serviceAccount = JSON.parse(cleanedCredentials);
+  // Parse service account - handle escaped newlines in private_key
+  const serviceAccount: ServiceAccount = JSON.parse(googleCredentials);
+  
+  // Ensure private_key has proper newlines (replace literal \n with actual newlines)
+  if (serviceAccount.private_key && serviceAccount.private_key.includes('\\n')) {
+    serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
   }
 
   // Get access token
