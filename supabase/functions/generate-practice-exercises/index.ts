@@ -185,11 +185,6 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY not configured");
-    }
-
     // Fetch student's skill vector with difficulty level
     const { data: skillVector } = await supabase
       .from('student_skill_vectors')

@@ -97,8 +97,6 @@ serve(async (req) => {
     }
 
     // Call Vertex AI
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-
     const userPrompt = `Grade: ${grade} (3-6)
 Topic/lesson: "${lesson_context}"
 Subject: ${subject}

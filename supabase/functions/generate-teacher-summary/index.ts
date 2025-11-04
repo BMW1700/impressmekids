@@ -292,11 +292,6 @@ serve(async (req) => {
     }
 
     // Call Vertex AI for analysis
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
-    }
-
     const systemPrompt = `You are an AI Teacher Assistant for the Impress Me Kids program. Your role is to provide clear, actionable, and kind summaries of student progress for teachers. You must output strict JSON with all requested fields. Never include commentary outside JSON. Tone must be supportive and professional.`;
 
     const userPrompt = `Classroom: ${classroom_id}
