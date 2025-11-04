@@ -87,7 +87,17 @@ export async function getVertexAccessToken(): Promise<string> {
     throw new Error('GOOGLE_VERTEX_AI_KEY not configured');
   }
 
-  const serviceAccount = JSON.parse(googleCredentials);
+  // Handle both stringified JSON and plain string private keys
+  let serviceAccount: ServiceAccount;
+  try {
+    serviceAccount = JSON.parse(googleCredentials);
+  } catch (e) {
+    // If JSON parse fails, try to parse as a string with escaped newlines
+    const cleanedCredentials = googleCredentials
+      .replace(/\\n/g, '\n')  // Replace literal \n with actual newlines
+      .replace(/\\\\/g, '\\'); // Replace double backslashes
+    serviceAccount = JSON.parse(cleanedCredentials);
+  }
 
   // Get access token
   const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
