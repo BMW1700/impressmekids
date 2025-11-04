@@ -101,6 +101,17 @@ export async function getVertexAccessToken(): Promise<{ token: string; projectId
     serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
   }
 
+  // Verify project_id exists
+  if (!serviceAccount.project_id) {
+    console.error('Service account JSON:', { 
+      hasProjectId: !!serviceAccount.project_id,
+      keys: Object.keys(serviceAccount)
+    });
+    throw new Error('GOOGLE_VERTEX_AI_KEY does not contain project_id field');
+  }
+
+  console.log('Using Google Cloud project:', serviceAccount.project_id);
+
   // Get access token
   const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
