@@ -164,7 +164,7 @@ AUDIO FEATURES (Real-time analysis):
 `;
     }
 
-    // Call Lovable AI for deep analysis with enhanced data
+    // Call Vertex AI for deep analysis with enhanced data
     const aiPrompt = `You are an expert speech coach with expertise in phonetics, prosody, and public speaking. Analyze this student's speech performance using advanced acoustic and linguistic data.
 
 TRANSCRIPT: "${transcript}"
@@ -205,35 +205,22 @@ Format as JSON:
   }
 }`;
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('LOVABLE_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: 'You are an expert speech analysis AI. Always respond with valid JSON.' },
-          { role: 'user', content: aiPrompt }
-        ],
-      }),
+    // Import Vertex AI helper
+    const { callVertexAI } = await import('./_shared/vertexAuth.ts');
+
+    const systemInstruction = 'You are an expert speech analysis AI. Always respond with valid JSON.';
+    
+    const aiContent = await callVertexAI(aiPrompt, systemInstruction, {
+      model: 'gemini-2.5-flash',
+      temperature: 0.7,
     });
-
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('AI API error:', errorText);
-      throw new Error('AI analysis failed');
-    }
-
-    const aiData = await aiResponse.json();
     
     // Strip markdown code blocks if present (AI sometimes wraps JSON in ```json ... ```)
-    let aiContent = aiData.choices[0].message.content.trim();
-    if (aiContent.startsWith('```')) {
-      aiContent = aiContent.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+    let cleanedContent = aiContent.trim();
+    if (cleanedContent.startsWith('```')) {
+      cleanedContent = cleanedContent.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
     }
-    const aiAnalysis = JSON.parse(aiContent);
+    const aiAnalysis = JSON.parse(cleanedContent);
 
     // Calculate overall grade (weighted average)
     // Clamp individual scores to 1-5 range to prevent invalid grades
@@ -519,29 +506,17 @@ Format as JSON:
   }
 }`;
 
-  const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${Deno.env.get('LOVABLE_API_KEY')}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'google/gemini-2.5-flash',
-      messages: [
-        { role: 'system', content: 'You are an expert reading comprehension AI with proprietary analysis algorithms. Always respond with valid JSON.' },
-        { role: 'user', content: aiPrompt }
-      ],
-    }),
+  // Import Vertex AI helper
+  const { callVertexAI } = await import('./_shared/vertexAuth.ts');
+  
+  const systemInstruction = 'You are an expert reading comprehension AI with proprietary analysis algorithms. Always respond with valid JSON.';
+  
+  const aiContent = await callVertexAI(aiPrompt, systemInstruction, {
+    model: 'gemini-2.5-flash',
+    temperature: 0.7,
   });
-
-  if (!aiResponse.ok) {
-    const errorText = await aiResponse.text();
-    console.error('AI API error:', errorText);
-    throw new Error('Reading comprehension AI analysis failed');
-  }
-
-  const aiData = await aiResponse.json();
-  const aiAnalysis = JSON.parse(aiData.choices[0].message.content);
+  
+  const aiAnalysis = JSON.parse(aiContent);
 
   // Calculate overall comprehension score
   const comprehensionScore = Math.round(

@@ -125,51 +125,17 @@ Return ONLY a valid JSON array of flashcards in this exact format:
   }
 ]`;
 
-    console.log('Calling Lovable AI for flashcard generation...');
+    console.log('Calling Vertex AI for flashcard generation...');
 
-    // Call Lovable AI
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: 'You are a helpful assistant that creates educational flashcards. Always return valid JSON arrays.' },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.7,
-      }),
+    // Import Vertex AI helper
+    const { callVertexAI } = await import('../_shared/vertexAuth.ts');
+
+    const systemInstruction = 'You are a helpful assistant that creates educational flashcards. Always return valid JSON arrays.';
+    
+    const generatedText = await callVertexAI(prompt, systemInstruction, {
+      model: 'gemini-2.5-flash',
+      temperature: 0.7,
     });
-
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('AI gateway error:', aiResponse.status, errorText);
-      
-      if (aiResponse.status === 429) {
-        return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }), {
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      
-      if (aiResponse.status === 402) {
-        return new Response(JSON.stringify({ error: 'AI credits depleted. Please add credits to continue.' }), {
-          status: 402,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      return new Response(JSON.stringify({ error: 'Failed to generate flashcards' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const aiData = await aiResponse.json();
-    const generatedText = aiData.choices[0].message.content;
 
     console.log('AI response:', generatedText);
 

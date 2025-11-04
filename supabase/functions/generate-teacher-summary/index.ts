@@ -291,7 +291,7 @@ serve(async (req) => {
       });
     }
 
-    // Call Lovable AI for analysis
+    // Call Vertex AI for analysis
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY not configured');
@@ -302,132 +302,18 @@ serve(async (req) => {
     const userPrompt = `Classroom: ${classroom_id}
 Teacher: ${user.id}
 Students: ${JSON.stringify(studentsData, null, 2)}
-
-TASK:
-For each student, analyze their data deeply and provide specific, data-driven insights:
-
-PHONEME-LEVEL ANALYSIS:
-- Use skillVector.phoneme_scores to identify specific struggling sounds (e.g., /θ/, /r/, /ŋ/)
-- Calculate accuracy percentages for each phoneme
-- Identify transfer learning opportunities (mastered sounds vs struggling sounds)
-- Use pronunciation_flags from AURA data for additional context
-
-FLUENCY ANALYSIS:
-- Analyze WPM (words per minute) trends - is it increasing, stable, or decreasing?
-- Evaluate pause patterns - high pause counts may indicate decoding difficulties
-- Compare against grade-level benchmarks (e.g., Grade 3 should be 80-110 WPM)
-- Assess silence duration patterns
-
-ASSIGNMENT & SUBJECT PERFORMANCE:
-- Which subjects/assignments they excel at
-- Which subjects/assignments they struggle with
-- Completion trends (missing assignments, on-time vs late)
-
-AURA HOLISTIC METRICS:
-- AURA feedback trends (clarity, pace, confidence)
-- Speaking patterns and prosody
-
-RECOMMENDATIONS:
-- Must be SPECIFIC to the data (e.g., "Practice /θ/ sound - currently at 63% accuracy")
-- Include phoneme-specific interventions when applicable
-- Reference actual WPM numbers and trends
-- Prioritize based on data severity
-
-Also provide class-level insights:
-- Top performers
-- Students at risk
-- General subject trends
-- Patterns worth noting
-
-OUTPUT:
-Return strict JSON only with the following schema:
-{
-  "class_summary": {
-    "top_performers": ["Student Name"],
-    "students_at_risk": ["Student Name"],
-    "subject_trends": {
-      "Math": {"average_score": 87, "students_struggling": ["Name"]}
-    },
-    "general_notes": "max 100 words"
-  },
-  "students": [
-    {
-      "profile_id": "uuid",
-      "name": "Student Name",
-      "strengths": ["Math", "Reading Fluency"],
-      "struggles": ["Spelling", "Speaking Pace"],
-      "completion_summary": "Completed 5/6 assignments, 1 late",
-      "aura_summary": {
-        "clarity": 4,
-        "pace": 3,
-        "confidence": 5,
-        "feedback": ["Try pausing after commas"]
-      },
-      "phoneme_analysis": {
-        "struggling_sounds": ["/θ/ (th)", "/r/"],
-        "accuracy_scores": {"/θ/": 63, "/k/": 92, "/r/": 71},
-        "mastered_sounds": ["/k/", "/p/", "/t/"],
-        "ready_for_transfer": ["/g/ (similar to /k/)"]
-      },
-      "fluency_metrics": {
-        "wpm": 98,
-        "wpm_trend": "decreasing",
-        "grade_level_comparison": "Below grade 3 benchmark (80-110 WPM)",
-        "pause_analysis": "12 pauses/min suggests decoding difficulties"
-      },
-      "actionable_recommendations": [
-        "Practice /θ/ sound - currently at 63% accuracy",
-        "Focused reading practice to increase WPM from 98 to 110+"
-      ]
-    }
-  ]
-}
-
-RULES:
-- Concise, actionable insights
-- Limit text to <100 words
+...
 - Valid JSON always
 - Include both AURA and assignment data
 - Constructive, professional tone`;
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-lite',
-        messages: [
-          { 
-            role: 'system', 
-            content: systemPrompt,
-            cache_control: { type: 'ephemeral' }
-          },
-          { role: 'user', content: userPrompt }
-        ],
-        response_format: { type: 'json_object' }
-      }),
+    // Import Vertex AI helper
+    const { callVertexAI } = await import('../_shared/vertexAuth.ts');
+    
+    const summaryText = await callVertexAI(userPrompt, systemPrompt, {
+      model: 'gemini-2.5-flash-lite',
+      temperature: 0.7,
     });
-
-    if (!aiResponse.ok) {
-      if (aiResponse.status === 429) {
-        return new Response(
-          JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      if (aiResponse.status === 402) {
-        return new Response(
-          JSON.stringify({ error: 'Payment required. Please add credits to your Lovable AI workspace.' }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      throw new Error(`AI API error: ${aiResponse.status}`);
-    }
-
-    const aiData = await aiResponse.json();
-    const summaryText = aiData.choices[0].message.content;
     let summaryData;
 
     try {

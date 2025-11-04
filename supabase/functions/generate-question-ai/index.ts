@@ -96,7 +96,7 @@ serve(async (req) => {
       });
     }
 
-    // Call Lovable AI
+    // Call Vertex AI
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
     const userPrompt = `Grade: ${grade} (3-6)
@@ -106,33 +106,13 @@ Difficulty: ${difficulty}/5
 
 Generate 3 questions following the exact format specified.`;
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.7,
-      }),
+    // Import Vertex AI helper
+    const { callVertexAI } = await import('../_shared/vertexAuth.ts');
+
+    const content = await callVertexAI(userPrompt, SYSTEM_PROMPT, {
+      model: 'gemini-2.5-flash',
+      temperature: 0.7,
     });
-
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('AI API error:', errorText);
-      return new Response(JSON.stringify({ error: 'AI generation failed' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const aiData = await aiResponse.json();
-    const content = aiData.choices[0].message.content;
 
     console.log('AI response:', content);
 

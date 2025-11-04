@@ -288,7 +288,7 @@ serve(async (req) => {
 
     console.log(`Transfer predictions for student ${studentId}:`, transferPredictions.slice(0, 3));
 
-    // Generate exercises using Lovable AI with RL-enhanced scaling
+    // Generate exercises using Vertex AI with RL-enhanced scaling
     const recommendedRestMinutes = articulatoryFatigueRisk > 0.7 
       ? Math.ceil(articulatoryFatigueRisk * 30) 
       : 0;
@@ -342,43 +342,16 @@ Return ONLY a JSON object:
   ]
 }`;
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: "You are an expert speech-language pathologist creating engaging pronunciation exercises for students. Always return valid JSON.",
-          },
-          { role: "user", content: prompt },
-        ],
-        response_format: { type: "json_object" },
-      }),
+    // Import Vertex AI helper
+    const { callVertexAI } = await import('../_shared/vertexAuth.ts');
+    
+    const systemInstruction = "You are an expert speech-language pathologist creating engaging pronunciation exercises for students. Always return valid JSON.";
+    
+    const generatedContent = await callVertexAI(prompt, systemInstruction, {
+      model: "gemini-2.5-flash",
+      temperature: 0.7,
     });
-
-    if (!aiResponse.ok) {
-      if (aiResponse.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (aiResponse.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Payment required. Please add credits to your workspace." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      throw new Error(`AI API error: ${aiResponse.status}`);
-    }
-
-    const aiData = await aiResponse.json();
-    const generatedContent = aiData.choices[0].message.content;
+    
     const parsed = JSON.parse(generatedContent);
 
     // Insert exercises into database with V2 difficulty tracking
