@@ -312,7 +312,19 @@ Students: ${JSON.stringify(studentsData, null, 2)}
     let summaryData;
 
     try {
-      summaryData = JSON.parse(summaryText);
+      // Clean markdown code fences if present
+      let cleanedText = summaryText.trim();
+      if (cleanedText.startsWith('```json')) {
+        cleanedText = cleanedText.slice(7); // Remove ```json
+      } else if (cleanedText.startsWith('```')) {
+        cleanedText = cleanedText.slice(3); // Remove ```
+      }
+      if (cleanedText.endsWith('```')) {
+        cleanedText = cleanedText.slice(0, -3); // Remove trailing ```
+      }
+      cleanedText = cleanedText.trim();
+      
+      summaryData = JSON.parse(cleanedText);
     } catch (e) {
       console.error('Failed to parse AI response as JSON:', summaryText);
       throw new Error('Invalid JSON response from AI');
