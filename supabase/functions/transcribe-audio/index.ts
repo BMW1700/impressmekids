@@ -4,10 +4,64 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { transcribeAudioSchema, validateInput } from '../_shared/validation.ts';
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from '../_shared/rateLimiter.ts';
 
+// Google Cloud Speech-to-Text API configuration
+const GOOGLE_SPEECH_API = 'https://speech.googleapis.com/v1/speech:recognize';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Helper function to create JWT for Google Cloud authentication
+async function createJWT(serviceAccount: any): Promise<string> {
+  const header = {
+    alg: 'RS256',
+    typ: 'JWT',
+    kid: serviceAccount.private_key_id,
+  };
+
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    iss: serviceAccount.client_email,
+    scope: 'https://www.googleapis.com/auth/cloud-platform',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: now + 3600,
+  };
+
+  const encodedHeader = btoa(JSON.stringify(header)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  const encodedPayload = btoa(JSON.stringify(payload)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  const signatureInput = `${encodedHeader}.${encodedPayload}`;
+
+  // Import private key
+  const privateKey = serviceAccount.private_key;
+  const pemHeader = '-----BEGIN PRIVATE KEY-----';
+  const pemFooter = '-----END PRIVATE KEY-----';
+  const pemContents = privateKey.substring(pemHeader.length, privateKey.length - pemFooter.length).trim();
+  const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+
+  const cryptoKey = await crypto.subtle.importKey(
+    'pkcs8',
+    binaryDer,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  // Sign the JWT
+  const signature = await crypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5',
+    cryptoKey,
+    new TextEncoder().encode(signatureInput)
+  );
+
+  const encodedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)))
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+
+  return `${signatureInput}.${encodedSignature}`;
+}
 
 function processBase64Chunks(base64String: string, chunkSize = 32768) {
   const chunks: Uint8Array[] = [];
@@ -97,29 +151,68 @@ serve(async (req) => {
 
     const { audio } = validation.data;
 
-    const binaryAudio = processBase64Chunks(audio);
-    
-    const formData = new FormData();
-    const blob = new Blob([binaryAudio], { type: 'audio/webm' });
-    formData.append('file', blob, 'audio.webm');
-    formData.append('model', 'whisper-1');
+    // Get Google Cloud credentials
+    const googleCredentials = Deno.env.get('GOOGLE_VERTEX_AI_KEY');
+    if (!googleCredentials) {
+      throw new Error('Google Cloud credentials not configured');
+    }
 
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    // Parse the service account key
+    const serviceAccount = JSON.parse(googleCredentials);
+    
+    // Get access token for Google Cloud API
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+        assertion: await createJWT(serviceAccount),
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      throw new Error(`Failed to get access token: ${await tokenResponse.text()}`);
+    }
+
+    const { access_token } = await tokenResponse.json();
+
+    // Prepare audio content for Google Speech-to-Text
+    const binaryAudio = processBase64Chunks(audio);
+    const base64Audio = btoa(String.fromCharCode(...binaryAudio));
+
+    // Call Google Cloud Speech-to-Text API
+    const response = await fetch(GOOGLE_SPEECH_API, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_WHISPER_KEY')}`,
+        'Authorization': `Bearer ${access_token}`,
+        'Content-Type': 'application/json',
       },
-      body: formData,
+      body: JSON.stringify({
+        config: {
+          encoding: 'WEBM_OPUS',
+          sampleRateHertz: 48000,
+          languageCode: 'en-US',
+          enableAutomaticPunctuation: true,
+        },
+        audio: {
+          content: base64Audio,
+        },
+      }),
     });
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${await response.text()}`);
+      throw new Error(`Google Speech API error: ${await response.text()}`);
     }
 
     const result = await response.json();
+    
+    // Extract transcription from Google's response format
+    const transcription = result.results
+      ?.map((r: any) => r.alternatives?.[0]?.transcript)
+      .join(' ') || '';
 
     return new Response(
-      JSON.stringify({ text: result.text }),
+      JSON.stringify({ text: transcription }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
