@@ -7,9 +7,10 @@ interface ServiceAccount {
   private_key: string;
   private_key_id: string;
   client_email: string;
+  project_id: string;
 }
 
-let cachedToken: { token: string; expiresAt: number } | null = null;
+let cachedToken: { token: string; projectId: string; expiresAt: number } | null = null;
 
 /**
  * Create JWT for Google Cloud authentication
@@ -78,12 +79,12 @@ async function createJWT(serviceAccount: ServiceAccount): Promise<string> {
 }
 
 /**
- * Get Google Cloud access token (with caching)
+ * Get Google Cloud access token and project ID (with caching)
  */
-export async function getVertexAccessToken(): Promise<string> {
+export async function getVertexAccessToken(): Promise<{ token: string; projectId: string }> {
   // Check cache
   if (cachedToken && cachedToken.expiresAt > Date.now() + 60000) {
-    return cachedToken.token;
+    return { token: cachedToken.token, projectId: cachedToken.projectId };
   }
 
   // Get credentials
@@ -116,13 +117,14 @@ export async function getVertexAccessToken(): Promise<string> {
 
   const { access_token, expires_in } = await tokenResponse.json();
 
-  // Cache token
+  // Cache token and project ID
   cachedToken = {
     token: access_token,
+    projectId: serviceAccount.project_id,
     expiresAt: Date.now() + (expires_in - 60) * 1000, // Expire 1 min early
   };
 
-  return access_token;
+  return { token: access_token, projectId: serviceAccount.project_id };
 }
 
 /**
@@ -137,8 +139,7 @@ export async function callVertexAI(
     maxOutputTokens?: number;
   } = {}
 ): Promise<string> {
-  const accessToken = await getVertexAccessToken();
-  const projectId = Deno.env.get('GOOGLE_VERTEX_PROJECT_ID') || 'impress-me-kids';
+  const { token: accessToken, projectId } = await getVertexAccessToken();
   const region = Deno.env.get('GOOGLE_VERTEX_REGION') || 'us-central1';
   const model = options.model || 'gemini-2.5-flash';
 
@@ -199,8 +200,7 @@ export async function callVertexVision(
     temperature?: number;
   } = {}
 ): Promise<string> {
-  const accessToken = await getVertexAccessToken();
-  const projectId = Deno.env.get('GOOGLE_VERTEX_PROJECT_ID') || 'impress-me-kids';
+  const { token: accessToken, projectId } = await getVertexAccessToken();
   const region = Deno.env.get('GOOGLE_VERTEX_REGION') || 'us-central1';
   const model = options.model || 'gemini-2.5-flash';
 
