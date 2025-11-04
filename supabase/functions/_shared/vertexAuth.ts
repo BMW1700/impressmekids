@@ -44,9 +44,14 @@ async function createJWT(serviceAccount: ServiceAccount): Promise<string> {
   const privateKey = serviceAccount.private_key;
   const pemHeader = '-----BEGIN PRIVATE KEY-----';
   const pemFooter = '-----END PRIVATE KEY-----';
+  
+  // Extract base64 content, removing header, footer, and all whitespace/newlines
   const pemContents = privateKey
-    .substring(pemHeader.length, privateKey.length - pemFooter.length)
+    .replace(pemHeader, '')
+    .replace(pemFooter, '')
+    .replace(/\s/g, '')  // Remove all whitespace including newlines
     .trim();
+  
   const binaryDer = Uint8Array.from(atob(pemContents), (c) => c.charCodeAt(0));
 
   const cryptoKey = await crypto.subtle.importKey(
