@@ -279,13 +279,29 @@ export const useCalendarData = ({ startDate, endDate, userId, userRole, childId 
       if (userRole === "teacher") {
         assignmentsQuery = assignmentsQuery.eq("teacher_id", userId);
       } else if (userRole === "student") {
+        // Get student's classroom IDs
+        const { data: studentClassrooms } = await supabase
+          .from("classroom_students")
+          .select("classroom_id")
+          .eq("student_id", effectiveUserId);
+        
+        const classroomIds = studentClassrooms?.map(c => c.classroom_id) || [];
         assignmentsQuery = assignmentsQuery
           .eq("status", "published")
-          .eq("is_posted", true);
+          .eq("is_posted", true)
+          .in("classroom_id", classroomIds);
       } else if (userRole === "parent" && childId) {
+        // Get child's classroom IDs
+        const { data: childClassrooms } = await supabase
+          .from("classroom_students")
+          .select("classroom_id")
+          .eq("student_id", childId);
+        
+        const classroomIds = childClassrooms?.map(c => c.classroom_id) || [];
         assignmentsQuery = assignmentsQuery
           .eq("status", "published")
-          .eq("is_posted", true);
+          .eq("is_posted", true)
+          .in("classroom_id", classroomIds);
       }
 
       const { data: assignments } = await assignmentsQuery;
