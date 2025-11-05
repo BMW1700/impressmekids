@@ -256,7 +256,10 @@ export const useMultiQuestionAssignments = (classroomId?: string, assignmentId?:
     mutationFn: async ({ id, newStatus }: { id: string; newStatus: 'draft' | 'published' }) => {
       const { error } = await supabase
         .from('assignments')
-        .update({ status: newStatus })
+        .update({ 
+          status: newStatus,
+          is_posted: newStatus === 'published'
+        })
         .eq('id', id);
 
       if (error) throw error;

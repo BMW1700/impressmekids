@@ -83,6 +83,7 @@ export const useAssignments = (classroomId?: string) => {
           passage_metadata: passageMetadata || {},
           due_date: dueDate?.toISOString(),
           status,
+          is_posted: status === 'published',
           enable_realtime_coaching: enableRealtimeCoaching || false,
         })
         .select()
