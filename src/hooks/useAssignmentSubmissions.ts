@@ -65,6 +65,7 @@ export const useAssignmentSubmissions = (assignmentId?: string) => {
           grade,
           teacher_feedback: feedback,
           graded_at: new Date().toISOString(),
+          status: 'graded',
         })
         .eq('id', submissionId)
         .select()

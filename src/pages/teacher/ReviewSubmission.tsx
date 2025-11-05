@@ -96,7 +96,7 @@ export default function ReviewSubmission() {
   };
 
   const handleSaveGrade = () => {
-    if (!submissionId) return;
+    if (!submissionId || !assignment?.classroom_id) return;
 
     const gradeValue = parseFloat(grade);
     if (isNaN(gradeValue) || gradeValue < 0 || gradeValue > 100) {
@@ -125,6 +125,10 @@ export default function ReviewSubmission() {
         feedback: feedback.trim(),
       },
       {
+        onSuccess: () => {
+          // Navigate to classroom assignments tab
+          navigate(`/classrooms/${assignment.classroom_id}?tab=assignments`);
+        },
         onSettled: () => {
           setIsSaving(false);
         },

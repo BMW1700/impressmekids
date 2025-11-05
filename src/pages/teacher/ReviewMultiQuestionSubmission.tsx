@@ -194,7 +194,7 @@ export default function ReviewMultiQuestionSubmission() {
   };
 
   const handleSaveGrade = () => {
-    if (!submissionId) return;
+    if (!submissionId || !assignment?.classroom_id) return;
 
     const { totalPoints, earnedPoints } = calculateTotalScore();
     const gradePercentage = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
@@ -211,11 +211,15 @@ export default function ReviewMultiQuestionSubmission() {
     setIsSaving(true);
     gradeSubmission(
       {
-        submissionId,
+        submissionId: submission.id,
         grade: gradePercentage,
         feedback: feedback.trim(),
       },
       {
+        onSuccess: () => {
+          // Navigate to classroom assignments tab
+          navigate(`/classrooms/${assignment.classroom_id}?tab=assignments`);
+        },
         onSettled: () => {
           setIsSaving(false);
         },
