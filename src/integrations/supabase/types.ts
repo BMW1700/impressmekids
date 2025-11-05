@@ -2952,6 +2952,7 @@ export type Database = {
         avatar_url: string | null
         grade: number | null
         games_won: number | null
+        games_played: number | null
         assignments_completed: number | null
         aura_avg_score: number | null
         total_score: number | null
