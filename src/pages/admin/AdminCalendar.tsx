@@ -4,13 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Calendar as CalendarIcon } from "lucide-react";
+import { Loader2, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { SchoolEventManager } from "@/components/admin/SchoolEventManager";
 
 export default function AdminCalendar() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   useEffect(() => {
     checkAdminAccess();
@@ -79,6 +80,25 @@ export default function AdminCalendar() {
             </TabsList>
 
             <TabsContent value="events" className="space-y-4">
+              <div className="flex items-center justify-between mb-6">
+                <button
+                  onClick={() => setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() - 1, 1))}
+                  className="p-2 hover:bg-accent rounded-md"
+                  aria-label="Previous month"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <h2 className="text-2xl font-bold">
+                  {selectedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </h2>
+                <button
+                  onClick={() => setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1))}
+                  className="p-2 hover:bg-accent rounded-md"
+                  aria-label="Next month"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
               <SchoolEventManager />
             </TabsContent>
           </Tabs>
