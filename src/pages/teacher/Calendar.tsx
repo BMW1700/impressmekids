@@ -29,7 +29,7 @@ const TeacherCalendar = () => {
     assignments: true,
     events: true,
     schoolEvents: true,
-    drafts: true,
+    drafts: false,
   });
   const [focusedDateIndex, setFocusedDateIndex] = useState<number | null>(null);
   const calendarGridRef = useRef<HTMLDivElement>(null);
