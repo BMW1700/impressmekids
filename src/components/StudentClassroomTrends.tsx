@@ -3,7 +3,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useStudentClassroomTrends } from "@/hooks/useStudentClassroomTrends";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TrendingUp, TrendingDown, Activity, Flame, Calendar } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, subDays, eachDayOfInterval, startOfDay, isSameDay } from "date-fns";
+import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface StudentClassroomTrendsProps {
   classroomId: string;
@@ -62,6 +63,48 @@ export const StudentClassroomTrends = ({ classroomId, studentId }: StudentClassr
     Assignment: point.assignmentGrade ? Math.round(point.assignmentGrade * 10) / 10 : null,
     AURA: point.auraScore ? Math.round(point.auraScore * 10) / 10 : null,
   }));
+
+  // Generate calendar heat map data (last 90 days)
+  const today = new Date();
+  const startDate = subDays(today, 89);
+  const allDays = eachDayOfInterval({ start: startDate, end: today });
+  
+  const activityMap = new Map<string, number>();
+  trendData.forEach(point => {
+    const dateKey = format(parseISO(point.date), 'yyyy-MM-dd');
+    activityMap.set(dateKey, (activityMap.get(dateKey) || 0) + 1);
+  });
+
+  const heatMapData = allDays.map(day => {
+    const dateKey = format(day, 'yyyy-MM-dd');
+    return {
+      date: day,
+      dateKey,
+      count: activityMap.get(dateKey) || 0,
+    };
+  });
+
+  const maxActivity = Math.max(...heatMapData.map(d => d.count), 1);
+
+  const getActivityColor = (count: number) => {
+    if (count === 0) return 'bg-muted/30';
+    const intensity = count / maxActivity;
+    if (intensity < 0.25) return 'bg-primary/20';
+    if (intensity < 0.5) return 'bg-primary/40';
+    if (intensity < 0.75) return 'bg-primary/60';
+    return 'bg-primary';
+  };
+
+  // Group by weeks for display
+  const weeks: Array<Array<{ date: Date; dateKey: string; count: number }>> = [];
+  let currentWeek: Array<{ date: Date; dateKey: string; count: number }> = [];
+  heatMapData.forEach((day, index) => {
+    currentWeek.push(day);
+    if ((index + 1) % 7 === 0 || index === heatMapData.length - 1) {
+      weeks.push([...currentWeek]);
+      currentWeek = [];
+    }
+  });
 
   return (
     <div className="space-y-6">
@@ -125,6 +168,54 @@ export const StudentClassroomTrends = ({ classroomId, studentId }: StudentClassr
           </CardContent>
         </Card>
       </div>
+
+      {/* Activity Heat Map */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Activity Frequency</CardTitle>
+          <CardDescription>Your daily activity in this classroom over the last 90 days</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-1 overflow-x-auto pb-2">
+              <TooltipProvider>
+                {weeks.map((week, weekIndex) => (
+                  <div key={weekIndex} className="flex flex-col gap-1">
+                    {week.map((day, dayIndex) => (
+                      <UITooltip key={dayIndex}>
+                        <TooltipTrigger asChild>
+                          <div
+                            className={`w-3 h-3 rounded-sm transition-colors ${getActivityColor(day.count)}`}
+                          />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <div className="text-xs">
+                            <div className="font-semibold">{format(day.date, 'MMM d, yyyy')}</div>
+                            <div className="text-muted-foreground">
+                              {day.count === 0 ? 'No activity' : `${day.count} ${day.count === 1 ? 'activity' : 'activities'}`}
+                            </div>
+                          </div>
+                        </TooltipContent>
+                      </UITooltip>
+                    ))}
+                  </div>
+                ))}
+              </TooltipProvider>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Less</span>
+              <div className="flex gap-1">
+                <div className="w-3 h-3 rounded-sm bg-muted/30" />
+                <div className="w-3 h-3 rounded-sm bg-primary/20" />
+                <div className="w-3 h-3 rounded-sm bg-primary/40" />
+                <div className="w-3 h-3 rounded-sm bg-primary/60" />
+                <div className="w-3 h-3 rounded-sm bg-primary" />
+              </div>
+              <span>More</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Trend Chart */}
       <Card>
