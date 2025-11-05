@@ -2775,6 +2775,13 @@ export type Database = {
         }
         Returns: string
       }
+      get_student_assignment_stats: {
+        Args: { _student_id: string }
+        Returns: {
+          completed_assignments: number
+          total_assignments: number
+        }[]
+      }
       get_student_classrooms: {
         Args: { _user_id: string }
         Returns: {

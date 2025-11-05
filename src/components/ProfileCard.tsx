@@ -1,7 +1,7 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Target } from "lucide-react";
+import { Trophy, Target, BookOpen, CheckCircle } from "lucide-react";
 
 interface ProfileCardProps {
   fullName?: string;
@@ -11,9 +11,13 @@ interface ProfileCardProps {
     games_played?: number;
     games_won?: number;
   };
+  assignmentStats?: {
+    total_assignments?: number;
+    completed_assignments?: number;
+  };
 }
 
-export const ProfileCard = ({ fullName, grade, avatarUrl, stats }: ProfileCardProps) => {
+export const ProfileCard = ({ fullName, grade, avatarUrl, stats, assignmentStats }: ProfileCardProps) => {
   const initials = fullName
     ? fullName
         .split(' ')
@@ -42,6 +46,24 @@ export const ProfileCard = ({ fullName, grade, avatarUrl, stats }: ProfileCardPr
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-4">
+          <div className="text-center p-4 rounded-lg bg-muted">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <BookOpen className="h-5 w-5 text-primary" />
+            </div>
+            <div className="text-2xl font-bold text-primary">
+              {assignmentStats?.total_assignments || 0}
+            </div>
+            <div className="text-xs text-muted-foreground">Assignments</div>
+          </div>
+          <div className="text-center p-4 rounded-lg bg-muted">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <CheckCircle className="h-5 w-5 text-secondary" />
+            </div>
+            <div className="text-2xl font-bold text-secondary">
+              {assignmentStats?.completed_assignments || 0}
+            </div>
+            <div className="text-xs text-muted-foreground">Completed</div>
+          </div>
           <div className="text-center p-4 rounded-lg bg-muted">
             <div className="flex items-center justify-center gap-2 mb-2">
               <Target className="h-5 w-5 text-primary" />

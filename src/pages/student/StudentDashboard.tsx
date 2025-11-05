@@ -14,6 +14,7 @@ import { AnnouncementCard } from "@/components/AnnouncementCard";
 import NextBestActionCard from "@/components/aura/NextBestActionCard";
 import { CalendarWidget } from "@/components/calendar/CalendarWidget";
 import { Directory } from "@/components/Directory";
+import { useStudentAssignmentStats } from "@/hooks/useStudentAssignmentStats";
 
 const StudentDashboard = () => {
   const [profile, setProfile] = useState<any>(null);
@@ -23,6 +24,7 @@ const StudentDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { data: assignmentStats } = useStudentAssignmentStats(profile?.id);
 
   useEffect(() => {
     checkAuth();
@@ -203,6 +205,7 @@ const StudentDashboard = () => {
                 grade={studentProfile?.grade}
                 avatarUrl={studentProfile?.avatar_url}
                 stats={studentProfile?.stats}
+                assignmentStats={assignmentStats}
               />
             </div>
             
