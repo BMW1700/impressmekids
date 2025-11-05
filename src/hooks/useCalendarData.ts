@@ -277,7 +277,9 @@ export const useCalendarData = ({ startDate, endDate, userId, userRole, childId 
         .lte("due_date", format(endDate, "yyyy-MM-dd"));
 
       if (userRole === "teacher") {
-        assignmentsQuery = assignmentsQuery.eq("teacher_id", userId);
+        assignmentsQuery = assignmentsQuery
+          .eq("teacher_id", userId)
+          .eq("is_posted", true);
       } else if (userRole === "student") {
         // Get student's classroom IDs
         const { data: studentClassrooms } = await supabase
@@ -287,7 +289,6 @@ export const useCalendarData = ({ startDate, endDate, userId, userRole, childId 
         
         const classroomIds = studentClassrooms?.map(c => c.classroom_id) || [];
         assignmentsQuery = assignmentsQuery
-          .eq("status", "published")
           .eq("is_posted", true)
           .in("classroom_id", classroomIds);
       } else if (userRole === "parent" && childId) {
@@ -299,7 +300,6 @@ export const useCalendarData = ({ startDate, endDate, userId, userRole, childId 
         
         const classroomIds = childClassrooms?.map(c => c.classroom_id) || [];
         assignmentsQuery = assignmentsQuery
-          .eq("status", "published")
           .eq("is_posted", true)
           .in("classroom_id", classroomIds);
       }
