@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic, Eye, EyeOff, UserCheck, BarChart3, Calendar } from "lucide-react";
+import { ClassroomLeaderboard } from "@/components/ClassroomLeaderboard";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,6 +60,7 @@ const ClassroomDetail = () => {
   const { isTeacher, isStudent, isLoading: permissionsLoading } = useClassroomPermissions(id);
   const [classroom, setClassroom] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
+  const [profile, setProfile] = useState<any>(null);
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [parentRequests, setParentRequests] = useState<any[]>([]);
@@ -112,6 +114,12 @@ const ClassroomDetail = () => {
       
       console.log('✅ Session found. User ID:', session.user.id);
       console.log('📧 User email:', session.user.email);
+
+      // Store user profile
+      const { data: userProfile } = await supabase.rpc('get_user_profile', { _user_id: session.user.id });
+      if (userProfile && userProfile.length > 0) {
+        setProfile(userProfile[0]);
+      }
 
       // Query 1: Load classroom using security definer function
       console.log('\n📚 Step 2: Loading classroom...');
@@ -615,7 +623,7 @@ const ClassroomDetail = () => {
           )}
 
           <Tabs defaultValue={searchParams.get('tab') || (isStudent ? "assignments" : "students")} className="mb-8">
-            <TabsList className={cn("grid w-full h-auto p-2 bg-muted/50 rounded-xl", isTeacher ? "grid-cols-7 gap-2" : "grid-cols-4 gap-2")}>
+            <TabsList className={cn("grid w-full h-auto p-2 bg-muted/50 rounded-xl", isTeacher ? "grid-cols-8 gap-2" : "grid-cols-5 gap-2")}>
               {isTeacher && (
                 <TabsTrigger 
                   value="students" 
@@ -651,6 +659,13 @@ const ClassroomDetail = () => {
                   )}
                 </TabsTrigger>
               )}
+              <TabsTrigger 
+                value="leaderboard"
+                className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
+              >
+                <Trophy className="mr-2 h-4 w-4" />
+                Leaderboard
+              </TabsTrigger>
               <TabsTrigger 
                 value="assignments"
                 className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
@@ -734,6 +749,17 @@ const ClassroomDetail = () => {
                 <ClassroomAIInsights classroomId={id!} />
               </TabsContent>
             )}
+
+            <TabsContent value="leaderboard" className="mt-6">
+              <div className="mb-6">
+                <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Class Leaderboard</h2>
+                <p className="text-muted-foreground mt-1">Track student performance and achievements</p>
+              </div>
+              <ClassroomLeaderboard 
+                classroomId={id!} 
+                currentStudentId={isStudent ? profile?.id : undefined}
+              />
+            </TabsContent>
 
             {isTeacher && (
               <TabsContent value="parent-requests" className="mt-6">

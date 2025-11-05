@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, Users, Trophy, BookOpen, Loader2, BarChart3, Brain, Calendar as CalendarIcon, Sparkles, TrendingUp, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Directory } from "@/components/Directory";
+import { ClassroomLeaderboard } from "@/components/ClassroomLeaderboard";
 
 const TeacherDashboard = () => {
   const [profile, setProfile] = useState<any>(null);
@@ -232,10 +233,14 @@ const TeacherDashboard = () => {
           </div>
 
           <Tabs defaultValue="classrooms" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="classrooms">
                 <Users className="h-4 w-4 mr-2" />
                 Classrooms
+              </TabsTrigger>
+              <TabsTrigger value="leaderboard">
+                <Trophy className="h-4 w-4 mr-2" />
+                Leaderboard
               </TabsTrigger>
               <TabsTrigger value="calendar" onClick={() => navigate('/teacher/calendar')}>
                 <CalendarIcon className="h-4 w-4 mr-2" />
@@ -300,6 +305,36 @@ const TeacherDashboard = () => {
                     </div>
                   ))}
                 </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="leaderboard" className="mt-6 space-y-6">
+              {classrooms.length === 0 ? (
+                <Card className="p-12 text-center">
+                  <Trophy className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">
+                    Create a classroom to view leaderboards
+                  </p>
+                </Card>
+              ) : (
+                classrooms.map((classroom) => (
+                  <div key={classroom.id}>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xl font-bold">{classroom.name}</h3>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/classrooms/${classroom.id}?tab=leaderboard`)}
+                      >
+                        View Full Leaderboard →
+                      </Button>
+                    </div>
+                    <ClassroomLeaderboard
+                      classroomId={classroom.id}
+                      limit={3}
+                    />
+                  </div>
+                ))
               )}
             </TabsContent>
 
