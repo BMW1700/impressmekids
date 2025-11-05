@@ -2,7 +2,6 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Target, BookOpen, CheckCircle } from "lucide-react";
-
 interface ProfileCardProps {
   fullName?: string;
   grade?: number;
@@ -16,18 +15,15 @@ interface ProfileCardProps {
     completed_assignments?: number;
   };
 }
-
-export const ProfileCard = ({ fullName, grade, avatarUrl, stats, assignmentStats }: ProfileCardProps) => {
-  const initials = fullName
-    ? fullName
-        .split(' ')
-        .map(n => n[0])
-        .join('')
-        .toUpperCase()
-    : '??';
-
-  return (
-    <Card className="shadow-card">
+export const ProfileCard = ({
+  fullName,
+  grade,
+  avatarUrl,
+  stats,
+  assignmentStats
+}: ProfileCardProps) => {
+  const initials = fullName ? fullName.split(' ').map(n => n[0]).join('').toUpperCase() : '??';
+  return <Card className="shadow-card">
       <CardHeader className="text-center">
         <div className="flex justify-center mb-4">
           <Avatar className="h-24 w-24">
@@ -38,11 +34,9 @@ export const ProfileCard = ({ fullName, grade, avatarUrl, stats, assignmentStats
           </Avatar>
         </div>
         <CardTitle className="text-2xl">{fullName || 'Student'}</CardTitle>
-        {grade && (
-          <Badge variant="secondary" className="mt-2">
+        {grade && <Badge variant="secondary" className="mt-2">
             Grade {grade}
-          </Badge>
-        )}
+          </Badge>}
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-4">
@@ -62,7 +56,7 @@ export const ProfileCard = ({ fullName, grade, avatarUrl, stats, assignmentStats
             <div className="text-2xl font-bold text-secondary">
               {assignmentStats?.completed_assignments || 0}
             </div>
-            <div className="text-xs text-muted-foreground">Completed</div>
+            <div className="text-xs text-muted-foreground">Assignments Completed</div>
           </div>
           <div className="text-center p-4 rounded-lg bg-muted">
             <div className="flex items-center justify-center gap-2 mb-2">
@@ -84,6 +78,5 @@ export const ProfileCard = ({ fullName, grade, avatarUrl, stats, assignmentStats
           </div>
         </div>
       </CardContent>
-    </Card>
-  );
+    </Card>;
 };
