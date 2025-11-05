@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar as CalendarIcon, Grid, List, Plus, Download, Filter } from "lucide-react";
+import { Calendar as CalendarIcon, Grid, List, Plus, Download, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCalendarData, CalendarItem } from "@/hooks/useCalendarData";
 import { Calendar } from "@/components/ui/calendar";
 import { getCalendarMonthDays, getCategoryColor, getTypeColor, formatTime, exportToICal, getItemsForDate } from "@/lib/calendarUtils";
@@ -218,8 +218,27 @@ const TeacherCalendar = () => {
 
             <TabsContent value="month" className="mt-6">
               <Card className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() - 1, 1))}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <h2 className="text-2xl font-bold">
+                    {selectedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </h2>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1))}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
                 <div 
-                  className="grid grid-cols-7 gap-2" 
+                  className="grid grid-cols-7 gap-2"
                   ref={calendarGridRef}
                   role="grid"
                   aria-label="Teacher calendar month view"
