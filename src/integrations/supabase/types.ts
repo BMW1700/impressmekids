@@ -2688,6 +2688,16 @@ export type Database = {
           teacher_name: string
         }[]
       }
+      get_classroom_leaderboard: {
+        Args: { _classroom_id: string }
+        Returns: Database["public"]["CompositeTypes"]["classroom_leaderboard_entry"][]
+        SetofOptions: {
+          from: "*"
+          to: "classroom_leaderboard_entry"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_classroom_student_display_info: {
         Args: { _classroom_id: string; _requesting_user_id: string }
         Returns: {
@@ -2936,7 +2946,16 @@ export type Database = {
       user_role: "teacher" | "student" | "admin" | "district_admin" | "parent"
     }
     CompositeTypes: {
-      [_ in never]: never
+      classroom_leaderboard_entry: {
+        student_id: string | null
+        student_name: string | null
+        avatar_url: string | null
+        grade: number | null
+        games_won: number | null
+        assignments_completed: number | null
+        aura_avg_score: number | null
+        total_score: number | null
+      }
     }
   }
 }
