@@ -62,7 +62,7 @@ const Index = () => {
               Your Complete Platform for <span className="text-secondary">Teaching & Learning</span>
             </h1>
             
-            <p className="text-lg md:text-xl lg:text-2xl mb-8 opacity-95 max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">Everything teachers and students need in one place—assignments, games, communication, literacy tools, and powerful AI-driven insights</p>
+            <p className="text-lg md:text-xl lg:text-2xl mb-8 opacity-95 max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">A collaborative learning community that empowers teachers, students, and parents to connect, communicate, and inspire academic growth in and beyond the classroom. </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
               <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary-light text-lg px-8 py-6" asChild>
