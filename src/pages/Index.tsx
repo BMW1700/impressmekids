@@ -81,7 +81,7 @@ const Index = () => {
             <div className="flex flex-wrap justify-center gap-6 text-sm animate-in fade-in slide-in-from-bottom-4 duration-700 delay-400">
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5" />
-                <span>No credit cardd</span>
+                <span>One stop shop for all classrooms</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5" />
