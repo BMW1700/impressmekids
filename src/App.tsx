@@ -36,6 +36,7 @@ import NotificationSettings from "./pages/parent/NotificationSettings";
 import ChildDetail from "./pages/parent/ChildDetail";
 import DistrictDashboard from "./pages/district/DistrictDashboard";
 import RegisterDistrict from "./pages/district/RegisterDistrict";
+import PolicyViewer from "./pages/policies/PolicyViewer";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
