@@ -303,7 +303,7 @@ export const IncidentResponsePolicy = () => {
         <ul>
           <li><strong>Internal Goal:</strong> Notify affected parents/students within 7 days of confirmed breach</li>
           <li><strong>Legal Requirement:</strong> Within 30 days (aim for faster to maintain trust)</li>
-          <li><strong>Department of Education:</strong> Notify if breach affects >500 individuals (within reasonable time)</li>
+          <li><strong>Department of Education:</strong> Notify if breach affects &gt;500 individuals (within reasonable time)</li>
         </ul>
 
         <p><strong>Notification Content (Must Include):</strong></p>
@@ -321,7 +321,7 @@ export const IncidentResponsePolicy = () => {
           <li><strong>Email:</strong> Primary notification method (sent to parent email on file)</li>
           <li><strong>In-App Alert:</strong> Banner notification when users log in</li>
           <li><strong>Letter:</strong> Mailed to parent/guardian if email undeliverable</li>
-          <li><strong>Public Disclosure:</strong> Only if required by state law or affects >5,000 individuals</li>
+          <li><strong>Public Disclosure:</strong> Only if required by state law or affects &gt;5,000 individuals</li>
         </ul>
 
         <p><strong>Documentation Requirements:</strong></p>

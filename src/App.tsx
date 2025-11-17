@@ -81,6 +81,7 @@ const App = () => (
           <Route path="/admin/settings" element={<SchoolSettings />} />
           <Route path="/district/dashboard" element={<DistrictDashboard />} />
           <Route path="/district/register" element={<RegisterDistrict />} />
+          <Route path="/policies" element={<PolicyViewer />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
