@@ -280,7 +280,7 @@ export const AccessControlPolicy = () => {
           <h3>8.2 Automated Monitoring</h3>
           <p>Real-time alerts for suspicious access patterns:</p>
           <ul>
-            <li>Access to >50 student records in <5 minutes → Alert to Security Lead</li>
+            <li>Access to &gt;50 student records in &lt;5 minutes → Alert to Security Lead</li>
             <li>Voice recording access without consent → Blocked + alert</li>
             <li>Admin role assignment → Immediate notification to Security Lead and Technical Lead</li>
             <li>Failed RLS policy checks → Logged and reviewed daily</li>

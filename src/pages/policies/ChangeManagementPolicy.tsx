@@ -262,11 +262,11 @@ export const ChangeManagementPolicy = () => {
           </ul>
           <p><strong>Rollback Criteria (Trigger Immediate Rollback if):</strong></p>
           <ul>
-            <li>Error rate increases by >5% from baseline</li>
+            <li>Error rate increases by &gt;5% from baseline</li>
             <li>Critical functionality broken (login, grading, voice recording)</li>
             <li>Security vulnerability introduced (RLS bypass, authentication issue)</li>
             <li>Data corruption or loss detected</li>
-            <li>Performance degradation >20% (page load times, API latency)</li>
+            <li>Performance degradation &gt;20% (page load times, API latency)</li>
           </ul>
         </div>
 
