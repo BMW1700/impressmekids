@@ -300,16 +300,22 @@ export default function PolicyViewer() {
           <h2 className="text-lg font-bold mb-3 text-green-900 flex items-center gap-2">
             <span className="text-2xl">✓</span> Ready for Delve/Coalfire Audit!
           </h2>
-          <ol className="list-decimal list-inside space-y-2 text-green-900 font-medium">
+          <ol className="list-decimal list-inside space-y-3 text-green-900 font-medium">
             <li>Select which policy to export (or "All Policies" for combined)</li>
             <li>Click "Print to PDF" or press Ctrl+P (Windows) / Cmd+P (Mac)</li>
+            <li className="bg-yellow-50 border-2 border-yellow-400 rounded p-3 -ml-6 pl-6">
+              <span className="text-red-600 font-bold">⚠️ CRITICAL:</span> In the print dialog, <span className="underline font-bold">UNCHECK "Headers and footers"</span> option
+              <div className="text-sm mt-1 ml-6 text-yellow-900">
+                This removes browser defaults (URL, timestamp) and ensures only ImpressMe Kids footer appears
+              </div>
+            </li>
             <li>Choose "Save as PDF" as your destination</li>
             <li>Save with naming format: <code className="bg-green-100 px-2 py-0.5 rounded font-mono">IMK_[PolicyName]_v1.0.pdf</code></li>
             <li>Sign the approval page and re-scan/upload for final submission</li>
           </ol>
           <div className="mt-4 p-3 bg-green-100 rounded border border-green-300">
             <p className="text-sm font-semibold text-green-900">
-              ✓ Includes: Document control, approval pages, SOC 2 mappings, page numbers, professional formatting
+              ✓ Includes: Document control, approval pages, SOC 2 mappings, page numbers, professional ImpressMe Kids branding
             </p>
           </div>
         </div>
