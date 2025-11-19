@@ -21,12 +21,6 @@ export const GradeWeightsForm = ({
   const [weights, setWeights] = useState<GradeWeights>(initialWeights);
   const [isEditing, setIsEditing] = useState(false);
 
-  useEffect(() => {
-    if (initialWeights) {
-      setWeights(initialWeights);
-    }
-  }, [initialWeights]);
-
   const total = weights.test + weights.quiz + weights.homework + weights.attendance;
   const isValid = total === 100;
 
@@ -77,7 +71,10 @@ export const GradeWeightsForm = ({
               <span className="text-lg font-bold text-primary">{weights.attendance}%</span>
             </div>
           </div>
-          <Button onClick={() => setIsEditing(true)} className="w-full">
+          <Button onClick={() => {
+            setWeights(initialWeights);
+            setIsEditing(true);
+          }} className="w-full">
             Edit Weights
           </Button>
         </CardContent>
