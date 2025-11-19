@@ -310,6 +310,7 @@ export type Database = {
       assignments: {
         Row: {
           assignment_type: string
+          category: string
           classroom_id: string
           created_at: string
           description: string | null
@@ -330,6 +331,7 @@ export type Database = {
         }
         Insert: {
           assignment_type?: string
+          category?: string
           classroom_id: string
           created_at?: string
           description?: string | null
@@ -350,6 +352,7 @@ export type Database = {
         }
         Update: {
           assignment_type?: string
+          category?: string
           classroom_id?: string
           created_at?: string
           description?: string | null

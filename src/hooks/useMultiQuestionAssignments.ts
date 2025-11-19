@@ -13,6 +13,7 @@ interface Question {
 interface CreateAssignmentData {
   title: string;
   description?: string;
+  category: 'Test' | 'Quiz' | 'Homework';
   classroom_id: string;
   due_date?: string;
   timer_minutes?: number;
@@ -138,6 +139,7 @@ export const useMultiQuestionAssignments = (classroomId?: string, assignmentId?:
         .insert({
           title: data.title,
           description: data.description,
+          category: data.category,
           classroom_id: data.classroom_id,
           teacher_id: session.session.user.id,
           due_date: data.due_date,

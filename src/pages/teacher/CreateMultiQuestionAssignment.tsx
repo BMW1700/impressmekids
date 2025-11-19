@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Save, Users } from 'lucide-react';
 import { QuestionBuilder } from '@/components/assignments/QuestionBuilder';
 import { GroupManagementModal } from '@/components/assignments/GroupManagementModal';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useMultiQuestionAssignments } from '@/hooks/useMultiQuestionAssignments';
 import { useAssignmentGroups } from '@/hooks/useAssignmentGroups';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -39,6 +40,7 @@ export default function CreateMultiQuestionAssignment() {
   const [maxAttempts, setMaxAttempts] = useState<number>(1);
   const [isGroupAssignment, setIsGroupAssignment] = useState(false);
   const [showGroupModal, setShowGroupModal] = useState(false);
+  const [category, setCategory] = useState<'Test' | 'Quiz' | 'Homework'>('Homework');
   const [classroomStudents, setClassroomStudents] = useState<Array<{ id: string; full_name: string }>>([]);
   const [questions, setQuestions] = useState<Question[]>([
     { id: uuidv4(), sequence: 1, question_type: null, question_data: {} }
@@ -83,6 +85,7 @@ export default function CreateMultiQuestionAssignment() {
       setDueDate(assignment.due_date ? new Date(assignment.due_date).toISOString().slice(0, 16) : '');
       setMaxAttempts(assignment.max_attempts || 1);
       setIsGroupAssignment(assignment.is_group_assignment || false);
+      setCategory((assignment.category || 'Homework') as 'Test' | 'Quiz' | 'Homework');
       
       if (assignment.assignment_questions && assignment.assignment_questions.length > 0) {
         const loadedQuestions = assignment.assignment_questions.map((q: any) => ({
@@ -165,6 +168,7 @@ export default function CreateMultiQuestionAssignment() {
       createAssignment({
         title,
         description,
+        category,
         classroom_id: classroomId,
         due_date: dueDate,
         timer_minutes: timerMinutes,
@@ -220,6 +224,7 @@ export default function CreateMultiQuestionAssignment() {
       createAssignment({
         title,
         description,
+        category,
         classroom_id: classroomId,
         due_date: dueDate,
         timer_minutes: timerMinutes,
@@ -275,6 +280,20 @@ export default function CreateMultiQuestionAssignment() {
                   placeholder="Describe the assignment..."
                   rows={3}
                 />
+              </div>
+
+              <div>
+                <Label htmlFor="category">Assignment Category *</Label>
+                <Select value={category} onValueChange={(value) => setCategory(value as 'Test' | 'Quiz' | 'Homework')}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Test">📄 Test</SelectItem>
+                    <SelectItem value="Quiz">📋 Quiz</SelectItem>
+                    <SelectItem value="Homework">📝 Homework</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid grid-cols-3 gap-4">

@@ -57,6 +57,7 @@ export const useAssignments = (classroomId?: string) => {
       title,
       description,
       passageText,
+      category,
       passageMetadata,
       dueDate,
       status,
@@ -67,6 +68,7 @@ export const useAssignments = (classroomId?: string) => {
       title: string;
       description?: string;
       passageText: string;
+      category: 'Test' | 'Quiz' | 'Homework';
       passageMetadata?: any;
       dueDate?: Date;
       status: string;
@@ -80,6 +82,7 @@ export const useAssignments = (classroomId?: string) => {
           title,
           description,
           passage_text: passageText,
+          category,
           passage_metadata: passageMetadata || {},
           due_date: dueDate?.toISOString(),
           status,
