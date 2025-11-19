@@ -2,10 +2,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useStudentGradebook } from "@/hooks/useStudentGradebook";
-import { Loader2, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Minus, Eye } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { useState } from "react";
 import { format } from "date-fns";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +22,7 @@ export const GradebookSection = ({ studentId }: GradebookSectionProps) => {
   const { data: gradebook, isLoading } = useStudentGradebook(studentId);
   const [selectedClassroom, setSelectedClassroom] = useState<string | null>(null);
   const [showAllGrades, setShowAllGrades] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   if (isLoading) {
     return (
@@ -193,6 +195,14 @@ export const GradebookSection = ({ studentId }: GradebookSectionProps) => {
                         {assignment.grade.toFixed(1)}%
                       </span>
                     )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate(`/teacher/review-submission/${assignment.id}`)}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      View Details
+                    </Button>
                   </div>
                 </div>
               ))}
