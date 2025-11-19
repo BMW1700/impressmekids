@@ -9,8 +9,9 @@ import { ChangeManagementPolicy } from "./ChangeManagementPolicy";
 import GoogleVertexSecurityControls from "./GoogleVertexSecurityControls";
 import SystemDescription from "./SystemDescription";
 import ControlMatrix from "./ControlMatrix";
+import VendorManagementPolicy from "./VendorManagementPolicy";
 
-type PolicyType = "password" | "access" | "incident" | "change" | "vertex" | "system" | "control-matrix" | "all";
+type PolicyType = "password" | "access" | "incident" | "change" | "vertex" | "system" | "control-matrix" | "vendor" | "all";
 
 export default function PolicyViewer() {
   const [selectedPolicy, setSelectedPolicy] = useState<PolicyType>("password");
@@ -48,6 +49,10 @@ export default function PolicyViewer() {
       name: "Google Vertex AI Security Controls",
       component: <GoogleVertexSecurityControls />
     },
+    vendor: {
+      name: "Vendor Management Policy",
+      component: <VendorManagementPolicy />
+    },
     all: {
       name: "All Policies (Combined)",
       component: (
@@ -65,6 +70,8 @@ export default function PolicyViewer() {
           <ChangeManagementPolicy />
           <div className="page-break" />
           <GoogleVertexSecurityControls />
+          <div className="page-break" />
+          <VendorManagementPolicy />
         </>
       )
     }
