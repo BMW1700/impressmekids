@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSearchParams } from "react-router-dom";
+import { SyllabusTab } from "@/components/classroom/SyllabusTab";
 import {
   Dialog,
   DialogContent,
@@ -727,6 +728,13 @@ const ClassroomDetail = () => {
                 <BookOpen className="mr-2 h-4 w-4" />
                 Study Materials
               </TabsTrigger>
+              <TabsTrigger 
+                value="syllabus"
+                className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Syllabus
+              </TabsTrigger>
             </TabsList>
 
             {isTeacher && (
@@ -1253,6 +1261,10 @@ const ClassroomDetail = () => {
                   ))}
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="syllabus" className="mt-6">
+              <SyllabusTab classroomId={id!} isTeacher={isTeacher} />
             </TabsContent>
           </Tabs>
         </div>
