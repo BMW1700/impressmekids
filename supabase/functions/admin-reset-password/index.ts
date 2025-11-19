@@ -12,16 +12,57 @@ serve(async (req) => {
   }
 
   try {
-    // Verify authorization - must be service role or authenticated admin
+    // Verify authorization - must be authenticated admin
     const authHeader = req.headers.get('authorization');
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     
-    if (!authHeader || !authHeader.includes(serviceRoleKey ?? '')) {
+    if (!authHeader) {
       return new Response(
         JSON.stringify({ error: "Unauthorized - Admin access required" }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 401,
+        }
+      );
+    }
+
+    // Create admin client to verify user's admin role
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      {
+        global: {
+          headers: { Authorization: authHeader },
+        },
+      }
+    );
+
+    // Verify user is authenticated
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - Invalid authentication" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401,
+        }
+      );
+    }
+
+    // Verify user has admin role
+    const { data: roleData, error: roleError } = await supabaseClient
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
+      .single();
+
+    if (roleError || !roleData) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - Admin access required" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 403,
         }
       );
     }
