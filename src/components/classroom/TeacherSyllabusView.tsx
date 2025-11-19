@@ -21,6 +21,8 @@ import {
   Download,
   Trash2,
   AlertTriangle,
+  ExternalLink,
+  Info,
 } from "lucide-react";
 import { GradeWeightsForm } from "./GradeWeightsForm";
 import {
@@ -30,6 +32,7 @@ import {
   useToggleSyllabusPublish,
   useDeleteSyllabus,
   useDownloadSyllabus,
+  useSignedSyllabusUrl,
   GradeWeights,
 } from "@/hooks/useClassroomSyllabus";
 import { toast } from "sonner";
@@ -45,9 +48,13 @@ export const TeacherSyllabusView = ({ classroomId }: TeacherSyllabusViewProps) =
   const togglePublishMutation = useToggleSyllabusPublish();
   const deleteMutation = useDeleteSyllabus();
   const downloadMutation = useDownloadSyllabus();
+  const { data: signedUrl, isLoading: isLoadingUrl } = useSignedSyllabusUrl(
+    syllabus?.file_url || null
+  );
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [pdfLoadError, setPdfLoadError] = useState(false);
 
   const handleFileUpload = useCallback(
     (file: File) => {
@@ -203,6 +210,15 @@ export const TeacherSyllabusView = ({ classroomId }: TeacherSyllabusViewProps) =
                   >
                     <Download className="h-4 w-4" />
                   </Button>
+                  {signedUrl && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => window.open(signedUrl, '_blank')}
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
@@ -240,11 +256,64 @@ export const TeacherSyllabusView = ({ classroomId }: TeacherSyllabusViewProps) =
 
               {/* PDF Preview */}
               <div className="border rounded-lg overflow-hidden bg-muted">
-                <iframe
-                  src={`/api/placeholder/800/600`}
-                  className="w-full h-[500px]"
-                  title="Syllabus Preview"
-                />
+                {isLoadingUrl ? (
+                  <div className="w-full h-[500px] flex items-center justify-center">
+                    <div className="text-center">
+                      <FileText className="h-12 w-12 animate-pulse mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">Loading preview...</p>
+                    </div>
+                  </div>
+                ) : signedUrl ? (
+                  <>
+                    {syllabus.mime_type === 'application/pdf' ? (
+                      <>
+                        <iframe
+                          src={signedUrl}
+                          className="w-full h-[500px]"
+                          title="Syllabus Preview"
+                          onError={() => setPdfLoadError(true)}
+                          onLoad={() => setPdfLoadError(false)}
+                        />
+                        {pdfLoadError && (
+                          <Alert variant="destructive" className="mt-2">
+                            <AlertTriangle className="h-4 w-4" />
+                            <AlertDescription>
+                              Your browser cannot display PDFs inline. Please download the file or open in a new tab.
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                      </>
+                    ) : (syllabus.mime_type?.includes('word') || syllabus.mime_type?.includes('document')) ? (
+                      <div className="w-full h-[500px] flex items-center justify-center bg-muted">
+                        <div className="text-center space-y-4">
+                          <FileText className="h-16 w-16 mx-auto text-muted-foreground" />
+                          <div>
+                            <p className="font-semibold">Word Document</p>
+                            <p className="text-sm text-muted-foreground">
+                              Word documents cannot be previewed. Please download to view.
+                            </p>
+                          </div>
+                          <Button onClick={handleDownload}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Download Document
+                          </Button>
+                        </div>
+                      </div>
+                    ) : null}
+                    {syllabus.mime_type === 'application/pdf' && !pdfLoadError && (
+                      <Alert className="mt-2">
+                        <Info className="h-4 w-4" />
+                        <AlertDescription className="text-xs">
+                          If the preview doesn't display, try downloading the file or opening in a new tab.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </>
+                ) : (
+                  <div className="w-full h-[500px] flex items-center justify-center">
+                    <p className="text-sm text-muted-foreground">Preview not available</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
