@@ -46,6 +46,16 @@ export const useStudentClassroomTrends = (classroomId: string | undefined, stude
 
       if (auraError) throw auraError;
 
+      // Fetch attendance records
+      const { data: attendanceData, error: attendanceError } = await supabase
+        .from('attendance_records')
+        .select('date, status')
+        .eq('classroom_id', classroomId)
+        .eq('student_id', studentId)
+        .order('date', { ascending: true });
+
+      if (attendanceError) throw attendanceError;
+
       // Filter AURA records to only include those related to this classroom
       const classroomAuraData = [];
       
@@ -122,6 +132,27 @@ export const useStudentClassroomTrends = (classroomId: string | undefined, stude
             auraScore: item.grade,
             overallGrade: item.grade || 0,
             activityType: 'aura'
+          });
+        }
+      });
+
+      // Add attendance data to the dateMap
+      attendanceData?.forEach(record => {
+        const date = record.date;
+        const attendanceGrade = record.status === 'Absent' ? 0 : 100;
+        
+        const existing = dateMap.get(date);
+        if (existing) {
+          // Include attendance in overall grade calculation
+          const grades = [existing.assignmentGrade, existing.auraScore, attendanceGrade].filter(g => g !== null) as number[];
+          existing.overallGrade = grades.reduce((a, b) => a + b, 0) / grades.length;
+        } else {
+          dateMap.set(date, {
+            date,
+            assignmentGrade: null,
+            auraScore: null,
+            overallGrade: attendanceGrade,
+            activityType: 'assignment'
           });
         }
       });

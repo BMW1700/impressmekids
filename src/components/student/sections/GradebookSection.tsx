@@ -173,7 +173,46 @@ export const GradebookSection = ({ studentId }: GradebookSectionProps) => {
               All Grades - {gradebook?.find((c) => c.id === showAllGrades)?.name}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-4">
+            {/* Attendance Summary */}
+            {gradebook?.find((c) => c.id === showAllGrades)?.attendanceAverage !== null && (
+              <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg border-2 border-blue-200 dark:border-blue-800">
+                <h4 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  <span>Attendance</span>
+                </h4>
+                <div className="flex items-center gap-4">
+                  <div className="text-3xl font-bold text-blue-600">
+                    {gradebook?.find((c) => c.id === showAllGrades)?.attendanceAverage?.toFixed(1)}%
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">
+                        Present: {gradebook?.find((c) => c.id === showAllGrades)?.daysPresent} days
+                      </span>
+                      <Badge className="bg-green-500 hover:bg-green-600">
+                        Present
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">
+                        Tardy: {gradebook?.find((c) => c.id === showAllGrades)?.daysTardy} days
+                      </span>
+                      <Badge className="bg-yellow-500 hover:bg-yellow-600">
+                        Tardy
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">
+                        Absent: {gradebook?.find((c) => c.id === showAllGrades)?.daysAbsent} days
+                      </span>
+                      <Badge variant="destructive">Absent</Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Assignments List */}
             {gradebook
               ?.find((c) => c.id === showAllGrades)
               ?.assignments.map((assignment) => (
