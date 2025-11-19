@@ -159,7 +159,7 @@ export const HomeSection = ({
       </div>
 
       {/* Activity Feed - Middle 30% */}
-      <ActivityFeed />
+      <ActivityFeed studentId={studentProfile.id} />
 
       {/* Quick Actions - Bottom 10% */}
       <div>
