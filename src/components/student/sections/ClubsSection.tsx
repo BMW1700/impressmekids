@@ -1,16 +1,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, Calendar, Bell } from "lucide-react";
+import { Users, Calendar, Bell, Plus } from "lucide-react";
 import { useStudentClubs } from "@/hooks/useStudentClubs";
 import { Loader2 } from "lucide-react";
+import { useState } from "react";
+import { CreateClubPostModal } from "@/components/student/CreateClubPostModal";
 
 interface ClubsSectionProps {
   studentId: string;
 }
 
 export const ClubsSection = ({ studentId }: ClubsSectionProps) => {
-  const { data: clubs, isLoading } = useStudentClubs(studentId);
+  const { data: clubs, isLoading, refetch } = useStudentClubs(studentId);
+  const [selectedClub, setSelectedClub] = useState<string | null>(null);
+  const [showPostModal, setShowPostModal] = useState(false);
 
   if (isLoading) {
     return (
@@ -55,8 +59,15 @@ export const ClubsSection = ({ studentId }: ClubsSectionProps) => {
                     View Posts
                   </Button>
                   {(club.userRole === "owner" || club.userRole === "moderator") && (
-                    <Button size="sm" className="flex-1">
-                      <Calendar className="h-4 w-4 mr-2" />
+                    <Button
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => {
+                        setSelectedClub(club.id);
+                        setShowPostModal(true);
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
                       New Post
                     </Button>
                   )}
@@ -75,6 +86,15 @@ export const ClubsSection = ({ studentId }: ClubsSectionProps) => {
             <Button>Browse Clubs</Button>
           </CardContent>
         </Card>
+      )}
+
+      {selectedClub && (
+        <CreateClubPostModal
+          open={showPostModal}
+          onOpenChange={setShowPostModal}
+          clubId={selectedClub}
+          onSuccess={() => refetch()}
+        />
       )}
     </div>
   );
