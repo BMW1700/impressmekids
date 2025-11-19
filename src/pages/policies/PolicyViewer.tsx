@@ -167,11 +167,15 @@ export default function PolicyViewer() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="system">System Description Document</SelectItem>
+                <SelectItem value="control-matrix">SOC 2 Control Matrix</SelectItem>
                 <SelectItem value="password">Password and MFA Policy</SelectItem>
                 <SelectItem value="access">Access Control Policy</SelectItem>
                 <SelectItem value="incident">Incident Response Policy</SelectItem>
                 <SelectItem value="change">Change Management Policy</SelectItem>
                 <SelectItem value="vertex">Google Vertex AI Security Controls</SelectItem>
+                <SelectItem value="vendor">Vendor Management Policy</SelectItem>
+                <SelectItem value="dataclass">Data Classification &amp; Handling Policy</SelectItem>
                 <SelectItem value="all">All Policies (Combined)</SelectItem>
               </SelectContent>
             </Select>
