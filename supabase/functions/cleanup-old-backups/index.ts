@@ -112,14 +112,51 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const cronSecret = Deno.env.get('CRON_SECRET');
 
-    // Handle authentication - allow both cron calls (no auth header) and manual admin calls
+    if (!cronSecret) {
+      return new Response(
+        JSON.stringify({ error: 'Server misconfiguration - CRON_SECRET not set' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // Require authentication - either admin JWT or cron secret
     const authHeader = req.headers.get('Authorization');
+    const cronSecretHeader = req.headers.get('X-Cron-Secret');
     let userId: string | null = null;
     let token: string | null = null;
+    let isCronJob = false;
 
-    // If Authorization header exists, this is a manual call - verify admin role
-    if (authHeader) {
+    if (!authHeader && !cronSecretHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - Authentication required' }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // Check if this is a cron job with valid secret
+    if (cronSecretHeader) {
+      if (cronSecretHeader !== cronSecret) {
+        console.error('Invalid cron secret provided');
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized - Invalid cron secret' }),
+          {
+            status: 401,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+      isCronJob = true;
+      console.log('Automated cleanup via cron job with valid secret');
+    } else if (authHeader) {
+      // Manual admin call - verify JWT and admin role
       token = authHeader.replace('Bearer ', '');
       
       // Direct REST API call for authentication
@@ -168,9 +205,8 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+      console.log('Manual cleanup initiated by admin');
     }
-    // If no Authorization header, this is a cron job call - proceed without authentication
-    console.log(authHeader ? 'Manual cleanup initiated by admin' : 'Automated cleanup via cron job');
 
     console.log('Starting cleanup of old backups (>180 days)...');
 

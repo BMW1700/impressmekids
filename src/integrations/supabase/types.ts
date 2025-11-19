@@ -2813,6 +2813,12 @@ export type Database = {
           teacher_name: string
         }[]
       }
+      get_student_group_ids: {
+        Args: { _student_id: string }
+        Returns: {
+          group_id: string
+        }[]
+      }
       get_student_parents_admin: {
         Args: { p_student_id: string }
         Returns: {

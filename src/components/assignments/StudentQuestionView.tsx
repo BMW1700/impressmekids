@@ -66,9 +66,14 @@ export const StudentQuestionView = ({
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
+      // Get signed URL with 24-hour expiration for teacher review
+      const { data: signedUrlData, error: urlError } = await supabase.storage
         .from('assignment-audio')
-        .getPublicUrl(fileName);
+        .createSignedUrl(uploadData.path, 86400); // 24 hours
+
+      if (urlError) throw urlError;
+
+      const publicUrl = signedUrlData.signedUrl;
 
       // Create AURA record with full analysis
       const { data: session } = await supabase.auth.getSession();
