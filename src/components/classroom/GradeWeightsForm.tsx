@@ -14,7 +14,7 @@ interface GradeWeightsFormProps {
 }
 
 export const GradeWeightsForm = ({
-  initialWeights = { test: 25, quiz: 25, homework: 25, attendance: 25 },
+  initialWeights = { test: 35, quiz: 30, homework: 25, attendance: 10 },
   onSave,
   isSaving = false,
 }: GradeWeightsFormProps) => {
