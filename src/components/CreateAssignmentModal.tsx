@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useAssignments } from "@/hooks/useAssignments";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface CreateAssignmentModalProps {
   open: boolean;
@@ -36,6 +37,7 @@ export const CreateAssignmentModal = ({
   const [previewMode, setPreviewMode] = useState(false);
   const [enableRealtimeCoaching, setEnableRealtimeCoaching] = useState(false);
   const [isPosted, setIsPosted] = useState(true);
+  const [category, setCategory] = useState<'Test' | 'Quiz' | 'Homework'>('Homework');
   const { toast } = useToast();
   const { createAssignment } = useAssignments(classroomId);
 
@@ -142,6 +144,7 @@ export const CreateAssignmentModal = ({
         title: title.trim(),
         description: description.trim() || undefined,
         passageText: passageText.trim(),
+        category,
         passageMetadata,
         dueDate: dueDate ? new Date(dueDate) : undefined,
         status: isPosted ? 'published' : 'draft',
@@ -158,6 +161,7 @@ export const CreateAssignmentModal = ({
       setPreviewMode(false);
       setEnableRealtimeCoaching(false);
       setIsPosted(true);
+      setCategory('Homework');
       onOpenChange(false);
       onSuccess?.();
     } catch (error: any) {
