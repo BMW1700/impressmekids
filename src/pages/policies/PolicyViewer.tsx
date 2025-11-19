@@ -6,8 +6,9 @@ import { PasswordMFAPolicy } from "./PasswordMFAPolicy";
 import { AccessControlPolicy } from "./AccessControlPolicy";
 import { IncidentResponsePolicy } from "./IncidentResponsePolicy";
 import { ChangeManagementPolicy } from "./ChangeManagementPolicy";
+import GoogleVertexSecurityControls from "./GoogleVertexSecurityControls";
 
-type PolicyType = "password" | "access" | "incident" | "change" | "all";
+type PolicyType = "password" | "access" | "incident" | "change" | "vertex" | "all";
 
 export default function PolicyViewer() {
   const [selectedPolicy, setSelectedPolicy] = useState<PolicyType>("password");
@@ -33,6 +34,10 @@ export default function PolicyViewer() {
       name: "Change Management Policy",
       component: <ChangeManagementPolicy />
     },
+    vertex: {
+      name: "Google Vertex AI Security Controls",
+      component: <GoogleVertexSecurityControls />
+    },
     all: {
       name: "All Policies (Combined)",
       component: (
@@ -44,6 +49,8 @@ export default function PolicyViewer() {
           <IncidentResponsePolicy />
           <div className="page-break" />
           <ChangeManagementPolicy />
+          <div className="page-break" />
+          <GoogleVertexSecurityControls />
         </>
       )
     }
@@ -136,6 +143,7 @@ export default function PolicyViewer() {
                 <SelectItem value="access">Access Control Policy</SelectItem>
                 <SelectItem value="incident">Incident Response Policy</SelectItem>
                 <SelectItem value="change">Change Management Policy</SelectItem>
+                <SelectItem value="vertex">Google Vertex AI Security Controls</SelectItem>
                 <SelectItem value="all">All Policies (Combined)</SelectItem>
               </SelectContent>
             </Select>
