@@ -11,8 +11,9 @@ import SystemDescription from "./SystemDescription";
 import ControlMatrix from "./ControlMatrix";
 import VendorManagementPolicy from "./VendorManagementPolicy";
 import DataClassificationPolicy from "./DataClassificationPolicy";
+import { BackupDisasterRecoveryPolicy } from "./BackupDisasterRecoveryPolicy";
 
-type PolicyType = "password" | "access" | "incident" | "change" | "vertex" | "system" | "control-matrix" | "vendor" | "dataclass" | "all";
+type PolicyType = "password" | "access" | "incident" | "change" | "vertex" | "system" | "control-matrix" | "vendor" | "dataclass" | "backup" | "all";
 
 export default function PolicyViewer() {
   const [selectedPolicy, setSelectedPolicy] = useState<PolicyType>("password");
@@ -58,6 +59,10 @@ export default function PolicyViewer() {
       name: "Data Classification & Handling Policy",
       component: <DataClassificationPolicy />
     },
+    backup: {
+      name: "Backup & Disaster Recovery Policy",
+      component: <BackupDisasterRecoveryPolicy />
+    },
     all: {
       name: "All Policies (Combined)",
       component: (
@@ -79,6 +84,8 @@ export default function PolicyViewer() {
           <VendorManagementPolicy />
           <div className="page-break" />
           <DataClassificationPolicy />
+          <div className="page-break" />
+          <BackupDisasterRecoveryPolicy />
         </>
       )
     }
@@ -176,6 +183,7 @@ export default function PolicyViewer() {
                 <SelectItem value="vertex">Google Vertex AI Security Controls</SelectItem>
                 <SelectItem value="vendor">Vendor Management Policy</SelectItem>
                 <SelectItem value="dataclass">Data Classification &amp; Handling Policy</SelectItem>
+                <SelectItem value="backup">Backup &amp; Disaster Recovery Policy</SelectItem>
                 <SelectItem value="all">All Policies (Combined)</SelectItem>
               </SelectContent>
             </Select>
