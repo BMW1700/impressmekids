@@ -33,6 +33,15 @@ export const Header = ({ showAuthButtons = true, onSignOut, children }: HeaderPr
           <div className="flex items-center gap-2">
             {children}
             
+            {/* Show Home button for authenticated users */}
+            {onSignOut && (
+              <Button variant="ghost" size="icon" asChild>
+                <Link to="/student/dashboard" aria-label="Go to dashboard">
+                  <Home className="h-5 w-5" />
+                </Link>
+              </Button>
+            )}
+            
             {showAuthButtons && !onSignOut && (
               <>
                 <Button variant="ghost" asChild>
