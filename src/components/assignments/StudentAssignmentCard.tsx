@@ -81,12 +81,30 @@ export function StudentAssignmentCard({ assignment, classroomId }: StudentAssign
     );
   };
 
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'Test':
+        return 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800';
+      case 'Quiz':
+        return 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800';
+      case 'Homework':
+        return 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800';
+      default:
+        return 'bg-muted text-muted-foreground';
+    }
+  };
+
   return (
     <Card className="shadow-card hover:shadow-purple transition-shadow">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <CardTitle className="text-lg">{assignment.title}</CardTitle>
+            {assignment.category && (
+              <Badge variant="outline" className={getCategoryColor(assignment.category)}>
+                {assignment.category}
+              </Badge>
+            )}
             {assignment.assignment_type === 'speaking' && (
               <span title="Speaking Assignment">
                 <Mic className="h-4 w-4 text-primary" />

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Upload, FileText, Eye, Calendar } from "lucide-react";
+import { Loader2, Upload, FileText, Eye, Calendar, BookOpen } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -210,6 +210,36 @@ export const CreateAssignmentModal = ({
                 rows={2}
                 maxLength={500}
               />
+            </div>
+
+            {/* Category */}
+            <div className="grid gap-2">
+              <Label htmlFor="category">Category</Label>
+              <Select value={category} onValueChange={(value: any) => setCategory(value)}>
+                <SelectTrigger id="category">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Test">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Test
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="Quiz">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Quiz
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="Homework">
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="h-4 w-4" />
+                      Homework
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid gap-2">
