@@ -1,6 +1,6 @@
 import NextBestActionCard from "@/components/aura/NextBestActionCard";
 import { Link } from "react-router-dom";
-import { Sparkles, Gamepad2, AlertCircle } from "lucide-react";
+import { Sparkles, Gamepad2, AlertCircle, BookOpen, CheckCircle, Trophy, Award } from "lucide-react";
 import { CompactProfileHeader } from "@/components/student/CompactProfileHeader";
 import { DashboardMetrics } from "@/components/student/DashboardMetrics";
 import { ActivityFeed } from "@/components/student/ActivityFeed";
@@ -26,6 +26,10 @@ export const HomeSection = ({
   assignmentStats,
 }: HomeSectionProps) => {
   const firstName = userProfile?.full_name?.split(" ")[0] || "Student";
+  const totalAssignments = assignmentStats?.total_assignments || 0;
+  const completedAssignments = assignmentStats?.completed_assignments || 0;
+  const gamesPlayed = studentProfile?.stats?.games_played || 0;
+  const gamesWon = studentProfile?.stats?.games_won || 0;
   
   return (
     <div className="space-y-8">
@@ -41,6 +45,73 @@ export const HomeSection = ({
             grade={studentProfile?.grade}
             avatarUrl={studentProfile?.avatar_url}
           />
+
+          {/* Quick Stats Bar */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Link to="/student/dashboard" className="group">
+              <Card className="border-primary/20 hover:border-primary/40 transition-all duration-200 hover:scale-105">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-blue-600/10">
+                      <BookOpen className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <div className="text-xl font-bold text-blue-600 dark:text-blue-400">{totalAssignments}</div>
+                      <div className="text-xs text-muted-foreground">Assignments</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link to="/student/dashboard" className="group">
+              <Card className="border-primary/20 hover:border-primary/40 transition-all duration-200 hover:scale-105">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-green-600/10">
+                      <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    </div>
+                    <div>
+                      <div className="text-xl font-bold text-green-600 dark:text-green-400">{completedAssignments}</div>
+                      <div className="text-xs text-muted-foreground">Completed</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link to="/games" className="group">
+              <Card className="border-primary/20 hover:border-primary/40 transition-all duration-200 hover:scale-105">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-purple-600/10">
+                      <Gamepad2 className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <div>
+                      <div className="text-xl font-bold text-purple-600 dark:text-purple-400">{gamesPlayed}</div>
+                      <div className="text-xs text-muted-foreground">Games Played</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link to="/games" className="group">
+              <Card className="border-primary/20 hover:border-primary/40 transition-all duration-200 hover:scale-105">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-orange-600/10">
+                      <Trophy className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                    </div>
+                    <div>
+                      <div className="text-xl font-bold text-orange-600 dark:text-orange-400">{gamesWon}</div>
+                      <div className="text-xs text-muted-foreground">Games Won</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          </div>
           
           {/* Welcome Message */}
           <div>
