@@ -48,6 +48,25 @@ export const useClassroomSyllabus = (classroomId: string | undefined) => {
   });
 };
 
+export const useSignedSyllabusUrl = (filePath: string | null) => {
+  return useQuery({
+    queryKey: ["signed-syllabus-url", filePath],
+    queryFn: async () => {
+      if (!filePath) return null;
+      
+      const { data, error } = await supabase.storage
+        .from("classroom-syllabus")
+        .createSignedUrl(filePath, 3600); // 1 hour expiry
+      
+      if (error) throw error;
+      return data.signedUrl;
+    },
+    enabled: !!filePath,
+    staleTime: 3000 * 1000, // Consider stale after 50 minutes
+    refetchInterval: 3000 * 1000, // Refresh every 50 minutes
+  });
+};
+
 export const useUploadSyllabus = () => {
   const queryClient = useQueryClient();
 

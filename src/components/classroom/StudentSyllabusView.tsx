@@ -1,11 +1,13 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { FileText, Download, Info } from "lucide-react";
+import { FileText, Download, Info, ExternalLink, AlertTriangle } from "lucide-react";
 import { GradeWeightsDisplay } from "./GradeWeightsDisplay";
 import {
   useClassroomSyllabus,
   useDownloadSyllabus,
+  useSignedSyllabusUrl,
 } from "@/hooks/useClassroomSyllabus";
 
 interface StudentSyllabusViewProps {
@@ -15,6 +17,10 @@ interface StudentSyllabusViewProps {
 export const StudentSyllabusView = ({ classroomId }: StudentSyllabusViewProps) => {
   const { data: syllabus, isLoading } = useClassroomSyllabus(classroomId);
   const downloadMutation = useDownloadSyllabus();
+  const { data: signedUrl, isLoading: isLoadingUrl } = useSignedSyllabusUrl(
+    syllabus?.file_url || null
+  );
+  const [pdfLoadError, setPdfLoadError] = useState(false);
 
   const handleDownload = () => {
     if (syllabus) {
@@ -62,10 +68,21 @@ export const StudentSyllabusView = ({ classroomId }: StudentSyllabusViewProps) =
                 {syllabus.file_name} • {formatFileSize(syllabus.file_size)}
               </CardDescription>
             </div>
-            <Button onClick={handleDownload} disabled={downloadMutation.isPending}>
-              <Download className="mr-2 h-4 w-4" />
-              Download
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleDownload} disabled={downloadMutation.isPending}>
+                <Download className="mr-2 h-4 w-4" />
+                Download
+              </Button>
+              {signedUrl && (
+                <Button 
+                  variant="outline"
+                  onClick={() => window.open(signedUrl, '_blank')}
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Open in New Tab
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -79,11 +96,58 @@ export const StudentSyllabusView = ({ classroomId }: StudentSyllabusViewProps) =
 
           {/* PDF Viewer */}
           <div className="border rounded-lg overflow-hidden bg-muted">
-            <iframe
-              src={`/api/placeholder/800/600`}
-              className="w-full h-[600px]"
-              title="Course Syllabus"
-            />
+            {isLoadingUrl ? (
+              <div className="w-full h-[600px] flex items-center justify-center">
+                <div className="text-center">
+                  <FileText className="h-12 w-12 animate-pulse mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Loading syllabus...</p>
+                </div>
+              </div>
+            ) : signedUrl ? (
+              <>
+                {syllabus.mime_type === 'application/pdf' ? (
+                  <>
+                    <iframe
+                      src={signedUrl}
+                      className="w-full h-[600px]"
+                      title="Course Syllabus"
+                      onError={() => setPdfLoadError(true)}
+                      onLoad={() => setPdfLoadError(false)}
+                    />
+                    {pdfLoadError && (
+                      <Alert variant="destructive" className="mt-2">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertDescription>
+                          Your browser cannot display PDFs inline. Please download the file or open in a new tab.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </>
+                ) : (syllabus.mime_type?.includes('word') || syllabus.mime_type?.includes('document')) ? (
+                  <div className="w-full h-[600px] flex items-center justify-center bg-muted">
+                    <div className="text-center space-y-4">
+                      <FileText className="h-16 w-16 mx-auto text-muted-foreground" />
+                      <div>
+                        <p className="font-semibold">Word Document</p>
+                        <p className="text-sm text-muted-foreground">
+                          Word documents cannot be previewed. Please download to view.
+                        </p>
+                      </div>
+                      <Button onClick={handleDownload}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Download Document
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <div className="w-full h-[600px] flex items-center justify-center">
+                <p className="text-sm text-muted-foreground">
+                  Unable to display preview. Use the download button above.
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
