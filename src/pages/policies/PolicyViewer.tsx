@@ -10,8 +10,9 @@ import GoogleVertexSecurityControls from "./GoogleVertexSecurityControls";
 import SystemDescription from "./SystemDescription";
 import ControlMatrix from "./ControlMatrix";
 import VendorManagementPolicy from "./VendorManagementPolicy";
+import DataClassificationPolicy from "./DataClassificationPolicy";
 
-type PolicyType = "password" | "access" | "incident" | "change" | "vertex" | "system" | "control-matrix" | "vendor" | "all";
+type PolicyType = "password" | "access" | "incident" | "change" | "vertex" | "system" | "control-matrix" | "vendor" | "dataclass" | "all";
 
 export default function PolicyViewer() {
   const [selectedPolicy, setSelectedPolicy] = useState<PolicyType>("password");
@@ -53,6 +54,10 @@ export default function PolicyViewer() {
       name: "Vendor Management Policy",
       component: <VendorManagementPolicy />
     },
+    dataclass: {
+      name: "Data Classification & Handling Policy",
+      component: <DataClassificationPolicy />
+    },
     all: {
       name: "All Policies (Combined)",
       component: (
@@ -72,6 +77,8 @@ export default function PolicyViewer() {
           <GoogleVertexSecurityControls />
           <div className="page-break" />
           <VendorManagementPolicy />
+          <div className="page-break" />
+          <DataClassificationPolicy />
         </>
       )
     }
