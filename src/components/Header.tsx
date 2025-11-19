@@ -33,7 +33,7 @@ export const Header = ({ showAuthButtons = true, onSignOut, children }: HeaderPr
           <div className="flex items-center gap-2">
             {children}
             
-            {showAuthButtons && (
+            {showAuthButtons && !onSignOut && (
               <>
                 <Button variant="ghost" asChild>
                   <Link to="/auth">Sign In</Link>
