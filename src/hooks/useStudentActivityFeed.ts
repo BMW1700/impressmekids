@@ -28,6 +28,18 @@ export const useStudentActivityFeed = (studentId: string | undefined) => {
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
+      // First, fetch student's classroom IDs
+      const { data: classroomData } = await supabase
+        .from("classroom_students")
+        .select("classroom_id")
+        .eq("student_id", studentId);
+
+      const classroomIds = classroomData?.map(c => c.classroom_id) || [];
+
+      if (classroomIds.length === 0) {
+        return []; // Student not enrolled in any classrooms
+      }
+
       // Fetch recent assignments (posted in last 7 days)
       const { data: assignments } = await supabase
         .from("assignments")
@@ -43,13 +55,7 @@ export const useStudentActivityFeed = (studentId: string | undefined) => {
         `)
         .eq("is_posted", true)
         .gte("created_at", sevenDaysAgo.toISOString())
-        .in(
-          "classroom_id",
-          supabase
-            .from("classroom_students")
-            .select("classroom_id")
-            .eq("student_id", studentId)
-        );
+        .in("classroom_id", classroomIds);
 
       assignments?.forEach((assignment: any) => {
         const createdAt = new Date(assignment.created_at);
@@ -73,7 +79,7 @@ export const useStudentActivityFeed = (studentId: string | undefined) => {
           description: assignment.title,
           time: formatDistanceToNow(createdAt, { addSuffix: true }),
           timestamp: createdAt,
-          icon: null, // Will be set in component
+          icon: null,
           color: "text-blue-600 dark:text-blue-400",
           bgColor: "bg-blue-600/10",
           badge,
@@ -113,12 +119,12 @@ export const useStudentActivityFeed = (studentId: string | undefined) => {
           color: "text-green-600 dark:text-green-400",
           bgColor: "bg-green-600/10",
           badge: isNew ? "New" : undefined,
-          link: `/classrooms/${submission.assignments.classroom_id}`,
+          link: `/student/dashboard`,
           classroomName: submission.assignments.classrooms?.name,
         });
       });
 
-      // Fetch recent announcements
+      // Fetch recent announcements (posted in last 7 days)
       const { data: announcements } = await supabase
         .from("classroom_announcements")
         .select(`
@@ -130,29 +136,23 @@ export const useStudentActivityFeed = (studentId: string | undefined) => {
           classrooms(name)
         `)
         .gte("created_at", sevenDaysAgo.toISOString())
-        .in(
-          "classroom_id",
-          supabase
-            .from("classroom_students")
-            .select("classroom_id")
-            .eq("student_id", studentId)
-        )
+        .in("classroom_id", classroomIds)
         .order("created_at", { ascending: false });
 
       announcements?.forEach((announcement: any) => {
         const createdAt = new Date(announcement.created_at);
         const isNew = now.getTime() - createdAt.getTime() < 24 * 60 * 60 * 1000;
-        
+
         activities.push({
           id: announcement.id,
           type: "announcement",
-          title: "Class Announcement",
+          title: "New Announcement",
           description: announcement.title,
           time: formatDistanceToNow(createdAt, { addSuffix: true }),
           timestamp: createdAt,
           icon: null,
-          color: "text-purple-600 dark:text-purple-400",
-          bgColor: "bg-purple-600/10",
+          color: "text-orange-600 dark:text-orange-400",
+          bgColor: "bg-orange-600/10",
           badge: isNew ? "New" : undefined,
           link: `/classrooms/${announcement.classroom_id}`,
           classroomName: announcement.classrooms?.name,
@@ -172,26 +172,29 @@ export const useStudentActivityFeed = (studentId: string | undefined) => {
           classrooms(name)
         `)
         .eq("is_posted", true)
-        .gte("event_date", now.toISOString().split("T")[0])
-        .lte("event_date", sevenDaysFromNow.toISOString().split("T")[0])
-        .in(
-          "classroom_id",
-          supabase
-            .from("classroom_students")
-            .select("classroom_id")
-            .eq("student_id", studentId)
-        )
+        .gte("event_date", now.toISOString().split('T')[0])
+        .lte("event_date", sevenDaysFromNow.toISOString().split('T')[0])
+        .in("classroom_id", classroomIds)
         .order("event_date", { ascending: true });
 
       events?.forEach((event: any) => {
         const eventDate = new Date(event.event_date);
-        const daysUntil = Math.ceil((eventDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const eventDateOnly = new Date(eventDate);
+        eventDateOnly.setHours(0, 0, 0, 0);
         
-        let badge;
-        if (daysUntil === 0) badge = "Today";
-        else if (daysUntil === 1) badge = "Tomorrow";
-        else if (daysUntil <= 7) badge = `In ${daysUntil} days`;
+        const daysUntil = Math.ceil((eventDateOnly.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         
+        let badge = undefined;
+        if (daysUntil === 0) {
+          badge = "Today";
+        } else if (daysUntil === 1) {
+          badge = "Tomorrow";
+        } else if (daysUntil <= 7) {
+          badge = `In ${daysUntil} days`;
+        }
+
         activities.push({
           id: event.id,
           type: "event",
@@ -200,49 +203,49 @@ export const useStudentActivityFeed = (studentId: string | undefined) => {
           time: formatDistanceToNow(eventDate, { addSuffix: true }),
           timestamp: eventDate,
           icon: null,
-          color: "text-orange-600 dark:text-orange-400",
-          bgColor: "bg-orange-600/10",
+          color: "text-purple-600 dark:text-purple-400",
+          bgColor: "bg-purple-600/10",
           badge,
-          link: "/student/calendar",
+          link: `/student/calendar`,
           classroomName: event.classrooms?.name,
         });
       });
 
-      // Fetch recent AURA achievements (last 7 days with high grades)
+      // Fetch recent AURA achievements (last 7 days with notable improvements)
       const { data: auraRecords } = await supabase
         .from("aura_records")
-        .select("id, grade, created_at, wpm, clarity, confidence")
+        .select("id, clarity, confidence, wpm, created_at")
         .eq("profile_id", studentId)
         .gte("created_at", sevenDaysAgo.toISOString())
-        .gte("grade", 85)
         .order("created_at", { ascending: false })
-        .limit(5);
+        .limit(20);
 
-      auraRecords?.forEach((record: any) => {
-        const createdAt = new Date(record.created_at);
-        const isNew = now.getTime() - createdAt.getTime() < 24 * 60 * 60 * 1000;
+      // Find significant improvements
+      if (auraRecords && auraRecords.length > 1) {
+        const recentRecord = auraRecords[0];
+        const previousAvg = auraRecords.slice(1).reduce((sum, r) => sum + r.clarity, 0) / (auraRecords.length - 1);
         
-        let achievementText = "Great reading session!";
-        if (record.grade >= 95) achievementText = "Perfect reading score!";
-        else if (record.grade >= 90) achievementText = "Excellent reading performance!";
-        
-        activities.push({
-          id: record.id,
-          type: "achievement",
-          title: "AURA Achievement",
-          description: achievementText,
-          time: formatDistanceToNow(createdAt, { addSuffix: true }),
-          timestamp: createdAt,
-          icon: null,
-          color: "text-yellow-600 dark:text-yellow-400",
-          bgColor: "bg-yellow-600/10",
-          badge: isNew ? "New" : undefined,
-          link: "/student/aura-practice",
-        });
-      });
+        if (recentRecord.clarity > previousAvg + 10) {
+          activities.push({
+            id: recentRecord.id,
+            type: "achievement",
+            title: "AURA Achievement",
+            description: `Reading clarity improved by ${Math.round(recentRecord.clarity - previousAvg)}%!`,
+            time: formatDistanceToNow(new Date(recentRecord.created_at), { addSuffix: true }),
+            timestamp: new Date(recentRecord.created_at),
+            icon: null,
+            color: "text-pink-600 dark:text-pink-400",
+            bgColor: "bg-pink-600/10",
+            badge: "Achievement",
+            link: `/student/aura-practice`,
+          });
+        }
+      }
 
       // Sort all activities by timestamp (most recent first)
-      return activities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      activities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+      return activities;
     },
     enabled: !!studentId,
   });
