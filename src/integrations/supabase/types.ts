@@ -774,6 +774,63 @@ export type Database = {
           },
         ]
       }
+      classroom_syllabus: {
+        Row: {
+          classroom_id: string
+          created_at: string
+          file_name: string
+          file_size: number
+          file_url: string
+          grade_weights: Json
+          id: string
+          is_posted: boolean
+          mime_type: string
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          classroom_id: string
+          created_at?: string
+          file_name: string
+          file_size: number
+          file_url: string
+          grade_weights?: Json
+          id?: string
+          is_posted?: boolean
+          mime_type: string
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          classroom_id?: string
+          created_at?: string
+          file_name?: string
+          file_size?: number
+          file_url?: string
+          grade_weights?: Json
+          id?: string
+          is_posted?: boolean
+          mime_type?: string
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "classroom_syllabus_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: true
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "classroom_syllabus_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classrooms: {
         Row: {
           created_at: string

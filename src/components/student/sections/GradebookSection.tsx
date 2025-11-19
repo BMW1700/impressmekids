@@ -56,21 +56,26 @@ export const GradebookSection = ({ studentId }: GradebookSectionProps) => {
             <Card key={classroom.id}>
               <CardHeader>
                 <div className="flex items-start justify-between">
-                  <div>
+                  <div className="flex-1">
                     <CardTitle className="text-2xl">{classroom.name}</CardTitle>
-                    <div className="flex items-center gap-2 mt-2">
-                      {classroom.currentGrade !== null ? (
+                    <div className="flex items-center gap-4 mt-2">
+                      {classroom.finalGrade !== null ? (
                         <>
-                          <span className="text-3xl font-bold text-primary">
-                            {classroom.currentGrade.toFixed(1)}%
-                          </span>
-                          {classroom.currentGrade >= 90 ? (
-                            <TrendingUp className="h-5 w-5 text-green-500" />
-                          ) : classroom.currentGrade >= 70 ? (
-                            <Minus className="h-5 w-5 text-yellow-500" />
-                          ) : (
-                            <TrendingDown className="h-5 w-5 text-red-500" />
-                          )}
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1">Final Grade (Weighted)</div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-3xl font-bold text-primary">
+                                {classroom.finalGrade.toFixed(1)}%
+                              </span>
+                              {classroom.finalGrade >= 90 ? (
+                                <TrendingUp className="h-5 w-5 text-green-500" />
+                              ) : classroom.finalGrade >= 70 ? (
+                                <Minus className="h-5 w-5 text-yellow-500" />
+                              ) : (
+                                <TrendingDown className="h-5 w-5 text-red-500" />
+                              )}
+                            </div>
+                          </div>
                         </>
                       ) : (
                         <span className="text-muted-foreground">No grades yet</span>
@@ -94,6 +99,50 @@ export const GradebookSection = ({ studentId }: GradebookSectionProps) => {
                   </div>
                 </div>
               </CardHeader>
+
+              {/* Category Breakdown */}
+              {classroom.categoryBreakdown && (
+                <CardContent className="pt-0">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-lg bg-muted/50">
+                    <div className="space-y-1">
+                      <div className="text-xs text-muted-foreground font-medium">Tests</div>
+                      <div className="text-lg font-bold text-foreground">
+                        {classroom.categoryBreakdown.test.average.toFixed(1)}%
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {classroom.categoryBreakdown.test.weight}% weight • {classroom.categoryBreakdown.test.count} graded
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-xs text-muted-foreground font-medium">Quizzes</div>
+                      <div className="text-lg font-bold text-foreground">
+                        {classroom.categoryBreakdown.quiz.average.toFixed(1)}%
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {classroom.categoryBreakdown.quiz.weight}% weight • {classroom.categoryBreakdown.quiz.count} graded
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-xs text-muted-foreground font-medium">Homework</div>
+                      <div className="text-lg font-bold text-foreground">
+                        {classroom.categoryBreakdown.homework.average.toFixed(1)}%
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {classroom.categoryBreakdown.homework.weight}% weight • {classroom.categoryBreakdown.homework.count} graded
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-xs text-muted-foreground font-medium">Attendance</div>
+                      <div className="text-lg font-bold text-foreground">
+                        {classroom.categoryBreakdown.attendance.percentage.toFixed(1)}%
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {classroom.categoryBreakdown.attendance.weight}% weight
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              )}
 
               {classroom.upcomingAssignments.length > 0 && (
                 <CardContent>
