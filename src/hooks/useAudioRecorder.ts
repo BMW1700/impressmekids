@@ -102,10 +102,14 @@ export const useAudioRecorder = (options: AudioRecorderOptions = {}) => {
 
       if (error) throw error;
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
+      // Get signed URL with 24-hour expiration for teacher review
+      const { data: signedUrlData, error: urlError } = await supabase.storage
         .from('assignment-audio')
-        .getPublicUrl(data.path);
+        .createSignedUrl(data.path, 86400); // 24 hours
+
+      if (urlError) throw urlError;
+
+      const publicUrl = signedUrlData.signedUrl;
 
       if (options.onRecordingComplete) {
         options.onRecordingComplete(publicUrl, duration);
