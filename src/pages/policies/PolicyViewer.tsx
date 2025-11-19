@@ -7,8 +7,10 @@ import { AccessControlPolicy } from "./AccessControlPolicy";
 import { IncidentResponsePolicy } from "./IncidentResponsePolicy";
 import { ChangeManagementPolicy } from "./ChangeManagementPolicy";
 import GoogleVertexSecurityControls from "./GoogleVertexSecurityControls";
+import SystemDescription from "./SystemDescription";
+import ControlMatrix from "./ControlMatrix";
 
-type PolicyType = "password" | "access" | "incident" | "change" | "vertex" | "all";
+type PolicyType = "password" | "access" | "incident" | "change" | "vertex" | "system" | "control-matrix" | "all";
 
 export default function PolicyViewer() {
   const [selectedPolicy, setSelectedPolicy] = useState<PolicyType>("password");
@@ -18,6 +20,14 @@ export default function PolicyViewer() {
   };
 
   const policies = {
+    system: {
+      name: "System Description Document",
+      component: <SystemDescription />
+    },
+    "control-matrix": {
+      name: "SOC 2 Control Matrix",
+      component: <ControlMatrix />
+    },
     password: {
       name: "Password and MFA Policy",
       component: <PasswordMFAPolicy />
@@ -42,6 +52,10 @@ export default function PolicyViewer() {
       name: "All Policies (Combined)",
       component: (
         <>
+          <SystemDescription />
+          <div className="page-break" />
+          <ControlMatrix />
+          <div className="page-break" />
           <PasswordMFAPolicy />
           <div className="page-break" />
           <AccessControlPolicy />
