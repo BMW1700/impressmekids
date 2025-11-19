@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic, Eye, EyeOff, UserCheck, BarChart3, Calendar } from "lucide-react";
 import { ClassroomLeaderboard } from "@/components/ClassroomLeaderboard";
+import { AttendanceTab } from "@/components/teacher/AttendanceTab";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -624,7 +625,7 @@ const ClassroomDetail = () => {
           )}
 
           <Tabs defaultValue={searchParams.get('tab') || (isStudent ? "assignments" : "students")} className="mb-8">
-            <TabsList className={cn("grid w-full h-auto p-2 bg-muted/50 rounded-xl", isTeacher ? "grid-cols-8 gap-2" : "grid-cols-6 gap-2")}>
+            <TabsList className={cn("grid w-full h-auto p-2 bg-muted/50 rounded-xl", isTeacher ? "grid-cols-9 gap-2" : "grid-cols-6 gap-2")}>
               {isTeacher && (
                 <TabsTrigger 
                   value="students" 
@@ -632,6 +633,15 @@ const ClassroomDetail = () => {
                 >
                   <Users className="mr-2 h-4 w-4" />
                   Students
+                </TabsTrigger>
+              )}
+              {isTeacher && (
+                <TabsTrigger 
+                  value="attendance"
+                  className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
+                >
+                  <UserCheck className="mr-2 h-4 w-4" />
+                  Attendance
                 </TabsTrigger>
               )}
               {isTeacher && (
@@ -751,6 +761,23 @@ const ClassroomDetail = () => {
               ))}
                 </div>
               )}
+              </TabsContent>
+            )}
+
+            {isTeacher && (
+              <TabsContent value="attendance" className="mt-6">
+                <div className="mb-6">
+                  <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Attendance</h2>
+                  <p className="text-muted-foreground mt-1">Track and manage student attendance</p>
+                </div>
+                <AttendanceTab 
+                  classroomId={id!} 
+                  students={students.map(s => ({
+                    student_id: s.student_id,
+                    full_name: s.profiles?.full_name || 'Student',
+                    avatar_url: s.student_profiles?.[0]?.avatar_url
+                  }))}
+                />
               </TabsContent>
             )}
 

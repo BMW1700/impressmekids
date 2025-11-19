@@ -20,6 +20,11 @@ interface GradebookClassroom {
     status: "Graded" | "Submitted" | "Incomplete" | "Past Due" | "Submitted Late";
     grade: number | null;
   }[];
+  attendanceAverage: number | null;
+  totalDaysRecorded: number;
+  daysPresent: number;
+  daysTardy: number;
+  daysAbsent: number;
 }
 
 export const useStudentGradebook = (studentId: string | undefined) => {
@@ -119,6 +124,29 @@ export const useStudentGradebook = (studentId: string | undefined) => {
             status: a.status,
           }));
 
+        // Fetch attendance records for this classroom
+        const { data: attendanceRecords } = await supabase
+          .from("attendance_records")
+          .select("status")
+          .eq("classroom_id", classroom.classroom_id)
+          .eq("student_id", studentId);
+
+        // Calculate attendance metrics
+        let daysPresent = 0;
+        let daysTardy = 0;
+        let daysAbsent = 0;
+
+        attendanceRecords?.forEach((record) => {
+          if (record.status === "Present") daysPresent++;
+          else if (record.status === "Tardy") daysTardy++;
+          else if (record.status === "Absent") daysAbsent++;
+        });
+
+        const totalDaysRecorded = daysPresent + daysTardy + daysAbsent;
+        const attendancePoints = daysPresent * 100 + daysTardy * 100 + daysAbsent * 0;
+        const attendanceAverage =
+          totalDaysRecorded > 0 ? attendancePoints / totalDaysRecorded : null;
+
         // Mock grade history (in real implementation, you'd track this over time)
         const gradeHistory = gradedCount > 0
           ? [{ date: new Date().toISOString(), grade: currentGrade || 0 }]
@@ -132,6 +160,11 @@ export const useStudentGradebook = (studentId: string | undefined) => {
           classAverageHistory: [], // Would need to calculate from all students
           upcomingAssignments,
           assignments: assignmentsList,
+          attendanceAverage,
+          totalDaysRecorded,
+          daysPresent,
+          daysTardy,
+          daysAbsent,
         });
       }
 

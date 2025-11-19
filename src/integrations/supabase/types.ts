@@ -385,6 +385,61 @@ export type Database = {
           },
         ]
       }
+      attendance_records: {
+        Row: {
+          classroom_id: string
+          created_at: string | null
+          date: string
+          id: string
+          recorded_by: string
+          status: string
+          student_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          classroom_id: string
+          created_at?: string | null
+          date: string
+          id?: string
+          recorded_by: string
+          status: string
+          student_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          classroom_id?: string
+          created_at?: string | null
+          date?: string
+          id?: string
+          recorded_by?: string
+          status?: string
+          student_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       aura_access_log: {
         Row: {
           access_context: string | null
