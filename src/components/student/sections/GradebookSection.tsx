@@ -6,7 +6,6 @@ import { Loader2, TrendingUp, TrendingDown, Minus, Eye } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { useState } from "react";
 import { format } from "date-fns";
-import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +21,7 @@ export const GradebookSection = ({ studentId }: GradebookSectionProps) => {
   const { data: gradebook, isLoading } = useStudentGradebook(studentId);
   const [selectedClassroom, setSelectedClassroom] = useState<string | null>(null);
   const [showAllGrades, setShowAllGrades] = useState<string | null>(null);
-  const navigate = useNavigate();
+  const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
 
   if (isLoading) {
     return (
@@ -195,18 +194,58 @@ export const GradebookSection = ({ studentId }: GradebookSectionProps) => {
                         {assignment.grade.toFixed(1)}%
                       </span>
                     )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => navigate(`/teacher/review-submission/${assignment.id}`)}
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      View Details
-                    </Button>
+                    {assignment.status === "Graded" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSelectedAssignment(assignment)}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Details
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assignment Details Dialog */}
+      <Dialog open={!!selectedAssignment} onOpenChange={() => setSelectedAssignment(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Assignment Details</DialogTitle>
+          </DialogHeader>
+          {selectedAssignment && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold text-lg">{selectedAssignment.title}</h3>
+                <p className="text-sm text-muted-foreground">
+                  Due: {format(new Date(selectedAssignment.dueDate), "MMMM d, yyyy")}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
+                {getStatusBadge(selectedAssignment.status)}
+                {selectedAssignment.grade !== null && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Your Grade</p>
+                    <p className="text-2xl font-bold text-primary">
+                      {selectedAssignment.grade.toFixed(1)}%
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="font-semibold mb-2">Teacher Feedback</h4>
+                <p className="text-muted-foreground">
+                  No teacher feedback available yet.
+                </p>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
