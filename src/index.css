@@ -373,3 +373,23 @@ All colors MUST be HSL.
     color: hsl(var(--muted-foreground));
   }
 }
+
+/* Custom progress bar colors for dashboard metrics */
+.progress-blue [data-state="complete"] {
+  background: hsl(221.2 83.2% 53.3%);
+}
+.progress-green [data-state="complete"] {
+  background: hsl(142.1 76.2% 36.3%);
+}
+.progress-yellow [data-state="complete"] {
+  background: hsl(47.9 95.8% 53.1%);
+}
+.progress-purple [data-state="complete"] {
+  background: hsl(262.1 83.3% 57.8%);
+}
+.progress-orange [data-state="complete"] {
+  background: hsl(24.6 95% 53.1%);
+}
+.progress-pink [data-state="complete"] {
+  background: hsl(330.4 81.2% 60.4%);
+}

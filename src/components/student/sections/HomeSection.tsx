@@ -1,9 +1,9 @@
-import NextBestActionCard from "@/components/aura/NextBestActionCard";
 import { Link } from "react-router-dom";
 import { Sparkles, Gamepad2, AlertCircle, BookOpen, CheckCircle, Trophy, Award } from "lucide-react";
 import { CompactProfileHeader } from "@/components/student/CompactProfileHeader";
 import { DashboardMetrics } from "@/components/student/DashboardMetrics";
 import { ActivityFeed } from "@/components/student/ActivityFeed";
+import { SmartNextAction } from "@/components/student/SmartNextAction";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -143,8 +143,11 @@ export const HomeSection = ({
         </div>
       </div>
 
-      {/* AI Recommendation */}
-      <NextBestActionCard />
+      {/* AI-Powered Smart Recommendation */}
+      <SmartNextAction 
+        assignmentStats={assignmentStats}
+        studentStats={studentProfile?.stats}
+      />
 
       {/* Dashboard Metrics - Middle 40% */}
       <div>
