@@ -100,7 +100,16 @@ export const ActivityFeed = ({ studentId }: ActivityFeedProps) => {
                         )}
                       </div>
                       {activity.badge && (
-                        <Badge variant="outline" className="text-xs shrink-0">
+                        <Badge 
+                          variant="outline" 
+                          className={`text-xs shrink-0 ${
+                            activity.badgeColor === 'red' ? 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-300' : 
+                            activity.badgeColor === 'orange' ? 'bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-900/30 dark:text-orange-300' :
+                            activity.badgeColor === 'yellow' ? 'bg-yellow-100 text-yellow-700 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                            activity.badgeColor === 'blue' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300' : 
+                            ''
+                          }`}
+                        >
                           {activity.badge}
                         </Badge>
                       )}
