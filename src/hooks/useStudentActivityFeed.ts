@@ -13,8 +13,10 @@ export interface ActivityItem {
   color: string;
   bgColor: string;
   badge?: string;
+  badgeColor?: string;
   link: string;
   classroomName?: string;
+  urgency?: number;
 }
 
 export const useStudentActivityFeed = (studentId: string | undefined) => {
@@ -40,7 +42,7 @@ export const useStudentActivityFeed = (studentId: string | undefined) => {
         return []; // Student not enrolled in any classrooms
       }
 
-      // Fetch recent assignments (posted in last 7 days)
+      // Fetch ALL posted assignments (no date filter)
       const { data: assignments } = await supabase
         .from("assignments")
         .select(`
@@ -54,37 +56,76 @@ export const useStudentActivityFeed = (studentId: string | undefined) => {
           classrooms(name)
         `)
         .eq("is_posted", true)
-        .gte("created_at", sevenDaysAgo.toISOString())
-        .in("classroom_id", classroomIds);
+        .eq("status", "published")
+        .in("classroom_id", classroomIds)
+        .order("due_date", { ascending: true, nullsFirst: false });
+
+      // Get all completed submissions to filter them out
+      const { data: completedSubmissions } = await supabase
+        .from("assignment_submissions")
+        .select("assignment_id, status")
+        .eq("student_id", studentId)
+        .in("status", ["graded", "completed"]);
+
+      const completedAssignmentIds = new Set(
+        completedSubmissions?.map(s => s.assignment_id) || []
+      );
 
       assignments?.forEach((assignment: any) => {
+        // Skip completed assignments
+        if (completedAssignmentIds.has(assignment.id)) return;
+
         const createdAt = new Date(assignment.created_at);
         const dueDate = assignment.due_date ? new Date(assignment.due_date) : null;
-        const isNew = now.getTime() - createdAt.getTime() < 24 * 60 * 60 * 1000;
         
-        let badge = isNew ? "New" : undefined;
+        let badge = undefined;
+        let badgeColor = undefined;
+        let urgency = 0;
+        
         if (dueDate) {
-          const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-          if (daysUntilDue <= 2 && daysUntilDue > 0) {
+          const hoursUntilDue = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+          const daysUntilDue = Math.ceil(hoursUntilDue / 24);
+          
+          if (hoursUntilDue < 0) {
+            badge = "Past Due";
+            badgeColor = "red";
+            urgency = 1000;
+          } else if (hoursUntilDue < 24) {
+            badge = "Due Today";
+            badgeColor = "orange";
+            urgency = 900;
+          } else if (daysUntilDue <= 2) {
             badge = `Due in ${daysUntilDue} day${daysUntilDue > 1 ? 's' : ''}`;
-          } else if (daysUntilDue === 0) {
-            badge = "Due today";
+            badgeColor = "yellow";
+            urgency = 800;
+          } else if (daysUntilDue <= 7) {
+            urgency = 700;
           }
+        }
+        
+        // Add "New" badge if created in last 24h and no due date badge
+        const isNew = now.getTime() - createdAt.getTime() < 24 * 60 * 60 * 1000;
+        if (isNew && !badge) {
+          badge = "New";
+          badgeColor = "blue";
+          urgency = 600;
         }
 
         activities.push({
           id: assignment.id,
           type: "assignment",
-          title: `New ${assignment.category}`,
+          title: `${assignment.category}`,
           description: assignment.title,
-          time: formatDistanceToNow(createdAt, { addSuffix: true }),
+          time: dueDate ? `Due ${dueDate.toLocaleDateString()}` : formatDistanceToNow(createdAt, { addSuffix: true }),
           timestamp: createdAt,
           icon: null,
-          color: "text-blue-600 dark:text-blue-400",
-          bgColor: "bg-blue-600/10",
+          color: badge === "Past Due" ? "text-red-600 dark:text-red-400" : "text-blue-600 dark:text-blue-400",
+          bgColor: badge === "Past Due" ? "bg-red-600/10" : "bg-blue-600/10",
           badge,
+          badgeColor,
           link: `/classrooms/${assignment.classroom_id}`,
           classroomName: assignment.classrooms?.name,
+          urgency,
         });
       });
 
