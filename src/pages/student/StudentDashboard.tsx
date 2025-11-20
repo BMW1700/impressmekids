@@ -97,7 +97,7 @@ const StudentDashboard = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header onSignOut={handleSignOut} />
+      <Header onSignOut={handleSignOut} studentId={profile?.id} />
       <div className="flex flex-1">
         <StudentDashboardSidebar activeSection={activeSection} onSectionChange={setActiveSection} />
         <main className="flex-1 overflow-y-auto">

@@ -2,14 +2,16 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Home } from "lucide-react";
 import { ReactNode } from "react";
+import { StudentNotificationBell } from "@/components/student/StudentNotificationBell";
 
 interface HeaderProps {
   showAuthButtons?: boolean;
   onSignOut?: () => void;
   children?: ReactNode;
+  studentId?: string;
 }
 
-export const Header = ({ showAuthButtons = true, onSignOut, children }: HeaderProps) => {
+export const Header = ({ showAuthButtons = true, onSignOut, children, studentId }: HeaderProps) => {
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
       <div className="container mx-auto px-4 py-4">
@@ -32,6 +34,9 @@ export const Header = ({ showAuthButtons = true, onSignOut, children }: HeaderPr
           
           <div className="flex items-center gap-2">
             {children}
+            
+            {/* Show notification bell for students */}
+            {studentId && <StudentNotificationBell studentId={studentId} />}
             
             {/* Show Home button for authenticated users */}
             {onSignOut && (
