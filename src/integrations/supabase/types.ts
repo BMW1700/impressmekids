@@ -18,7 +18,6 @@ export type Database = {
         Row: {
           created_at: string
           denial_reason: string | null
-          district_code: string
           district_id: string
           district_name: string
           email: string
@@ -34,7 +33,6 @@ export type Database = {
         Insert: {
           created_at?: string
           denial_reason?: string | null
-          district_code: string
           district_id: string
           district_name: string
           email: string
@@ -50,7 +48,6 @@ export type Database = {
         Update: {
           created_at?: string
           denial_reason?: string | null
-          district_code?: string
           district_id?: string
           district_name?: string
           email?: string
