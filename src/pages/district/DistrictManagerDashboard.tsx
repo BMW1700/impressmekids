@@ -95,6 +95,11 @@ const DistrictManagerDashboard = () => {
     setLoading(false);
   };
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
+  };
+
   const handleCreateDistrict = async () => {
     if (!newDistrictName.trim()) {
       toast.error("Please enter a district name");
@@ -156,7 +161,7 @@ const DistrictManagerDashboard = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Header />
+      <Header onSignOut={handleSignOut} />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
         <div className="mb-8">
           <h1 className="text-3xl font-bold flex items-center gap-2">
