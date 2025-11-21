@@ -33,7 +33,7 @@ export const Header = ({ showAuthButtons = true, onSignOut, children, studentId 
               <h1 className="text-xl font-bold bg-gradient-hero bg-clip-text text-transparent group-hover:opacity-80 transition-opacity">
                 ImpressMe Kids
               </h1>
-              <p className="text-xs text-muted-foreground">An Impress Me Family App</p>
+              <p className="text-xs text-muted-foreground">An ImpressMe Family App</p>
             </div>
           </Link>
           
