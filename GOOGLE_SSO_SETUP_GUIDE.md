@@ -108,15 +108,106 @@ If you have a custom domain:
 3. Choose a Google account
 4. You should be redirected back and logged in automatically
 
-### Troubleshooting
+---
+
+## Troubleshooting Guide
+
+### Error: Google 403 "access_blocked" or "This app is blocked"
+
+This error means Google is blocking sign-in attempts. Follow these steps **in order**:
+
+#### Step 1: Check OAuth Consent Screen Configuration
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Navigate to **APIs & Services** → **OAuth consent screen**
+3. Check your **User Type**:
+
+   **If User Type is "Internal":**
+   - This only allows users from your organization's Workspace
+   - If you're testing with a personal Gmail account, it will fail
+   - **Solution:** Change to **"External"** to allow any Google account
+
+   **If User Type is "External":**
+   - Check the **Publishing status**:
+     - If **"Testing"**: Only whitelisted users can sign in
+     - **Solution A:** Add your test email to **"Test users"** (up to 100 users)
+     - **Solution B:** Click **"Publish App"** to allow anyone to sign in
+
+4. **Verify Scopes** (at the bottom of the page):
+   - Must include:
+     - `openid`
+     - `.../auth/userinfo.email`
+     - `.../auth/userinfo.profile`
+   - If missing, click **"Edit App"** → **"Scopes"** → Add these scopes → **"Save"**
+
+5. Click **"Save and Continue"**
+
+#### Step 2: Verify OAuth Client ID Configuration
+
+1. Navigate to **APIs & Services** → **Credentials**
+2. Find your **OAuth 2.0 Client ID** (should be "Web application" type)
+3. Click the **edit icon** (pencil)
+4. **Verify Authorized JavaScript origins:**
+   ```
+   https://impress-me-kids.lovable.app
+   ```
+   - Must be exactly this URL (no trailing slash, no `http://`)
+
+5. **Verify Authorized redirect URIs:**
+   ```
+   https://sjigkjwkgovculkovcjy.supabase.co/auth/v1/callback
+   ```
+   - This MUST exactly match the "Callback URL" shown in your backend's Google settings
+   - Check backend to confirm: Users → Auth Settings → Google Settings → "Callback URL"
+
+6. Click **"Save"**
+
+#### Step 3: Confirm Backend Credentials Match
+
+<lov-actions>
+  <lov-open-backend>Open Backend Settings</lov-open-backend>
+</lov-actions>
+
+1. In the backend dashboard, go to **Users** → **Auth Settings** → **Google Settings**
+2. **Verify these match your Google Cloud OAuth Client:**
+   - **Client ID** (looks like: `123456789-abc.apps.googleusercontent.com`)
+   - **Client Secret** (looks like: `GOCSPX-abc123xyz`)
+3. If they don't match, copy-paste from Google Cloud Console and **Save**
+
+#### Step 4: Clear Browser Cache & Test
+
+1. **Close all browser windows** (this clears session cookies)
+2. Open a **new incognito/private window**
+3. Go to: `https://impress-me-kids.lovable.app/auth`
+4. Click **"Sign in with Google"**
+5. **Test with both:**
+   - A personal **Gmail** account (e.g., `yourname@gmail.com`)
+   - A **school/Workspace** account (e.g., `teacher@district.org`) if applicable
+
+#### Step 5: Check Error Details
+
+If sign-in still fails, check the URL bar for error parameters:
+
+- `error=access_denied` → User cancelled or app not approved
+- `error=admin_policy_enforced` → Workspace admin blocked the app
+- `error=org_internal` → App is set to "Internal" but user is external
+
+**If using a school/Workspace account:**
+- The school's Workspace admin may need to approve your app
+- Go to: Google Workspace Admin Console → Security → API Controls → Manage Third-Party App Access
+- Request admin to whitelist your OAuth Client ID
+
+---
+
+### Other Common Errors
 
 **Error: "redirect_uri_mismatch"**
-- Check that your redirect URI in Google Cloud **exactly matches** what's in Lovable Cloud backend
-- Common issue: Missing `/auth` at the end of the URL
+- Your redirect URI in Google Cloud doesn't match the backend's callback URL
+- Solution: Copy the **exact** callback URL from backend settings and paste into Google Cloud
 
 **Error: "requested path is invalid"**
-- Your Site URL or Redirect URL is not set correctly in Lovable Cloud
-- Open backend settings and verify both are set to your app's domain
+- Your Site URL or Redirect URL is not configured in the backend
+- Solution: Set **Site URL** to `https://impress-me-kids.lovable.app` in backend auth settings
 
 **Users stuck on "Choose role" after Google sign-in**
 - This is expected for district staff (e.g., @district.edu emails)
