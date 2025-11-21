@@ -22,34 +22,24 @@ const Index = () => {
       } = await supabase.auth.getSession();
       if (session) {
         // User is authenticated, redirect to their dashboard
-        console.log('🔍 Index.tsx - User authenticated:', session.user.email);
         const {
           data: profileData
         } = await supabase.rpc('get_user_profile', {
           _user_id: session.user.id
         });
-        console.log('🔍 Index.tsx - Profile data from get_user_profile:', profileData);
         if (profileData && profileData.length > 0) {
           const userRole = profileData[0].role;
-          console.log('🔍 Index.tsx - Detected role:', userRole);
           if (userRole === 'teacher') {
-            console.log('➡️ Redirecting to /teacher/dashboard');
             navigate('/teacher/dashboard');
           } else if (userRole === 'parent') {
-            console.log('➡️ Redirecting to /parent/dashboard');
             navigate('/parent/dashboard');
           } else if (userRole === 'district_manager') {
-            console.log('➡️ Redirecting to /district-manager/dashboard');
             navigate('/district-manager/dashboard');
           } else if (userRole === 'admin') {
-            console.log('➡️ Redirecting to /admin/dashboard');
             navigate('/admin/dashboard');
           } else {
-            console.log('➡️ Redirecting to /student/dashboard (default)');
             navigate('/student/dashboard');
           }
-        } else {
-          console.error('❌ Index.tsx - No profile data returned');
         }
       }
     };

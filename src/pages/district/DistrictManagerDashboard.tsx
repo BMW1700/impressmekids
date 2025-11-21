@@ -29,46 +29,26 @@ const DistrictManagerDashboard = () => {
   }, []);
 
   const checkAuth = async () => {
-    console.log('🔍 DistrictManagerDashboard - Starting checkAuth');
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
-      console.log('❌ DistrictManagerDashboard - No session, redirecting to /auth');
       navigate("/auth");
       return;
     }
 
-    console.log('🔍 DistrictManagerDashboard - Session found:', session.user.email, 'User ID:', session.user.id);
-
     // Check if district manager account exists
-    console.log('🔍 DistrictManagerDashboard - Querying district_managers table...');
-    const { data: districtManager, error: dmError } = await supabase
+    const { data: districtManager } = await supabase
       .from("district_managers")
       .select("*")
       .eq("user_id", session.user.id)
       .maybeSingle();
 
-    console.log('🔍 DistrictManagerDashboard - district_managers query result:', {
-      data: districtManager,
-      error: dmError
-    });
-
     if (!districtManager) {
-      console.error('❌ DistrictManagerDashboard - No district manager record found!');
-      console.log('🔍 DistrictManagerDashboard - Checking if RLS is blocking the query...');
-      
-      // Try to get more info about the user's roles
-      const { data: profileData } = await supabase.rpc('get_user_profile', {
-        _user_id: session.user.id
-      });
-      console.log('🔍 DistrictManagerDashboard - User profile from get_user_profile:', profileData);
-      
       toast.error("You do not have district manager access");
       navigate("/");
       return;
     }
 
-    console.log('✅ DistrictManagerDashboard - District manager access confirmed');
     loadDistricts();
   };
 
