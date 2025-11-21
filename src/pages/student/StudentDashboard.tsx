@@ -73,8 +73,13 @@ const StudentDashboard = () => {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    navigate('/auth');
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.log('Sign out error (expected if session expired):', error);
+    } finally {
+      navigate('/auth', { replace: true });
+    }
   };
 
   const renderSection = () => {
