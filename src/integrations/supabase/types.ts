@@ -14,6 +14,79 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_verification_requests: {
+        Row: {
+          created_at: string
+          denial_reason: string | null
+          district_code: string
+          district_id: string
+          district_name: string
+          email: string
+          full_name: string
+          id: string
+          profile_id: string
+          requested_role: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          denial_reason?: string | null
+          district_code: string
+          district_id: string
+          district_name: string
+          email: string
+          full_name: string
+          id?: string
+          profile_id: string
+          requested_role: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          denial_reason?: string | null
+          district_code?: string
+          district_id?: string
+          district_name?: string
+          email?: string
+          full_name?: string
+          id?: string
+          profile_id?: string
+          requested_role?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_verification_requests_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_verification_requests_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_verification_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       answers: {
         Row: {
           answer_text: string
@@ -1191,6 +1264,7 @@ export type Database = {
       districts: {
         Row: {
           created_at: string
+          district_code: string
           email_domains: string[]
           id: string
           logo_url: string | null
@@ -1202,6 +1276,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          district_code: string
           email_domains?: string[]
           id?: string
           logo_url?: string | null
@@ -1213,6 +1288,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          district_code?: string
           email_domains?: string[]
           id?: string
           logo_url?: string | null
@@ -2086,27 +2162,33 @@ export type Database = {
         Row: {
           created_at: string
           district_id: string | null
+          district_name: string | null
           email: string
           full_name: string
           id: string
+          is_verified: boolean | null
           role: Database["public"]["Enums"]["user_role"]
           signup_domain: string | null
         }
         Insert: {
           created_at?: string
           district_id?: string | null
+          district_name?: string | null
           email: string
           full_name: string
           id: string
+          is_verified?: boolean | null
           role?: Database["public"]["Enums"]["user_role"]
           signup_domain?: string | null
         }
         Update: {
           created_at?: string
           district_id?: string | null
+          district_name?: string | null
           email?: string
           full_name?: string
           id?: string
+          is_verified?: boolean | null
           role?: Database["public"]["Enums"]["user_role"]
           signup_domain?: string | null
         }
@@ -2921,6 +3003,7 @@ export type Database = {
         Args: { p_email: string }
         Returns: string
       }
+      generate_district_code: { Args: never; Returns: string }
       generate_join_code: { Args: never; Returns: string }
       get_all_admins: {
         Args: never
