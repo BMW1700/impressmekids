@@ -8,11 +8,12 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, Loader2, Chrome, Building2 } from "lucide-react";
+import { Loader2, Chrome, Building2 } from "lucide-react";
 import { detectUserTypeFromEmail } from "@/lib/districtDetection";
 import { RoleSelectionModal } from "@/components/auth/RoleSelectionModal";
 import { DistrictCombobox } from "@/components/auth/DistrictCombobox";
 import { useQuery } from "@tanstack/react-query";
+import logo from "@/assets/logo.png";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -498,8 +499,12 @@ const Auth = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-4">
-            <div className="p-2 rounded-lg bg-white shadow-lg">
-              <Sparkles className="h-8 w-8 text-primary" />
+            <div className="rounded-lg bg-white shadow-lg overflow-hidden">
+              <img 
+                src={logo} 
+                alt="ImpressMe Kids Logo" 
+                className="h-20 w-20 object-cover"
+              />
             </div>
           </Link>
           <h1 className="text-3xl font-bold text-white mb-2">Welcome to Impress Me Kids!</h1>
