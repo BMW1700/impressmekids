@@ -3256,6 +3256,7 @@ export type Database = {
         Args: { _classroom_id: string; _user_id: string }
         Returns: boolean
       }
+      is_district_manager: { Args: { _user_id: string }; Returns: boolean }
       is_parent: { Args: { _user_id: string }; Returns: boolean }
       is_parent_of_student: {
         Args: { _student_id: string; _user_id: string }
