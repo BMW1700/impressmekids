@@ -29,39 +29,66 @@ const DistrictManagerDashboard = () => {
   }, []);
 
   const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    console.log("🔐 [DistrictManager] Starting authentication check...");
+    
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    console.log("🔐 [DistrictManager] Session data:", {
+      hasSession: !!session,
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      sessionError
+    });
     
     if (!session) {
+      console.log("❌ [DistrictManager] No session found, redirecting to auth");
       navigate("/auth");
       return;
     }
 
     // Check if district manager account exists
-    const { data: districtManager } = await supabase
+    console.log("🔍 [DistrictManager] Querying district_managers table for user:", session.user.id);
+    const { data: districtManager, error: dmError } = await supabase
       .from("district_managers")
       .select("*")
       .eq("user_id", session.user.id)
       .maybeSingle();
 
+    console.log("🔍 [DistrictManager] District manager query result:", {
+      found: !!districtManager,
+      data: districtManager,
+      error: dmError
+    });
+
     if (!districtManager) {
+      console.log("❌ [DistrictManager] No district manager record found for this user");
       toast.error("You do not have district manager access");
       navigate("/");
       return;
     }
 
+    console.log("✅ [DistrictManager] District manager authenticated:", districtManager.full_name);
     loadDistricts();
   };
 
   const loadDistricts = async () => {
+    console.log("📋 [DistrictManager] Loading districts...");
+    
     const { data, error } = await supabase
       .from("districts")
       .select("id, name, district_code, created_at")
       .order("name");
 
+    console.log("📋 [DistrictManager] Districts query result:", {
+      count: data?.length || 0,
+      error,
+      districts: data
+    });
+
     if (error) {
+      console.error("❌ [DistrictManager] Failed to load districts:", error);
       toast.error("Failed to load districts");
-      console.error(error);
     } else {
+      console.log("✅ [DistrictManager] Loaded", data?.length || 0, "districts");
       setDistricts(data || []);
     }
 
@@ -75,17 +102,24 @@ const DistrictManagerDashboard = () => {
     }
 
     setIsCreating(true);
+    console.log("➕ [DistrictManager] Creating new district:", newDistrictName.trim());
 
     try {
       // Generate unique district code
+      console.log("🔢 [DistrictManager] Generating unique district code...");
       const { data: codeData, error: codeError } = await supabase
         .rpc('generate_unique_district_code');
 
-      if (codeError) throw codeError;
+      if (codeError) {
+        console.error("❌ [DistrictManager] Failed to generate code:", codeError);
+        throw codeError;
+      }
 
       const districtCode = codeData;
+      console.log("✅ [DistrictManager] Generated district code:", districtCode);
 
       // Create the district
+      console.log("💾 [DistrictManager] Inserting district into database...");
       const { error: insertError } = await supabase
         .from("districts")
         .insert({
@@ -95,14 +129,18 @@ const DistrictManagerDashboard = () => {
           slug: newDistrictName.toLowerCase().replace(/\s+/g, '-')
         });
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error("❌ [DistrictManager] Failed to insert district:", insertError);
+        throw insertError;
+      }
 
+      console.log("✅ [DistrictManager] District created successfully");
       toast.success(`District created successfully! Code: ${districtCode}`);
       setNewDistrictName("");
       loadDistricts();
     } catch (error: any) {
+      console.error("❌ [DistrictManager] Error creating district:", error);
       toast.error("Failed to create district: " + error.message);
-      console.error(error);
     } finally {
       setIsCreating(false);
     }
