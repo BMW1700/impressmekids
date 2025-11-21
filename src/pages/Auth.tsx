@@ -8,30 +8,51 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, Loader2, Chrome } from "lucide-react";
+import { Sparkles, Loader2, Chrome, Building2 } from "lucide-react";
 import { detectUserTypeFromEmail } from "@/lib/districtDetection";
 import { RoleSelectionModal } from "@/components/auth/RoleSelectionModal";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState<"teacher" | "student" | "parent" | "district_admin">("student");
+  const [role, setRole] = useState<"teacher" | "student" | "parent" | "admin">("student");
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [pendingDistrictName, setPendingDistrictName] = useState("");
   const [pendingDistrictId, setPendingDistrictId] = useState<string | null>(null);
-  const [availableRoles, setAvailableRoles] = useState<('teacher' | 'student' | 'parent')[]>(['teacher', 'student']);
+  const [availableRoles, setAvailableRoles] = useState<('teacher' | 'student' | 'parent')[]>(['student', 'parent']);
+  
+  // District code for teacher/admin signup
+  const [districtCode, setDistrictCode] = useState("");
+  const [districtInfo, setDistrictInfo] = useState<{id: string, name: string} | null>(null);
+  
+  // District selection for student/parent signup
+  const [selectedDistrictId, setSelectedDistrictId] = useState<string>("");
+  
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Fetch all districts for dropdown
+  const { data: districts } = useQuery({
+    queryKey: ['districts-list'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('districts')
+        .select('id, name, district_code')
+        .order('name');
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const redirectToDashboard = (userRole: string) => {
     if (userRole === 'teacher') {
       navigate('/teacher/dashboard');
     } else if (userRole === 'parent') {
       navigate('/parent/dashboard');
-    } else if (userRole === 'district_admin') {
-      navigate('/district/dashboard');
     } else if (userRole === 'admin') {
       navigate('/admin/dashboard');
     } else {
@@ -43,6 +64,18 @@ const Auth = () => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
+        // Check verification status
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_verified, role')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (!profile?.is_verified) {
+          navigate('/pending-verification');
+          return;
+        }
+
         // Check if this is an OAuth callback that needs role selection
         const urlParams = new URLSearchParams(window.location.search);
         const isOAuthCallback = urlParams.get('code') || urlParams.get('access_token');
@@ -51,7 +84,6 @@ const Auth = () => {
           const district = await detectUserTypeFromEmail(session.user.email);
           
           if (district.requiresRoleSelection) {
-            // User needs to choose role
             setPendingDistrictName(district.districtName || "");
             setPendingDistrictId(district.districtId);
             setAvailableRoles(district.availableRoles);
@@ -83,7 +115,7 @@ const Auth = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: 'https://impress-me-kids.lovable.app/auth',
+          redirectTo: window.location.origin + '/auth',
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -109,6 +141,31 @@ const Auth = () => {
     }
   };
 
+  const validateDistrictCode = async (code: string) => {
+    if (code.length !== 12) return;
+    
+    const { data, error } = await supabase
+      .from('districts')
+      .select('id, name')
+      .eq('district_code', code)
+      .single();
+      
+    if (data) {
+      setDistrictInfo(data);
+      toast({
+        title: "District Found",
+        description: `${data.name}`,
+      });
+    } else {
+      setDistrictInfo(null);
+      toast({
+        title: "Invalid Code",
+        description: "District code not found. Please check and try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleRoleSelection = async (selectedRole: 'teacher' | 'student' | 'parent') => {
     setIsLoading(true);
     try {
@@ -123,53 +180,42 @@ const Auth = () => {
         return;
       }
 
-      // If user is trying to select teacher role without a district, create pending request
-      if (selectedRole === 'teacher' && !pendingDistrictId) {
-        const { error: requestError } = await supabase
-          .from('pending_teacher_requests')
-          .insert({
-            user_id: user.id,
-            email: user.email || '',
-            full_name: user.user_metadata?.full_name || 'User',
-            status: 'pending'
-          });
-
-        if (requestError) throw requestError;
-
-        // Set them as student temporarily
-        const { error: roleError } = await supabase
-          .from('profiles')
-          .update({ role: 'student' })
-          .eq('id', user.id);
-
-        if (roleError) throw roleError;
-
-        setShowRoleModal(false);
-        toast({
-          title: "Teacher Access Requested",
-          description: "Your request for teacher access has been submitted for admin approval. You've been registered as a student in the meantime.",
-        });
-        redirectToDashboard('student');
-        return;
-      }
-
-      // Update profile with selected role
+      // Update profile with selected role and district
       const { error: roleError } = await supabase
         .from('profiles')
         .update({ 
           role: selectedRole,
-          district_id: pendingDistrictId 
+          district_id: pendingDistrictId,
+          district_name: pendingDistrictName,
+          is_verified: false
         })
         .eq('id', user.id);
 
       if (roleError) throw roleError;
 
+      // Create verification request
+      const { error: requestError } = await supabase
+        .from('account_verification_requests')
+        .insert({
+          user_id: user.id,
+          profile_id: user.id,
+          district_id: pendingDistrictId!,
+          district_code: '',
+          district_name: pendingDistrictName,
+          full_name: user.user_metadata?.full_name || 'User',
+          email: user.email || '',
+          requested_role: selectedRole,
+          status: 'pending'
+        });
+
+      if (requestError) throw requestError;
+
       setShowRoleModal(false);
       toast({
-        title: "Success",
-        description: `Welcome! You're signed in as a ${selectedRole}.`,
+        title: "Account Created",
+        description: "Your account is pending approval from your district administrator.",
       });
-      redirectToDashboard(selectedRole);
+      navigate('/pending-verification');
     } catch (error: any) {
       console.error('Error updating role:', error);
       toast({
@@ -187,17 +233,33 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      console.log('🔐 Starting signup process...', { email, role, fullName });
-      
-      // Check if email exists via secure function (prevents email enumeration)
-      const { data: profileCheck, error: checkError } = await supabase
-        .rpc('check_email_exists_secure', { 
-          p_email: email.toLowerCase().trim() 
-        });
-      
-      if (checkError) {
-        console.error('Email check error:', checkError);
+      // Validation for teacher/admin signup
+      if (role === 'teacher' || role === 'admin') {
+        if (!districtCode || districtCode.length !== 12 || !districtInfo) {
+          toast({
+            title: "District Code Required",
+            description: "Please enter a valid 12-digit district code.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
       }
+
+      // Validation for student/parent signup
+      if ((role === 'student' || role === 'parent') && !selectedDistrictId) {
+        toast({
+          title: "District Selection Required",
+          description: "Please select your school district.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Check if email exists
+      const { data: profileCheck, error: checkError } = await supabase
+        .rpc('check_email_exists_secure', { p_email: email.toLowerCase().trim() });
       
       if (profileCheck === true) {
         toast({
@@ -208,11 +270,11 @@ const Auth = () => {
         setIsLoading(false);
         return;
       }
-      
-      // Clear any existing sessions first
-      await supabase.auth.signOut();
-      console.log('🧹 Cleared existing sessions');
 
+      // Clear any existing sessions
+      await supabase.auth.signOut();
+
+      // Create auth user
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -221,50 +283,82 @@ const Auth = () => {
             full_name: fullName,
             role: role,
           },
-          emailRedirectTo: 'https://impress-me-kids.lovable.app/auth',
+          emailRedirectTo: window.location.origin + '/auth',
         },
       });
 
-      if (error) {
-        // Handle duplicate email error from Supabase
-        if (error.message.includes('already registered') || error.message.includes('duplicate')) {
-          toast({
-            title: "Email already registered",
-            description: "This email is already in use. Please sign in instead.",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
-        throw error;
-      }
+      if (error) throw error;
+      if (!data.user) throw new Error('User creation failed');
 
-      if (data.user) {
-        console.log('✅ User created:', data.user.id);
-        console.log('📋 User metadata:', data.user.user_metadata);
-        
-        // Wait for the profile and role to be created by trigger
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      // Wait for trigger to create profile
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Get district info
+      const districtId = (role === 'teacher' || role === 'admin') 
+        ? districtInfo?.id 
+        : selectedDistrictId;
+      
+      const districtName = (role === 'teacher' || role === 'admin')
+        ? districtInfo?.name
+        : districts?.find(d => d.id === selectedDistrictId)?.name;
+
+      // For admins, mark as verified immediately (they'll create the first admin manually)
+      const isVerified = role === 'admin';
+
+      // Update profile with district info and verification status
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ 
+          district_id: districtId,
+          district_name: districtName,
+          is_verified: isVerified
+        })
+        .eq('id', data.user.id);
+
+      if (profileError) throw profileError;
+
+      // Create verification request for all non-admin roles
+      if (role === 'teacher' || role === 'student' || role === 'parent') {
+        const { error: requestError } = await supabase
+          .from('account_verification_requests')
+          .insert({
+            user_id: data.user.id,
+            profile_id: data.user.id,
+            district_id: districtId!,
+            district_code: (role === 'teacher' || role === 'admin') ? districtCode : districts?.find(d => d.id === selectedDistrictId)?.district_code || '',
+            district_name: districtName || '',
+            full_name: fullName,
+            email: email,
+            requested_role: role,
+            status: 'pending'
+          });
+
+        if (requestError) throw requestError;
 
         toast({
-          title: "Account created!",
-          description: `Welcome to Impress Me Kids as a ${role}! 🎉`,
+          title: "Account Created",
+          description: "Your account is pending approval from your district administrator.",
         });
 
-        redirectToDashboard(role);
+        navigate('/pending-verification');
+      } else {
+        toast({
+          title: "Admin Account Created",
+          description: `Welcome! You can now access the admin dashboard.`,
+        });
+
+        redirectToDashboard('admin');
       }
+
     } catch (error: any) {
-      console.error('❌ Signup error:', error);
+      console.error('Signup error:', error);
       
-      // Provide user-friendly error messages
       let errorMessage = error.message || "Failed to create account";
       
       if (error.message?.includes('already registered') || error.message?.includes('duplicate')) {
-        errorMessage = "This email is already registered. Please sign in instead or use a different email.";
+        errorMessage = "This email is already registered. Please sign in instead.";
       } else if (error.message?.includes('password')) {
         errorMessage = "Password must be at least 6 characters long.";
-      } else if (error.message?.includes('email')) {
-        errorMessage = "Please enter a valid email address.";
       }
       
       toast({
@@ -290,7 +384,7 @@ const Auth = () => {
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'https://impress-me-kids.lovable.app/auth',
+        redirectTo: window.location.origin + '/auth',
       });
 
       if (error) throw error;
@@ -315,8 +409,6 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      console.log('🔐 Starting signin process...', { email });
-      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -325,49 +417,52 @@ const Auth = () => {
       if (error) throw error;
 
       if (data.user) {
-        console.log('✅ User signed in:', data.user.id);
-        
-        // Fetch user profile to determine role with retry
-        let profile = null;
+        // Check verification status
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_verified, role')
+          .eq('id', data.user.id)
+          .single();
+
+        if (!profile?.is_verified) {
+          navigate('/pending-verification');
+          return;
+        }
+
+        // Fetch full profile with retry
+        let profileData = null;
         let attempts = 0;
         const maxAttempts = 3;
         
-        while (attempts < maxAttempts && !profile) {
+        while (attempts < maxAttempts && !profileData) {
           attempts++;
-          console.log(`📋 Fetching profile (attempt ${attempts}/${maxAttempts})...`);
           
-          const { data: profileData, error: profileError } = await supabase
+          const { data: pd, error: profileError } = await supabase
             .rpc('get_user_profile', { _user_id: data.user.id });
 
           if (profileError) {
             console.error('Profile fetch error:', profileError);
-          } else if (profileData && profileData.length > 0) {
-            profile = profileData[0];
-            console.log('✅ Profile found with role:', profile.role);
-          } else {
-            console.warn('Profile not found for user:', data.user.id);
-            if (attempts < maxAttempts) {
-              console.log('⏳ Profile not ready, waiting...');
-              await new Promise(resolve => setTimeout(resolve, 500));
-            }
+          } else if (pd && pd.length > 0) {
+            profileData = pd[0];
+          } else if (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 500));
           }
         }
 
-        if (!profile) {
+        if (!profileData) {
           throw new Error('Profile not found. Please try again.');
         }
 
         toast({
           title: "Welcome back!",
-          description: `Successfully signed in as ${profile.role}! 🎮`,
+          description: `Successfully signed in as ${profileData.role}!`,
         });
 
-        redirectToDashboard(profile.role);
+        redirectToDashboard(profileData.role);
       }
     } catch (error: any) {
-      console.error('❌ Signin error:', error);
+      console.error('Signin error:', error);
       
-      // Provide user-friendly error messages
       let errorMessage = error.message || "Failed to sign in";
       
       if (error.message?.includes('Invalid login credentials')) {
@@ -553,7 +648,7 @@ const Auth = () => {
                   </div>
                   <div className="space-y-2">
                     <Label>I am a...</Label>
-                    <RadioGroup value={role} onValueChange={(value) => setRole(value as "teacher" | "student" | "parent" | "district_admin")}>
+                    <RadioGroup value={role} onValueChange={(value) => setRole(value as typeof role)}>
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="student" id="student" />
                         <Label htmlFor="student" className="font-normal cursor-pointer">
@@ -566,11 +661,72 @@ const Auth = () => {
                           Parent
                         </Label>
                       </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="teacher" id="teacher" />
+                        <Label htmlFor="teacher" className="font-normal cursor-pointer">
+                          Teacher
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="admin" id="admin" />
+                        <Label htmlFor="admin" className="font-normal cursor-pointer">
+                          District Admin
+                        </Label>
+                      </div>
                     </RadioGroup>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Note: Teacher and Admin accounts require verification and must be approved by school administrators.
-                    </p>
                   </div>
+
+                  {/* District Code Input for Teacher/Admin */}
+                  {(role === 'teacher' || role === 'admin') && (
+                    <div className="space-y-2">
+                      <Label htmlFor="district-code" className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        12-Digit District Code
+                      </Label>
+                      <Input
+                        id="district-code"
+                        type="text"
+                        placeholder="000000000000"
+                        maxLength={12}
+                        value={districtCode}
+                        onChange={(e) => setDistrictCode(e.target.value)}
+                        onBlur={(e) => validateDistrictCode(e.target.value)}
+                        required
+                      />
+                      {districtInfo && (
+                        <p className="text-sm text-primary">✓ {districtInfo.name}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Contact your district administrator for your district code
+                      </p>
+                    </div>
+                  )}
+
+                  {/* District Dropdown for Student/Parent */}
+                  {(role === 'student' || role === 'parent') && (
+                    <div className="space-y-2">
+                      <Label htmlFor="district-select" className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        Select Your School District
+                      </Label>
+                      <Select value={selectedDistrictId} onValueChange={setSelectedDistrictId}>
+                        <SelectTrigger id="district-select">
+                          <SelectValue placeholder="Choose your district..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {districts?.map((district) => (
+                            <SelectItem key={district.id} value={district.id}>
+                              {district.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-muted-foreground">
+                    Note: All new accounts require verification and approval by district administrators.
+                  </p>
                 </CardContent>
                 <CardFooter>
                   <Button 

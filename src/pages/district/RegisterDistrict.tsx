@@ -54,18 +54,27 @@ export default function RegisterDistrict() {
 
       const slug = districtName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
-      const { error } = await supabase
+      const { error: insertError } = await supabase
         .from('districts')
         .insert({
           name: districtName,
           slug,
           email_domains: cleanDomains,
           primary_contact_email: user.email,
-        });
+        } as any);
 
-      if (error) throw error;
+      if (insertError) throw insertError;
+      
+      // Fetch the newly created district to get the district_code
+      const { data: newDistrict, error: fetchError } = await supabase
+        .from('districts')
+        .select('district_code')
+        .eq('slug', slug)
+        .single();
 
-      toast.success("District registered successfully! Teachers can now sign up with Google using your domain.");
+      if (fetchError) throw fetchError;
+
+      toast.success(`District registered successfully! Your 12-digit district code is: ${newDistrict.district_code}. Share this with teachers and administrators.`);
       navigate('/district/dashboard');
     } catch (error: any) {
       console.error('Error registering district:', error);

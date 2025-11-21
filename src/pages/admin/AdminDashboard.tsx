@@ -18,7 +18,7 @@ import { ParentAccessRequestsList } from "@/components/admin/ParentAccessRequest
 import { BackupManagement } from "@/components/admin/BackupManagement";
 import { SchoolEventManager } from "@/components/admin/SchoolEventManager";
 import { BulkStudentImport } from "@/components/admin/BulkStudentImport";
-import { PendingTeacherRequests } from "@/components/admin/PendingTeacherRequests";
+import { AccountVerificationRequests } from "@/components/admin/AccountVerificationRequests";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -180,7 +180,7 @@ export default function AdminDashboard() {
             </TabsList>
 
             <TabsContent value="teacher-requests" className="space-y-4">
-              <PendingTeacherRequests />
+              <AccountVerificationRequests />
             </TabsContent>
 
             <TabsContent value="teachers" className="space-y-4">
