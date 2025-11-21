@@ -49,7 +49,9 @@ const Auth = () => {
   });
 
   const redirectToDashboard = (userRole: string) => {
-    if (userRole === 'teacher') {
+    if (userRole === 'district_manager') {
+      navigate('/district-manager/dashboard');
+    } else if (userRole === 'teacher') {
       navigate('/teacher/dashboard');
     } else if (userRole === 'parent') {
       navigate('/parent/dashboard');
@@ -232,6 +234,17 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
+      // Block district_manager signups completely (hidden role)
+      if (role === 'district_manager' as any) {
+        toast({
+          title: "Invalid Role",
+          description: "District Manager accounts cannot be created through signup.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
       // Validation for teacher/admin signup
       if (role === 'teacher' || role === 'admin') {
         if (!districtCode || districtCode.length !== 12 || !districtInfo) {

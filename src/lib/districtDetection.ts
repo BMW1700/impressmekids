@@ -5,7 +5,7 @@ export interface DistrictMatch {
   districtName: string | null;
   suggestedRole: 'teacher' | 'student' | 'parent';
   requiresRoleSelection: boolean;
-  availableRoles: ('teacher' | 'student' | 'parent')[];
+  availableRoles: ('teacher' | 'student' | 'parent')[]; // NEVER includes 'district_manager' - hidden role
 }
 
 export async function detectUserTypeFromEmail(email: string): Promise<DistrictMatch> {

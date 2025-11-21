@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import PendingVerification from "./pages/PendingVerification";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminCalendar from "./pages/admin/AdminCalendar";
 import SchoolSettings from "./pages/admin/SchoolSettings";
@@ -35,6 +36,7 @@ import RequestAccess from "./pages/parent/RequestAccess";
 import NotificationSettings from "./pages/parent/NotificationSettings";
 import ChildDetail from "./pages/parent/ChildDetail";
 import DistrictDashboard from "./pages/district/DistrictDashboard";
+import DistrictManagerDashboard from "./pages/district/DistrictManagerDashboard";
 import RegisterDistrict from "./pages/district/RegisterDistrict";
 import PolicyViewer from "./pages/policies/PolicyViewer";
 import NotFound from "./pages/NotFound";
@@ -50,6 +52,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/pending-verification" element={<PendingVerification />} />
           <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
           <Route path="/teacher/calendar" element={<TeacherCalendar />} />
           <Route path="/student/dashboard" element={<StudentDashboard />} />
@@ -80,6 +83,7 @@ const App = () => (
           <Route path="/admin/calendar" element={<AdminCalendar />} />
           <Route path="/admin/settings" element={<SchoolSettings />} />
           <Route path="/district/dashboard" element={<DistrictDashboard />} />
+          <Route path="/district-manager/dashboard" element={<DistrictManagerDashboard />} />
           <Route path="/district/register" element={<RegisterDistrict />} />
           <Route path="/policies" element={<PolicyViewer />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
