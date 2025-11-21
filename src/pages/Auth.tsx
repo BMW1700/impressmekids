@@ -325,7 +325,7 @@ const Auth = () => {
             user_id: data.user.id,
             profile_id: data.user.id,
             district_id: districtId!,
-            district_code: (role === 'teacher' || role === 'admin') ? districtCode : districts?.find(d => d.id === selectedDistrictId)?.district_code || '',
+            district_code: role === 'teacher' ? districtCode : districts?.find(d => d.id === selectedDistrictId)?.district_code || '',
             district_name: districtName || '',
             full_name: fullName,
             email: email,
