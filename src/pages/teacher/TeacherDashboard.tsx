@@ -67,6 +67,19 @@ const TeacherDashboard = () => {
         return;
       }
 
+      // Check verification status (teachers must be verified to access dashboard)
+      const { data: profileDetails } = await supabase
+        .from('profiles')
+        .select('is_verified')
+        .eq('id', session.user.id)
+        .single();
+
+      if (!profileDetails?.is_verified) {
+        console.log('⚠️ Teacher not verified, redirecting to pending verification');
+        navigate('/pending-verification');
+        return;
+      }
+
       console.log('✅ Teacher access confirmed');
       setProfile(profileData);
     } catch (error) {
