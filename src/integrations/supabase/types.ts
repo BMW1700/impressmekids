@@ -1258,6 +1258,30 @@ export type Database = {
         }
         Relationships: []
       }
+      district_managers: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       districts: {
         Row: {
           created_at: string
@@ -3002,6 +3026,7 @@ export type Database = {
       }
       generate_district_code: { Args: never; Returns: string }
       generate_join_code: { Args: never; Returns: string }
+      generate_unique_district_code: { Args: never; Returns: string }
       get_all_admins: {
         Args: never
         Returns: {
@@ -3282,7 +3307,7 @@ export type Database = {
     }
     Enums: {
       answer_status: "not_attempted" | "in_progress" | "completed"
-      app_role: "admin" | "teacher" | "student"
+      app_role: "admin" | "teacher" | "student" | "district_manager"
       difficulty_level: "easy" | "medium" | "hard"
       elimination_status: "active" | "eliminated"
       event_category:
@@ -3444,7 +3469,7 @@ export const Constants = {
   public: {
     Enums: {
       answer_status: ["not_attempted", "in_progress", "completed"],
-      app_role: ["admin", "teacher", "student"],
+      app_role: ["admin", "teacher", "student", "district_manager"],
       difficulty_level: ["easy", "medium", "hard"],
       elimination_status: ["active", "eliminated"],
       event_category: [
