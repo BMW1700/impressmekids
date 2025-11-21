@@ -66,7 +66,7 @@ export type Database = {
             columns: ["district_id"]
             isOneToOne: false
             referencedRelation: "districts"
-            referencedColumns: ["id"]
+            referencedColumns: ["district_code"]
           },
           {
             foreignKeyName: "account_verification_requests_profile_id_fkey"
@@ -2218,11 +2218,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_profiles_district"
+            foreignKeyName: "profiles_district_id_fkey"
             columns: ["district_id"]
             isOneToOne: false
             referencedRelation: "districts"
-            referencedColumns: ["id"]
+            referencedColumns: ["district_code"]
           },
         ]
       }
@@ -3304,10 +3304,15 @@ export type Database = {
         }
         Returns: Json
       }
-      update_user_district: {
-        Args: { p_district_id: string; p_user_id: string }
-        Returns: undefined
-      }
+      update_user_district:
+        | {
+            Args: { p_district_id: string; p_user_id: string }
+            Returns: undefined
+          }
+        | {
+            Args: { p_district_id: string; p_user_id: string }
+            Returns: undefined
+          }
     }
     Enums: {
       answer_status: "not_attempted" | "in_progress" | "completed"

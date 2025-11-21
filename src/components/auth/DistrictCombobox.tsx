@@ -37,7 +37,7 @@ export function DistrictCombobox({
 }: DistrictComboboxProps) {
   const [open, setOpen] = useState(false);
 
-  const selectedDistrict = districts.find((district) => district.id === value);
+  const selectedDistrict = districts.find((district) => district.district_code === value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -66,14 +66,14 @@ export function DistrictCombobox({
                   key={district.id}
                   value={district.name}
                   onSelect={() => {
-                    onValueChange(district.id);
+                    onValueChange(district.district_code || district.id);
                     setOpen(false);
                   }}
                 >
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      value === district.id ? "opacity-100" : "opacity-0"
+                      value === district.district_code ? "opacity-100" : "opacity-0"
                     )}
                   />
                   {district.name}

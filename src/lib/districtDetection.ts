@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export interface DistrictMatch {
-  districtId: string | null;
+  districtCode: string | null;
   districtName: string | null;
   suggestedRole: 'teacher' | 'student' | 'parent';
   requiresRoleSelection: boolean;
@@ -13,7 +13,7 @@ export async function detectUserTypeFromEmail(email: string): Promise<DistrictMa
   
   if (!domain) {
     return {
-      districtId: null,
+      districtCode: null,
       districtName: null,
       suggestedRole: 'student',
       requiresRoleSelection: true,
@@ -24,14 +24,14 @@ export async function detectUserTypeFromEmail(email: string): Promise<DistrictMa
   // Query districts table for matching email domain
   const { data: districts } = await supabase
     .from('districts')
-    .select('id, name, email_domains')
+    .select('district_code, name, email_domains')
     .contains('email_domains', [domain]);
   
   if (districts && districts.length > 0) {
     // User email matches a registered district - they can be teacher OR student
     // Teacher accounts will require district code verification during signup
     return {
-      districtId: districts[0].id,
+      districtCode: districts[0].district_code,
       districtName: districts[0].name,
       suggestedRole: 'student',
       requiresRoleSelection: true,
@@ -41,7 +41,7 @@ export async function detectUserTypeFromEmail(email: string): Promise<DistrictMa
   
   // Email doesn't match any district → offer only student/parent (no teacher option)
   return {
-    districtId: null,
+    districtCode: null,
     districtName: null,
     suggestedRole: 'student',
     requiresRoleSelection: true,

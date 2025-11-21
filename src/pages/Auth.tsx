@@ -27,7 +27,7 @@ const Auth = () => {
   
   // District code for teacher/admin signup
   const [districtCode, setDistrictCode] = useState("");
-  const [districtInfo, setDistrictInfo] = useState<{id: string, name: string} | null>(null);
+  const [districtInfo, setDistrictInfo] = useState<{district_code: string, name: string} | null>(null);
   
   // District selection for student/parent signup
   const [selectedDistrictId, setSelectedDistrictId] = useState<string>("");
@@ -88,7 +88,7 @@ const Auth = () => {
           
           if (district.requiresRoleSelection) {
             setPendingDistrictName(district.districtName || "");
-            setPendingDistrictId(district.districtId);
+            setPendingDistrictId(district.districtCode);
             setAvailableRoles(district.availableRoles);
             setShowRoleModal(true);
             return;
@@ -149,7 +149,7 @@ const Auth = () => {
     
     const { data, error } = await supabase
       .from('districts')
-      .select('id, name')
+      .select('district_code, name')
       .eq('district_code', code)
       .single();
       
@@ -308,12 +308,12 @@ const Auth = () => {
 
       // Get district info
       const districtId = (role === 'teacher' || role === 'admin') 
-        ? districtInfo?.id 
+        ? districtInfo?.district_code 
         : selectedDistrictId;
       
       const districtName = (role === 'teacher' || role === 'admin')
         ? districtInfo?.name
-        : districts?.find(d => d.id === selectedDistrictId)?.name;
+        : districts?.find(d => d.district_code === selectedDistrictId)?.name;
 
       // For admins, mark as verified immediately (they'll create the first admin manually)
       const isVerified = role === 'admin';
