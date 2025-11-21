@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { useSearchParams } from "react-router-dom";
 import { Checkbox } from "@/components/ui/checkbox";
 
 export default function Calendar() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialDate = searchParams.get("date") 
     ? parse(searchParams.get("date")!, "yyyy-MM-dd", new Date())
@@ -55,6 +57,16 @@ export default function Calendar() {
     },
     enabled: !!session?.user?.id,
   });
+
+  // Redirect non-students to their appropriate calendar/dashboard
+  useEffect(() => {
+    if (profile && profile.role !== 'student') {
+      if (profile.role === 'district_manager') navigate('/district-manager/dashboard');
+      else if (profile.role === 'teacher') navigate('/teacher/calendar');
+      else if (profile.role === 'admin') navigate('/admin/calendar');
+      else if (profile.role === 'parent') navigate('/parent/calendar');
+    }
+  }, [profile, navigate]);
 
   const getDateRange = () => {
     switch (view) {

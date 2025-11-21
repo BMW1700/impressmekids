@@ -41,7 +41,12 @@ const StudentDashboard = () => {
       if (profileError || !profileResult || profileResult.length === 0) { navigate('/auth'); return; }
 
       const profileData = profileResult[0];
+      
+      // Redirect non-students to their appropriate dashboards
+      if (profileData.role === 'district_manager') { navigate('/district-manager/dashboard'); return; }
       if (profileData.role === 'teacher') { navigate('/teacher/dashboard'); return; }
+      if (profileData.role === 'admin') { navigate('/admin/dashboard'); return; }
+      if (profileData.role === 'parent') { navigate('/parent/dashboard'); return; }
 
       // Check verification status (students must be verified to access dashboard)
       const { data: profileDetails } = await supabase
