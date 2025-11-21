@@ -43,6 +43,18 @@ const StudentDashboard = () => {
       const profileData = profileResult[0];
       if (profileData.role === 'teacher') { navigate('/teacher/dashboard'); return; }
 
+      // Check verification status (students must be verified to access dashboard)
+      const { data: profileDetails } = await supabase
+        .from('profiles')
+        .select('is_verified')
+        .eq('id', session.user.id)
+        .single();
+
+      if (!profileDetails?.is_verified) {
+        navigate('/pending-verification');
+        return;
+      }
+
       setProfile(profileData);
 
       const { data: publicProfile } = await supabase.from('public_profiles').select('*').eq('id', session.user.id).single();

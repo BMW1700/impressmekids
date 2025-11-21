@@ -72,6 +72,7 @@ export default function AdminDashboard() {
         return;
       }
 
+      // Note: Admins are always verified - no verification check needed
       setLoading(false);
     } catch (error) {
       console.error("Error checking admin access:", error);

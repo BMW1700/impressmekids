@@ -87,6 +87,18 @@ const ParentDashboard = () => {
         return;
       }
 
+      // Check verification status (parents must be verified to access dashboard)
+      const { data: profileDetails } = await supabase
+        .from('profiles')
+        .select('is_verified')
+        .eq('id', session.user.id)
+        .single();
+
+      if (!profileDetails?.is_verified) {
+        navigate('/pending-verification');
+        return;
+      }
+
       // Use security definer function to get parent account
       const { data: parentAccount } = await supabase
         .rpc("get_parent_account", { _user_id: session.user.id });
