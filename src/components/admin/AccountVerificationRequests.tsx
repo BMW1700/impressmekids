@@ -14,7 +14,6 @@ interface VerificationRequest {
   user_id: string;
   profile_id: string;
   district_id: string;
-  district_code: string;
   district_name: string;
   full_name: string;
   email: string;
