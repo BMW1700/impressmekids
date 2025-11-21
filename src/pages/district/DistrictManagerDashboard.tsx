@@ -7,8 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Building2, Plus } from "lucide-react";
+import { Loader2, Building2, Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { ConfirmModal } from "@/components/ConfirmModal";
 
 interface District {
   id: string;
@@ -22,6 +23,10 @@ const DistrictManagerDashboard = () => {
   const [districts, setDistricts] = useState<District[]>([]);
   const [newDistrictName, setNewDistrictName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [districtToDelete, setDistrictToDelete] = useState<District | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -151,6 +156,66 @@ const DistrictManagerDashboard = () => {
     }
   };
 
+  const handleStartEdit = (district: District) => {
+    setEditingId(district.id);
+    setEditingName(district.name);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditingName("");
+  };
+
+  const handleSaveEdit = async (districtId: string) => {
+    if (!editingName.trim()) {
+      toast.error("District name cannot be empty");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("districts")
+        .update({ name: editingName.trim() })
+        .eq("id", districtId);
+
+      if (error) throw error;
+
+      toast.success("District updated successfully");
+      setEditingId(null);
+      setEditingName("");
+      loadDistricts();
+    } catch (error: any) {
+      console.error("❌ [DistrictManager] Error updating district:", error);
+      toast.error("Failed to update district: " + error.message);
+    }
+  };
+
+  const handleDeleteClick = (district: District) => {
+    setDistrictToDelete(district);
+    setDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!districtToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("districts")
+        .delete()
+        .eq("id", districtToDelete.id);
+
+      if (error) throw error;
+
+      toast.success("District deleted successfully");
+      setDeleteModalOpen(false);
+      setDistrictToDelete(null);
+      loadDistricts();
+    } catch (error: any) {
+      console.error("❌ [DistrictManager] Error deleting district:", error);
+      toast.error("Failed to delete district: " + error.message);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -225,15 +290,54 @@ const DistrictManagerDashboard = () => {
                   key={district.id}
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
                 >
-                  <div>
-                    <h3 className="font-semibold text-lg">{district.name}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Created: {new Date(district.created_at).toLocaleDateString()}
-                    </p>
+                  <div className="flex-1">
+                    {editingId === district.id ? (
+                      <div className="flex gap-2 items-center">
+                        <Input
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          className="max-w-md"
+                          autoFocus
+                        />
+                        <Button size="sm" onClick={() => handleSaveEdit(district.id)}>
+                          Save
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <h3 className="font-semibold text-lg">{district.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Created: {new Date(district.created_at).toLocaleDateString()}
+                        </p>
+                      </>
+                    )}
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground mb-1">District Code</p>
-                    <p className="text-xl font-mono font-bold">{district.district_code}</p>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground mb-1">District Code</p>
+                      <p className="text-xl font-mono font-bold">{district.district_code}</p>
+                    </div>
+                    {editingId !== district.id && (
+                      <div className="flex gap-2">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleStartEdit(district)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleDeleteClick(district)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -247,6 +351,19 @@ const DistrictManagerDashboard = () => {
         </Card>
       </main>
       <Footer />
+
+      <ConfirmModal
+        open={deleteModalOpen}
+        onOpenChange={(open) => {
+          setDeleteModalOpen(open);
+          if (!open) setDistrictToDelete(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        title="Delete District"
+        description={`Are you sure you want to delete "${districtToDelete?.name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
     </div>
   );
 };
