@@ -5,6 +5,7 @@ export interface DistrictMatch {
   districtName: string | null;
   suggestedRole: 'teacher' | 'student' | 'parent';
   requiresRoleSelection: boolean;
+  availableRoles: ('teacher' | 'student' | 'parent')[];
 }
 
 export async function detectUserTypeFromEmail(email: string): Promise<DistrictMatch> {
@@ -15,7 +16,8 @@ export async function detectUserTypeFromEmail(email: string): Promise<DistrictMa
       districtId: null,
       districtName: null,
       suggestedRole: 'parent',
-      requiresRoleSelection: false,
+      requiresRoleSelection: true,
+      availableRoles: ['student', 'parent', 'teacher'],
     };
   }
   
@@ -26,20 +28,22 @@ export async function detectUserTypeFromEmail(email: string): Promise<DistrictMa
     .contains('email_domains', [domain]);
   
   if (districts && districts.length > 0) {
-    // User email matches a registered district - needs to choose role
+    // User email matches a registered district - offer teacher/student
     return {
       districtId: districts[0].id,
       districtName: districts[0].name,
       suggestedRole: 'teacher',
       requiresRoleSelection: true,
+      availableRoles: ['teacher', 'student'],
     };
   }
   
-  // Email doesn't match any district → must be a parent
+  // Email doesn't match any district → offer student/parent/teacher
   return {
     districtId: null,
     districtName: null,
-    suggestedRole: 'parent',
-    requiresRoleSelection: false,
+    suggestedRole: 'student',
+    requiresRoleSelection: true,
+    availableRoles: ['student', 'parent', 'teacher'],
   };
 }
