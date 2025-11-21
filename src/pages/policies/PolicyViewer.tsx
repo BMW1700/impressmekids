@@ -12,8 +12,12 @@ import ControlMatrix from "./ControlMatrix";
 import VendorManagementPolicy from "./VendorManagementPolicy";
 import DataClassificationPolicy from "./DataClassificationPolicy";
 import { BackupDisasterRecoveryPolicy } from "./BackupDisasterRecoveryPolicy";
+import RiskRegister from "./RiskRegister";
+import EvidenceLog from "./EvidenceLog";
+import VendorRiskAssessment from "./VendorRiskAssessment";
+import IncidentResponseTabletop from "./IncidentResponseTabletop";
 
-type PolicyType = "password" | "access" | "incident" | "change" | "vertex" | "system" | "control-matrix" | "vendor" | "dataclass" | "backup" | "all";
+type PolicyType = "password" | "access" | "incident" | "change" | "vertex" | "system" | "control-matrix" | "vendor" | "dataclass" | "backup" | "risk-register" | "evidence-log" | "vendor-assessment" | "ir-tabletop" | "all";
 
 export default function PolicyViewer() {
   const [selectedPolicy, setSelectedPolicy] = useState<PolicyType>("password");
@@ -31,6 +35,14 @@ export default function PolicyViewer() {
       name: "SOC 2 Control Matrix",
       component: <ControlMatrix />
     },
+    "risk-register": {
+      name: "Risk Register",
+      component: <RiskRegister />
+    },
+    "evidence-log": {
+      name: "Evidence Log",
+      component: <EvidenceLog />
+    },
     password: {
       name: "Password and MFA Policy",
       component: <PasswordMFAPolicy />
@@ -43,6 +55,10 @@ export default function PolicyViewer() {
       name: "Incident Response Policy",
       component: <IncidentResponsePolicy />
     },
+    "ir-tabletop": {
+      name: "Incident Response Tabletop Exercise",
+      component: <IncidentResponseTabletop />
+    },
     change: {
       name: "Change Management Policy",
       component: <ChangeManagementPolicy />
@@ -54,6 +70,10 @@ export default function PolicyViewer() {
     vendor: {
       name: "Vendor Management Policy",
       component: <VendorManagementPolicy />
+    },
+    "vendor-assessment": {
+      name: "Vendor Risk Assessment Summary",
+      component: <VendorRiskAssessment />
     },
     dataclass: {
       name: "Data Classification & Handling Policy",
@@ -71,17 +91,25 @@ export default function PolicyViewer() {
           <div className="page-break" />
           <ControlMatrix />
           <div className="page-break" />
+          <RiskRegister />
+          <div className="page-break" />
+          <EvidenceLog />
+          <div className="page-break" />
           <PasswordMFAPolicy />
           <div className="page-break" />
           <AccessControlPolicy />
           <div className="page-break" />
           <IncidentResponsePolicy />
           <div className="page-break" />
+          <IncidentResponseTabletop />
+          <div className="page-break" />
           <ChangeManagementPolicy />
           <div className="page-break" />
           <GoogleVertexSecurityControls />
           <div className="page-break" />
           <VendorManagementPolicy />
+          <div className="page-break" />
+          <VendorRiskAssessment />
           <div className="page-break" />
           <DataClassificationPolicy />
           <div className="page-break" />
@@ -176,12 +204,16 @@ export default function PolicyViewer() {
               <SelectContent>
                 <SelectItem value="system">System Description Document</SelectItem>
                 <SelectItem value="control-matrix">SOC 2 Control Matrix</SelectItem>
+                <SelectItem value="risk-register">Risk Register</SelectItem>
+                <SelectItem value="evidence-log">Evidence Log</SelectItem>
                 <SelectItem value="password">Password and MFA Policy</SelectItem>
                 <SelectItem value="access">Access Control Policy</SelectItem>
                 <SelectItem value="incident">Incident Response Policy</SelectItem>
+                <SelectItem value="ir-tabletop">Incident Response Tabletop Exercise</SelectItem>
                 <SelectItem value="change">Change Management Policy</SelectItem>
                 <SelectItem value="vertex">Google Vertex AI Security Controls</SelectItem>
                 <SelectItem value="vendor">Vendor Management Policy</SelectItem>
+                <SelectItem value="vendor-assessment">Vendor Risk Assessment Summary</SelectItem>
                 <SelectItem value="dataclass">Data Classification &amp; Handling Policy</SelectItem>
                 <SelectItem value="backup">Backup &amp; Disaster Recovery Policy</SelectItem>
                 <SelectItem value="all">All Policies (Combined)</SelectItem>
