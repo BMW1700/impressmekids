@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Building2, Plus, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Building2, Plus, Pencil, Trash2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmModal } from "@/components/ConfirmModal";
 
@@ -16,6 +16,7 @@ interface District {
   name: string;
   district_code: string;
   created_at: string;
+  is_visible: boolean;
 }
 
 const DistrictManagerDashboard = () => {
@@ -80,7 +81,7 @@ const DistrictManagerDashboard = () => {
     
     const { data, error } = await supabase
       .from("districts")
-      .select("id, name, district_code, created_at")
+      .select("id, name, district_code, created_at, is_visible")
       .order("name");
 
     console.log("📋 [DistrictManager] Districts query result:", {
@@ -193,6 +194,29 @@ const DistrictManagerDashboard = () => {
   const handleDeleteClick = (district: District) => {
     setDistrictToDelete(district);
     setDeleteModalOpen(true);
+  };
+
+  const handleToggleVisibility = async (district: District) => {
+    try {
+      const newVisibility = !district.is_visible;
+      
+      const { error } = await supabase
+        .from("districts")
+        .update({ is_visible: newVisibility })
+        .eq("id", district.id);
+
+      if (error) throw error;
+
+      toast.success(
+        newVisibility 
+          ? "District is now visible in signup" 
+          : "District hidden from signup"
+      );
+      loadDistricts();
+    } catch (error: any) {
+      console.error("❌ [DistrictManager] Error toggling visibility:", error);
+      toast.error("Failed to update visibility: " + error.message);
+    }
   };
 
   const handleConfirmDelete = async () => {
@@ -322,6 +346,18 @@ const DistrictManagerDashboard = () => {
                     </div>
                     {editingId !== district.id && (
                       <div className="flex gap-2">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleToggleVisibility(district)}
+                          title={district.is_visible ? "Hide from signup" : "Show in signup"}
+                        >
+                          {district.is_visible ? (
+                            <Eye className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </Button>
                         <Button
                           size="icon"
                           variant="ghost"

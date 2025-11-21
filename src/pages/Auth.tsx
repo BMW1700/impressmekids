@@ -42,6 +42,7 @@ const Auth = () => {
       const { data, error } = await supabase
         .from('districts')
         .select('id, name, district_code')
+        .eq('is_visible', true)
         .order('name');
       if (error) throw error;
       return data;

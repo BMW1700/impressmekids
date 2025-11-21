@@ -1288,6 +1288,7 @@ export type Database = {
           district_code: string
           email_domains: string[]
           id: string
+          is_visible: boolean
           logo_url: string | null
           name: string
           primary_contact_email: string | null
@@ -1300,6 +1301,7 @@ export type Database = {
           district_code: string
           email_domains?: string[]
           id?: string
+          is_visible?: boolean
           logo_url?: string | null
           name: string
           primary_contact_email?: string | null
@@ -1312,6 +1314,7 @@ export type Database = {
           district_code?: string
           email_domains?: string[]
           id?: string
+          is_visible?: boolean
           logo_url?: string | null
           name?: string
           primary_contact_email?: string | null
