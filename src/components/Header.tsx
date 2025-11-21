@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Home } from "lucide-react";
+import { Home } from "lucide-react";
 import { ReactNode } from "react";
 import { StudentNotificationBell } from "@/components/student/StudentNotificationBell";
+import logo from "@/assets/logo.png";
 
 interface HeaderProps {
   showAuthButtons?: boolean;
@@ -21,8 +22,12 @@ export const Header = ({ showAuthButtons = true, onSignOut, children, studentId 
             className="flex items-center gap-2 group transition-all hover:opacity-80"
             aria-label="Go to homepage"
           >
-            <div className="p-2 rounded-lg bg-gradient-hero group-hover:scale-110 transition-transform">
-              <Sparkles className="h-6 w-6 text-white" />
+            <div className="rounded-lg bg-gradient-hero group-hover:scale-110 transition-transform overflow-hidden">
+              <img 
+                src={logo} 
+                alt="ImpressMe Kids Logo" 
+                className="h-10 w-10 object-cover"
+              />
             </div>
             <div>
               <h1 className="text-xl font-bold bg-gradient-hero bg-clip-text text-transparent group-hover:opacity-80 transition-opacity">
