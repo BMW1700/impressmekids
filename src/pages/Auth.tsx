@@ -21,6 +21,7 @@ const Auth = () => {
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [pendingDistrictName, setPendingDistrictName] = useState("");
   const [pendingDistrictId, setPendingDistrictId] = useState<string | null>(null);
+  const [availableRoles, setAvailableRoles] = useState<('teacher' | 'student' | 'parent')[]>(['teacher', 'student']);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -49,10 +50,11 @@ const Auth = () => {
         if (isOAuthCallback && session.user.email) {
           const district = await detectUserTypeFromEmail(session.user.email);
           
-          if (district.requiresRoleSelection && district.districtId) {
-            // District staff needs to choose role
+          if (district.requiresRoleSelection) {
+            // User needs to choose role
             setPendingDistrictName(district.districtName || "");
             setPendingDistrictId(district.districtId);
+            setAvailableRoles(district.availableRoles);
             setShowRoleModal(true);
             return;
           }
@@ -107,7 +109,7 @@ const Auth = () => {
     }
   };
 
-  const handleRoleSelection = async (selectedRole: 'teacher' | 'student') => {
+  const handleRoleSelection = async (selectedRole: 'teacher' | 'student' | 'parent') => {
     setIsLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -121,24 +123,16 @@ const Auth = () => {
         return;
       }
 
-      // Insert role into user_roles table (profiles.role is kept for backward compatibility only)
+      // Update profile with selected role
       const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({ 
-          user_id: user.id,
-          role: selectedRole
-        });
+        .from('profiles')
+        .update({ 
+          role: selectedRole,
+          district_id: pendingDistrictId 
+        })
+        .eq('id', user.id);
 
       if (roleError) throw roleError;
-
-      // Update district via secure function
-      const { error: profileError } = await supabase
-        .rpc('update_user_district', { 
-          p_user_id: user.id,
-          p_district_id: pendingDistrictId 
-        });
-
-      if (profileError) throw profileError;
 
       setShowRoleModal(false);
       toast({
@@ -548,13 +542,10 @@ const Auth = () => {
                           Parent
                         </Label>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="district_admin" id="district_admin" />
-                        <Label htmlFor="district_admin" className="font-normal cursor-pointer">
-                          District Admin
-                        </Label>
-                      </div>
                     </RadioGroup>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Note: Admin accounts must be created by an existing administrator.
+                    </p>
                   </div>
                 </CardContent>
                 <CardFooter>
@@ -588,6 +579,7 @@ const Auth = () => {
       <RoleSelectionModal
         open={showRoleModal}
         districtName={pendingDistrictName}
+        availableRoles={availableRoles}
         onSelectRole={handleRoleSelection}
       />
     </div>
