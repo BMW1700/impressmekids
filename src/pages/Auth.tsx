@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Sparkles, Loader2, Chrome, Building2 } from "lucide-react";
 import { detectUserTypeFromEmail } from "@/lib/districtDetection";
 import { RoleSelectionModal } from "@/components/auth/RoleSelectionModal";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DistrictCombobox } from "@/components/auth/DistrictCombobox";
 import { useQuery } from "@tanstack/react-query";
 
 const Auth = () => {
@@ -720,18 +720,12 @@ const Auth = () => {
                         <Building2 className="h-4 w-4" />
                         Select Your School District
                       </Label>
-                      <Select value={selectedDistrictId} onValueChange={setSelectedDistrictId}>
-                        <SelectTrigger id="district-select">
-                          <SelectValue placeholder="Choose your district..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {districts?.map((district) => (
-                            <SelectItem key={district.id} value={district.id}>
-                              {district.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <DistrictCombobox
+                        value={selectedDistrictId}
+                        onValueChange={setSelectedDistrictId}
+                        districts={districts || []}
+                        placeholder="Choose your district..."
+                      />
                     </div>
                   )}
 
