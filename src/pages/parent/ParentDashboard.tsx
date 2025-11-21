@@ -79,8 +79,8 @@ const ParentDashboard = () => {
       if (userRole !== 'parent') {
         if (userRole === 'teacher') {
           navigate('/teacher/dashboard');
-        } else if (userRole === 'district_admin') {
-          navigate('/district/dashboard');
+        } else if (userRole === 'district_manager') {
+          navigate('/district-manager/dashboard');
         } else {
           navigate('/student/dashboard');
         }
