@@ -123,6 +123,36 @@ const Auth = () => {
         return;
       }
 
+      // If user is trying to select teacher role without a district, create pending request
+      if (selectedRole === 'teacher' && !pendingDistrictId) {
+        const { error: requestError } = await supabase
+          .from('pending_teacher_requests')
+          .insert({
+            user_id: user.id,
+            email: user.email || '',
+            full_name: user.user_metadata?.full_name || 'User',
+            status: 'pending'
+          });
+
+        if (requestError) throw requestError;
+
+        // Set them as student temporarily
+        const { error: roleError } = await supabase
+          .from('profiles')
+          .update({ role: 'student' })
+          .eq('id', user.id);
+
+        if (roleError) throw roleError;
+
+        setShowRoleModal(false);
+        toast({
+          title: "Teacher Access Requested",
+          description: "Your request for teacher access has been submitted for admin approval. You've been registered as a student in the meantime.",
+        });
+        redirectToDashboard('student');
+        return;
+      }
+
       // Update profile with selected role
       const { error: roleError } = await supabase
         .from('profiles')
@@ -531,12 +561,6 @@ const Auth = () => {
                         </Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="teacher" id="teacher" />
-                        <Label htmlFor="teacher" className="font-normal cursor-pointer">
-                          Teacher
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
                         <RadioGroupItem value="parent" id="parent" />
                         <Label htmlFor="parent" className="font-normal cursor-pointer">
                           Parent
@@ -544,7 +568,7 @@ const Auth = () => {
                       </div>
                     </RadioGroup>
                     <p className="text-xs text-muted-foreground mt-2">
-                      Note: Admin accounts must be created by an existing administrator.
+                      Note: Teacher and Admin accounts require verification and must be approved by school administrators.
                     </p>
                   </div>
                 </CardContent>

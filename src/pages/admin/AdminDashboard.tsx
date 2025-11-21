@@ -18,6 +18,7 @@ import { ParentAccessRequestsList } from "@/components/admin/ParentAccessRequest
 import { BackupManagement } from "@/components/admin/BackupManagement";
 import { SchoolEventManager } from "@/components/admin/SchoolEventManager";
 import { BulkStudentImport } from "@/components/admin/BulkStudentImport";
+import { PendingTeacherRequests } from "@/components/admin/PendingTeacherRequests";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -165,8 +166,9 @@ export default function AdminDashboard() {
           </div>
 
           {/* Main Content Tabs */}
-          <Tabs defaultValue="teachers" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-8">
+          <Tabs defaultValue="teacher-requests" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-9">
+              <TabsTrigger value="teacher-requests">Teacher Requests</TabsTrigger>
               <TabsTrigger value="teachers">Teachers</TabsTrigger>
               <TabsTrigger value="students">Students</TabsTrigger>
               <TabsTrigger value="admins">Admins</TabsTrigger>
@@ -176,6 +178,10 @@ export default function AdminDashboard() {
               <TabsTrigger value="calendar">Calendar</TabsTrigger>
               <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="teacher-requests" className="space-y-4">
+              <PendingTeacherRequests />
+            </TabsContent>
 
             <TabsContent value="teachers" className="space-y-4">
               <Card>

@@ -38,12 +38,12 @@ export async function detectUserTypeFromEmail(email: string): Promise<DistrictMa
     };
   }
   
-  // Email doesn't match any district → offer student/parent/teacher
+  // Email doesn't match any district → offer only student/parent (security: no public teacher signup)
   return {
     districtId: null,
     districtName: null,
     suggestedRole: 'student',
     requiresRoleSelection: true,
-    availableRoles: ['student', 'parent', 'teacher'],
+    availableRoles: ['student', 'parent'],
   };
 }
