@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { VoiceRecorder } from "@/components/aura/VoiceRecorder";
@@ -17,8 +18,35 @@ import DifficultyProgressCard from "@/components/aura/DifficultyProgressCard";
 
 const AuraPractice = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [latestAnalysis, setLatestAnalysis] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { navigate('/auth'); return; }
+    
+    const { data: profileResult } = await supabase.rpc('get_user_profile', { 
+      _user_id: session.user.id 
+    });
+    
+    if (!profileResult || profileResult.length === 0) { 
+      navigate('/auth'); 
+      return; 
+    }
+    
+    const profileData = profileResult[0];
+    
+    // Redirect non-students to their dashboards
+    if (profileData.role === 'district_manager') navigate('/district-manager/dashboard');
+    else if (profileData.role === 'teacher') navigate('/teacher/dashboard');
+    else if (profileData.role === 'admin') navigate('/admin/dashboard');
+    else if (profileData.role === 'parent') navigate('/parent/dashboard');
+  };
 
   const { data: user } = useQuery({
     queryKey: ['user'],

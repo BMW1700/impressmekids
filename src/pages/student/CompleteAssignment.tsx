@@ -23,10 +23,41 @@ export default function CompleteAssignment() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [hasStarted, setHasStarted] = useState(false);
 
-  // Debug log component mount
+  // Check authentication and role on mount
   useEffect(() => {
-    console.log('🎯 [CompleteAssignment] Component mounted', { assignmentId, hasStarted });
+    checkAuth();
   }, []);
+
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { navigate('/auth'); return; }
+    
+    const { data: profileResult } = await supabase.rpc('get_user_profile', { 
+      _user_id: session.user.id 
+    });
+    
+    if (!profileResult || profileResult.length === 0) { 
+      navigate('/auth'); 
+      return; 
+    }
+    
+    const profileData = profileResult[0];
+    
+    // Only students can complete assignments
+    if (profileData.role !== 'student') {
+      toast({
+        title: "Access Denied",
+        description: "Only students can access assignments.",
+        variant: "destructive",
+      });
+      
+      // Redirect to appropriate dashboard
+      if (profileData.role === 'district_manager') navigate('/district-manager/dashboard');
+      else if (profileData.role === 'teacher') navigate('/teacher/dashboard');
+      else if (profileData.role === 'admin') navigate('/admin/dashboard');
+      else if (profileData.role === 'parent') navigate('/parent/dashboard');
+    }
+  };
 
   const { timeRemaining, formatTime, stopTimer } = useAssignmentTimer({
     assignmentId: assignmentId || '',
