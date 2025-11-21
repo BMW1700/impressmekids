@@ -18,7 +18,7 @@ export function RoleSelectionModal({ open, districtName, availableRoles, onSelec
 
   const title = districtName 
     ? `Welcome to ${districtName}!`
-    : 'Welcome to Impress Me Kids!';
+    : 'Welcome to ImpressMe Kids!';
   
   const description = availableRoles.length === 2 && districtName
     ? 'Are you joining as a teacher or student?'

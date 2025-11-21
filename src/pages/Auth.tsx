@@ -507,7 +507,7 @@ const Auth = () => {
               />
             </div>
           </Link>
-          <h1 className="text-3xl font-bold text-white mb-2">Welcome to Impress Me Kids!</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">Welcome to ImpressMe Kids!</h1>
           <p className="text-white/80">Sign in or create an account to start playing</p>
         </div>
 

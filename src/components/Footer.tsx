@@ -39,7 +39,7 @@ export const Footer = () => {
         {/* Footer Links */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Impress Me Kids. All rights reserved.
+            © {new Date().getFullYear()} ImpressMe Kids. All rights reserved.
           </div>
           <div className="flex items-center gap-4 text-sm">
             <Link to="/privacy-policy" className="text-muted-foreground hover:text-primary transition-colors">
@@ -54,7 +54,7 @@ export const Footer = () => {
               rel="noopener noreferrer"
               className="text-primary hover:text-primary-dark transition-colors font-medium"
             >
-              An Impress Me Family App ✨
+              An ImpressMe Family App ✨
             </a>
           </div>
         </div>
