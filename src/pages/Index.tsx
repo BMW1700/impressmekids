@@ -29,17 +29,19 @@ const Index = () => {
         });
         if (profileData && profileData.length > 0) {
           const userRole = profileData[0].role;
-          if (userRole === 'teacher') {
-            navigate('/teacher/dashboard');
-          } else if (userRole === 'parent') {
-            navigate('/parent/dashboard');
-          } else if (userRole === 'district_admin') {
-            navigate('/district/dashboard');
-          } else if (userRole === 'admin') {
-            navigate('/admin/dashboard');
-          } else {
-            navigate('/student/dashboard');
-          }
+        if (userRole === 'teacher') {
+          navigate('/teacher/dashboard');
+        } else if (userRole === 'parent') {
+          navigate('/parent/dashboard');
+        } else if (userRole === 'district_admin') {
+          navigate('/district/dashboard');
+        } else if (userRole === 'district_manager') {
+          navigate('/district-manager/dashboard');
+        } else if (userRole === 'admin') {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('/student/dashboard');
+        }
         }
       }
     };
