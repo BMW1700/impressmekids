@@ -73,7 +73,7 @@ export default function Calendar() {
 
   const dateRange = getDateRange();
 
-  const userRole = profile?.role === "district_manager" ? "admin" : (profile?.role || "student") as "admin" | "parent" | "student" | "teacher";
+  const userRole = profile?.role === "district_admin" ? "admin" : (profile?.role || "student") as "admin" | "parent" | "student" | "teacher";
 
   const { data: items = [], isLoading } = useCalendarData({
     startDate: dateRange.start,
