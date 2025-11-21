@@ -3226,7 +3226,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
-          role: Database["public"]["Enums"]["user_role"]
+          role: string
         }[]
       }
       get_user_role: {
