@@ -33,8 +33,8 @@ const Index = () => {
             navigate('/teacher/dashboard');
           } else if (userRole === 'parent') {
             navigate('/parent/dashboard');
-          } else if (userRole === 'district_admin') {
-            navigate('/district/dashboard');
+          } else if (userRole === 'district_manager') {
+            navigate('/district-manager/dashboard');
           } else if (userRole === 'admin') {
             navigate('/admin/dashboard');
           } else {
