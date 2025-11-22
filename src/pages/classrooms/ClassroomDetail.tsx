@@ -274,13 +274,20 @@ const ClassroomDetail = () => {
       console.log('Query: flashcard_sets, classroom_id =', id);
       
       try {
-        const { data: flashcardsData, error: flashcardsError } = await supabase
+        let flashcardsQuery = supabase
           .from('flashcard_sets')
           .select(`
             *,
             question_groups!question_group_id (title, subject, grade)
           `)
-          .eq('classroom_id', id)
+          .eq('classroom_id', id);
+        
+        // Students only see posted flashcard sets
+        if (classroomData?.teacher_id !== session.user.id) {
+          flashcardsQuery = flashcardsQuery.eq('is_posted', true);
+        }
+        
+        const { data: flashcardsData, error: flashcardsError } = await flashcardsQuery
           .order('created_at', { ascending: false });
 
         if (flashcardsError) {
@@ -1244,7 +1251,14 @@ const ClassroomDetail = () => {
                   {flashcardSets.map((set) => (
                     <Card key={set.id} className="shadow-card hover:shadow-purple transition-shadow">
                       <CardHeader>
-                        <CardTitle className="text-lg">{set.title}</CardTitle>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-lg">{set.title}</CardTitle>
+                          {isTeacher && (
+                            <Badge variant={set.is_posted ? "default" : "secondary"}>
+                              {set.is_posted ? "Posted" : "Draft"}
+                            </Badge>
+                          )}
+                        </div>
                         {set.description && (
                           <p className="text-sm text-muted-foreground line-clamp-2">
                             {set.description}
@@ -1271,13 +1285,44 @@ const ClassroomDetail = () => {
                           <p className="text-xs text-muted-foreground">
                             Created {new Date(set.created_at).toLocaleDateString()}
                           </p>
-                          <Button
-                            className="w-full bg-gradient-primary"
-                            onClick={() => setViewingFlashcardSet(set)}
-                          >
-                            <Play className="mr-2 h-4 w-4" />
-                            Study Now
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              className="flex-1 bg-gradient-primary"
+                              onClick={() => setViewingFlashcardSet(set)}
+                            >
+                              <Play className="mr-2 h-4 w-4" />
+                              Study Now
+                            </Button>
+                            {isTeacher && (
+                              <Button
+                                variant={set.is_posted ? "outline" : "default"}
+                                onClick={async () => {
+                                  try {
+                                    const { error } = await supabase
+                                      .from('flashcard_sets')
+                                      .update({ is_posted: !set.is_posted })
+                                      .eq('id', set.id);
+                                    
+                                    if (error) throw error;
+                                    
+                                    toast({
+                                      title: "Success",
+                                      description: `Flashcard set ${!set.is_posted ? 'posted' : 'unpublished'}`,
+                                    });
+                                    loadClassroomData();
+                                  } catch (error: any) {
+                                    toast({
+                                      title: "Error",
+                                      description: "Failed to update flashcard set status",
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }}
+                              >
+                                {set.is_posted ? "Unpost" : "Post"}
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
