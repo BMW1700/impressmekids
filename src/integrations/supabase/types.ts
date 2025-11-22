@@ -2435,6 +2435,47 @@ export type Database = {
           },
         ]
       }
+      risk_alert_notifications: {
+        Row: {
+          email_status: string
+          id: string
+          notification_type: string
+          parent_id: string | null
+          risk_score: number
+          sent_at: string
+          student_id: string
+          teacher_id: string
+        }
+        Insert: {
+          email_status?: string
+          id?: string
+          notification_type: string
+          parent_id?: string | null
+          risk_score: number
+          sent_at?: string
+          student_id: string
+          teacher_id: string
+        }
+        Update: {
+          email_status?: string
+          id?: string
+          notification_type?: string
+          parent_id?: string | null
+          risk_score?: number
+          sent_at?: string
+          student_id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_alert_notifications_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "parent_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       school_events: {
         Row: {
           blocks_classes: boolean | null
@@ -2555,6 +2596,56 @@ export type Database = {
         }
         Relationships: []
       }
+      student_interventions: {
+        Row: {
+          classroom_id: string
+          created_at: string
+          id: string
+          intervention_type: string
+          notes: string | null
+          resolved_at: string | null
+          risk_score_after: number | null
+          risk_score_before: number
+          status: string
+          student_id: string
+          teacher_id: string
+        }
+        Insert: {
+          classroom_id: string
+          created_at?: string
+          id?: string
+          intervention_type: string
+          notes?: string | null
+          resolved_at?: string | null
+          risk_score_after?: number | null
+          risk_score_before: number
+          status?: string
+          student_id: string
+          teacher_id: string
+        }
+        Update: {
+          classroom_id?: string
+          created_at?: string
+          id?: string
+          intervention_type?: string
+          notes?: string | null
+          resolved_at?: string | null
+          risk_score_after?: number | null
+          risk_score_before?: number
+          status?: string
+          student_id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_interventions_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_profiles: {
         Row: {
           created_at: string
@@ -2580,6 +2671,44 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_risk_history: {
+        Row: {
+          classroom_id: string
+          created_at: string
+          factors: Json
+          id: string
+          risk_level: string
+          risk_score: number
+          student_id: string
+        }
+        Insert: {
+          classroom_id: string
+          created_at?: string
+          factors?: Json
+          id?: string
+          risk_level: string
+          risk_score: number
+          student_id: string
+        }
+        Update: {
+          classroom_id?: string
+          created_at?: string
+          factors?: Json
+          id?: string
+          risk_level?: string
+          risk_score?: number
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_risk_history_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
             referencedColumns: ["id"]
           },
         ]

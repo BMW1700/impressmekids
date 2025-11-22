@@ -1,13 +1,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, TrendingDown, Clock, Target } from "lucide-react";
+import { AlertTriangle, TrendingDown, Clock, Target, Mail, LineChart } from "lucide-react";
 import { calculateRiskScore, extractFeatures, generateRiskFactors } from "@/lib/ml/riskScoringML";
+import { useState } from "react";
+import { toast } from "@/hooks/use-toast";
+import RiskTrendChart from "./RiskTrendChart";
+import InterventionTracker from "./InterventionTracker";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AtRiskAlertsProps {
   students: any[];
   records: any[];
   skillVectors: any[];
+  classroomId: string;
+  classroomName: string;
 }
 
 interface RiskAssessment {
@@ -19,7 +26,9 @@ interface RiskAssessment {
   recommendations: string[];
 }
 
-const AtRiskAlerts = ({ students, records, skillVectors }: AtRiskAlertsProps) => {
+const AtRiskAlerts = ({ students, records, skillVectors, classroomId, classroomName }: AtRiskAlertsProps) => {
+  const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
+  const [isSendingAlerts, setIsSendingAlerts] = useState(false);
   const assessRisk = (studentId: string): RiskAssessment => {
     const studentRecords = records.filter((r) => r.profile_id === studentId);
     const vector = skillVectors.find((v) => v.student_id === studentId);
@@ -65,16 +74,88 @@ const AtRiskAlerts = ({ students, records, skillVectors }: AtRiskAlertsProps) =>
     return <Clock className="w-4 h-4" />;
   };
 
+  const handleSendAlerts = async (sendToParents: boolean = false) => {
+    setIsSendingAlerts(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: teacher } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", user.id)
+        .single();
+
+      const alerts = assessments.map((assessment) => ({
+        studentId: assessment.studentId,
+        studentName: assessment.studentName,
+        teacherId: user.id,
+        teacherEmail: teacher?.email || "",
+        teacherName: teacher?.full_name || "",
+        riskScore: assessment.riskScore,
+        riskLevel: assessment.riskLevel,
+        factors: assessment.factors,
+        recommendations: assessment.recommendations,
+        classroomId,
+        classroomName,
+      }));
+
+      const response = await supabase.functions.invoke("send-risk-alerts", {
+        body: { alerts, sendToParents },
+      });
+
+      if (response.error) throw response.error;
+
+      toast({
+        title: "Alerts Sent!",
+        description: `Successfully sent ${alerts.length} risk alert${alerts.length > 1 ? "s" : ""}${sendToParents ? " to teachers and parents" : " to teachers"}.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingAlerts(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5 text-orange-500" />
-          At-Risk Student Alerts
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Predictive analytics for early intervention
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-orange-500" />
+              At-Risk Student Alerts
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Predictive analytics for early intervention
+            </p>
+          </div>
+          {assessments.length > 0 && (
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={() => handleSendAlerts(false)}
+                disabled={isSendingAlerts}
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                Email Teachers
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => handleSendAlerts(true)}
+                disabled={isSendingAlerts}
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                Email Teachers & Parents
+              </Button>
+            </div>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         {assessments.length === 0 ? (
@@ -127,9 +208,32 @@ const AtRiskAlerts = ({ students, records, skillVectors }: AtRiskAlertsProps) =>
                   </div>
                 </div>
 
-                <Button size="sm" variant="outline" className="w-full">
-                  Mark as Addressed
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setSelectedStudent(assessment.studentId)}
+                  >
+                    <LineChart className="w-4 h-4 mr-2" />
+                    View Trends
+                  </Button>
+                </div>
+
+                {selectedStudent === assessment.studentId && (
+                  <div className="mt-4 space-y-4">
+                    <RiskTrendChart
+                      studentId={assessment.studentId}
+                      studentName={assessment.studentName}
+                    />
+                    <InterventionTracker
+                      studentId={assessment.studentId}
+                      studentName={assessment.studentName}
+                      classroomId={classroomId}
+                      currentRiskScore={assessment.riskScore}
+                    />
+                  </div>
+                )}
               </div>
             ))}
           </div>
