@@ -245,6 +245,8 @@ const AuraAnalytics = () => {
                     students={students || []}
                     records={auraRecords}
                     skillVectors={skillVectors}
+                    classroomId={classroomId!}
+                    classroomName={classrooms?.find(c => c.id === classroomId)?.name || "Classroom"}
                   />
                 </TabsContent>
 
