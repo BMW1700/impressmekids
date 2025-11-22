@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 import { showNextQuestionSchema, validateInput } from '../_shared/validation.ts';
 
 const corsHeaders = {

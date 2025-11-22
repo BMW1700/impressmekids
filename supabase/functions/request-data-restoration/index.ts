@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { Resend } from 'https://esm.sh/resend@2.0.0';
 
 const corsHeaders = {
