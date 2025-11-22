@@ -17,6 +17,7 @@ import { useMultiQuestionAssignments } from '@/hooks/useMultiQuestionAssignments
 import { useAssignmentGroups } from '@/hooks/useAssignmentGroups';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { ConfirmModal } from '@/components/ConfirmModal';
+import { StandardsSelector } from '@/components/classroom/StandardsSelector';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Question {
@@ -41,6 +42,7 @@ export default function CreateMultiQuestionAssignment() {
   const [isGroupAssignment, setIsGroupAssignment] = useState(false);
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [category, setCategory] = useState<'Test' | 'Quiz' | 'Homework'>('Homework');
+  const [selectedStandards, setSelectedStandards] = useState<string[]>([]);
   const [classroomStudents, setClassroomStudents] = useState<Array<{ id: string; full_name: string }>>([]);
   const [questions, setQuestions] = useState<Question[]>([
     { id: uuidv4(), sequence: 1, question_type: null, question_data: {} }
@@ -295,6 +297,11 @@ export default function CreateMultiQuestionAssignment() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <StandardsSelector
+                selectedStandards={selectedStandards}
+                onStandardsChange={setSelectedStandards}
+              />
 
               <div className="grid grid-cols-3 gap-4">
                 <div>

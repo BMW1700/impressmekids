@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { StandardsProgressSection } from "./StandardsProgressSection";
 
 interface GradebookSectionProps {
   studentId: string;
@@ -53,7 +54,13 @@ export const GradebookSection = ({ studentId }: GradebookSectionProps) => {
       {gradebook && gradebook.length > 0 ? (
         <div className="space-y-6">
           {gradebook.map((classroom) => (
-            <Card key={classroom.id}>
+            <>
+              <StandardsProgressSection
+                key={`standards-${classroom.id}`}
+                studentId={studentId}
+                classroomId={classroom.id}
+              />
+              <Card key={classroom.id}>
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -166,6 +173,7 @@ export const GradebookSection = ({ studentId }: GradebookSectionProps) => {
                 </CardContent>
               )}
             </Card>
+            </>
           ))}
         </div>
       ) : (
