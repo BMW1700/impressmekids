@@ -66,17 +66,17 @@ const Index = () => {
         
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
-            <Badge variant="secondary" className="mb-6 px-4 py-2 text-sm font-semibold animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <Badge variant="secondary" className="mb-6 px-4 py-2 text-sm font-semibold">
               Complete Classroom Solution
             </Badge>
             
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100 leading-tight">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
               Your Complete Platform for <span className="text-secondary">Teaching & Learning</span>
             </h1>
             
-            <p className="text-lg md:text-xl lg:text-2xl mb-8 opacity-95 max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">A collaborative learning platform that empowers teachers, students, and parents to connect, communicate, and inspire academic growth in and beyond the classroom.</p>
+            <p className="text-lg md:text-xl lg:text-2xl mb-8 opacity-95 max-w-3xl mx-auto">A collaborative learning platform that empowers teachers, students, and parents to connect, communicate, and inspire academic growth in and beyond the classroom.</p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
               <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary-light text-lg px-8 py-6" asChild>
                 <Link to="/auth">
                   Request a Demo
@@ -90,7 +90,7 @@ const Index = () => {
               </Button>
             </div>
 
-            <div className="flex flex-wrap justify-center gap-6 text-sm animate-in fade-in slide-in-from-bottom-4 duration-700 delay-400">
+            <div className="flex flex-wrap justify-center gap-6 text-sm">
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5" />
                 <span>One stop shop for all classrooms</span>
