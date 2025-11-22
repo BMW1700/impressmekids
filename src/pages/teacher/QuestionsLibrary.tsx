@@ -207,12 +207,21 @@ const QuestionsLibrary = () => {
               <h1 className="text-3xl font-bold mb-2">Question Groups</h1>
               <p className="text-muted-foreground">{classroom?.name}</p>
             </div>
-            <Button
-              onClick={() => setShowCreateModal(true)}
-            >
-              <FolderPlus className="mr-2 h-4 w-4" />
-              Create Question Group
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => navigate(`/classrooms/${classroomId}?tab=study`)}
+              >
+                <BookOpen className="mr-2 h-4 w-4" />
+                View Flashcards
+              </Button>
+              <Button
+                onClick={() => setShowCreateModal(true)}
+              >
+                <FolderPlus className="mr-2 h-4 w-4" />
+                Create Question Group
+              </Button>
+            </div>
           </div>
 
           {questionGroups.length === 0 ? (

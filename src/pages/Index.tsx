@@ -1,11 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ClipboardList, Trophy, Users2, BookOpen, ArrowRight, CheckCircle, GraduationCap, MessageSquare, LayoutDashboard } from "lucide-react";
+import { ClipboardList, Trophy, Users2, BookOpen, ArrowRight, CheckCircle, GraduationCap, MessageSquare, LayoutDashboard, Loader2 } from "lucide-react";
 import { StatsSection } from "@/components/landing/StatsSection";
 import { TestimonialSection } from "@/components/landing/TestimonialSection";
 import { TrustSection } from "@/components/landing/TrustSection";
@@ -13,6 +13,8 @@ import { ResearchSection } from "@/components/landing/ResearchSection";
 import { Badge } from "@/components/ui/badge";
 const Index = () => {
   const navigate = useNavigate();
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
   useEffect(() => {
     const checkAuthAndRedirect = async () => {
       const {
@@ -42,9 +44,19 @@ const Index = () => {
           }
         }
       }
+      setIsCheckingAuth(false);
     };
     checkAuthAndRedirect();
   }, [navigate]);
+
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return <div className="min-h-screen flex flex-col">
       <Header />
       
