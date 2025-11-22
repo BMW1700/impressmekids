@@ -92,7 +92,7 @@ export const trainMLSchema = z.object({
 export const generateQuestionSchema = z.object({
   classroom_id: uuidSchema,
   group_id: uuidSchema.optional(),
-  lesson_context: z.string().min(10).max(5000),
+  lesson_context: z.string().min(3).max(5000),
   subject: z.string().min(1).max(100),
   grade: z.number().int().min(1).max(12),
   difficulty: z.number().int().min(1).max(5),
