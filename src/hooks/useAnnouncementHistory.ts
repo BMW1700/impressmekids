@@ -4,8 +4,7 @@ import { startOfDay, subDays } from "date-fns";
 
 interface GroupedAnnouncements {
   today: any[];
-  lastSevenDays: any[];
-  other: any[];
+  lastFourteenDays: any[];
 }
 
 export const useAnnouncementHistory = (studentId: string | undefined) => {
@@ -24,7 +23,11 @@ export const useAnnouncementHistory = (studentId: string | undefined) => {
 
       const classroomIds = classroomData.map((c) => c.classroom_id);
 
-      // Get all announcements from student's classrooms
+      const now = new Date();
+      const todayStart = startOfDay(now);
+      const fourteenDaysAgo = startOfDay(subDays(now, 14));
+
+      // Fetch only announcements from the last 14 days
       const { data: announcements, error: announcementsError } = await supabase
         .from("classroom_announcements")
         .select(`
@@ -37,18 +40,15 @@ export const useAnnouncementHistory = (studentId: string | undefined) => {
           )
         `)
         .in("classroom_id", classroomIds)
+        .gte("created_at", fourteenDaysAgo.toISOString())
+        .limit(100)
         .order("created_at", { ascending: false });
 
       if (announcementsError) throw announcementsError;
 
-      const now = new Date();
-      const todayStart = startOfDay(now);
-      const sevenDaysAgo = startOfDay(subDays(now, 7));
-
       const grouped: GroupedAnnouncements = {
         today: [],
-        lastSevenDays: [],
-        other: [],
+        lastFourteenDays: [],
       };
 
       announcements?.forEach((announcement) => {
@@ -56,15 +56,14 @@ export const useAnnouncementHistory = (studentId: string | undefined) => {
         
         if (createdAt >= todayStart) {
           grouped.today.push(announcement);
-        } else if (createdAt >= sevenDaysAgo) {
-          grouped.lastSevenDays.push(announcement);
         } else {
-          grouped.other.push(announcement);
+          grouped.lastFourteenDays.push(announcement);
         }
       });
 
       return grouped;
     },
     enabled: !!studentId,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 };
