@@ -43,14 +43,14 @@ export const AnnouncementsSection = ({ studentId }: AnnouncementsSectionProps) =
         </Card>
       )}
 
-      {/* Last 7 Days */}
-      {data?.lastSevenDays && data.lastSevenDays.length > 0 && (
+      {/* Last 14 Days */}
+      {data?.lastFourteenDays && data.lastFourteenDays.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Last 7 Days</CardTitle>
+            <CardTitle>Last 14 Days</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {data.lastSevenDays.map((announcement: any) => (
+            {data.lastFourteenDays.map((announcement: any) => (
               <AnnouncementCard
                 key={announcement.id}
                 title={announcement.title}
@@ -64,28 +64,7 @@ export const AnnouncementsSection = ({ studentId }: AnnouncementsSectionProps) =
         </Card>
       )}
 
-      {/* Other */}
-      {data?.other && data.other.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Older</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {data.other.map((announcement: any) => (
-              <AnnouncementCard
-                key={announcement.id}
-                title={announcement.title}
-                content={announcement.content}
-                createdAt={announcement.created_at}
-                classroomName={announcement.classrooms?.name}
-                type={announcement.announcement_type === "assignment" ? "assignment" : "announcement"}
-              />
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {!data?.today?.length && !data?.lastSevenDays?.length && !data?.other?.length && (
+      {!data?.today?.length && !data?.lastFourteenDays?.length && (
         <Card>
           <CardContent className="text-center py-12">
             <p className="text-muted-foreground">No announcements yet.</p>
