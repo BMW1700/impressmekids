@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic, Eye, EyeOff, UserCheck, BarChart3, Calendar } from "lucide-react";
+import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic, Eye, EyeOff, UserCheck, BarChart3, Calendar, Plus } from "lucide-react";
 import { ClassroomLeaderboard } from "@/components/ClassroomLeaderboard";
 import { AttendanceTab } from "@/components/teacher/AttendanceTab";
 import {
@@ -1191,8 +1191,22 @@ const ClassroomDetail = () => {
             </TabsContent>
 
             <TabsContent value="study" className="mt-6">
-              <div className="mb-4">
-                <h2 className="text-2xl font-bold">Study Materials</h2>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold">Study Materials</h2>
+                  <p className="text-muted-foreground">
+                    {isTeacher ? "Manage flashcard sets for your students" : "Review flashcard sets from your teacher"}
+                  </p>
+                </div>
+                {isTeacher && (
+                  <Button
+                    onClick={() => navigate(`/teacher/questions/${id}`)}
+                    className="bg-gradient-primary"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Flashcards
+                  </Button>
+                )}
               </div>
 
               {viewingFlashcardSet ? (
@@ -1215,6 +1229,15 @@ const ClassroomDetail = () => {
                       ? "Generate flashcard sets from your question groups"
                       : "Your teacher hasn't created any flashcard sets yet"}
                   </p>
+                  {isTeacher && (
+                    <Button
+                      onClick={() => navigate(`/teacher/questions/${id}`)}
+                      className="bg-gradient-primary"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create Your First Flashcard Set
+                    </Button>
+                  )}
                 </Card>
               ) : (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
