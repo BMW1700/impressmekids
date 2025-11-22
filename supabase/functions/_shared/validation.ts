@@ -95,7 +95,7 @@ export const generateQuestionSchema = z.object({
   lesson_context: z.string().min(10).max(5000),
   subject: z.string().min(1).max(100),
   grade: z.number().int().min(1).max(12),
-  difficulty: z.enum(['easy', 'medium', 'hard']),
+  difficulty: z.number().int().min(1).max(5),
   count: z.number().int().min(1).max(10).optional(),
 });
 
