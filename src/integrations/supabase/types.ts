@@ -1400,6 +1400,7 @@ export type Database = {
           description: string | null
           flashcards: Json
           id: string
+          is_posted: boolean
           question_group_id: string
           title: string
           updated_at: string
@@ -1411,6 +1412,7 @@ export type Database = {
           description?: string | null
           flashcards?: Json
           id?: string
+          is_posted?: boolean
           question_group_id: string
           title: string
           updated_at?: string
@@ -1422,6 +1424,7 @@ export type Database = {
           description?: string | null
           flashcards?: Json
           id?: string
+          is_posted?: boolean
           question_group_id?: string
           title?: string
           updated_at?: string
