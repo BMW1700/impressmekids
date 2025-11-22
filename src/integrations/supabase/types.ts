@@ -298,6 +298,42 @@ export type Database = {
           },
         ]
       }
+      assignment_standards: {
+        Row: {
+          assignment_id: string
+          created_at: string
+          id: string
+          standard_id: string
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string
+          id?: string
+          standard_id: string
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string
+          id?: string
+          standard_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_standards_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_standards_standard_id_fkey"
+            columns: ["standard_id"]
+            isOneToOne: false
+            referencedRelation: "learning_standards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignment_submissions: {
         Row: {
           assignment_id: string
@@ -1649,6 +1685,36 @@ export type Database = {
           },
         ]
       }
+      learning_standards: {
+        Row: {
+          category: string
+          code: string
+          created_at: string
+          description: string
+          grade: number
+          id: string
+          subject: string
+        }
+        Insert: {
+          category: string
+          code: string
+          created_at?: string
+          description: string
+          grade: number
+          id?: string
+          subject: string
+        }
+        Update: {
+          category?: string
+          code?: string
+          created_at?: string
+          description?: string
+          grade?: number
+          id?: string
+          subject?: string
+        }
+        Relationships: []
+      }
       match_events: {
         Row: {
           answer_deadline: string | null
@@ -2776,6 +2842,61 @@ export type Database = {
             foreignKeyName: "student_skill_vectors_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_standard_scores: {
+        Row: {
+          assignments_completed: number
+          classroom_id: string
+          created_at: string
+          id: string
+          last_updated: string
+          mastery_percentage: number
+          standard_id: string
+          student_id: string
+        }
+        Insert: {
+          assignments_completed?: number
+          classroom_id: string
+          created_at?: string
+          id?: string
+          last_updated?: string
+          mastery_percentage?: number
+          standard_id: string
+          student_id: string
+        }
+        Update: {
+          assignments_completed?: number
+          classroom_id?: string
+          created_at?: string
+          id?: string
+          last_updated?: string
+          mastery_percentage?: number
+          standard_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_standard_scores_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_standard_scores_standard_id_fkey"
+            columns: ["standard_id"]
+            isOneToOne: false
+            referencedRelation: "learning_standards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_standard_scores_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },

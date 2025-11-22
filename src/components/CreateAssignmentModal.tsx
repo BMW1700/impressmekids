@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useAssignments } from "@/hooks/useAssignments";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { StandardsSelector } from "@/components/classroom/StandardsSelector";
 
 interface CreateAssignmentModalProps {
   open: boolean;
@@ -38,6 +39,7 @@ export const CreateAssignmentModal = ({
   const [enableRealtimeCoaching, setEnableRealtimeCoaching] = useState(false);
   const [isPosted, setIsPosted] = useState(true);
   const [category, setCategory] = useState<'Test' | 'Quiz' | 'Homework'>('Homework');
+  const [selectedStandards, setSelectedStandards] = useState<string[]>([]);
   const { toast } = useToast();
   const { createAssignment } = useAssignments(classroomId);
 
@@ -151,6 +153,36 @@ export const CreateAssignmentModal = ({
         enableRealtimeCoaching,
       });
 
+      // Map standards if any selected - need to get the assignment ID after creation
+      if (selectedStandards.length > 0) {
+        // Wait briefly for the mutation to complete
+        setTimeout(async () => {
+          try {
+            const { data: recentAssignment } = await supabase
+              .from('assignments')
+              .select('id')
+              .eq('classroom_id', classroomId)
+              .eq('title', title.trim())
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+
+            if (recentAssignment) {
+              await supabase
+                .from("assignment_standards")
+                .insert(
+                  selectedStandards.map((standardId) => ({
+                    assignment_id: recentAssignment.id,
+                    standard_id: standardId,
+                  }))
+                );
+            }
+          } catch (err) {
+            console.error("Error mapping standards:", err);
+          }
+        }, 500);
+      }
+
       // Reset form
       setTitle("");
       setDescription("");
@@ -162,6 +194,7 @@ export const CreateAssignmentModal = ({
       setEnableRealtimeCoaching(false);
       setIsPosted(true);
       setCategory('Homework');
+      setSelectedStandards([]);
       onOpenChange(false);
       onSuccess?.();
     } catch (error: any) {
@@ -241,6 +274,11 @@ export const CreateAssignmentModal = ({
                 </SelectContent>
               </Select>
             </div>
+
+            <StandardsSelector
+              selectedStandards={selectedStandards}
+              onStandardsChange={setSelectedStandards}
+            />
 
             <div className="grid gap-2">
               <Label htmlFor="dueDate">

@@ -47,6 +47,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSearchParams } from "react-router-dom";
 import { SyllabusTab } from "@/components/classroom/SyllabusTab";
+import { StandardsProgressDashboard } from "@/components/classroom/StandardsProgressDashboard";
 import {
   Dialog,
   DialogContent,
@@ -875,7 +876,11 @@ const ClassroomDetail = () => {
             )}
 
             <TabsContent value="assignments" className="mt-6">
-              <div className="mb-4 flex items-center justify-between">
+              {isTeacher && (
+                <StandardsProgressDashboard classroomId={id!} />
+              )}
+              
+              <div className="mb-4 flex items-center justify-between mt-6">
                 <h2 className="text-2xl font-bold">Assignments</h2>
                 {isTeacher && (
                   <Button
