@@ -1,10 +1,8 @@
 import { Link } from "react-router-dom";
-import { Shield, Lock, FileCheck, Globe } from "lucide-react";
+import { Shield, Globe, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-
 export const Footer = () => {
-  return (
-    <footer className="border-t border-border bg-card/50 backdrop-blur-sm mt-auto">
+  return <footer className="border-t border-border bg-card/50 backdrop-blur-sm mt-auto">
       <div className="container mx-auto px-4 py-8">
         {/* Trust Badges Section */}
         <div className="mb-6 pb-6 border-b border-border">
@@ -17,7 +15,7 @@ export const Footer = () => {
             </div>
             <div className="flex flex-wrap items-center justify-center gap-3">
               <Badge variant="outline" className="px-3 py-1.5 border-primary/20 hover:border-primary/40 transition-colors">
-                <FileCheck className="h-3.5 w-3.5 mr-1.5 text-primary" />
+                <Globe className="h-3.5 w-3.5 mr-1.5 text-primary" />
                 FERPA Aligned
               </Badge>
               <Badge variant="outline" className="px-3 py-1.5 border-primary/20 hover:border-primary/40 transition-colors">
@@ -25,7 +23,7 @@ export const Footer = () => {
                 COPPA Ready
               </Badge>
               <Badge variant="outline" className="px-3 py-1.5 border-primary/20 hover:border-primary/40 transition-colors">
-                <Lock className="h-3.5 w-3.5 mr-1.5 text-primary" />
+                <FileText className="h-3.5 w-3.5 mr-1.5 text-primary" />
                 Enterprise Security
               </Badge>
               <Badge variant="outline" className="px-3 py-1.5 border-primary/20 hover:border-primary/40 transition-colors">
@@ -48,17 +46,11 @@ export const Footer = () => {
             <Link to="/terms-of-service" className="text-muted-foreground hover:text-primary transition-colors">
               Terms of Service
             </Link>
-            <a 
-              href="https://impressme.com" 
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:text-primary-dark transition-colors font-medium"
-            >
+            <a href="https://impressme.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-dark transition-colors font-medium">
               An ImpressMe Family App ✨
             </a>
           </div>
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 };
