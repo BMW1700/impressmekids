@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.58.0";
+import { createClient } from "@supabase/supabase-js";
 import { simpleG2PFallback, arpabetToIPAPhonemes } from "./_shared/cmuDictUtils.ts";
 import { calculatePhonemeAccuracy } from "./_shared/phonemeDistance.ts";
 import * as cmudictModule from "npm:cmu-pronouncing-dictionary@3.0.0";
