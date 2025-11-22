@@ -2315,6 +2315,7 @@ export type Database = {
           metadata: Json | null
           options: Json | null
           question_text: string
+          question_type: string | null
           source: string | null
           subject: string
         }
@@ -2335,6 +2336,7 @@ export type Database = {
           metadata?: Json | null
           options?: Json | null
           question_text: string
+          question_type?: string | null
           source?: string | null
           subject: string
         }
@@ -2355,6 +2357,7 @@ export type Database = {
           metadata?: Json | null
           options?: Json | null
           question_text?: string
+          question_type?: string | null
           source?: string | null
           subject?: string
         }
