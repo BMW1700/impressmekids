@@ -351,7 +351,7 @@ export const GradebookSection = ({ studentId }: GradebookSectionProps) => {
                 </div>
 
                 {selectedAssignment.submissionId && 
-                 (selectedAssignment.status === "Graded" || selectedAssignment.status === "Submitted") && (
+                 selectedAssignment.status === "Graded" && (
                   <Button 
                     onClick={() => navigate(`/student/assignment/${selectedAssignment.id}`)}
                     className="w-full"
