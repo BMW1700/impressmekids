@@ -3,7 +3,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useStudentGradebook } from "@/hooks/useStudentGradebook";
 import { Loader2, TrendingUp, TrendingDown, Minus, Eye } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { useState } from "react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -14,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { StandardsProgressSection } from "./StandardsProgressSection";
+import { StudentClassroomTrends } from "@/components/StudentClassroomTrends";
 
 interface GradebookSectionProps {
   studentId: string;
@@ -188,38 +188,15 @@ export const GradebookSection = ({ studentId }: GradebookSectionProps) => {
 
       {/* Trend Graph Dialog */}
       <Dialog open={!!selectedClassroom} onOpenChange={() => setSelectedClassroom(null)}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Grade Trend - {selectedClassData?.name}</DialogTitle>
+            <DialogTitle>Performance Trends - {selectedClassData?.name}</DialogTitle>
           </DialogHeader>
-          {selectedClassData && selectedClassData.gradeHistory.length > 0 ? (
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={selectedClassData.gradeHistory}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="date"
-                    tickFormatter={(date) => format(new Date(date), "MMM d")}
-                  />
-                  <YAxis domain={[0, 100]} />
-                  <Tooltip
-                    labelFormatter={(date) => format(new Date(date), "MMM d, yyyy")}
-                  />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="grade"
-                    stroke="#8b5cf6"
-                    strokeWidth={2}
-                    name="My Grade"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <p className="text-center text-muted-foreground py-8">
-              Not enough data to show grade trends yet.
-            </p>
+          {selectedClassroom && (
+            <StudentClassroomTrends 
+              classroomId={selectedClassroom}
+              studentId={studentId}
+            />
           )}
         </DialogContent>
       </Dialog>
