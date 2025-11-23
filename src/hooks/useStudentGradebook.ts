@@ -82,7 +82,8 @@ export const useStudentGradebook = (studentId: string | undefined) => {
               grade,
               status,
               submitted_at,
-              graded_at
+              graded_at,
+              teacher_feedback
             )
           `)
           .eq("classroom_id", classroom.classroom_id)
@@ -143,6 +144,8 @@ export const useStudentGradebook = (studentId: string | undefined) => {
             status,
             grade: submission?.grade || null,
             category: assignment.category,
+            submissionId: submission?.id || null,
+            teacherFeedback: submission?.teacher_feedback || null,
           };
         });
 
