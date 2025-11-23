@@ -60,7 +60,6 @@ export const StudentClassroomTrends = ({ classroomId, studentId }: StudentClassr
     date: format(parseISO(point.date), 'MMM d'),
     fullDate: point.date,
     Overall: Math.round(point.overallGrade * 10) / 10,
-    Assignment: point.assignmentGrade ? Math.round(point.assignmentGrade * 10) / 10 : null,
     AURA: point.auraScore ? Math.round(point.auraScore * 10) / 10 : null,
     'Class Average': point.classAverage ? Math.round(point.classAverage * 10) / 10 : null,
   }));
@@ -255,14 +254,6 @@ export const StudentClassroomTrends = ({ classroomId, studentId }: StudentClassr
                 strokeWidth={3}
                 dot={{ fill: 'hsl(var(--primary))', r: 4 }}
                 activeDot={{ r: 6 }}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="Assignment" 
-                stroke="hsl(var(--chart-1))" 
-                strokeWidth={2}
-                dot={{ fill: 'hsl(var(--chart-1))', r: 3 }}
-                connectNulls
               />
               <Line 
                 type="monotone" 
