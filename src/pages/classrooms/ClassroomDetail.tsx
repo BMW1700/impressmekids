@@ -647,7 +647,7 @@ const ClassroomDetail = () => {
           )}
 
           <Tabs defaultValue={searchParams.get('tab') || (isStudent ? "assignments" : "students")} className="mb-8">
-            <TabsList className={cn("grid w-full h-auto p-2 bg-muted/50 rounded-xl", isTeacher ? "grid-cols-9 gap-2" : "grid-cols-6 gap-2")}>
+            <TabsList className={cn("grid w-full h-auto p-2 bg-muted/50 rounded-xl", isTeacher ? "grid-cols-9 gap-2" : "grid-cols-5 gap-2")}>
               {isTeacher && (
                 <TabsTrigger 
                   value="students" 
@@ -692,13 +692,15 @@ const ClassroomDetail = () => {
                   )}
                 </TabsTrigger>
               )}
-              <TabsTrigger 
-                value="leaderboard"
-                className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
-              >
-                <Trophy className="mr-2 h-4 w-4" />
-                Leaderboard
-              </TabsTrigger>
+              {isTeacher && (
+                <TabsTrigger 
+                  value="leaderboard"
+                  className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
+                >
+                  <Trophy className="mr-2 h-4 w-4" />
+                  Leaderboard
+                </TabsTrigger>
+              )}
               {isStudent && (
                 <TabsTrigger 
                   value="trends"
@@ -816,16 +818,18 @@ const ClassroomDetail = () => {
               </TabsContent>
             )}
 
-            <TabsContent value="leaderboard" className="mt-6">
-              <div className="mb-6">
-                <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Class Leaderboard</h2>
-                <p className="text-muted-foreground mt-1">Track student performance and achievements</p>
-              </div>
-              <ClassroomLeaderboard 
-                classroomId={id!} 
-                currentStudentId={isStudent ? profile?.id : undefined}
-              />
-            </TabsContent>
+            {isTeacher && (
+              <TabsContent value="leaderboard" className="mt-6">
+                <div className="mb-6">
+                  <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Class Leaderboard</h2>
+                  <p className="text-muted-foreground mt-1">Track student performance and achievements</p>
+                </div>
+                <ClassroomLeaderboard 
+                  classroomId={id!} 
+                  currentStudentId={isStudent ? profile?.id : undefined}
+                />
+              </TabsContent>
+            )}
 
             {isStudent && profile && (
               <TabsContent value="trends" className="mt-6">
