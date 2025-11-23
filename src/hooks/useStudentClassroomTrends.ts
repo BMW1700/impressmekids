@@ -162,6 +162,76 @@ export const useStudentClassroomTrends = (classroomId: string | undefined, stude
         new Date(a.date).getTime() - new Date(b.date).getTime()
       );
 
+      // Recalculate overallGrade as cumulative running average
+      const allGrades: Array<{ date: string; grade: number; type: 'assignment' | 'aura' | 'attendance' }> = [];
+
+      // Collect all individual grades from assignment submissions
+      assignmentData?.forEach(item => {
+        if (item.grade !== null) {
+          allGrades.push({
+            date: new Date(item.submitted_at).toISOString().split('T')[0],
+            grade: item.grade,
+            type: 'assignment'
+          });
+        }
+      });
+
+      // Collect all individual grades from AURA records
+      classroomAuraData.forEach(item => {
+        if (item.grade !== null) {
+          allGrades.push({
+            date: new Date(item.created_at).toISOString().split('T')[0],
+            grade: item.grade,
+            type: 'aura'
+          });
+        }
+      });
+
+      // Collect all individual grades from attendance
+      attendanceData?.forEach(record => {
+        const attendanceGrade = record.status === 'Absent' ? 0 : 100;
+        allGrades.push({
+          date: record.date,
+          grade: attendanceGrade,
+          type: 'attendance'
+        });
+      });
+
+      // Sort all grades by date
+      allGrades.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+      // For each trend data point, calculate cumulative average up to that date
+      trendData.forEach((point) => {
+        const pointDate = new Date(point.date);
+        
+        // Get all grades up to and including this date
+        const gradesUpToDate = allGrades.filter(g => 
+          new Date(g.date) <= pointDate
+        );
+        
+        if (gradesUpToDate.length > 0) {
+          const sum = gradesUpToDate.reduce((acc, g) => acc + g.grade, 0);
+          point.overallGrade = sum / gradesUpToDate.length;
+        }
+        
+        // Also calculate cumulative averages for assignmentGrade and auraScore
+        const assignmentGradesUpToDate = gradesUpToDate.filter(g => g.type === 'assignment');
+        if (assignmentGradesUpToDate.length > 0) {
+          const assignmentSum = assignmentGradesUpToDate.reduce((acc, g) => acc + g.grade, 0);
+          point.assignmentGrade = assignmentSum / assignmentGradesUpToDate.length;
+        } else {
+          point.assignmentGrade = null;
+        }
+        
+        const auraGradesUpToDate = gradesUpToDate.filter(g => g.type === 'aura');
+        if (auraGradesUpToDate.length > 0) {
+          const auraSum = auraGradesUpToDate.reduce((acc, g) => acc + g.grade, 0);
+          point.auraScore = auraSum / auraGradesUpToDate.length;
+        } else {
+          point.auraScore = null;
+        }
+      });
+
       // Calculate summary statistics
       const last30Days = trendData.filter(point => {
         const pointDate = new Date(point.date);
