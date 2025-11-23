@@ -26,6 +26,8 @@ import ReadingAssignment from "./pages/student/ReadingAssignment";
 import CompleteAssignment from "./pages/student/CompleteAssignment";
 import ReviewSubmission from "./pages/teacher/ReviewSubmission";
 import ReviewMultiQuestionSubmission from "./pages/teacher/ReviewMultiQuestionSubmission";
+import ReviewMySubmission from "./pages/student/ReviewMySubmission";
+import ReviewMyAnnotations from "./pages/student/ReviewMyAnnotations";
 import CreateMultiQuestionAssignment from "./pages/teacher/CreateMultiQuestionAssignment";
 import StudentProfile from "./pages/teacher/StudentProfile";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -66,6 +68,8 @@ const App = () => (
           <Route path="/teacher/aura-analytics/:classroomId?" element={<AuraAnalytics />} />
           <Route path="/teacher/student/:studentId" element={<StudentProfile />} />
           <Route path="/student/assignment/:assignmentId" element={<CompleteAssignment />} />
+          <Route path="/student/review-submission/:submissionId" element={<ReviewMySubmission />} />
+          <Route path="/student/review-annotations/:submissionId" element={<ReviewMyAnnotations />} />
           <Route path="/teacher/review-submission/:submissionId" element={<ReviewSubmission />} />
           <Route path="/teacher/assignment/review/:submissionId" element={<ReviewMultiQuestionSubmission />} />
           <Route path="/join-class" element={<JoinClass />} />

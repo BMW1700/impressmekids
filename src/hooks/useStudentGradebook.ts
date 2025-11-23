@@ -77,6 +77,8 @@ export const useStudentGradebook = (studentId: string | undefined) => {
             title,
             due_date,
             category,
+            passage_text,
+            classroom_id,
             assignment_submissions (
               id,
               grade,
@@ -146,6 +148,8 @@ export const useStudentGradebook = (studentId: string | undefined) => {
             category: assignment.category,
             submissionId: submission?.id || null,
             teacherFeedback: submission?.teacher_feedback || null,
+            passageText: assignment.passage_text,
+            classroomId: assignment.classroom_id,
           };
         });
 

@@ -353,7 +353,16 @@ export const GradebookSection = ({ studentId }: GradebookSectionProps) => {
                 {selectedAssignment.submissionId && 
                  selectedAssignment.status === "Graded" && (
                   <Button 
-                    onClick={() => navigate(`/student/assignment/${selectedAssignment.id}`)}
+                    onClick={() => {
+                      const hasPassage = selectedAssignment.passageText;
+                      const submissionId = selectedAssignment.submissionId;
+                      
+                      if (hasPassage) {
+                        navigate(`/student/review-annotations/${submissionId}`);
+                      } else {
+                        navigate(`/student/review-submission/${submissionId}`);
+                      }
+                    }}
                     className="w-full"
                   >
                     <Eye className="mr-2 h-4 w-4" />
