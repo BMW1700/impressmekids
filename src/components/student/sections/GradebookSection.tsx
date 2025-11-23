@@ -6,6 +6,7 @@ import { Loader2, TrendingUp, TrendingDown, Minus, Eye } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { useState } from "react";
 import { format } from "date-fns";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,7 @@ interface GradebookSectionProps {
 
 export const GradebookSection = ({ studentId }: GradebookSectionProps) => {
   const { data: gradebook, isLoading } = useStudentGradebook(studentId);
+  const navigate = useNavigate();
   const [selectedClassroom, setSelectedClassroom] = useState<string | null>(null);
   const [showAllGrades, setShowAllGrades] = useState<string | null>(null);
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
@@ -334,11 +336,30 @@ export const GradebookSection = ({ studentId }: GradebookSectionProps) => {
                 )}
               </div>
 
-              <div className="border-t pt-4">
-                <h4 className="font-semibold mb-2">Teacher Feedback</h4>
-                <p className="text-muted-foreground">
-                  No teacher feedback available yet.
-                </p>
+              <div className="border-t pt-4 space-y-4">
+                <div>
+                  <h4 className="font-semibold mb-2">Teacher Feedback</h4>
+                  {selectedAssignment.teacherFeedback ? (
+                    <p className="text-muted-foreground whitespace-pre-wrap">
+                      {selectedAssignment.teacherFeedback}
+                    </p>
+                  ) : (
+                    <p className="text-muted-foreground italic">
+                      No teacher feedback provided yet.
+                    </p>
+                  )}
+                </div>
+
+                {selectedAssignment.submissionId && 
+                 (selectedAssignment.status === "Graded" || selectedAssignment.status === "Submitted") && (
+                  <Button 
+                    onClick={() => navigate(`/student/assignment/${selectedAssignment.id}`)}
+                    className="w-full"
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    View Submission
+                  </Button>
+                )}
               </div>
             </div>
           )}
