@@ -6,6 +6,7 @@ interface TrendDataPoint {
   overallGrade: number;
   assignmentGrade: number | null;
   auraScore: number | null;
+  classAverage: number | null;
   activityType: 'assignment' | 'aura' | 'both';
 }
 
@@ -26,6 +27,16 @@ export const useStudentClassroomTrends = (classroomId: string | undefined, stude
         ? (syllabus.grade_weights as any)
         : { test: 25, quiz: 25, homework: 25, attendance: 25 };
 
+      // Fetch all students in this classroom
+      const { data: classroomStudents, error: studentsError } = await supabase
+        .from('classroom_students')
+        .select('student_id')
+        .eq('classroom_id', classroomId);
+
+      if (studentsError) throw studentsError;
+
+      const allStudentIds = classroomStudents?.map(s => s.student_id) || [];
+
       // Fetch assignment submissions for this classroom
       const { data: assignmentData, error: assignmentError } = await supabase
         .from('assignment_submissions')
@@ -42,6 +53,23 @@ export const useStudentClassroomTrends = (classroomId: string | undefined, stude
 
       if (assignmentError) throw assignmentError;
 
+      // Fetch assignment submissions for ALL students
+      const { data: allStudentsAssignmentData, error: allAssignmentsError } = await supabase
+        .from('assignment_submissions')
+        .select(`
+          grade,
+          submitted_at,
+          student_id,
+          assignment_id,
+          assignments!inner(classroom_id, category)
+        `)
+        .in('student_id', allStudentIds)
+        .eq('assignments.classroom_id', classroomId)
+        .not('grade', 'is', null)
+        .order('submitted_at', { ascending: true });
+
+      if (allAssignmentsError) throw allAssignmentsError;
+
       // Fetch AURA records for this classroom
       const { data: auraData, error: auraError } = await supabase
         .from('aura_records')
@@ -57,6 +85,22 @@ export const useStudentClassroomTrends = (classroomId: string | undefined, stude
 
       if (auraError) throw auraError;
 
+      // Fetch AURA records for ALL students
+      const { data: allStudentsAuraData, error: allAuraError } = await supabase
+        .from('aura_records')
+        .select(`
+          grade,
+          created_at,
+          profile_id,
+          reading_assignment_id,
+          question_id
+        `)
+        .in('profile_id', allStudentIds)
+        .not('grade', 'is', null)
+        .order('created_at', { ascending: true });
+
+      if (allAuraError) throw allAuraError;
+
       // Fetch attendance records
       const { data: attendanceData, error: attendanceError } = await supabase
         .from('attendance_records')
@@ -67,42 +111,51 @@ export const useStudentClassroomTrends = (classroomId: string | undefined, stude
 
       if (attendanceError) throw attendanceError;
 
-      // Filter AURA records to only include those related to this classroom
-      const classroomAuraData = [];
-      
-      if (auraData) {
-        for (const record of auraData) {
-          let isClassroomRelated = false;
-          
-          // Check if linked to classroom assignment
-          if (record.reading_assignment_id) {
-            const { data: assignmentCheck } = await supabase
-              .from('assignments')
-              .select('classroom_id')
-              .eq('id', record.reading_assignment_id)
-              .eq('classroom_id', classroomId)
-              .single();
-            
-            if (assignmentCheck) isClassroomRelated = true;
-          }
-          
-          // Check if linked to classroom question
-          if (!isClassroomRelated && record.question_id) {
-            const { data: questionCheck } = await supabase
-              .from('questions')
-              .select('classroom_id')
-              .eq('id', record.question_id)
-              .eq('classroom_id', classroomId)
-              .single();
-            
-            if (questionCheck) isClassroomRelated = true;
-          }
-          
-          if (isClassroomRelated) {
-            classroomAuraData.push(record);
-          }
+      // Fetch attendance records for ALL students
+      const { data: allStudentsAttendanceData, error: allAttendanceError } = await supabase
+        .from('attendance_records')
+        .select('date, status, student_id')
+        .eq('classroom_id', classroomId)
+        .in('student_id', allStudentIds)
+        .order('date', { ascending: true });
+
+      if (allAttendanceError) throw allAttendanceError;
+
+      // Optimization: Fetch all assignment and question IDs for this classroom once
+      const { data: classroomAssignmentIds } = await supabase
+        .from('assignments')
+        .select('id')
+        .eq('classroom_id', classroomId);
+
+      const { data: classroomQuestionIds } = await supabase
+        .from('questions')
+        .select('id')
+        .eq('classroom_id', classroomId);
+
+      const assignmentIdSet = new Set(classroomAssignmentIds?.map(a => a.id) || []);
+      const questionIdSet = new Set(classroomQuestionIds?.map(q => q.id) || []);
+
+      // Filter AURA records efficiently using pre-fetched IDs
+      const classroomAuraData = auraData?.filter(record => {
+        if (record.reading_assignment_id && assignmentIdSet.has(record.reading_assignment_id)) {
+          return true;
         }
-      }
+        if (record.question_id && questionIdSet.has(record.question_id)) {
+          return true;
+        }
+        return false;
+      }) || [];
+
+      // Filter all students' AURA records efficiently
+      const allClassroomAuraData = allStudentsAuraData?.filter(record => {
+        if (record.reading_assignment_id && assignmentIdSet.has(record.reading_assignment_id)) {
+          return true;
+        }
+        if (record.question_id && questionIdSet.has(record.question_id)) {
+          return true;
+        }
+        return false;
+      }) || [];
 
       // Combine and organize data by date
       const dateMap = new Map<string, TrendDataPoint>();
@@ -122,6 +175,7 @@ export const useStudentClassroomTrends = (classroomId: string | undefined, stude
             assignmentGrade: item.grade,
             auraScore: null,
             overallGrade: item.grade || 0,
+            classAverage: null,
             activityType: 'assignment'
           });
         }
@@ -142,6 +196,7 @@ export const useStudentClassroomTrends = (classroomId: string | undefined, stude
             assignmentGrade: null,
             auraScore: item.grade,
             overallGrade: item.grade || 0,
+            classAverage: null,
             activityType: 'aura'
           });
         }
@@ -163,6 +218,7 @@ export const useStudentClassroomTrends = (classroomId: string | undefined, stude
             assignmentGrade: null,
             auraScore: null,
             overallGrade: attendanceGrade,
+            classAverage: null,
             activityType: 'assignment'
           });
         }
@@ -224,6 +280,120 @@ export const useStudentClassroomTrends = (classroomId: string | undefined, stude
 
       // Sort by date
       allGrades.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+      // Helper function to calculate weighted cumulative grade for any student up to a date
+      interface CategorizedGrade {
+        date: string;
+        grade: number;
+        category: 'test' | 'quiz' | 'homework' | 'attendance';
+      }
+
+      const calculateStudentGradeUpToDate = (
+        studentId: string,
+        upToDate: Date,
+        allAssignments: any[],
+        allAura: any[],
+        allAttendance: any[]
+      ): number | null => {
+        const studentGrades: CategorizedGrade[] = [];
+
+        // Collect assignment grades for this student
+        allAssignments
+          ?.filter(item => item.student_id === studentId && item.grade !== null)
+          .forEach(item => {
+            const itemDate = new Date(item.submitted_at);
+            if (itemDate <= upToDate) {
+              const category = item.assignments.category;
+              let weightCategory: 'test' | 'quiz' | 'homework' | 'attendance';
+              
+              if (category === "Test") weightCategory = 'test';
+              else if (category === "Quiz") weightCategory = 'quiz';
+              else if (category === "Homework") weightCategory = 'homework';
+              else weightCategory = 'homework';
+              
+              studentGrades.push({
+                date: new Date(item.submitted_at).toISOString().split('T')[0],
+                grade: item.grade,
+                category: weightCategory
+              });
+            }
+          });
+
+        // Collect AURA grades for this student
+        allAura
+          ?.filter(item => item.profile_id === studentId && item.grade !== null)
+          .forEach(item => {
+            const itemDate = new Date(item.created_at);
+            if (itemDate <= upToDate) {
+              studentGrades.push({
+                date: new Date(item.created_at).toISOString().split('T')[0],
+                grade: item.grade,
+                category: 'homework'
+              });
+            }
+          });
+
+        // Collect attendance grades for this student
+        allAttendance
+          ?.filter(record => record.student_id === studentId)
+          .forEach(record => {
+            const itemDate = new Date(record.date);
+            if (itemDate <= upToDate) {
+              const attendanceGrade = record.status === 'Absent' ? 0 : 100;
+              studentGrades.push({
+                date: record.date,
+                grade: attendanceGrade,
+                category: 'attendance'
+              });
+            }
+          });
+
+        if (studentGrades.length === 0) return null;
+
+        // Calculate weighted average
+        const testGrades = studentGrades.filter(g => g.category === 'test');
+        const quizGrades = studentGrades.filter(g => g.category === 'quiz');
+        const homeworkGrades = studentGrades.filter(g => g.category === 'homework');
+        const attendanceGrades = studentGrades.filter(g => g.category === 'attendance');
+        
+        const testAvg = testGrades.length > 0 
+          ? testGrades.reduce((sum, g) => sum + g.grade, 0) / testGrades.length 
+          : 0;
+        const quizAvg = quizGrades.length > 0 
+          ? quizGrades.reduce((sum, g) => sum + g.grade, 0) / quizGrades.length 
+          : 0;
+        const homeworkAvg = homeworkGrades.length > 0 
+          ? homeworkGrades.reduce((sum, g) => sum + g.grade, 0) / homeworkGrades.length 
+          : 0;
+        const attendanceAvg = attendanceGrades.length > 0 
+          ? attendanceGrades.reduce((sum, g) => sum + g.grade, 0) / attendanceGrades.length 
+          : 0;
+        
+        let weightedSum = 0;
+        let totalWeight = 0;
+        
+        if (testGrades.length > 0) {
+          weightedSum += (testAvg * weights.test) / 100;
+          totalWeight += weights.test;
+        }
+        
+        if (quizGrades.length > 0) {
+          weightedSum += (quizAvg * weights.quiz) / 100;
+          totalWeight += weights.quiz;
+        }
+        
+        if (homeworkGrades.length > 0) {
+          weightedSum += (homeworkAvg * weights.homework) / 100;
+          totalWeight += weights.homework;
+        }
+        
+        if (attendanceGrades.length > 0) {
+          weightedSum += (attendanceAvg * weights.attendance) / 100;
+          totalWeight += weights.attendance;
+        }
+        
+        return totalWeight > 0 ? (weightedSum / totalWeight) * 100 : null;
+      };
 
       // For each trend data point, calculate WEIGHTED cumulative average
       trendData.forEach((point) => {
@@ -297,6 +467,36 @@ export const useStudentClassroomTrends = (classroomId: string | undefined, stude
           point.auraScore = auraSum / auraGradesUpToDate.length;
         } else {
           point.auraScore = null;
+        }
+      });
+
+      // Calculate class average for each date point
+      trendData.forEach((point) => {
+        const pointDate = new Date(point.date);
+        
+        // Calculate grade for each student in the class up to this date
+        const classGrades: number[] = [];
+        
+        allStudentIds.forEach(studId => {
+          const studentGrade = calculateStudentGradeUpToDate(
+            studId,
+            pointDate,
+            allStudentsAssignmentData,
+            allClassroomAuraData,
+            allStudentsAttendanceData
+          );
+          
+          if (studentGrade !== null) {
+            classGrades.push(studentGrade);
+          }
+        });
+        
+        // Calculate average of all student grades
+        if (classGrades.length > 0) {
+          const sum = classGrades.reduce((acc, grade) => acc + grade, 0);
+          point.classAverage = sum / classGrades.length;
+        } else {
+          point.classAverage = null;
         }
       });
 

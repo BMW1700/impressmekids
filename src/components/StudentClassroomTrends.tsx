@@ -62,6 +62,7 @@ export const StudentClassroomTrends = ({ classroomId, studentId }: StudentClassr
     Overall: Math.round(point.overallGrade * 10) / 10,
     Assignment: point.assignmentGrade ? Math.round(point.assignmentGrade * 10) / 10 : null,
     AURA: point.auraScore ? Math.round(point.auraScore * 10) / 10 : null,
+    'Class Average': point.classAverage ? Math.round(point.classAverage * 10) / 10 : null,
   }));
 
   // Generate calendar heat map data (last 90 days)
@@ -269,6 +270,15 @@ export const StudentClassroomTrends = ({ classroomId, studentId }: StudentClassr
                 stroke="hsl(var(--chart-2))" 
                 strokeWidth={2}
                 dot={{ fill: 'hsl(var(--chart-2))', r: 3 }}
+                connectNulls
+              />
+              <Line 
+                type="monotone" 
+                dataKey="Class Average" 
+                stroke="#94a3b8"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                dot={{ fill: '#94a3b8', r: 3 }}
                 connectNulls
               />
             </LineChart>
