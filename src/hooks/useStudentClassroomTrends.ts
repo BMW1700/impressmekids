@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { eachDayOfInterval, format, subDays } from "date-fns";
 
 interface TrendDataPoint {
   date: string;
@@ -500,6 +501,66 @@ export const useStudentClassroomTrends = (classroomId: string | undefined, stude
         }
       });
 
+      // Generate complete daily data points with carry-forward logic
+      const endDate = new Date();
+      const startDate = trendData.length > 0 
+        ? new Date(Math.min(...trendData.map(d => new Date(d.date).getTime())))
+        : subDays(endDate, 29);
+
+      const allDates = eachDayOfInterval({ start: startDate, end: endDate });
+      
+      const completeTrendData: TrendDataPoint[] = [];
+      let previousGrade = 0;
+      let previousAuraScore: number | null = null;
+      let previousClassAverage: number | null = null;
+
+      allDates.forEach(currentDate => {
+        const dateStr = format(currentDate, 'yyyy-MM-dd');
+        const existingData = trendData.find(d => d.date === dateStr);
+        
+        if (existingData) {
+          completeTrendData.push(existingData);
+          previousGrade = existingData.overallGrade;
+          previousAuraScore = existingData.auraScore;
+          previousClassAverage = existingData.classAverage;
+        } else {
+          // Calculate class average for this date
+          const classGrades: number[] = [];
+          
+          allStudentIds.forEach(studId => {
+            const studentGrade = calculateStudentGradeUpToDate(
+              studId,
+              currentDate,
+              allStudentsAssignmentData,
+              allClassroomAuraData,
+              allStudentsAttendanceData
+            );
+            
+            if (studentGrade !== null) {
+              classGrades.push(studentGrade);
+            }
+          });
+          
+          const dayClassAverage = classGrades.length > 0 
+            ? classGrades.reduce((acc, grade) => acc + grade, 0) / classGrades.length
+            : previousClassAverage;
+          
+          completeTrendData.push({
+            date: dateStr,
+            overallGrade: previousGrade,
+            assignmentGrade: null,
+            auraScore: previousAuraScore,
+            classAverage: dayClassAverage,
+            activityType: 'assignment'
+          });
+          
+          previousClassAverage = dayClassAverage;
+        }
+      });
+
+      // Use complete trend data for final output
+      const finalTrendData = completeTrendData;
+
       // Calculate summary statistics
       const last30Days = trendData.filter(point => {
         const pointDate = new Date(point.date);
@@ -547,7 +608,7 @@ export const useStudentClassroomTrends = (classroomId: string | undefined, stude
       }
 
       return {
-        trendData,
+        trendData: finalTrendData,
         summary: {
           avgLast30: Math.round(avgLast30 * 10) / 10,
           avgLast60: Math.round(avgLast60 * 10) / 10,
