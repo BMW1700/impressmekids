@@ -252,7 +252,7 @@ export const StudentClassroomTrends = ({ classroomId, studentId }: StudentClassr
                 dataKey="Overall" 
                 stroke="hsl(var(--primary))" 
                 strokeWidth={3}
-                dot={{ fill: 'hsl(var(--primary))', r: 4 }}
+                dot={false}
                 activeDot={{ r: 6 }}
               />
               <Line 
@@ -260,7 +260,8 @@ export const StudentClassroomTrends = ({ classroomId, studentId }: StudentClassr
                 dataKey="AURA" 
                 stroke="hsl(var(--chart-2))" 
                 strokeWidth={2}
-                dot={{ fill: 'hsl(var(--chart-2))', r: 3 }}
+                dot={false}
+                activeDot={{ r: 6 }}
                 connectNulls
               />
               <Line 
@@ -269,7 +270,8 @@ export const StudentClassroomTrends = ({ classroomId, studentId }: StudentClassr
                 stroke="#94a3b8"
                 strokeWidth={2}
                 strokeDasharray="5 5"
-                dot={{ fill: '#94a3b8', r: 3 }}
+                dot={false}
+                activeDot={{ r: 6 }}
                 connectNulls
               />
             </LineChart>
