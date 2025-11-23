@@ -15,6 +15,17 @@ export const useStudentClassroomTrends = (classroomId: string | undefined, stude
     queryFn: async () => {
       if (!classroomId || !studentId) throw new Error('Missing required parameters');
 
+      // Fetch syllabus weights for this classroom
+      const { data: syllabus } = await supabase
+        .from("classroom_syllabus")
+        .select("grade_weights")
+        .eq("classroom_id", classroomId)
+        .maybeSingle();
+
+      const weights = syllabus?.grade_weights 
+        ? (syllabus.grade_weights as any)
+        : { test: 25, quiz: 25, homework: 25, attendance: 25 };
+
       // Fetch assignment submissions for this classroom
       const { data: assignmentData, error: assignmentError } = await supabase
         .from('assignment_submissions')
@@ -22,7 +33,7 @@ export const useStudentClassroomTrends = (classroomId: string | undefined, stude
           grade,
           submitted_at,
           assignment_id,
-          assignments!inner(classroom_id)
+          assignments!inner(classroom_id, category)
         `)
         .eq('student_id', studentId)
         .eq('assignments.classroom_id', classroomId)
@@ -162,60 +173,114 @@ export const useStudentClassroomTrends = (classroomId: string | undefined, stude
         new Date(a.date).getTime() - new Date(b.date).getTime()
       );
 
-      // Recalculate overallGrade as cumulative running average
-      const allGrades: Array<{ date: string; grade: number; type: 'assignment' | 'aura' | 'attendance' }> = [];
+      // Recalculate overallGrade as weighted cumulative running average
+      interface CategorizedGrade {
+        date: string;
+        grade: number;
+        category: 'test' | 'quiz' | 'homework' | 'attendance';
+      }
 
-      // Collect all individual grades from assignment submissions
+      const allGrades: CategorizedGrade[] = [];
+
+      // Collect assignment grades WITH CATEGORIES
       assignmentData?.forEach(item => {
         if (item.grade !== null) {
+          const category = item.assignments.category;
+          let weightCategory: 'test' | 'quiz' | 'homework' | 'attendance';
+          
+          if (category === "Test") weightCategory = 'test';
+          else if (category === "Quiz") weightCategory = 'quiz';
+          else if (category === "Homework") weightCategory = 'homework';
+          else weightCategory = 'homework';
+          
           allGrades.push({
             date: new Date(item.submitted_at).toISOString().split('T')[0],
             grade: item.grade,
-            type: 'assignment'
+            category: weightCategory
           });
         }
       });
 
-      // Collect all individual grades from AURA records
+      // Collect AURA grades (treat as homework)
       classroomAuraData.forEach(item => {
         if (item.grade !== null) {
           allGrades.push({
             date: new Date(item.created_at).toISOString().split('T')[0],
             grade: item.grade,
-            type: 'aura'
+            category: 'homework'
           });
         }
       });
 
-      // Collect all individual grades from attendance
+      // Collect attendance grades
       attendanceData?.forEach(record => {
         const attendanceGrade = record.status === 'Absent' ? 0 : 100;
         allGrades.push({
           date: record.date,
           grade: attendanceGrade,
-          type: 'attendance'
+          category: 'attendance'
         });
       });
 
-      // Sort all grades by date
+      // Sort by date
       allGrades.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-      // For each trend data point, calculate cumulative average up to that date
+      // For each trend data point, calculate WEIGHTED cumulative average
       trendData.forEach((point) => {
         const pointDate = new Date(point.date);
         
-        // Get all grades up to and including this date
         const gradesUpToDate = allGrades.filter(g => 
           new Date(g.date) <= pointDate
         );
         
         if (gradesUpToDate.length > 0) {
-          const sum = gradesUpToDate.reduce((acc, g) => acc + g.grade, 0);
-          point.overallGrade = sum / gradesUpToDate.length;
+          const testGrades = gradesUpToDate.filter(g => g.category === 'test');
+          const quizGrades = gradesUpToDate.filter(g => g.category === 'quiz');
+          const homeworkGrades = gradesUpToDate.filter(g => g.category === 'homework');
+          const attendanceGrades = gradesUpToDate.filter(g => g.category === 'attendance');
+          
+          const testAvg = testGrades.length > 0 
+            ? testGrades.reduce((sum, g) => sum + g.grade, 0) / testGrades.length 
+            : 0;
+          const quizAvg = quizGrades.length > 0 
+            ? quizGrades.reduce((sum, g) => sum + g.grade, 0) / quizGrades.length 
+            : 0;
+          const homeworkAvg = homeworkGrades.length > 0 
+            ? homeworkGrades.reduce((sum, g) => sum + g.grade, 0) / homeworkGrades.length 
+            : 0;
+          const attendanceAvg = attendanceGrades.length > 0 
+            ? attendanceGrades.reduce((sum, g) => sum + g.grade, 0) / attendanceGrades.length 
+            : 0;
+          
+          let weightedSum = 0;
+          let totalWeight = 0;
+          
+          if (testGrades.length > 0) {
+            weightedSum += (testAvg * weights.test) / 100;
+            totalWeight += weights.test;
+          }
+          
+          if (quizGrades.length > 0) {
+            weightedSum += (quizAvg * weights.quiz) / 100;
+            totalWeight += weights.quiz;
+          }
+          
+          if (homeworkGrades.length > 0) {
+            weightedSum += (homeworkAvg * weights.homework) / 100;
+            totalWeight += weights.homework;
+          }
+          
+          if (attendanceGrades.length > 0) {
+            weightedSum += (attendanceAvg * weights.attendance) / 100;
+            totalWeight += weights.attendance;
+          }
+          
+          point.overallGrade = totalWeight > 0 ? (weightedSum / totalWeight) * 100 : 0;
         }
         
-        // Also calculate cumulative averages for assignmentGrade and auraScore
-        const assignmentGradesUpToDate = gradesUpToDate.filter(g => g.type === 'assignment');
+        const assignmentGradesUpToDate = gradesUpToDate.filter(g => 
+          g.category === 'test' || g.category === 'quiz' || g.category === 'homework'
+        );
         if (assignmentGradesUpToDate.length > 0) {
           const assignmentSum = assignmentGradesUpToDate.reduce((acc, g) => acc + g.grade, 0);
           point.assignmentGrade = assignmentSum / assignmentGradesUpToDate.length;
@@ -223,9 +288,12 @@ export const useStudentClassroomTrends = (classroomId: string | undefined, stude
           point.assignmentGrade = null;
         }
         
-        const auraGradesUpToDate = gradesUpToDate.filter(g => g.type === 'aura');
+        const auraGradesUpToDate = classroomAuraData
+          .filter(item => item.grade !== null && new Date(item.created_at) <= pointDate)
+          .map(item => item.grade as number);
+        
         if (auraGradesUpToDate.length > 0) {
-          const auraSum = auraGradesUpToDate.reduce((acc, g) => acc + g.grade, 0);
+          const auraSum = auraGradesUpToDate.reduce((acc, g) => acc + g, 0);
           point.auraScore = auraSum / auraGradesUpToDate.length;
         } else {
           point.auraScore = null;
