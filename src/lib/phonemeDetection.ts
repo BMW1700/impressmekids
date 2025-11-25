@@ -1,4 +1,5 @@
 import { pipeline, env } from '@huggingface/transformers';
+import { getIPAPronunciation } from './cmuDictWrapper';
 
 // Configure transformers.js
 env.allowLocalModels = false;
@@ -121,9 +122,9 @@ const mapWordsToPhonemes = (chunks: any[]): PhonemeResult[] => {
     const timestamp = chunk.timestamp[0] || 0;
     const duration = (chunk.timestamp[1] || timestamp + 0.5) - timestamp;
     
-    // Simple phoneme mapping for common English sounds
-    // In production, use a proper G2P (grapheme-to-phoneme) model
-    const wordPhonemes = simpleG2P(word);
+    // Use CMU Dictionary for high-accuracy G2P (90%+), fallback to simpleG2P
+    const pronunciations = getIPAPronunciation(word);
+    const wordPhonemes = pronunciations[0] || simpleG2P(word); // Use first pronunciation variant or fallback
     const phonemeDuration = duration / wordPhonemes.length;
     
     wordPhonemes.forEach((phoneme, idx) => {
@@ -190,9 +191,12 @@ export const analyzePhonemeAccuracy = (
   detectedPhonemes: PhonemeResult[],
   transcript: string
 ): PhonemeAnalysis => {
-  // Map transcript to expected phonemes
+  // Map transcript to expected phonemes using CMU Dictionary
   const words = transcript.toLowerCase().split(/\s+/);
-  const expectedPhonemes = words.flatMap(word => simpleG2P(word));
+  const expectedPhonemes = words.flatMap(word => {
+    const pronunciations = getIPAPronunciation(word);
+    return pronunciations[0] || simpleG2P(word); // Use CMU Dict or fallback
+  });
   
   // Calculate overall accuracy
   const matchCount = Math.min(detectedPhonemes.length, expectedPhonemes.length);
