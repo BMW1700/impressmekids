@@ -2447,6 +2447,60 @@ export type Database = {
           },
         ]
       }
+      reading_sessions: {
+        Row: {
+          accuracy_percent: number
+          assignment_id: string | null
+          created_at: string | null
+          duration_seconds: number
+          fluency_score: number | null
+          id: string
+          passage_text: string
+          student_id: string
+          words_read: number
+          wpm: number
+        }
+        Insert: {
+          accuracy_percent: number
+          assignment_id?: string | null
+          created_at?: string | null
+          duration_seconds: number
+          fluency_score?: number | null
+          id?: string
+          passage_text: string
+          student_id: string
+          words_read: number
+          wpm: number
+        }
+        Update: {
+          accuracy_percent?: number
+          assignment_id?: string | null
+          created_at?: string | null
+          duration_seconds?: number
+          fluency_score?: number | null
+          id?: string
+          passage_text?: string
+          student_id?: string
+          words_read?: number
+          wpm?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reading_sessions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reading_sessions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       realtime_practice_sessions: {
         Row: {
           created_at: string
@@ -2662,6 +2716,47 @@ export type Database = {
         }
         Relationships: []
       }
+      student_error_patterns: {
+        Row: {
+          created_at: string | null
+          error_type: string
+          frequency: number | null
+          id: string
+          last_seen: string | null
+          mastered: boolean | null
+          student_id: string
+          word_examples: string[]
+        }
+        Insert: {
+          created_at?: string | null
+          error_type: string
+          frequency?: number | null
+          id?: string
+          last_seen?: string | null
+          mastered?: boolean | null
+          student_id: string
+          word_examples: string[]
+        }
+        Update: {
+          created_at?: string | null
+          error_type?: string
+          frequency?: number | null
+          id?: string
+          last_seen?: string | null
+          mastered?: boolean | null
+          student_id?: string
+          word_examples?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_error_patterns_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_interventions: {
         Row: {
           classroom_id: string
@@ -2735,6 +2830,59 @@ export type Database = {
           {
             foreignKeyName: "student_profiles_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_reading_stats: {
+        Row: {
+          badges_earned: string[] | null
+          created_at: string | null
+          current_streak_days: number | null
+          id: string
+          last_activity_date: string | null
+          level: number | null
+          longest_streak_days: number | null
+          student_id: string
+          total_sessions: number | null
+          total_words_read: number | null
+          updated_at: string | null
+          xp_points: number | null
+        }
+        Insert: {
+          badges_earned?: string[] | null
+          created_at?: string | null
+          current_streak_days?: number | null
+          id?: string
+          last_activity_date?: string | null
+          level?: number | null
+          longest_streak_days?: number | null
+          student_id: string
+          total_sessions?: number | null
+          total_words_read?: number | null
+          updated_at?: string | null
+          xp_points?: number | null
+        }
+        Update: {
+          badges_earned?: string[] | null
+          created_at?: string | null
+          current_streak_days?: number | null
+          id?: string
+          last_activity_date?: string | null
+          level?: number | null
+          longest_streak_days?: number | null
+          student_id?: string
+          total_sessions?: number | null
+          total_words_read?: number | null
+          updated_at?: string | null
+          xp_points?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_reading_stats_student_id_fkey"
+            columns: ["student_id"]
             isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -3248,6 +3396,59 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      word_readings: {
+        Row: {
+          created_at: string | null
+          end_time_ms: number
+          hesitation_detected: boolean | null
+          id: string
+          mispronunciation_type: string | null
+          phonemes_detected: Json | null
+          phonemes_expected: Json | null
+          session_id: string
+          start_time_ms: number
+          was_correct: boolean
+          word_index: number
+          word_text: string
+        }
+        Insert: {
+          created_at?: string | null
+          end_time_ms: number
+          hesitation_detected?: boolean | null
+          id?: string
+          mispronunciation_type?: string | null
+          phonemes_detected?: Json | null
+          phonemes_expected?: Json | null
+          session_id: string
+          start_time_ms: number
+          was_correct: boolean
+          word_index: number
+          word_text: string
+        }
+        Update: {
+          created_at?: string | null
+          end_time_ms?: number
+          hesitation_detected?: boolean | null
+          id?: string
+          mispronunciation_type?: string | null
+          phonemes_detected?: Json | null
+          phonemes_expected?: Json | null
+          session_id?: string
+          start_time_ms?: number
+          was_correct?: boolean
+          word_index?: number
+          word_text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "word_readings_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "reading_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
