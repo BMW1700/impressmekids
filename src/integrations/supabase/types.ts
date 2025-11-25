@@ -2447,6 +2447,94 @@ export type Database = {
           },
         ]
       }
+      reading_achievements: {
+        Row: {
+          achievement_type: string
+          created_at: string
+          earned_at: string
+          id: string
+          metadata: Json | null
+          student_id: string
+        }
+        Insert: {
+          achievement_type: string
+          created_at?: string
+          earned_at?: string
+          id?: string
+          metadata?: Json | null
+          student_id: string
+        }
+        Update: {
+          achievement_type?: string
+          created_at?: string
+          earned_at?: string
+          id?: string
+          metadata?: Json | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reading_achievements_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reading_missions: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          current_value: number
+          description: string
+          expires_at: string | null
+          id: string
+          mission_type: string
+          status: string
+          student_id: string
+          target_value: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          current_value?: number
+          description: string
+          expires_at?: string | null
+          id?: string
+          mission_type: string
+          status?: string
+          student_id: string
+          target_value: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          current_value?: number
+          description?: string
+          expires_at?: string | null
+          id?: string
+          mission_type?: string
+          status?: string
+          student_id?: string
+          target_value?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reading_missions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reading_sessions: {
         Row: {
           accuracy_percent: number
@@ -2496,6 +2584,44 @@ export type Database = {
             foreignKeyName: "reading_sessions_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reading_streaks: {
+        Row: {
+          created_at: string
+          current_streak: number
+          id: string
+          last_reading_date: string | null
+          longest_streak: number
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_reading_date?: string | null
+          longest_streak?: number
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_reading_date?: string | null
+          longest_streak?: number
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reading_streaks_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
