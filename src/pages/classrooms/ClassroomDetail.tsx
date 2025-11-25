@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic, Eye, EyeOff, UserCheck, BarChart3, Calendar, Plus } from "lucide-react";
 import { ClassroomLeaderboard } from "@/components/ClassroomLeaderboard";
+import { LeaderboardCard } from "@/components/aura/LeaderboardCard";
 import { AttendanceTab } from "@/components/teacher/AttendanceTab";
 import {
   DropdownMenu,
@@ -824,10 +825,18 @@ const ClassroomDetail = () => {
                   <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Class Leaderboard</h2>
                   <p className="text-muted-foreground mt-1">Track student performance and achievements</p>
                 </div>
-                <ClassroomLeaderboard 
-                  classroomId={id!} 
-                  currentStudentId={isStudent ? profile?.id : undefined}
-                />
+                
+                <div className="grid lg:grid-cols-2 gap-6 mb-6">
+                  <LeaderboardCard 
+                    classroomId={id!} 
+                    currentStudentId={profile?.id}
+                    title="Reading Stars"
+                  />
+                  <ClassroomLeaderboard 
+                    classroomId={id!} 
+                    currentStudentId={isStudent ? profile?.id : undefined}
+                  />
+                </div>
               </TabsContent>
             )}
 
