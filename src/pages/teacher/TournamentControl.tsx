@@ -454,7 +454,7 @@ const TournamentControl = () => {
         open={showSelectQuestions}
         onOpenChange={setShowSelectQuestions}
         tournamentId={tournamentId!}
-        classroomId={classroom?.id}
+        classroomId={classroom?.id || tournament?.classroom_id}
         onSuccess={loadTournamentData}
       />
     </div>

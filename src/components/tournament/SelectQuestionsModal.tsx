@@ -15,7 +15,7 @@ interface SelectQuestionsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tournamentId: string;
-  classroomId: string;
+  classroomId: string | undefined;
   onSuccess?: () => void;
 }
 
@@ -36,7 +36,7 @@ export const SelectQuestionsModal = ({
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (open) {
+    if (open && classroomId) {
       loadQuestions();
       loadQuestionGroups();
       loadExistingSelections();
@@ -245,7 +245,15 @@ export const SelectQuestionsModal = ({
           <DialogTitle>Select Questions for Tournament</DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="groups" className="w-full">
+        {!classroomId ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+              <p className="text-muted-foreground">Loading classroom data...</p>
+            </div>
+          </div>
+        ) : (
+          <Tabs defaultValue="groups" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="groups">Select by Group</TabsTrigger>
             <TabsTrigger value="individual">Select Individual Questions</TabsTrigger>
@@ -397,6 +405,7 @@ export const SelectQuestionsModal = ({
             )}
           </TabsContent>
         </Tabs>
+        )}
       </DialogContent>
     </Dialog>
   );
