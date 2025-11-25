@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Mic, StopCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { getIPAPronunciation } from '@/lib/cmuDictWrapper';
+import { analyzeMispronunciationPatterns } from '@/lib/mispronunciationAnalysis';
 
 interface WordByWordReaderProps {
   passageText: string;
@@ -160,22 +162,36 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
     }
 
     if (wordReadings.length > 0) {
-      const wordInserts = wordReadings.map((wr) => ({
-        session_id: session.id,
-        word_text: wr.word,
-        word_index: wr.index,
-        start_time_ms: wr.startMs,
-        end_time_ms: wr.endMs,
-        phonemes_detected: [],
-        phonemes_expected: [],
-        was_correct: wr.correct,
-        hesitation_detected: wr.hesitation,
-      }));
+      const wordInserts = wordReadings.map((wr, idx) => {
+        // Get expected phonemes for the word
+        const expectedWord = words[wr.index] || wr.word;
+        const expectedPhonemes = getIPAPronunciation(expectedWord)[0] || [];
+        
+        // Detect hesitation based on time gap (>800ms between words)
+        const previousReading = idx > 0 ? wordReadings[idx - 1] : null;
+        const timeGap = previousReading ? wr.startMs - previousReading.endMs : 0;
+        const hasHesitation = timeGap > 800;
+        
+        return {
+          session_id: session.id,
+          word_text: wr.word,
+          word_index: wr.index,
+          start_time_ms: wr.startMs,
+          end_time_ms: wr.endMs,
+          phonemes_detected: [], // Would need audio analysis to populate
+          phonemes_expected: expectedPhonemes,
+          was_correct: wr.correct,
+          hesitation_detected: hasHesitation,
+        };
+      });
 
       await supabase.from('word_readings').insert(wordInserts);
     }
 
     await updateStudentStats(user.id, wordsRead, accuracy);
+
+    // Analyze mispronunciation patterns in background
+    analyzeMispronunciationPatterns(user.id, session.id).catch(console.error);
 
     setIsProcessing(false);
 

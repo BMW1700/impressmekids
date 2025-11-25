@@ -15,6 +15,7 @@ import { Mic, TrendingUp, BookOpen } from "lucide-react";
 import GeneratedExercises from "@/components/aura/GeneratedExercises";
 import PhonemeMasteryPathway from "@/components/aura/PhonemeMasteryPathway";
 import DifficultyProgressCard from "@/components/aura/DifficultyProgressCard";
+import { PhonemePracticeExercises } from "@/components/aura/PhonemePracticeExercises";
 
 const AuraPractice = () => {
   const { toast } = useToast();
@@ -210,6 +211,10 @@ const AuraPractice = () => {
             </TabsContent>
 
             <TabsContent value="exercises" className="mt-6 space-y-6">
+              {user?.id && (
+                <PhonemePracticeExercises studentId={user.id} />
+              )}
+              
               {skillVector && (
                 <DifficultyProgressCard
                   currentLevel={skillVector.current_difficulty_level || 1}
