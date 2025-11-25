@@ -5,6 +5,12 @@ import { getIPAPronunciation } from './cmuDictWrapper';
 env.allowLocalModels = false;
 env.useBrowserCache = true;
 
+// Cache for CMU Dictionary lookups to boost performance
+const phonemeCache = new Map<string, string[]>();
+
+// Cache for model initialization promise
+let modelInitPromise: Promise<any> | null = null;
+
 export interface PhonemeResult {
   phoneme: string;
   timestamp: number;
@@ -21,25 +27,36 @@ export interface PhonemeAnalysis {
 let phonemeRecognizer: any = null;
 
 /**
- * Initialize the phoneme recognition model (Wav2Vec2 for phoneme recognition)
+ * Initialize the phoneme recognition model with promise caching
  */
-export const initPhonemeRecognizer = async (): Promise<void> => {
-  if (phonemeRecognizer) return;
+export const initPhonemeRecognizer = async (): Promise<any> => {
+  if (phonemeRecognizer) return phonemeRecognizer;
   
-  console.log('Loading phoneme recognition model...');
+  // Use cached promise to prevent multiple simultaneous downloads
+  if (!modelInitPromise) {
+    modelInitPromise = (async () => {
+      try {
+        console.log('Loading phoneme recognition model...');
+        const model = await pipeline(
+          'automatic-speech-recognition',
+          'Xenova/whisper-tiny.en',
+          { 
+            device: 'webgpu',
+            dtype: 'fp32'
+          }
+        );
+        console.log('Phoneme recognition model loaded');
+        phonemeRecognizer = model;
+        return model;
+      } catch (error) {
+        console.error('Failed to load phoneme recognition model:', error);
+        modelInitPromise = null; // Reset so we can retry
+        throw new Error('Failed to initialize phoneme recognizer. Please check your internet connection.');
+      }
+    })();
+  }
   
-  // Using a lighter ASR model that works well in browsers
-  // We'll map the transcription to phonemes
-  phonemeRecognizer = await pipeline(
-    'automatic-speech-recognition',
-    'Xenova/whisper-tiny.en',
-    { 
-      device: 'webgpu',
-      dtype: 'fp32'
-    }
-  );
-  
-  console.log('Phoneme recognition model loaded');
+  return modelInitPromise;
 };
 
 /**
@@ -122,9 +139,16 @@ const mapWordsToPhonemes = (chunks: any[]): PhonemeResult[] => {
     const timestamp = chunk.timestamp[0] || 0;
     const duration = (chunk.timestamp[1] || timestamp + 0.5) - timestamp;
     
-    // Use CMU Dictionary for high-accuracy G2P (90%+), fallback to simpleG2P
-    const pronunciations = getIPAPronunciation(word);
-    const wordPhonemes = pronunciations[0] || simpleG2P(word); // Use first pronunciation variant or fallback
+    // Use cached CMU Dictionary lookup for performance
+    let wordPhonemes: string[];
+    if (phonemeCache.has(word)) {
+      wordPhonemes = phonemeCache.get(word)!;
+    } else {
+      const pronunciations = getIPAPronunciation(word);
+      wordPhonemes = pronunciations[0] || simpleG2P(word);
+      phonemeCache.set(word, wordPhonemes);
+    }
+    
     const phonemeDuration = duration / wordPhonemes.length;
     
     wordPhonemes.forEach((phoneme, idx) => {
@@ -191,11 +215,16 @@ export const analyzePhonemeAccuracy = (
   detectedPhonemes: PhonemeResult[],
   transcript: string
 ): PhonemeAnalysis => {
-  // Map transcript to expected phonemes using CMU Dictionary
+  // Map transcript to expected phonemes using CMU Dictionary with caching
   const words = transcript.toLowerCase().split(/\s+/);
   const expectedPhonemes = words.flatMap(word => {
+    if (phonemeCache.has(word)) {
+      return phonemeCache.get(word)!;
+    }
     const pronunciations = getIPAPronunciation(word);
-    return pronunciations[0] || simpleG2P(word); // Use CMU Dict or fallback
+    const phonemes = pronunciations[0] || simpleG2P(word);
+    phonemeCache.set(word, phonemes);
+    return phonemes;
   });
   
   // Calculate overall accuracy
