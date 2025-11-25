@@ -42,6 +42,7 @@ import DistrictManagerDashboard from "./pages/district/DistrictManagerDashboard"
 import RegisterDistrict from "./pages/district/RegisterDistrict";
 import PolicyViewer from "./pages/policies/PolicyViewer";
 import NotFound from "./pages/NotFound";
+import ReadingAnalyticsCalibration from "./components/aura/ReadingAnalyticsCalibration";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +68,7 @@ const App = () => (
           <Route path="/teacher/tournament/control" element={<TournamentControl />} />
           <Route path="/teacher/aura-analytics/:classroomId?" element={<AuraAnalytics />} />
           <Route path="/teacher/student/:studentId" element={<StudentProfile />} />
+          <Route path="/teacher/reading-calibration" element={<ReadingAnalyticsCalibration />} />
           <Route path="/student/assignment/:assignmentId" element={<CompleteAssignment />} />
           <Route path="/student/review-submission/:submissionId" element={<ReviewMySubmission />} />
           <Route path="/student/review-annotations/:submissionId" element={<ReviewMyAnnotations />} />
