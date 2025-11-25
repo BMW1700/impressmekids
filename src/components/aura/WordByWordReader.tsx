@@ -10,6 +10,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { getIPAPronunciation } from '@/lib/cmuDictWrapper';
 import { analyzeMispronunciationPatterns } from '@/lib/mispronunciationAnalysis';
 import { detectPhonemes } from '@/lib/phonemeDetection';
+import { checkAndAwardAchievements, generateDailyMissions, updateMissionProgress } from '@/lib/achievementLogic';
+import { AchievementUnlockedModal } from './AchievementUnlockedModal';
 
 // Browser compatibility check
 const checkBrowserSupport = () => {
@@ -56,6 +58,8 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [wordReadings, setWordReadings] = useState<WordReading[]>([]);
   const [browserSupport] = useState(checkBrowserSupport());
+  const [newAchievements, setNewAchievements] = useState<string[]>([]);
+  const [showAchievementModal, setShowAchievementModal] = useState(false);
   
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -273,7 +277,37 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       audioChunksRef.current = [];
     }
 
+    const { data: statsCheck } = await supabase
+      .from('student_reading_stats')
+      .select('total_sessions')
+      .eq('student_id', user.id)
+      .single();
+
+    const isFirstSession = !statsCheck || statsCheck.total_sessions === 0;
+
     await updateStudentStats(user.id, wordsRead, accuracy);
+
+    // Generate daily missions if not already created
+    await generateDailyMissions(user.id);
+
+    // Update mission progress
+    await updateMissionProgress(user.id, {
+      wordsRead,
+      durationSeconds: totalDuration,
+    });
+
+    // Check and award achievements
+    const achievements = await checkAndAwardAchievements(user.id, {
+      wpm,
+      accuracy,
+      wordsRead,
+      isFirstSession,
+    });
+
+    if (achievements.length > 0) {
+      setNewAchievements(achievements);
+      setShowAchievementModal(true);
+    }
 
     // Analyze mispronunciation patterns in background
     analyzeMispronunciationPatterns(user.id, session.id).catch(console.error);
@@ -377,6 +411,12 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
           🎤 Reading... Follow the highlighted word
         </p>
       )}
+
+      <AchievementUnlockedModal
+        isOpen={showAchievementModal}
+        onClose={() => setShowAchievementModal(false)}
+        achievements={newAchievements}
+      />
     </Card>
   );
 };
