@@ -29,7 +29,7 @@ serve(async (req) => {
       });
     }
 
-    const { tournament_id: classroom_id, name = 'New Tournament', game_type = 'jeopardy_duel' } = requestData;
+    const { classroom_id, name = 'New Tournament', game_type = 'jeopardy_duel' } = validation.data;
 
     console.log('Creating tournament:', { classroom_id, name, game_type });
 

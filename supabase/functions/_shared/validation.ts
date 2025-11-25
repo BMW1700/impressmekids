@@ -55,12 +55,13 @@ export const buzzInSchema = z.object({
 });
 
 export const startTournamentSchema = z.object({
-  tournament_id: uuidSchema,
+  classroom_id: uuidSchema,
+  name: z.string().min(1).max(200).optional(),
+  game_type: z.string().min(1).max(50).optional(),
 });
 
 export const seedMatchesSchema = z.object({
   tournament_id: uuidSchema,
-  round_number: z.number().int().min(0).max(20),
 });
 
 export const startRoundSchema = z.object({
