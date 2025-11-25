@@ -47,18 +47,22 @@ export const useReadingGamification = (studentId?: string) => {
     enabled: !!studentId,
   });
 
-  // Fetch streak
+  // Fetch streak from student_reading_stats
   const { data: streak, isLoading: streakLoading } = useQuery({
     queryKey: ["reading-streak", studentId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("reading_streaks")
-        .select("*")
+        .from("student_reading_stats")
+        .select("current_streak_days, longest_streak_days, last_activity_date")
         .eq("student_id", studentId!)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') throw error;
-      return data as Streak | null;
+      if (error) throw error;
+      return data ? {
+        current_streak: data.current_streak_days,
+        longest_streak: data.longest_streak_days,
+        last_reading_date: data.last_activity_date
+      } : { current_streak: 0, longest_streak: 0, last_reading_date: null };
     },
     enabled: !!studentId,
   });
@@ -80,52 +84,12 @@ export const useReadingGamification = (studentId?: string) => {
     enabled: !!studentId,
   });
 
-  // Update streak
+  // Update streak - streak logic is handled by updateStudentStats in WordByWordReader
   const updateStreak = useMutation({
     mutationFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
-      
-      const { data: existingStreak } = await supabase
-        .from("reading_streaks")
-        .select("*")
-        .eq("student_id", studentId!)
-        .single();
-
-      if (!existingStreak) {
-        // Create new streak
-        const { error } = await supabase
-          .from("reading_streaks")
-          .insert({
-            student_id: studentId!,
-            current_streak: 1,
-            longest_streak: 1,
-            last_reading_date: today,
-          });
-        if (error) throw error;
-      } else {
-        const lastDate = existingStreak.last_reading_date;
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-        let newStreak = existingStreak.current_streak;
-        if (lastDate === yesterdayStr) {
-          newStreak += 1;
-        } else if (lastDate !== today) {
-          newStreak = 1;
-        }
-
-        const { error } = await supabase
-          .from("reading_streaks")
-          .update({
-            current_streak: newStreak,
-            longest_streak: Math.max(newStreak, existingStreak.longest_streak),
-            last_reading_date: today,
-          })
-          .eq("id", existingStreak.id);
-        
-        if (error) throw error;
-      }
+      // Streak updates are handled automatically in updateStudentStats
+      // This just triggers a refetch of the data
+      return Promise.resolve();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reading-streak", studentId] });
