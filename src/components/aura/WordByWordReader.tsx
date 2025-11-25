@@ -3,12 +3,29 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Mic, StopCircle, Loader2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Mic, StopCircle, Loader2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { getIPAPronunciation } from '@/lib/cmuDictWrapper';
 import { analyzeMispronunciationPatterns } from '@/lib/mispronunciationAnalysis';
 import { detectPhonemes } from '@/lib/phonemeDetection';
+
+// Browser compatibility check
+const checkBrowserSupport = () => {
+  const hasWebSpeech = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+  const hasMediaRecorder = 'MediaRecorder' in window;
+  const hasGetUserMedia = navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+  
+  return {
+    isSupported: hasWebSpeech && hasMediaRecorder && hasGetUserMedia,
+    missing: [
+      !hasWebSpeech && 'Web Speech API',
+      !hasMediaRecorder && 'MediaRecorder',
+      !hasGetUserMedia && 'Microphone Access'
+    ].filter(Boolean) as string[]
+  };
+};
 
 interface WordByWordReaderProps {
   passageText: string;
@@ -38,6 +55,7 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [wordReadings, setWordReadings] = useState<WordReading[]>([]);
+  const [browserSupport] = useState(checkBrowserSupport());
   
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -47,16 +65,17 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
   const { toast } = useToast();
 
   const startReading = useCallback(async () => {
-    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    
-    if (!SpeechRecognition) {
+    // Check browser support
+    if (!browserSupport.isSupported) {
       toast({
         title: 'Browser not supported',
-        description: 'Please use Chrome or Edge for word-by-word tracking',
+        description: `Missing: ${browserSupport.missing.join(', ')}. Please use Chrome or Edge.`,
         variant: 'destructive',
       });
       return;
     }
+
+    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
 
     // Start audio recording for phoneme detection
     try {
@@ -73,11 +92,19 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       mediaRecorderRef.current = recorder;
     } catch (error) {
       console.error('Microphone access error:', error);
-      toast({
-        title: 'Microphone Error',
-        description: 'Please allow microphone access',
-        variant: 'destructive',
-      });
+      if (error instanceof DOMException && error.name === 'NotAllowedError') {
+        toast({
+          title: 'Microphone access denied',
+          description: 'Please allow microphone access to use this feature.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Microphone Error',
+          description: 'Please check your microphone and try again.',
+          variant: 'destructive',
+        });
+      }
       return;
     }
 
@@ -294,6 +321,17 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
 
   return (
     <Card className="p-6 space-y-4">
+      {!browserSupport.isSupported && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Your browser doesn't support word-by-word reading practice. 
+            Missing: {browserSupport.missing.join(', ')}. 
+            Please use Chrome, Edge, or another modern browser.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Word-by-Word Reading Practice</h3>
         <Badge variant="secondary">
@@ -309,7 +347,11 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
 
       <div className="flex gap-2">
         {!isRecording && !isProcessing && (
-          <Button onClick={startReading} className="flex-1">
+          <Button 
+            onClick={startReading} 
+            className="flex-1"
+            disabled={!browserSupport.isSupported}
+          >
             <Mic className="mr-2 h-4 w-4" />
             Start Reading
           </Button>
