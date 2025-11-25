@@ -44,40 +44,70 @@ export async function analyzeMispronunciationPatterns(
     const errorMap = new Map<string, ErrorPattern>();
 
     for (const reading of errorReadings) {
-      // Get expected phonemes (cast Json to string[])
+      // Get detected and expected phonemes
+      const detectedPhonemes = Array.isArray(reading.phonemes_detected) 
+        ? (reading.phonemes_detected as string[])
+        : [];
       const expectedPhonemes = Array.isArray(reading.phonemes_expected) 
         ? (reading.phonemes_expected as string[])
         : [];
       
       if (expectedPhonemes.length === 0) continue;
-
-      // For now, analyze at word level since we don't have detected phonemes
-      // In future: compare phonemes_detected with phonemes_expected
       
-      // Identify common error patterns by word context
       const wordContext = reading.word_text.toLowerCase();
       
-      // Check for common phoneme confusion patterns
-      const commonConfusions = identifyCommonConfusions(
-        wordContext,
-        expectedPhonemes
-      );
-
-      for (const confusion of commonConfusions) {
-        const errorType = `${confusion.target}→${confusion.substitute}`;
+      // Compare detected vs expected phonemes for exact error patterns
+      if (detectedPhonemes.length > 0) {
+        const maxLength = Math.max(detectedPhonemes.length, expectedPhonemes.length);
         
-        if (errorMap.has(errorType)) {
-          const existing = errorMap.get(errorType)!;
-          existing.frequency++;
-          if (!existing.contexts.includes(wordContext)) {
-            existing.contexts.push(wordContext);
+        for (let i = 0; i < maxLength; i++) {
+          const expected = expectedPhonemes[i];
+          const detected = detectedPhonemes[i];
+          
+          // Skip if both are undefined or if they match
+          if (!expected || expected === detected) continue;
+          
+          // Record phoneme substitution error
+          const substitute = detected || '∅'; // ∅ represents omission
+          const errorType = `${expected}→${substitute}`;
+          
+          if (errorMap.has(errorType)) {
+            const existing = errorMap.get(errorType)!;
+            existing.frequency++;
+            if (!existing.contexts.includes(wordContext)) {
+              existing.contexts.push(wordContext);
+            }
+          } else {
+            errorMap.set(errorType, {
+              errorType,
+              frequency: 1,
+              contexts: [wordContext],
+            });
           }
-        } else {
-          errorMap.set(errorType, {
-            errorType,
-            frequency: 1,
-            contexts: [wordContext],
-          });
+        }
+      } else {
+        // Fallback: Use heuristic analysis if phoneme detection failed
+        const commonConfusions = identifyCommonConfusions(
+          wordContext,
+          expectedPhonemes
+        );
+
+        for (const confusion of commonConfusions) {
+          const errorType = `${confusion.target}→${confusion.substitute}`;
+          
+          if (errorMap.has(errorType)) {
+            const existing = errorMap.get(errorType)!;
+            existing.frequency++;
+            if (!existing.contexts.includes(wordContext)) {
+              existing.contexts.push(wordContext);
+            }
+          } else {
+            errorMap.set(errorType, {
+              errorType,
+              frequency: 1,
+              contexts: [wordContext],
+            });
+          }
         }
       }
     }
