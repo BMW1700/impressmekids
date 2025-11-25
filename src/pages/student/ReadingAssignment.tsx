@@ -8,13 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Send, Save, Calendar, MessageSquare } from "lucide-react";
+import { Loader2, ArrowLeft, Send, Save, Calendar, MessageSquare, BookOpen, Mic } from "lucide-react";
 import { useTextHighlights } from "@/hooks/useTextHighlights";
 import { useSubmission } from "@/hooks/useSubmission";
 import { AnnotationSidebar } from "@/components/assignments/AnnotationSidebar";
 import { MobileAnnotationDrawer } from "@/components/assignments/MobileAnnotationDrawer";
 import { RealtimeAnnotationCoach } from "@/components/aura/RealtimeAnnotationCoach";
+import { WordByWordReader } from "@/components/aura/WordByWordReader";
 import {
   Dialog,
   DialogContent,
@@ -53,6 +55,7 @@ export default function ReadingAssignment() {
   const [hoveredHighlightId, setHoveredHighlightId] = useState<string | null>(null);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [selectedHighlightIndex, setSelectedHighlightIndex] = useState<number>(-1);
+  const [readingMode, setReadingMode] = useState<'annotation' | 'word-by-word'>('annotation');
 
   const { submission, createOrUpdateSubmission } = useSubmission(assignmentId, studentId || undefined);
   const { highlights, createHighlight, updateHighlight, deleteHighlight } = useTextHighlights(
@@ -387,28 +390,57 @@ export default function ReadingAssignment() {
           </div>
 
           <div className="grid lg:grid-cols-3 gap-6">
-            {/* Reading Passage */}
+            {/* Reading Passage with Mode Tabs */}
             <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Reading Passage</CardTitle>
-                  {!isSubmitted && (
-                    <p className="text-sm text-muted-foreground">
-                      Select any text to highlight and add your notes
-                    </p>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <div
-                    ref={passageRef}
-                    className="prose prose-sm max-w-none font-serif text-base leading-relaxed whitespace-pre-wrap select-text"
-                    onMouseUp={handleTextSelection}
-                    style={{ userSelect: isSubmitted ? 'none' : 'text' }}
-                  >
-                    {renderHighlightedText()}
-                  </div>
-                </CardContent>
-              </Card>
+              {!isSubmitted && (
+                <Tabs value={readingMode} onValueChange={(v) => setReadingMode(v as any)} className="mb-4">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="annotation" className="flex items-center gap-2">
+                      <BookOpen className="h-4 w-4" />
+                      Read & Annotate
+                    </TabsTrigger>
+                    <TabsTrigger value="word-by-word" className="flex items-center gap-2">
+                      <Mic className="h-4 w-4" />
+                      Word-by-Word Practice
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              )}
+
+              {readingMode === 'word-by-word' && !isSubmitted ? (
+                <WordByWordReader
+                  passageText={assignment.passage_text}
+                  assignmentId={assignmentId}
+                  onComplete={(sessionData) => {
+                    toast({
+                      title: "Reading Session Complete!",
+                      description: `${sessionData.wpm} WPM • ${sessionData.accuracy}% Accuracy`,
+                    });
+                    setReadingMode('annotation');
+                  }}
+                />
+              ) : (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Reading Passage</CardTitle>
+                    {!isSubmitted && (
+                      <p className="text-sm text-muted-foreground">
+                        Select any text to highlight and add your notes
+                      </p>
+                    )}
+                  </CardHeader>
+                  <CardContent>
+                    <div
+                      ref={passageRef}
+                      className="prose prose-sm max-w-none font-serif text-base leading-relaxed whitespace-pre-wrap select-text"
+                      onMouseUp={handleTextSelection}
+                      style={{ userSelect: isSubmitted ? 'none' : 'text' }}
+                    >
+                      {renderHighlightedText()}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {!isSubmitted && (
                 <div className="flex gap-3 mt-6">
