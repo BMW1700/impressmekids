@@ -4,8 +4,12 @@ import { CompactProfileHeader } from "@/components/student/CompactProfileHeader"
 import { DashboardMetrics } from "@/components/student/DashboardMetrics";
 import { ActivityFeed } from "@/components/student/ActivityFeed";
 import { SmartNextAction } from "@/components/student/SmartNextAction";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useReadingGamification } from "@/hooks/useReadingGamification";
+import { AchievementBadge } from "@/components/aura/AchievementBadge";
+import { StreakCounter } from "@/components/aura/StreakCounter";
+import { MissionCard } from "@/components/aura/MissionCard";
 
 interface HomeSectionProps {
   userProfile: any;
@@ -30,6 +34,7 @@ export const HomeSection = ({
   const completedAssignments = assignmentStats?.completed_assignments || 0;
   const gamesPlayed = studentProfile?.stats?.games_played || 0;
   const gamesWon = studentProfile?.stats?.games_won || 0;
+  const { achievements, streak, missions } = useReadingGamification(studentProfile?.id);
   
   return (
     <div className="space-y-8">
@@ -157,6 +162,53 @@ export const HomeSection = ({
           studentStats={studentProfile?.stats}
         />
       </div>
+
+      {/* Reading Gamification Section */}
+      {studentProfile?.id && (
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Reading Streak 🔥</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <StreakCounter 
+                  currentStreak={streak.current_streak}
+                  longestStreak={streak.longest_streak}
+                />
+              </CardContent>
+            </Card>
+
+            {achievements.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Achievements</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {achievements.slice(0, 6).map((achievement) => (
+                      <AchievementBadge 
+                        key={achievement.id} 
+                        achievement={achievement}
+                        size="md"
+                      />
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {missions.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="font-semibold">Active Missions</h3>
+              {missions.slice(0, 2).map((mission) => (
+                <MissionCard key={mission.id} mission={mission} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Activity Feed - Middle 30% */}
       {studentProfile?.id && <ActivityFeed studentId={studentProfile.id} />}
