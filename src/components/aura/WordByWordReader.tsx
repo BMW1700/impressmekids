@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { getIPAPronunciation } from '@/lib/cmuDictWrapper';
 import { analyzeMispronunciationPatterns } from '@/lib/mispronunciationAnalysis';
+import { detectPhonemes } from '@/lib/phonemeDetection';
 
 interface WordByWordReaderProps {
   passageText: string;
@@ -39,6 +40,8 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
   const [wordReadings, setWordReadings] = useState<WordReading[]>([]);
   
   const recognitionRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const startTimeRef = useRef<number>(0);
   const words = passageText.split(/\s+/).filter(w => w.length > 0);
   const { toast } = useToast();
@@ -50,6 +53,29 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       toast({
         title: 'Browser not supported',
         description: 'Please use Chrome or Edge for word-by-word tracking',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Start audio recording for phoneme detection
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+      
+      recorder.start(100); // Capture every 100ms for fine-grained segmentation
+      mediaRecorderRef.current = recorder;
+    } catch (error) {
+      console.error('Microphone access error:', error);
+      toast({
+        title: 'Microphone Error',
+        description: 'Please allow microphone access',
         variant: 'destructive',
       });
       return;
@@ -114,6 +140,12 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       recognitionRef.current = null;
     }
 
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      // Give it time to finish capturing
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+
     setIsRecording(false);
     setIsProcessing(true);
 
@@ -162,30 +194,56 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
     }
 
     if (wordReadings.length > 0) {
-      const wordInserts = wordReadings.map((wr, idx) => {
-        // Get expected phonemes for the word
-        const expectedWord = words[wr.index] || wr.word;
-        const expectedPhonemes = getIPAPronunciation(expectedWord)[0] || [];
-        
-        // Detect hesitation based on time gap (>800ms between words)
-        const previousReading = idx > 0 ? wordReadings[idx - 1] : null;
-        const timeGap = previousReading ? wr.startMs - previousReading.endMs : 0;
-        const hasHesitation = timeGap > 800;
-        
-        return {
-          session_id: session.id,
-          word_text: wr.word,
-          word_index: wr.index,
-          start_time_ms: wr.startMs,
-          end_time_ms: wr.endMs,
-          phonemes_detected: [], // Would need audio analysis to populate
-          phonemes_expected: expectedPhonemes,
-          was_correct: wr.correct,
-          hesitation_detected: hasHesitation,
-        };
-      });
+      // Combine audio chunks into single blob
+      const fullAudioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+      
+      // Process each word with phoneme detection
+      const wordInserts = await Promise.all(
+        wordReadings.map(async (wr, idx) => {
+          // Get expected phonemes for the word
+          const expectedWord = words[wr.index] || wr.word;
+          const expectedPhonemes = getIPAPronunciation(expectedWord)[0] || [];
+          
+          // Detect hesitation based on time gap (>800ms between words)
+          const previousReading = idx > 0 ? wordReadings[idx - 1] : null;
+          const timeGap = previousReading ? wr.startMs - previousReading.endMs : 0;
+          const hasHesitation = timeGap > 800;
+          
+          // Extract audio segment for this word and detect phonemes
+          let detectedPhonemes: string[] = [];
+          try {
+            const wordAudioBlob = await extractAudioSegment(
+              fullAudioBlob,
+              wr.startMs,
+              wr.endMs
+            );
+            
+            if (wordAudioBlob) {
+              const phonemeResults = await detectPhonemes(wordAudioBlob);
+              detectedPhonemes = phonemeResults.map(p => p.phoneme);
+            }
+          } catch (error) {
+            console.error('Phoneme detection error for word:', wr.word, error);
+          }
+          
+          return {
+            session_id: session.id,
+            word_text: wr.word,
+            word_index: wr.index,
+            start_time_ms: wr.startMs,
+            end_time_ms: wr.endMs,
+            phonemes_detected: detectedPhonemes,
+            phonemes_expected: expectedPhonemes,
+            was_correct: wr.correct,
+            hesitation_detected: hasHesitation,
+          };
+        })
+      );
 
       await supabase.from('word_readings').insert(wordInserts);
+      
+      // Clear audio chunks for next session
+      audioChunksRef.current = [];
     }
 
     await updateStudentStats(user.id, wordsRead, accuracy);
@@ -395,4 +453,123 @@ function getPreviousDate(dateStr: string): string {
   const date = new Date(dateStr);
   date.setDate(date.getDate() - 1);
   return date.toISOString().split('T')[0];
+}
+
+/**
+ * Extract a specific time segment from an audio blob
+ */
+async function extractAudioSegment(
+  audioBlob: Blob,
+  startMs: number,
+  endMs: number
+): Promise<Blob | null> {
+  try {
+    const arrayBuffer = await audioBlob.arrayBuffer();
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    
+    const sampleRate = audioBuffer.sampleRate;
+    const startSample = Math.floor((startMs / 1000) * sampleRate);
+    const endSample = Math.floor((endMs / 1000) * sampleRate);
+    const segmentLength = endSample - startSample;
+    
+    if (segmentLength <= 0 || startSample >= audioBuffer.length) {
+      return null;
+    }
+    
+    // Create new buffer for the segment
+    const segmentBuffer = audioContext.createBuffer(
+      audioBuffer.numberOfChannels,
+      segmentLength,
+      sampleRate
+    );
+    
+    // Copy audio data for this segment
+    for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+      const sourceData = audioBuffer.getChannelData(channel);
+      const targetData = segmentBuffer.getChannelData(channel);
+      
+      for (let i = 0; i < segmentLength; i++) {
+        const sourceIndex = startSample + i;
+        if (sourceIndex < sourceData.length) {
+          targetData[i] = sourceData[sourceIndex];
+        }
+      }
+    }
+    
+    // Convert buffer back to blob
+    return await audioBufferToBlob(segmentBuffer);
+  } catch (error) {
+    console.error('Audio segment extraction error:', error);
+    return null;
+  }
+}
+
+/**
+ * Convert AudioBuffer to Blob
+ */
+async function audioBufferToBlob(audioBuffer: AudioBuffer): Promise<Blob> {
+  const offlineContext = new OfflineAudioContext(
+    audioBuffer.numberOfChannels,
+    audioBuffer.length,
+    audioBuffer.sampleRate
+  );
+  
+  const source = offlineContext.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(offlineContext.destination);
+  source.start();
+  
+  const renderedBuffer = await offlineContext.startRendering();
+  
+  // Convert to WAV format
+  const wavData = audioBufferToWav(renderedBuffer);
+  return new Blob([wavData], { type: 'audio/wav' });
+}
+
+/**
+ * Convert AudioBuffer to WAV format
+ */
+function audioBufferToWav(buffer: AudioBuffer): ArrayBuffer {
+  const length = buffer.length * buffer.numberOfChannels * 2;
+  const arrayBuffer = new ArrayBuffer(44 + length);
+  const view = new DataView(arrayBuffer);
+  
+  // WAV header
+  const writeString = (offset: number, string: string) => {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
+    }
+  };
+  
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + length, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, buffer.numberOfChannels, true);
+  view.setUint32(24, buffer.sampleRate, true);
+  view.setUint32(28, buffer.sampleRate * buffer.numberOfChannels * 2, true);
+  view.setUint16(32, buffer.numberOfChannels * 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, length, true);
+  
+  // Audio data
+  const channels = [];
+  for (let i = 0; i < buffer.numberOfChannels; i++) {
+    channels.push(buffer.getChannelData(i));
+  }
+  
+  let offset = 44;
+  for (let i = 0; i < buffer.length; i++) {
+    for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+      const sample = Math.max(-1, Math.min(1, channels[channel][i]));
+      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+      offset += 2;
+    }
+  }
+  
+  return arrayBuffer;
 }
