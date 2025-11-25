@@ -196,14 +196,14 @@ const TournamentControl = () => {
   const handleStartRound = async () => {
     setIsStarting(true);
     try {
-      const waitingMatches = matches.filter(m => m.status === 'waiting');
+      // Calculate current round from matches
+      const currentRound = matches.length > 0 ? Math.max(...matches.map(m => m.round)) : 1;
       
-      for (const match of waitingMatches) {
-        const { error } = await supabase.functions.invoke('start-round', {
-          body: { match_id: match.id }
-        });
-        if (error) throw error;
-      }
+      const { error } = await supabase.functions.invoke('start-round', {
+        body: { tournament_id: tournamentId, round_number: currentRound }
+      });
+      
+      if (error) throw error;
 
       toast({
         title: "Round Started",
