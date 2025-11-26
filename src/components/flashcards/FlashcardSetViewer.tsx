@@ -103,10 +103,10 @@ export function FlashcardSetViewer({ flashcards }: FlashcardSetViewerProps) {
         </div>
       </div>
 
-      <div className="relative">
+      <div className="relative flex justify-center">
         <Card 
           className={cn(
-            "relative cursor-pointer transition-all duration-300 border-4 shadow-lg hover:shadow-xl aspect-square",
+            "relative cursor-pointer transition-all duration-300 border-4 shadow-lg hover:shadow-xl w-[350px] h-[350px]",
             currentBorderColor,
             isFlipped && "scale-[0.98]"
           )}
