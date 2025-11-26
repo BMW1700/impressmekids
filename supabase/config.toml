@@ -1,5 +1,9 @@
 project_id = "sjigkjwkgovculkovcjy"
 
+# Global import map for all functions
+[functions]
+import_map = './functions/import_map.json'
+
 [functions.send-calendar-notifications]
 verify_jwt = false
 
