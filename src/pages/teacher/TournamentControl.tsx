@@ -55,14 +55,20 @@ const TournamentControl = () => {
   }, [matches]);
 
   const loadTournamentData = async () => {
+    console.log('🔄 [TournamentControl] Starting loadTournamentData for tournament:', tournamentId);
+    
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      console.log('✅ [TournamentControl] Session check:', { userId: session?.user?.id });
+      
       if (!session) {
+        console.error('❌ [TournamentControl] No session found, redirecting to auth');
         navigate('/auth');
         return;
       }
 
       // Load tournament with retry logic for new tournaments
+      console.log('🔄 [TournamentControl] Loading tournament data...');
       let tournamentData = null;
       let attempts = 0;
       const maxAttempts = 15;
@@ -74,10 +80,14 @@ const TournamentControl = () => {
           .eq('id', tournamentId)
           .maybeSingle();
         
-        if (error) throw error;
+        if (error) {
+          console.error('❌ [TournamentControl] Tournament query error:', error);
+          throw error;
+        }
         
         if (data) {
           tournamentData = data;
+          console.log('✅ [TournamentControl] Tournament loaded:', { id: data.id, name: data.name, status: data.status });
           break;
         }
         
@@ -89,20 +99,28 @@ const TournamentControl = () => {
       }
 
       if (!tournamentData) {
+        console.error('❌ [TournamentControl] Tournament not found after polling');
         throw new Error('Tournament not found after polling');
       }
 
       // Load classroom separately to avoid RLS recursion
+      console.log('🔄 [TournamentControl] Loading classroom:', tournamentData.classroom_id);
       const { data: classroomData, error: classroomError } = await supabase
         .from('classrooms')
         .select('*')
         .eq('id', tournamentData.classroom_id)
         .single();
 
-      if (classroomError) throw classroomError;
+      if (classroomError) {
+        console.error('❌ [TournamentControl] Classroom query error:', classroomError);
+        throw classroomError;
+      }
+      
+      console.log('✅ [TournamentControl] Classroom loaded:', { id: classroomData.id, name: classroomData.name, teacherId: classroomData.teacher_id });
 
       // Verify teacher ownership
       if (classroomData.teacher_id !== session.user.id) {
+        console.error('❌ [TournamentControl] Access denied - not classroom teacher');
         toast({
           title: "Access Denied",
           description: "Only the classroom teacher can control this tournament",
@@ -116,31 +134,61 @@ const TournamentControl = () => {
       setClassroom(classroomData);
 
       // Load players
-      const { data: playersData, error: playersError } = await supabase
-        .from('tournament_players')
-        .select('*, profiles(full_name)')
-        .eq('tournament_id', tournamentId)
-        .order('seed');
+      console.log('🔄 [TournamentControl] Loading players...');
+      try {
+        const { data: playersData, error: playersError } = await supabase
+          .from('tournament_players')
+          .select('*, profiles(full_name)')
+          .eq('tournament_id', tournamentId)
+          .order('seed');
 
-      if (playersError) throw playersError;
-      setPlayers(playersData || []);
+        if (playersError) {
+          console.error('❌ [TournamentControl] Players query error:', playersError);
+          throw playersError;
+        }
+        
+        console.log('✅ [TournamentControl] Players loaded:', playersData?.length || 0, 'players');
+        setPlayers(playersData || []);
+      } catch (playerError) {
+        console.error('❌ [TournamentControl] Failed to load players, continuing with empty list:', playerError);
+        setPlayers([]);
+      }
 
-      // Load question count
-      const { data: questionsData, error: questionsError } = await supabase
-        .from('tournament_questions')
-        .select('id')
-        .eq('tournament_id', tournamentId);
+      // Load question count - THIS IS THE CRITICAL QUERY
+      console.log('🔄 [TournamentControl] Loading tournament questions...');
+      try {
+        const { data: questionsData, error: questionsError } = await supabase
+          .from('tournament_questions')
+          .select('id')
+          .eq('tournament_id', tournamentId);
 
-      if (questionsError) throw questionsError;
-      setQuestionCount(questionsData?.length || 0);
+        if (questionsError) {
+          console.error('❌ [TournamentControl] Tournament questions query error:', questionsError);
+          console.error('❌ [TournamentControl] Error details:', {
+            message: questionsError.message,
+            code: questionsError.code,
+            details: questionsError.details,
+            hint: questionsError.hint
+          });
+          throw questionsError;
+        }
+        
+        console.log('✅ [TournamentControl] Tournament questions loaded:', questionsData?.length || 0, 'questions');
+        console.log('📊 [TournamentControl] Questions data:', questionsData);
+        setQuestionCount(questionsData?.length || 0);
+      } catch (questionError) {
+        console.error('❌ [TournamentControl] Failed to load questions, setting count to 0:', questionError);
+        setQuestionCount(0);
+      }
     } catch (error: any) {
-      console.error("Error loading tournament:", error);
+      console.error("❌ [TournamentControl] Fatal error loading tournament:", error);
       toast({
         title: "Error",
         description: "Failed to load tournament data",
         variant: "destructive",
       });
     } finally {
+      console.log('✅ [TournamentControl] loadTournamentData completed');
       setIsLoading(false);
     }
   };

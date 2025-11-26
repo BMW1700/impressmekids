@@ -67,7 +67,9 @@ export const SelectQuestionsModal = ({
   };
 
   const loadQuestionGroups = async () => {
+    console.log('🔄 [SelectQuestionsModal] Loading question groups for classroom:', classroomId);
     setIsGroupsLoading(true);
+    
     try {
       const { data, error } = await supabase
         .from('question_groups')
@@ -75,33 +77,61 @@ export const SelectQuestionsModal = ({
         .eq('classroom_id', classroomId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [SelectQuestionsModal] Question groups query error:', error);
+        console.error('❌ [SelectQuestionsModal] Error details:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+        throw error;
+      }
+      
+      console.log('✅ [SelectQuestionsModal] Question groups loaded:', data?.length || 0, 'groups');
+      console.log('📊 [SelectQuestionsModal] Groups data:', data);
       setQuestionGroups(data || []);
     } catch (error: any) {
-      console.error("Error loading question groups:", error);
+      console.error("❌ [SelectQuestionsModal] Failed to load question groups:", error);
       toast({
         title: "Error",
         description: "Failed to load question groups",
         variant: "destructive",
       });
+      setQuestionGroups([]);
     } finally {
       setIsGroupsLoading(false);
     }
   };
 
   const loadExistingSelections = async () => {
+    console.log('🔄 [SelectQuestionsModal] Loading existing selections for tournament:', tournamentId);
+    
     try {
       const { data, error } = await supabase
         .from('tournament_questions')
         .select('question_id')
         .eq('tournament_id', tournamentId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [SelectQuestionsModal] Existing selections query error:', error);
+        console.error('❌ [SelectQuestionsModal] Error details:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+        throw error;
+      }
+      
+      console.log('✅ [SelectQuestionsModal] Existing selections loaded:', data?.length || 0, 'questions');
+      console.log('📊 [SelectQuestionsModal] Selections data:', data);
       
       const existingIds = new Set(data?.map(tq => tq.question_id) || []);
       setSelectedQuestions(existingIds);
     } catch (error: any) {
-      console.error("Error loading existing selections:", error);
+      console.error("❌ [SelectQuestionsModal] Failed to load existing selections:", error);
+      setSelectedQuestions(new Set());
     }
   };
 
