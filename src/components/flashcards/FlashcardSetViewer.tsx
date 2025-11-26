@@ -22,6 +22,10 @@ export function FlashcardSetViewer({ flashcards }: FlashcardSetViewerProps) {
 
   const currentCard = shuffledCards[currentIndex];
   const hasHint = currentCard?.hint && currentCard.hint.trim().length > 0;
+  
+  // Rotate through brain-stimulating colors
+  const borderColors = ['border-yellow-400', 'border-orange-400', 'border-red-400', 'border-blue-400', 'border-green-400'];
+  const currentBorderColor = borderColors[currentIndex % borderColors.length];
 
   // Keyboard navigation
   useEffect(() => {
@@ -82,116 +86,131 @@ export function FlashcardSetViewer({ flashcards }: FlashcardSetViewerProps) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">
+    <div className="max-w-2xl mx-auto space-y-4">
+      <div className="flex items-center justify-between px-2">
+        <span className="text-sm font-medium text-muted-foreground">
           Card {currentIndex + 1} of {shuffledCards.length}
         </span>
         <div className="flex gap-2">
           <Button variant="ghost" size="sm" onClick={handleShuffle}>
-            <Shuffle className="h-4 w-4 mr-2" />
+            <Shuffle className="h-4 w-4 mr-1" />
             Shuffle
           </Button>
           <Button variant="ghost" size="sm" onClick={handleReset}>
-            <RotateCcw className="h-4 w-4 mr-2" />
+            <RotateCcw className="h-4 w-4 mr-1" />
             Reset
           </Button>
         </div>
       </div>
 
-      <div 
-        className="relative cursor-pointer perspective-1000"
-        onClick={handleFlip}
-        style={{ minHeight: '300px' }}
-      >
+      <div className="relative">
         <Card 
           className={cn(
-            "transition-transform duration-500 transform-style-3d",
-            isFlipped && "rotate-y-180"
+            "relative cursor-pointer transition-all duration-300 border-4 shadow-lg hover:shadow-xl",
+            currentBorderColor,
+            isFlipped && "scale-[0.98]"
           )}
+          onClick={handleFlip}
         >
-          <CardContent className="p-8">
+          <CardContent className="p-6 min-h-[240px] flex flex-col">
             <div className={cn(
-              "backface-hidden",
+              "flex-1 flex items-center justify-center",
               !isFlipped ? "block" : "hidden"
             )}>
-              <div className="text-center space-y-4">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              <div className="text-center space-y-3">
+                <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
                   Question
                 </p>
-                <p className="text-xl font-medium">{currentCard.front}</p>
-                <p className="text-sm text-muted-foreground">
-                  (Click to reveal answer)
+                <p className="text-lg font-semibold leading-tight">{currentCard.front}</p>
+                <p className="text-xs text-muted-foreground italic">
+                  Click to reveal answer
                 </p>
               </div>
             </div>
 
             <div className={cn(
-              "backface-hidden rotate-y-180",
+              "flex-1 flex items-center justify-center",
               isFlipped ? "block" : "hidden"
             )}>
-              <div className="text-center space-y-4">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              <div className="text-center space-y-3">
+                <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
                   Answer
                 </p>
-                <p className="text-lg">{currentCard.back}</p>
-                <p className="text-sm text-muted-foreground">
-                  (Click to see question)
+                <p className="text-lg font-medium leading-tight">{currentCard.back}</p>
+                <p className="text-xs text-muted-foreground italic">
+                  Click to see question
                 </p>
               </div>
+            </div>
+
+            {/* Navigation buttons integrated into card */}
+            <div className="flex justify-between items-center mt-4 pt-4 border-t">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePrevious();
+                }}
+                disabled={currentIndex === 0}
+                className="hover:bg-muted"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Previous
+              </Button>
+              
+              <div className="flex-1 mx-4">
+                <div className="w-full bg-muted rounded-full h-1.5">
+                  <div 
+                    className={cn(
+                      "h-1.5 rounded-full transition-all duration-300",
+                      currentBorderColor.replace('border-', 'bg-')
+                    )}
+                    style={{ width: `${((currentIndex + 1) / shuffledCards.length) * 100}%` }}
+                  />
+                </div>
+              </div>
+
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleNext();
+                }}
+                disabled={currentIndex === shuffledCards.length - 1}
+                className="hover:bg-muted"
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      {hasHint && !isFlipped && (
-        <div className="space-y-2">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setShowHint(!showHint)}
-            className="w-full"
-          >
-            <Lightbulb className="h-4 w-4 mr-2" />
-            {showHint ? 'Hide Hint' : 'Show Hint'}
-          </Button>
-          
-          {showHint && (
-            <Card className="bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800">
-              <CardContent className="p-4">
-                <p className="text-sm text-yellow-900 dark:text-yellow-100">
-                  💡 {currentCard.hint}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
-
-      <div className="flex justify-between gap-2">
-        <Button 
-          variant="outline" 
-          onClick={handlePrevious}
-          disabled={currentIndex === 0}
-        >
-          <ChevronLeft className="h-4 w-4 mr-2" />
-          Previous
-        </Button>
-        <Button 
-          variant="outline" 
-          onClick={handleNext}
-          disabled={currentIndex === shuffledCards.length - 1}
-        >
-          Next
-          <ChevronRight className="h-4 w-4 ml-2" />
-        </Button>
-      </div>
-
-      <div className="w-full bg-muted rounded-full h-2">
-        <div 
-          className="bg-primary h-2 rounded-full transition-all duration-300"
-          style={{ width: `${((currentIndex + 1) / shuffledCards.length) * 100}%` }}
-        />
+        {hasHint && !isFlipped && (
+          <div className="mt-3">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowHint(!showHint)}
+              className="w-full"
+            >
+              <Lightbulb className="h-4 w-4 mr-2" />
+              {showHint ? 'Hide Hint' : 'Show Hint'}
+            </Button>
+            
+            {showHint && (
+              <Card className="mt-2 bg-yellow-50 dark:bg-yellow-950 border-2 border-yellow-400">
+                <CardContent className="p-3">
+                  <p className="text-sm text-yellow-900 dark:text-yellow-100">
+                    💡 {currentCard.hint}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
       </div>
 
       <p className="text-xs text-center text-muted-foreground">
