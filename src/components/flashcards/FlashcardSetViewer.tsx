@@ -23,8 +23,8 @@ export function FlashcardSetViewer({ flashcards }: FlashcardSetViewerProps) {
   const currentCard = shuffledCards[currentIndex];
   const hasHint = currentCard?.hint && currentCard.hint.trim().length > 0;
   
-  // Rotate through brain-stimulating colors (4 colors only)
-  const borderColors = ['border-blue-400', 'border-green-400', 'border-yellow-400', 'border-orange-400'];
+  // Rotate through brain-stimulating colors
+  const borderColors = ['border-yellow-400', 'border-orange-400', 'border-red-400', 'border-blue-400', 'border-green-400'];
   const currentBorderColor = borderColors[currentIndex % borderColors.length];
 
   // Keyboard navigation
@@ -103,16 +103,16 @@ export function FlashcardSetViewer({ flashcards }: FlashcardSetViewerProps) {
         </div>
       </div>
 
-      <div className="relative flex justify-center">
+      <div className="relative">
         <Card 
           className={cn(
-            "relative cursor-pointer transition-all duration-300 border-4 shadow-lg hover:shadow-xl w-[350px] h-[350px]",
+            "relative cursor-pointer transition-all duration-300 border-4 shadow-lg hover:shadow-xl",
             currentBorderColor,
             isFlipped && "scale-[0.98]"
           )}
           onClick={handleFlip}
         >
-          <CardContent className="p-6 h-full flex flex-col">
+          <CardContent className="p-6 min-h-[240px] flex flex-col">
             <div className={cn(
               "flex-1 flex items-center justify-center",
               !isFlipped ? "block" : "hidden"
