@@ -86,7 +86,7 @@ export function FlashcardSetViewer({ flashcards }: FlashcardSetViewerProps) {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
+    <div className="max-w-lg mx-auto space-y-4">
       <div className="flex items-center justify-between px-2">
         <span className="text-sm font-medium text-muted-foreground">
           Card {currentIndex + 1} of {shuffledCards.length}
