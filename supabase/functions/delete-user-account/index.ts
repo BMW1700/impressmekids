@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
     console.error('Delete user account error:', error)
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'Failed to delete user account' 
+        error: error instanceof Error ? error.message : 'Failed to delete user account' 
       }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     )
