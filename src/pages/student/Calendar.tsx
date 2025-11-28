@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, Printer, Search, Filter } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { format, addMonths, subMonths, addDays, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, parse } from "date-fns";
 import { useCalendarData } from "@/hooks/useCalendarData";
 import { getCalendarMonthDays, getItemsForDate, getCategoryColor, getTypeColor, formatTime, getCategoryIcon, exportToICal } from "@/lib/calendarUtils";
@@ -349,129 +350,97 @@ export default function Calendar() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="max-w-7xl mx-auto space-y-6">
-          {/* Header */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-4xl font-luxury font-bold flex items-center gap-3 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-fade-in">
-                <CalendarIcon className="h-9 w-9 text-primary" />
-                My Calendar
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                View your classes, assignments, and events
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleExport}>
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-              <Button variant="outline" size="sm" onClick={handlePrint} className="print:hidden">
-                <Printer className="h-4 w-4 mr-2" />
-                Print
-              </Button>
-            </div>
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
+        <div className="space-y-8">
+          <div className="text-center">
+            <h1 className="text-5xl font-luxury font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-fade-in">
+              My Calendar
+            </h1>
+            <p className="text-muted-foreground mt-2 text-lg">View your schedule and upcoming assignments</p>
           </div>
 
-          {/* Controls */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col md:flex-row gap-4">
-                {/* View Selector */}
-                <Tabs value={view} onValueChange={(v) => setView(v as any)} className="flex-1">
-                  <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="day">Day</TabsTrigger>
-                    <TabsTrigger value="week">Week</TabsTrigger>
-                    <TabsTrigger value="month">Month</TabsTrigger>
-                    <TabsTrigger value="list">List</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-
-                {/* Search */}
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search events..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-
-              {/* Date Navigation */}
-              <div className="flex items-center justify-between mt-4">
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" onClick={() => navigateDate("prev")}>
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" onClick={() => setCurrentDate(new Date())}>
-                    Today
-                  </Button>
-                  <Button variant="outline" size="icon" onClick={() => navigateDate("next")}>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-                <h2 className="text-xl font-semibold">
-                  {format(currentDate, view === "day" ? "MMMM d, yyyy" : "MMMM yyyy")}
+          <div className="relative p-8 rounded-3xl backdrop-blur-xl bg-gradient-mesh-light border-2 border-white/30 shadow-glass-lg">
+            <div className="flex flex-col gap-6">
+              <div className="flex items-center justify-between">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigateDate('prev')}
+                  className="rounded-full hover:bg-white/20 hover:scale-110 transition-all backdrop-blur-sm border border-white/20"
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </Button>
+                <h2 className="text-4xl font-luxury font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  {format(currentDate, 'MMMM yyyy')}
                 </h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigateDate('next')}
+                  className="rounded-full hover:bg-white/20 hover:scale-110 transition-all backdrop-blur-sm border border-white/20"
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </Button>
               </div>
 
-              {/* Filters */}
-              <div className="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t">
-                <span className="text-sm font-medium flex items-center gap-2">
-                  <Filter className="h-4 w-4" />
-                  Show:
-                </span>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <Checkbox
-                    checked={filters.classes}
-                    onCheckedChange={(checked) => setFilters({ ...filters, classes: !!checked })}
-                  />
-                  <span className="text-sm">Classes</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <Checkbox
-                    checked={filters.events}
-                    onCheckedChange={(checked) => setFilters({ ...filters, events: !!checked })}
-                  />
-                  <span className="text-sm">Events</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <Checkbox
-                    checked={filters.assignments}
-                    onCheckedChange={(checked) => setFilters({ ...filters, assignments: !!checked })}
-                  />
-                  <span className="text-sm">Assignments</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <Checkbox
-                    checked={filters.schoolEvents}
-                    onCheckedChange={(checked) => setFilters({ ...filters, schoolEvents: !!checked })}
-                  />
-                  <span className="text-sm">School Events</span>
-                </label>
+              <div className="flex flex-wrap gap-3 items-center justify-center">
+                <button
+                  onClick={() => setFilters(prev => ({ ...prev, classes: !prev.classes }))}
+                  className={cn(
+                    "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 backdrop-blur-sm border-2",
+                    filters.classes 
+                      ? "bg-blue-500/30 text-blue-700 dark:text-blue-300 border-blue-400/50 shadow-md" 
+                      : "bg-white/40 text-muted-foreground border-white/30 hover:bg-white/60"
+                  )}
+                >
+                  Classes
+                </button>
+                <button
+                  onClick={() => setFilters(prev => ({ ...prev, events: !prev.events }))}
+                  className={cn(
+                    "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 backdrop-blur-sm border-2",
+                    filters.events 
+                      ? "bg-green-500/30 text-green-700 dark:text-green-300 border-green-400/50 shadow-md" 
+                      : "bg-white/40 text-muted-foreground border-white/30 hover:bg-white/60"
+                  )}
+                >
+                  Events
+                </button>
+                <button
+                  onClick={() => setFilters(prev => ({ ...prev, assignments: !prev.assignments }))}
+                  className={cn(
+                    "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 backdrop-blur-sm border-2",
+                    filters.assignments 
+                      ? "bg-purple-500/30 text-purple-700 dark:text-purple-300 border-purple-400/50 shadow-md" 
+                      : "bg-white/40 text-muted-foreground border-white/30 hover:bg-white/60"
+                  )}
+                >
+                  Assignments
+                </button>
+                <button
+                  onClick={() => setFilters(prev => ({ ...prev, schoolEvents: !prev.schoolEvents }))}
+                  className={cn(
+                    "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 backdrop-blur-sm border-2",
+                    filters.schoolEvents 
+                      ? "bg-orange-500/30 text-orange-700 dark:text-orange-300 border-orange-400/50 shadow-md" 
+                      : "bg-white/40 text-muted-foreground border-white/30 hover:bg-white/60"
+                  )}
+                >
+                  School Events
+                </button>
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Calendar Content */}
-          {isLoading ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <div className="animate-pulse">Loading calendar...</div>
-              </CardContent>
-            </Card>
-          ) : view === "list" ? (
-            renderListView()
-          ) : (
-            <Card>
-              <CardContent className="pt-6">
-                {renderMonthView()}
-              </CardContent>
-            </Card>
-          )}
+              {isLoading ? (
+                <div className="py-12 text-center">
+                  <div className="animate-pulse text-lg">Loading calendar...</div>
+                </div>
+              ) : view === "list" ? (
+                renderListView()
+              ) : (
+                renderMonthView()
+              )}
+            </div>
+          </div>
         </div>
       </main>
       <Footer />
