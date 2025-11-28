@@ -224,13 +224,13 @@ export default function ParentCalendar() {
 
     return (
       <div 
-        className="grid grid-cols-7 gap-2"
+        className="grid grid-cols-7 gap-3"
         ref={calendarGridRef}
         role="grid"
         aria-label="Parent calendar month view"
       >
         {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day) => (
-          <div key={day} className="text-center font-semibold text-sm py-2 text-muted-foreground" role="columnheader">
+          <div key={day} className="text-center font-medium text-xs text-muted-foreground/70 py-3 tracking-wider uppercase" role="columnheader">
             {day}
           </div>
         ))}
@@ -241,7 +241,7 @@ export default function ParentCalendar() {
           const isFocused = focusedDateIndex === i;
 
           return (
-            <Card
+            <div
               key={i}
               tabIndex={0}
               role="gridcell"
@@ -254,15 +254,19 @@ export default function ParentCalendar() {
                 }
               }}
               onFocus={() => setFocusedDateIndex(i)}
-              className={`min-h-[120px] p-2 cursor-pointer hover:shadow-md transition-all ${
-                !isCurrentMonth ? "opacity-40" : ""
-              } ${isToday ? "ring-2 ring-primary" : ""} ${
-                isFocused ? "ring-2 ring-primary ring-offset-2 shadow-lg" : ""
-              }`}
+              className={`
+                group min-h-28 p-3 rounded-2xl cursor-pointer transition-all duration-300
+                backdrop-blur-sm border
+                ${!isCurrentMonth ? "opacity-30" : ""}
+                ${isCurrentMonth ? "bg-card/50 border-white/10" : "bg-muted/10 border-transparent"}
+                ${isToday ? "bg-gradient-to-br from-primary/20 to-accent/20 border-primary/40 shadow-glow-primary" : ""}
+                ${isFocused ? "ring-2 ring-primary ring-offset-2 shadow-lg" : ""}
+                hover:shadow-glass-md hover:scale-[1.02] hover:bg-card/70
+              `}
             >
-              <div className="font-semibold text-sm mb-1">
-                {format(day, "d")}
-                {isToday && <Badge className="ml-1 text-xs">Today</Badge>}
+              <div className={`text-sm font-semibold mb-2 flex items-center justify-between ${isToday ? "text-primary animate-pulse-luxury" : "text-foreground"}`}>
+                <span>{format(day, "d")}</span>
+                {isToday && <span className="w-2 h-2 rounded-full bg-primary animate-pulse-luxury"></span>}
               </div>
               <div className="space-y-1">
                 {dayItems.slice(0, 3).map((item) => {
@@ -294,7 +298,7 @@ export default function ParentCalendar() {
                   </div>
                 )}
               </div>
-            </Card>
+            </div>
           );
         })}
       </div>
@@ -417,11 +421,11 @@ export default function ParentCalendar() {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold flex items-center gap-2">
-                <CalendarIcon className="h-8 w-8" />
+              <h1 className="text-4xl font-luxury font-bold flex items-center gap-3 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-fade-in">
+                <CalendarIcon className="h-9 w-9 text-primary" />
                 Student Calendar
               </h1>
-              <p className="text-muted-foreground">View your child's schedule</p>
+              <p className="text-muted-foreground mt-1">View your child's schedule</p>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={handleExport}>
