@@ -428,7 +428,8 @@ const TeacherCalendar = () => {
                 </div>
               </Card>
             </TabsContent>
-          </Tabs>
+            </Tabs>
+          </div>
         </div>
       </main>
 
