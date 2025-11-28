@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
@@ -65,10 +66,12 @@ export default function AdminCalendar() {
       <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
         <div className="space-y-6">
           <div className="flex items-center gap-3">
-            <CalendarIcon className="h-8 w-8" />
+            <CalendarIcon className="h-9 w-9 text-primary" />
             <div>
-              <h1 className="text-3xl font-bold">Admin Calendar Management</h1>
-              <p className="text-muted-foreground">
+              <h1 className="text-4xl font-luxury font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-fade-in">
+                Admin Calendar Management
+              </h1>
+              <p className="text-muted-foreground mt-1">
                 Manage school-wide events and calendar settings
               </p>
             </div>
@@ -80,24 +83,30 @@ export default function AdminCalendar() {
             </TabsList>
 
             <TabsContent value="events" className="space-y-4">
-              <div className="flex items-center justify-between mb-6">
-                <button
-                  onClick={() => setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() - 1, 1))}
-                  className="p-2 hover:bg-accent rounded-md"
-                  aria-label="Previous month"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <h2 className="text-2xl font-bold">
-                  {selectedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                </h2>
-                <button
-                  onClick={() => setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1))}
-                  className="p-2 hover:bg-accent rounded-md"
-                  aria-label="Next month"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
+              <div className="relative p-8 rounded-3xl bg-gradient-mesh-light backdrop-blur-xl border border-white/20 shadow-glass-lg">
+                <div className="flex items-center justify-between mb-8">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() - 1, 1))}
+                    className="rounded-full hover:bg-white/10 transition-all hover:scale-110"
+                    aria-label="Previous month"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
+                  <h2 className="text-3xl font-luxury font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
+                    {selectedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </h2>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1))}
+                    className="rounded-full hover:bg-white/10 transition-all hover:scale-110"
+                    aria-label="Next month"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </Button>
+                </div>
               </div>
               <SchoolEventManager />
             </TabsContent>

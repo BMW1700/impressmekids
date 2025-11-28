@@ -138,7 +138,9 @@ const TeacherCalendar = () => {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold mb-2">Teacher Calendar</h1>
+              <h1 className="text-4xl font-luxury font-bold mb-2 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-fade-in">
+                Teacher Calendar
+              </h1>
               <p className="text-muted-foreground">Manage your schedule, events, and assignments</p>
             </div>
             <div className="flex gap-2">
@@ -217,34 +219,36 @@ const TeacherCalendar = () => {
             </TabsList>
 
             <TabsContent value="month" className="mt-6">
-              <Card className="p-6">
-                <div className="flex items-center justify-between mb-6">
+              <div className="relative p-8 rounded-3xl bg-gradient-mesh-light backdrop-blur-xl border border-white/20 shadow-glass-lg">
+                <div className="flex items-center justify-between mb-8">
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="icon"
                     onClick={() => setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() - 1, 1))}
+                    className="rounded-full hover:bg-white/10 transition-all hover:scale-110"
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeft className="h-5 w-5" />
                   </Button>
-                  <h2 className="text-2xl font-bold">
+                  <h2 className="text-3xl font-luxury font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
                     {selectedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                   </h2>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="icon"
                     onClick={() => setSelectedDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1))}
+                    className="rounded-full hover:bg-white/10 transition-all hover:scale-110"
                   >
-                    <ChevronRight className="h-4 w-4" />
+                    <ChevronRight className="h-5 w-5" />
                   </Button>
                 </div>
                 <div 
-                  className="grid grid-cols-7 gap-2"
+                  className="grid grid-cols-7 gap-3"
                   ref={calendarGridRef}
                   role="grid"
                   aria-label="Teacher calendar month view"
                 >
                   {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-                    <div key={day} className="text-center font-semibold text-sm text-muted-foreground py-2" role="columnheader">
+                    <div key={day} className="text-center font-medium text-xs text-muted-foreground/70 py-3 tracking-wider uppercase" role="columnheader">
                       {day}
                     </div>
                   ))}
@@ -267,16 +271,18 @@ const TeacherCalendar = () => {
                         }}
                         onFocus={() => setFocusedDateIndex(idx)}
                         className={`
-                          min-h-24 p-2 border rounded-lg cursor-pointer transition-all
-                          ${isCurrentMonth ? "bg-card" : "bg-muted/30"}
-                          ${isToday ? "border-primary ring-2 ring-primary/20" : "border-border"}
-                          ${date.toDateString() === selectedDate.toDateString() ? "ring-2 ring-primary" : ""}
+                          group min-h-28 p-3 rounded-2xl cursor-pointer transition-all duration-300
+                          backdrop-blur-sm border
+                          ${isCurrentMonth ? "bg-card/50 border-white/10" : "bg-muted/10 border-transparent"}
+                          ${isToday ? "bg-gradient-to-br from-primary/20 to-accent/20 border-primary/40 shadow-glow-primary" : ""}
+                          ${date.toDateString() === selectedDate.toDateString() ? "ring-2 ring-primary/50" : ""}
                           ${isFocused ? "ring-2 ring-primary ring-offset-2 shadow-lg" : ""}
-                          hover:border-primary/50
+                          hover:shadow-glass-md hover:scale-[1.02] hover:bg-card/70
                         `}
                       >
-                        <div className={`text-sm font-medium mb-1 ${isToday ? "text-primary" : ""}`}>
-                          {date.getDate()}
+                        <div className={`text-sm font-semibold mb-2 flex items-center justify-between ${isToday ? "text-primary animate-pulse-luxury" : "text-foreground"}`}>
+                          <span>{date.getDate()}</span>
+                          {isToday && <span className="w-2 h-2 rounded-full bg-primary animate-pulse-luxury"></span>}
                         </div>
                         <div className="space-y-1">
                           {itemsForDay.slice(0, 3).map((item, i) => {
@@ -315,7 +321,7 @@ const TeacherCalendar = () => {
                     );
                   })}
                 </div>
-              </Card>
+              </div>
 
               {itemsForSelectedDate.length > 0 && (
                 <Card className="mt-6 p-6">
