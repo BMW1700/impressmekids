@@ -87,6 +87,39 @@ const JeopardyGame = () => {
     }
   }, [tournaments, tournamentId]);
 
+  // Poll for userPlayer if not yet set (student may be seeded after page load)
+  useEffect(() => {
+    if (!tournamentId || userPlayer) return;
+    
+    console.log('[JeopardyGame] Starting userPlayer polling...');
+    
+    const pollForUserPlayer = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        
+        const { data: playerData } = await supabase
+          .from('tournament_players')
+          .select('*')
+          .eq('tournament_id', tournamentId)
+          .eq('profile_id', session.user.id)
+          .maybeSingle();
+        
+        if (playerData) {
+          console.log('✅ [JeopardyGame] userPlayer found via polling:', playerData);
+          setUserPlayer(playerData);
+        }
+      } catch (error) {
+        console.error('[JeopardyGame] Error polling for userPlayer:', error);
+      }
+    };
+    
+    const pollInterval = setInterval(pollForUserPlayer, 2000);
+    pollForUserPlayer(); // Run immediately
+    
+    return () => clearInterval(pollInterval);
+  }, [tournamentId, userPlayer]);
+
   useEffect(() => {
     console.log('🔍 [JeopardyGame] Checking for active match...', { 
       matchCount: matches.length, 

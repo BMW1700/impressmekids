@@ -236,6 +236,35 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
     };
   }, [tournament.id]);
 
+  // Poll for active match and auto-transition (for students)
+  useEffect(() => {
+    if (!userPlayer) return;
+    
+    const pollForActiveMatch = async () => {
+      try {
+        const { data } = await supabase
+          .from('matches')
+          .select('*')
+          .eq('tournament_id', tournament.id)
+          .or(`player_a.eq.${userPlayer.id},player_b.eq.${userPlayer.id}`)
+          .eq('status', 'in_progress')
+          .maybeSingle();
+        
+        if (data) {
+          console.log('🎮 [TournamentLobby] Found active match, transitioning:', data);
+          onMatchStart(data);
+        }
+      } catch (error) {
+        console.error('[TournamentLobby] Error polling for active match:', error);
+      }
+    };
+    
+    const pollInterval = setInterval(pollForActiveMatch, 1500);
+    pollForActiveMatch(); // Run immediately
+    
+    return () => clearInterval(pollInterval);
+  }, [tournament.id, userPlayer, onMatchStart]);
+
   const handleSeedAndStart = async () => {
     if (players.length < 2) {
       toast({
@@ -286,17 +315,29 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
     setIsStarting(true);
     try {
       const waitingMatches = matches.filter(m => m.status === 'waiting');
-      
-      for (const match of waitingMatches) {
-        const { error } = await supabase.functions.invoke('start-round', {
-          body: { match_id: match.id }
+      if (waitingMatches.length === 0) {
+        toast({
+          title: "No matches waiting",
+          description: "All matches are already in progress or completed",
         });
-        if (error) throw error;
+        setIsStarting(false);
+        return;
       }
+
+      const currentRound = Math.min(...waitingMatches.map(m => m.round));
+      
+      const { error } = await supabase.functions.invoke('start-round', {
+        body: {
+          tournament_id: tournament.id,
+          round_number: currentRound
+        }
+      });
+
+      if (error) throw error;
 
       toast({
         title: "Round Started",
-        description: "All matches are now in progress",
+        description: `Round ${currentRound} started - all matches are now in progress`,
       });
 
       loadLobbyData();
@@ -304,7 +345,7 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
       console.error("Error starting round:", error);
       toast({
         title: "Error",
-        description: "Failed to start round",
+        description: error.message || "Failed to start round",
         variant: "destructive",
       });
     } finally {
