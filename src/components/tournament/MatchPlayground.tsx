@@ -34,19 +34,14 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
   }, [match.id]);
 
   useEffect(() => {
-    if (matchStates && Array.isArray(matchStates)) {
-      const state = matchStates.find((s: any) => s.match_id === match.id);
-      if (state) {
-        setMatchState(state);
-      }
+    if (matchStates && matchStates[match.id]) {
+      setMatchState(matchStates[match.id]);
     }
   }, [matchStates, match.id]);
 
   useEffect(() => {
-    if (matchEvents && Array.isArray(matchEvents) && matchEvents.length > 0 && matchState) {
-      const event = matchEvents.find(
-        (e: any) => e.match_id === match.id && e.seq === matchState.current_seq
-      );
+    if (matchEvents && matchEvents[match.id] && matchState) {
+      const event = matchEvents[match.id].find((e: any) => e.seq === matchState.current_seq);
       if (event) {
         setCurrentEvent(event);
         loadQuestion(event.question_id);
@@ -64,6 +59,32 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
         .single();
 
       setOpponent(opponentData);
+
+      // Also load match_state
+      const { data: stateData } = await supabase
+        .from('match_state')
+        .select('*')
+        .eq('match_id', match.id)
+        .single();
+      
+      if (stateData) {
+        setMatchState(stateData);
+      }
+      
+      // Also load match_events
+      const { data: eventsData } = await supabase
+        .from('match_events')
+        .select('*')
+        .eq('match_id', match.id)
+        .order('seq');
+      
+      if (eventsData && stateData) {
+        const currentEvent = eventsData.find((e: any) => e.seq === stateData.current_seq);
+        if (currentEvent) {
+          setCurrentEvent(currentEvent);
+          loadQuestion(currentEvent.question_id);
+        }
+      }
     } catch (error) {
       console.error('Error loading match data:', error);
     }
@@ -153,6 +174,37 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
     }
   };
 
+  const handleTimerExpire = async () => {
+    console.log('⏰ Timer expired for match:', match.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('end-round-and-compute-winners', {
+        body: {
+          tournament_id: match.tournament_id,
+          round_number: match.round,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.winner_id) {
+        const isWinner = data.winner_id === tournamentPlayerId;
+        toast({
+          title: isWinner ? "You Won! 🎉" : "Match Over",
+          description: isWinner 
+            ? "You're advancing to the next round!" 
+            : "Better luck next time!",
+          variant: isWinner ? "default" : "destructive",
+        });
+        
+        setTimeout(() => {
+          onMatchEnd();
+        }, 2000);
+      }
+    } catch (error: any) {
+      console.error('Timer expire error:', error);
+    }
+  };
+
   if (!matchState || !question) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -182,7 +234,10 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
                     <div className="text-3xl font-bold text-primary">{myScore}</div>
                   </div>
                   <div className="text-center">
-                    <MatchTimer roundEndsAt={matchState.round_ends_at} />
+                    <MatchTimer 
+                      roundEndsAt={matchState.round_ends_at} 
+                      onExpire={handleTimerExpire}
+                    />
                   </div>
                   <div className="text-center">
                     <div className="text-sm text-muted-foreground mb-1">{opponent?.profile?.full_name || 'Opponent'}</div>

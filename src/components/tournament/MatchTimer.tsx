@@ -4,10 +4,12 @@ import { Clock } from 'lucide-react';
 interface MatchTimerProps {
   roundEndsAt?: string;
   className?: string;
+  onExpire?: () => void;
 }
 
-export const MatchTimer = ({ roundEndsAt, className = '' }: MatchTimerProps) => {
+export const MatchTimer = ({ roundEndsAt, className = '', onExpire }: MatchTimerProps) => {
   const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [hasExpired, setHasExpired] = useState(false);
 
   useEffect(() => {
     if (!roundEndsAt) {
@@ -27,6 +29,13 @@ export const MatchTimer = ({ roundEndsAt, className = '' }: MatchTimerProps) => 
 
     return () => clearInterval(interval);
   }, [roundEndsAt]);
+
+  useEffect(() => {
+    if (timeLeft === 0 && !hasExpired && onExpire) {
+      setHasExpired(true);
+      onExpire();
+    }
+  }, [timeLeft, hasExpired, onExpire]);
 
   if (!roundEndsAt) {
     return null;

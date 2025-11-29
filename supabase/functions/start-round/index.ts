@@ -74,7 +74,7 @@ serve(async (req) => {
       .rpc('now' as any);
 
     const round_starts_at = new Date().toISOString();
-    const round_ends_at = new Date(Date.now() + 60000).toISOString(); // 60 seconds
+    const round_ends_at = new Date(Date.now() + 30000).toISOString(); // 30 seconds
 
     console.log('Round timing:', { round_starts_at, round_ends_at });
 
@@ -85,8 +85,8 @@ serve(async (req) => {
         .update({
           round_starts_at,
           round_ends_at,
-          current_seq: 0,
-          accepting_buzz: false
+          current_seq: 1,
+          accepting_buzz: true
         })
         .eq('match_id', match.id);
 
@@ -94,6 +94,13 @@ serve(async (req) => {
         .from('matches')
         .update({ status: 'in_progress', started_at: round_starts_at })
         .eq('id', match.id);
+
+      // Mark first question as shown
+      await supabase
+        .from('match_events')
+        .update({ shown_at: round_starts_at })
+        .eq('match_id', match.id)
+        .eq('seq', 1);
     }
 
     // Update tournament status
