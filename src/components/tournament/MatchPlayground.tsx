@@ -29,23 +29,7 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
   const hasTimerExpiredRef = useRef(false);
   const currentQuestionIdRef = useRef<string | null>(null);
 
-  // Initial load and controlled polling
-  useEffect(() => {
-    loadMatchData();
-    hasTimerExpiredRef.current = false;
-    currentQuestionIdRef.current = null;
-    
-    // Simple controlled polling - only during active match
-    if (match.status !== 'completed') {
-      const pollInterval = setInterval(() => {
-        loadMatchData();
-      }, 3000); // 3-second poll for match updates
-      
-      return () => clearInterval(pollInterval);
-    }
-  }, [match.id, match.status]);
-
-  const loadMatchData = async () => {
+  const loadMatchData = useCallback(async () => {
     try {
       const opponentId = match.player_a === tournamentPlayerId ? match.player_b : match.player_a;
       const { data: opponentData } = await supabase
@@ -90,7 +74,7 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
     } catch (error) {
       console.error('Error loading match data:', error);
     }
-  };
+  }, [match.id, match.player_a, match.player_b, tournamentPlayerId]);
 
   const loadQuestion = async (questionId: string) => {
     // Guard: Don't reload if we already have this exact question
@@ -111,6 +95,71 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
       console.error('Error loading question:', error);
     }
   };
+
+  // Check if round has ended based on time
+  const checkRoundEnd = useCallback(async () => {
+    if (!matchState?.round_ends_at || match.status === 'completed' || hasTimerExpiredRef.current) {
+      return;
+    }
+    
+    const now = Date.now();
+    const endTime = new Date(matchState.round_ends_at).getTime();
+    
+    if (now >= endTime) {
+      console.log('⏰ [MatchPlayground] Round time expired! Invoking end-round function...');
+      hasTimerExpiredRef.current = true;
+      
+      try {
+        const { data, error } = await supabase.functions.invoke('end-round-and-compute-winners', {
+          body: {
+            tournament_id: match.tournament_id,
+            round_number: match.round,
+          },
+        });
+
+        if (error) throw error;
+
+        console.log('✅ [MatchPlayground] end-round-and-compute-winners response:', data);
+        
+        if (data?.winner_id) {
+          const isWinner = data.winner_id === tournamentPlayerId;
+          toast({
+            title: isWinner ? "🎉 You Won This Match!" : "Match Over",
+            description: isWinner 
+              ? "Great job! Moving to next round..." 
+              : "Better luck next time!",
+            variant: isWinner ? "default" : "destructive",
+            duration: 3000,
+          });
+           
+          // Give backend time to update match & tournament state before leaving
+          setTimeout(() => {
+            onMatchEnd();
+          }, 2000);
+         }
+       } catch (error: any) {
+         console.error('Round end error:', error);
+       }
+    }
+  }, [matchState?.round_ends_at, match.status, match.tournament_id, match.round, tournamentPlayerId, onMatchEnd, toast]);
+
+  // Initial load and controlled polling
+  useEffect(() => {
+    loadMatchData();
+    hasTimerExpiredRef.current = false;
+    currentQuestionIdRef.current = null;
+    
+    // Simple controlled polling - only during active match
+    if (match.status !== 'completed') {
+      const pollInterval = setInterval(() => {
+        loadMatchData();
+        checkRoundEnd(); // Check if round has ended
+      }, 3000); // 3-second poll for match updates
+      
+      return () => clearInterval(pollInterval);
+    }
+  }, [match.id, match.status, loadMatchData, checkRoundEnd]);
+
 
   const handleBuzz = async () => {
     if (!currentEvent || !matchState) return;
@@ -181,46 +230,6 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
     }
   };
 
-  const handleTimerExpire = useCallback(async () => {
-    // Guard: prevent multiple calls and check if match is already completed
-    if (hasTimerExpiredRef.current || match.status === 'completed') {
-      console.log('⏰ Timer expire skipped (already handled or match completed)');
-      return;
-    }
-    
-    hasTimerExpiredRef.current = true;
-    console.log('⏰ Timer expired for match:', match.id);
-    
-    try {
-      const { data, error } = await supabase.functions.invoke('end-round-and-compute-winners', {
-        body: {
-          tournament_id: match.tournament_id,
-          round_number: match.round,
-        },
-      });
-
-      if (error) throw error;
-
-      if (data?.winner_id) {
-        const isWinner = data.winner_id === tournamentPlayerId;
-        toast({
-          title: isWinner ? "You Won! 🎉" : "Match Over",
-          description: isWinner 
-            ? "You're advancing to the next round!" 
-            : "Better luck next time!",
-          variant: isWinner ? "default" : "destructive",
-          duration: 3000,
-        });
-         
-        // Give backend time to update match & tournament state before leaving
-        setTimeout(() => {
-          onMatchEnd();
-        }, 2000);
-       }
-     } catch (error: any) {
-       console.error('Timer expire error:', error);
-     }
-   }, [match.id, match.status, match.tournament_id, match.round, tournamentPlayerId, onMatchEnd, toast]);
 
   if (!matchState || !question) {
     return (
@@ -252,8 +261,7 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
                   </div>
                   <div className="text-center">
                     <MatchTimer 
-                      roundEndsAt={matchState.round_ends_at} 
-                      onExpire={handleTimerExpire}
+                      roundEndsAt={matchState.round_ends_at}
                     />
                   </div>
                   <div className="text-center">
