@@ -151,29 +151,45 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
         return;
       }
 
+      // Use upsert to handle case where student already joined
       const { error } = await supabase
         .from('tournament_players')
-        .insert({
-          tournament_id: tournament.id,
-          profile_id: session.user.id,
-          seed: players.length + 1
-        });
+        .upsert(
+          {
+            tournament_id: tournament.id,
+            profile_id: session.user.id,
+            seed: players.length + 1
+          },
+          { 
+            onConflict: 'tournament_id,profile_id',
+            ignoreDuplicates: true 
+          }
+        );
 
       if (error) {
-        console.error('Join error:', error);
-        toast({
-          title: "Error",
-          description: "Failed to join tournament",
-          variant: "destructive",
-        });
+        // Check if it's a duplicate error - treat as success
+        if (error.code === '23505') {
+          toast({
+            title: "Already Joined!",
+            description: "You're already in the tournament!",
+          });
+          setHasJoined(true);
+        } else {
+          console.error('Join error:', error);
+          toast({
+            title: "Error",
+            description: "Failed to join tournament",
+            variant: "destructive",
+          });
+        }
       } else {
         toast({
           title: "Joined!",
           description: "You're in the tournament!",
         });
         setHasJoined(true);
-        loadLobbyData();
       }
+      loadLobbyData();
     } catch (error) {
       console.error('Join error:', error);
       toast({
