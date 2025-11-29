@@ -29,6 +29,8 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
   const [classroomStudentCount, setClassroomStudentCount] = useState(0);
   const [isStarting, setIsStarting] = useState(false);
   const [showSelectQuestions, setShowSelectQuestions] = useState(false);
+  const [hasJoined, setHasJoined] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
   
   const { matches: realtimeMatches } = useTournamentRealtime(tournament.id);
 
@@ -75,28 +77,23 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
 
   const loadLobbyData = async () => {
     try {
-      // Load classroom student count
-      try {
-        const { count: studentCount } = await supabase
-          .from('classroom_students')
-          .select('*', { count: 'exact', head: true })
-          .eq('classroom_id', tournament.classroom_id);
-
-        setClassroomStudentCount(studentCount || 0);
-      } catch (error) {
-        console.log('Classroom student count not available:', error);
-        setClassroomStudentCount(0);
-      }
-
-      // Load players - may return empty for students before seeding
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // Load players
       try {
         const { data: playersData } = await supabase
           .from('tournament_players')
-          .select('*, profile:profiles(*)')
+          .select('*, profiles(full_name)')
           .eq('tournament_id', tournament.id)
-          .order('seed', { ascending: true });
+          .order('seed');
 
         setPlayers(playersData || []);
+        
+        // Check if current user has joined
+        if (session && playersData) {
+          const userHasJoined = playersData.some(p => p.profile_id === session.user.id);
+          setHasJoined(userHasJoined);
+        }
       } catch (error) {
         console.log('Players not available yet:', error);
         setPlayers([]);
@@ -141,21 +138,87 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
     }
   };
 
-  const handleSeedAndStart = async () => {
-    if (questionCount === 0) {
+  const handleJoinTournament = async () => {
+    setIsJoining(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Error",
+          description: "You must be signed in to join",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('tournament_players')
+        .insert({
+          tournament_id: tournament.id,
+          profile_id: session.user.id,
+          seed: players.length + 1
+        });
+
+      if (error) {
+        console.error('Join error:', error);
+        toast({
+          title: "Error",
+          description: "Failed to join tournament",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Joined!",
+          description: "You're in the tournament!",
+        });
+        setHasJoined(true);
+        loadLobbyData();
+      }
+    } catch (error) {
+      console.error('Join error:', error);
       toast({
-        title: "No Questions Assigned",
-        description: "Please assign questions to the tournament before starting",
+        title: "Error",
+        description: "Failed to join tournament",
         variant: "destructive",
       });
-      setShowSelectQuestions(true);
-      return;
+    } finally {
+      setIsJoining(false);
     }
+  };
 
+  // Real-time subscription for player joins
+  useEffect(() => {
+    const channel = supabase
+      .channel(`tournament-players-${tournament.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'tournament_players',
+        filter: `tournament_id=eq.${tournament.id}`
+      }, () => {
+        loadLobbyData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [tournament.id]);
+
+  const handleSeedAndStart = async () => {
     if (players.length < 2) {
       toast({
         title: "Not Enough Players",
-        description: "At least 2 players are needed to start the tournament",
+        description: "At least 2 students must join before starting.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (questionCount === 0) {
+      toast({
+        title: "No Questions",
+        description: "Please assign questions before starting the tournament.",
         variant: "destructive",
       });
       return;
@@ -305,11 +368,11 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
                     <Button
                       className="w-full justify-start bg-gradient-primary hover:opacity-90"
                       onClick={handleSeedAndStart}
-                      disabled={tournament.status !== 'waiting' || isStarting || classroomStudentCount < 2}
+                      disabled={tournament.status !== 'waiting' || isStarting || players.length < 2}
                     >
                       {isStarting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       <Play className="mr-2 h-4 w-4" />
-                      Seed & Start
+                      Start Tournament
                     </Button>
 
                     <Button
@@ -432,34 +495,71 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Players</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Players ({players.length})
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
-                    {players.map((player, index) => (
-                      <div
-                        key={player.id}
-                        className={`flex items-center justify-between p-3 rounded-lg ${
-                          player.id === userPlayer?.id ? 'bg-primary/10 border border-primary' : 'bg-muted/50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
-                            {player.seed}
-                          </div>
-                          <span className="font-medium">
-                            {player.profile?.full_name}
-                            {player.id === userPlayer?.id && ' (You)'}
-                          </span>
-                        </div>
-                        <Badge variant={player.status === 'active' ? 'default' : 'secondary'}>
-                          {player.status}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+                  {!isTeacher && tournament.status === 'waiting' && !hasJoined && (
+                    <Button 
+                      onClick={handleJoinTournament}
+                      disabled={isJoining}
+                      className="w-full mb-4 bg-gradient-primary hover:opacity-90"
+                      size="lg"
+                    >
+                      {isJoining ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Joining...
+                        </>
+                      ) : (
+                        <>
+                          🎮 Join Tournament
+                        </>
+                      )}
+                    </Button>
+                  )}
+                  
+                  {!isTeacher && hasJoined && tournament.status === 'waiting' && (
+                    <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded text-center">
+                      <p className="text-green-600 dark:text-green-400 font-medium">
+                        ✅ You've Joined! Waiting for teacher to start...
+                      </p>
+                    </div>
+                  )}
+                  
+                  {players.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      {isTeacher ? 'Waiting for students to join...' : 'No players yet. Be the first to join!'}
+                    </p>
+                  ) : (
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                      {players.map((player) => {
+                        const isCurrentUser = player.profile_id === userPlayer?.id;
+                        
+                        return (
+                           <div
+                             key={player.id}
+                             className={`flex items-center justify-between p-2 rounded ${
+                               isCurrentUser ? 'bg-primary/20 border border-primary/40' : 'bg-secondary/20'
+                             }`}
+                           >
+                             <div className="flex items-center gap-2">
+                               <span className="text-xs font-semibold bg-primary/20 text-primary px-2 py-1 rounded">
+                                 #{player.seed}
+                               </span>
+                               <span className={`font-medium ${isCurrentUser ? 'text-primary' : ''}`}>
+                                 {player.profiles?.full_name} {isCurrentUser ? '(You)' : ''}
+                               </span>
+                             </div>
+                           </div>
+                         );
+                       })}
+                     </div>
+                   )}
+                 </CardContent>
+               </Card>
             </div>
 
             <div className="mt-8 flex justify-center gap-4">
