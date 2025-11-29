@@ -3810,6 +3810,18 @@ export type Database = {
           student_count: number
         }[]
       }
+      get_tournament_players: {
+        Args: { _tournament_id: string }
+        Returns: {
+          avatar_url: string
+          created_at: string
+          display_name: string
+          id: string
+          profile_id: string
+          seed: number
+          status: string
+        }[]
+      }
       get_user_profile: {
         Args: { _user_id: string }
         Returns: {
