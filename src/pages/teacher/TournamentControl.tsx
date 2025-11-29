@@ -265,14 +265,8 @@ const TournamentControl = () => {
       return;
     }
 
-    if (players.length < 2) {
-      toast({
-        title: "Not Enough Players",
-        description: "At least 2 players are needed to start the tournament",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Allow starting with any number of players (including 0)
+    // Backend will handle match creation accordingly
 
     setIsStarting(true);
     try {
@@ -453,7 +447,7 @@ const TournamentControl = () => {
                 <Button
                   className="w-full justify-start bg-gradient-primary hover:opacity-90"
                   onClick={handleSeedAndStart}
-                  disabled={tournament.status !== 'waiting' || isStarting || players.length < 2}
+                  disabled={tournament.status !== 'waiting' || isStarting}
                 >
                   {isStarting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   <Play className="mr-2 h-4 w-4" />
