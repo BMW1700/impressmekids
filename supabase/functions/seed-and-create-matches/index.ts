@@ -74,8 +74,8 @@ serve(async (req) => {
       .select('*')
       .eq('tournament_id', tournament_id);
 
-    if (playersError || !existingPlayers || existingPlayers.length < 2) {
-      return new Response(JSON.stringify({ error: 'Not enough players have joined (need at least 2)' }), {
+    if (playersError || !existingPlayers || existingPlayers.length === 0) {
+      return new Response(JSON.stringify({ error: 'No players have joined yet' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -174,7 +174,7 @@ serve(async (req) => {
     // Update tournament status
     await supabase
       .from('tournaments')
-      .update({ status: 'waiting' })
+      .update({ status: 'in_progress' })
       .eq('id', tournament_id);
 
     return new Response(JSON.stringify({ 
