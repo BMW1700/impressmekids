@@ -5,11 +5,10 @@ import { Footer } from "@/components/Footer";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Trophy, Zap } from "lucide-react";
+import { Loader2, Trophy } from "lucide-react";
 import { BuzzButton } from "./BuzzButton";
 import { MatchTimer } from "./MatchTimer";
 import { useToast } from "@/hooks/use-toast";
-import { useTournamentRealtime } from "@/hooks/useTournamentRealtime";
 import { Input } from "@/components/ui/input";
 
 interface MatchPlaygroundProps {
@@ -28,29 +27,23 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
   const [opponent, setOpponent] = useState<any>(null);
   
   const hasTimerExpiredRef = useRef(false);
-  
-  const { matchEvents, matchStates } = useTournamentRealtime(match.tournament_id);
+  const currentQuestionIdRef = useRef<string | null>(null);
 
+  // Initial load and controlled polling
   useEffect(() => {
     loadMatchData();
-    hasTimerExpiredRef.current = false; // Reset guard when match changes
-  }, [match.id]);
-
-  useEffect(() => {
-    if (matchStates && matchStates[match.id]) {
-      setMatchState(matchStates[match.id]);
+    hasTimerExpiredRef.current = false;
+    currentQuestionIdRef.current = null;
+    
+    // Simple controlled polling - only during active match
+    if (match.status !== 'completed') {
+      const pollInterval = setInterval(() => {
+        loadMatchData();
+      }, 3000); // 3-second poll for match updates
+      
+      return () => clearInterval(pollInterval);
     }
-  }, [matchStates, match.id]);
-
-  useEffect(() => {
-    if (matchEvents && matchEvents[match.id] && matchState) {
-      const event = matchEvents[match.id].find((e: any) => e.seq === matchState.current_seq);
-      if (event) {
-        setCurrentEvent(event);
-        loadQuestion(event.question_id);
-      }
-    }
-  }, [matchEvents, matchState, match.id]);
+  }, [match.id, match.status]);
 
   const loadMatchData = async () => {
     try {
@@ -61,9 +54,11 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
         .eq('id', opponentId)
         .single();
 
-      setOpponent(opponentData);
+      if (opponentData) {
+        setOpponent(opponentData);
+      }
 
-      // Also load match_state
+      // Load match_state
       const { data: stateData } = await supabase
         .from('match_state')
         .select('*')
@@ -72,20 +67,24 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
       
       if (stateData) {
         setMatchState(stateData);
-      }
-      
-      // Also load match_events
-      const { data: eventsData } = await supabase
-        .from('match_events')
-        .select('*')
-        .eq('match_id', match.id)
-        .order('seq');
-      
-      if (eventsData && stateData) {
-        const currentEvent = eventsData.find((e: any) => e.seq === stateData.current_seq);
-        if (currentEvent) {
-          setCurrentEvent(currentEvent);
-          loadQuestion(currentEvent.question_id);
+        
+        // Load match_events
+        const { data: eventsData } = await supabase
+          .from('match_events')
+          .select('*')
+          .eq('match_id', match.id)
+          .order('seq');
+        
+        if (eventsData) {
+          const currentEvent = eventsData.find((e: any) => e.seq === stateData.current_seq);
+          if (currentEvent) {
+            setCurrentEvent(currentEvent);
+            // Only load question if it's a NEW question (guard against redundant loads)
+            if (currentEvent.question_id !== currentQuestionIdRef.current) {
+              currentQuestionIdRef.current = currentEvent.question_id;
+              loadQuestion(currentEvent.question_id);
+            }
+          }
         }
       }
     } catch (error) {
@@ -94,6 +93,11 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
   };
 
   const loadQuestion = async (questionId: string) => {
+    // Guard: Don't reload if we already have this exact question
+    if (question?.id === questionId) {
+      return;
+    }
+    
     try {
       const { data, error } = await supabase
         .from('questions')
