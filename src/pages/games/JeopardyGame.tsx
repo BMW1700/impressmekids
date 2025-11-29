@@ -89,7 +89,8 @@ const JeopardyGame = () => {
 
   // Poll for userPlayer if not yet set (student may be seeded after page load)
   useEffect(() => {
-    if (!tournamentId || userPlayer) return;
+    // Stop polling if we have userPlayer, are in match view, or no tournament
+    if (!tournamentId || userPlayer || view === 'match') return;
     
     console.log('[JeopardyGame] Starting userPlayer polling...');
     
@@ -114,11 +115,11 @@ const JeopardyGame = () => {
       }
     };
     
-    const pollInterval = setInterval(pollForUserPlayer, 2000);
+    const pollInterval = setInterval(pollForUserPlayer, 5000); // Slower polling
     pollForUserPlayer(); // Run immediately
     
     return () => clearInterval(pollInterval);
-  }, [tournamentId, userPlayer]);
+  }, [tournamentId, userPlayer, view]);
 
   useEffect(() => {
     // Stop polling if we're already viewing a match, found a match, or don't have required data
@@ -146,9 +147,10 @@ const JeopardyGame = () => {
     }
   }, [matches, userPlayer]);
 
-  // Poll for match status changes
+  // Poll for match status changes - ONLY in lobby view
   useEffect(() => {
-    if (!tournamentId || !userPlayer) return;
+    // Stop polling if already in match view, have a match, or missing required data
+    if (!tournamentId || !userPlayer || view === 'match' || currentMatch) return;
     
     const pollInterval = setInterval(async () => {
       const { data } = await supabase
@@ -164,7 +166,7 @@ const JeopardyGame = () => {
         setCurrentMatch(data);
         setView('match');
       }
-    }, 2000);
+    }, 5000); // Slower polling
     
     return () => clearInterval(pollInterval);
   }, [tournamentId, userPlayer, view, currentMatch]);
