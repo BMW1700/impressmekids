@@ -7,7 +7,6 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Trophy, Users, Play, Crown, Settings, Edit, SkipForward, StopCircle } from "lucide-react";
-import { useTournamentRealtime } from "@/hooks/useTournamentRealtime";
 import { useToast } from "@/hooks/use-toast";
 import { SelectQuestionsModal } from "@/components/tournament/SelectQuestionsModal";
 
@@ -31,8 +30,6 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
   const [showSelectQuestions, setShowSelectQuestions] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
-  
-  const { matches: realtimeMatches } = useTournamentRealtime(tournament.id);
 
   useEffect(() => {
     checkIfTeacher();
@@ -57,23 +54,6 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
       console.error("Error checking teacher status:", error);
     }
   };
-
-  useEffect(() => {
-    if (realtimeMatches.length > 0) {
-      setMatches(realtimeMatches);
-      
-      // Check if user has an active match
-      if (userPlayer) {
-        const userMatch = realtimeMatches.find(
-          m => (m.player_a === userPlayer.id || m.player_b === userPlayer.id) &&
-               m.status === 'in_progress'
-        );
-        if (userMatch) {
-          onMatchStart(userMatch);
-        }
-      }
-    }
-  }, [realtimeMatches, userPlayer]);
 
   const loadLobbyData = async () => {
     try {

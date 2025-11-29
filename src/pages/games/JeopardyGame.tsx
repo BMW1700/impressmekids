@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Trophy, Users, Play } from "lucide-react";
 import { TournamentLobby } from "@/components/tournament/TournamentLobby";
 import { MatchPlayground } from "@/components/tournament/MatchPlayground";
-import { useTournamentRealtime } from "@/hooks/useTournamentRealtime";
 import { useToast } from "@/hooks/use-toast";
 import { CreateTournamentModal } from "@/components/tournament/CreateTournamentModal";
 import { SelectGameModal } from "@/components/tournament/SelectGameModal";
@@ -30,8 +29,6 @@ const JeopardyGame = () => {
   const [showSelectGame, setShowSelectGame] = useState(false);
   const [selectedGameType, setSelectedGameType] = useState<string>('jeopardy_duel');
   const [selectedClassroomId, setSelectedClassroomId] = useState<string>('');
-
-  const { tournaments, matches, matchStates } = useTournamentRealtime(tournamentId || undefined);
 
   useEffect(() => {
     checkIfTeacher();
@@ -73,20 +70,6 @@ const JeopardyGame = () => {
     }
   };
 
-  useEffect(() => {
-    // Watch for realtime tournament updates
-    if (tournaments.length > 0 && tournamentId) {
-      const updatedTournament = tournaments.find(t => t.id === tournamentId);
-      if (updatedTournament) {
-        setTournament(prev => ({
-          ...prev,
-          ...updatedTournament,
-          classroom: prev?.classroom  // Preserve joined data
-        }));
-      }
-    }
-  }, [tournaments, tournamentId]);
-
   // Poll for userPlayer if not yet set (student may be seeded after page load)
   useEffect(() => {
     // Stop polling if we have userPlayer, are in match view, or no tournament
@@ -120,32 +103,6 @@ const JeopardyGame = () => {
     
     return () => clearInterval(pollInterval);
   }, [tournamentId, userPlayer, view]);
-
-  useEffect(() => {
-    // Stop polling if we're already viewing a match, found a match, or don't have required data
-    if (!tournamentId || !userPlayer || view === 'match' || currentMatch) return;
-    
-    console.log('🔍 [JeopardyGame] Checking for active match...', {
-      matchCount: matches.length, 
-      hasUserPlayer: !!userPlayer,
-      userPlayerId: userPlayer?.id 
-    });
-    
-    if (matches.length > 0 && userPlayer) {
-      const activeMatch = matches.find(
-        m => (m.player_a === userPlayer.id || m.player_b === userPlayer.id) &&
-             (m.status === 'waiting' || m.status === 'in_progress')
-      );
-      
-      console.log('🎮 [JeopardyGame] Active match found:', activeMatch);
-      
-      if (activeMatch && activeMatch.status === 'in_progress') {
-        console.log('✅ [JeopardyGame] Transitioning to match view');
-        setCurrentMatch(activeMatch);
-        setView('match');
-      }
-    }
-  }, [matches, userPlayer]);
 
   // Poll for match status changes - ONLY in lobby view
   useEffect(() => {
