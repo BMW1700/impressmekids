@@ -213,15 +213,34 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
         schema: 'public',
         table: 'tournament_players',
         filter: `tournament_id=eq.${tournament.id}`
-      }, () => {
+      }, (payload) => {
+        console.log('🔔 [TournamentLobby] Realtime event received:', payload);
         loadLobbyData();
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 [TournamentLobby] Subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [tournament.id]);
+
+  // Polling fallback for teachers (Realtime RLS has issues with SECURITY DEFINER)
+  useEffect(() => {
+    if (!isTeacher) return;
+    
+    console.log('🔄 [TournamentLobby] Starting polling for teacher...');
+    const pollInterval = setInterval(() => {
+      console.log('📊 [TournamentLobby] Polling player count...');
+      loadLobbyData();
+    }, 3000); // Poll every 3 seconds
+    
+    return () => {
+      console.log('🛑 [TournamentLobby] Stopping polling');
+      clearInterval(pollInterval);
+    };
+  }, [isTeacher, tournament.id]);
 
   const handleSeedAndStart = async () => {
     if (players.length < 2) {
