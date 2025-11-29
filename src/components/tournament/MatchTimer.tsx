@@ -25,7 +25,8 @@ export const MatchTimer = ({ roundEndsAt, className = '', onExpire }: MatchTimer
     };
 
     updateTimer();
-    const interval = setInterval(updateTimer, 100);
+    const interval = setInterval(updateTimer, 1000);
+
 
     return () => clearInterval(interval);
   }, [roundEndsAt]);

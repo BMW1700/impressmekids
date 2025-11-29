@@ -180,27 +180,6 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
     }
   };
 
-  // Real-time subscription for player joins
-  useEffect(() => {
-    const channel = supabase
-      .channel(`tournament-players-${tournament.id}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'tournament_players',
-        filter: `tournament_id=eq.${tournament.id}`
-      }, (payload) => {
-        console.log('🔔 [TournamentLobby] Realtime event received:', payload);
-        loadLobbyData();
-      })
-      .subscribe((status) => {
-        console.log('📡 [TournamentLobby] Subscription status:', status);
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [tournament.id]);
 
   // Lightweight polling ONLY when tournament is waiting (not started yet)
   useEffect(() => {

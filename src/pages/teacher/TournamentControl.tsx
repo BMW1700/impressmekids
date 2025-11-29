@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Settings, Play, SkipForward, StopCircle, Edit, Users } from "lucide-react";
 import { SelectQuestionsModal } from "@/components/tournament/SelectQuestionsModal";
-import { useTournamentRealtime } from "@/hooks/useTournamentRealtime";
+
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -34,10 +34,8 @@ const TournamentControl = () => {
   const [showSelectQuestions, setShowSelectQuestions] = useState(false);
   const [localMatches, setLocalMatches] = useState<any[]>([]);
   
-  const { matches: realtimeMatches, matchStates } = useTournamentRealtime(tournamentId || undefined);
-  
-  // Combine local and realtime matches
-  const matches = localMatches.length > 0 ? localMatches : realtimeMatches;
+  const matches = localMatches;
+
 
   useEffect(() => {
     if (tournamentId) {
@@ -236,29 +234,6 @@ const TournamentControl = () => {
     }
   };
 
-  // Real-time subscription for player joins
-  useEffect(() => {
-    if (!tournamentId) return;
-    
-    const channel = supabase
-      .channel(`tournament-players-teacher-${tournamentId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'tournament_players',
-        filter: `tournament_id=eq.${tournamentId}`
-      }, (payload) => {
-        console.log('🔔 [TournamentControl] Realtime event received:', payload);
-        loadTournamentData();
-      })
-      .subscribe((status) => {
-        console.log('📡 [TournamentControl] Subscription status:', status);
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [tournamentId]);
 
   // Lightweight polling ONLY for player count when waiting
   useEffect(() => {
