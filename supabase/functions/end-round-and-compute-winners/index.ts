@@ -32,27 +32,7 @@ serve(async (req) => {
 
     const { tournament_id, round_number } = validation.data;
 
-    console.log('Ending round and computing winners:', { tournament_id, round_number });
-
-    // Verify authorization
-    const authHeader = req.headers.get('Authorization')!;
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const rateLimitResult = await checkRateLimit(user.id, 'end-round', RATE_LIMITS.TOURNAMENT);
-    if (!rateLimitResult.allowed) {
-      return new Response(JSON.stringify({ error: 'Rate limit exceeded', resetAt: rateLimitResult.resetAt }), {
-        status: 429,
-        headers: { ...corsHeaders, ...getRateLimitHeaders(rateLimitResult, RATE_LIMITS.TOURNAMENT), 'Content-Type': 'application/json' },
-      });
-    }
+    console.log('🏁 Ending round and computing winners:', { tournament_id, round_number });
 
     // Get all matches for this round
     const { data: matches, error: matchesError } = await supabase
@@ -99,12 +79,12 @@ serve(async (req) => {
       
       await supabase
         .from('tournament_players')
-        .update({ eliminated: true })
+        .update({ status: 'eliminated' })
         .eq('id', loser_id);
 
       winners.push(winner_id);
 
-      console.log('Match', match.id, 'winner:', winner_id);
+      console.log('✅ Match', match.id, 'winner:', winner_id, 'loser:', loser_id);
     }
 
     // Check if tournament is complete (only 1 winner left)
@@ -112,7 +92,7 @@ serve(async (req) => {
       .from('tournament_players')
       .select('id')
       .eq('tournament_id', tournament_id)
-      .eq('eliminated', false);
+      .neq('status', 'eliminated');
 
     if (remainingPlayers && remainingPlayers.length === 1) {
       // Tournament complete
@@ -124,11 +104,33 @@ serve(async (req) => {
         })
         .eq('id', tournament_id);
 
-      console.log('Tournament completed');
+      console.log('🏆 Tournament completed! Winner:', remainingPlayers[0].id);
     } else if (remainingPlayers && remainingPlayers.length > 1) {
       // Create next round matches
       const nextRound = round_number + 1;
       const nextMatches = [];
+
+      // Get question pool from first match of previous round
+      const { data: sampleMatch } = await supabase
+        .from('matches')
+        .select('id')
+        .eq('tournament_id', tournament_id)
+        .eq('round', round_number)
+        .limit(1)
+        .single();
+
+      let questionIds: string[] = [];
+      if (sampleMatch) {
+        const { data: events } = await supabase
+          .from('match_events')
+          .select('question_id')
+          .eq('match_id', sampleMatch.id)
+          .order('seq');
+        
+        if (events) {
+          questionIds = events.map(e => e.question_id);
+        }
+      }
 
       for (let i = 0; i < remainingPlayers.length; i += 2) {
         if (i + 1 < remainingPlayers.length) {
@@ -154,17 +156,33 @@ serve(async (req) => {
                 accepting_buzz: false
               });
 
+            // Copy questions to new match
+            if (questionIds.length > 0) {
+              const events = questionIds.map((qid, idx) => ({
+                match_id: nextMatch.id,
+                question_id: qid,
+                seq: idx + 1
+              }));
+
+              await supabase
+                .from('match_events')
+                .insert(events);
+            }
+
             nextMatches.push(nextMatch);
           }
         }
       }
 
-      console.log('Created', nextMatches.length, 'matches for round', nextRound);
+      console.log('📋 Created', nextMatches.length, 'matches for round', nextRound);
     }
 
     return new Response(JSON.stringify({ 
+      success: true,
       winners: winners.length,
-      remaining_players: remainingPlayers?.length || 0
+      remaining_players: remainingPlayers?.length || 0,
+      winner_id: winners.length === 1 ? winners[0] : null,
+      tournament_complete: remainingPlayers?.length === 1
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
