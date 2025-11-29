@@ -28,6 +28,7 @@ const TournamentControl = () => {
   const [classroom, setClassroom] = useState<any>(null);
   const [players, setPlayers] = useState<any[]>([]);
   const [questionCount, setQuestionCount] = useState(0);
+  const [classroomStudentCount, setClassroomStudentCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
   const [showSelectQuestions, setShowSelectQuestions] = useState(false);
@@ -132,6 +133,26 @@ const TournamentControl = () => {
 
       setTournament(tournamentData);
       setClassroom(classroomData);
+
+      // Load classroom student count
+      console.log('🔄 [TournamentControl] Loading classroom student count...');
+      try {
+        const { count: studentCount, error: countError } = await supabase
+          .from('classroom_students')
+          .select('*', { count: 'exact', head: true })
+          .eq('classroom_id', classroomData.id);
+
+        if (countError) {
+          console.error('❌ [TournamentControl] Classroom student count error:', countError);
+          throw countError;
+        }
+        
+        console.log('✅ [TournamentControl] Classroom student count:', studentCount || 0);
+        setClassroomStudentCount(studentCount || 0);
+      } catch (countError) {
+        console.error('❌ [TournamentControl] Failed to load classroom student count:', countError);
+        setClassroomStudentCount(0);
+      }
 
       // Load players
       console.log('🔄 [TournamentControl] Loading players...');
@@ -392,7 +413,7 @@ const TournamentControl = () => {
                 <Button
                   className="w-full justify-start bg-gradient-primary hover:opacity-90"
                   onClick={handleSeedAndStart}
-                  disabled={tournament.status !== 'waiting' || isStarting || players.length === 0}
+                  disabled={tournament.status !== 'waiting' || isStarting || classroomStudentCount < 2}
                 >
                   {isStarting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   <Play className="mr-2 h-4 w-4" />
@@ -426,14 +447,19 @@ const TournamentControl = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
-                  Players ({players.length})
+                  Players
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {players.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    Waiting for students to join...
-                  </p>
+                  <div className="text-center py-4">
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {classroomStudentCount} students in classroom
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Students will be auto-added when you click "Seed Players"
+                    </p>
+                  </div>
                 ) : (
                   <div className="space-y-2 max-h-[300px] overflow-y-auto">
                     {players.map((player) => (

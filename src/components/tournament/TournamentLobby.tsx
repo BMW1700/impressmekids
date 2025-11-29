@@ -26,6 +26,7 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isTeacher, setIsTeacher] = useState(false);
   const [questionCount, setQuestionCount] = useState(0);
+  const [classroomStudentCount, setClassroomStudentCount] = useState(0);
   const [isStarting, setIsStarting] = useState(false);
   const [showSelectQuestions, setShowSelectQuestions] = useState(false);
   
@@ -74,6 +75,19 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
 
   const loadLobbyData = async () => {
     try {
+      // Load classroom student count
+      try {
+        const { count: studentCount } = await supabase
+          .from('classroom_students')
+          .select('*', { count: 'exact', head: true })
+          .eq('classroom_id', tournament.classroom_id);
+
+        setClassroomStudentCount(studentCount || 0);
+      } catch (error) {
+        console.log('Classroom student count not available:', error);
+        setClassroomStudentCount(0);
+      }
+
       // Load players - may return empty for students before seeding
       try {
         const { data: playersData } = await supabase
@@ -291,7 +305,7 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
                     <Button
                       className="w-full justify-start bg-gradient-primary hover:opacity-90"
                       onClick={handleSeedAndStart}
-                      disabled={tournament.status !== 'waiting' || isStarting || players.length === 0}
+                      disabled={tournament.status !== 'waiting' || isStarting || classroomStudentCount < 2}
                     >
                       {isStarting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       <Play className="mr-2 h-4 w-4" />
