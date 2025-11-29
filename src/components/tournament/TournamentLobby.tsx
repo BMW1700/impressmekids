@@ -222,48 +222,36 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
     };
   }, [tournament.id]);
 
-  // Polling fallback for all users (Realtime RLS has issues with SECURITY DEFINER)
+  // Lightweight polling ONLY when tournament is waiting (not started yet)
   useEffect(() => {
-    console.log('🔄 [TournamentLobby] Starting polling...');
-    const pollInterval = setInterval(() => {
-      console.log('📊 [TournamentLobby] Polling data...');
-      loadLobbyData();
-    }, 3000); // Poll every 3 seconds
+    // Only poll for player updates when tournament is in waiting status
+    if (tournament.status !== 'waiting') return;
     
-    return () => {
-      console.log('🛑 [TournamentLobby] Stopping polling');
-      clearInterval(pollInterval);
-    };
-  }, [tournament.id]);
-
-  // Poll for active match and auto-transition (for students)
-  useEffect(() => {
-    if (!userPlayer) return;
-    
-    const pollForActiveMatch = async () => {
+    const loadPlayersOnly = async () => {
       try {
-        const { data } = await supabase
-          .from('matches')
-          .select('*')
-          .eq('tournament_id', tournament.id)
-          .or(`player_a.eq.${userPlayer.id},player_b.eq.${userPlayer.id}`)
-          .eq('status', 'in_progress')
-          .maybeSingle();
+        const { data: playersData } = await supabase
+          .rpc('get_tournament_players', { _tournament_id: tournament.id });
         
-        if (data) {
-          console.log('🎮 [TournamentLobby] Found active match, transitioning:', data);
-          onMatchStart(data);
+        if (playersData) {
+          setPlayers(playersData);
+          
+          // Check if current user has joined
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            const userHasJoined = playersData.some(p => p.profile_id === session.user.id);
+            setHasJoined(userHasJoined);
+          }
         }
       } catch (error) {
-        console.error('[TournamentLobby] Error polling for active match:', error);
+        console.error('Failed to load players:', error);
       }
     };
     
-    const pollInterval = setInterval(pollForActiveMatch, 1500);
-    pollForActiveMatch(); // Run immediately
+    // Much slower polling - only for player count updates in lobby
+    const pollInterval = setInterval(loadPlayersOnly, 8000);
     
     return () => clearInterval(pollInterval);
-  }, [tournament.id, userPlayer, onMatchStart]);
+  }, [tournament.id, tournament.status]);
 
   const handleSeedAndStart = async () => {
     if (players.length < 2) {
