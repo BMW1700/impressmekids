@@ -74,42 +74,54 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
 
   const loadLobbyData = async () => {
     try {
-      const { data: playersData, error: playersError } = await supabase
-        .from('tournament_players')
-        .select('*, profile:profiles(*)')
-        .eq('tournament_id', tournament.id)
-        .order('seed', { ascending: true });
+      // Load players - may return empty for students before seeding
+      try {
+        const { data: playersData } = await supabase
+          .from('tournament_players')
+          .select('*, profile:profiles(*)')
+          .eq('tournament_id', tournament.id)
+          .order('seed', { ascending: true });
 
-      if (playersError) throw playersError;
-      setPlayers(playersData || []);
+        setPlayers(playersData || []);
+      } catch (error) {
+        console.log('Players not available yet:', error);
+        setPlayers([]);
+      }
 
-      const { data: matchesData, error: matchesError } = await supabase
-        .from('matches')
-        .select(`
-          *,
-          player_a_data:tournament_players!matches_player_a_fkey(profile:profiles(*)),
-          player_b_data:tournament_players!matches_player_b_fkey(profile:profiles(*))
-        `)
-        .eq('tournament_id', tournament.id)
-        .order('round', { ascending: true });
+      // Load matches - may return empty for students before they're created
+      try {
+        const { data: matchesData } = await supabase
+          .from('matches')
+          .select(`
+            *,
+            player_a_data:tournament_players!matches_player_a_fkey(profile:profiles(*)),
+            player_b_data:tournament_players!matches_player_b_fkey(profile:profiles(*))
+          `)
+          .eq('tournament_id', tournament.id)
+          .order('round', { ascending: true });
 
-      if (matchesError) throw matchesError;
-      setMatches(matchesData || []);
+        setMatches(matchesData || []);
+      } catch (error) {
+        console.log('Matches not available yet:', error);
+        setMatches([]);
+      }
 
-      // Load question count if teacher
-      const { data: questionsData } = await supabase
-        .from('tournament_questions')
-        .select('id')
-        .eq('tournament_id', tournament.id);
-      
-      setQuestionCount(questionsData?.length || 0);
+      // Load question count - ONLY for teachers
+      if (isTeacher) {
+        try {
+          const { data: questionsData } = await supabase
+            .from('tournament_questions')
+            .select('id')
+            .eq('tournament_id', tournament.id);
+          
+          setQuestionCount(questionsData?.length || 0);
+        } catch (error) {
+          console.log('Questions not available:', error);
+          setQuestionCount(0);
+        }
+      }
     } catch (error) {
       console.error('Error loading lobby data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load tournament data",
-        variant: "destructive",
-      });
     } finally {
       setIsLoadingData(false);
     }
@@ -320,7 +332,9 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold">{players.length}</div>
+                  <div className="text-3xl font-bold">
+                    {players.length === 0 && tournament.status === 'waiting' ? 'Pending' : players.length}
+                  </div>
                 </CardContent>
               </Card>
 
@@ -356,9 +370,17 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
                 </CardHeader>
                 <CardContent>
                   {matches.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-8">
-                      No matches created yet. Waiting for tournament to start...
-                    </p>
+                    <div className="text-center py-8 space-y-3">
+                      <div className="text-4xl">🎮</div>
+                      <p className="font-semibold text-lg">Waiting for Tournament to Start</p>
+                      {!isTeacher && (
+                        <div className="text-sm text-muted-foreground space-y-2">
+                          <p>Your teacher is setting up the game.</p>
+                          <p>Once they click "Seed & Start", you'll be automatically added!</p>
+                          <p className="text-primary font-medium">Get ready for a head-to-head trivia duel! 🏆</p>
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <div className="space-y-3">
                       {matches.map((match) => (
