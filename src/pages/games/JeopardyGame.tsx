@@ -74,10 +74,15 @@ const JeopardyGame = () => {
   };
 
   useEffect(() => {
+    // Watch for realtime tournament updates
     if (tournaments.length > 0 && tournamentId) {
       const updatedTournament = tournaments.find(t => t.id === tournamentId);
       if (updatedTournament) {
-        setTournament(updatedTournament);
+        setTournament(prev => ({
+          ...prev,
+          ...updatedTournament,
+          classroom: prev?.classroom  // Preserve joined data
+        }));
       }
     }
   }, [tournaments, tournamentId]);
