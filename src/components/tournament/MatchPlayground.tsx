@@ -211,14 +211,16 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
           variant: isWinner ? "default" : "destructive",
           duration: 3000,
         });
-        
-        // Transition immediately instead of waiting
-        onMatchEnd();
-      }
-    } catch (error: any) {
-      console.error('Timer expire error:', error);
-    }
-  }, [match.id, match.status, match.tournament_id, match.round, tournamentPlayerId, onMatchEnd, toast]);
+         
+        // Give backend time to update match & tournament state before leaving
+        setTimeout(() => {
+          onMatchEnd();
+        }, 2000);
+       }
+     } catch (error: any) {
+       console.error('Timer expire error:', error);
+     }
+   }, [match.id, match.status, match.tournament_id, match.round, tournamentPlayerId, onMatchEnd, toast]);
 
   if (!matchState || !question) {
     return (
