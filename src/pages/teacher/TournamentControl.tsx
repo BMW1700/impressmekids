@@ -225,16 +225,34 @@ const TournamentControl = () => {
         schema: 'public',
         table: 'tournament_players',
         filter: `tournament_id=eq.${tournamentId}`
-      }, () => {
-        console.log('🔔 [TournamentControl] New player joined, refreshing data...');
-        loadTournamentData(); // Refresh player list when student joins
+      }, (payload) => {
+        console.log('🔔 [TournamentControl] Realtime event received:', payload);
+        loadTournamentData();
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 [TournamentControl] Subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [tournamentId]);
+
+  // Polling fallback for teachers - Realtime RLS has issues with SECURITY DEFINER
+  useEffect(() => {
+    if (!tournamentId || tournament?.status === 'completed') return;
+    
+    console.log('🔄 [TournamentControl] Starting polling for player updates...');
+    const pollInterval = setInterval(() => {
+      console.log('📊 [TournamentControl] Polling player count...');
+      loadTournamentData();
+    }, 3000); // Poll every 3 seconds
+    
+    return () => {
+      console.log('🛑 [TournamentControl] Stopping polling');
+      clearInterval(pollInterval);
+    };
+  }, [tournamentId, tournament?.status]);
 
   const handleSeedAndStart = async () => {
     if (questionCount === 0) {
