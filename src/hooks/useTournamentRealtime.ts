@@ -115,6 +115,12 @@ export const useTournamentRealtime = (tournamentId?: string) => {
 
     fetchInitialData();
 
+    // Add polling for matches since Realtime has RLS issues with complex policies
+    const pollInterval = setInterval(() => {
+      console.log('🔄 [useTournamentRealtime] Polling for data updates...');
+      fetchInitialData();
+    }, 3000); // Poll every 3 seconds
+
     // Subscribe to tournament changes
     const tournamentChannel = supabase
       .channel(`tournament:${tournamentId}`)
@@ -222,6 +228,7 @@ export const useTournamentRealtime = (tournamentId?: string) => {
     channels.push(stateChannel);
 
     return () => {
+      clearInterval(pollInterval);
       channels.forEach((channel) => {
         supabase.removeChannel(channel);
       });

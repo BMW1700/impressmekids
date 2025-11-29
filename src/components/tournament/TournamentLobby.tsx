@@ -101,15 +101,11 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
         setPlayers([]);
       }
 
-      // Load matches - may return empty for students before they're created
+      // Load matches - simplified query without broken nested joins
       try {
         const { data: matchesData } = await supabase
           .from('matches')
-          .select(`
-            *,
-            player_a_data:tournament_players!matches_player_a_fkey(profile:profiles(*)),
-            player_b_data:tournament_players!matches_player_b_fkey(profile:profiles(*))
-          `)
+          .select('*')
           .eq('tournament_id', tournament.id)
           .order('round', { ascending: true });
 
