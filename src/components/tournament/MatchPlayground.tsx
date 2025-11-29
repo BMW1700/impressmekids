@@ -28,12 +28,6 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
   
   const hasTimerExpiredRef = useRef(false);
   const currentQuestionIdRef = useRef<string | null>(null);
-  const onMatchEndRef = useRef(onMatchEnd);
-  
-  // Keep ref updated with latest onMatchEnd
-  useEffect(() => {
-    onMatchEndRef.current = onMatchEnd;
-  }, [onMatchEnd]);
 
   const loadMatchData = useCallback(async () => {
     try {
@@ -138,26 +132,22 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
             duration: 3000,
           });
            
-           // Give backend time to update match & tournament state before leaving
+          // Give backend time to update match & tournament state before leaving
           setTimeout(() => {
-            onMatchEndRef.current();
+            onMatchEnd();
           }, 2000);
          }
        } catch (error: any) {
          console.error('Round end error:', error);
        }
     }
-  }, [matchState?.round_ends_at, match.status, match.tournament_id, match.round, tournamentPlayerId, toast]);
-
-  // Reset refs only when match changes
-  useEffect(() => {
-    hasTimerExpiredRef.current = false;
-    currentQuestionIdRef.current = null;
-  }, [match.id]);
+  }, [matchState?.round_ends_at, match.status, match.tournament_id, match.round, tournamentPlayerId, onMatchEnd, toast]);
 
   // Initial load and controlled polling
   useEffect(() => {
     loadMatchData();
+    hasTimerExpiredRef.current = false;
+    currentQuestionIdRef.current = null;
     
     // Simple controlled polling - only during active match
     if (match.status !== 'completed') {
@@ -363,7 +353,7 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
 
             {match.status === 'completed' && (
               <div className="mt-6 text-center">
-                <Button onClick={() => onMatchEndRef.current()} className="bg-gradient-primary hover:opacity-90">
+                <Button onClick={onMatchEnd} className="bg-gradient-primary hover:opacity-90">
                   <Trophy className="mr-2 h-5 w-5" />
                   Back to Lobby
                 </Button>
