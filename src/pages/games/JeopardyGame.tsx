@@ -38,6 +38,33 @@ const JeopardyGame = () => {
     }
   }, [tournamentId]);
 
+  // Handle auth state changes to clear stale player data
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[JeopardyGame] Auth state change:', event);
+      
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        // Re-fetch tournament data with new session
+        if (tournamentId && session) {
+          console.log('[JeopardyGame] Refreshing tournament data after auth change');
+          setUserPlayer(null);
+          setCurrentMatch(null);
+          setView('lobby');
+          loadTournamentData();
+        }
+      } else if (event === 'SIGNED_OUT') {
+        // Clear all state on sign out
+        console.log('[JeopardyGame] Clearing state after sign out');
+        setUserPlayer(null);
+        setCurrentMatch(null);
+        setView('lobby');
+        setTournament(null);
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [tournamentId]);
+
   const checkIfTeacher = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
