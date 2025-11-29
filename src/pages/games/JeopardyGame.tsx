@@ -121,8 +121,8 @@ const JeopardyGame = () => {
   }, [tournamentId, userPlayer]);
 
   useEffect(() => {
-    // Stop polling if we're already viewing a match or don't have the required data
-    if (!tournamentId || !userPlayer || view === 'match') return;
+    // Stop polling if we're already viewing a match, found a match, or don't have required data
+    if (!tournamentId || !userPlayer || view === 'match' || currentMatch) return;
     
     console.log('🔍 [JeopardyGame] Checking for active match...', {
       matchCount: matches.length, 
@@ -167,7 +167,7 @@ const JeopardyGame = () => {
     }, 2000);
     
     return () => clearInterval(pollInterval);
-  }, [tournamentId, userPlayer, view]);
+  }, [tournamentId, userPlayer, view, currentMatch]);
 
   const loadTournamentData = async () => {
     setIsLoading(true);
