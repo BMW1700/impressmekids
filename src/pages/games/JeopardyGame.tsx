@@ -18,17 +18,18 @@ const JeopardyGame = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const tournamentId = searchParams.get('tournament');
-  const [tournament, setTournament] = useState<any>(null);
-  const [userPlayer, setUserPlayer] = useState<any>(null);
-  const [currentMatch, setCurrentMatch] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(!!tournamentId);
-  const [view, setView] = useState<'lobby' | 'match'>('lobby');
-  const [isTeacher, setIsTeacher] = useState(false);
-  const [teacherClassrooms, setTeacherClassrooms] = useState<any[]>([]);
-  const [showCreateTournament, setShowCreateTournament] = useState(false);
-  const [showSelectGame, setShowSelectGame] = useState(false);
-  const [selectedGameType, setSelectedGameType] = useState<string>('jeopardy_duel');
-  const [selectedClassroomId, setSelectedClassroomId] = useState<string>('');
+   const [tournament, setTournament] = useState<any>(null);
+   const [userPlayer, setUserPlayer] = useState<any>(null);
+   const [currentMatch, setCurrentMatch] = useState<any>(null);
+   const [completedMatchIds, setCompletedMatchIds] = useState<Set<string>>(new Set());
+   const [isLoading, setIsLoading] = useState(!!tournamentId);
+   const [view, setView] = useState<'lobby' | 'match'>('lobby');
+   const [isTeacher, setIsTeacher] = useState(false);
+   const [teacherClassrooms, setTeacherClassrooms] = useState<any[]>([]);
+   const [showCreateTournament, setShowCreateTournament] = useState(false);
+   const [showSelectGame, setShowSelectGame] = useState(false);
+   const [selectedGameType, setSelectedGameType] = useState<string>('jeopardy_duel');
+   const [selectedClassroomId, setSelectedClassroomId] = useState<string>('');
 
   useEffect(() => {
     checkIfTeacher();
@@ -110,20 +111,20 @@ const JeopardyGame = () => {
     if (!tournamentId || !userPlayer || view === 'match' || currentMatch) return;
     
     const pollInterval = setInterval(async () => {
-      const { data } = await supabase
-        .from('matches')
-        .select('*')
-        .eq('tournament_id', tournamentId)
-        .or(`player_a.eq.${userPlayer.id},player_b.eq.${userPlayer.id}`)
-        .eq('status', 'in_progress')
-        .maybeSingle();
-      
-      if (data) {
-        console.log('🔄 [JeopardyGame] Poll found active match:', data);
-        setCurrentMatch(data);
-        setView('match');
-      }
-    }, 5000); // Slower polling
+       const { data } = await supabase
+         .from('matches')
+         .select('*')
+         .eq('tournament_id', tournamentId)
+         .or(`player_a.eq.${userPlayer.id},player_b.eq.${userPlayer.id}`)
+         .eq('status', 'in_progress')
+         .maybeSingle();
+       
+       if (data && !completedMatchIds.has(data.id)) {
+         console.log('🔄 [JeopardyGame] Poll found active match:', data);
+         setCurrentMatch(data);
+         setView('match');
+       }
+     }, 5000); // Slower polling
     
     return () => clearInterval(pollInterval);
   }, [tournamentId, userPlayer, view, currentMatch]);
@@ -395,17 +396,20 @@ const JeopardyGame = () => {
   }
 
   if (view === 'match' && currentMatch) {
-    return (
-      <MatchPlayground
-        match={currentMatch}
-        tournamentPlayerId={userPlayer.id}
-        onMatchEnd={() => {
-          setView('lobby');
-          setCurrentMatch(null);
-        }}
-      />
-    );
-  }
+     return (
+       <MatchPlayground
+         match={currentMatch}
+         tournamentPlayerId={userPlayer.id}
+         onMatchEnd={() => {
+           if (currentMatch) {
+             setCompletedMatchIds((prev) => new Set([...prev, currentMatch.id]));
+           }
+           setView('lobby');
+           setCurrentMatch(null);
+         }}
+       />
+     );
+   }
 
   return (
     <TournamentLobby
