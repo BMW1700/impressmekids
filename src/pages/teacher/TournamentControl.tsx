@@ -154,14 +154,11 @@ const TournamentControl = () => {
         setClassroomStudentCount(0);
       }
 
-      // Load players
+      // Load players using RPC function (bypasses RLS issues)
       console.log('🔄 [TournamentControl] Loading players...');
       try {
         const { data: playersData, error: playersError } = await supabase
-          .from('tournament_players')
-          .select('*, profiles(full_name)')
-          .eq('tournament_id', tournamentId)
-          .order('seed');
+          .rpc('get_tournament_players', { _tournament_id: tournamentId });
 
         if (playersError) {
           console.error('❌ [TournamentControl] Players query error:', playersError);
@@ -498,7 +495,7 @@ const TournamentControl = () => {
                   <div className="space-y-2 max-h-[300px] overflow-y-auto">
                     {players.map((player) => (
                       <div key={player.id} className="flex items-center justify-between p-2 border rounded">
-                        <span className="text-sm">{player.profiles?.full_name || 'Player'}</span>
+                        <span className="text-sm">{player.display_name || 'Player'}</span>
                         <Badge variant="outline">Seed {player.seed}</Badge>
                       </div>
                     ))}
@@ -535,13 +532,13 @@ const TournamentControl = () => {
                             </div>
                             <div className="flex items-center gap-4">
                               <span className="font-medium">
-                                {players.find(p => p.id === match.player_a)?.profiles?.full_name || 'Player A'}
+                                {players.find(p => p.id === match.player_a)?.display_name || 'Player A'}
                               </span>
                               <Badge variant="secondary">{match.score_a}</Badge>
                               <span className="text-muted-foreground">vs</span>
                               <Badge variant="secondary">{match.score_b}</Badge>
                               <span className="font-medium">
-                                {players.find(p => p.id === match.player_b)?.profiles?.full_name || 'Player B'}
+                                {players.find(p => p.id === match.player_b)?.display_name || 'Player B'}
                               </span>
                             </div>
                           </div>
