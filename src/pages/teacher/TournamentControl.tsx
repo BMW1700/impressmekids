@@ -32,8 +32,12 @@ const TournamentControl = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
   const [showSelectQuestions, setShowSelectQuestions] = useState(false);
+  const [localMatches, setLocalMatches] = useState<any[]>([]);
   
-  const { matches, matchStates } = useTournamentRealtime(tournamentId || undefined);
+  const { matches: realtimeMatches, matchStates } = useTournamentRealtime(tournamentId || undefined);
+  
+  // Combine local and realtime matches
+  const matches = localMatches.length > 0 ? localMatches : realtimeMatches;
 
   useEffect(() => {
     if (tournamentId) {
@@ -198,6 +202,27 @@ const TournamentControl = () => {
         console.error('❌ [TournamentControl] Failed to load questions, setting count to 0:', questionError);
         setQuestionCount(0);
       }
+
+      // Load matches directly for immediate display
+      console.log('🔄 [TournamentControl] Loading matches...');
+      try {
+        const { data: matchesData, error: matchesError } = await supabase
+          .from('matches')
+          .select('*')
+          .eq('tournament_id', tournamentId)
+          .order('round', { ascending: true });
+
+        if (matchesError) {
+          console.error('❌ [TournamentControl] Matches query error:', matchesError);
+          throw matchesError;
+        }
+        
+        console.log('✅ [TournamentControl] Matches loaded:', matchesData?.length || 0, 'matches');
+        setLocalMatches(matchesData || []);
+      } catch (matchError) {
+        console.error('❌ [TournamentControl] Failed to load matches:', matchError);
+        setLocalMatches([]);
+      }
     } catch (error: any) {
       console.error("❌ [TournamentControl] Fatal error loading tournament:", error);
       toast({
@@ -262,27 +287,49 @@ const TournamentControl = () => {
       return;
     }
 
-    // Allow starting with any number of players (including 0)
-    // Backend will handle match creation accordingly
-
     setIsStarting(true);
     try {
       // First seed players and create matches
+      console.log('🎮 [TournamentControl] Seeding players and creating matches...');
       const { data: seedData, error: seedError } = await supabase.functions.invoke(
         'seed-and-create-matches',
         { body: { tournament_id: tournamentId } }
       );
 
       if (seedError) throw seedError;
+      console.log('✅ [TournamentControl] Matches created:', seedData.matches_created);
 
-      toast({
-        title: "Tournament Started",
-        description: `Created ${seedData.matches_created} matches. Players can now join!`,
+      // Immediately fetch the newly created matches
+      const { data: newMatches } = await supabase
+        .from('matches')
+        .select('*')
+        .eq('tournament_id', tournamentId)
+        .order('round', { ascending: true });
+      
+      setLocalMatches(newMatches || []);
+      console.log('✅ [TournamentControl] Matches fetched:', newMatches?.length || 0);
+
+      // Auto-start round 1 immediately
+      console.log('🎮 [TournamentControl] Auto-starting Round 1...');
+      const { error: roundError } = await supabase.functions.invoke('start-round', {
+        body: { tournament_id: tournamentId, round_number: 1 }
       });
 
-      loadTournamentData();
+      if (roundError) {
+        console.error('❌ [TournamentControl] Failed to auto-start round:', roundError);
+        throw roundError;
+      }
+      console.log('✅ [TournamentControl] Round 1 started automatically');
+
+      toast({
+        title: "Game Started!",
+        description: `${seedData.matches_created} matches created and Round 1 is now live!`,
+      });
+
+      // Refetch to get updated match states
+      await loadTournamentData();
     } catch (error: any) {
-      console.error("Error starting tournament:", error);
+      console.error("❌ [TournamentControl] Error starting tournament:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to start tournament",
@@ -455,7 +502,7 @@ const TournamentControl = () => {
                   variant="outline"
                   className="w-full justify-start"
                   onClick={handleStartRound}
-                  disabled={tournament.status !== 'in_progress' || isStarting || matches.every(m => m.status !== 'waiting')}
+                  disabled={tournament.status !== 'in_progress' || isStarting || matches.length === 0 || matches.every(m => m.status !== 'waiting')}
                 >
                   {isStarting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   <SkipForward className="mr-2 h-4 w-4" />
