@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
@@ -395,18 +395,20 @@ const JeopardyGame = () => {
     );
   }
 
+  const handleMatchEnd = useCallback(() => {
+    if (currentMatch) {
+      setCompletedMatchIds((prev) => new Set([...prev, currentMatch.id]));
+    }
+    setView('lobby');
+    setCurrentMatch(null);
+  }, [currentMatch]);
+
   if (view === 'match' && currentMatch) {
      return (
        <MatchPlayground
          match={currentMatch}
          tournamentPlayerId={userPlayer.id}
-         onMatchEnd={() => {
-           if (currentMatch) {
-             setCompletedMatchIds((prev) => new Set([...prev, currentMatch.id]));
-           }
-           setView('lobby');
-           setCurrentMatch(null);
-         }}
+         onMatchEnd={handleMatchEnd}
        />
      );
    }
