@@ -58,6 +58,63 @@ export const useTournamentRealtime = (tournamentId?: string) => {
 
     const channels: RealtimeChannel[] = [];
 
+    // Initial fetch of existing data
+    const fetchInitialData = async () => {
+      // Fetch tournament
+      const { data: tournamentData } = await supabase
+        .from('tournaments')
+        .select('*')
+        .eq('id', tournamentId)
+        .single();
+      
+      if (tournamentData) {
+        setTournaments([tournamentData]);
+      }
+
+      // Fetch existing matches
+      const { data: matchData } = await supabase
+        .from('matches')
+        .select('*')
+        .eq('tournament_id', tournamentId);
+      
+      if (matchData && matchData.length > 0) {
+        setMatches(matchData);
+        
+        // Fetch match states
+        const matchIds = matchData.map(m => m.id);
+        const { data: stateData } = await supabase
+          .from('match_state')
+          .select('*')
+          .in('match_id', matchIds);
+        
+        if (stateData) {
+          const stateMap: Record<string, MatchState> = {};
+          stateData.forEach(s => {
+            stateMap[s.match_id] = s;
+          });
+          setMatchStates(stateMap);
+        }
+
+        // Fetch match events  
+        const { data: eventsData } = await supabase
+          .from('match_events')
+          .select('*')
+          .in('match_id', matchIds)
+          .order('seq');
+        
+        if (eventsData) {
+          const eventsMap: Record<string, MatchEvent[]> = {};
+          eventsData.forEach(e => {
+            if (!eventsMap[e.match_id]) eventsMap[e.match_id] = [];
+            eventsMap[e.match_id].push(e);
+          });
+          setMatchEvents(eventsMap);
+        }
+      }
+    };
+
+    fetchInitialData();
+
     // Subscribe to tournament changes
     const tournamentChannel = supabase
       .channel(`tournament:${tournamentId}`)

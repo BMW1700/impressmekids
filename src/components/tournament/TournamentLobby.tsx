@@ -226,13 +226,11 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
     };
   }, [tournament.id]);
 
-  // Polling fallback for teachers (Realtime RLS has issues with SECURITY DEFINER)
+  // Polling fallback for all users (Realtime RLS has issues with SECURITY DEFINER)
   useEffect(() => {
-    if (!isTeacher) return;
-    
-    console.log('🔄 [TournamentLobby] Starting polling for teacher...');
+    console.log('🔄 [TournamentLobby] Starting polling...');
     const pollInterval = setInterval(() => {
-      console.log('📊 [TournamentLobby] Polling player count...');
+      console.log('📊 [TournamentLobby] Polling data...');
       loadLobbyData();
     }, 3000); // Poll every 3 seconds
     
@@ -240,7 +238,7 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
       console.log('🛑 [TournamentLobby] Stopping polling');
       clearInterval(pollInterval);
     };
-  }, [isTeacher, tournament.id]);
+  }, [tournament.id]);
 
   const handleSeedAndStart = async () => {
     if (players.length < 2) {
