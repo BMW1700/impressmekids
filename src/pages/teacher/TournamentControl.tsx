@@ -413,11 +413,11 @@ const TournamentControl = () => {
                 <Button
                   className="w-full justify-start bg-gradient-primary hover:opacity-90"
                   onClick={handleSeedAndStart}
-                  disabled={tournament.status !== 'waiting' || isStarting || classroomStudentCount < 2}
+                  disabled={tournament.status !== 'waiting' || isStarting || players.length < 2}
                 >
                   {isStarting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   <Play className="mr-2 h-4 w-4" />
-                  Seed Players & Create Matches
+                  Start Tournament
                 </Button>
 
                 <Button
@@ -453,11 +453,11 @@ const TournamentControl = () => {
               <CardContent>
                 {players.length === 0 ? (
                   <div className="text-center py-4">
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {classroomStudentCount} students in classroom
+                    <p className="text-sm text-muted-foreground">
+                      Waiting for students to join...
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      Students will be auto-added when you click "Seed Players"
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Students must click "Join Tournament" before you can start
                     </p>
                   </div>
                 ) : (

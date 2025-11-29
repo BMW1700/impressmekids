@@ -68,40 +68,37 @@ serve(async (req) => {
       });
     }
 
-    // Get students in classroom
-    const { data: students, error: studentsError } = await supabase
-      .from('classroom_students')
-      .select('student_id, profiles!inner(id, full_name)')
-      .eq('classroom_id', tournament.classroom_id);
+    // Get players who have already joined
+    const { data: existingPlayers, error: playersError } = await supabase
+      .from('tournament_players')
+      .select('*')
+      .eq('tournament_id', tournament_id);
 
-    if (studentsError || !students || students.length < 2) {
-      return new Response(JSON.stringify({ error: 'Not enough students (need at least 2)' }), {
+    if (playersError || !existingPlayers || existingPlayers.length < 2) {
+      return new Response(JSON.stringify({ error: 'Not enough players have joined (need at least 2)' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Shuffle and seed students
-    const shuffled = students.sort(() => Math.random() - 0.5);
+    // Shuffle and reassign seeds
+    const shuffled = existingPlayers.sort(() => Math.random() - 0.5);
     const tournamentPlayers = [];
 
     for (let i = 0; i < shuffled.length; i++) {
       const { data: player, error: playerError } = await supabase
         .from('tournament_players')
-        .insert({
-          tournament_id,
-          profile_id: shuffled[i].student_id,
-          seed: i + 1
-        })
+        .update({ seed: i + 1 })
+        .eq('id', shuffled[i].id)
         .select()
         .single();
 
-      if (!playerError) {
+      if (!playerError && player) {
         tournamentPlayers.push(player);
       }
     }
 
-    console.log('Created tournament players:', tournamentPlayers.length);
+    console.log('Seeded tournament players:', tournamentPlayers.length);
 
     // Create first round matches (bracket style)
     const matches = [];
