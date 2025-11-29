@@ -88,17 +88,50 @@ const JeopardyGame = () => {
   }, [tournaments, tournamentId]);
 
   useEffect(() => {
+    console.log('🔍 [JeopardyGame] Checking for active match...', { 
+      matchCount: matches.length, 
+      hasUserPlayer: !!userPlayer,
+      userPlayerId: userPlayer?.id 
+    });
+    
     if (matches.length > 0 && userPlayer) {
       const activeMatch = matches.find(
         m => (m.player_a === userPlayer.id || m.player_b === userPlayer.id) &&
              (m.status === 'waiting' || m.status === 'in_progress')
       );
+      
+      console.log('🎮 [JeopardyGame] Active match found:', activeMatch);
+      
       if (activeMatch && activeMatch.status === 'in_progress') {
+        console.log('✅ [JeopardyGame] Transitioning to match view');
         setCurrentMatch(activeMatch);
         setView('match');
       }
     }
   }, [matches, userPlayer]);
+
+  // Poll for match status changes
+  useEffect(() => {
+    if (!tournamentId || !userPlayer) return;
+    
+    const pollInterval = setInterval(async () => {
+      const { data } = await supabase
+        .from('matches')
+        .select('*')
+        .eq('tournament_id', tournamentId)
+        .or(`player_a.eq.${userPlayer.id},player_b.eq.${userPlayer.id}`)
+        .eq('status', 'in_progress')
+        .maybeSingle();
+      
+      if (data) {
+        console.log('🔄 [JeopardyGame] Poll found active match:', data);
+        setCurrentMatch(data);
+        setView('match');
+      }
+    }, 2000);
+    
+    return () => clearInterval(pollInterval);
+  }, [tournamentId, userPlayer]);
 
   const loadTournamentData = async () => {
     setIsLoading(true);

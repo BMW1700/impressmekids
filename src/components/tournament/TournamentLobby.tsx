@@ -491,34 +491,36 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {matches.map((match) => (
-                        <Card key={match.id} className="p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <Badge variant="outline">Round {match.round}</Badge>
-                            <Badge variant={getStatusColor(match.status)}>
-                              {match.status}
-                            </Badge>
+                      {matches.map((match) => {
+                        // Resolve player names from players array
+                        const playerAName = players.find(p => p.id === match.player_a)?.display_name || 'TBD';
+                        const playerBName = players.find(p => p.id === match.player_b)?.display_name || 'TBD';
+                        
+                        return (
+                          <Card key={match.id} className="p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <Badge variant="outline">Round {match.round}</Badge>
+                              <Badge variant={getStatusColor(match.status)}>
+                                {match.status}
+                              </Badge>
                           </div>
-                          <div className="grid grid-cols-3 gap-2 items-center">
-                            <div className="text-sm">
-                              {match.player_a_data?.profile?.full_name || 'TBD'}
-                              <span className="ml-2 font-bold">{match.score_a}</span>
-                            </div>
-                            <div className="text-center text-muted-foreground text-xs">vs</div>
-                            <div className="text-sm text-right">
-                              <span className="mr-2 font-bold">{match.score_b}</span>
-                              {match.player_b_data?.profile?.full_name || 'TBD'}
-                            </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="font-medium">{playerAName}</span>
+                            <span className="text-muted-foreground">vs</span>
+                            <span className="font-medium">{playerBName}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs mt-1">
+                            <span className="font-bold">{match.score_a}</span>
+                            <span className="font-bold">{match.score_b}</span>
                           </div>
                           {match.winner_id && (
                             <div className="mt-2 text-center text-sm text-primary font-semibold">
-                              Winner: {match.winner_id === match.player_a ? 
-                                match.player_a_data?.profile?.full_name : 
-                                match.player_b_data?.profile?.full_name}
+                              Winner: {players.find(p => p.id === match.winner_id)?.display_name || 'TBD'}
                             </div>
                           )}
                         </Card>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </CardContent>
