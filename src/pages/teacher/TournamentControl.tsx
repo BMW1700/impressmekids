@@ -218,7 +218,7 @@ const TournamentControl = () => {
     const channel = supabase
       .channel(`tournament-players-teacher-${tournamentId}`)
       .on('postgres_changes', {
-        event: 'INSERT',
+        event: '*', // Listen for ALL events (INSERT, UPDATE, DELETE)
         schema: 'public',
         table: 'tournament_players',
         filter: `tournament_id=eq.${tournamentId}`
@@ -237,19 +237,21 @@ const TournamentControl = () => {
 
   // Polling fallback for teachers - Realtime RLS has issues with SECURITY DEFINER
   useEffect(() => {
-    if (!tournamentId || tournament?.status === 'completed') return;
+    if (!tournamentId) return;
     
     console.log('🔄 [TournamentControl] Starting polling for player updates...');
     const pollInterval = setInterval(() => {
+      // Skip polling if tournament is completed
+      if (tournament?.status === 'completed') return;
       console.log('📊 [TournamentControl] Polling player count...');
       loadTournamentData();
-    }, 3000); // Poll every 3 seconds
+    }, 2000); // Poll every 2 seconds for faster updates
     
     return () => {
       console.log('🛑 [TournamentControl] Stopping polling');
       clearInterval(pollInterval);
     };
-  }, [tournamentId, tournament?.status]);
+  }, [tournamentId]); // Only depend on tournamentId to prevent unnecessary restarts
 
   const handleSeedAndStart = async () => {
     if (questionCount === 0) {
