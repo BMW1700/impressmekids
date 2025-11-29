@@ -173,58 +173,9 @@ export const useTournamentRealtime = (tournamentId?: string) => {
 
     channels.push(matchChannel);
 
-    // Subscribe to match events
-    const eventChannel = supabase
-      .channel(`match_events:${tournamentId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'match_events',
-        },
-        (payload) => {
-          console.log('Match event update:', payload);
-          const event = payload.new as MatchEvent;
-          if (event) {
-            setMatchEvents((prev) => ({
-              ...prev,
-              [event.match_id]: [
-                ...(prev[event.match_id] || []).filter((e) => e.id !== event.id),
-                event,
-              ].sort((a, b) => a.seq - b.seq),
-            }));
-          }
-        }
-      )
-      .subscribe();
-
-    channels.push(eventChannel);
-
-    // Subscribe to match state changes
-    const stateChannel = supabase
-      .channel(`match_state:${tournamentId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'match_state',
-        },
-        (payload) => {
-          console.log('Match state update:', payload);
-          const state = payload.new as MatchState;
-          if (state) {
-            setMatchStates((prev) => ({
-              ...prev,
-              [state.match_id]: state,
-            }));
-          }
-        }
-      )
-      .subscribe();
-
-    channels.push(stateChannel);
+    // NOTE: Removed unfiltered match_events and match_state subscriptions
+    // These were causing cascading re-renders and glitching
+    // Components using this hook should use controlled polling instead
 
     return () => {
       clearInterval(pollInterval);
