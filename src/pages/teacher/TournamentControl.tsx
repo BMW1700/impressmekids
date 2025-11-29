@@ -214,6 +214,28 @@ const TournamentControl = () => {
     }
   };
 
+  // Real-time subscription for player joins
+  useEffect(() => {
+    if (!tournamentId) return;
+    
+    const channel = supabase
+      .channel(`tournament-players-teacher-${tournamentId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'tournament_players',
+        filter: `tournament_id=eq.${tournamentId}`
+      }, () => {
+        console.log('🔔 [TournamentControl] New player joined, refreshing data...');
+        loadTournamentData(); // Refresh player list when student joins
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [tournamentId]);
+
   const handleSeedAndStart = async () => {
     if (questionCount === 0) {
       toast({
@@ -447,7 +469,7 @@ const TournamentControl = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
-                  Players
+                  Players ({players.length})
                 </CardTitle>
               </CardHeader>
               <CardContent>
