@@ -79,15 +79,17 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
-      // Load players
+      // Load players using SECURITY DEFINER function
       try {
-        const { data: playersData } = await supabase
-          .from('tournament_players')
-          .select('*, profiles(full_name)')
-          .eq('tournament_id', tournament.id)
-          .order('seed');
+        const { data: playersData, error: playersError } = await supabase
+          .rpc('get_tournament_players', { _tournament_id: tournament.id });
 
-        setPlayers(playersData || []);
+        if (playersError) {
+          console.error('Error loading players:', playersError);
+          setPlayers([]);
+        } else {
+          setPlayers(playersData || []);
+        }
         
         // Check if current user has joined
         if (session && playersData) {
@@ -565,9 +567,9 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
                                <span className="text-xs font-semibold bg-primary/20 text-primary px-2 py-1 rounded">
                                  #{player.seed}
                                </span>
-                               <span className={`font-medium ${isCurrentUser ? 'text-primary' : ''}`}>
-                                 {player.profiles?.full_name} {isCurrentUser ? '(You)' : ''}
-                               </span>
+                                <span className={`font-medium ${isCurrentUser ? 'text-primary' : ''}`}>
+                                  {player.display_name} {isCurrentUser ? '(You)' : ''}
+                                </span>
                              </div>
                            </div>
                          );
