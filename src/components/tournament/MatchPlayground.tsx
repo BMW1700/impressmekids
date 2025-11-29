@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -27,10 +27,13 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [opponent, setOpponent] = useState<any>(null);
   
+  const hasTimerExpiredRef = useRef(false);
+  
   const { matchEvents, matchStates } = useTournamentRealtime(match.tournament_id);
 
   useEffect(() => {
     loadMatchData();
+    hasTimerExpiredRef.current = false; // Reset guard when match changes
   }, [match.id]);
 
   useEffect(() => {
@@ -174,8 +177,16 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
     }
   };
 
-  const handleTimerExpire = async () => {
+  const handleTimerExpire = useCallback(async () => {
+    // Guard: prevent multiple calls and check if match is already completed
+    if (hasTimerExpiredRef.current || match.status === 'completed') {
+      console.log('⏰ Timer expire skipped (already handled or match completed)');
+      return;
+    }
+    
+    hasTimerExpiredRef.current = true;
     console.log('⏰ Timer expired for match:', match.id);
+    
     try {
       const { data, error } = await supabase.functions.invoke('end-round-and-compute-winners', {
         body: {
@@ -194,16 +205,16 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
             ? "You're advancing to the next round!" 
             : "Better luck next time!",
           variant: isWinner ? "default" : "destructive",
+          duration: 3000,
         });
         
-        setTimeout(() => {
-          onMatchEnd();
-        }, 2000);
+        // Transition immediately instead of waiting
+        onMatchEnd();
       }
     } catch (error: any) {
       console.error('Timer expire error:', error);
     }
-  };
+  }, [match.id, match.status, match.tournament_id, match.round, tournamentPlayerId, onMatchEnd, toast]);
 
   if (!matchState || !question) {
     return (
