@@ -260,20 +260,28 @@ const TournamentControl = () => {
     };
   }, [tournamentId]);
 
-  // Polling fallback for teachers - Realtime RLS has issues with SECURITY DEFINER
+  // Lightweight polling ONLY for player count when waiting
   useEffect(() => {
-    if (!tournamentId || tournament?.status === 'completed') return;
+    // Only poll when tournament is waiting (not started yet)
+    if (!tournamentId || tournament?.status !== 'waiting') return;
     
-    console.log('🔄 [TournamentControl] Starting polling for player updates...');
-    const pollInterval = setInterval(() => {
-      console.log('📊 [TournamentControl] Polling player count...');
-      loadTournamentData();
-    }, 3000); // Poll every 3 seconds
-    
-    return () => {
-      console.log('🛑 [TournamentControl] Stopping polling');
-      clearInterval(pollInterval);
+    const loadPlayersOnly = async () => {
+      try {
+        const { data: playersData } = await supabase
+          .rpc('get_tournament_players', { _tournament_id: tournamentId });
+        
+        if (playersData) {
+          setPlayers(playersData);
+        }
+      } catch (error) {
+        console.error('Failed to load players:', error);
+      }
     };
+    
+    // Much slower polling - only for player count
+    const pollInterval = setInterval(loadPlayersOnly, 8000);
+    
+    return () => clearInterval(pollInterval);
   }, [tournamentId, tournament?.status]);
 
   const handleSeedAndStart = async () => {

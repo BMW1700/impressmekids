@@ -115,11 +115,10 @@ export const useTournamentRealtime = (tournamentId?: string) => {
 
     fetchInitialData();
 
-    // Add polling for matches since Realtime has RLS issues with complex policies
+    // Realtime subscriptions should handle updates, but keep slow polling as fallback
     const pollInterval = setInterval(() => {
-      console.log('🔄 [useTournamentRealtime] Polling for data updates...');
       fetchInitialData();
-    }, 3000); // Poll every 3 seconds
+    }, 10000); // Slow polling - 10 seconds as fallback only
 
     // Subscribe to tournament changes
     const tournamentChannel = supabase
