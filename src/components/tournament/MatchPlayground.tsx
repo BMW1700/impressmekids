@@ -29,6 +29,40 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
   const hasTimerExpiredRef = useRef(false);
   const currentQuestionIdRef = useRef<string | null>(null);
 
+  // Validate player session on mount
+  useEffect(() => {
+    const validatePlayerSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({ 
+          title: "Session expired", 
+          description: "Please sign in again",
+          variant: "destructive" 
+        });
+        onMatchEnd();
+        return;
+      }
+      
+      // Verify tournament player belongs to current user
+      const { data: player } = await supabase
+        .from('tournament_players')
+        .select('profile_id')
+        .eq('id', tournamentPlayerId)
+        .single();
+      
+      if (!player || player.profile_id !== session.user.id) {
+        toast({ 
+          title: "Session Mismatch", 
+          description: "Please rejoin the tournament with your current account",
+          variant: "destructive" 
+        });
+        onMatchEnd();
+      }
+    };
+    
+    validatePlayerSession();
+  }, [tournamentPlayerId, onMatchEnd, toast]);
+
   const loadMatchData = useCallback(async () => {
     try {
       const opponentId = match.player_a === tournamentPlayerId ? match.player_b : match.player_a;
@@ -163,6 +197,33 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
 
   const handleBuzz = async () => {
     if (!currentEvent || !matchState) return;
+
+    // Pre-buzz validation: verify session matches player
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast({ 
+        title: "Session expired", 
+        description: "Please sign in again",
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    const { data: player } = await supabase
+      .from('tournament_players')
+      .select('profile_id')
+      .eq('id', tournamentPlayerId)
+      .maybeSingle();
+    
+    if (!player || player.profile_id !== session.user.id) {
+      toast({ 
+        title: "Session Mismatch", 
+        description: "Your session doesn't match this player. Please rejoin the tournament.",
+        variant: "destructive" 
+      });
+      onMatchEnd();
+      return;
+    }
 
     try {
       const { data, error } = await supabase.functions.invoke('buzz-in', {
