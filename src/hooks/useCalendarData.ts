@@ -38,7 +38,18 @@ export const useCalendarData = ({ startDate, endDate, userId, userRole, childId 
   return useQuery({
     queryKey: ["calendar-data", startDate, endDate, userId, userRole, childId],
     queryFn: async () => {
-      if (!userId) return [];
+      console.log("🗓️ useCalendarData STARTED", {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        userId,
+        userRole,
+        childId
+      });
+
+      if (!userId) {
+        console.log("❌ No userId provided, returning empty array");
+        return [];
+      }
 
       const effectiveUserId = childId || userId;
       const items: CalendarItem[] = [];
@@ -278,6 +289,12 @@ export const useCalendarData = ({ startDate, endDate, userId, userRole, childId 
         .gte("due_date", format(startDate, "yyyy-MM-dd"))
         .lte("due_date", format(endDate, "yyyy-MM-dd") + "T23:59:59");
 
+      console.log("📝 Assignment query filters:", {
+        userRole,
+        startDateStr: format(startDate, "yyyy-MM-dd"),
+        endDateStr: format(endDate, "yyyy-MM-dd") + "T23:59:59"
+      });
+
       if (userRole === "teacher") {
         assignmentsQuery = assignmentsQuery
           .eq("teacher_id", userId)
@@ -308,21 +325,18 @@ export const useCalendarData = ({ startDate, endDate, userId, userRole, childId 
 
       const { data: assignments } = await assignmentsQuery;
 
-      console.log("useCalendarData - Assignment query result:", {
+      console.log("📊 Assignment query result:", {
         role: userRole,
-        startDate: format(startDate, "yyyy-MM-dd"),
-        endDate: format(endDate, "yyyy-MM-dd") + "T23:59:59",
         assignmentCount: assignments?.length || 0,
         assignments: assignments?.map(a => ({
           id: a.id,
           title: a.title,
           due_date: a.due_date,
           is_posted: a.is_posted,
-          status: a.status
+          status: a.status,
+          classroom_id: a.classroom_id
         }))
       });
-
-      // For students/parents, check submission status
       if ((userRole === "student" || (userRole === "parent" && childId)) && assignments) {
         const assignmentIds = assignments.map(a => a.id);
         const { data: submissions } = await supabase
@@ -337,6 +351,17 @@ export const useCalendarData = ({ startDate, endDate, userId, userRole, childId 
 
         assignments.forEach((assignment: any) => {
           const recentlyPosted = assignment.created_at && new Date(assignment.created_at) > twoDaysAgo;
+          const isDraft = !assignment.is_posted || assignment.status !== "published";
+          
+          console.log("📌 Adding assignment to calendar:", {
+            id: assignment.id,
+            title: assignment.title,
+            due_date: assignment.due_date,
+            is_posted: assignment.is_posted,
+            status: assignment.status,
+            isDraft,
+            recentlyPosted
+          });
           
           items.push({
             id: assignment.id,
@@ -348,7 +373,7 @@ export const useCalendarData = ({ startDate, endDate, userId, userRole, childId 
             classroomName: assignment.classrooms?.name,
             teacherName: assignment.classrooms?.profiles?.full_name,
             isSubmitted: submissionMap.get(assignment.id) || false,
-            isDraft: !assignment.is_posted || assignment.status !== "published",
+            isDraft,
             recentlyPosted,
           });
         });
