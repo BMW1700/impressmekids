@@ -156,27 +156,39 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
 
         console.log('✅ [MatchPlayground] end-round-and-compute-winners response:', data);
         
-        if (data?.winner_id) {
-          const isWinner = data.winner_id === tournamentPlayerId;
+        if (data?.tournament_complete) {
+          console.log('🏆 Tournament complete!');
           toast({
-            title: isWinner ? "🎉 You Won This Match!" : "Match Over",
-            description: isWinner 
-              ? "Great job! Moving to next round..." 
-              : "Better luck next time!",
-            variant: isWinner ? "default" : "destructive",
-            duration: 3000,
+            title: "Tournament Complete!",
+            description: "Check the lobby for the winner!",
           });
-           
-          // Give backend time to update match & tournament state before leaving
+          onMatchEnd();
+        } else if (data?.next_round_started && data?.winner_id === tournamentPlayerId) {
+          console.log('✅ Round ended, next round auto-started, I am a winner!');
+          
+          // Winner - seamless transition by reloading match data
+          toast({
+            title: "You Won!",
+            description: "Moving to next round...",
+          });
+          
+          // Reload to get next match
           setTimeout(() => {
-            onMatchEnd();
-          }, 2000);
-         }
-       } catch (error: any) {
-         console.error('Round end error:', error);
-       }
+            loadMatchData();
+          }, 1000);
+        } else {
+          console.log('✅ Round ended, returning to lobby');
+          toast({
+            title: "Round Complete!",
+            description: data?.winner_id === tournamentPlayerId ? "You advanced!" : "Better luck next time!",
+          });
+          onMatchEnd();
+        }
+      } catch (error: any) {
+        console.error('Round end error:', error);
+      }
     }
-  }, [matchState?.round_ends_at, match.status, match.tournament_id, match.round, tournamentPlayerId, onMatchEnd, toast]);
+  }, [matchState?.round_ends_at, match.status, match.tournament_id, match.round, tournamentPlayerId, onMatchEnd, toast, loadMatchData]);
 
   // Initial load and controlled polling
   useEffect(() => {
