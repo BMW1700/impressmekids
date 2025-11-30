@@ -3894,15 +3894,25 @@ export type Database = {
         Args: { email: string; viewer_id: string }
         Returns: string
       }
-      submit_answer_tx: {
-        Args: {
-          p_answer_text: string
-          p_match_id: string
-          p_seq: number
-          p_tournament_player_id: string
-        }
-        Returns: Json
-      }
+      submit_answer_tx:
+        | {
+            Args: {
+              p_answer_text: string
+              p_match_id: string
+              p_seq: number
+              p_tournament_player_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_answer_text: string
+              p_match_event_id: string
+              p_match_id: string
+              p_tournament_player_id: string
+            }
+            Returns: Json
+          }
       update_user_district:
         | {
             Args: { p_district_id: string; p_user_id: string }

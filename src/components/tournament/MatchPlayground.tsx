@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Trophy } from "lucide-react";
 import { BuzzButton } from "./BuzzButton";
 import { MatchTimer } from "./MatchTimer";
+import { AnswerCountdown } from "./AnswerCountdown";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 
@@ -198,33 +199,6 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
   const handleBuzz = async () => {
     if (!currentEvent || !matchState) return;
 
-    // Pre-buzz validation: verify session matches player
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      toast({ 
-        title: "Session expired", 
-        description: "Please sign in again",
-        variant: "destructive" 
-      });
-      return;
-    }
-
-    const { data: player } = await supabase
-      .from('tournament_players')
-      .select('profile_id')
-      .eq('id', tournamentPlayerId)
-      .maybeSingle();
-    
-    if (!player || player.profile_id !== session.user.id) {
-      toast({ 
-        title: "Session Mismatch", 
-        description: "Your session doesn't match this player. Please rejoin the tournament.",
-        variant: "destructive" 
-      });
-      onMatchEnd();
-      return;
-    }
-
     try {
       const { data, error } = await supabase.functions.invoke('buzz-in', {
         body: {
@@ -365,13 +339,16 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
                   </div>
                 )}
 
-                {isMyTurn && currentEvent && (
-                  <div className="space-y-4">
-                    <div className="text-center mb-4">
-                      <Badge variant="default" className="text-lg px-4 py-2">
-                        Your Turn!
-                      </Badge>
-                    </div>
+            {isMyTurn && currentEvent && (
+              <div className="space-y-4">
+                <div className="text-center mb-4">
+                  <Badge variant="default" className="text-lg px-4 py-2">
+                    Your Turn!
+                  </Badge>
+                  {currentEvent.answer_deadline && (
+                    <AnswerCountdown deadline={currentEvent.answer_deadline} />
+                  )}
+                </div>
                     <div className="flex gap-2">
                       <Input
                         value={answer}
