@@ -9,14 +9,16 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, Printer, Search, Filter, Loader2, Users } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, Printer, Search, Filter, Loader2, Users, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, addMonths, subMonths, addDays, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { useParentCalendarData } from "@/hooks/useParentCalendarData";
 import { getCalendarMonthDays, getItemsForDate, getCategoryColor, getTypeColor, formatTime, getCategoryIcon, exportToICal } from "@/lib/calendarUtils";
 import { CalendarItemDetailModal } from "@/components/calendar/CalendarItemDetailModal";
+import { ParentCreateEventModal } from "@/components/parent/ParentCreateEventModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { getStudentColor, getParentColor } from "@/lib/parentCalendarColors";
 
 export default function ParentCalendar() {
   const navigate = useNavigate();
@@ -32,6 +34,7 @@ export default function ParentCalendar() {
     schoolEvents: true,
   });
   const [focusedDateIndex, setFocusedDateIndex] = useState<number | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const calendarGridRef = useRef<HTMLDivElement>(null);
 
   // Check authentication
@@ -133,12 +136,24 @@ export default function ParentCalendar() {
 
   const dateRange = getDateRange();
 
-  const { data: items = [], isLoading: calendarLoading } = useParentCalendarData({
+  const { data: items = [], isLoading: calendarLoading, refetch } = useParentCalendarData({
     startDate: dateRange.start,
     endDate: dateRange.end,
     parentId: parentId || "",
     childId: selectedChildId,
   });
+
+  // Get event color based on type and student
+  const getEventColor = (item: any) => {
+    if (item.type === "parent_personal") {
+      return getParentColor();
+    } else if (item.type === "parent_student" && item.studentId) {
+      const studentIndex = children.findIndex(c => c.id === item.studentId);
+      return getStudentColor(studentIndex);
+    }
+    // Default for other event types (assignments, school events, etc.)
+    return getCategoryColor(item.category);
+  };
 
   const filteredItems = items.filter((item) => {
     if (!filters.events && item.type === "event") return false;
@@ -271,7 +286,7 @@ export default function ParentCalendar() {
               </div>
               <div className="space-y-1">
                 {dayItems.slice(0, 3).map((item) => {
-                  const categoryColor = getCategoryColor(item.category);
+                  const eventColor = getEventColor(item);
 
                   return (
                     <div
@@ -286,10 +301,13 @@ export default function ParentCalendar() {
                           setSelectedItem(item);
                         }
                       }}
-                      className={`text-xs p-1 rounded truncate ${categoryColor.bg} ${categoryColor.text} hover:opacity-80 focus:ring-2 focus:ring-primary focus:ring-offset-1`}
+                      className={`text-xs p-1 rounded truncate ${eventColor.bg} ${eventColor.text} border ${eventColor.border} hover:opacity-80 focus:ring-2 focus:ring-primary focus:ring-offset-1`}
                     >
                       <span className="mr-1">{getCategoryIcon(item.category)}</span>
                       {item.title}
+                      {item.type === "parent_student" && item.studentName && (
+                        <span className="text-[10px] ml-1 opacity-70">({item.studentName})</span>
+                      )}
                     </div>
                   );
                 })}
@@ -466,6 +484,13 @@ export default function ParentCalendar() {
               </div>
 
               <div className="flex flex-wrap gap-3 items-center justify-center">
+                <Button
+                  onClick={() => setShowCreateModal(true)}
+                  className="rounded-full px-6 py-2 bg-gradient-to-r from-primary to-accent text-white hover:shadow-lg transition-all"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Event
+                </Button>
                 <button
                   onClick={() => setFilters(prev => ({ ...prev, events: !prev.events }))}
                   className={cn(
@@ -515,6 +540,15 @@ export default function ParentCalendar() {
         </div>
       </main>
       <Footer />
+
+      {/* Create Event Modal */}
+      <ParentCreateEventModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        parentId={parentId || ""}
+        children={children.map(c => ({ student_id: c.id, student_name: c.full_name }))}
+        onEventCreated={() => refetch()}
+      />
 
       {/* Item Detail Modal */}
       {selectedItem && (

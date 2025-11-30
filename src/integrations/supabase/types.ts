@@ -2118,6 +2118,110 @@ export type Database = {
           },
         ]
       }
+      parent_personal_events: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          end_time: string | null
+          event_date: string
+          id: string
+          location: string | null
+          parent_id: string
+          start_time: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          end_time?: string | null
+          event_date: string
+          id?: string
+          location?: string | null
+          parent_id: string
+          start_time?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          end_time?: string | null
+          event_date?: string
+          id?: string
+          location?: string | null
+          parent_id?: string
+          start_time?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_personal_events_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "parent_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parent_student_events: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          end_time: string | null
+          event_date: string
+          id: string
+          location: string | null
+          parent_id: string
+          start_time: string | null
+          student_id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          end_time?: string | null
+          event_date: string
+          id?: string
+          location?: string | null
+          parent_id: string
+          start_time?: string | null
+          student_id: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          end_time?: string | null
+          event_date?: string
+          id?: string
+          location?: string | null
+          parent_id?: string
+          start_time?: string | null
+          student_id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_student_events_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "parent_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parent_student_events_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parent_student_links: {
         Row: {
           approved: boolean

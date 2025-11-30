@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, parseISO, format, isWithinInterval } from "date-fns";
 
-export type CalendarItemType = "class" | "event" | "assignment" | "school_event";
+export type CalendarItemType = "class" | "event" | "assignment" | "school_event" | "parent_personal" | "parent_student";
 
 export interface CalendarItem {
   id: string;
@@ -22,6 +22,8 @@ export interface CalendarItem {
   blocksClasses?: boolean;
   attachments?: Array<{ name: string; url: string }>;
   recentlyPosted?: boolean;
+  studentId?: string; // For parent-student events
+  studentName?: string; // For display purposes
 }
 
 interface UseCalendarDataProps {
@@ -371,6 +373,30 @@ export const useCalendarData = ({ startDate, endDate, userId, userRole, childId 
           blocksClasses: event.blocks_classes,
         });
       });
+
+      // 6. Fetch parent-created events for students
+      if (userRole === "student") {
+        const { data: parentStudentEvents } = await supabase
+          .from("parent_student_events")
+          .select("*")
+          .eq("student_id", effectiveUserId)
+          .gte("event_date", format(startDate, "yyyy-MM-dd"))
+          .lte("event_date", format(endDate, "yyyy-MM-dd"));
+
+        parentStudentEvents?.forEach((event: any) => {
+          items.push({
+            id: event.id,
+            type: "parent_student",
+            title: event.title,
+            description: event.description,
+            date: event.event_date,
+            startTime: event.start_time,
+            endTime: event.end_time,
+            location: event.location,
+            category: "parent_event",
+          });
+        });
+      }
 
       return items.sort((a, b) => {
         const dateCompare = a.date.localeCompare(b.date);
