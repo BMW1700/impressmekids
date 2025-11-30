@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Chrome, Building2 } from "lucide-react";
 import { detectUserTypeFromEmail } from "@/lib/districtDetection";
@@ -22,6 +23,7 @@ const Auth = () => {
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<"teacher" | "student" | "parent" | "admin">("student");
   const [showRoleModal, setShowRoleModal] = useState(false);
+  const [showDistrictModal, setShowDistrictModal] = useState(false);
   const [pendingDistrictName, setPendingDistrictName] = useState("");
   const [pendingDistrictId, setPendingDistrictId] = useState<string | null>(null);
   const [availableRoles, setAvailableRoles] = useState<('teacher' | 'student' | 'parent')[]>(['student', 'parent']);
@@ -87,6 +89,15 @@ const Auth = () => {
         if (isOAuthCallback && session.user.email) {
           const district = await detectUserTypeFromEmail(session.user.email);
           
+          // ALWAYS require district and role selection for OAuth users
+          // If no district match, show district selection first
+          if (!district.districtCode) {
+            setShowDistrictModal(true);
+            setAvailableRoles(district.availableRoles);
+            return;
+          }
+          
+          // If district matched, proceed to role selection
           if (district.requiresRoleSelection) {
             setPendingDistrictName(district.districtName || "");
             setPendingDistrictId(district.districtCode);
@@ -167,6 +178,16 @@ const Auth = () => {
         description: "District code not found. Please check and try again.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleDistrictSelection = async (districtId: string) => {
+    const selectedDistrict = districts?.find(d => d.district_code === districtId);
+    if (selectedDistrict) {
+      setPendingDistrictId(selectedDistrict.district_code);
+      setPendingDistrictName(selectedDistrict.name);
+      setShowDistrictModal(false);
+      setShowRoleModal(true);
     }
   };
 
@@ -766,6 +787,29 @@ const Auth = () => {
           </Link>
         </div>
       </div>
+
+      {/* District Selection Modal for OAuth users without district email */}
+      <Dialog open={showDistrictModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Select Your District</DialogTitle>
+            <DialogDescription>
+              Please select the district you're joining to continue
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 pt-4">
+            <DistrictCombobox
+              districts={districts || []}
+              value={pendingDistrictId || ""}
+              onValueChange={handleDistrictSelection}
+            />
+            <p className="text-sm text-muted-foreground">
+              Can't find your district? Contact your district administrator.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <RoleSelectionModal
         open={showRoleModal}
