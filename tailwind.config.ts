@@ -168,6 +168,55 @@ export default {
             transform: "translateY(0)",
           },
         },
+        "confetti-fall": {
+          "0%": {
+            transform: "translateY(-100px) rotate(0deg)",
+            opacity: "1",
+          },
+          "100%": {
+            transform: "translateY(100vh) rotate(360deg)",
+            opacity: "0",
+          },
+        },
+        "pop-in-bounce": {
+          "0%": {
+            transform: "scale(0)",
+            opacity: "0",
+          },
+          "50%": {
+            transform: "scale(1.1)",
+          },
+          "100%": {
+            transform: "scale(1)",
+            opacity: "1",
+          },
+        },
+        "glow-pulse": {
+          "0%, 100%": {
+            textShadow: "0 0 20px rgba(234, 179, 8, 0.5), 0 0 40px rgba(234, 179, 8, 0.3)",
+          },
+          "50%": {
+            textShadow: "0 0 30px rgba(234, 179, 8, 0.8), 0 0 60px rgba(234, 179, 8, 0.5)",
+          },
+        },
+        "trophy-shine": {
+          "0%, 100%": {
+            filter: "drop-shadow(0 0 20px rgba(234, 179, 8, 0.5))",
+          },
+          "50%": {
+            filter: "drop-shadow(0 0 40px rgba(234, 179, 8, 0.8))",
+          },
+        },
+        "float-up": {
+          "0%": {
+            transform: "translateY(20px)",
+            opacity: "0",
+          },
+          "100%": {
+            transform: "translateY(0)",
+            opacity: "1",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -178,6 +227,11 @@ export default {
         "spark": "spark 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
         "glow-urgent": "glow-urgent 2s ease-in-out infinite",
         "fade-in-up": "fade-in-up 0.4s ease-out",
+        "confetti-fall": "confetti-fall 4s linear infinite",
+        "pop-in-bounce": "pop-in-bounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
+        "glow-pulse": "glow-pulse 2s ease-in-out infinite",
+        "trophy-shine": "trophy-shine 2s ease-in-out infinite",
+        "float-up": "float-up 0.8s ease-out",
       },
     },
   },

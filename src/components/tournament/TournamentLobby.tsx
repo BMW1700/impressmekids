@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Trophy, Users, Play, Crown, Settings, Edit, SkipForward, StopCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SelectQuestionsModal } from "@/components/tournament/SelectQuestionsModal";
+import { TournamentCelebration } from "@/components/tournament/TournamentCelebration";
 
 interface TournamentLobbyProps {
   tournament: any;
@@ -364,31 +365,43 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
               </Badge>
             </div>
 
-            {tournament.status === 'completed' && (
-              <Card className="mb-8 bg-gradient-to-r from-yellow-400/20 to-amber-500/20 border-yellow-500/50 shadow-xl">
-                <CardContent className="py-8 text-center">
-                  <div className="text-6xl mb-4">🏆</div>
-                  <h2 className="text-3xl font-bold text-yellow-600 dark:text-yellow-400 mb-2">
-                    Tournament Champion!
-                  </h2>
-                  <p className="text-2xl font-semibold mb-2">
-                    {(() => {
-                      // Find the winner - the player who is not eliminated
-                      const winner = players.find(p => p.status === 'active');
-                      return winner?.display_name || 'Unknown';
-                    })()}
-                  </p>
-                  <p className="text-muted-foreground mt-2">
-                    Congratulations on winning the tournament!
-                  </p>
-                  <div className="mt-6 flex justify-center gap-2">
-                    <Badge variant="outline" className="text-lg px-4 py-2">
-                      🥇 Champion
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            {tournament.status === 'completed' && (() => {
+              // Find winner and runner-up
+              const winner = players.find(p => p.status === 'active');
+              
+              // Find runner-up - most recently eliminated player
+              const eliminatedPlayers = players
+                .filter(p => p.status === 'eliminated')
+                .sort((a, b) => {
+                  const aTime = a.eliminated_at ? new Date(a.eliminated_at).getTime() : 0;
+                  const bTime = b.eliminated_at ? new Date(b.eliminated_at).getTime() : 0;
+                  return bTime - aTime;
+                });
+              const runnerUp = eliminatedPlayers[0];
+
+              // Get final scores from last matches
+              const finalMatches = matches.filter(m => m.status === 'completed');
+              const lastRound = finalMatches.length > 0 ? Math.max(...finalMatches.map(m => m.round)) : 0;
+              const finalMatch = finalMatches.find(m => m.round === lastRound);
+
+              const winnerScore = finalMatch ? (
+                winner?.id === finalMatch.player_a ? finalMatch.score_a : finalMatch.score_b
+              ) : 0;
+              
+              const runnerUpScore = finalMatch ? (
+                runnerUp?.id === finalMatch.player_a ? finalMatch.score_a : finalMatch.score_b
+              ) : 0;
+
+              return (
+                <div className="mb-8">
+                  <TournamentCelebration
+                    winner={winner ? { name: winner.display_name, score: winnerScore } : null}
+                    runnerUp={runnerUp ? { name: runnerUp.display_name, score: runnerUpScore } : null}
+                    tournamentName={tournament.name}
+                  />
+                </div>
+              );
+            })()}
 
             {isTeacher && (
               <Card className="mb-8 shadow-card border-primary/20">

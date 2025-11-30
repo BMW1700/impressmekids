@@ -175,14 +175,62 @@ serve(async (req) => {
       }
 
       console.log('📋 Created', nextMatches.length, 'matches for round', nextRound);
+
+      // AUTO-START next round immediately!
+      if (nextMatches.length > 0) {
+        console.log('🚀 Auto-starting next round...');
+        
+        const round_starts_at = new Date().toISOString();
+        const round_ends_at = new Date(Date.now() + 30000).toISOString(); // 30 seconds
+        
+        for (const match of nextMatches) {
+          // Update match state to start
+          await supabase
+            .from('match_state')
+            .update({
+              round_starts_at,
+              round_ends_at,
+              current_seq: 1,
+              accepting_buzz: true
+            })
+            .eq('match_id', match.id);
+          
+          // Set match status to in_progress
+          await supabase
+            .from('matches')
+            .update({ status: 'in_progress', started_at: round_starts_at })
+            .eq('id', match.id);
+          
+          // Show first question
+          await supabase
+            .from('match_events')
+            .update({ shown_at: round_starts_at })
+            .eq('match_id', match.id)
+            .eq('seq', 1);
+        }
+        
+        console.log('✅ Next round auto-started!');
+      }
+
+      return new Response(JSON.stringify({ 
+        success: true,
+        winners: winners.length,
+        remaining_players: remainingPlayers?.length || 0,
+        winner_id: winners.length === 1 ? winners[0] : null,
+        tournament_complete: false,
+        next_round_started: nextMatches.length > 0
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
+    // Fallback response
     return new Response(JSON.stringify({ 
       success: true,
       winners: winners.length,
       remaining_players: remainingPlayers?.length || 0,
-      winner_id: winners.length === 1 ? winners[0] : null,
-      tournament_complete: remainingPlayers?.length === 1
+      winner_id: null,
+      tournament_complete: true
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

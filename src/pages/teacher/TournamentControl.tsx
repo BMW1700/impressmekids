@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Settings, Play, SkipForward, StopCircle, Edit, Users } from "lucide-react";
 import { SelectQuestionsModal } from "@/components/tournament/SelectQuestionsModal";
+import { TournamentCelebration } from "@/components/tournament/TournamentCelebration";
 
 import {
   Breadcrumb,
@@ -451,6 +452,44 @@ const TournamentControl = () => {
               </div>
             </div>
           </div>
+
+          {tournament.status === 'completed' && (() => {
+            // Find winner and runner-up
+            const winner = players.find(p => p.status === 'active');
+            
+            // Find runner-up - most recently eliminated player
+            const eliminatedPlayers = players
+              .filter(p => p.status === 'eliminated')
+              .sort((a, b) => {
+                const aTime = a.eliminated_at ? new Date(a.eliminated_at).getTime() : 0;
+                const bTime = b.eliminated_at ? new Date(b.eliminated_at).getTime() : 0;
+                return bTime - aTime;
+              });
+            const runnerUp = eliminatedPlayers[0];
+
+            // Get final scores from last matches
+            const finalMatches = matches.filter(m => m.status === 'completed');
+            const lastRound = finalMatches.length > 0 ? Math.max(...finalMatches.map(m => m.round)) : 0;
+            const finalMatch = finalMatches.find(m => m.round === lastRound);
+
+            const winnerScore = finalMatch ? (
+              winner?.id === finalMatch.player_a ? finalMatch.score_a : finalMatch.score_b
+            ) : 0;
+            
+            const runnerUpScore = finalMatch ? (
+              runnerUp?.id === finalMatch.player_a ? finalMatch.score_a : finalMatch.score_b
+            ) : 0;
+
+            return (
+              <div className="mb-8">
+                <TournamentCelebration
+                  winner={winner ? { name: winner.display_name, score: winnerScore } : null}
+                  runnerUp={runnerUp ? { name: runnerUp.display_name, score: runnerUpScore } : null}
+                  tournamentName={tournament.name}
+                />
+              </div>
+            );
+          })()}
 
           <div className="grid md:grid-cols-2 gap-6 mb-6">
             <Card>
