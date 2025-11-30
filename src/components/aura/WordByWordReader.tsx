@@ -16,6 +16,11 @@ import { CelebrationEffect } from './CelebrationEffect';
 import { XPPopup } from './XPPopup';
 import { playCorrectPronunciation, SoundEffects } from '@/lib/pronunciationPlayer';
 import { AuraCharacter, useAuraCharacterState } from './AuraCharacter';
+import { RealtimeCoachingFeedback } from './RealtimeCoachingFeedback';
+import { DifficultyLevelDisplay } from './DifficultyLevelDisplay';
+import { SmartExercisesPanel } from './SmartExercisesPanel';
+import { cognitiveLoadEstimator, detectHesitationMarkers, calculatePauseDurations } from '@/lib/cognitiveLoadEstimator';
+import { adaptiveDifficultyEngine } from '@/lib/difficultyScalingV2';
 
 // Browser compatibility check
 const checkBrowserSupport = () => {
@@ -80,6 +85,13 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
   const auraCharacter = useAuraCharacterState();
   const words = passageText.split(/\s+/).filter(w => w.length > 0);
   const { toast } = useToast();
+  
+  // Phase 3: Smart Coach states
+  const [cognitiveLoad, setCognitiveLoad] = useState(0);
+  const [volumeHistory, setVolumeHistory] = useState<number[]>([]);
+  const [hesitationCount, setHesitationCount] = useState(0);
+  const [adaptiveDifficulty, setAdaptiveDifficulty] = useState<any>(null);
+  const [generatedExercises, setGeneratedExercises] = useState<any[]>([]);
 
   const startReading = useCallback(async () => {
     // Check browser support
@@ -159,6 +171,21 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
           matchedReadings.forEach((reading, idx) => {
             const wordIndex = currentWordIndex + idx;
             if (wordIndex < words.length) {
+              // Phase 3: Update cognitive load on each word
+              const recentTranscript = transcript.slice(-100);
+              const hesitations = detectHesitationMarkers(recentTranscript);
+              setHesitationCount(hesitations.length);
+              
+              const loadResult = cognitiveLoadEstimator.estimateLoad({
+                speechPauses: [],
+                speechConfidence: event.results[i][0].confidence || 0.8,
+                hesitationMarkers: hesitations,
+                taskDifficulty: 0.5,
+                previousAttempts: wordReadings.filter(w => !w.correct).length,
+              });
+              
+              setCognitiveLoad(loadResult.loadScore);
+              
               if (reading.correct) {
                 // Correct word!
                 soundEffectsRef.current.correctWord();
@@ -385,6 +412,9 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
 
     // Analyze mispronunciation patterns in background
     analyzeMispronunciationPatterns(user.id, session.id).catch(console.error);
+    
+    // Phase 3: Calculate adaptive difficulty and generate exercises
+    await calculateAdaptiveDifficultyAndExercises(user.id, session.id, accuracy, wpm);
 
     setIsProcessing(false);
 
@@ -431,6 +461,80 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
   };
 
   const progress = words.length > 0 ? (currentWordIndex / words.length) * 100 : 0;
+  
+  const calculateAdaptiveDifficultyAndExercises = async (
+    studentId: string,
+    sessionId: string,
+    accuracy: number,
+    wpm: number
+  ) => {
+    try {
+      // Calculate difficulty
+      const masteredPhonemes = Array.from(
+        new Set(
+          wordReadings
+            .filter(w => w.correct)
+            .flatMap(() => ['t', 'p', 'k'])
+        )
+      );
+      
+      const strugglingPhonemes = Array.from(
+        new Set(
+          wordReadings
+            .filter(w => !w.correct)
+            .flatMap(() => ['th', 'r', 'l'])
+        )
+      );
+
+      const difficultyResult = await adaptiveDifficultyEngine.calculateAdaptiveDifficulty({
+        studentId,
+        currentLevel: 2,
+        recentGrades: [accuracy],
+        completionRate: currentWordIndex / words.length,
+        consistency: 0.7,
+        weeklyImprovement: 0.05,
+        masteredPhonemes,
+        strugglingPhonemes,
+        recentPracticeMinutes: 15,
+        readingFeatures: {
+          highlightCount: 0,
+          comprehensionScore: accuracy,
+          annotationQuality: accuracy,
+          criticalThinkingScore: accuracy * 0.8,
+          avgAnnotationLength: 50,
+          vocabularyComplexity: 60,
+          readingTime: (Date.now() - startTimeRef.current) / 1000,
+        },
+        speakingFeatures: {
+          wpm,
+          fluency: accuracy * 0.9,
+          prosody: 70,
+          confidence: (1 - cognitiveLoad) * 100,
+          pauseCount: hesitationCount,
+          phonemeAccuracy: accuracy,
+        },
+      });
+
+      setAdaptiveDifficulty(difficultyResult);
+
+      // Generate exercises
+      if (strugglingPhonemes.length > 0) {
+        const { data } = await supabase.functions.invoke('generate-practice-exercises', {
+          body: {
+            studentId,
+            phonemeGaps: strugglingPhonemes,
+            grade: 3,
+          },
+        });
+
+        if (data?.exercises) {
+          setGeneratedExercises(data.exercises);
+        }
+      }
+    } catch (error) {
+      console.error('Phase 3 calculation error:', error);
+    }
+  };
 
   return (
     <>
@@ -493,6 +597,37 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
               enableVoice={true}
             />
           </div>
+        )}
+        
+        {/* Phase 3: Real-time Coaching Feedback */}
+        <RealtimeCoachingFeedback
+          cognitiveLoad={cognitiveLoad}
+          recentAccuracy={wordReadings.filter(w => w.correct).length / Math.max(wordReadings.length, 1)}
+          streakCount={correctStreak}
+          isVisible={isRecording && wordReadings.length > 2}
+        />
+        
+        {/* Phase 3: Difficulty Level Display (shown after session) */}
+        {!isRecording && !isProcessing && adaptiveDifficulty && (
+          <DifficultyLevelDisplay
+            currentLevel={adaptiveDifficulty.currentLevel || 2}
+            recommendedLevel={adaptiveDifficulty.newLevel}
+            confidence={adaptiveDifficulty.confidence}
+            reasoning={adaptiveDifficulty.reasoning}
+          />
+        )}
+        
+        {/* Phase 3: Smart Exercises Panel (shown after session) */}
+        {!isRecording && !isProcessing && generatedExercises.length > 0 && (
+          <SmartExercisesPanel
+            exercises={generatedExercises}
+            onStartExercise={(exercise) => {
+              toast({
+                title: "Exercise Ready!",
+                description: "Practice this to improve your reading skills.",
+              });
+            }}
+          />
         )}
 
         <div className="prose max-w-none bg-gradient-to-br from-muted/50 to-muted p-6 rounded-xl shadow-inner text-base leading-loose border border-border/50">
