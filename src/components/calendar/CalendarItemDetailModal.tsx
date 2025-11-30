@@ -14,9 +14,11 @@ interface CalendarItemDetailModalProps {
   item: CalendarItem;
   onClose: () => void;
   userRole: "student" | "teacher" | "admin" | "parent";
+  onEdit?: (item: CalendarItem) => void;
+  onDelete?: (item: CalendarItem) => void;
 }
 
-export const CalendarItemDetailModal = ({ item, onClose, userRole }: CalendarItemDetailModalProps) => {
+export const CalendarItemDetailModal = ({ item, onClose, userRole, onEdit, onDelete }: CalendarItemDetailModalProps) => {
   const navigate = useNavigate();
   const categoryColor = getCategoryColor(item.category);
   const typeColor = getTypeColor(item.type);
@@ -187,6 +189,18 @@ export const CalendarItemDetailModal = ({ item, onClose, userRole }: CalendarIte
                 <Edit className="h-4 w-4" />
                 Edit {item.type === "event" ? "Event" : "Assignment"}
               </Button>
+            )}
+            {userRole === "parent" && (item.type === "parent_personal" || item.type === "parent_student") && (
+              <div className="flex gap-2">
+                <Button onClick={() => onEdit?.(item)} className="flex-1 gap-2">
+                  <Edit className="h-4 w-4" />
+                  Edit Event
+                </Button>
+                <Button onClick={() => onDelete?.(item)} variant="destructive" className="flex-1 gap-2">
+                  <Trash2 className="h-4 w-4" />
+                  Delete
+                </Button>
+              </div>
             )}
           </div>
         </div>

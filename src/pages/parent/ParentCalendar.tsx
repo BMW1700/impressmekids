@@ -16,12 +16,15 @@ import { useParentCalendarData } from "@/hooks/useParentCalendarData";
 import { getCalendarMonthDays, getItemsForDate, getCategoryColor, getTypeColor, formatTime, getCategoryIcon, exportToICal } from "@/lib/calendarUtils";
 import { CalendarItemDetailModal } from "@/components/calendar/CalendarItemDetailModal";
 import { ParentCreateEventModal } from "@/components/parent/ParentCreateEventModal";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { getStudentColor, getParentColor } from "@/lib/parentCalendarColors";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ParentCalendar() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<"month" | "week" | "day" | "list">("month");
   const [selectedItem, setSelectedItem] = useState<any>(null);
@@ -35,6 +38,9 @@ export default function ParentCalendar() {
   });
   const [focusedDateIndex, setFocusedDateIndex] = useState<number | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editEvent, setEditEvent] = useState<any>(null);
+  const [deleteEvent, setDeleteEvent] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const calendarGridRef = useRef<HTMLDivElement>(null);
 
   // Check authentication
@@ -153,6 +159,62 @@ export default function ParentCalendar() {
     }
     // Default for other event types (assignments, school events, etc.)
     return getCategoryColor(item.category);
+  };
+
+  const handleEdit = (item: any) => {
+    setEditEvent({
+      id: item.id,
+      type: item.type,
+      title: item.title,
+      description: item.description,
+      date: item.date,
+      startTime: item.startTime,
+      endTime: item.endTime,
+      location: item.location,
+      studentId: item.studentId,
+    });
+    setSelectedItem(null);
+    setShowCreateModal(true);
+  };
+
+  const handleDelete = (item: any) => {
+    setDeleteEvent(item);
+    setSelectedItem(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteEvent) return;
+
+    setIsDeleting(true);
+    try {
+      const table = deleteEvent.type === "parent_personal"
+        ? "parent_personal_events"
+        : "parent_student_events";
+
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .eq("id", deleteEvent.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Event Deleted",
+        description: "The event has been removed from your calendar.",
+      });
+
+      refetch();
+    } catch (error: any) {
+      console.error("Error deleting event:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete event. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeleteEvent(null);
+    }
   };
 
   const filteredItems = items.filter((item) => {
@@ -544,10 +606,17 @@ export default function ParentCalendar() {
       {/* Create Event Modal */}
       <ParentCreateEventModal
         open={showCreateModal}
-        onOpenChange={setShowCreateModal}
+        onOpenChange={(open) => {
+          setShowCreateModal(open);
+          if (!open) setEditEvent(null);
+        }}
         parentId={parentId || ""}
         children={children.map(c => ({ student_id: c.id, student_name: c.full_name }))}
-        onEventCreated={() => refetch()}
+        onEventCreated={() => {
+          refetch();
+          setEditEvent(null);
+        }}
+        editEvent={editEvent}
       />
 
       {/* Item Detail Modal */}
@@ -556,8 +625,20 @@ export default function ParentCalendar() {
           item={selectedItem}
           onClose={() => setSelectedItem(null)}
           userRole="parent"
+          onEdit={handleEdit}
+          onDelete={handleDelete}
         />
       )}
+
+      <ConfirmModal
+        open={!!deleteEvent}
+        onOpenChange={(open) => !open && setDeleteEvent(null)}
+        onConfirm={confirmDelete}
+        title="Delete Event"
+        description="Are you sure you want to delete this event? This action cannot be undone."
+        confirmText={isDeleting ? "Deleting..." : "Delete"}
+        cancelText="Cancel"
+      />
     </div>
   );
 }

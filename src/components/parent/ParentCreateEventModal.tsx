@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,17 @@ interface ParentCreateEventModalProps {
   parentId: string;
   children: Array<{ student_id: string; student_name: string }>;
   onEventCreated: () => void;
+  editEvent?: {
+    id: string;
+    type: "parent_personal" | "parent_student";
+    title: string;
+    description?: string;
+    date: string;
+    startTime?: string;
+    endTime?: string;
+    location?: string;
+    studentId?: string;
+  } | null;
 }
 
 export function ParentCreateEventModal({
@@ -27,16 +38,42 @@ export function ParentCreateEventModal({
   parentId,
   children,
   onEventCreated,
+  editEvent,
 }: ParentCreateEventModalProps) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [date, setDate] = useState<Date>();
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [location, setLocation] = useState("");
-  const [target, setTarget] = useState<"self" | string>("self");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const [title, setTitle] = useState(editEvent?.title || "");
+  const [description, setDescription] = useState(editEvent?.description || "");
+  const [date, setDate] = useState<Date | undefined>(
+    editEvent?.date ? new Date(editEvent.date) : undefined
+  );
+  const [startTime, setStartTime] = useState(editEvent?.startTime || "");
+  const [endTime, setEndTime] = useState(editEvent?.endTime || "");
+  const [location, setLocation] = useState(editEvent?.location || "");
+  const [target, setTarget] = useState<string>(
+    editEvent?.studentId || "self"
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Update form when editEvent changes
+  useEffect(() => {
+    if (editEvent) {
+      setTitle(editEvent.title);
+      setDescription(editEvent.description || "");
+      setDate(editEvent.date ? new Date(editEvent.date) : undefined);
+      setStartTime(editEvent.startTime || "");
+      setEndTime(editEvent.endTime || "");
+      setLocation(editEvent.location || "");
+      setTarget(editEvent.studentId || "self");
+    } else {
+      setTitle("");
+      setDescription("");
+      setDate(undefined);
+      setStartTime("");
+      setEndTime("");
+      setLocation("");
+      setTarget("self");
+    }
+  }, [editEvent, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,33 +99,55 @@ export function ParentCreateEventModal({
         location: location || null,
       };
 
-      if (target === "self") {
-        // Create parent personal event
+      if (editEvent) {
+        // Update existing event
+        const table = editEvent.type === "parent_personal" 
+          ? "parent_personal_events" 
+          : "parent_student_events";
+        
+        const updateData = target === "self"
+          ? eventData
+          : { ...eventData, student_id: target };
+
         const { error } = await supabase
-          .from("parent_personal_events")
-          .insert(eventData);
+          .from(table)
+          .update(updateData)
+          .eq("id", editEvent.id);
 
         if (error) throw error;
 
         toast({
-          title: "Event Created",
-          description: "Your personal event has been added to your calendar.",
+          title: "Event Updated",
+          description: "Your event has been updated successfully.",
         });
       } else {
-        // Create parent-student event
-        const { error } = await supabase
-          .from("parent_student_events")
-          .insert({
-            ...eventData,
-            student_id: target,
+        // Create new event
+        if (target === "self") {
+          const { error } = await supabase
+            .from("parent_personal_events")
+            .insert(eventData);
+
+          if (error) throw error;
+
+          toast({
+            title: "Event Created",
+            description: "Your personal event has been added to your calendar.",
           });
+        } else {
+          const { error } = await supabase
+            .from("parent_student_events")
+            .insert({
+              ...eventData,
+              student_id: target,
+            });
 
-        if (error) throw error;
+          if (error) throw error;
 
-        toast({
-          title: "Event Created",
-          description: "The event has been added to your student's calendar.",
-        });
+          toast({
+            title: "Event Created",
+            description: "The event has been added to your student's calendar.",
+          });
+        }
       }
 
       // Reset form
@@ -102,10 +161,10 @@ export function ParentCreateEventModal({
       onOpenChange(false);
       onEventCreated();
     } catch (error: any) {
-      console.error("Error creating event:", error);
+      console.error("Error saving event:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to create event. Please try again.",
+        description: error.message || "Failed to save event. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -117,7 +176,7 @@ export function ParentCreateEventModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Create Event</DialogTitle>
+          <DialogTitle>{editEvent ? "Edit Event" : "Create Event"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -226,7 +285,9 @@ export function ParentCreateEventModal({
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create Event"}
+              {isSubmitting 
+                ? (editEvent ? "Updating..." : "Creating...") 
+                : (editEvent ? "Update Event" : "Create Event")}
             </Button>
           </div>
         </form>
