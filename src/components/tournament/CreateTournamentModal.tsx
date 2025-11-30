@@ -109,7 +109,7 @@ export const CreateTournamentModal = ({
       <DialogHeader>
         <DialogTitle>Create New Tournament</DialogTitle>
         <DialogDescription>
-          Create a new {gameType === 'jeopardy_duel' ? 'Jeopardy Duel' : gameType.replace(/_/g, ' ')} tournament for your classroom
+          Create a new {gameType === 'jeopardy_duel' ? 'TriviaTastic' : gameType.replace(/_/g, ' ')} tournament for your classroom
         </DialogDescription>
       </DialogHeader>
 

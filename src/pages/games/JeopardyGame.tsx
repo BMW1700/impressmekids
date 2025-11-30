@@ -227,7 +227,7 @@ const JeopardyGame = () => {
                   <Trophy className="h-12 w-12 text-white" />
                 </div>
                 <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                  Jeopardy Duel
+                  TriviaTastic
                 </h1>
                 <p className="text-xl text-muted-foreground mb-8">
                   Challenge your classmates in epic trivia showdowns!
