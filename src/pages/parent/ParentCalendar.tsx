@@ -158,7 +158,7 @@ export default function ParentCalendar() {
       return getStudentColor(studentIndex);
     }
     // Default for other event types (assignments, school events, etc.)
-    return getCategoryColor(item.category);
+    return getTypeColor(item.type);
   };
 
   const handleEdit = (item: any) => {
@@ -406,7 +406,6 @@ export default function ParentCalendar() {
             <CardContent className="space-y-2">
               {dayItems.map((item) => {
                 const typeColor = getTypeColor(item.type);
-                const categoryColor = getCategoryColor(item.category);
 
                 return (
                   <div
@@ -421,7 +420,7 @@ export default function ParentCalendar() {
                         setSelectedItem(item);
                       }
                     }}
-                    className={`p-3 rounded-lg cursor-pointer hover:shadow-md transition-shadow border ${categoryColor.border} focus:ring-2 focus:ring-primary focus:ring-offset-2`}
+                    className={`p-3 rounded-lg cursor-pointer hover:shadow-md transition-shadow border ${typeColor.border} focus:ring-2 focus:ring-primary focus:ring-offset-2`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
