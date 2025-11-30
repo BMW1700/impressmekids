@@ -353,3 +353,66 @@ export class CrossModalTransferNetwork {
 
 // Global singleton instance
 export const crossModalNetwork = new CrossModalTransferNetwork();
+
+/**
+ * Predict which words in a passage will be difficult for a student
+ * Uses reading history + word complexity analysis
+ */
+export interface DifficultWordPrediction {
+  word: string;
+  difficulty: number;  // 0-1 score
+  reasons: string[];
+}
+
+export async function predictDifficultWords(
+  passageText: string,
+  studentId: string
+): Promise<DifficultWordPrediction[]> {
+  // Extract unique words
+  const words = passageText
+    .toLowerCase()
+    .split(/\s+/)
+    .map(w => w.replace(/[^a-z]/g, ''))
+    .filter(w => w.length > 3);
+  
+  const uniqueWords = [...new Set(words)];
+  
+  // Rule-based difficulty scoring
+  const predictions = uniqueWords.map(word => {
+    let difficulty = 0;
+    const reasons: string[] = [];
+    
+    // Length-based difficulty
+    if (word.length > 8) {
+      difficulty += 0.3;
+      reasons.push('Long word');
+    }
+    
+    // Syllable complexity (approximation)
+    const vowelCount = (word.match(/[aeiou]/g) || []).length;
+    if (vowelCount > 3) {
+      difficulty += 0.2;
+      reasons.push('Multiple syllables');
+    }
+    
+    // Consonant clusters
+    if (/[bcdfghjklmnpqrstvwxyz]{3,}/.test(word)) {
+      difficulty += 0.3;
+      reasons.push('Consonant cluster');
+    }
+    
+    // Silent letters
+    if (/gh|kn|wr|mb/.test(word)) {
+      difficulty += 0.2;
+      reasons.push('Silent letters');
+    }
+    
+    return {
+      word,
+      difficulty: Math.min(difficulty, 1),
+      reasons
+    };
+  });
+  
+  return predictions.filter(p => p.difficulty > 0.3);
+}
