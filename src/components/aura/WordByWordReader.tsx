@@ -15,6 +15,7 @@ import { AchievementUnlockedModal } from './AchievementUnlockedModal';
 import { CelebrationEffect } from './CelebrationEffect';
 import { XPPopup } from './XPPopup';
 import { playCorrectPronunciation, SoundEffects } from '@/lib/pronunciationPlayer';
+import { AuraCharacter, useAuraCharacterState } from './AuraCharacter';
 
 // Browser compatibility check
 const checkBrowserSupport = () => {
@@ -76,6 +77,7 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
   const audioChunksRef = useRef<Blob[]>([]);
   const startTimeRef = useRef<number>(0);
   const soundEffectsRef = useRef<SoundEffects>(new SoundEffects());
+  const auraCharacter = useAuraCharacterState();
   const words = passageText.split(/\s+/).filter(w => w.length > 0);
   const { toast } = useToast();
 
@@ -89,6 +91,9 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       });
       return;
     }
+
+    // AURA starts listening
+    auraCharacter.setThinking();
 
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
 
@@ -157,6 +162,8 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
               if (reading.correct) {
                 // Correct word!
                 soundEffectsRef.current.correctWord();
+                auraCharacter.reactToCorrect();
+                
                 setCorrectStreak(prev => {
                   const newStreak = prev + 1;
                   
@@ -165,18 +172,21 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
                     setCelebrationMessage('On Fire! 🔥');
                     setCelebrationTrigger(Date.now());
                     soundEffectsRef.current.streakAchieved();
+                    auraCharacter.reactToStreak(5);
                     setXpAmount(5);
                     setXpPopupTrigger(Date.now());
                   } else if (newStreak === 10) {
                     setCelebrationMessage('Unstoppable! ⚡');
                     setCelebrationTrigger(Date.now());
                     soundEffectsRef.current.celebrationSound();
+                    auraCharacter.reactToStreak(10);
                     setXpAmount(10);
                     setXpPopupTrigger(Date.now());
                   } else if (newStreak % 15 === 0) {
                     setCelebrationMessage('Reading Master! 🌟');
                     setCelebrationTrigger(Date.now());
                     soundEffectsRef.current.celebrationSound();
+                    auraCharacter.reactToStreak(newStreak);
                     setXpAmount(15);
                     setXpPopupTrigger(Date.now());
                   } else {
@@ -190,6 +200,7 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
               } else {
                 // Incorrect word - instant feedback!
                 soundEffectsRef.current.incorrectWord();
+                auraCharacter.reactToIncorrect();
                 setCorrectStreak(0); // Reset streak
                 
                 // Play correct pronunciation
@@ -472,6 +483,17 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
             />
           )}
         </div>
+
+        {/* AURA Character */}
+        {isRecording && (
+          <div className="flex justify-center py-2">
+            <AuraCharacter 
+              state={auraCharacter.state} 
+              message={auraCharacter.message}
+              enableVoice={true}
+            />
+          </div>
+        )}
 
         <div className="prose max-w-none bg-gradient-to-br from-muted/50 to-muted p-6 rounded-xl shadow-inner text-base leading-loose border border-border/50">
           {renderPassage()}
