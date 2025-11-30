@@ -61,8 +61,7 @@ export const useParentCalendarData = ({
           classrooms (
             id,
             name,
-            subject,
-            schedule
+            subject
           )
         `)
         .in("student_id", studentIds);
