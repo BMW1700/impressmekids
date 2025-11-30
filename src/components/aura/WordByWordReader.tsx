@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Mic, StopCircle, Loader2, AlertCircle } from 'lucide-react';
+import { Mic, StopCircle, Loader2, AlertCircle, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { getIPAPronunciation } from '@/lib/cmuDictWrapper';
@@ -12,6 +12,9 @@ import { analyzeMispronunciationPatterns } from '@/lib/mispronunciationAnalysis'
 import { detectPhonemes } from '@/lib/phonemeDetection';
 import { checkAndAwardAchievements, generateDailyMissions, updateMissionProgress } from '@/lib/achievementLogic';
 import { AchievementUnlockedModal } from './AchievementUnlockedModal';
+import { CelebrationEffect } from './CelebrationEffect';
+import { XPPopup } from './XPPopup';
+import { playCorrectPronunciation, SoundEffects } from '@/lib/pronunciationPlayer';
 
 // Browser compatibility check
 const checkBrowserSupport = () => {
@@ -61,10 +64,18 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
   const [newAchievements, setNewAchievements] = useState<string[]>([]);
   const [showAchievementModal, setShowAchievementModal] = useState(false);
   
+  // Phase 1: Real-time feedback states
+  const [correctStreak, setCorrectStreak] = useState(0);
+  const [celebrationTrigger, setCelebrationTrigger] = useState(0);
+  const [xpPopupTrigger, setXpPopupTrigger] = useState(0);
+  const [xpAmount, setXpAmount] = useState(0);
+  const [celebrationMessage, setCelebrationMessage] = useState('Amazing!');
+  
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const startTimeRef = useRef<number>(0);
+  const soundEffectsRef = useRef<SoundEffects>(new SoundEffects());
   const words = passageText.split(/\s+/).filter(w => w.length > 0);
   const { toast } = useToast();
 
@@ -123,10 +134,11 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
 
     recognition.onresult = (event: any) => {
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          const transcript = event.results[i][0].transcript.trim().toLowerCase();
-          const timestamp = Date.now() - startTimeRef.current;
+        // PHASE 1: Real-time feedback on interim results
+        const transcript = event.results[i][0].transcript.trim().toLowerCase();
+        const timestamp = Date.now() - startTimeRef.current;
 
+        if (event.results[i].isFinal) {
           const spokenWords = transcript.split(/\s+/);
           spokenWords.forEach((spokenWord) => {
             wordTimestamps.push({ word: spokenWord, time: timestamp });
@@ -137,6 +149,57 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
             words,
             currentWordIndex
           );
+
+          // Process each matched word for instant feedback
+          matchedReadings.forEach((reading, idx) => {
+            const wordIndex = currentWordIndex + idx;
+            if (wordIndex < words.length) {
+              if (reading.correct) {
+                // Correct word!
+                soundEffectsRef.current.correctWord();
+                setCorrectStreak(prev => {
+                  const newStreak = prev + 1;
+                  
+                  // Trigger celebrations at milestones
+                  if (newStreak === 5) {
+                    setCelebrationMessage('On Fire! 🔥');
+                    setCelebrationTrigger(Date.now());
+                    soundEffectsRef.current.streakAchieved();
+                    setXpAmount(5);
+                    setXpPopupTrigger(Date.now());
+                  } else if (newStreak === 10) {
+                    setCelebrationMessage('Unstoppable! ⚡');
+                    setCelebrationTrigger(Date.now());
+                    soundEffectsRef.current.celebrationSound();
+                    setXpAmount(10);
+                    setXpPopupTrigger(Date.now());
+                  } else if (newStreak % 15 === 0) {
+                    setCelebrationMessage('Reading Master! 🌟');
+                    setCelebrationTrigger(Date.now());
+                    soundEffectsRef.current.celebrationSound();
+                    setXpAmount(15);
+                    setXpPopupTrigger(Date.now());
+                  } else {
+                    // Small XP for each correct word
+                    setXpAmount(1);
+                    setXpPopupTrigger(Date.now());
+                  }
+                  
+                  return newStreak;
+                });
+              } else {
+                // Incorrect word - instant feedback!
+                soundEffectsRef.current.incorrectWord();
+                setCorrectStreak(0); // Reset streak
+                
+                // Play correct pronunciation
+                const expectedWord = words[wordIndex];
+                setTimeout(() => {
+                  playCorrectPronunciation(expectedWord);
+                }, 300);
+              }
+            }
+          });
 
           setWordReadings(prev => [...prev, ...matchedReadings]);
           setCurrentWordIndex(prev => Math.min(prev + matchedReadings.length, words.length));
@@ -330,17 +393,22 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
 
   const renderPassage = () => {
     return words.map((word, idx) => {
-      let className = 'px-1 py-0.5 rounded transition-colors inline-block ';
+      let className = 'px-2 py-1 rounded-lg transition-all duration-200 inline-block text-lg ';
       
       if (idx < currentWordIndex) {
         const wordReading = wordReadings.find(wr => wr.index === idx);
-        className += wordReading?.correct
-          ? 'bg-green-200 dark:bg-green-900/50'
-          : 'bg-red-200 dark:bg-red-900/50';
+        if (wordReading?.correct) {
+          // Correct word - green with glow
+          className += 'bg-gradient-to-br from-green-400 to-green-600 text-white shadow-lg shadow-green-500/50 scale-105';
+        } else {
+          // Incorrect word - red with glow
+          className += 'bg-gradient-to-br from-red-400 to-red-600 text-white shadow-lg shadow-red-500/50 scale-105';
+        }
       } else if (idx === currentWordIndex && isRecording) {
-        className += 'bg-yellow-200 dark:bg-yellow-900/50 font-bold ring-2 ring-primary animate-pulse';
+        // Current word - pulsing highlight
+        className += 'bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-400 text-white font-bold ring-4 ring-primary ring-offset-2 animate-pulse scale-110 shadow-2xl shadow-yellow-500/50';
       } else {
-        className += 'text-muted-foreground';
+        className += 'text-muted-foreground hover:text-foreground';
       }
 
       return (
@@ -354,32 +422,62 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
   const progress = words.length > 0 ? (currentWordIndex / words.length) * 100 : 0;
 
   return (
-    <Card className="p-6 space-y-4">
-      {!browserSupport.isSupported && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Your browser doesn't support word-by-word reading practice. 
-            Missing: {browserSupport.missing.join(', ')}. 
-            Please use Chrome, Edge, or another modern browser.
-          </AlertDescription>
-        </Alert>
-      )}
+    <>
+      {/* Phase 1: Celebration effects */}
+      <CelebrationEffect trigger={celebrationTrigger} message={celebrationMessage} />
+      <XPPopup xp={xpAmount} trigger={xpPopupTrigger} />
+      
+      <Card className="p-6 space-y-4 relative overflow-hidden">
+        {/* Animated background on streak */}
+        {correctStreak >= 5 && isRecording && (
+          <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 animate-pulse pointer-events-none" />
+        )}
+        
+        {!browserSupport.isSupported && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Your browser doesn't support word-by-word reading practice. 
+              Missing: {browserSupport.missing.join(', ')}. 
+              Please use Chrome, Edge, or another modern browser.
+            </AlertDescription>
+          </Alert>
+        )}
 
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Word-by-Word Reading Practice</h3>
-        <Badge variant="secondary">
-          {currentWordIndex} / {words.length} words
-        </Badge>
-      </div>
+        <div className="flex items-center justify-between relative z-10">
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-semibold">Word-by-Word Reading Practice</h3>
+            {correctStreak >= 5 && isRecording && (
+              <Badge variant="default" className="animate-bounce bg-gradient-to-r from-amber-500 to-orange-500">
+                <Sparkles className="h-3 w-3 mr-1" />
+                {correctStreak} Streak!
+              </Badge>
+            )}
+          </div>
+          <Badge variant="secondary" className="text-base px-4 py-1">
+            {currentWordIndex} / {words.length} words
+          </Badge>
+        </div>
 
-      <Progress value={progress} className="h-2" />
+        {/* Real-time animated progress bar */}
+        <div className="relative">
+          <Progress 
+            value={progress} 
+            className="h-3 transition-all duration-300"
+          />
+          {progress > 0 && (
+            <div 
+              className="absolute top-0 h-3 bg-gradient-to-r from-green-400 to-blue-500 rounded-full transition-all duration-300 shadow-lg"
+              style={{ width: `${progress}%` }}
+            />
+          )}
+        </div>
 
-      <div className="prose prose-sm max-w-none bg-muted p-4 rounded-lg text-base leading-relaxed">
-        {renderPassage()}
-      </div>
+        <div className="prose max-w-none bg-gradient-to-br from-muted/50 to-muted p-6 rounded-xl shadow-inner text-base leading-loose border border-border/50">
+          {renderPassage()}
+        </div>
 
-      <div className="flex gap-2">
+        <div className="flex gap-2 relative z-10">
         {!isRecording && !isProcessing && (
           <Button 
             onClick={startReading} 
@@ -406,18 +504,29 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
         )}
       </div>
 
-      {isRecording && (
-        <p className="text-sm text-center text-muted-foreground animate-pulse">
-          🎤 Reading... Follow the highlighted word
-        </p>
-      )}
+        {isRecording && (
+          <div className="flex items-center justify-center gap-4 p-4 bg-gradient-to-r from-primary/10 to-secondary/10 rounded-lg animate-pulse relative z-10">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-red-500 rounded-full animate-ping" />
+              <p className="text-base font-medium">
+                🎤 Reading... Follow the glowing word
+              </p>
+            </div>
+            {correctStreak > 0 && (
+              <Badge variant="outline" className="text-sm">
+                {correctStreak} correct in a row! 🔥
+              </Badge>
+            )}
+          </div>
+        )}
 
-      <AchievementUnlockedModal
-        isOpen={showAchievementModal}
-        onClose={() => setShowAchievementModal(false)}
-        achievements={newAchievements}
-      />
-    </Card>
+        <AchievementUnlockedModal
+          isOpen={showAchievementModal}
+          onClose={() => setShowAchievementModal(false)}
+          achievements={newAchievements}
+        />
+      </Card>
+    </>
   );
 };
 
