@@ -22,7 +22,7 @@ const Games = () => {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             <GameTile
               title="TriviaTastic"
-              description="Challenge your classmates in a fast-paced trivia battle! Answer questions across multiple subjects."
+              description="Challenge your classmates in a fast-paced multiplayer trivia battle! Answer questions across multiple subjects."
               gradeRange="Grades K-12"
               path="/games/jeopardy-1v1"
               icon={<Zap className="h-6 w-6 text-white" />}
