@@ -10,34 +10,33 @@ import { useReadingGamification } from "@/hooks/useReadingGamification";
 import { AchievementBadge } from "@/components/aura/AchievementBadge";
 import { StreakCounter } from "@/components/aura/StreakCounter";
 import { MissionCard } from "@/components/aura/MissionCard";
-
 interface HomeSectionProps {
   userProfile: any;
   studentProfile: any;
   assignmentStats: any;
 }
-
 const getGreeting = () => {
   const hour = new Date().getHours();
   if (hour < 12) return "Good morning";
   if (hour < 18) return "Good afternoon";
   return "Good evening";
 };
-
 export const HomeSection = ({
   userProfile,
   studentProfile,
-  assignmentStats,
+  assignmentStats
 }: HomeSectionProps) => {
   const firstName = userProfile?.full_name?.split(" ")[0] || "Student";
   const totalAssignments = assignmentStats?.total_assignments || 0;
   const completedAssignments = assignmentStats?.completed_assignments || 0;
   const gamesPlayed = studentProfile?.stats?.games_played || 0;
   const gamesWon = studentProfile?.stats?.games_won || 0;
-  const { achievements, streak, missions } = useReadingGamification(studentProfile?.id);
-  
-  return (
-    <div className="space-y-8">
+  const {
+    achievements,
+    streak,
+    missions
+  } = useReadingGamification(studentProfile?.id);
+  return <div className="space-y-8">
       {/* Hero Section - Top 25% */}
       <div className="relative rounded-2xl bg-gradient-to-br from-primary/10 via-background to-secondary/10 p-6 border border-primary/20 overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-primary/20 to-transparent rounded-full blur-3xl" />
@@ -45,11 +44,7 @@ export const HomeSection = ({
         
         <div className="relative z-10 space-y-6">
           {/* Compact Profile Header */}
-          <CompactProfileHeader
-            fullName={userProfile?.full_name}
-            grade={studentProfile?.grade}
-            avatarUrl={studentProfile?.avatar_url}
-          />
+          <CompactProfileHeader fullName={userProfile?.full_name} grade={studentProfile?.grade} avatarUrl={studentProfile?.avatar_url} />
 
           {/* Quick Stats Bar */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -149,66 +144,43 @@ export const HomeSection = ({
       </div>
 
       {/* AI-Powered Smart Recommendation */}
-      <SmartNextAction 
-        assignmentStats={assignmentStats}
-        studentStats={studentProfile?.stats}
-      />
+      <SmartNextAction assignmentStats={assignmentStats} studentStats={studentProfile?.stats} />
 
       {/* Dashboard Metrics - Middle 40% */}
       <div>
         <h2 className="text-2xl font-bold mb-6">Your Performance</h2>
-        <DashboardMetrics
-          assignmentStats={assignmentStats}
-          studentStats={studentProfile?.stats}
-        />
+        <DashboardMetrics assignmentStats={assignmentStats} studentStats={studentProfile?.stats} />
       </div>
 
       {/* Reading Gamification Section */}
-      {studentProfile?.id && (
-        <div className="grid gap-6 md:grid-cols-2">
+      {studentProfile?.id && <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Reading Streak 🔥</CardTitle>
               </CardHeader>
               <CardContent>
-                <StreakCounter 
-                  currentStreak={streak.current_streak}
-                  longestStreak={streak.longest_streak}
-                />
+                <StreakCounter currentStreak={streak.current_streak} longestStreak={streak.longest_streak} />
               </CardContent>
             </Card>
 
-            {achievements.length > 0 && (
-              <Card>
+            {achievements.length > 0 && <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Achievements</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
-                    {achievements.slice(0, 6).map((achievement) => (
-                      <AchievementBadge 
-                        key={achievement.id} 
-                        achievement={achievement}
-                        size="md"
-                      />
-                    ))}
+                    {achievements.slice(0, 6).map(achievement => <AchievementBadge key={achievement.id} achievement={achievement} size="md" />)}
                   </div>
                 </CardContent>
-              </Card>
-            )}
+              </Card>}
           </div>
 
-          {missions.length > 0 && (
-            <div className="space-y-4">
+          {missions.length > 0 && <div className="space-y-4">
               <h3 className="font-semibold">Active Missions</h3>
-              {missions.slice(0, 2).map((mission) => (
-                <MissionCard key={mission.id} mission={mission} />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+              {missions.slice(0, 2).map(mission => <MissionCard key={mission.id} mission={mission} />)}
+            </div>}
+        </div>}
 
       {/* Activity Feed - Middle 30% */}
       {studentProfile?.id && <ActivityFeed studentId={studentProfile.id} />}
@@ -217,10 +189,7 @@ export const HomeSection = ({
       <div>
         <h2 className="text-2xl font-bold mb-6">Quick Actions</h2>
         <div className="grid md:grid-cols-2 gap-6">
-          <Link
-            to="/games"
-            className="group relative block p-8 rounded-2xl bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-500 hover:shadow-2xl hover:shadow-blue-500/50 transition-all duration-300 hover:scale-105 overflow-hidden"
-          >
+          <Link to="/games" className="group relative block p-8 rounded-2xl bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-500 hover:shadow-2xl hover:shadow-blue-500/50 transition-all duration-300 hover:scale-105 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
             <div className="relative z-10">
               <div className="flex items-center gap-4 mb-4">
@@ -235,10 +204,7 @@ export const HomeSection = ({
             </div>
           </Link>
 
-          <Link
-            to="/student/aura-practice"
-            className="group relative block p-8 rounded-2xl bg-gradient-to-br from-purple-600 via-pink-500 to-rose-500 hover:shadow-2xl hover:shadow-purple-500/50 transition-all duration-300 hover:scale-105 overflow-hidden"
-          >
+          <Link to="/student/aura-practice" className="group relative block p-8 rounded-2xl bg-gradient-to-br from-purple-600 via-pink-500 to-rose-500 hover:shadow-2xl hover:shadow-purple-500/50 transition-all duration-300 hover:scale-105 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
             <div className="relative z-10">
               <div className="flex items-center gap-4 mb-4">
@@ -254,6 +220,5 @@ export const HomeSection = ({
           </Link>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
