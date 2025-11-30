@@ -11,17 +11,24 @@ import AuraProgressChart from "@/components/aura/AuraProgressChart";
 import SpeakerDiarizationView from "@/components/aura/SpeakerDiarizationView";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mic, TrendingUp, BookOpen } from "lucide-react";
+import { Mic, TrendingUp, BookOpen, Library, Sparkles } from "lucide-react";
 import GeneratedExercises from "@/components/aura/GeneratedExercises";
 import PhonemeMasteryPathway from "@/components/aura/PhonemeMasteryPathway";
 import DifficultyProgressCard from "@/components/aura/DifficultyProgressCard";
 import { PhonemePracticeExercises } from "@/components/aura/PhonemePracticeExercises";
+import { StoryLibrary } from "@/components/aura/StoryLibrary";
+import { GuidedReadingFlow } from "@/components/aura/GuidedReadingFlow";
+import { ReadingBookshelf } from "@/components/aura/ReadingBookshelf";
+import { SmartNotifications } from "@/components/aura/SmartNotifications";
+import type { CuratedStory as Story } from "@/data/curatedStories";
 
 const AuraPractice = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [latestAnalysis, setLatestAnalysis] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [selectedStory, setSelectedStory] = useState<Story | null>(null);
+  const [isReadingStory, setIsReadingStory] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -132,24 +139,69 @@ const AuraPractice = () => {
     }
   };
 
+  const handleStorySelect = (story: Story) => {
+    setSelectedStory(story);
+    setIsReadingStory(true);
+  };
+
+  const handleReadingComplete = () => {
+    setIsReadingStory(false);
+    setSelectedStory(null);
+    refetch(); // Refresh progress data
+  };
+
+  const handleReadingBack = () => {
+    setIsReadingStory(false);
+    setSelectedStory(null);
+  };
+
+  if (isReadingStory && selectedStory && user?.id) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Header />
+        <main className="flex-1 container mx-auto px-4 py-8">
+          <GuidedReadingFlow
+            story={selectedStory}
+            studentId={user.id}
+            onBack={handleReadingBack}
+            onComplete={handleReadingComplete}
+          />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
       
       <main className="flex-1 container mx-auto px-4 py-8 animate-fade-in">
         <div className="max-w-6xl mx-auto space-y-6">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="p-3 rounded-full bg-primary/10">
-              <Mic className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">AURA Practice</h1>
-              <p className="text-muted-foreground">Improve your speaking skills with AI-powered feedback</p>
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-full bg-gradient-to-br from-purple-500 to-blue-500">
+                <Sparkles className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold">AURA Reading</h1>
+                <p className="text-muted-foreground">AI-powered reading comprehension practice</p>
+              </div>
             </div>
           </div>
 
-          <Tabs defaultValue="practice" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+          <SmartNotifications onNavigate={(path) => navigate(path)} />
+
+          <Tabs defaultValue="stories" className="w-full">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="stories" className="hover:scale-105 transition-transform">
+                <Library className="h-4 w-4 mr-2" />
+                Stories
+              </TabsTrigger>
+              <TabsTrigger value="bookshelf" className="hover:scale-105 transition-transform">
+                <BookOpen className="h-4 w-4 mr-2" />
+                Bookshelf
+              </TabsTrigger>
               <TabsTrigger value="practice" className="hover:scale-105 transition-transform">
                 <Mic className="h-4 w-4 mr-2" />
                 Practice
@@ -159,10 +211,18 @@ const AuraPractice = () => {
                 Progress
               </TabsTrigger>
               <TabsTrigger value="exercises" className="hover:scale-105 transition-transform">
-                <BookOpen className="h-4 w-4 mr-2" />
+                <Sparkles className="h-4 w-4 mr-2" />
                 Exercises
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="stories" className="mt-6">
+              <StoryLibrary onSelectStory={handleStorySelect} />
+            </TabsContent>
+
+            <TabsContent value="bookshelf" className="mt-6">
+              <ReadingBookshelf />
+            </TabsContent>
 
             <TabsContent value="practice" className="space-y-6 mt-6">
               <Card className="hover:scale-[1.01] transition-transform duration-200">
