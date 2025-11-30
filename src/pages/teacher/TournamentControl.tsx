@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Settings, Play, SkipForward, StopCircle, Edit, Users } from "lucide-react";
 import { SelectQuestionsModal } from "@/components/tournament/SelectQuestionsModal";
 import { TournamentCelebration } from "@/components/tournament/TournamentCelebration";
+import { TournamentBracket } from "@/components/tournament/TournamentBracket";
 
 import {
   Breadcrumb,
@@ -236,26 +237,41 @@ const TournamentControl = () => {
   };
 
 
-  // Lightweight polling ONLY for player count when waiting
+  // Lightweight polling for player count (waiting) and match scores (in_progress)
   useEffect(() => {
-    // Only poll when tournament is waiting (not started yet)
-    if (!tournamentId || tournament?.status !== 'waiting') return;
+    if (!tournamentId) return;
     
-    const loadPlayersOnly = async () => {
+    const loadUpdates = async () => {
       try {
-        const { data: playersData } = await supabase
-          .rpc('get_tournament_players', { _tournament_id: tournamentId });
+        // Always load players when waiting
+        if (tournament?.status === 'waiting') {
+          const { data: playersData } = await supabase
+            .rpc('get_tournament_players', { _tournament_id: tournamentId });
+          
+          if (playersData) {
+            setPlayers(playersData);
+          }
+        }
         
-        if (playersData) {
-          setPlayers(playersData);
+        // Load match scores when tournament is active
+        if (tournament?.status === 'in_progress') {
+          const { data: matchesData } = await supabase
+            .from('matches')
+            .select('*')
+            .eq('tournament_id', tournamentId)
+            .order('round', { ascending: true });
+          
+          if (matchesData) {
+            setLocalMatches(matchesData);
+          }
         }
       } catch (error) {
-        console.error('Failed to load players:', error);
+        console.error('Failed to load updates:', error);
       }
     };
     
-    // Much slower polling - only for player count
-    const pollInterval = setInterval(loadPlayersOnly, 8000);
+    // Poll every 3 seconds for live updates
+    const pollInterval = setInterval(loadUpdates, 3000);
     
     return () => clearInterval(pollInterval);
   }, [tournamentId, tournament?.status]);
@@ -576,47 +592,10 @@ const TournamentControl = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Matches ({matches.length})</CardTitle>
+              <CardTitle>Tournament Bracket</CardTitle>
             </CardHeader>
             <CardContent>
-              {matches.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No matches created yet. Click "Seed Players & Create Matches" to begin.
-                </p>
-              ) : (
-                <div className="space-y-4">
-                  {matches.map((match) => (
-                    <Card key={match.id} className="shadow-sm">
-                      <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Badge variant="outline">Round {match.round}</Badge>
-                              <Badge variant={
-                                match.status === 'completed' ? 'secondary' :
-                                match.status === 'in_progress' ? 'default' : 'outline'
-                              }>
-                                {match.status}
-                              </Badge>
-                            </div>
-                            <div className="flex items-center gap-4">
-                              <span className="font-medium">
-                                {players.find(p => p.id === match.player_a)?.display_name || 'Player A'}
-                              </span>
-                              <Badge variant="secondary">{match.score_a}</Badge>
-                              <span className="text-muted-foreground">vs</span>
-                              <Badge variant="secondary">{match.score_b}</Badge>
-                              <span className="font-medium">
-                                {players.find(p => p.id === match.player_b)?.display_name || 'Player B'}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
+              <TournamentBracket matches={matches} players={players} />
             </CardContent>
           </Card>
         </div>

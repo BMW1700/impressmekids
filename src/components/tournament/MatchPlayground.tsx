@@ -26,6 +26,7 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
   const [answer, setAnswer] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [opponent, setOpponent] = useState<any>(null);
+  const [localScores, setLocalScores] = useState({ myScore: 0, opponentScore: 0 });
   
   const hasTimerExpiredRef = useRef(false);
   const currentQuestionIdRef = useRef<string | null>(null);
@@ -75,6 +76,21 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
 
       if (opponentData) {
         setOpponent(opponentData);
+      }
+
+      // Load current match scores
+      const { data: matchData } = await supabase
+        .from('matches')
+        .select('score_a, score_b')
+        .eq('id', match.id)
+        .single();
+      
+      if (matchData) {
+        const isPlayerA = match.player_a === tournamentPlayerId;
+        setLocalScores({
+          myScore: isPlayerA ? matchData.score_a : matchData.score_b,
+          opponentScore: isPlayerA ? matchData.score_b : matchData.score_a
+        });
       }
 
       // Load match_state
@@ -222,7 +238,16 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
 
       if (error) throw error;
 
-      if (!data.success) {
+      if (data.success) {
+        // IMMEDIATELY update local state with the deadline from response (shows full 10 seconds)
+        setCurrentEvent((prev: any) => ({
+          ...prev,
+          buzz_owner_tournament_player_id: tournamentPlayerId,
+          buzz_at: data.buzz_at,
+          answer_deadline: data.answer_deadline
+        }));
+        setMatchState((prev: any) => ({ ...prev, accepting_buzz: false }));
+      } else {
         toast({
           title: "Too late!",
           description: data.error || "Someone else buzzed in first",
@@ -256,11 +281,17 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
       if (error) throw error;
 
       if (data.success) {
+        // IMMEDIATELY update local scores
+        setLocalScores(prev => ({
+          ...prev,
+          myScore: prev.myScore + data.points_awarded
+        }));
+        
         toast({
           title: data.correct ? "Correct! 🎉" : "Incorrect",
           description: data.correct 
             ? `+${data.points_awarded} points!` 
-            : "Your opponent gets a chance to answer",
+            : `${data.points_awarded} points - Your opponent gets a chance to answer`,
           variant: data.correct ? "default" : "destructive",
         });
         setAnswer("");
@@ -288,8 +319,6 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
 
   const isMyTurn = currentEvent?.buzz_owner_tournament_player_id === tournamentPlayerId;
   const canBuzz = matchState.accepting_buzz && !currentEvent?.buzz_owner_tournament_player_id;
-  const myScore = match.player_a === tournamentPlayerId ? match.score_a : match.score_b;
-  const opponentScore = match.player_a === tournamentPlayerId ? match.score_b : match.score_a;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -304,7 +333,7 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
                 <div className="grid grid-cols-3 gap-4 items-center">
                   <div className="text-center">
                     <div className="text-sm text-muted-foreground mb-1">You</div>
-                    <div className="text-3xl font-bold text-primary">{myScore}</div>
+                    <div className="text-3xl font-bold text-primary">{localScores.myScore}</div>
                   </div>
                   <div className="text-center">
                     <MatchTimer 
@@ -313,7 +342,7 @@ export const MatchPlayground = ({ match, tournamentPlayerId, onMatchEnd }: Match
                   </div>
                   <div className="text-center">
                     <div className="text-sm text-muted-foreground mb-1">{opponent?.profile?.full_name || 'Opponent'}</div>
-                    <div className="text-3xl font-bold text-secondary">{opponentScore}</div>
+                    <div className="text-3xl font-bold text-secondary">{localScores.opponentScore}</div>
                   </div>
                 </div>
               </CardContent>
