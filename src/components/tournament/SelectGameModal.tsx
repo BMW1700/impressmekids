@@ -13,7 +13,7 @@ const games = [
   {
     id: 'jeopardy_duel',
     title: 'TriviaTastic',
-    description: 'Challenge students in a fast-paced trivia battle across multiple subjects',
+    description: 'Challenge students in a fast-paced multiplayer trivia battle across multiple subjects',
     gradeRange: 'Grades K-12',
     icon: Zap,
     isAvailable: true,
