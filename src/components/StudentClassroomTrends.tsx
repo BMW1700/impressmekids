@@ -5,29 +5,29 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { TrendingUp, TrendingDown, Activity, Flame, Calendar } from "lucide-react";
 import { format, parseISO, subDays, eachDayOfInterval, startOfDay, isSameDay } from "date-fns";
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
 interface StudentClassroomTrendsProps {
   classroomId: string;
   studentId: string;
 }
-
-export const StudentClassroomTrends = ({ classroomId, studentId }: StudentClassroomTrendsProps) => {
-  const { data, isLoading } = useStudentClassroomTrends(classroomId, studentId);
-
+export const StudentClassroomTrends = ({
+  classroomId,
+  studentId
+}: StudentClassroomTrendsProps) => {
+  const {
+    data,
+    isLoading
+  } = useStudentClassroomTrends(classroomId, studentId);
   if (isLoading) {
-    return (
-      <div className="space-y-6">
+    return <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i}>
+          {[1, 2, 3, 4].map(i => <Card key={i}>
               <CardHeader className="pb-3">
                 <Skeleton className="h-4 w-24" />
               </CardHeader>
               <CardContent>
                 <Skeleton className="h-8 w-16" />
               </CardContent>
-            </Card>
-          ))}
+            </Card>)}
         </div>
         <Card>
           <CardHeader>
@@ -37,23 +37,21 @@ export const StudentClassroomTrends = ({ classroomId, studentId }: StudentClassr
             <Skeleton className="h-[400px] w-full" />
           </CardContent>
         </Card>
-      </div>
-    );
+      </div>;
   }
-
   if (!data || data.trendData.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
+    return <div className="flex flex-col items-center justify-center py-12 text-center">
         <Activity className="h-16 w-16 text-muted-foreground mb-4" />
         <h3 className="text-lg font-semibold mb-2">No Activity Yet</h3>
         <p className="text-muted-foreground max-w-md">
           Complete assignments or practice with AURA to start tracking your progress in this classroom.
         </p>
-      </div>
-    );
+      </div>;
   }
-
-  const { trendData, summary } = data;
+  const {
+    trendData,
+    summary
+  } = data;
 
   // Format data for the chart
   const chartData = trendData.map(point => ({
@@ -61,31 +59,30 @@ export const StudentClassroomTrends = ({ classroomId, studentId }: StudentClassr
     fullDate: point.date,
     Overall: Math.round(point.overallGrade * 10) / 10,
     AURA: point.auraScore ? Math.round(point.auraScore * 10) / 10 : null,
-    'Class Average': point.classAverage ? Math.round(point.classAverage * 10) / 10 : null,
+    'Class Average': point.classAverage ? Math.round(point.classAverage * 10) / 10 : null
   }));
 
   // Generate calendar heat map data (last 90 days)
   const today = new Date();
   const startDate = subDays(today, 89);
-  const allDays = eachDayOfInterval({ start: startDate, end: today });
-  
+  const allDays = eachDayOfInterval({
+    start: startDate,
+    end: today
+  });
   const activityMap = new Map<string, number>();
   trendData.forEach(point => {
     const dateKey = format(parseISO(point.date), 'yyyy-MM-dd');
     activityMap.set(dateKey, (activityMap.get(dateKey) || 0) + 1);
   });
-
   const heatMapData = allDays.map(day => {
     const dateKey = format(day, 'yyyy-MM-dd');
     return {
       date: day,
       dateKey,
-      count: activityMap.get(dateKey) || 0,
+      count: activityMap.get(dateKey) || 0
     };
   });
-
   const maxActivity = Math.max(...heatMapData.map(d => d.count), 1);
-
   const getActivityColor = (count: number) => {
     if (count === 0) return 'bg-muted/30';
     const intensity = count / maxActivity;
@@ -96,8 +93,16 @@ export const StudentClassroomTrends = ({ classroomId, studentId }: StudentClassr
   };
 
   // Group by weeks for display
-  const weeks: Array<Array<{ date: Date; dateKey: string; count: number }>> = [];
-  let currentWeek: Array<{ date: Date; dateKey: string; count: number }> = [];
+  const weeks: Array<Array<{
+    date: Date;
+    dateKey: string;
+    count: number;
+  }>> = [];
+  let currentWeek: Array<{
+    date: Date;
+    dateKey: string;
+    count: number;
+  }> = [];
   heatMapData.forEach((day, index) => {
     currentWeek.push(day);
     if ((index + 1) % 7 === 0 || index === heatMapData.length - 1) {
@@ -105,9 +110,7 @@ export const StudentClassroomTrends = ({ classroomId, studentId }: StudentClassr
       currentWeek = [];
     }
   });
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
@@ -126,11 +129,7 @@ export const StudentClassroomTrends = ({ classroomId, studentId }: StudentClassr
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              {summary.improvement >= 0 ? (
-                <TrendingUp className="h-4 w-4 text-success" />
-              ) : (
-                <TrendingDown className="h-4 w-4 text-destructive" />
-              )}
+              {summary.improvement >= 0 ? <TrendingUp className="h-4 w-4 text-success" /> : <TrendingDown className="h-4 w-4 text-destructive" />}
               Improvement
             </CardTitle>
           </CardHeader>
@@ -171,7 +170,7 @@ export const StudentClassroomTrends = ({ classroomId, studentId }: StudentClassr
 
       {/* Activity Heat Map */}
       <Card>
-        <CardHeader>
+        <CardHeader className="text-primary">
           <CardTitle>Activity Frequency</CardTitle>
           <CardDescription>Your daily activity in this classroom over the last 90 days</CardDescription>
         </CardHeader>
@@ -179,14 +178,10 @@ export const StudentClassroomTrends = ({ classroomId, studentId }: StudentClassr
           <div className="flex flex-col gap-2">
             <div className="flex gap-1 overflow-x-auto pb-2">
               <TooltipProvider>
-                {weeks.map((week, weekIndex) => (
-                  <div key={weekIndex} className="flex flex-col gap-1">
-                    {week.map((day, dayIndex) => (
-                      <UITooltip key={dayIndex}>
+                {weeks.map((week, weekIndex) => <div key={weekIndex} className="flex flex-col gap-1">
+                    {week.map((day, dayIndex) => <UITooltip key={dayIndex}>
                         <TooltipTrigger asChild>
-                          <div
-                            className={`w-3 h-3 rounded-sm transition-colors ${getActivityColor(day.count)}`}
-                          />
+                          <div className={`w-3 h-3 rounded-sm transition-colors ${getActivityColor(day.count)}`} />
                         </TooltipTrigger>
                         <TooltipContent>
                           <div className="text-xs">
@@ -196,10 +191,8 @@ export const StudentClassroomTrends = ({ classroomId, studentId }: StudentClassr
                             </div>
                           </div>
                         </TooltipContent>
-                      </UITooltip>
-                    ))}
-                  </div>
-                ))}
+                      </UITooltip>)}
+                  </div>)}
               </TooltipProvider>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -225,59 +218,43 @@ export const StudentClassroomTrends = ({ classroomId, studentId }: StudentClassr
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+            <LineChart data={chartData} margin={{
+            top: 5,
+            right: 30,
+            left: 20,
+            bottom: 5
+          }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis 
-                dataKey="date" 
-                className="text-xs"
-                tick={{ fill: 'hsl(var(--muted-foreground))' }}
-              />
-              <YAxis 
-                domain={[0, 100]}
-                className="text-xs"
-                tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                label={{ value: 'Grade (%)', angle: -90, position: 'insideLeft' }}
-              />
-              <Tooltip 
-                contentStyle={{
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '6px',
-                }}
-                labelStyle={{ color: 'hsl(var(--foreground))' }}
-              />
+              <XAxis dataKey="date" className="text-xs" tick={{
+              fill: 'hsl(var(--muted-foreground))'
+            }} />
+              <YAxis domain={[0, 100]} className="text-xs" tick={{
+              fill: 'hsl(var(--muted-foreground))'
+            }} label={{
+              value: 'Grade (%)',
+              angle: -90,
+              position: 'insideLeft'
+            }} />
+              <Tooltip contentStyle={{
+              backgroundColor: 'hsl(var(--card))',
+              border: '1px solid hsl(var(--border))',
+              borderRadius: '6px'
+            }} labelStyle={{
+              color: 'hsl(var(--foreground))'
+            }} />
               <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="Overall" 
-                stroke="hsl(var(--primary))" 
-                strokeWidth={3}
-                dot={false}
-                activeDot={{ r: 6 }}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="AURA" 
-                stroke="hsl(var(--chart-2))" 
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 6 }}
-                connectNulls
-              />
-              <Line 
-                type="monotone" 
-                dataKey="Class Average" 
-                stroke="#94a3b8"
-                strokeWidth={2}
-                strokeDasharray="5 5"
-                dot={false}
-                activeDot={{ r: 6 }}
-                connectNulls
-              />
+              <Line type="monotone" dataKey="Overall" stroke="hsl(var(--primary))" strokeWidth={3} dot={false} activeDot={{
+              r: 6
+            }} />
+              <Line type="monotone" dataKey="AURA" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={false} activeDot={{
+              r: 6
+            }} connectNulls />
+              <Line type="monotone" dataKey="Class Average" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" dot={false} activeDot={{
+              r: 6
+            }} connectNulls />
             </LineChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 };
