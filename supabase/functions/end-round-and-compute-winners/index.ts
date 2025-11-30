@@ -79,7 +79,10 @@ serve(async (req) => {
       
       await supabase
         .from('tournament_players')
-        .update({ status: 'eliminated' })
+        .update({ 
+          status: 'eliminated',
+          eliminated_at: new Date().toISOString()
+        })
         .eq('id', loser_id);
 
       winners.push(winner_id);
@@ -100,7 +103,7 @@ serve(async (req) => {
         .from('tournaments')
         .update({
           status: 'completed',
-          ended_at: new Date().toISOString()
+          completed_at: new Date().toISOString()
         })
         .eq('id', tournament_id);
 
