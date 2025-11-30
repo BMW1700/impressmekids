@@ -308,6 +308,20 @@ export const useCalendarData = ({ startDate, endDate, userId, userRole, childId 
 
       const { data: assignments } = await assignmentsQuery;
 
+      console.log("useCalendarData - Assignment query result:", {
+        role: userRole,
+        startDate: format(startDate, "yyyy-MM-dd"),
+        endDate: format(endDate, "yyyy-MM-dd") + "T23:59:59",
+        assignmentCount: assignments?.length || 0,
+        assignments: assignments?.map(a => ({
+          id: a.id,
+          title: a.title,
+          due_date: a.due_date,
+          is_posted: a.is_posted,
+          status: a.status
+        }))
+      });
+
       // For students/parents, check submission status
       if ((userRole === "student" || (userRole === "parent" && childId)) && assignments) {
         const assignmentIds = assignments.map(a => a.id);
