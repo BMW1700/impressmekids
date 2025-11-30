@@ -76,7 +76,7 @@ export const useCalendarData = ({ startDate, endDate, userId, userRole, childId 
           .select("event_date")
           .eq("blocks_classes", true)
           .gte("event_date", format(startDate, "yyyy-MM-dd"))
-          .lte("event_date", format(endDate, "yyyy-MM-dd"));
+          .lte("event_date", format(endDate, "yyyy-MM-dd") + "T23:59:59");
 
         const blockedDates = new Set(blockingEvents?.map(e => e.event_date) || []);
 
@@ -131,7 +131,7 @@ export const useCalendarData = ({ startDate, endDate, userId, userRole, childId 
           .select("event_date")
           .eq("blocks_classes", true)
           .gte("event_date", format(startDate, "yyyy-MM-dd"))
-          .lte("event_date", format(endDate, "yyyy-MM-dd"));
+          .lte("event_date", format(endDate, "yyyy-MM-dd") + "T23:59:59");
 
         const blockedDates = new Set(blockingEvents?.map(e => e.event_date) || []);
 
@@ -179,7 +179,7 @@ export const useCalendarData = ({ startDate, endDate, userId, userRole, childId 
           classrooms(name, profiles!classrooms_teacher_id_fkey(full_name))
         `)
         .gte("event_date", format(startDate, "yyyy-MM-dd"))
-        .lte("event_date", format(endDate, "yyyy-MM-dd"));
+        .lte("event_date", format(endDate, "yyyy-MM-dd") + "T23:59:59");
 
       // Filter based on role
       if (userRole === "teacher") {
@@ -276,7 +276,7 @@ export const useCalendarData = ({ startDate, endDate, userId, userRole, childId 
         `)
         .not("due_date", "is", null)
         .gte("due_date", format(startDate, "yyyy-MM-dd"))
-        .lte("due_date", format(endDate, "yyyy-MM-dd"));
+        .lte("due_date", format(endDate, "yyyy-MM-dd") + "T23:59:59");
 
       if (userRole === "teacher") {
         assignmentsQuery = assignmentsQuery
@@ -358,7 +358,7 @@ export const useCalendarData = ({ startDate, endDate, userId, userRole, childId 
         .from("school_events")
         .select("*")
         .gte("event_date", format(startDate, "yyyy-MM-dd"))
-        .lte("event_date", format(endDate, "yyyy-MM-dd"));
+        .lte("event_date", format(endDate, "yyyy-MM-dd") + "T23:59:59");
 
       schoolEvents?.forEach((event: any) => {
         items.push({
@@ -381,7 +381,7 @@ export const useCalendarData = ({ startDate, endDate, userId, userRole, childId 
           .select("*")
           .eq("student_id", effectiveUserId)
           .gte("event_date", format(startDate, "yyyy-MM-dd"))
-          .lte("event_date", format(endDate, "yyyy-MM-dd"));
+          .lte("event_date", format(endDate, "yyyy-MM-dd") + "T23:59:59");
 
         parentStudentEvents?.forEach((event: any) => {
           items.push({
