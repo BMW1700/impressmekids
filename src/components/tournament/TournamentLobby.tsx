@@ -364,6 +364,32 @@ export const TournamentLobby = ({ tournament, userPlayer, onMatchStart }: Tourna
               </Badge>
             </div>
 
+            {tournament.status === 'completed' && (
+              <Card className="mb-8 bg-gradient-to-r from-yellow-400/20 to-amber-500/20 border-yellow-500/50 shadow-xl">
+                <CardContent className="py-8 text-center">
+                  <div className="text-6xl mb-4">🏆</div>
+                  <h2 className="text-3xl font-bold text-yellow-600 dark:text-yellow-400 mb-2">
+                    Tournament Champion!
+                  </h2>
+                  <p className="text-2xl font-semibold mb-2">
+                    {(() => {
+                      // Find the winner - the player who is not eliminated
+                      const winner = players.find(p => p.status === 'active');
+                      return winner?.display_name || 'Unknown';
+                    })()}
+                  </p>
+                  <p className="text-muted-foreground mt-2">
+                    Congratulations on winning the tournament!
+                  </p>
+                  <div className="mt-6 flex justify-center gap-2">
+                    <Badge variant="outline" className="text-lg px-4 py-2">
+                      🥇 Champion
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {isTeacher && (
               <Card className="mb-8 shadow-card border-primary/20">
                 <CardHeader>
