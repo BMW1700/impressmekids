@@ -49,10 +49,10 @@ export const useSmartNotifications = () => {
       }
 
       // Streak Notification
-      if (stats.streak_days && stats.streak_days >= 3) {
+      if (stats.current_streak_days && stats.current_streak_days >= 3) {
         notifications.push({
           type: 'streak',
-          title: `🔥 ${stats.streak_days}-Day Streak!`,
+          title: `🔥 ${stats.current_streak_days}-Day Streak!`,
           message: 'Amazing consistency! Keep it up to maintain your streak.',
           action: {
             label: 'Read More',
