@@ -151,11 +151,9 @@ export default function ParentCalendar() {
 
   // Get event color based on type and student
   const getEventColor = (item: any) => {
-    if (item.type === "parent_personal") {
-      return getParentColor();
-    } else if (item.type === "parent_student" && item.studentId) {
-      const studentIndex = children.findIndex(c => c.id === item.studentId);
-      return getStudentColor(studentIndex);
+    // Parent-created events use green to match the "Events" filter button
+    if (item.type === "parent_personal" || item.type === "parent_student") {
+      return getTypeColor("event"); // Green color for events
     }
     // Default for other event types (assignments, school events, etc.)
     return getTypeColor(item.type);
@@ -218,7 +216,7 @@ export default function ParentCalendar() {
   };
 
   const filteredItems = items.filter((item) => {
-    if (!filters.events && item.type === "event") return false;
+    if (!filters.events && (item.type === "event" || item.type === "parent_personal" || item.type === "parent_student")) return false;
     if (!filters.assignments && item.type === "assignment") return false;
     if (!filters.schoolEvents && item.type === "school_event") return false;
     if (searchQuery && !item.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
