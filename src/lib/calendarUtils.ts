@@ -43,10 +43,10 @@ export const getCategoryColor = (category?: string) => {
 
 export const getTypeColor = (type: string) => {
   const colors: Record<string, { bg: string; text: string; icon: string }> = {
-    class: { bg: "bg-primary/10", text: "text-primary", icon: "📚" },
-    event: { bg: "bg-accent/50", text: "text-accent-foreground", icon: "📅" },
-    assignment: { bg: "bg-secondary/50", text: "text-secondary-foreground", icon: "📝" },
-    school_event: { bg: "bg-destructive/10", text: "text-destructive", icon: "🏫" },
+    class: { bg: "bg-blue-500/30", text: "text-blue-700 dark:text-blue-300", icon: "📚" },
+    event: { bg: "bg-green-500/30", text: "text-green-700 dark:text-green-300", icon: "📅" },
+    assignment: { bg: "bg-purple-500/30", text: "text-purple-700 dark:text-purple-300", icon: "📝" },
+    school_event: { bg: "bg-orange-500/30", text: "text-orange-700 dark:text-orange-300", icon: "🏫" },
   };
 
   return colors[type] || colors.event;

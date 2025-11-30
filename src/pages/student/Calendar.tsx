@@ -244,7 +244,7 @@ export default function Calendar() {
                           setSelectedItem(item);
                         }
                       }}
-                      className={`text-xs p-1 rounded truncate ${categoryColor.bg} ${categoryColor.text} hover:opacity-80 focus:ring-2 focus:ring-primary focus:ring-offset-1`}
+                      className={`text-xs p-1 rounded truncate ${typeColor.bg} ${typeColor.text} hover:opacity-80 focus:ring-2 focus:ring-primary focus:ring-offset-1`}
                     >
                       <span className="mr-1">{getCategoryIcon(item.category)}</span>
                       {item.title}
