@@ -1137,7 +1137,7 @@ const ClassroomDetail = () => {
                   <h3 className="text-xl font-bold mb-2">No Tournaments Yet</h3>
                   <p className="text-muted-foreground mb-4">
                     {isTeacher
-                      ? 'Create your first Jeopardy Duel tournament for this classroom'
+                      ? 'Create your first TriviaTastic tournament for this classroom'
                       : 'Your teacher hasn\'t created any tournaments yet'}
                   </p>
                   {isTeacher && (

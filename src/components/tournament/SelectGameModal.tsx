@@ -12,7 +12,7 @@ interface SelectGameModalProps {
 const games = [
   {
     id: 'jeopardy_duel',
-    title: 'Jeopardy Duel',
+    title: 'TriviaTastic',
     description: 'Challenge students in a fast-paced trivia battle across multiple subjects',
     gradeRange: 'Grades K-12',
     icon: Zap,
