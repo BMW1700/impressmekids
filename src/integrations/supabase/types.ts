@@ -2482,6 +2482,51 @@ export type Database = {
           },
         ]
       }
+      reading_library: {
+        Row: {
+          category: string
+          cover_gradient: string | null
+          created_at: string | null
+          description: string | null
+          difficulty_level: number | null
+          grade_level: number
+          id: string
+          passage_text: string
+          reading_time_minutes: number | null
+          target_phonemes: string[] | null
+          title: string
+          word_count: number | null
+        }
+        Insert: {
+          category: string
+          cover_gradient?: string | null
+          created_at?: string | null
+          description?: string | null
+          difficulty_level?: number | null
+          grade_level: number
+          id?: string
+          passage_text: string
+          reading_time_minutes?: number | null
+          target_phonemes?: string[] | null
+          title: string
+          word_count?: number | null
+        }
+        Update: {
+          category?: string
+          cover_gradient?: string | null
+          created_at?: string | null
+          description?: string | null
+          difficulty_level?: number | null
+          grade_level?: number
+          id?: string
+          passage_text?: string
+          reading_time_minutes?: number | null
+          target_phonemes?: string[] | null
+          title?: string
+          word_count?: number | null
+        }
+        Relationships: []
+      }
       reading_missions: {
         Row: {
           completed_at: string | null
@@ -2957,6 +3002,57 @@ export type Database = {
             foreignKeyName: "student_profiles_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_reading_progress: {
+        Row: {
+          best_accuracy: number | null
+          best_wpm: number | null
+          completed: boolean | null
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          story_id: string
+          student_id: string
+          times_read: number | null
+        }
+        Insert: {
+          best_accuracy?: number | null
+          best_wpm?: number | null
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          story_id: string
+          student_id: string
+          times_read?: number | null
+        }
+        Update: {
+          best_accuracy?: number | null
+          best_wpm?: number | null
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          story_id?: string
+          student_id?: string
+          times_read?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_reading_progress_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "reading_library"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_reading_progress_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
