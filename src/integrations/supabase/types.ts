@@ -3816,6 +3816,7 @@ export type Database = {
           avatar_url: string
           created_at: string
           display_name: string
+          eliminated_at: string
           id: string
           profile_id: string
           seed: number
