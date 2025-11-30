@@ -247,6 +247,11 @@ export default function ParentCalendar() {
     window.print();
   };
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
+  };
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -469,7 +474,7 @@ export default function ParentCalendar() {
   if (children.length === 0) {
     return (
       <div className="min-h-screen flex flex-col">
-        <Header />
+        <Header onSignOut={handleSignOut} />
         <main className="flex-1 container mx-auto px-4 py-8">
           <Card className="max-w-md mx-auto">
             <CardHeader>
@@ -495,7 +500,7 @@ export default function ParentCalendar() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
+      <Header onSignOut={handleSignOut} />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
         <div className="space-y-8">
           <div className="text-center">
