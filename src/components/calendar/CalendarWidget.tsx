@@ -30,13 +30,6 @@ export const CalendarWidget = ({ userId, userRole, childId }: CalendarWidgetProp
     childId,
   });
 
-  console.log("CalendarWidget - Date range:", {
-    monthStart: monthStart.toISOString(),
-    monthEnd: monthEnd.toISOString(),
-    itemCount: items.length,
-    items: items.map(i => ({ type: i.type, title: i.title, date: i.date }))
-  });
-
   const days = getCalendarMonthDays(today);
   const upcomingItems = items
     .filter(item => new Date(item.date) >= today && !item.isDraft)

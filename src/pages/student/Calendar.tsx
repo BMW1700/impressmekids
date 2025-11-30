@@ -95,53 +95,14 @@ export default function Calendar() {
     userRole,
   });
 
-  console.log("🔍 Calendar.tsx - Raw items from useCalendarData:", {
-    totalItems: items.length,
-    assignments: items.filter(i => i.type === "assignment").map(i => ({
-      id: i.id,
-      title: i.title,
-      date: i.date,
-      isDraft: i.isDraft,
-      type: i.type
-    }))
-  });
-
-  console.log("🎯 Calendar.tsx - Filter state:", filters);
-
   const filteredItems = items.filter(item => {
-    if (!filters.classes && item.type === "class") {
-      console.log("❌ Filtered out (classes disabled):", item.title);
-      return false;
-    }
-    if (!filters.events && item.type === "event") {
-      console.log("❌ Filtered out (events disabled):", item.title);
-      return false;
-    }
-    if (!filters.assignments && item.type === "assignment") {
-      console.log("❌ Filtered out (assignments disabled):", item.title);
-      return false;
-    }
-    if (!filters.schoolEvents && item.type === "school_event") {
-      console.log("❌ Filtered out (school events disabled):", item.title);
-      return false;
-    }
-    if (searchQuery && !item.title.toLowerCase().includes(searchQuery.toLowerCase())) {
-      console.log("❌ Filtered out (search):", item.title);
-      return false;
-    }
-    if (item.isDraft) {
-      console.log("❌ Filtered out (draft):", item.title, { isDraft: item.isDraft });
-      return false;
-    }
+    if (!filters.classes && item.type === "class") return false;
+    if (!filters.events && item.type === "event") return false;
+    if (!filters.assignments && item.type === "assignment") return false;
+    if (!filters.schoolEvents && item.type === "school_event") return false;
+    if (searchQuery && !item.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (item.isDraft) return false;
     return true;
-  });
-
-  console.log("✅ Calendar.tsx - Filtered items:", {
-    totalFiltered: filteredItems.length,
-    assignments: filteredItems.filter(i => i.type === "assignment").map(i => ({
-      title: i.title,
-      date: i.date
-    }))
   });
 
   const navigateDate = (direction: "prev" | "next") => {
