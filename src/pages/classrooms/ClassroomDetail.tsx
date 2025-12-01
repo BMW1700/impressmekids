@@ -723,7 +723,13 @@ const ClassroomDetail = () => {
                   <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Behavior Tracking</h2>
                   <p className="text-muted-foreground mt-1">Track and reward student behavior</p>
                 </div>
-                <TeacherBehaviorTab classroomId={id!} students={students} />
+                <TeacherBehaviorTab 
+                  classroomId={id!} 
+                  students={students.map(s => ({ 
+                    id: s.student_id, 
+                    full_name: s.profiles?.full_name || 'Unknown'
+                  }))} 
+                />
               </TabsContent>}
 
             {isTeacher && <TabsContent value="ai-insights" className="mt-6">
