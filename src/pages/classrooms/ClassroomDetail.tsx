@@ -520,7 +520,7 @@ const ClassroomDetail = () => {
                     </div>
                   </div>
                 </div>
-                {isTeacher && <div className="flex flex-col items-end gap-1">
+                {isTeacher && <div className="flex flex-col items-center gap-1">
                   <span className="text-sm text-muted-foreground font-medium">Join Code</span>
                   <Badge variant="outline" className="font-mono text-xl px-6 py-3 border-2 border-primary/30 bg-background/80 backdrop-blur-sm">
                     {classroom.join_code}
