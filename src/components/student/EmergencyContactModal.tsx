@@ -47,12 +47,35 @@ export const EmergencyContactModal = ({
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  const formatPhoneNumber = (value: string) => {
+    // Remove all non-numeric characters
+    const cleaned = value.replace(/\D/g, '');
+    
+    // Limit to 10 digits
+    const limited = cleaned.slice(0, 10);
+    
+    // Format as (XXX) XXX-XXXX
+    if (limited.length <= 3) {
+      return limited;
+    } else if (limited.length <= 6) {
+      return `(${limited.slice(0, 3)}) ${limited.slice(3)}`;
+    } else {
+      return `(${limited.slice(0, 3)}) ${limited.slice(3, 6)}-${limited.slice(6)}`;
+    }
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setPhoneNumber(formatted);
+  };
+
   useEffect(() => {
     if (contact) {
       setName(contact.name);
       setRelationship(contact.relationship);
       setCustomRelationship(contact.custom_relationship || "");
-      setPhoneNumber(contact.phone_number);
+      // Format phone number from database (stored as digits only)
+      setPhoneNumber(formatPhoneNumber(contact.phone_number));
     } else {
       setName("");
       setRelationship("");
@@ -91,12 +114,19 @@ export const EmergencyContactModal = ({
       
       const user = session.user;
 
+      // Store only digits in database
+      const cleanedPhoneNumber = phoneNumber.replace(/\D/g, '');
+      
+      if (cleanedPhoneNumber.length !== 10) {
+        throw new Error("Phone number must be 10 digits");
+      }
+
       const contactData = {
         student_id: user.id,
         name,
         relationship,
         custom_relationship: relationship === "Other" ? customRelationship : null,
-        phone_number: phoneNumber,
+        phone_number: cleanedPhoneNumber,
       };
 
       if (contact?.id) {
@@ -194,8 +224,9 @@ export const EmergencyContactModal = ({
               id="phoneNumber"
               type="tel"
               value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              placeholder="Enter phone number"
+              onChange={handlePhoneChange}
+              placeholder="(123) 456-7890"
+              maxLength={14}
             />
           </div>
 
