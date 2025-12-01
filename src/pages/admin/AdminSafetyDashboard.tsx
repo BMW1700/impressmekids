@@ -79,7 +79,7 @@ export default function AdminSafetyDashboard() {
     if (alertsData.data) setAlerts(alertsData.data);
     if (drillsData.data) {
       setDrills(drillsData.data);
-      const active = drillsData.data.find(d => d.status === "active");
+      const active = drillsData.data.find(d => d.status === "in_progress");
       setActiveDrill(active || null);
     }
     if (classroomsData.data) setClassrooms(classroomsData.data);
@@ -106,7 +106,7 @@ export default function AdminSafetyDashboard() {
         .from("drill_sessions")
         .insert({
           drill_type: selectedDrillType,
-          status: "active",
+          status: "in_progress",
           created_by: session.user.id,
           started_at: new Date().toISOString()
         })
@@ -119,7 +119,7 @@ export default function AdminSafetyDashboard() {
       const drillSessions = classrooms.map(classroom => ({
         classroom_id: classroom.id,
         drill_type: selectedDrillType,
-        status: "active",
+        status: "in_progress",
         created_by: session.user.id,
         started_at: new Date().toISOString(),
         school_drill_id: parentDrill.id

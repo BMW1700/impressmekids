@@ -222,7 +222,7 @@ export default function AdminDrillMonitor() {
               </div>
             </div>
             
-            {drill.status === 'active' && (
+            {drill.status === 'in_progress' && (
               <div className="text-center">
                 <div className="text-5xl font-mono font-bold text-primary">
                   {formatTime(elapsedTime)}
@@ -273,7 +273,7 @@ export default function AdminDrillMonitor() {
         <Card className="p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">Student Status</h2>
-            {drill.status === 'active' && (
+            {drill.status === 'in_progress' && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="default" size="lg" disabled={unaccountedStudents > 0}>
