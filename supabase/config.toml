@@ -75,3 +75,6 @@ verify_jwt = true
 
 [functions.update-q-learning]
 verify_jwt = true
+
+[functions.send-drill-notification]
+verify_jwt = true
