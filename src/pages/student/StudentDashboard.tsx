@@ -103,7 +103,7 @@ const StudentDashboard = () => {
   const renderSection = () => {
     if (!profile) return null;
     switch (activeSection) {
-      case "home": return <HomeSection userProfile={profile} studentProfile={studentProfile} assignmentStats={assignmentStats} />;
+      case "home": return <HomeSection userProfile={profile} studentProfile={studentProfile} assignmentStats={assignmentStats} classrooms={classrooms} />;
       case "today": return <TodaySection studentId={profile.id} />;
       case "courses": return <CoursesSection classrooms={classrooms} />;
       case "clubs": return <ClubsSection studentId={profile.id} />;

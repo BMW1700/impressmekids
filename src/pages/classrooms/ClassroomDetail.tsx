@@ -39,6 +39,7 @@ import { SyllabusTab } from "@/components/classroom/SyllabusTab";
 import { StandardsProgressDashboard } from "@/components/classroom/StandardsProgressDashboard";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { TeacherSafetyTab } from "@/components/teacher/TeacherSafetyTab";
+import { TeacherBehaviorTab } from "@/components/behavior/TeacherBehaviorTab";
 const ClassroomDetail = () => {
   const {
     id
@@ -588,6 +589,10 @@ const ClassroomDetail = () => {
                     <Shield className="mr-2 h-4 w-4" />
                     Safety
                   </TabsTrigger>
+                  <TabsTrigger value="behavior" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
+                    <Trophy className="mr-2 h-4 w-4" />
+                    Behavior
+                  </TabsTrigger>
                   <TabsTrigger value="assignments" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <FileText className="mr-2 h-4 w-4" />
                     Assignments
@@ -711,6 +716,14 @@ const ClassroomDetail = () => {
                   <p className="text-muted-foreground mt-1">Manage emergency drills and student safety</p>
                 </div>
                 <TeacherSafetyTab classroomId={id!} students={students} />
+              </TabsContent>}
+
+            {isTeacher && <TabsContent value="behavior" className="mt-6">
+                <div className="mb-6">
+                  <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Behavior Tracking</h2>
+                  <p className="text-muted-foreground mt-1">Track and reward student behavior</p>
+                </div>
+                <TeacherBehaviorTab classroomId={id!} students={students} />
               </TabsContent>}
 
             {isTeacher && <TabsContent value="ai-insights" className="mt-6">

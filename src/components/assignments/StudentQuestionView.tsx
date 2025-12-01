@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,6 +12,7 @@ import type { PhonemeResult } from '@/lib/phonemeDetection';
 interface StudentQuestionViewProps {
   question: any;
   answer?: any;
+  shuffleAnswers?: boolean;
   onAnswerChange: (answerData: any) => void;
   questionNumber: number;
   totalQuestions: number;
@@ -20,12 +21,29 @@ interface StudentQuestionViewProps {
 export const StudentQuestionView = ({
   question,
   answer,
+  shuffleAnswers = false,
   onAnswerChange,
   questionNumber,
   totalQuestions,
 }: StudentQuestionViewProps) => {
   const [localAnswer, setLocalAnswer] = useState(answer?.answer_data || {});
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [shuffledOptions, setShuffledOptions] = useState<any[]>([]);
+
+  // Shuffle options when question loads (if enabled)
+  useEffect(() => {
+    const qData = question?.question_data;
+    if (shuffleAnswers && qData?.options && shuffledOptions.length === 0) {
+      const options = [...qData.options];
+      for (let i = options.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [options[i], options[j]] = [options[j], options[i]];
+      }
+      setShuffledOptions(options);
+    } else if (qData?.options && !shuffleAnswers) {
+      setShuffledOptions(qData.options);
+    }
+  }, [question, shuffleAnswers]);
 
   // Early return if question is not loaded yet
   if (!question) {
@@ -135,7 +153,7 @@ export const StudentQuestionView = ({
                 onValueChange={(v) => handleChange({ answer_text: v })}
                 className="space-y-3"
               >
-                {qData.options?.map((option: any, idx: number) => {
+                {(shuffledOptions.length > 0 ? shuffledOptions : qData.options)?.map((option: any, idx: number) => {
                   const optionText = typeof option === 'string' ? option : option.text;
                   const optionImage = typeof option === 'object' ? option.image_url : undefined;
                   
