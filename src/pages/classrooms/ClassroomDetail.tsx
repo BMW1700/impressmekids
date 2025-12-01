@@ -520,9 +520,9 @@ const ClassroomDetail = () => {
                     </div>
                   </div>
                 </div>
-                <Badge variant="outline" className="font-mono text-xl px-6 py-3 border-2 border-primary/30 bg-background/80 backdrop-blur-sm">
+                {isTeacher && <Badge variant="outline" className="font-mono text-xl px-6 py-3 border-2 border-primary/30 bg-background/80 backdrop-blur-sm">
                   {classroom.join_code}
-                </Badge>
+                </Badge>}
               </div>
             </CardHeader>
             <CardContent className="pt-6 relative z-10">
@@ -660,9 +660,9 @@ const ClassroomDetail = () => {
               <p className="text-muted-foreground mb-6 text-lg">
                 Share the join code with your students to get started
               </p>
-              <Badge variant="outline" className="font-mono text-2xl px-6 py-3 border-2 border-primary/30">
+              {isTeacher && <Badge variant="outline" className="font-mono text-2xl px-6 py-3 border-2 border-primary/30">
                 {classroom.join_code}
-              </Badge>
+              </Badge>}
             </Card> : <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {students.map(student => <Card key={student.id} className="shadow-card hover:shadow-elegant transition-all duration-300 hover:scale-[1.02] border-2 border-primary/10 hover:border-primary/30">
                   <CardHeader className="pb-3">
