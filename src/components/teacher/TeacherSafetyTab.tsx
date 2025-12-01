@@ -4,8 +4,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, AlertTriangle, CheckCircle2, Shield } from "lucide-react";
+import { Loader2, AlertTriangle, CheckCircle2, Shield, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface TeacherSafetyTabProps {
   classroomId: string;
@@ -17,12 +28,14 @@ export const TeacherSafetyTab = ({ classroomId, students }: TeacherSafetyTabProp
   const [activeDrill, setActiveDrill] = useState<any>(null);
   const [isStartingDrill, setIsStartingDrill] = useState(false);
   const [drillAttendance, setDrillAttendance] = useState<any[]>([]);
+  const [isEndingDrill, setIsEndingDrill] = useState(false);
+  const [isSendingAllClear, setIsSendingAllClear] = useState(false);
 
   const fetchDrillAttendance = async () => {
     if (!activeDrill) return;
     const { data } = await supabase
       .from('drill_attendance')
-      .select('*')
+      .select('*, profiles(full_name)')
       .eq('drill_session_id', activeDrill.id);
     setDrillAttendance(data || []);
   };
@@ -35,7 +48,7 @@ export const TeacherSafetyTab = ({ classroomId, students }: TeacherSafetyTabProp
     if (activeDrill) {
       fetchDrillAttendance();
       
-      // Subscribe to drill_attendance changes
+      // Subscribe to real-time drill_attendance changes
       const channel = supabase
         .channel('drill-attendance-changes')
         .on(
@@ -92,12 +105,13 @@ export const TeacherSafetyTab = ({ classroomId, students }: TeacherSafetyTabProp
 
       if (drillError) throw drillError;
 
-      // Create drill_attendance records for all students (status = 'pending' by default)
+      // Create drill_attendance records for all students
       const attendanceRecords = students.map(student => ({
         drill_session_id: drill.id,
         classroom_id: classroomId,
         student_id: student.student_id,
-        status: 'pending'
+        status: 'pending',
+        student_checked_in: false
       }));
 
       const { error: attendanceError } = await supabase
@@ -106,18 +120,18 @@ export const TeacherSafetyTab = ({ classroomId, students }: TeacherSafetyTabProp
 
       if (attendanceError) throw attendanceError;
 
-      setActiveDrill(drill);
       toast({
         title: "Drill Started",
-        description: `${drillType.replace(/_/g, ' ')} drill is now active. Mark student attendance.`
+        description: `${drillType.replace(/_/g, ' ')} drill is now in progress.`,
       });
-      
-      fetchDrillAttendance();
-    } catch (error: any) {
+
+      checkActiveDrill();
+    } catch (error) {
+      console.error('Error starting drill:', error);
       toast({
         title: "Error",
-        description: error.message,
-        variant: "destructive"
+        description: "Failed to start drill",
+        variant: "destructive",
       });
     } finally {
       setIsStartingDrill(false);
@@ -126,127 +140,207 @@ export const TeacherSafetyTab = ({ classroomId, students }: TeacherSafetyTabProp
 
   const handleEndDrill = async () => {
     if (!activeDrill) return;
-    
-    try {
-      const { error } = await supabase
-        .from('drill_sessions')
-        .update({
-          status: 'completed',
-          ended_at: new Date().toISOString()
-        })
-        .eq('id', activeDrill.id);
+    setIsEndingDrill(true);
 
-      if (error) throw error;
+    const { error } = await supabase
+      .from('drill_sessions')
+      .update({
+        status: 'completed',
+        ended_at: new Date().toISOString()
+      })
+      .eq('id', activeDrill.id);
 
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to end drill",
+        variant: "destructive",
+      });
+    } else {
       toast({
         title: "Drill Ended",
-        description: "All students accounted for. Drill session completed."
+        description: "Drill session has been marked as completed.",
       });
-      
       setActiveDrill(null);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive"
-      });
+      setDrillAttendance([]);
     }
+
+    setIsEndingDrill(false);
   };
 
-  const handleMarkAttendance = async (studentId: string, status: 'present' | 'absent' | 'unaccounted') => {
+  const handleSendAllClear = async () => {
     if (!activeDrill) return;
+    setIsSendingAllClear(true);
 
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not authenticated");
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
 
-      const { error } = await supabase
-        .from('drill_attendance')
-        .update({
-          status,
-          marked_at: new Date().toISOString(),
-          marked_by: session.user.id
-        })
-        .eq('drill_session_id', activeDrill.id)
-        .eq('student_id', studentId);
+    const { error } = await supabase
+      .from('drill_sessions')
+      .update({
+        all_clear_at: new Date().toISOString(),
+        all_clear_by: session.user.id
+      })
+      .eq('id', activeDrill.id);
 
-      if (error) throw error;
-
-      fetchDrillAttendance();
-    } catch (error: any) {
+    if (error) {
       toast({
         title: "Error",
-        description: error.message,
-        variant: "destructive"
+        description: "Failed to send all-clear notification",
+        variant: "destructive",
       });
+    } else {
+      toast({
+        title: "All Clear Sent!",
+        description: "Parents and admins have been notified that all students are safe.",
+      });
+      checkActiveDrill();
     }
+
+    setIsSendingAllClear(false);
   };
 
-  const getStudentDrillStatus = (studentId: string) => {
-    const record = drillAttendance?.find(r => 
-      r.student_id === studentId && r.drill_session_id === activeDrill?.id
-    );
-    return record?.status || 'pending';
+  const checkedInStudents = drillAttendance.filter(a => a.student_checked_in);
+  const missingStudents = drillAttendance.filter(a => !a.student_checked_in);
+  const allStudentsAccountedFor = drillAttendance.length > 0 && missingStudents.length === 0;
+  const percentageCheckedIn = drillAttendance.length > 0 
+    ? Math.round((checkedInStudents.length / drillAttendance.length) * 100)
+    : 0;
+
+  const getDrillTypeLabel = (type: string) => {
+    return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
-  const accountedCount = drillAttendance.filter(r => 
-    r.drill_session_id === activeDrill?.id && r.status === 'present'
-  ).length;
-
-  const unaccountedCount = drillAttendance.filter(r => 
-    r.drill_session_id === activeDrill?.id && r.status === 'unaccounted'
-  ).length;
-
-  if (!activeDrill) {
+  if (activeDrill) {
     return (
       <div className="space-y-6">
-        <Card>
+        <Card className="border-red-500 bg-red-500/5">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Safety Drill Management
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-6 w-6 text-red-600" />
+                <div>
+                  <CardTitle className="text-red-700">Drill In Progress</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {getDrillTypeLabel(activeDrill.drill_type)}
+                  </p>
+                </div>
+              </div>
+              <Badge variant={allStudentsAccountedFor ? "default" : "destructive"} className="text-lg px-4 py-2">
+                {percentageCheckedIn}% Checked In
+              </Badge>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Start a safety drill to track student attendance during emergency procedures.
-            </p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Button
-                onClick={() => handleStartDrill('fire_drill')}
-                disabled={isStartingDrill}
-                className="h-20"
-              >
-                {isStartingDrill ? <Loader2 className="h-4 w-4 animate-spin" /> : "Start Fire Drill"}
-              </Button>
-              
-              <Button
-                onClick={() => handleStartDrill('lockdown_drill')}
-                disabled={isStartingDrill}
-                className="h-20"
-                variant="outline"
-              >
-                {isStartingDrill ? <Loader2 className="h-4 w-4 animate-spin" /> : "Start Lockdown Drill"}
-              </Button>
-              
-              <Button
-                onClick={() => handleStartDrill('tornado_drill')}
-                disabled={isStartingDrill}
-                className="h-20"
-                variant="outline"
-              >
-                {isStartingDrill ? <Loader2 className="h-4 w-4 animate-spin" /> : "Start Tornado Drill"}
-              </Button>
-              
-              <Button
-                onClick={() => handleStartDrill('evacuation_drill')}
-                disabled={isStartingDrill}
-                className="h-20"
-                variant="outline"
-              >
-                {isStartingDrill ? <Loader2 className="h-4 w-4 animate-spin" /> : "Start Evacuation Drill"}
-              </Button>
+            <div className="flex items-center justify-between p-4 bg-background rounded-lg">
+              <div>
+                <p className="text-sm text-muted-foreground">Students Accounted For</p>
+                <p className="text-2xl font-bold">{checkedInStudents.length} / {drillAttendance.length}</p>
+              </div>
+              {allStudentsAccountedFor && !activeDrill.all_clear_at && (
+                <Button 
+                  size="lg" 
+                  onClick={handleSendAllClear}
+                  disabled={isSendingAllClear}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <CheckCircle2 className="mr-2 h-5 w-5" />
+                  {isSendingAllClear ? 'Sending...' : 'Send All Clear'}
+                </Button>
+              )}
+              {activeDrill.all_clear_at && (
+                <Badge variant="default" className="bg-green-600">
+                  <CheckCircle2 className="mr-1 h-4 w-4" />
+                  All Clear Sent
+                </Badge>
+              )}
+            </div>
+
+            {allStudentsAccountedFor && (
+              <div className="p-4 bg-green-500/10 border border-green-500 rounded-lg text-center animate-pulse">
+                <p className="text-xl font-bold text-green-700">
+                  ✅ ALL STUDENTS ACCOUNTED FOR
+                </p>
+              </div>
+            )}
+
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* Checked In Students */}
+              <Card className="bg-green-50">
+                <CardHeader>
+                  <CardTitle className="text-green-700 flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5" />
+                    Checked In ({checkedInStudents.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {checkedInStudents.map(student => (
+                      <div key={student.id} className="flex items-center gap-2 p-2 bg-background rounded">
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        <span className="flex-1">{student.profiles?.full_name || 'Unknown'}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(student.student_checkin_at).toLocaleTimeString()}
+                        </span>
+                      </div>
+                    ))}
+                    {checkedInStudents.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        No students checked in yet
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Missing Students */}
+              <Card className={missingStudents.length > 0 ? "bg-red-50 border-red-300 animate-pulse" : "bg-muted"}>
+                <CardHeader>
+                  <CardTitle className={`flex items-center gap-2 ${missingStudents.length > 0 ? 'text-red-700' : 'text-muted-foreground'}`}>
+                    <AlertTriangle className="h-5 w-5" />
+                    Not Checked In ({missingStudents.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {missingStudents.map(student => (
+                      <div key={student.id} className="flex items-center gap-2 p-2 bg-background rounded">
+                        <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                        <span className="flex-1">{student.profiles?.full_name || 'Unknown'}</span>
+                      </div>
+                    ))}
+                    {missingStudents.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        All students checked in! 🎉
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="flex gap-3">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" className="flex-1">
+                    End Drill
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>End Drill Session?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will mark the drill as completed. {missingStudents.length > 0 && `There are still ${missingStudents.length} students who haven't checked in.`}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleEndDrill} disabled={isEndingDrill}>
+                      {isEndingDrill ? 'Ending...' : 'End Drill'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </CardContent>
         </Card>
@@ -254,104 +348,69 @@ export const TeacherSafetyTab = ({ classroomId, students }: TeacherSafetyTabProp
     );
   }
 
+  // No active drill - show start options
   return (
-    <div className="space-y-6">
-      {/* Active Drill Header */}
-      <Card className="border-orange-500 bg-orange-500/10">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-orange-500 rounded-full animate-pulse">
-                <AlertTriangle className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold">
-                  {activeDrill.drill_type.replace(/_/g, ' ').toUpperCase()} ACTIVE
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Started at {new Date(activeDrill.started_at).toLocaleTimeString()}
-                </p>
-              </div>
-            </div>
-            
-            <Button onClick={handleEndDrill} variant="destructive">
-              End Drill
-            </Button>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <Shield className="h-8 w-8 text-primary" />
+          <div>
+            <CardTitle>Safety Drills</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Start a drill to track student attendance and safety
+            </p>
           </div>
-          
-          <div className="flex gap-6 mt-4">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-green-600">{accountedCount}</div>
-              <div className="text-xs text-muted-foreground">Accounted For</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-red-600">{unaccountedCount}</div>
-              <div className="text-xs text-muted-foreground">Unaccounted</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold">{students.length}</div>
-              <div className="text-xs text-muted-foreground">Total Students</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Student Attendance Grid */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Mark Student Attendance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {students.map((student) => {
-              const status = getStudentDrillStatus(student.student_id);
-              return (
-                <div
-                  key={student.student_id}
-                  className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-full ${
-                      status === 'present' ? 'bg-green-500' :
-                      status === 'unaccounted' ? 'bg-red-500 animate-pulse' :
-                      'bg-muted'
-                    }`} />
-                    <span className="font-medium">{student.profiles?.full_name}</span>
-                  </div>
-                  
-                  <Select
-                    value={status}
-                    onValueChange={(value: any) => handleMarkAttendance(student.student_id, value)}
-                  >
-                    <SelectTrigger className="w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">
-                        <span className="flex items-center gap-2">
-                          Pending
-                        </span>
-                      </SelectItem>
-                      <SelectItem value="present">
-                        <span className="flex items-center gap-2 text-green-600">
-                          <CheckCircle2 className="h-4 w-4" />
-                          Present
-                        </span>
-                      </SelectItem>
-                      <SelectItem value="unaccounted">
-                        <span className="flex items-center gap-2 text-red-600">
-                          <AlertTriangle className="h-4 w-4" />
-                          Unaccounted
-                        </span>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <Button
+            variant="outline"
+            className="h-24 flex-col gap-2"
+            onClick={() => handleStartDrill('fire_drill')}
+            disabled={isStartingDrill}
+          >
+            🔥
+            <span>Fire Drill</span>
+          </Button>
+          <Button
+            variant="outline"
+            className="h-24 flex-col gap-2"
+            onClick={() => handleStartDrill('lockdown_drill')}
+            disabled={isStartingDrill}
+          >
+            🔒
+            <span>Lockdown</span>
+          </Button>
+          <Button
+            variant="outline"
+            className="h-24 flex-col gap-2"
+            onClick={() => handleStartDrill('earthquake_drill')}
+            disabled={isStartingDrill}
+          >
+            🌊
+            <span>Earthquake</span>
+          </Button>
+          <Button
+            variant="outline"
+            className="h-24 flex-col gap-2"
+            onClick={() => handleStartDrill('tornado_drill')}
+            disabled={isStartingDrill}
+          >
+            🌪️
+            <span>Tornado</span>
+          </Button>
+          <Button
+            variant="outline"
+            className="h-24 flex-col gap-2"
+            onClick={() => handleStartDrill('evacuation_drill')}
+            disabled={isStartingDrill}
+          >
+            🚶
+            <span>Evacuation</span>
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 };

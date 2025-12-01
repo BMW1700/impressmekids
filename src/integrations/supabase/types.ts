@@ -1547,6 +1547,8 @@ export type Database = {
           marked_by: string | null
           parent_notified: boolean | null
           status: string
+          student_checked_in: boolean | null
+          student_checkin_at: string | null
           student_id: string
         }
         Insert: {
@@ -1558,6 +1560,8 @@ export type Database = {
           marked_by?: string | null
           parent_notified?: boolean | null
           status?: string
+          student_checked_in?: boolean | null
+          student_checkin_at?: string | null
           student_id: string
         }
         Update: {
@@ -1569,6 +1573,8 @@ export type Database = {
           marked_by?: string | null
           parent_notified?: boolean | null
           status?: string
+          student_checked_in?: boolean | null
+          student_checkin_at?: string | null
           student_id?: string
         }
         Relationships: [
@@ -1604,42 +1610,61 @@ export type Database = {
       }
       drill_sessions: {
         Row: {
+          all_clear_at: string | null
+          all_clear_by: string | null
+          announced_at: string | null
           classroom_id: string | null
           created_by: string
           drill_type: string
           ended_at: string | null
           id: string
           notes: string | null
+          scheduled_for: string | null
           school_drill_id: string | null
           school_id: string | null
           started_at: string | null
           status: string
         }
         Insert: {
+          all_clear_at?: string | null
+          all_clear_by?: string | null
+          announced_at?: string | null
           classroom_id?: string | null
           created_by: string
           drill_type: string
           ended_at?: string | null
           id?: string
           notes?: string | null
+          scheduled_for?: string | null
           school_drill_id?: string | null
           school_id?: string | null
           started_at?: string | null
           status?: string
         }
         Update: {
+          all_clear_at?: string | null
+          all_clear_by?: string | null
+          announced_at?: string | null
           classroom_id?: string | null
           created_by?: string
           drill_type?: string
           ended_at?: string | null
           id?: string
           notes?: string | null
+          scheduled_for?: string | null
           school_drill_id?: string | null
           school_id?: string | null
           started_at?: string | null
           status?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "drill_sessions_all_clear_by_fkey"
+            columns: ["all_clear_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "drill_sessions_classroom_id_fkey"
             columns: ["classroom_id"]
