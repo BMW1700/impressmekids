@@ -13,6 +13,9 @@ import { Loader2, Chrome, Building2 } from "lucide-react";
 import { detectUserTypeFromEmail } from "@/lib/districtDetection";
 import { RoleSelectionModal } from "@/components/auth/RoleSelectionModal";
 import { DistrictCombobox } from "@/components/auth/DistrictCombobox";
+import { AgeVerificationModal } from "@/components/auth/AgeVerificationModal";
+import { ParentalConsentForm } from "@/components/auth/ParentalConsentForm";
+import { ConsentPending } from "@/components/auth/ConsentPending";
 import { useQuery } from "@tanstack/react-query";
 import logo from "@/assets/logo.png";
 
@@ -34,6 +37,13 @@ const Auth = () => {
   
   // District selection for student/parent signup
   const [selectedDistrictId, setSelectedDistrictId] = useState<string>("");
+  
+  // COPPA consent flow state
+  const [showAgeVerification, setShowAgeVerification] = useState(false);
+  const [showParentalConsentForm, setShowParentalConsentForm] = useState(false);
+  const [showConsentPending, setShowConsentPending] = useState(false);
+  const [parentEmailForConsent, setParentEmailForConsent] = useState("");
+  const [isUnder13, setIsUnder13] = useState(false);
   
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -254,6 +264,13 @@ const Auth = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // For students, show age verification first
+    if (role === 'student' && !showAgeVerification && !isUnder13 && !showParentalConsentForm) {
+      setShowAgeVerification(true);
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
@@ -266,6 +283,26 @@ const Auth = () => {
         });
         setIsLoading(false);
         return;
+      }
+      
+      // For students under 13, check if parental consent is verified
+      if (role === 'student' && isUnder13) {
+        const { data: consent, error: consentError } = await supabase
+          .from('student_signup_consents')
+          .select('consent_given')
+          .eq('student_email', email.toLowerCase().trim())
+          .eq('consent_given', true)
+          .single();
+        
+        if (consentError || !consent) {
+          toast({
+            title: "Parental Consent Required",
+            description: "Please wait for your parent to verify consent via email before completing signup.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
       }
 
       // Validation for teacher/admin signup
@@ -622,7 +659,7 @@ const Auth = () => {
             </TabsContent>
 
             <TabsContent value="signup">
-              <form onSubmit={handleSignUp}>
+              <form id="signup-form" onSubmit={handleSignUp}>
                 <CardHeader>
                   <CardTitle>Create Account</CardTitle>
                   <CardDescription>
@@ -816,6 +853,50 @@ const Auth = () => {
         districtName={pendingDistrictName}
         availableRoles={availableRoles}
         onSelectRole={handleRoleSelection}
+      />
+      
+      {/* COPPA Age Verification Modal */}
+      <AgeVerificationModal
+        open={showAgeVerification}
+        onSelectAge={(under13) => {
+          setIsUnder13(under13);
+          setShowAgeVerification(false);
+          if (under13) {
+            setShowParentalConsentForm(true);
+          } else {
+            // 13 or older, proceed with signup
+            const form = document.getElementById('signup-form') as HTMLFormElement;
+            form?.requestSubmit();
+          }
+        }}
+      />
+      
+      {/* Parental Consent Form Modal */}
+      <ParentalConsentForm
+        open={showParentalConsentForm}
+        studentEmail={email}
+        onConsentRequested={(parentEmail) => {
+          setParentEmailForConsent(parentEmail);
+          setShowParentalConsentForm(false);
+          setShowConsentPending(true);
+        }}
+        onCancel={() => {
+          setShowParentalConsentForm(false);
+          setIsUnder13(false);
+        }}
+      />
+      
+      {/* Consent Pending Modal */}
+      <ConsentPending
+        open={showConsentPending}
+        parentEmail={parentEmailForConsent}
+        onClose={() => {
+          setShowConsentPending(false);
+          toast({
+            title: "Waiting for Consent",
+            description: "Once your parent verifies consent, you can complete the signup process.",
+          });
+        }}
       />
     </div>
   );
