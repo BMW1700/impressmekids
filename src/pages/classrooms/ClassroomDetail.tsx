@@ -11,12 +11,7 @@ import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap,
 import { ClassroomLeaderboard } from "@/components/ClassroomLeaderboard";
 import { LeaderboardCard } from "@/components/aura/LeaderboardCard";
 import { AttendanceTab } from "@/components/teacher/AttendanceTab";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { FlashcardSetViewer } from "@/components/flashcards/FlashcardSetViewer";
 import { CreateTournamentModal } from "@/components/tournament/CreateTournamentModal";
@@ -37,32 +32,26 @@ import { ClassroomAIInsights } from "@/components/teacher/ClassroomAIInsights";
 import { TeacherSuccessBoard } from "@/components/teacher/TeacherSuccessBoard";
 import { EditClassroomModal } from "@/components/EditClassroomModal";
 import { StudentClassroomTrends } from "@/components/StudentClassroomTrends";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSearchParams } from "react-router-dom";
 import { SyllabusTab } from "@/components/classroom/SyllabusTab";
 import { StandardsProgressDashboard } from "@/components/classroom/StandardsProgressDashboard";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 const ClassroomDetail = () => {
-  const { id } = useParams();
+  const {
+    id
+  } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { toast } = useToast();
-  const { isTeacher, isStudent, isLoading: permissionsLoading } = useClassroomPermissions(id);
+  const {
+    toast
+  } = useToast();
+  const {
+    isTeacher,
+    isStudent,
+    isLoading: permissionsLoading
+  } = useClassroomPermissions(id);
   const [classroom, setClassroom] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
   const [profile, setProfile] = useState<any>(null);
@@ -79,7 +68,6 @@ const ClassroomDetail = () => {
   const [flashcardSets, setFlashcardSets] = useState<any[]>([]);
   const [viewingFlashcardSet, setViewingFlashcardSet] = useState<any>(null);
   const [deleteAssignmentId, setDeleteAssignmentId] = useState<string | null>(null);
-
   const getCategoryColor = (category: string) => {
     switch (category) {
       case 'Test':
@@ -95,46 +83,55 @@ const ClassroomDetail = () => {
   const [deleteTournamentId, setDeleteTournamentId] = useState<string | null>(null);
   const [showClassGlance, setShowClassGlance] = useState(false);
   const [showEditClassroom, setShowEditClassroom] = useState(false);
-  const { assignments } = useAssignments(id);
-  const { submissions: assignmentSubmissions } = useAssignmentSubmissions(viewingAssignmentId || undefined);
-  const { deleteAssignment, toggleAssignmentStatus } = useMultiQuestionAssignments(id);
-
+  const {
+    assignments
+  } = useAssignments(id);
+  const {
+    submissions: assignmentSubmissions
+  } = useAssignmentSubmissions(viewingAssignmentId || undefined);
+  const {
+    deleteAssignment,
+    toggleAssignmentStatus
+  } = useMultiQuestionAssignments(id);
   useEffect(() => {
     // Wait for permissions to be determined before loading data
     if (!permissionsLoading) {
       loadClassroomData();
     }
   }, [id, permissionsLoading]);
-
   const loadClassroomData = async () => {
     console.log('🔍 ============================================');
     console.log('🔍 loadClassroomData: STARTING');
     console.log('🔍 Classroom ID:', id);
     console.log('🔍 ============================================');
-    
     let classroomData: any = null;
-    
     try {
       // Get session with detailed logging
       console.log('🔐 Step 1: Getting session...');
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
+      const {
+        data: {
+          session
+        },
+        error: sessionError
+      } = await supabase.auth.getSession();
       if (sessionError) {
         console.error('❌ Session error:', JSON.stringify(sessionError, null, 2));
         throw sessionError;
       }
-      
       if (!session) {
         console.error('❌ No session found, redirecting to auth');
         navigate('/auth');
         return;
       }
-      
       console.log('✅ Session found. User ID:', session.user.id);
       console.log('📧 User email:', session.user.email);
 
       // Store user profile
-      const { data: userProfile } = await supabase.rpc('get_user_profile', { _user_id: session.user.id });
+      const {
+        data: userProfile
+      } = await supabase.rpc('get_user_profile', {
+        _user_id: session.user.id
+      });
       if (userProfile && userProfile.length > 0) {
         setProfile(userProfile[0]);
       }
@@ -142,14 +139,14 @@ const ClassroomDetail = () => {
       // Query 1: Load classroom using security definer function
       console.log('\n📚 Step 2: Loading classroom...');
       console.log('Query: get_classroom_detail RPC, classroom_id =', id);
-      
       try {
-        const { data: classroomResult, error: classroomError } = await supabase
-          .rpc('get_classroom_detail', {
-            _user_id: session.user.id,
-            _classroom_id: id
-          });
-
+        const {
+          data: classroomResult,
+          error: classroomError
+        } = await supabase.rpc('get_classroom_detail', {
+          _user_id: session.user.id,
+          _classroom_id: id
+        });
         if (classroomError) {
           console.error('❌ CLASSROOM QUERY FAILED');
           console.error('Error code:', classroomError.code);
@@ -157,13 +154,11 @@ const ClassroomDetail = () => {
           console.error('Full error object:', JSON.stringify(classroomError, null, 2));
           throw classroomError;
         }
-        
         if (!classroomResult || classroomResult.length === 0) {
           console.error('❌ Classroom not found or access denied');
           setIsLoading(false);
           return;
         }
-        
         classroomData = classroomResult[0];
         console.log('✅ Classroom loaded:', classroomData.name);
         console.log('   Teacher ID:', classroomData.teacher_id);
@@ -177,14 +172,14 @@ const ClassroomDetail = () => {
       // Query 2: Load students using security definer function
       console.log('\n👥 Step 3: Loading students...');
       console.log('Query: get_classroom_students RPC, classroom_id =', id);
-      
       try {
-        const { data: studentsResult, error: studentsError } = await supabase
-          .rpc('get_classroom_students', {
-            _user_id: session.user.id,
-            _classroom_id: id
-          });
-
+        const {
+          data: studentsResult,
+          error: studentsError
+        } = await supabase.rpc('get_classroom_students', {
+          _user_id: session.user.id,
+          _classroom_id: id
+        });
         if (studentsError) {
           console.error('❌ STUDENTS QUERY FAILED');
           console.error('Error code:', studentsError.code);
@@ -192,7 +187,7 @@ const ClassroomDetail = () => {
           console.error('Full error object:', JSON.stringify(studentsError, null, 2));
           throw studentsError;
         }
-        
+
         // Transform data to match the expected format
         const studentsData = studentsResult?.map((student: any) => ({
           student_id: student.student_id,
@@ -207,7 +202,6 @@ const ClassroomDetail = () => {
             }] : []
           }
         })) || [];
-        
         console.log('✅ Students loaded:', studentsData.length, 'students');
         setStudents(studentsData);
       } catch (err: any) {
@@ -218,14 +212,13 @@ const ClassroomDetail = () => {
       // Query 3: Load tournaments
       console.log('\n🏆 Step 4: Loading tournaments...');
       console.log('Query: tournaments, classroom_id =', id);
-      
       try {
-        const { data: tournamentsData, error: tournamentsError } = await supabase
-          .from('tournaments')
-          .select('*')
-          .eq('classroom_id', id)
-          .order('created_at', { ascending: false });
-
+        const {
+          data: tournamentsData,
+          error: tournamentsError
+        } = await supabase.from('tournaments').select('*').eq('classroom_id', id).order('created_at', {
+          ascending: false
+        });
         if (tournamentsError) {
           console.error('❌ TOURNAMENTS QUERY FAILED');
           console.error('Error code:', tournamentsError.code);
@@ -235,7 +228,6 @@ const ClassroomDetail = () => {
           console.error('Full error object:', JSON.stringify(tournamentsError, null, 2));
           throw tournamentsError;
         }
-        
         console.log('✅ Tournaments loaded:', tournamentsData?.length || 0, 'tournaments');
         setTournaments(tournamentsData || []);
       } catch (err: any) {
@@ -246,14 +238,13 @@ const ClassroomDetail = () => {
       // Query 4: Load announcements
       console.log('\n📢 Step 5: Loading announcements...');
       console.log('Query: classroom_announcements, classroom_id =', id);
-      
       try {
-        const { data: announcementsData, error: announcementsError } = await supabase
-          .from('classroom_announcements')
-          .select('*')
-          .eq('classroom_id', id)
-          .order('created_at', { ascending: false });
-
+        const {
+          data: announcementsData,
+          error: announcementsError
+        } = await supabase.from('classroom_announcements').select('*').eq('classroom_id', id).order('created_at', {
+          ascending: false
+        });
         if (announcementsError) {
           console.error('❌ ANNOUNCEMENTS QUERY FAILED');
           console.error('Error code:', announcementsError.code);
@@ -263,7 +254,6 @@ const ClassroomDetail = () => {
           console.error('Full error object:', JSON.stringify(announcementsError, null, 2));
           throw announcementsError;
         }
-        
         console.log('✅ Announcements loaded:', announcementsData?.length || 0, 'announcements');
         setAnnouncements(announcementsData || []);
       } catch (err: any) {
@@ -274,24 +264,22 @@ const ClassroomDetail = () => {
       // Query 5: Load flashcard sets
       console.log('\n🎴 Step 6: Loading flashcard sets...');
       console.log('Query: flashcard_sets, classroom_id =', id);
-      
       try {
-        let flashcardsQuery = supabase
-          .from('flashcard_sets')
-          .select(`
+        let flashcardsQuery = supabase.from('flashcard_sets').select(`
             *,
             question_groups!question_group_id (title, subject, grade)
-          `)
-          .eq('classroom_id', id);
-        
+          `).eq('classroom_id', id);
+
         // Students only see posted flashcard sets
         if (classroomData?.teacher_id !== session.user.id) {
           flashcardsQuery = flashcardsQuery.eq('is_posted', true);
         }
-        
-        const { data: flashcardsData, error: flashcardsError } = await flashcardsQuery
-          .order('created_at', { ascending: false });
-
+        const {
+          data: flashcardsData,
+          error: flashcardsError
+        } = await flashcardsQuery.order('created_at', {
+          ascending: false
+        });
         if (flashcardsError) {
           console.error('❌ FLASHCARDS QUERY FAILED');
           console.error('Error code:', flashcardsError.code);
@@ -301,7 +289,6 @@ const ClassroomDetail = () => {
           console.error('Full error object:', JSON.stringify(flashcardsError, null, 2));
           throw flashcardsError;
         }
-        
         console.log('✅ Flashcard sets loaded:', flashcardsData?.length || 0, 'sets');
         setFlashcardSets(flashcardsData || []);
       } catch (err: any) {
@@ -314,17 +301,16 @@ const ClassroomDetail = () => {
       if (classroomData?.teacher_id === session.user.id) {
         console.log('\n👨‍👩‍👧 Step 7: Loading parent access requests...');
         console.log('Query: parent_access_requests, classroom_id =', id);
-        
         try {
-          const { data: requestsData, error: requestsError } = await supabase
-            .from('parent_access_requests')
-            .select(`
+          const {
+            data: requestsData,
+            error: requestsError
+          } = await supabase.from('parent_access_requests').select(`
               *,
               parent_accounts!parent_id (full_name, email)
-            `)
-            .eq('classroom_id', id)
-            .order('created_at', { ascending: false });
-
+            `).eq('classroom_id', id).order('created_at', {
+            ascending: false
+          });
           if (requestsError) {
             console.error('❌ PARENT REQUESTS QUERY FAILED');
             console.error('Error code:', requestsError.code);
@@ -334,23 +320,17 @@ const ClassroomDetail = () => {
             console.error('Full error object:', JSON.stringify(requestsError, null, 2));
             throw requestsError;
           }
-          
-          // Manually fetch student names for each request
-          const enrichedRequests = await Promise.all(
-            (requestsData || []).map(async (request: any) => {
-              const { data: studentData } = await supabase
-                .from('profiles')
-                .select('full_name')
-                .eq('id', request.student_id)
-                .single();
-              
-              return {
-                ...request,
-                profiles: studentData
-              };
-            })
-          );
 
+          // Manually fetch student names for each request
+          const enrichedRequests = await Promise.all((requestsData || []).map(async (request: any) => {
+            const {
+              data: studentData
+            } = await supabase.from('profiles').select('full_name').eq('id', request.student_id).single();
+            return {
+              ...request,
+              profiles: studentData
+            };
+          }));
           console.log('✅ Parent requests loaded:', enrichedRequests.length, 'requests');
           setParentRequests(enrichedRequests);
         } catch (err: any) {
@@ -360,7 +340,6 @@ const ClassroomDetail = () => {
       } else {
         console.log('\n⏭️ Step 7: Skipping parent requests (not teacher or no classroom)');
       }
-
       console.log('\n🎉 ============================================');
       console.log('🎉 ALL DATA LOADED SUCCESSFULLY!');
       console.log('🎉 ============================================');
@@ -373,122 +352,102 @@ const ClassroomDetail = () => {
       console.error('Error stack:', error?.stack);
       console.error('Full error:', error);
       console.error('💥 ============================================');
-      
       toast({
         title: "Error",
         description: `Failed to load classroom data: ${error?.message || 'Unknown error'}`,
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
       console.log('🏁 loadClassroomData: FINISHED (loading=false)');
     }
   };
-
   const copyJoinCode = () => {
     if (classroom?.join_code) {
       navigator.clipboard.writeText(classroom.join_code);
       toast({
         title: "Copied!",
-        description: "Join code copied to clipboard",
+        description: "Join code copied to clipboard"
       });
     }
   };
-
   const handleToggleAssignmentStatus = (assignmentId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'published' ? 'draft' : 'published';
-    toggleAssignmentStatus({ id: assignmentId, newStatus: newStatus as 'draft' | 'published' });
+    toggleAssignmentStatus({
+      id: assignmentId,
+      newStatus: newStatus as 'draft' | 'published'
+    });
   };
-
   const handleApproveParentRequest = async (requestId: string) => {
     try {
-      const { error } = await supabase
-        .from('parent_access_requests')
-        .update({ 
-          status: 'approved',
-          resolved_at: new Date().toISOString()
-        })
-        .eq('id', requestId);
-
+      const {
+        error
+      } = await supabase.from('parent_access_requests').update({
+        status: 'approved',
+        resolved_at: new Date().toISOString()
+      }).eq('id', requestId);
       if (error) throw error;
-
       toast({
         title: "Request Approved",
-        description: "Parent can now view their child's progress",
+        description: "Parent can now view their child's progress"
       });
-
       loadClassroomData();
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message || "Failed to approve request",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const handleDenyParentRequest = async (requestId: string) => {
     try {
-      const { error } = await supabase
-        .from('parent_access_requests')
-        .update({ 
-          status: 'denied',
-          resolved_at: new Date().toISOString()
-        })
-        .eq('id', requestId);
-
+      const {
+        error
+      } = await supabase.from('parent_access_requests').update({
+        status: 'denied',
+        resolved_at: new Date().toISOString()
+      }).eq('id', requestId);
       if (error) throw error;
-
       toast({
         title: "Request Denied",
-        description: "Parent access request has been denied",
+        description: "Parent access request has been denied"
       });
-
       loadClassroomData();
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message || "Failed to deny request",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const handleDeleteTournament = async (tournamentId: string) => {
     try {
-      const { error } = await supabase
-        .from('tournaments')
-        .delete()
-        .eq('id', tournamentId);
-
+      const {
+        error
+      } = await supabase.from('tournaments').delete().eq('id', tournamentId);
       if (error) throw error;
-
       toast({
         title: "Success",
-        description: "Tournament deleted successfully",
+        description: "Tournament deleted successfully"
       });
-
       loadClassroomData();
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message || "Failed to delete tournament",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   if (isLoading || permissionsLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
+    return <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+      </div>;
   }
-
   if (!isTeacher && !isStudent) {
-    return (
-      <div className="min-h-screen flex flex-col">
+    return <div className="min-h-screen flex flex-col">
         <Header showAuthButtons={false} />
         <main className="flex-1 py-8">
           <div className="container mx-auto px-4 text-center">
@@ -500,13 +459,10 @@ const ClassroomDetail = () => {
           </div>
         </main>
         <Footer />
-      </div>
-    );
+      </div>;
   }
-
   if (!classroom) {
-    return (
-      <div className="min-h-screen flex flex-col">
+    return <div className="min-h-screen flex flex-col">
         <Header showAuthButtons={false} />
         <main className="flex-1 py-8">
           <div className="container mx-auto px-4 text-center">
@@ -517,12 +473,9 @@ const ClassroomDetail = () => {
           </div>
         </main>
         <Footer />
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen flex flex-col">
+  return <div className="min-h-screen flex flex-col">
       <Header showAuthButtons={false} />
       
       <main className="flex-1 py-8">
@@ -574,223 +527,132 @@ const ClassroomDetail = () => {
             </CardHeader>
             <CardContent className="pt-6 relative z-10">
               <div className="flex items-center gap-3 flex-wrap">
-                {isTeacher && (
-                  <>
-                    <Button 
-                      variant="outline" 
-                      size="lg"
-                      onClick={copyJoinCode}
-                      className="hover:bg-primary/5 hover:border-primary/30"
-                    >
+                {isTeacher && <>
+                    <Button variant="outline" size="lg" onClick={copyJoinCode} className="hover:bg-primary/5 hover:border-primary/30">
                       <Copy className="mr-2 h-5 w-5" />
                       Copy Join Code
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="lg"
-                      onClick={() => setShowEditClassroom(true)}
-                      className="hover:bg-primary/5 hover:border-primary/30"
-                    >
+                    <Button variant="outline" size="lg" onClick={() => setShowEditClassroom(true)} className="hover:bg-primary/5 hover:border-primary/30">
                       Edit Classroom
                     </Button>
-                    <Button 
-                      size="lg"
-                      onClick={() => setShowClassGlance(true)}
-                      className="bg-gradient-primary hover:opacity-90 shadow-card text-base"
-                    >
+                    <Button size="lg" onClick={() => setShowClassGlance(true)} className="bg-gradient-primary hover:opacity-90 shadow-card text-base">
                       <BarChart3 className="mr-2 h-5 w-5" />
                       🧠 AI Class Insights
                     </Button>
-                  </>
-                )}
+                  </>}
               </div>
             </CardContent>
           </Card>
 
           {/* Quick Actions Section */}
-          {isTeacher && (
-            <div className="mb-8 p-6 rounded-2xl bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5 border-2 border-primary/10 shadow-card">
+          {isTeacher && <div className="mb-8 p-6 rounded-2xl bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5 border-2 border-primary/10 shadow-card">
               <div className="flex justify-between items-center">
                 <div>
                   <h2 className="text-2xl font-bold mb-1">Quick Actions</h2>
                   <p className="text-sm text-muted-foreground">Manage your classroom content and activities</p>
                 </div>
                 <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={() => navigate(`/teacher/questions/${id}`)}
-                    className="hover:bg-primary/5 hover:border-primary/30"
-                  >
+                  <Button variant="outline" size="lg" onClick={() => navigate(`/teacher/questions/${id}`)} className="hover:bg-primary/5 hover:border-primary/30">
                     <BookOpen className="mr-2 h-5 w-5" />
                     Manage Questions
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={() => navigate(`/teacher/assignment/create/${id}`)}
-                    className="hover:bg-secondary/5 hover:border-secondary/30"
-                  >
+                  <Button variant="outline" size="lg" onClick={() => navigate(`/teacher/assignment/create/${id}`)} className="hover:bg-secondary/5 hover:border-secondary/30">
                     <FileText className="mr-2 h-5 w-5" />
                     Create Assignment
                   </Button>
-                  <Button
-                    size="lg"
-                    className="bg-gradient-primary hover:opacity-90 shadow-card"
-                    onClick={() => setShowCreateAnnouncement(true)}
-                  >
+                  <Button size="lg" className="bg-gradient-primary hover:opacity-90 shadow-card" onClick={() => setShowCreateAnnouncement(true)}>
                     <Megaphone className="mr-2 h-5 w-5" />
                     Send Announcement
                   </Button>
                 </div>
               </div>
-            </div>
-          )}
+            </div>}
 
           <Tabs defaultValue={searchParams.get('tab') || (isStudent ? "assignments" : "students")} className="mb-8">
             <TabsList className={cn("grid w-full h-auto p-2 bg-muted/50 rounded-xl", isTeacher ? "grid-cols-5 gap-2" : "grid-cols-3 gap-2")}>
               {/* Teacher Top Row: Syllabus, Attendance, Assignments, Announcements, Students */}
-              {isTeacher && (
-                <>
-                  <TabsTrigger 
-                    value="syllabus"
-                    className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
-                  >
+              {isTeacher && <>
+                  <TabsTrigger value="syllabus" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <FileText className="mr-2 h-4 w-4" />
                     Syllabus
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="attendance"
-                    className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
-                  >
+                  <TabsTrigger value="attendance" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <UserCheck className="mr-2 h-4 w-4" />
                     Attendance
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="assignments"
-                    className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
-                  >
+                  <TabsTrigger value="assignments" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <FileText className="mr-2 h-4 w-4" />
                     Assignments
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="announcements"
-                    className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
-                  >
+                  <TabsTrigger value="announcements" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <Megaphone className="mr-2 h-4 w-4" />
                     Announcements
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="students" 
-                    className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
-                  >
+                  <TabsTrigger value="students" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <Users className="mr-2 h-4 w-4" />
                     Students
                   </TabsTrigger>
                   {/* Teacher Bottom Row: Leaderboard, Study Materials, Tournaments, AI Insights, Parent Requests */}
-                  <TabsTrigger 
-                    value="leaderboard"
-                    className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
-                  >
+                  <TabsTrigger value="leaderboard" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <Trophy className="mr-2 h-4 w-4" />
                     Leaderboard
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="study"
-                    className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
-                  >
+                  <TabsTrigger value="study" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <BookOpen className="mr-2 h-4 w-4" />
                     Study Materials
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="tournaments"
-                    className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
-                  >
+                  <TabsTrigger value="tournaments" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <Trophy className="mr-2 h-4 w-4" />
                     Study Games
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="ai-insights"
-                    className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
-                  >
+                  <TabsTrigger value="ai-insights" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <BarChart3 className="mr-2 h-4 w-4" />
                     AI Insights
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="parent-requests" 
-                    className="relative data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
-                  >
+                  <TabsTrigger value="parent-requests" className="relative data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <UserCheck className="mr-2 h-4 w-4" />
                     Parent Requests
-                    {parentRequests.filter(r => r.status === 'pending').length > 0 && (
-                      <Badge 
-                        variant="destructive" 
-                        className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-[10px]"
-                      >
+                    {parentRequests.filter(r => r.status === 'pending').length > 0 && <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
                         {parentRequests.filter(r => r.status === 'pending').length}
-                      </Badge>
-                    )}
+                      </Badge>}
                   </TabsTrigger>
-                </>
-              )}
+                </>}
               {/* Student Tabs: Row 1: Syllabus, Assignments, Announcements; Row 2: Study Materials, Tournaments, Trends */}
-              {!isTeacher && (
-                <>
-                  <TabsTrigger 
-                    value="syllabus"
-                    className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
-                  >
+              {!isTeacher && <>
+                  <TabsTrigger value="syllabus" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <FileText className="mr-2 h-4 w-4" />
                     Syllabus
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="assignments"
-                    className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
-                  >
+                  <TabsTrigger value="assignments" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <FileText className="mr-2 h-4 w-4" />
                     Assignments
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="announcements"
-                    className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
-                  >
+                  <TabsTrigger value="announcements" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <Megaphone className="mr-2 h-4 w-4" />
                     Announcements
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="study"
-                    className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
-                  >
+                  <TabsTrigger value="study" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <BookOpen className="mr-2 h-4 w-4" />
                     Study Materials
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="tournaments"
-                    className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
-                  >
+                  <TabsTrigger value="tournaments" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <Trophy className="mr-2 h-4 w-4" />
                     Study Games
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="trends"
-                    className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
-                  >
+                  <TabsTrigger value="trends" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <BarChart3 className="mr-2 h-4 w-4" />
                     Trends
                   </TabsTrigger>
-                </>
-              )}
+                </>}
             </TabsList>
 
-            {isTeacher && (
-              <TabsContent value="students" className="mt-6">
+            {isTeacher && <TabsContent value="students" className="mt-6">
                 <div className="mb-6">
                   <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Student Roster</h2>
                   <p className="text-muted-foreground mt-1">Manage and view your classroom students</p>
                 </div>
 
-              {students.length === 0 ? (
-            <Card className="p-16 text-center shadow-elegant border-2 border-primary/10 bg-gradient-to-br from-background to-muted/20">
+              {students.length === 0 ? <Card className="p-16 text-center shadow-elegant border-2 border-primary/10 bg-gradient-to-br from-background to-muted/20">
               <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-primary/10 flex items-center justify-center">
                 <Users className="h-12 w-12 text-primary" />
               </div>
@@ -801,91 +663,62 @@ const ClassroomDetail = () => {
               <Badge variant="outline" className="font-mono text-2xl px-6 py-3 border-2 border-primary/30">
                 {classroom.join_code}
               </Badge>
-            </Card>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {students.map((student) => (
-                <Card key={student.id} className="shadow-card hover:shadow-elegant transition-all duration-300 hover:scale-[1.02] border-2 border-primary/10 hover:border-primary/30">
+            </Card> : <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {students.map(student => <Card key={student.id} className="shadow-card hover:shadow-elegant transition-all duration-300 hover:scale-[1.02] border-2 border-primary/10 hover:border-primary/30">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-xl">{student.profiles?.full_name || 'Student'}</CardTitle>
-                    {student.profiles?.email && (
-                      <p className="text-sm text-muted-foreground">{student.profiles.email}</p>
-                    )}
+                    {student.profiles?.email && <p className="text-sm text-muted-foreground">{student.profiles.email}</p>}
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {student.student_profiles?.[0]?.grade && (
-                      <Badge variant="secondary" className="text-base px-3 py-1">
+                    {student.student_profiles?.[0]?.grade && <Badge variant="secondary" className="text-base px-3 py-1">
                         📚 Grade {student.student_profiles[0].grade}
-                      </Badge>
-                    )}
+                      </Badge>}
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Calendar className="h-3 w-3" />
                       <span>Joined {new Date(student.joined_at).toLocaleDateString()}</span>
                     </div>
                   </CardContent>
-                </Card>
-              ))}
-                </div>
-              )}
-              </TabsContent>
-            )}
+                </Card>)}
+                </div>}
+              </TabsContent>}
 
-            {isTeacher && (
-              <TabsContent value="attendance" className="mt-6">
+            {isTeacher && <TabsContent value="attendance" className="mt-6">
                 <div className="mb-6">
                   <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Attendance</h2>
                   <p className="text-muted-foreground mt-1">Track and manage student attendance</p>
                 </div>
-                <AttendanceTab 
-                  classroomId={id!} 
-                  students={students.map(s => ({
-                    student_id: s.student_id,
-                    full_name: s.profiles?.full_name || 'Student',
-                    avatar_url: s.student_profiles?.[0]?.avatar_url
-                  }))}
-                />
-              </TabsContent>
-            )}
+                <AttendanceTab classroomId={id!} students={students.map(s => ({
+              student_id: s.student_id,
+              full_name: s.profiles?.full_name || 'Student',
+              avatar_url: s.student_profiles?.[0]?.avatar_url
+            }))} />
+              </TabsContent>}
 
-            {isTeacher && (
-              <TabsContent value="ai-insights" className="mt-6">
+            {isTeacher && <TabsContent value="ai-insights" className="mt-6">
                 <ClassroomAIInsights classroomId={id!} />
-              </TabsContent>
-            )}
+              </TabsContent>}
 
-            {isTeacher && (
-              <TabsContent value="leaderboard" className="mt-6">
+            {isTeacher && <TabsContent value="leaderboard" className="mt-6">
                 <div className="mb-6">
                   <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Class Leaderboard</h2>
                   <p className="text-muted-foreground mt-1">Track student performance and achievements</p>
                 </div>
                 
                 <div className="grid lg:grid-cols-2 gap-6 mb-6">
-                  <LeaderboardCard 
-                    classroomId={id!} 
-                    currentStudentId={profile?.id}
-                    title="Reading Stars"
-                  />
-                  <ClassroomLeaderboard 
-                    classroomId={id!} 
-                    currentStudentId={isStudent ? profile?.id : undefined}
-                  />
+                  <LeaderboardCard classroomId={id!} currentStudentId={profile?.id} title="Reading Stars" />
+                  <ClassroomLeaderboard classroomId={id!} currentStudentId={isStudent ? profile?.id : undefined} />
                 </div>
-              </TabsContent>
-            )}
+              </TabsContent>}
 
-            {isStudent && profile && (
-              <TabsContent value="trends" className="mt-6">
+            {isStudent && profile && <TabsContent value="trends" className="mt-6">
                 <div className="mb-6">
                   <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Your Progress</h2>
                   <p className="text-muted-foreground mt-1">Track your performance trends in this classroom</p>
                 </div>
                 <StudentClassroomTrends classroomId={id!} studentId={profile.id} />
-              </TabsContent>
-            )}
+              </TabsContent>}
 
-            {isTeacher && (
-              <TabsContent value="parent-requests" className="mt-6">
+            {isTeacher && <TabsContent value="parent-requests" className="mt-6">
                 <div className="mb-4">
                   <h2 className="text-2xl font-bold">Parent Access Requests</h2>
                   <p className="text-muted-foreground mt-1">
@@ -893,119 +726,72 @@ const ClassroomDetail = () => {
                   </p>
                 </div>
 
-                {parentRequests.length === 0 ? (
-                  <Card className="p-12 text-center">
+                {parentRequests.length === 0 ? <Card className="p-12 text-center">
                     <UserCheck className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                     <h3 className="text-xl font-bold mb-2">No Parent Requests</h3>
                     <p className="text-muted-foreground">
                       When parents request access to view their child's progress, they'll appear here
                     </p>
-                  </Card>
-                ) : (
-                  <div className="grid md:grid-cols-2 gap-6">
-                    {parentRequests.map((request) => (
-                      <ParentAccessRequestCard
-                        key={request.id}
-                        id={request.id}
-                        parentName={request.parent_accounts?.full_name || 'Parent'}
-                        parentEmail={request.parent_accounts?.email || ''}
-                        studentName={request.profiles?.full_name || 'Student'}
-                        message={request.message}
-                        status={request.status}
-                        createdAt={request.created_at}
-                        onApprove={handleApproveParentRequest}
-                        onDeny={handleDenyParentRequest}
-                      />
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-            )}
+                  </Card> : <div className="grid md:grid-cols-2 gap-6">
+                    {parentRequests.map(request => <ParentAccessRequestCard key={request.id} id={request.id} parentName={request.parent_accounts?.full_name || 'Parent'} parentEmail={request.parent_accounts?.email || ''} studentName={request.profiles?.full_name || 'Student'} message={request.message} status={request.status} createdAt={request.created_at} onApprove={handleApproveParentRequest} onDeny={handleDenyParentRequest} />)}
+                  </div>}
+              </TabsContent>}
 
             <TabsContent value="assignments" className="mt-6">
-              {isTeacher && (
-                <StandardsProgressDashboard classroomId={id!} />
-              )}
+              {isTeacher && <StandardsProgressDashboard classroomId={id!} />}
               
               <div className="mb-4 flex items-center justify-between mt-6">
                 <h2 className="text-2xl font-bold">Assignments</h2>
-                {isTeacher && (
-                  <Button
-                    className="bg-gradient-primary hover:opacity-90"
-                    onClick={() => navigate(`/teacher/assignment/create/${id}`)}
-                  >
+                {isTeacher && <Button className="bg-gradient-primary hover:opacity-90" onClick={() => navigate(`/teacher/assignment/create/${id}`)}>
                     <FileText className="mr-2 h-4 w-4" />
                     Create Assignment
-                  </Button>
-                )}
+                  </Button>}
               </div>
 
-              {!assignments || assignments.length === 0 ? (
-                <Card className="p-12 text-center">
+              {!assignments || assignments.length === 0 ? <Card className="p-12 text-center">
                   <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="text-xl font-bold mb-2">No Assignments Yet</h3>
                   <p className="text-muted-foreground mb-4">
-                    {isTeacher 
-                      ? 'Create multi-question assignments with various question types'
-                      : 'Your teacher hasn\'t posted any assignments yet'}
+                    {isTeacher ? 'Create multi-question assignments with various question types' : 'Your teacher hasn\'t posted any assignments yet'}
                   </p>
-                  {isTeacher && (
-                    <Button
-                      className="bg-gradient-primary hover:opacity-90"
-                      onClick={() => navigate(`/teacher/assignment/create/${id}`)}
-                    >
+                  {isTeacher && <Button className="bg-gradient-primary hover:opacity-90" onClick={() => navigate(`/teacher/assignment/create/${id}`)}>
                       <FileText className="mr-2 h-4 w-4" />
                       Create First Assignment
-                    </Button>
-                  )}
-                </Card>
-              ) : (
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    </Button>}
+                </Card> : <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {assignments.map((assignment: any) => {
-                    // Teachers: show all assignments with full controls
-                    if (isTeacher) {
-                      return (
-                        <Card key={assignment.id} className="shadow-card hover:shadow-purple transition-shadow">
+                // Teachers: show all assignments with full controls
+                if (isTeacher) {
+                  return <Card key={assignment.id} className="shadow-card hover:shadow-purple transition-shadow">
                           <CardHeader>
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <CardTitle className="text-lg">{assignment.title}</CardTitle>
-                                {assignment.assignment_type === 'speaking' && (
-                                  <span title="Speaking Assignment">
+                                {assignment.assignment_type === 'speaking' && <span title="Speaking Assignment">
                                     <Mic className="h-4 w-4 text-primary" />
-                                  </span>
-                                )}
-                                {(assignment.assignment_type === 'reading_comprehension' || 
-                                  assignment.assignment_type === 'multi_question') && (
-                                  <div className="flex items-center gap-1">
+                                  </span>}
+                                {(assignment.assignment_type === 'reading_comprehension' || assignment.assignment_type === 'multi_question') && <div className="flex items-center gap-1">
                                     <span title="Reading/Questions">
                                       <BookOpen className="h-4 w-4 text-primary" />
                                     </span>
                                     <span title="Includes Speaking">
                                       <Mic className="h-4 w-4 text-primary" />
                                     </span>
-                                  </div>
-                                )}
+                                  </div>}
                               </div>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <Badge variant={assignment.status === 'published' ? 'default' : 'secondary'}>
-                                  {assignment.status === 'published' ? (
-                                    <>
+                                  {assignment.status === 'published' ? <>
                                       <Eye className="h-3 w-3 mr-1" />
                                       Published
-                                    </>
-                                  ) : (
-                                    <>
+                                    </> : <>
                                       <EyeOff className="h-3 w-3 mr-1" />
                                       Draft
-                                    </>
-                                  )}
+                                    </>}
                                 </Badge>
-                                {assignment.category && (
-                                  <Badge variant="outline" className={getCategoryColor(assignment.category)}>
+                                {assignment.category && <Badge variant="outline" className={getCategoryColor(assignment.category)}>
                                     {assignment.category}
-                                  </Badge>
-                                )}
+                                  </Badge>}
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -1013,25 +799,16 @@ const ClassroomDetail = () => {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end" className="bg-background z-50">
-                                    <DropdownMenuItem
-                                      onClick={() => handleToggleAssignmentStatus(assignment.id, assignment.status)}
-                                    >
-                                      {assignment.status === 'published' ? (
-                                        <>
+                                    <DropdownMenuItem onClick={() => handleToggleAssignmentStatus(assignment.id, assignment.status)}>
+                                      {assignment.status === 'published' ? <>
                                           <EyeOff className="mr-2 h-4 w-4" />
                                           Unpublish
-                                        </>
-                                      ) : (
-                                        <>
+                                        </> : <>
                                           <Eye className="mr-2 h-4 w-4" />
                                           Publish
-                                        </>
-                                      )}
+                                        </>}
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={() => setDeleteAssignmentId(assignment.id)}
-                                      className="text-destructive focus:text-destructive"
-                                    >
+                                    <DropdownMenuItem onClick={() => setDeleteAssignmentId(assignment.id)} className="text-destructive focus:text-destructive">
                                       <Trash2 className="mr-2 h-4 w-4" />
                                       Delete
                                     </DropdownMenuItem>
@@ -1042,74 +819,48 @@ const ClassroomDetail = () => {
                           </CardHeader>
                           <CardContent>
                             <div className="space-y-2">
-                              {assignment.description && (
-                                <p className="text-sm text-muted-foreground line-clamp-2">
+                              {assignment.description && <p className="text-sm text-muted-foreground line-clamp-2">
                                   {assignment.description}
-                                </p>
-                              )}
+                                </p>}
                               <div className="flex gap-2">
                                 <Badge variant="outline">
                                   {assignment.question_count || 1} Question{(assignment.question_count || 1) !== 1 ? 's' : ''}
                                 </Badge>
-                                {assignment.timer_minutes && (
-                                  <Badge variant="outline">
+                                {assignment.timer_minutes && <Badge variant="outline">
                                     {assignment.timer_minutes} min
-                                  </Badge>
-                                )}
+                                  </Badge>}
                               </div>
-                              {assignment.due_date && (
-                                <p className="text-xs text-muted-foreground">
+                              {assignment.due_date && <p className="text-xs text-muted-foreground">
                                   Due: {new Date(assignment.due_date).toLocaleDateString()}
-                                </p>
-                              )}
+                                </p>}
                               <p className="text-xs text-muted-foreground">
                                 Created {new Date(assignment.created_at).toLocaleDateString()}
                               </p>
                               
                               <AssignmentStatsCard assignmentId={assignment.id} />
                               
-                              {assignment.status === 'draft' && (
-                                <Button
-                                  variant="outline"
-                                  className="w-full mt-2"
-                                  onClick={() => navigate(`/teacher/assignment/create/${id}?edit=${assignment.id}`)}
-                                >
+                              {assignment.status === 'draft' && <Button variant="outline" className="w-full mt-2" onClick={() => navigate(`/teacher/assignment/create/${id}?edit=${assignment.id}`)}>
                                   Edit Draft
-                                </Button>
-                              )}
+                                </Button>}
                               
-                              {assignment.status === 'published' && (
-                                <Button
-                                  variant="outline"
-                                  className="w-full mt-4"
-                                  onClick={() => setViewingAssignmentId(assignment.id)}
-                                >
+                              {assignment.status === 'published' && <Button variant="outline" className="w-full mt-4" onClick={() => setViewingAssignmentId(assignment.id)}>
                                   <FileText className="mr-2 h-4 w-4" />
                                   View Submissions
-                                </Button>
-                              )}
+                                </Button>}
                             </div>
                           </CardContent>
-                        </Card>
-                      );
-                    }
-                    
-                    // Students: only show published assignments in student view
-                    if (isStudent && assignment.status === 'published') {
-                      return (
-                        <StudentAssignmentCard 
-                          key={assignment.id} 
-                          assignment={assignment} 
-                          classroomId={id!} 
-                        />
-                      );
-                    }
-                    
-                    // Fail-safe: if role is unclear, show nothing
-                    return null;
-                  })}
-                </div>
-              )}
+                        </Card>;
+                }
+
+                // Students: only show published assignments in student view
+                if (isStudent && assignment.status === 'published') {
+                  return <StudentAssignmentCard key={assignment.id} assignment={assignment} classroomId={id!} />;
+                }
+
+                // Fail-safe: if role is unclear, show nothing
+                return null;
+              })}
+                </div>}
             </TabsContent>
 
             <TabsContent value="announcements" className="mt-6">
@@ -1117,136 +868,87 @@ const ClassroomDetail = () => {
                 <h2 className="text-2xl font-bold">Announcements & Assignments</h2>
               </div>
 
-              {announcements.length === 0 ? (
-                <Card className="p-12 text-center">
+              {announcements.length === 0 ? <Card className="p-12 text-center">
                   <Megaphone className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="text-xl font-bold mb-2">No Announcements Yet</h3>
                   <p className="text-muted-foreground mb-4">
-                    {isTeacher 
-                      ? 'Send messages and assignments to all students in this classroom'
-                      : 'Your teacher hasn\'t posted any announcements yet'}
+                    {isTeacher ? 'Send messages and assignments to all students in this classroom' : 'Your teacher hasn\'t posted any announcements yet'}
                   </p>
-                  {isTeacher && (
-                    <Button
-                      className="bg-gradient-primary hover:opacity-90"
-                      onClick={() => setShowCreateAnnouncement(true)}
-                    >
+                  {isTeacher && <Button className="bg-gradient-primary hover:opacity-90" onClick={() => setShowCreateAnnouncement(true)}>
                       <Megaphone className="mr-2 h-4 w-4" />
                       Send to Students
-                    </Button>
-                  )}
-                </Card>
-              ) : (
-                <div className="space-y-4">
-                  {announcements.map((announcement) => (
-                    <AnnouncementCard
-                      key={announcement.id}
-                      title={announcement.title}
-                      content={announcement.content}
-                      type={announcement.announcement_type}
-                      createdAt={announcement.created_at}
-                    />
-                  ))}
-                </div>
-              )}
+                    </Button>}
+                </Card> : <div className="space-y-4">
+                  {announcements.map(announcement => <AnnouncementCard key={announcement.id} title={announcement.title} content={announcement.content} type={announcement.announcement_type} createdAt={announcement.created_at} />)}
+                </div>}
             </TabsContent>
 
             <TabsContent value="tournaments" className="mt-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold">Tournaments</h2>
-                {isTeacher && (
-                  <Button
-                    className="bg-gradient-primary hover:opacity-90"
-                    onClick={() => setShowSelectGame(true)}
-                  >
+                <h2 className="text-2xl font-bold">Study Games </h2>
+                {isTeacher && <Button className="bg-gradient-primary hover:opacity-90" onClick={() => setShowSelectGame(true)}>
                     <Trophy className="mr-2 h-4 w-4" />
                     Create Tournament
-                  </Button>
-                )}
+                  </Button>}
               </div>
 
-              {tournaments.length === 0 ? (
-                <Card className="p-12 text-center">
+              {tournaments.length === 0 ? <Card className="p-12 text-center">
                   <Trophy className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="text-xl font-bold mb-2">No Tournaments Yet</h3>
                   <p className="text-muted-foreground mb-4">
-                    {isTeacher
-                      ? 'Create your first TriviaTastic tournament for this classroom'
-                      : 'Your teacher hasn\'t created any tournaments yet'}
+                    {isTeacher ? 'Create your first TriviaTastic tournament for this classroom' : 'Your teacher hasn\'t created any tournaments yet'}
                   </p>
-                  {isTeacher && (
-                    <Button
-                      className="bg-gradient-primary hover:opacity-90"
-                      onClick={() => setShowSelectGame(true)}
-                    >
+                  {isTeacher && <Button className="bg-gradient-primary hover:opacity-90" onClick={() => setShowSelectGame(true)}>
                       <Trophy className="mr-2 h-4 w-4" />
                       Create Tournament
-                    </Button>
-                  )}
-                </Card>
-              ) : (
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {tournaments.map((tournament) => (
-                    <Card key={tournament.id} className="shadow-card hover:shadow-purple transition-shadow">
+                    </Button>}
+                </Card> : <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {tournaments.map(tournament => <Card key={tournament.id} className="shadow-card hover:shadow-purple transition-shadow">
                       <CardHeader>
                         <div className="flex items-center justify-between">
                           <CardTitle>{tournament.name}</CardTitle>
                           <div className="flex items-center gap-2">
-                            <Badge variant={
-                              tournament.status === 'completed' ? 'secondary' :
-                              tournament.status === 'in_progress' ? 'default' : 'outline'
-                            }>
+                            <Badge variant={tournament.status === 'completed' ? 'secondary' : tournament.status === 'in_progress' ? 'default' : 'outline'}>
                               {tournament.status}
                             </Badge>
-                            {isTeacher && (
-                              <DropdownMenu>
+                            {isTeacher && <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button variant="ghost" size="icon" className="h-8 w-8">
                                     <MoreVertical className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={() => setDeleteTournamentId(tournament.id)}
-                                    className="text-destructive focus:text-destructive"
-                                  >
+                                  <DropdownMenuItem onClick={() => setDeleteTournamentId(tournament.id)} className="text-destructive focus:text-destructive">
                                     <Trash2 className="mr-2 h-4 w-4" />
                                     Delete
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
+                              </DropdownMenu>}
                           </div>
                         </div>
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-2">
                           <p className="text-sm text-muted-foreground">
-                            Tournament created
+                            Game created
                           </p>
                           <p className="text-xs text-muted-foreground">
                             Created {new Date(tournament.created_at).toLocaleDateString()}
                           </p>
-                          <Button
-                            variant="outline"
-                            className="w-full mt-4"
-                            onClick={() => {
-                              if (isTeacher) {
-                                navigate(`/teacher/tournament/control?tournament=${tournament.id}`);
-                              } else {
-                                navigate(`/games/jeopardy-1v1?tournament=${tournament.id}`);
-                              }
-                            }}
-                          >
+                          <Button variant="outline" className="w-full mt-4" onClick={() => {
+                      if (isTeacher) {
+                        navigate(`/teacher/tournament/control?tournament=${tournament.id}`);
+                      } else {
+                        navigate(`/games/jeopardy-1v1?tournament=${tournament.id}`);
+                      }
+                    }}>
                             <Play className="mr-2 h-4 w-4" />
                             {isTeacher ? 'Control Tournament' : 'Join Tournament'}
                           </Button>
                         </div>
                       </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
+                    </Card>)}
+                </div>}
             </TabsContent>
 
             <TabsContent value="study" className="mt-6">
@@ -1257,79 +959,47 @@ const ClassroomDetail = () => {
                     {isTeacher ? "Manage flashcard sets for your students" : "Review flashcard sets from your teacher"}
                   </p>
                 </div>
-                {isTeacher && (
-                  <Button
-                    onClick={() => navigate(`/teacher/questions/${id}`)}
-                    className="bg-gradient-primary"
-                  >
+                {isTeacher && <Button onClick={() => navigate(`/teacher/questions/${id}`)} className="bg-gradient-primary">
                     <Plus className="mr-2 h-4 w-4" />
                     Create Flashcards
-                  </Button>
-                )}
+                  </Button>}
               </div>
 
-              {viewingFlashcardSet ? (
-                <div>
-                  <Button
-                    variant="outline"
-                    onClick={() => setViewingFlashcardSet(null)}
-                    className="mb-4"
-                  >
+              {viewingFlashcardSet ? <div>
+                  <Button variant="outline" onClick={() => setViewingFlashcardSet(null)} className="mb-4">
                     ← Back to Study Materials
                   </Button>
                   <FlashcardSetViewer flashcards={viewingFlashcardSet.flashcards} />
-                </div>
-              ) : flashcardSets.length === 0 ? (
-                <Card className="p-12 text-center">
+                </div> : flashcardSets.length === 0 ? <Card className="p-12 text-center">
                   <GraduationCap className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="text-xl font-bold mb-2">No Study Materials Yet</h3>
                   <p className="text-muted-foreground mb-4">
-                    {isTeacher
-                      ? "Generate flashcard sets from your question groups"
-                      : "Your teacher hasn't created any flashcard sets yet"}
+                    {isTeacher ? "Generate flashcard sets from your question groups" : "Your teacher hasn't created any flashcard sets yet"}
                   </p>
-                  {isTeacher && (
-                    <Button
-                      onClick={() => navigate(`/teacher/questions/${id}`)}
-                      className="bg-gradient-primary"
-                    >
+                  {isTeacher && <Button onClick={() => navigate(`/teacher/questions/${id}`)} className="bg-gradient-primary">
                       <Plus className="mr-2 h-4 w-4" />
                       Create Your First Flashcard Set
-                    </Button>
-                  )}
-                </Card>
-              ) : (
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {flashcardSets.map((set) => (
-                    <Card key={set.id} className="shadow-card hover:shadow-purple transition-shadow">
+                    </Button>}
+                </Card> : <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {flashcardSets.map(set => <Card key={set.id} className="shadow-card hover:shadow-purple transition-shadow">
                       <CardHeader>
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-lg">{set.title}</CardTitle>
-                          {isTeacher && (
-                            <Badge variant={set.is_posted ? "default" : "secondary"}>
+                          {isTeacher && <Badge variant={set.is_posted ? "default" : "secondary"}>
                               {set.is_posted ? "Posted" : "Draft"}
-                            </Badge>
-                          )}
+                            </Badge>}
                         </div>
-                        {set.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2">
+                        {set.description && <p className="text-sm text-muted-foreground line-clamp-2">
                             {set.description}
-                          </p>
-                        )}
+                          </p>}
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-3">
                           <div className="flex flex-wrap gap-2">
-                            {set.question_groups?.subject && (
-                              <Badge variant="secondary">{set.question_groups.subject}</Badge>
-                            )}
-                            {set.question_groups?.grade !== undefined && (
-                              <Badge variant="outline">
-                                {set.question_groups.grade === 0
-                                  ? "K"
-                                  : `Grade ${set.question_groups.grade}`}
-                              </Badge>
-                            )}
+                            {set.question_groups?.subject && <Badge variant="secondary">{set.question_groups.subject}</Badge>}
+                            {set.question_groups?.grade !== undefined && <Badge variant="outline">
+                                {set.question_groups.grade === 0 ? "K" : `Grade ${set.question_groups.grade}`}
+                              </Badge>}
                           </div>
                           <p className="text-sm text-muted-foreground">
                             <strong>{set.flashcards.length}</strong> flashcards
@@ -1338,49 +1008,38 @@ const ClassroomDetail = () => {
                             Created {new Date(set.created_at).toLocaleDateString()}
                           </p>
                           <div className="flex gap-2">
-                            <Button
-                              className="flex-1 bg-gradient-primary"
-                              onClick={() => setViewingFlashcardSet(set)}
-                            >
+                            <Button className="flex-1 bg-gradient-primary" onClick={() => setViewingFlashcardSet(set)}>
                               <Play className="mr-2 h-4 w-4" />
                               Study Now
                             </Button>
-                            {isTeacher && (
-                              <Button
-                                variant={set.is_posted ? "outline" : "default"}
-                                onClick={async () => {
-                                  try {
-                                    const { error } = await supabase
-                                      .from('flashcard_sets')
-                                      .update({ is_posted: !set.is_posted })
-                                      .eq('id', set.id);
-                                    
-                                    if (error) throw error;
-                                    
-                                    toast({
-                                      title: "Success",
-                                      description: `Flashcard set ${!set.is_posted ? 'posted' : 'unpublished'}`,
-                                    });
-                                    loadClassroomData();
-                                  } catch (error: any) {
-                                    toast({
-                                      title: "Error",
-                                      description: "Failed to update flashcard set status",
-                                      variant: "destructive",
-                                    });
-                                  }
-                                }}
-                              >
+                            {isTeacher && <Button variant={set.is_posted ? "outline" : "default"} onClick={async () => {
+                        try {
+                          const {
+                            error
+                          } = await supabase.from('flashcard_sets').update({
+                            is_posted: !set.is_posted
+                          }).eq('id', set.id);
+                          if (error) throw error;
+                          toast({
+                            title: "Success",
+                            description: `Flashcard set ${!set.is_posted ? 'posted' : 'unpublished'}`
+                          });
+                          loadClassroomData();
+                        } catch (error: any) {
+                          toast({
+                            title: "Error",
+                            description: "Failed to update flashcard set status",
+                            variant: "destructive"
+                          });
+                        }
+                      }}>
                                 {set.is_posted ? "Unpost" : "Post"}
-                              </Button>
-                            )}
+                              </Button>}
                           </div>
                         </div>
                       </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
+                    </Card>)}
+                </div>}
             </TabsContent>
 
             <TabsContent value="syllabus" className="mt-6">
@@ -1392,40 +1051,19 @@ const ClassroomDetail = () => {
 
       <Footer />
 
-      {isTeacher && (
-        <>
-          <SelectGameModal
-            open={showSelectGame}
-            onOpenChange={setShowSelectGame}
-            onSelectGame={(gameType) => {
-              setSelectedGameType(gameType);
-              setShowCreateTournament(true);
-            }}
-          />
+      {isTeacher && <>
+          <SelectGameModal open={showSelectGame} onOpenChange={setShowSelectGame} onSelectGame={gameType => {
+        setSelectedGameType(gameType);
+        setShowCreateTournament(true);
+      }} />
 
-          <CreateTournamentModal
-            open={showCreateTournament}
-            onOpenChange={setShowCreateTournament}
-            classroomId={id!}
-            gameType={selectedGameType}
-          />
+          <CreateTournamentModal open={showCreateTournament} onOpenChange={setShowCreateTournament} classroomId={id!} gameType={selectedGameType} />
 
-          <CreateAnnouncementModal
-            open={showCreateAnnouncement}
-            onOpenChange={setShowCreateAnnouncement}
-            classroomId={id!}
-            onSuccess={loadClassroomData}
-          />
+          <CreateAnnouncementModal open={showCreateAnnouncement} onOpenChange={setShowCreateAnnouncement} classroomId={id!} onSuccess={loadClassroomData} />
 
-          <CreateAssignmentModal
-            open={showCreateAssignment}
-            onOpenChange={setShowCreateAssignment}
-            classroomId={id!}
-            onSuccess={loadClassroomData}
-          />
+          <CreateAssignmentModal open={showCreateAssignment} onOpenChange={setShowCreateAssignment} classroomId={id!} onSuccess={loadClassroomData} />
 
-          {viewingAssignmentId && (
-            <Dialog open={!!viewingAssignmentId} onOpenChange={(open) => !open && setViewingAssignmentId(null)}>
+          {viewingAssignmentId && <Dialog open={!!viewingAssignmentId} onOpenChange={open => !open && setViewingAssignmentId(null)}>
               <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Student Submissions</DialogTitle>
@@ -1434,15 +1072,10 @@ const ClassroomDetail = () => {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
-                  <SubmissionsList 
-                    submissions={assignmentSubmissions}
-                    classroomId={id!}
-                    assignmentType={assignments.find((a: any) => a.id === viewingAssignmentId)?.assignment_type || 'multi_question'}
-                  />
+                  <SubmissionsList submissions={assignmentSubmissions} classroomId={id!} assignmentType={assignments.find((a: any) => a.id === viewingAssignmentId)?.assignment_type || 'multi_question'} />
                 </div>
               </DialogContent>
-            </Dialog>
-          )}
+            </Dialog>}
 
           {/* Class at a Glance Dialog */}
           <Dialog open={showClassGlance} onOpenChange={setShowClassGlance}>
@@ -1454,46 +1087,22 @@ const ClassroomDetail = () => {
             </DialogContent>
           </Dialog>
 
-          <ConfirmModal
-            open={!!deleteAssignmentId}
-            onOpenChange={(open) => !open && setDeleteAssignmentId(null)}
-            title="Delete Assignment"
-            description="Are you sure you want to delete this assignment? This action cannot be undone."
-            confirmText="Yes"
-            cancelText="No"
-            onConfirm={() => {
-              if (deleteAssignmentId) {
-                deleteAssignment(deleteAssignmentId);
-                setDeleteAssignmentId(null);
-              }
-            }}
-          />
+          <ConfirmModal open={!!deleteAssignmentId} onOpenChange={open => !open && setDeleteAssignmentId(null)} title="Delete Assignment" description="Are you sure you want to delete this assignment? This action cannot be undone." confirmText="Yes" cancelText="No" onConfirm={() => {
+        if (deleteAssignmentId) {
+          deleteAssignment(deleteAssignmentId);
+          setDeleteAssignmentId(null);
+        }
+      }} />
 
-          <ConfirmModal
-            open={!!deleteTournamentId}
-            onOpenChange={(open) => !open && setDeleteTournamentId(null)}
-            title="Delete Tournament"
-            description="Are you sure you want to delete this tournament? This will also delete all associated matches and player data. This action cannot be undone."
-            confirmText="Yes, Delete"
-            cancelText="Cancel"
-            onConfirm={() => {
-              if (deleteTournamentId) {
-                handleDeleteTournament(deleteTournamentId);
-                setDeleteTournamentId(null);
-              }
-            }}
-          />
+          <ConfirmModal open={!!deleteTournamentId} onOpenChange={open => !open && setDeleteTournamentId(null)} title="Delete Tournament" description="Are you sure you want to delete this tournament? This will also delete all associated matches and player data. This action cannot be undone." confirmText="Yes, Delete" cancelText="Cancel" onConfirm={() => {
+        if (deleteTournamentId) {
+          handleDeleteTournament(deleteTournamentId);
+          setDeleteTournamentId(null);
+        }
+      }} />
 
-          <EditClassroomModal
-            open={showEditClassroom}
-            onOpenChange={setShowEditClassroom}
-            onSuccess={loadClassroomData}
-            classroom={classroom}
-          />
-        </>
-      )}
-    </div>
-  );
+          <EditClassroomModal open={showEditClassroom} onOpenChange={setShowEditClassroom} onSuccess={loadClassroomData} classroom={classroom} />
+        </>}
+    </div>;
 };
-
 export default ClassroomDetail;
