@@ -109,11 +109,24 @@ export const usePushNotifications = () => {
       });
       setIsLoading(false);
       return true;
-    } catch (error) {
-      console.error('Error subscribing to push notifications:', error);
+    } catch (error: any) {
+      console.error('Push notification subscription error:', error);
+      
+      let errorMessage = "Could not enable push notifications";
+      
+      if (error?.message?.includes('Registration failed')) {
+        errorMessage = "Service worker registration failed. Please refresh the page.";
+      } else if (error?.message?.includes('denied')) {
+        errorMessage = "Notification permission was denied";
+      } else if (error?.name === 'NotSupportedError') {
+        errorMessage = "Push notifications are not supported in this browser";
+      } else if (error?.code === '23505') {
+        errorMessage = "Subscription already exists";
+      }
+      
       toast({
         title: 'Subscription Failed',
-        description: 'Failed to subscribe to push notifications.',
+        description: errorMessage,
         variant: 'destructive',
       });
       setIsLoading(false);

@@ -10,7 +10,7 @@ interface DrillSessionCardProps {
 export function DrillSessionCard({ drill }: DrillSessionCardProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "active": return "bg-red-500";
+      case "in_progress": return "bg-red-500";
       case "completed": return "bg-green-500";
       case "scheduled": return "bg-blue-500";
       default: return "bg-gray-500";
@@ -61,7 +61,7 @@ export function DrillSessionCard({ drill }: DrillSessionCardProps) {
           </div>
         </div>
 
-        {drill.status === "active" && (
+        {drill.status === "in_progress" && (
           <Button size="sm">
             Monitor Live
           </Button>

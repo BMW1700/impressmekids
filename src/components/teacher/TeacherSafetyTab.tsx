@@ -63,7 +63,7 @@ export const TeacherSafetyTab = ({ classroomId, students }: TeacherSafetyTabProp
       .from('drill_sessions')
       .select('*')
       .eq('classroom_id', classroomId)
-      .eq('status', 'active')
+      .eq('status', 'in_progress')
       .order('started_at', { ascending: false })
       .limit(1)
       .single();
@@ -84,7 +84,7 @@ export const TeacherSafetyTab = ({ classroomId, students }: TeacherSafetyTabProp
           drill_type: drillType,
           classroom_id: classroomId,
           created_by: session.user.id,
-          status: 'active',
+          status: 'in_progress',
           started_at: new Date().toISOString()
         })
         .select()

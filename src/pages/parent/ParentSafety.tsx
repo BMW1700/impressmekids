@@ -87,7 +87,7 @@ export default function ParentSafety() {
       .eq("status", "unaccounted");
 
     if (drillData) {
-      setUnaccountedChildren(drillData.filter((d: any) => d.drill_sessions?.status === "active"));
+      setUnaccountedChildren(drillData.filter((d: any) => d.drill_sessions?.status === "in_progress"));
     }
   };
 
