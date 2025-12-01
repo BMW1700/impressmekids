@@ -23,6 +23,7 @@ const TeacherDashboard = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showStudentsDialog, setShowStudentsDialog] = useState(false);
   const [classroomsWithStudents, setClassroomsWithStudents] = useState<any[]>([]);
+  const [totalStudentCount, setTotalStudentCount] = useState(0);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -101,6 +102,19 @@ const TeacherDashboard = () => {
 
       if (error) throw error;
       setClassrooms(classroomsData || []);
+
+      // Fetch student counts for all classrooms
+      if (classroomsData && classroomsData.length > 0) {
+        const { data: studentCounts } = await supabase
+          .from('classroom_students')
+          .select('classroom_id', { count: 'exact', head: false })
+          .in('classroom_id', classroomsData.map((c: any) => c.id));
+
+        const totalCount = studentCounts?.length || 0;
+        setTotalStudentCount(totalCount);
+      } else {
+        setTotalStudentCount(0);
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -267,7 +281,7 @@ const TeacherDashboard = () => {
               <CardContent>
                 <div className="flex items-baseline gap-2">
                   <div className="text-4xl font-bold bg-gradient-hero bg-clip-text text-transparent">
-                    {classrooms.reduce((acc, c) => acc + (c.classroom_students?.[0]?.count || 0), 0)}
+                    {totalStudentCount}
                   </div>
                   <div className="flex items-center text-sm text-green-600">
                     <TrendingUp className="h-3 w-3 mr-1" />
@@ -492,7 +506,7 @@ const TeacherDashboard = () => {
         open={showStudentsDialog}
         onOpenChange={setShowStudentsDialog}
         classrooms={classroomsWithStudents}
-        totalStudents={classrooms.reduce((acc, c) => acc + (c.classroom_students?.[0]?.count || 0), 0)}
+        totalStudents={totalStudentCount}
       />
     </div>
   );
