@@ -9,6 +9,7 @@ import PendingVerification from "./pages/PendingVerification";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminCalendar from "./pages/admin/AdminCalendar";
 import SchoolSettings from "./pages/admin/SchoolSettings";
+import AdminSafetyDashboard from "./pages/admin/AdminSafetyDashboard";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import TeacherCalendar from "./pages/teacher/Calendar";
 import StudentDashboard from "./pages/student/StudentDashboard";
@@ -37,6 +38,7 @@ import ParentCalendar from "./pages/parent/ParentCalendar";
 import RequestAccess from "./pages/parent/RequestAccess";
 import NotificationSettings from "./pages/parent/NotificationSettings";
 import ChildDetail from "./pages/parent/ChildDetail";
+import ParentSafety from "./pages/parent/ParentSafety";
 import DistrictDashboard from "./pages/district/DistrictDashboard";
 import DistrictManagerDashboard from "./pages/district/DistrictManagerDashboard";
 import RegisterDistrict from "./pages/district/RegisterDistrict";
@@ -84,10 +86,12 @@ const App = () => (
           <Route path="/parent/request-access" element={<RequestAccess />} />
           <Route path="/parent/notification-settings" element={<NotificationSettings />} />
           <Route path="/parent/child/:studentId" element={<ChildDetail />} />
+          <Route path="/parent/safety" element={<ParentSafety />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/calendar" element={<AdminCalendar />} />
           <Route path="/admin/settings" element={<SchoolSettings />} />
+          <Route path="/admin/safety" element={<AdminSafetyDashboard />} />
           <Route path="/district/dashboard" element={<DistrictDashboard />} />
           <Route path="/district-manager/dashboard" element={<DistrictManagerDashboard />} />
           <Route path="/district/register" element={<RegisterDistrict />} />
