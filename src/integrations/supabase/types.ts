@@ -1618,6 +1618,7 @@ export type Database = {
           drill_type: string
           ended_at: string | null
           id: string
+          is_real_emergency: boolean | null
           notes: string | null
           scheduled_for: string | null
           school_drill_id: string | null
@@ -1634,6 +1635,7 @@ export type Database = {
           drill_type: string
           ended_at?: string | null
           id?: string
+          is_real_emergency?: boolean | null
           notes?: string | null
           scheduled_for?: string | null
           school_drill_id?: string | null
@@ -1650,6 +1652,7 @@ export type Database = {
           drill_type?: string
           ended_at?: string | null
           id?: string
+          is_real_emergency?: boolean | null
           notes?: string | null
           scheduled_for?: string | null
           school_drill_id?: string | null
@@ -2634,6 +2637,7 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           id: string
+          notify_on_recess_return: boolean | null
           parent_id: string
           requested_at: string
           student_id: string
@@ -2643,6 +2647,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           id?: string
+          notify_on_recess_return?: boolean | null
           parent_id: string
           requested_at?: string
           student_id: string
@@ -2652,6 +2657,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           id?: string
+          notify_on_recess_return?: boolean | null
           parent_id?: string
           requested_at?: string
           student_id?: string

@@ -41,6 +41,7 @@ serve(async (req) => {
     }
 
     const drillTypeName = drillSession.drill_type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+    const isEmergency = drillSession.is_real_emergency || false;
 
     let targetUserIds: string[] = [];
     let notificationTitle = '';
@@ -70,8 +71,10 @@ serve(async (req) => {
             .filter(Boolean);
         }
 
-        notificationTitle = `✅ ${student?.full_name || 'Student'} Checked In`;
-        notificationBody = `Your child has been marked safe during the ${drillTypeName}.`;
+        notificationTitle = isEmergency ? `🚨 ${student?.full_name || 'Student'} is SAFE` : `✅ ${student?.full_name || 'Student'} Checked In`;
+        notificationBody = isEmergency 
+          ? `EMERGENCY UPDATE: Your child has been marked SAFE during the ${drillTypeName.toUpperCase()} emergency.`
+          : `Your child has been marked safe during the ${drillTypeName}.`;
         break;
       }
 
@@ -147,8 +150,10 @@ serve(async (req) => {
           }
         }
 
-        notificationTitle = `🚨 ${drillTypeName} In Progress`;
-        notificationBody = `A ${drillTypeName} has started. Follow your teacher's instructions.`;
+        notificationTitle = isEmergency ? `🚨 EMERGENCY: ${drillTypeName.toUpperCase()}` : `🚨 ${drillTypeName} In Progress`;
+        notificationBody = isEmergency
+          ? `REAL ${drillTypeName.toUpperCase()} EMERGENCY - THIS IS NOT A DRILL. Follow emergency protocols immediately.`
+          : `A ${drillTypeName} has started. Follow your teacher's instructions.`;
         break;
       }
 
@@ -188,8 +193,10 @@ serve(async (req) => {
         }
 
         const classroomName = (drillSession.classrooms as any)?.name || 'the classroom';
-        notificationTitle = `✅ All Clear`;
-        notificationBody = `Drill complete - all students in ${classroomName} are safe.`;
+        notificationTitle = isEmergency ? `✅ All Clear - ${drillTypeName.toUpperCase()} Emergency Resolved` : `✅ All Clear`;
+        notificationBody = isEmergency
+          ? `The ${drillTypeName.toUpperCase()} emergency has been resolved. All students in ${classroomName} are confirmed safe.`
+          : `Drill complete - all students in ${classroomName} are safe.`;
         break;
       }
     }

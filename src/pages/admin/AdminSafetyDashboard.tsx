@@ -33,6 +33,7 @@ export default function AdminSafetyDashboard() {
   const [showCreateAlert, setShowCreateAlert] = useState(false);
   const [showScheduleDrill, setShowScheduleDrill] = useState(false);
   const [selectedDrillType, setSelectedDrillType] = useState<string>("");
+  const [isRealEmergency, setIsRealEmergency] = useState(false);
   const [startingSchoolWideDrill, setStartingSchoolWideDrill] = useState(false);
   const [classrooms, setClassrooms] = useState<any[]>([]);
 
@@ -165,7 +166,8 @@ export default function AdminSafetyDashboard() {
           drill_type: selectedDrillType,
           status: "in_progress",
           created_by: session.user.id,
-          started_at: new Date().toISOString()
+          started_at: new Date().toISOString(),
+          is_real_emergency: isRealEmergency
         })
         .select()
         .single();
@@ -179,7 +181,8 @@ export default function AdminSafetyDashboard() {
         status: "in_progress",
         created_by: session.user.id,
         started_at: new Date().toISOString(),
-        school_drill_id: parentDrill.id
+        school_drill_id: parentDrill.id,
+        is_real_emergency: isRealEmergency
       }));
 
       const { error: sessionsError } = await supabase
@@ -222,12 +225,15 @@ export default function AdminSafetyDashboard() {
       }
 
       toast({
-        title: "School-Wide Drill Started",
-        description: `${selectedDrillType} drill initiated for all classrooms`,
+        title: isRealEmergency ? "🚨 EMERGENCY ACTIVATED" : "School-Wide Drill Started",
+        description: isRealEmergency 
+          ? `REAL ${selectedDrillType.replace(/_/g, ' ').toUpperCase()} EMERGENCY - All staff and parents notified`
+          : `${selectedDrillType} drill initiated for all classrooms`,
       });
 
       await fetchData();
       setSelectedDrillType("");
+      setIsRealEmergency(false);
     } catch (error) {
       console.error("Error starting school-wide drill:", error);
       toast({
@@ -282,27 +288,43 @@ export default function AdminSafetyDashboard() {
               <CalendarIcon className="mr-2 h-5 w-5" />
               Schedule Drill
             </Button>
-            <div className="flex gap-2">
-              <Select value={selectedDrillType} onValueChange={setSelectedDrillType}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select drill type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="fire">Fire Drill</SelectItem>
-                  <SelectItem value="lockdown">Lockdown</SelectItem>
-                  <SelectItem value="tornado">Tornado</SelectItem>
-                  <SelectItem value="earthquake">Earthquake</SelectItem>
-                  <SelectItem value="reunification">Reunification</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button 
-                onClick={startSchoolWideDrill} 
-                size="lg"
-                disabled={!selectedDrillType || startingSchoolWideDrill}
-              >
-                <Users className="mr-2 h-5 w-5" />
-                {startingSchoolWideDrill ? "Starting..." : "Start Now"}
-              </Button>
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2">
+                <Select value={selectedDrillType} onValueChange={setSelectedDrillType}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select drill type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fire">Fire Drill</SelectItem>
+                    <SelectItem value="lockdown">Lockdown</SelectItem>
+                    <SelectItem value="tornado">Tornado</SelectItem>
+                    <SelectItem value="earthquake">Earthquake</SelectItem>
+                    <SelectItem value="reunification">Reunification</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button 
+                  onClick={startSchoolWideDrill} 
+                  size="lg"
+                  disabled={!selectedDrillType || startingSchoolWideDrill}
+                  className={isRealEmergency ? "bg-red-600 hover:bg-red-700" : ""}
+                >
+                  <Users className="mr-2 h-5 w-5" />
+                  {startingSchoolWideDrill ? "Starting..." : (isRealEmergency ? "🚨 ACTIVATE EMERGENCY" : "Start Now")}
+                </Button>
+              </div>
+              <label className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg ${
+                isRealEmergency ? "bg-red-500/20 border border-red-500" : "bg-muted"
+              }`}>
+                <input 
+                  type="checkbox" 
+                  checked={isRealEmergency}
+                  onChange={(e) => setIsRealEmergency(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <span className={`text-sm font-semibold ${isRealEmergency ? "text-red-600" : ""}`}>
+                  {isRealEmergency ? "🚨 REAL EMERGENCY (NOT A DRILL)" : "🟡 This is a practice drill"}
+                </span>
+              </label>
             </div>
           </div>
         </div>
