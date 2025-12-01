@@ -707,7 +707,7 @@ const ClassroomDetail = () => {
                     className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
                   >
                     <Trophy className="mr-2 h-4 w-4" />
-                    Tournaments
+                    Study Games
                   </TabsTrigger>
                   <TabsTrigger 
                     value="ai-insights"
@@ -769,7 +769,7 @@ const ClassroomDetail = () => {
                     className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
                   >
                     <Trophy className="mr-2 h-4 w-4" />
-                    Tournaments
+                    Study Games
                   </TabsTrigger>
                   <TabsTrigger 
                     value="trends"
