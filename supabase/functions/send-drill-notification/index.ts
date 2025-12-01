@@ -7,10 +7,11 @@ const corsHeaders = {
 };
 
 interface DrillNotificationPayload {
-  type: 'student_checkin' | 'drill_scheduled' | 'drill_started' | 'all_clear';
-  drillSessionId: string;
+  type: 'student_checkin' | 'drill_scheduled' | 'drill_started' | 'all_clear' | 'recess_return';
+  drillSessionId?: string;
   studentId?: string;
   classroomId?: string;
+  studentIds?: string[];
 }
 
 serve(async (req) => {
@@ -25,23 +26,30 @@ serve(async (req) => {
     );
 
     const payload: DrillNotificationPayload = await req.json();
-    const { type, drillSessionId, studentId, classroomId } = payload;
+    const { type, drillSessionId, studentId, classroomId, studentIds } = payload;
 
-    console.log('Processing drill notification:', { type, drillSessionId, studentId, classroomId });
+    console.log('Processing drill notification:', { type, drillSessionId, studentId, classroomId, studentIds });
 
-    // Get drill session details
-    const { data: drillSession, error: drillError } = await supabaseClient
-      .from('drill_sessions')
-      .select('*, classrooms(name)')
-      .eq('id', drillSessionId)
-      .single();
+    let drillSession: any = null;
+    let drillTypeName = '';
+    let isEmergency = false;
 
-    if (drillError || !drillSession) {
-      throw new Error('Drill session not found');
+    // Get drill session details (except for recess_return)
+    if (type !== 'recess_return' && drillSessionId) {
+      const { data, error: drillError } = await supabaseClient
+        .from('drill_sessions')
+        .select('*, classrooms(name)')
+        .eq('id', drillSessionId)
+        .single();
+
+      if (drillError || !data) {
+        throw new Error('Drill session not found');
+      }
+
+      drillSession = data;
+      drillTypeName = drillSession.drill_type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+      isEmergency = drillSession.is_real_emergency || false;
     }
-
-    const drillTypeName = drillSession.drill_type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
-    const isEmergency = drillSession.is_real_emergency || false;
 
     let targetUserIds: string[] = [];
     let notificationTitle = '';
@@ -197,6 +205,34 @@ serve(async (req) => {
         notificationBody = isEmergency
           ? `The ${drillTypeName.toUpperCase()} emergency has been resolved. All students in ${classroomName} are confirmed safe.`
           : `Drill complete - all students in ${classroomName} are safe.`;
+        break;
+      }
+
+      case 'recess_return': {
+        if (!studentIds || studentIds.length === 0) throw new Error('studentIds required for recess_return');
+
+        // Get parents who have opted in for recess notifications
+        const { data: parentLinks } = await supabaseClient
+          .from('parent_student_links')
+          .select(`
+            parent_id,
+            student_id,
+            parent_accounts(user_id),
+            profiles(full_name)
+          `)
+          .in('student_id', studentIds)
+          .eq('approved', true);
+
+        if (parentLinks && parentLinks.length > 0) {
+          // Filter for parents with recess notification preference
+          // For now, send to all parents (we can add preference table later)
+          targetUserIds = parentLinks
+            .map(link => (link.parent_accounts as any)?.user_id)
+            .filter(Boolean);
+        }
+
+        notificationTitle = '✅ Children Returned from Recess';
+        notificationBody = 'Your child has safely returned to class from recess.';
         break;
       }
     }

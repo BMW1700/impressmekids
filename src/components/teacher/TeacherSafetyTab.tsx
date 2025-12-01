@@ -30,6 +30,8 @@ export const TeacherSafetyTab = ({ classroomId, students }: TeacherSafetyTabProp
   const [drillAttendance, setDrillAttendance] = useState<any[]>([]);
   const [isEndingDrill, setIsEndingDrill] = useState(false);
   const [isSendingAllClear, setIsSendingAllClear] = useState(false);
+  const [scheduledDrill, setScheduledDrill] = useState<any>(null);
+  const [isStartingRecess, setIsStartingRecess] = useState(false);
 
   const fetchDrillAttendance = async () => {
     if (!activeDrill) return;
@@ -42,6 +44,7 @@ export const TeacherSafetyTab = ({ classroomId, students }: TeacherSafetyTabProp
 
   useEffect(() => {
     checkActiveDrill();
+    checkScheduledDrill();
   }, [classroomId]);
 
   useEffect(() => {
@@ -84,26 +87,63 @@ export const TeacherSafetyTab = ({ classroomId, students }: TeacherSafetyTabProp
     setActiveDrill(data);
   };
 
-  const handleStartDrill = async (drillType: string) => {
+  const checkScheduledDrill = async () => {
+    const today = new Date().toISOString().split('T')[0];
+    const { data } = await supabase
+      .from('drill_sessions')
+      .select('*')
+      .eq('classroom_id', classroomId)
+      .eq('status', 'scheduled')
+      .gte('scheduled_for', `${today}T00:00:00`)
+      .lte('scheduled_for', `${today}T23:59:59`)
+      .order('scheduled_for', { ascending: true })
+      .limit(1)
+      .single();
+    
+    setScheduledDrill(data);
+  };
+
+  const handleStartDrill = async (drillType: string, isEmergency: boolean = false, useScheduledDrill: boolean = false) => {
     setIsStartingDrill(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
 
-      // Create drill session
-      const { data: drill, error: drillError } = await supabase
-        .from('drill_sessions')
-        .insert({
-          drill_type: drillType,
-          classroom_id: classroomId,
-          created_by: session.user.id,
-          status: 'in_progress',
-          started_at: new Date().toISOString()
-        })
-        .select()
-        .single();
+      let drill;
 
-      if (drillError) throw drillError;
+      if (useScheduledDrill && scheduledDrill) {
+        // Use existing scheduled drill
+        const { data: updatedDrill, error: updateError } = await supabase
+          .from('drill_sessions')
+          .update({
+            status: 'in_progress',
+            started_at: new Date().toISOString(),
+            is_real_emergency: isEmergency
+          })
+          .eq('id', scheduledDrill.id)
+          .select()
+          .single();
+
+        if (updateError) throw updateError;
+        drill = updatedDrill;
+      } else {
+        // Create new drill session
+        const { data: newDrill, error: drillError } = await supabase
+          .from('drill_sessions')
+          .insert({
+            drill_type: drillType,
+            classroom_id: classroomId,
+            created_by: session.user.id,
+            status: 'in_progress',
+            started_at: new Date().toISOString(),
+            is_real_emergency: isEmergency
+          })
+          .select()
+          .single();
+
+        if (drillError) throw drillError;
+        drill = newDrill;
+      }
 
       // Create drill_attendance records for all students
       const attendanceRecords = students.map(student => ({
@@ -121,11 +161,14 @@ export const TeacherSafetyTab = ({ classroomId, students }: TeacherSafetyTabProp
       if (attendanceError) throw attendanceError;
 
       toast({
-        title: "Drill Started",
-        description: `${drillType.replace(/_/g, ' ')} drill is now in progress.`,
+        title: isEmergency ? "🚨 EMERGENCY DECLARED" : "Drill Started",
+        description: isEmergency 
+          ? `REAL ${drillType.replace(/_/g, ' ').toUpperCase()} EMERGENCY - Parents are being notified immediately.`
+          : `${drillType.replace(/_/g, ' ')} drill is now in progress.`,
       });
 
       checkActiveDrill();
+      setScheduledDrill(null);
     } catch (error) {
       console.error('Error starting drill:', error);
       toast({
@@ -218,6 +261,37 @@ export const TeacherSafetyTab = ({ classroomId, students }: TeacherSafetyTabProp
 
     checkActiveDrill();
     setIsSendingAllClear(false);
+  };
+
+  const handleRecessReturn = async () => {
+    setIsStartingRecess(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      // Send recess return notifications to opted-in parents
+      await supabase.functions.invoke('send-drill-notification', {
+        body: {
+          type: 'recess_return',
+          classroomId: classroomId,
+          studentIds: students.map(s => s.id),
+        },
+      });
+
+      toast({
+        title: "Recess Return Notifications Sent",
+        description: "Parents who opted in have been notified their children returned from recess.",
+      });
+    } catch (error) {
+      console.error('Error sending recess notifications:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send recess return notifications",
+        variant: "destructive",
+      });
+    } finally {
+      setIsStartingRecess(false);
+    }
   };
 
   const checkedInStudents = drillAttendance.filter(a => a.student_checked_in);
@@ -378,67 +452,162 @@ export const TeacherSafetyTab = ({ classroomId, students }: TeacherSafetyTabProp
 
   // No active drill - show start options
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <Shield className="h-8 w-8 text-primary" />
+    <div className="space-y-6">
+      {scheduledDrill && (
+        <Card className="border-blue-500 border-2 bg-blue-500/5">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Shield className="h-6 w-6 text-blue-600" />
+                <div>
+                  <CardTitle className="text-blue-700">
+                    📅 Scheduled {scheduledDrill.drill_type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Scheduled for today at {new Date(scheduledDrill.scheduled_for).toLocaleTimeString()}
+                  </p>
+                </div>
+              </div>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
+                    Start Scheduled Drill Now
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Start Scheduled Drill?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will start the scheduled {scheduledDrill.drill_type.replace(/_/g, ' ')} drill. Students will be notified to check in.
+                      <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            id="emergency-toggle"
+                            className="w-4 h-4"
+                          />
+                          <span className="text-red-700 font-semibold">
+                            🚨 This is a REAL EMERGENCY (not a drill)
+                          </span>
+                        </label>
+                      </div>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => {
+                      const isEmergency = (document.getElementById('emergency-toggle') as HTMLInputElement)?.checked || false;
+                      handleStartDrill(scheduledDrill.drill_type, isEmergency, true);
+                    }}>
+                      Start Drill
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </CardHeader>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <Shield className="h-8 w-8 text-primary" />
+            <div>
+              <CardTitle>Safety Drills & Recess</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Start a drill to track student attendance or notify parents of recess return
+              </p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
           <div>
-            <CardTitle>Safety Drills</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Start a drill to track student attendance and safety
+            <h3 className="font-semibold mb-3">Emergency Drills</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {['fire_drill', 'lockdown_drill', 'earthquake_drill', 'tornado_drill', 'evacuation_drill'].map((drillType) => {
+                const icons: Record<string, string> = {
+                  fire_drill: '🔥',
+                  lockdown_drill: '🔒',
+                  earthquake_drill: '🌊',
+                  tornado_drill: '🌪️',
+                  evacuation_drill: '🚶'
+                };
+                const labels: Record<string, string> = {
+                  fire_drill: 'Fire Drill',
+                  lockdown_drill: 'Lockdown',
+                  earthquake_drill: 'Earthquake',
+                  tornado_drill: 'Tornado',
+                  evacuation_drill: 'Evacuation'
+                };
+
+                return (
+                  <AlertDialog key={drillType}>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="h-24 flex-col gap-2"
+                        disabled={isStartingDrill}
+                      >
+                        {icons[drillType]}
+                        <span>{labels[drillType]}</span>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Start {labels[drillType]}?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will notify students to check in once they're safely back in class.
+                          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input 
+                                type="checkbox" 
+                                id={`emergency-${drillType}`}
+                                className="w-4 h-4"
+                              />
+                              <span className="text-red-700 font-semibold">
+                                🚨 This is a REAL EMERGENCY (not a drill)
+                              </span>
+                            </label>
+                            <p className="text-xs text-red-600 mt-2">
+                              Checking this will immediately notify ALL parents and admins that this is an actual emergency situation.
+                            </p>
+                          </div>
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => {
+                          const isEmergency = (document.getElementById(`emergency-${drillType}`) as HTMLInputElement)?.checked || false;
+                          handleStartDrill(drillType, isEmergency);
+                        }}>
+                          Start
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="pt-6 border-t">
+            <h3 className="font-semibold mb-3">Recess & Break Management</h3>
+            <Button
+              variant="outline"
+              className="w-full h-16"
+              onClick={handleRecessReturn}
+              disabled={isStartingRecess}
+            >
+              <Users className="mr-2 h-5 w-5" />
+              {isStartingRecess ? 'Sending...' : 'Students Returned from Recess'}
+            </Button>
+            <p className="text-xs text-muted-foreground mt-2">
+              Notify parents who opted in that their children have returned from recess
             </p>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          <Button
-            variant="outline"
-            className="h-24 flex-col gap-2"
-            onClick={() => handleStartDrill('fire_drill')}
-            disabled={isStartingDrill}
-          >
-            🔥
-            <span>Fire Drill</span>
-          </Button>
-          <Button
-            variant="outline"
-            className="h-24 flex-col gap-2"
-            onClick={() => handleStartDrill('lockdown_drill')}
-            disabled={isStartingDrill}
-          >
-            🔒
-            <span>Lockdown</span>
-          </Button>
-          <Button
-            variant="outline"
-            className="h-24 flex-col gap-2"
-            onClick={() => handleStartDrill('earthquake_drill')}
-            disabled={isStartingDrill}
-          >
-            🌊
-            <span>Earthquake</span>
-          </Button>
-          <Button
-            variant="outline"
-            className="h-24 flex-col gap-2"
-            onClick={() => handleStartDrill('tornado_drill')}
-            disabled={isStartingDrill}
-          >
-            🌪️
-            <span>Tornado</span>
-          </Button>
-          <Button
-            variant="outline"
-            className="h-24 flex-col gap-2"
-            onClick={() => handleStartDrill('evacuation_drill')}
-            disabled={isStartingDrill}
-          >
-            🚶
-            <span>Evacuation</span>
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
