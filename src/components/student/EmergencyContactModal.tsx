@@ -82,8 +82,14 @@ export const EmergencyContactModal = ({
 
     setIsLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("No user found");
+      // Use getSession() instead of getUser() for more reliable session retrieval
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session?.user) {
+        throw new Error("Your session has expired. Please sign out and sign back in.");
+      }
+      
+      const user = session.user;
 
       const contactData = {
         student_id: user.id,
