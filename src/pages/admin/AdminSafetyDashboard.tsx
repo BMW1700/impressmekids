@@ -7,10 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Plus, AlertTriangle, Shield, Activity, BarChart3 } from "lucide-react";
+import { Plus, AlertTriangle, Shield, Activity, BarChart3, Users } from "lucide-react";
 import { CreateSafetyAlertModal } from "@/components/safety/CreateSafetyAlertModal";
 import { DrillSessionCard } from "@/components/safety/DrillSessionCard";
+import { AdminLiveView } from "@/components/admin/AdminLiveView";
+import { SafetyAnalytics } from "@/components/admin/SafetyAnalytics";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function AdminSafetyDashboard() {
   const navigate = useNavigate();
@@ -20,6 +29,9 @@ export default function AdminSafetyDashboard() {
   const [drills, setDrills] = useState<any[]>([]);
   const [activeDrill, setActiveDrill] = useState<any>(null);
   const [showCreateAlert, setShowCreateAlert] = useState(false);
+  const [selectedDrillType, setSelectedDrillType] = useState<string>("");
+  const [startingSchoolWideDrill, setStartingSchoolWideDrill] = useState(false);
+  const [classrooms, setClassrooms] = useState<any[]>([]);
 
   useEffect(() => {
     checkAuth();
@@ -48,7 +60,7 @@ export default function AdminSafetyDashboard() {
   };
 
   const fetchData = async () => {
-    const [alertsData, drillsData] = await Promise.all([
+    const [alertsData, drillsData, classroomsData] = await Promise.all([
       supabase
         .from("safety_alerts")
         .select("*")
@@ -57,7 +69,11 @@ export default function AdminSafetyDashboard() {
         .from("drill_sessions")
         .select("*")
         .order("started_at", { ascending: false })
-        .limit(10)
+        .limit(10),
+      supabase
+        .from("classrooms")
+        .select("id, name")
+        .order("name")
     ]);
 
     if (alertsData.data) setAlerts(alertsData.data);
@@ -65,6 +81,93 @@ export default function AdminSafetyDashboard() {
       setDrills(drillsData.data);
       const active = drillsData.data.find(d => d.status === "active");
       setActiveDrill(active || null);
+    }
+    if (classroomsData.data) setClassrooms(classroomsData.data);
+  };
+
+  const startSchoolWideDrill = async () => {
+    if (!selectedDrillType) {
+      toast({
+        title: "Select Drill Type",
+        description: "Please select a drill type before starting",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setStartingSchoolWideDrill(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      // Create parent drill session
+      const { data: parentDrill, error: parentError } = await supabase
+        .from("drill_sessions")
+        .insert({
+          drill_type: selectedDrillType,
+          status: "active",
+          created_by: session.user.id,
+          started_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (parentError) throw parentError;
+
+      // Create drill sessions for all classrooms
+      const drillSessions = classrooms.map(classroom => ({
+        classroom_id: classroom.id,
+        drill_type: selectedDrillType,
+        status: "active",
+        created_by: session.user.id,
+        started_at: new Date().toISOString(),
+        school_drill_id: parentDrill.id
+      }));
+
+      const { error: sessionsError } = await supabase
+        .from("drill_sessions")
+        .insert(drillSessions);
+
+      if (sessionsError) throw sessionsError;
+
+      // Create drill attendance records for all students in all classrooms
+      for (const classroom of classrooms) {
+        const { data: students } = await supabase
+          .from("classroom_students")
+          .select("student_id")
+          .eq("classroom_id", classroom.id);
+
+        if (students && students.length > 0) {
+          const attendanceRecords = students.map(student => ({
+            drill_session_id: parentDrill.id,
+            classroom_id: classroom.id,
+            student_id: student.student_id,
+            status: "unaccounted"
+          }));
+
+          await supabase
+            .from("drill_attendance")
+            .insert(attendanceRecords);
+        }
+      }
+
+      toast({
+        title: "School-Wide Drill Started",
+        description: `${selectedDrillType} drill initiated for all classrooms`,
+      });
+
+      await fetchData();
+      setSelectedDrillType("");
+    } catch (error) {
+      console.error("Error starting school-wide drill:", error);
+      toast({
+        title: "Error",
+        description: "Failed to start school-wide drill",
+        variant: "destructive",
+      });
+    } finally {
+      setStartingSchoolWideDrill(false);
     }
   };
 
@@ -101,10 +204,34 @@ export default function AdminSafetyDashboard() {
               Manage safety alerts, drills, and emergency communications
             </p>
           </div>
-          <Button onClick={() => setShowCreateAlert(true)} size="lg">
-            <Plus className="mr-2 h-5 w-5" />
-            Create Alert
-          </Button>
+          <div className="flex gap-3">
+            <Button onClick={() => setShowCreateAlert(true)} size="lg" variant="outline">
+              <Plus className="mr-2 h-5 w-5" />
+              Create Alert
+            </Button>
+            <div className="flex gap-2">
+              <Select value={selectedDrillType} onValueChange={setSelectedDrillType}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select drill type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fire">Fire Drill</SelectItem>
+                  <SelectItem value="lockdown">Lockdown</SelectItem>
+                  <SelectItem value="tornado">Tornado</SelectItem>
+                  <SelectItem value="earthquake">Earthquake</SelectItem>
+                  <SelectItem value="reunification">Reunification</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button 
+                onClick={startSchoolWideDrill} 
+                size="lg"
+                disabled={!selectedDrillType || startingSchoolWideDrill}
+              >
+                <Users className="mr-2 h-5 w-5" />
+                {startingSchoolWideDrill ? "Starting..." : "Start School-Wide Drill"}
+              </Button>
+            </div>
+          </div>
         </div>
 
         {activeDrill && (
@@ -208,25 +335,11 @@ export default function AdminSafetyDashboard() {
           </TabsContent>
 
           <TabsContent value="live">
-            <Card className="p-12 text-center">
-              <Activity className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Live Drill Monitoring</h3>
-              <p className="text-muted-foreground">
-                {activeDrill 
-                  ? "Select a classroom to view real-time attendance status"
-                  : "No active drills at this time"}
-              </p>
-            </Card>
+            <AdminLiveView activeDrillId={activeDrill?.id || null} />
           </TabsContent>
 
           <TabsContent value="analytics">
-            <Card className="p-12 text-center">
-              <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Safety Analytics</h3>
-              <p className="text-muted-foreground">
-                Acknowledgment rates and response time analytics will appear here
-              </p>
-            </Card>
+            <SafetyAnalytics />
           </TabsContent>
         </Tabs>
       </main>

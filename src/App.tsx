@@ -10,6 +10,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminCalendar from "./pages/admin/AdminCalendar";
 import SchoolSettings from "./pages/admin/SchoolSettings";
 import AdminSafetyDashboard from "./pages/admin/AdminSafetyDashboard";
+import AdminDrillMonitor from "./pages/admin/AdminDrillMonitor";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import TeacherCalendar from "./pages/teacher/Calendar";
 import StudentDashboard from "./pages/student/StudentDashboard";
@@ -92,6 +93,7 @@ const App = () => (
           <Route path="/admin/calendar" element={<AdminCalendar />} />
           <Route path="/admin/settings" element={<SchoolSettings />} />
           <Route path="/admin/safety" element={<AdminSafetyDashboard />} />
+          <Route path="/admin/safety/drill/:drillId" element={<AdminDrillMonitor />} />
           <Route path="/district/dashboard" element={<DistrictDashboard />} />
           <Route path="/district-manager/dashboard" element={<DistrictManagerDashboard />} />
           <Route path="/district/register" element={<RegisterDistrict />} />
