@@ -217,15 +217,16 @@ serve(async (req) => {
           .select(`
             parent_id,
             student_id,
+            notify_on_recess_return,
             parent_accounts(user_id),
             profiles(full_name)
           `)
           .in('student_id', studentIds)
-          .eq('approved', true);
+          .eq('approved', true)
+          .eq('notify_on_recess_return', true);
 
         if (parentLinks && parentLinks.length > 0) {
-          // Filter for parents with recess notification preference
-          // For now, send to all parents (we can add preference table later)
+          // Only send to parents who have opted in
           targetUserIds = parentLinks
             .map(link => (link.parent_accounts as any)?.user_id)
             .filter(Boolean);
