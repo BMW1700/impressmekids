@@ -943,7 +943,7 @@ const ClassroomDetail = () => {
                       }
                     }}>
                             <Play className="mr-2 h-4 w-4" />
-                            {isTeacher ? 'Control Tournament' : 'Join Tournament'}
+                            {isTeacher ? 'Control Tournament' : 'Join Game'}
                           </Button>
                         </div>
                       </CardContent>
