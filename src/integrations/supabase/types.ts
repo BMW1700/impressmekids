@@ -765,6 +765,50 @@ export type Database = {
           },
         ]
       }
+      authority_alert_sources: {
+        Row: {
+          api_key_hash: string | null
+          created_at: string | null
+          id: string
+          is_verified: boolean | null
+          last_verified_at: string | null
+          school_id: string | null
+          source_name: string
+          source_type: string
+          webhook_url: string | null
+        }
+        Insert: {
+          api_key_hash?: string | null
+          created_at?: string | null
+          id?: string
+          is_verified?: boolean | null
+          last_verified_at?: string | null
+          school_id?: string | null
+          source_name: string
+          source_type: string
+          webhook_url?: string | null
+        }
+        Update: {
+          api_key_hash?: string | null
+          created_at?: string | null
+          id?: string
+          is_verified?: boolean | null
+          last_verified_at?: string | null
+          school_id?: string | null
+          source_name?: string
+          source_type?: string
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "authority_alert_sources_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["district_code"]
+          },
+        ]
+      }
       backup_audit_log: {
         Row: {
           action_details: Json | null
@@ -1363,6 +1407,129 @@ export type Database = {
         }
         Relationships: []
       }
+      drill_attendance: {
+        Row: {
+          classroom_id: string
+          drill_session_id: string
+          id: string
+          location_notes: string | null
+          marked_at: string | null
+          marked_by: string | null
+          parent_notified: boolean | null
+          status: string
+          student_id: string
+        }
+        Insert: {
+          classroom_id: string
+          drill_session_id: string
+          id?: string
+          location_notes?: string | null
+          marked_at?: string | null
+          marked_by?: string | null
+          parent_notified?: boolean | null
+          status?: string
+          student_id: string
+        }
+        Update: {
+          classroom_id?: string
+          drill_session_id?: string
+          id?: string
+          location_notes?: string | null
+          marked_at?: string | null
+          marked_by?: string | null
+          parent_notified?: boolean | null
+          status?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drill_attendance_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drill_attendance_drill_session_id_fkey"
+            columns: ["drill_session_id"]
+            isOneToOne: false
+            referencedRelation: "drill_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drill_attendance_marked_by_fkey"
+            columns: ["marked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drill_attendance_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      drill_sessions: {
+        Row: {
+          classroom_id: string | null
+          created_by: string
+          drill_type: string
+          ended_at: string | null
+          id: string
+          notes: string | null
+          school_id: string | null
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          classroom_id?: string | null
+          created_by: string
+          drill_type: string
+          ended_at?: string | null
+          id?: string
+          notes?: string | null
+          school_id?: string | null
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          classroom_id?: string | null
+          created_by?: string
+          drill_type?: string
+          ended_at?: string | null
+          id?: string
+          notes?: string | null
+          school_id?: string | null
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drill_sessions_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drill_sessions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drill_sessions_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["district_code"]
+          },
+        ]
+      }
       emergency_contacts: {
         Row: {
           created_at: string
@@ -1937,6 +2104,44 @@ export type Database = {
           },
         ]
       }
+      message_templates: {
+        Row: {
+          content: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_for_parent: boolean
+          template_type: string
+          title: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_for_parent: boolean
+          template_type: string
+          title: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_for_parent?: boolean
+          template_type?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parent_access_requests: {
         Row: {
           admin_id: string | null
@@ -2292,6 +2497,60 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "parent_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parent_teacher_messages: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_from_parent: boolean
+          is_read: boolean | null
+          message_text: string
+          message_type: string
+          parent_id: string
+          student_id: string
+          subject: string
+          teacher_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_from_parent: boolean
+          is_read?: boolean | null
+          message_text: string
+          message_type: string
+          parent_id: string
+          student_id: string
+          subject: string
+          teacher_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_from_parent?: boolean
+          is_read?: boolean | null
+          message_text?: string
+          message_type?: string
+          parent_id?: string
+          student_id?: string
+          subject?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_teacher_messages_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parent_teacher_messages_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2904,6 +3163,111 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "parent_accounts"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      safety_alert_acknowledgments: {
+        Row: {
+          acknowledged_at: string | null
+          alert_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          alert_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          alert_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "safety_alert_acknowledgments_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "safety_alerts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_alert_acknowledgments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      safety_alerts: {
+        Row: {
+          alert_type: string
+          authority_source: string | null
+          authority_verified: boolean | null
+          created_at: string | null
+          created_by: string
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          message: string
+          notify_parents: boolean | null
+          notify_students: boolean | null
+          notify_teachers: boolean | null
+          school_id: string | null
+          severity: string
+          title: string
+        }
+        Insert: {
+          alert_type: string
+          authority_source?: string | null
+          authority_verified?: boolean | null
+          created_at?: string | null
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          message: string
+          notify_parents?: boolean | null
+          notify_students?: boolean | null
+          notify_teachers?: boolean | null
+          school_id?: string | null
+          severity: string
+          title: string
+        }
+        Update: {
+          alert_type?: string
+          authority_source?: string | null
+          authority_verified?: boolean | null
+          created_at?: string | null
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          message?: string
+          notify_parents?: boolean | null
+          notify_students?: boolean | null
+          notify_teachers?: boolean | null
+          school_id?: string | null
+          severity?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "safety_alerts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_alerts_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["district_code"]
           },
         ]
       }
