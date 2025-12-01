@@ -121,7 +121,11 @@ const StudentDashboard = () => {
     <div className="min-h-screen flex flex-col">
       <Header onSignOut={handleSignOut} studentId={profile?.id} />
       <div className="flex flex-1">
-        <StudentDashboardSidebar activeSection={activeSection} onSectionChange={setActiveSection} />
+        <StudentDashboardSidebar 
+          activeSection={activeSection} 
+          onSectionChange={setActiveSection}
+          onNavigateToGames={() => navigate('/games')}
+        />
         <main className="flex-1 overflow-y-auto">
           <div className="container mx-auto px-4 py-8">{renderSection()}</div>
         </main>
