@@ -3999,6 +3999,45 @@ export type Database = {
           },
         ]
       }
+      student_signup_consents: {
+        Row: {
+          consent_date: string | null
+          consent_given: boolean
+          consent_token: string
+          created_at: string
+          expires_at: string
+          id: string
+          ip_address: string | null
+          parent_email: string
+          parent_name: string
+          student_email: string
+        }
+        Insert: {
+          consent_date?: string | null
+          consent_given?: boolean
+          consent_token: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          ip_address?: string | null
+          parent_email: string
+          parent_name: string
+          student_email: string
+        }
+        Update: {
+          consent_date?: string | null
+          consent_given?: boolean
+          consent_token?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          ip_address?: string | null
+          parent_email?: string
+          parent_name?: string
+          student_email?: string
+        }
+        Relationships: []
+      }
       student_skill_vectors: {
         Row: {
           annotation_sophistication_trend: number | null

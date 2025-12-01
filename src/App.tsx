@@ -47,6 +47,7 @@ import RegisterDistrict from "./pages/district/RegisterDistrict";
 import PolicyViewer from "./pages/policies/PolicyViewer";
 import NotFound from "./pages/NotFound";
 import ReadingAnalyticsCalibration from "./components/aura/ReadingAnalyticsCalibration";
+import ConsentVerification from "./pages/ConsentVerification";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +62,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/pending-verification" element={<PendingVerification />} />
+          <Route path="/consent/:token" element={<ConsentVerification />} />
           <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
           <Route path="/teacher/calendar" element={<TeacherCalendar />} />
           <Route path="/student/dashboard" element={<StudentDashboard />} />
