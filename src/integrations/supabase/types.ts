@@ -947,6 +947,7 @@ export type Database = {
           location: string | null
           meeting_days: string[] | null
           name: string
+          schedule_end_date: string | null
           schedule_start_date: string | null
           start_time: string | null
           subject: string | null
@@ -961,6 +962,7 @@ export type Database = {
           location?: string | null
           meeting_days?: string[] | null
           name: string
+          schedule_end_date?: string | null
           schedule_start_date?: string | null
           start_time?: string | null
           subject?: string | null
@@ -975,6 +977,7 @@ export type Database = {
           location?: string | null
           meeting_days?: string[] | null
           name?: string
+          schedule_end_date?: string | null
           schedule_start_date?: string | null
           start_time?: string | null
           subject?: string | null

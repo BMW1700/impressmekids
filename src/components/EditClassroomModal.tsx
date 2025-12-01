@@ -24,6 +24,7 @@ export const EditClassroomModal = ({ open, onOpenChange, onSuccess, classroom }:
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [scheduleStartDate, setScheduleStartDate] = useState("");
+  const [scheduleEndDate, setScheduleEndDate] = useState("");
   const [meetingDays, setMeetingDays] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -58,6 +59,7 @@ export const EditClassroomModal = ({ open, onOpenChange, onSuccess, classroom }:
           setStartTime(classroom.start_time || "");
           setEndTime(classroom.end_time || "");
           setScheduleStartDate(classroom.schedule_start_date || "");
+          setScheduleEndDate(classroom.schedule_end_date || "");
           setMeetingDays(classroom.meeting_days || []);
         } else if (fullClassroom) {
           console.log('Full classroom data loaded:', fullClassroom);
@@ -68,6 +70,7 @@ export const EditClassroomModal = ({ open, onOpenChange, onSuccess, classroom }:
           setStartTime(fullClassroom.start_time || "");
           setEndTime(fullClassroom.end_time || "");
           setScheduleStartDate(fullClassroom.schedule_start_date || "");
+          setScheduleEndDate(fullClassroom.schedule_end_date || "");
           setMeetingDays(fullClassroom.meeting_days || []);
         }
       }
@@ -111,6 +114,7 @@ export const EditClassroomModal = ({ open, onOpenChange, onSuccess, classroom }:
           end_time: endTime || null,
           location: location.trim() || null,
           schedule_start_date: scheduleStartDate || null,
+          schedule_end_date: scheduleEndDate || null,
         })
         .eq('id', classroom.id)
         .eq('teacher_id', session.user.id);
@@ -231,15 +235,27 @@ export const EditClassroomModal = ({ open, onOpenChange, onSuccess, classroom }:
               </div>
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="scheduleStartDate">Schedule Start Date (Optional)</Label>
-              <Input
-                id="scheduleStartDate"
-                type="date"
-                value={scheduleStartDate}
-                onChange={(e) => setScheduleStartDate(e.target.value)}
-                disabled={isLoading}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="scheduleStartDate">Schedule Start Date (Optional)</Label>
+                <Input
+                  id="scheduleStartDate"
+                  type="date"
+                  value={scheduleStartDate}
+                  onChange={(e) => setScheduleStartDate(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="scheduleEndDate">Schedule End Date (Optional)</Label>
+                <Input
+                  id="scheduleEndDate"
+                  type="date"
+                  value={scheduleEndDate}
+                  onChange={(e) => setScheduleEndDate(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>
