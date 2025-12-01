@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, CloudRain, DoorClosed, Shield, MessageSquare, QrCode } from "lucide-react";
+import { AlertTriangle, CloudRain, DoorClosed, Shield, MessageSquare, QrCode, CheckCircle2, Clock } from "lucide-react";
 import { UnaccountedChildAlert } from "@/components/safety/UnaccountedChildAlert";
 import { ParentQuickMessagePanel } from "@/components/safety/ParentQuickMessagePanel";
 import { StudentQRCode } from "@/components/safety/StudentQRCode";
@@ -21,6 +21,7 @@ export default function ParentSafety() {
   const [students, setStudents] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [unaccountedChildren, setUnaccountedChildren] = useState<any[]>([]);
+  const [activeDrillStatus, setActiveDrillStatus] = useState<any[]>([]);
 
   useEffect(() => {
     checkAuth();
@@ -76,11 +77,12 @@ export default function ParentSafety() {
   };
 
   const checkUnaccountedStatus = async (studentIds: string[]) => {
+    // Check for unaccounted children
     const { data: drillData } = await supabase
       .from("drill_attendance")
       .select(`
         *,
-        drill_sessions(drill_type, status),
+        drill_sessions(drill_type, status, is_real_emergency),
         profiles(full_name)
       `)
       .in("student_id", studentIds)
@@ -88,6 +90,21 @@ export default function ParentSafety() {
 
     if (drillData) {
       setUnaccountedChildren(drillData.filter((d: any) => d.drill_sessions?.status === "in_progress"));
+    }
+
+    // Check active drill status for all children
+    const { data: activeStatus } = await supabase
+      .from("drill_attendance")
+      .select(`
+        *,
+        drill_sessions(drill_type, status, is_real_emergency, started_at),
+        profiles(full_name)
+      `)
+      .in("student_id", studentIds)
+      .eq("drill_sessions.status", "in_progress");
+
+    if (activeStatus) {
+      setActiveDrillStatus(activeStatus);
     }
   };
 
@@ -192,6 +209,48 @@ export default function ParentSafety() {
             Stay informed about school safety, emergencies, and important updates
           </p>
         </div>
+
+        {activeDrillStatus.length > 0 && (
+          <Card className={`mb-6 p-6 ${
+            activeDrillStatus.some((s: any) => s.drill_sessions?.is_real_emergency)
+              ? "border-red-600 border-2 bg-red-600/20 animate-pulse"
+              : "border-yellow-500 border-2 bg-yellow-500/10"
+          }`}>
+            <div className="flex items-center gap-3 mb-4">
+              <Shield className="h-6 w-6 text-yellow-600" />
+              <h2 className="text-xl font-bold">
+                {activeDrillStatus.some((s: any) => s.drill_sessions?.is_real_emergency)
+                  ? "🚨 EMERGENCY IN PROGRESS"
+                  : "Active Drill Status"}
+              </h2>
+            </div>
+            <div className="space-y-3">
+              {activeDrillStatus.map((status: any) => (
+                <div key={status.id} className="flex items-center justify-between p-3 bg-background/50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    {status.student_checked_in ? (
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <Clock className="h-5 w-5 text-orange-600 animate-pulse" />
+                    )}
+                    <div>
+                      <p className="font-semibold">{status.profiles.full_name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {status.drill_sessions.drill_type.replace(/_/g, " ")} 
+                        {status.drill_sessions.is_real_emergency && " (REAL EMERGENCY)"}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge className={status.student_checked_in ? "bg-green-600" : "bg-orange-600"}>
+                    {status.student_checked_in 
+                      ? `✓ SAFE (${new Date(status.student_checkin_at).toLocaleTimeString()})`
+                      : "Awaiting check-in..."}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         {unaccountedChildren.length > 0 && (
           <div className="mb-6 space-y-4">

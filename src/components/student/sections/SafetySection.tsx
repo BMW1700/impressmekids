@@ -13,6 +13,7 @@ interface DrillSession {
   started_at: string;
   scheduled_for: string | null;
   classroom_id: string;
+  is_real_emergency: boolean;
 }
 
 interface DrillAttendance {
@@ -150,7 +151,8 @@ export function SafetySection() {
     return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
-  const getDrillInstructions = (type: string) => {
+  const getDrillInstructions = (type: string, isEmergency: boolean = false) => {
+    const prefix = isEmergency ? "🚨 EMERGENCY: " : "";
     const instructions: Record<string, string> = {
       fire_drill: "Follow your teacher's instructions to evacuate the building calmly and quickly.",
       lockdown_drill: "Remain quiet and stay in your designated safe location until the all-clear is given.",
@@ -158,7 +160,7 @@ export function SafetySection() {
       tornado_drill: "Move to your designated shelter area and protect your head and neck.",
       evacuation_drill: "Follow evacuation routes to the designated assembly point."
     };
-    return instructions[type] || "Follow your teacher's instructions carefully.";
+    return prefix + (instructions[type] || "Follow your teacher's instructions carefully.");
   };
 
   if (activeDrill) {
@@ -166,20 +168,23 @@ export function SafetySection() {
 
     return (
       <div className="space-y-6">
-        <Card className="p-6 border-red-500 border-2 bg-red-500/5 animate-pulse">
+        <Card className={`p-6 border-2 ${
+          activeDrill.is_real_emergency 
+            ? "border-red-600 bg-red-600/20 animate-pulse" 
+            : "border-red-500 bg-red-500/5 animate-pulse"
+        }`}>
           <div className="flex items-start gap-4">
-            <div className="p-3 bg-red-500 rounded-full">
+            <div className={`p-3 ${activeDrill.is_real_emergency ? "bg-red-700" : "bg-red-500"} rounded-full`}>
               <AlertTriangle className="h-6 w-6 text-white" />
             </div>
             <div className="flex-1">
-              <h2 className="text-2xl font-bold text-red-700 mb-2">
-                🚨 DRILL IN PROGRESS
+              <h2 className={`text-2xl font-bold mb-2 ${activeDrill.is_real_emergency ? "text-red-800" : "text-red-700"}`}>
+                {activeDrill.is_real_emergency && "🚨 EMERGENCY - "}
+                {getDrillTypeLabel(activeDrill.drill_type)} IN PROGRESS
+                {!activeDrill.is_real_emergency && " (DRILL)"}
               </h2>
-              <p className="text-lg font-semibold mb-2">
-                {getDrillTypeLabel(activeDrill.drill_type)}
-              </p>
-              <p className="text-muted-foreground mb-4">
-                {getDrillInstructions(activeDrill.drill_type)}
+              <p className={`mb-4 ${activeDrill.is_real_emergency ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
+                {getDrillInstructions(activeDrill.drill_type, activeDrill.is_real_emergency)}
               </p>
 
               {hasCheckedIn ? (

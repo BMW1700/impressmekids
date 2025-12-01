@@ -234,15 +234,23 @@ export const TeacherSafetyTab = ({ classroomId, students }: TeacherSafetyTabProp
   if (activeDrill) {
     return (
       <div className="space-y-6">
-        <Card className="border-red-500 bg-red-500/5">
+        <Card className={`border-2 ${
+          activeDrill.is_real_emergency 
+            ? "border-red-600 bg-red-600/20 animate-pulse" 
+            : "border-red-500 bg-red-500/5"
+        }`}>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
+                <AlertTriangle className={`h-6 w-6 ${activeDrill.is_real_emergency ? "text-red-700" : "text-red-600"}`} />
                 <div>
-                  <CardTitle className="text-red-700">Drill In Progress</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <CardTitle className={activeDrill.is_real_emergency ? "text-red-800" : "text-red-700"}>
+                    {activeDrill.is_real_emergency && "🚨 REAL EMERGENCY - "}
                     {getDrillTypeLabel(activeDrill.drill_type)}
+                    {!activeDrill.is_real_emergency && " (DRILL)"}
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Started: {new Date(activeDrill.started_at).toLocaleString()}
                   </p>
                 </div>
               </div>
