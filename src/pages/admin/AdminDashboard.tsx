@@ -168,13 +168,14 @@ export default function AdminDashboard() {
 
           {/* Main Content Tabs */}
           <Tabs defaultValue="teacher-requests" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-9">
+            <TabsList className="grid w-full grid-cols-10">
               <TabsTrigger value="teacher-requests">Teacher Requests</TabsTrigger>
               <TabsTrigger value="teachers">Teachers</TabsTrigger>
               <TabsTrigger value="students">Students</TabsTrigger>
               <TabsTrigger value="admins">Admins</TabsTrigger>
               <TabsTrigger value="import">Import</TabsTrigger>
               <TabsTrigger value="parent-requests">Parent Requests</TabsTrigger>
+              <TabsTrigger value="safety">Safety</TabsTrigger>
               <TabsTrigger value="backups">Backups</TabsTrigger>
               <TabsTrigger value="calendar">Calendar</TabsTrigger>
               <TabsTrigger value="settings">Settings</TabsTrigger>
@@ -273,6 +274,22 @@ export default function AdminDashboard() {
                 </CardHeader>
                 <CardContent>
                   <ParentAccessRequestsList />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="safety" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Safety Dashboard</CardTitle>
+                  <CardDescription>
+                    Navigate to the full safety dashboard to manage alerts and drills
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button onClick={() => navigate("/admin/safety")} className="w-full">
+                    Open Safety Dashboard
+                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>
