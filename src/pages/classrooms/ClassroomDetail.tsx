@@ -648,7 +648,7 @@ const ClassroomDetail = () => {
           )}
 
           <Tabs defaultValue={searchParams.get('tab') || (isStudent ? "assignments" : "students")} className="mb-8">
-            <TabsList className={cn("grid w-full h-auto p-2 bg-muted/50 rounded-xl", isTeacher ? "grid-cols-9 gap-2" : "grid-cols-5 gap-2")}>
+            <TabsList className={cn("grid w-full h-auto p-2 bg-muted/50 rounded-xl", isTeacher ? "grid-cols-9 gap-2" : "grid-cols-3 gap-2")}>
               {isTeacher && (
                 <TabsTrigger 
                   value="students" 
@@ -702,15 +702,14 @@ const ClassroomDetail = () => {
                   Leaderboard
                 </TabsTrigger>
               )}
-              {isStudent && (
-                <TabsTrigger 
-                  value="trends"
-                  className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
-                >
-                  <BarChart3 className="mr-2 h-4 w-4" />
-                  Trends
-                </TabsTrigger>
-              )}
+              {/* Row 1: Syllabus, Assignments, Announcements */}
+              <TabsTrigger 
+                value="syllabus"
+                className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Syllabus
+              </TabsTrigger>
               <TabsTrigger 
                 value="assignments"
                 className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
@@ -725,13 +724,7 @@ const ClassroomDetail = () => {
                 <Megaphone className="mr-2 h-4 w-4" />
                 Announcements
               </TabsTrigger>
-              <TabsTrigger 
-                value="tournaments"
-                className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
-              >
-                <Trophy className="mr-2 h-4 w-4" />
-                Tournaments
-              </TabsTrigger>
+              {/* Row 2: Study Materials, Tournaments, Trends */}
               <TabsTrigger 
                 value="study"
                 className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
@@ -740,12 +733,21 @@ const ClassroomDetail = () => {
                 Study Materials
               </TabsTrigger>
               <TabsTrigger 
-                value="syllabus"
+                value="tournaments"
                 className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
               >
-                <FileText className="mr-2 h-4 w-4" />
-                Syllabus
+                <Trophy className="mr-2 h-4 w-4" />
+                Tournaments
               </TabsTrigger>
+              {isStudent && (
+                <TabsTrigger 
+                  value="trends"
+                  className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
+                >
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  Trends
+                </TabsTrigger>
+              )}
             </TabsList>
 
             {isTeacher && (
