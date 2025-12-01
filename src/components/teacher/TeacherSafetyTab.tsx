@@ -110,7 +110,7 @@ export const TeacherSafetyTab = ({ classroomId, students }: TeacherSafetyTabProp
         drill_session_id: drill.id,
         classroom_id: classroomId,
         student_id: student.student_id,
-        status: 'pending',
+        status: 'unaccounted',
         student_checked_in: false
       }));
 
