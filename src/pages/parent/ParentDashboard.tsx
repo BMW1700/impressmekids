@@ -162,10 +162,16 @@ const ParentDashboard = () => {
           </div>
           <div className="flex gap-2 flex-wrap">
             {parentId && firstChildId && (
-              <Button variant="outline" onClick={() => navigate("/parent/calendar")} className="gap-2 shadow-sm">
-                <CalendarIcon className="h-4 w-4" />
-                Calendar
-              </Button>
+              <>
+                <Button variant="outline" onClick={() => navigate("/parent/calendar")} className="gap-2 shadow-sm">
+                  <CalendarIcon className="h-4 w-4" />
+                  Calendar
+                </Button>
+                <Button variant="outline" onClick={() => navigate("/parent/safety")} className="gap-2 shadow-sm">
+                  <Bell className="h-4 w-4" />
+                  Safety
+                </Button>
+              </>
             )}
             {parentId && (
               <>

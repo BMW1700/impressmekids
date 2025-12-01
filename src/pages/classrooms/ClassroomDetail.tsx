@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic, Eye, EyeOff, UserCheck, BarChart3, Calendar, Plus } from "lucide-react";
+import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic, Eye, EyeOff, UserCheck, BarChart3, Calendar, Plus, Shield } from "lucide-react";
 import { ClassroomLeaderboard } from "@/components/ClassroomLeaderboard";
 import { LeaderboardCard } from "@/components/aura/LeaderboardCard";
 import { AttendanceTab } from "@/components/teacher/AttendanceTab";
@@ -38,6 +38,7 @@ import { useSearchParams } from "react-router-dom";
 import { SyllabusTab } from "@/components/classroom/SyllabusTab";
 import { StandardsProgressDashboard } from "@/components/classroom/StandardsProgressDashboard";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { TeacherSafetyTab } from "@/components/teacher/TeacherSafetyTab";
 const ClassroomDetail = () => {
   const {
     id
@@ -583,6 +584,10 @@ const ClassroomDetail = () => {
                     <UserCheck className="mr-2 h-4 w-4" />
                     Attendance
                   </TabsTrigger>
+                  <TabsTrigger value="safety" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
+                    <Shield className="mr-2 h-4 w-4" />
+                    Safety
+                  </TabsTrigger>
                   <TabsTrigger value="assignments" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <FileText className="mr-2 h-4 w-4" />
                     Assignments
@@ -698,6 +703,14 @@ const ClassroomDetail = () => {
               full_name: s.profiles?.full_name || 'Student',
               avatar_url: s.student_profiles?.[0]?.avatar_url
             }))} />
+              </TabsContent>}
+
+            {isTeacher && <TabsContent value="safety" className="mt-6">
+                <div className="mb-6">
+                  <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Safety & Drills</h2>
+                  <p className="text-muted-foreground mt-1">Manage emergency drills and student safety</p>
+                </div>
+                <TeacherSafetyTab classroomId={id!} students={students} />
               </TabsContent>}
 
             {isTeacher && <TabsContent value="ai-insights" className="mt-6">

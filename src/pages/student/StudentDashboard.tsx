@@ -16,6 +16,7 @@ import { AnnouncementsSection } from "@/components/student/sections/Announcement
 import { GradebookSection } from "@/components/student/sections/GradebookSection";
 import { DirectorySection } from "@/components/student/sections/DirectorySection";
 import { AccountSection } from "@/components/student/sections/AccountSection";
+import { SafetyAlertBanner } from "@/components/safety/SafetyAlertBanner";
 
 const StudentDashboard = () => {
   const [profile, setProfile] = useState<any>(null);
@@ -120,6 +121,9 @@ const StudentDashboard = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Header onSignOut={handleSignOut} studentId={profile?.id} />
+      <div className="container mx-auto px-4 pt-6">
+        <SafetyAlertBanner />
+      </div>
       <div className="flex flex-1">
         <StudentDashboardSidebar 
           activeSection={activeSection} 
