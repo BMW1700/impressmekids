@@ -1363,6 +1363,39 @@ export type Database = {
         }
         Relationships: []
       }
+      emergency_contacts: {
+        Row: {
+          created_at: string
+          custom_relationship: string | null
+          id: string
+          name: string
+          phone_number: string
+          relationship: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          custom_relationship?: string | null
+          id?: string
+          name: string
+          phone_number: string
+          relationship: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          custom_relationship?: string | null
+          id?: string
+          name?: string
+          phone_number?: string
+          relationship?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       events: {
         Row: {
           attachments: Json | null
