@@ -101,6 +101,39 @@ serve(async (req) => {
     // Log the alert distribution
     console.log(`Safety alert ${alertId} distributed to ${parents?.length || 0} parents`);
 
+    // Send push notifications to all parents
+    if (parents && parents.length > 0) {
+      for (const parent of parents) {
+        // Get parent user_id from parent_accounts
+        const { data: parentAccount } = await supabaseClient
+          .from("parent_accounts")
+          .select("user_id")
+          .eq("email", parent.email)
+          .single();
+
+        if (parentAccount?.user_id) {
+          try {
+            await supabaseClient.functions.invoke('send-push-notification', {
+              body: {
+                userId: parentAccount.user_id,
+                title: `🚨 ${alert.severity.toUpperCase()} Safety Alert`,
+                body: alert.title,
+                icon: '/android-chrome-192x192.png',
+                tag: `safety-alert-${alertId}`,
+                data: {
+                  type: 'safety_alert',
+                  alertId: alertId,
+                  severity: alert.severity,
+                },
+              },
+            });
+          } catch (pushError) {
+            console.error(`Failed to send push notification to ${parent.email}:`, pushError);
+          }
+        }
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
