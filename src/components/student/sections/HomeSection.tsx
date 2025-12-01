@@ -10,10 +10,12 @@ import { useReadingGamification } from "@/hooks/useReadingGamification";
 import { AchievementBadge } from "@/components/aura/AchievementBadge";
 import { StreakCounter } from "@/components/aura/StreakCounter";
 import { MissionCard } from "@/components/aura/MissionCard";
+import { BehaviorPointsCard } from "@/components/behavior/BehaviorPointsCard";
 interface HomeSectionProps {
   userProfile: any;
   studentProfile: any;
   assignmentStats: any;
+  classrooms?: Array<{ id: string }>;
 }
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -24,7 +26,8 @@ const getGreeting = () => {
 export const HomeSection = ({
   userProfile,
   studentProfile,
-  assignmentStats
+  assignmentStats,
+  classrooms
 }: HomeSectionProps) => {
   const firstName = userProfile?.full_name?.split(" ")[0] || "Student";
   const totalAssignments = assignmentStats?.total_assignments || 0;
@@ -151,6 +154,17 @@ export const HomeSection = ({
         <h2 className="text-2xl font-bold mb-6">Your Performance</h2>
         <DashboardMetrics assignmentStats={assignmentStats} studentStats={studentProfile?.stats} />
       </div>
+
+      {/* Behavior Points Section */}
+      {studentProfile?.id && classrooms && classrooms.length > 0 && (
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Behavior Points</h2>
+          <BehaviorPointsCard 
+            studentId={studentProfile.id} 
+            classroomId={classrooms[0].id} 
+          />
+        </div>
+      )}
 
       {/* Reading Gamification Section */}
       {studentProfile?.id && <div className="grid gap-6 md:grid-cols-2">

@@ -20,6 +20,11 @@ interface CreateAssignmentData {
   max_attempts?: number;
   is_group_assignment?: boolean;
   status?: 'draft' | 'published';
+  shuffle_questions?: boolean;
+  shuffle_answers?: boolean;
+  isolation_mode?: boolean;
+  focus_detection?: boolean;
+  time_per_question_seconds?: number;
   questions: Omit<Question, 'id'>[];
 }
 
@@ -150,6 +155,11 @@ export const useMultiQuestionAssignments = (classroomId?: string, assignmentId?:
           is_posted: data.status === 'published',
           assignment_type: 'multi_question',
           passage_text: '', // Required field for backward compatibility
+          shuffle_questions: data.shuffle_questions || false,
+          shuffle_answers: data.shuffle_answers || false,
+          isolation_mode: data.isolation_mode || false,
+          focus_detection: data.focus_detection || false,
+          time_per_question_seconds: data.time_per_question_seconds,
         } as any)
         .select()
         .single();
@@ -203,6 +213,11 @@ export const useMultiQuestionAssignments = (classroomId?: string, assignmentId?:
       if (updates.due_date !== undefined) updateData.due_date = updates.due_date;
       if (updates.timer_minutes !== undefined) updateData.timer_minutes = updates.timer_minutes;
       if (updates.max_attempts !== undefined) updateData.max_attempts = updates.max_attempts;
+      if (updates.shuffle_questions !== undefined) updateData.shuffle_questions = updates.shuffle_questions;
+      if (updates.shuffle_answers !== undefined) updateData.shuffle_answers = updates.shuffle_answers;
+      if (updates.isolation_mode !== undefined) updateData.isolation_mode = updates.isolation_mode;
+      if (updates.focus_detection !== undefined) updateData.focus_detection = updates.focus_detection;
+      if (updates.time_per_question_seconds !== undefined) updateData.time_per_question_seconds = updates.time_per_question_seconds;
       if (questions !== undefined) updateData.question_count = questions.length;
 
       const { error: assignmentError } = await supabase

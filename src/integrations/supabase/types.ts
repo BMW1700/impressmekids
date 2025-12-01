@@ -336,9 +336,11 @@ export type Database = {
       }
       assignment_submissions: {
         Row: {
+          anti_cheating_metadata: Json | null
           assignment_id: string
           attempt_number: number
           created_at: string
+          focus_violations: number | null
           grade: number | null
           graded_at: string | null
           group_id: string | null
@@ -354,9 +356,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          anti_cheating_metadata?: Json | null
           assignment_id: string
           attempt_number?: number
           created_at?: string
+          focus_violations?: number | null
           grade?: number | null
           graded_at?: string | null
           group_id?: string | null
@@ -372,9 +376,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          anti_cheating_metadata?: Json | null
           assignment_id?: string
           attempt_number?: number
           created_at?: string
+          focus_violations?: number | null
           grade?: number | null
           graded_at?: string | null
           group_id?: string | null
@@ -422,15 +428,20 @@ export type Database = {
           description: string | null
           due_date: string | null
           enable_realtime_coaching: boolean | null
+          focus_detection: boolean | null
           id: string
           is_group_assignment: boolean | null
           is_posted: boolean | null
+          isolation_mode: boolean | null
           max_attempts: number
           passage_metadata: Json | null
           passage_text: string
           question_count: number | null
+          shuffle_answers: boolean | null
+          shuffle_questions: boolean | null
           status: string
           teacher_id: string
+          time_per_question_seconds: number | null
           timer_minutes: number | null
           title: string
           updated_at: string
@@ -443,15 +454,20 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           enable_realtime_coaching?: boolean | null
+          focus_detection?: boolean | null
           id?: string
           is_group_assignment?: boolean | null
           is_posted?: boolean | null
+          isolation_mode?: boolean | null
           max_attempts?: number
           passage_metadata?: Json | null
           passage_text: string
           question_count?: number | null
+          shuffle_answers?: boolean | null
+          shuffle_questions?: boolean | null
           status?: string
           teacher_id: string
+          time_per_question_seconds?: number | null
           timer_minutes?: number | null
           title: string
           updated_at?: string
@@ -464,15 +480,20 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           enable_realtime_coaching?: boolean | null
+          focus_detection?: boolean | null
           id?: string
           is_group_assignment?: boolean | null
           is_posted?: boolean | null
+          isolation_mode?: boolean | null
           max_attempts?: number
           passage_metadata?: Json | null
           passage_text?: string
           question_count?: number | null
+          shuffle_answers?: boolean | null
+          shuffle_questions?: boolean | null
           status?: string
           teacher_id?: string
+          time_per_question_seconds?: number | null
           timer_minutes?: number | null
           title?: string
           updated_at?: string
@@ -846,6 +867,115 @@ export type Database = {
             columns: ["backup_id"]
             isOneToOne: false
             referencedRelation: "cold_storage_backups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      behavior_categories: {
+        Row: {
+          category_type: string
+          classroom_id: string
+          color: string | null
+          created_at: string
+          icon: string | null
+          id: string
+          is_default: boolean | null
+          name: string
+          point_value: number
+          updated_at: string
+        }
+        Insert: {
+          category_type: string
+          classroom_id: string
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+          point_value: number
+          updated_at?: string
+        }
+        Update: {
+          category_type?: string
+          classroom_id?: string
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          point_value?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "behavior_categories_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      behavior_records: {
+        Row: {
+          category_id: string
+          classroom_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          points: number
+          student_id: string
+          teacher_id: string
+        }
+        Insert: {
+          category_id: string
+          classroom_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          points: number
+          student_id: string
+          teacher_id: string
+        }
+        Update: {
+          category_id?: string
+          classroom_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          points?: number
+          student_id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "behavior_records_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "behavior_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "behavior_records_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "behavior_records_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "behavior_records_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -3391,6 +3521,63 @@ export type Database = {
         }
         Relationships: []
       }
+      student_behavior_stats: {
+        Row: {
+          best_streak: number
+          classroom_id: string
+          created_at: string
+          current_streak: number
+          id: string
+          last_positive_date: string | null
+          student_id: string
+          total_points: number
+          updated_at: string
+          week_start_date: string
+          weekly_points: number
+        }
+        Insert: {
+          best_streak?: number
+          classroom_id: string
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_positive_date?: string | null
+          student_id: string
+          total_points?: number
+          updated_at?: string
+          week_start_date?: string
+          weekly_points?: number
+        }
+        Update: {
+          best_streak?: number
+          classroom_id?: string
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_positive_date?: string | null
+          student_id?: string
+          total_points?: number
+          updated_at?: string
+          week_start_date?: string
+          weekly_points?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_behavior_stats_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_behavior_stats_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_error_patterns: {
         Row: {
           created_at: string | null
@@ -4494,6 +4681,10 @@ export type Database = {
       mask_email: {
         Args: { email: string; viewer_id: string }
         Returns: string
+      }
+      seed_default_behavior_categories: {
+        Args: { p_classroom_id: string }
+        Returns: undefined
       }
       submit_answer_tx:
         | {

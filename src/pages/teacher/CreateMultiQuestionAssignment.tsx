@@ -18,6 +18,7 @@ import { useAssignmentGroups } from '@/hooks/useAssignmentGroups';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { StandardsSelector } from '@/components/classroom/StandardsSelector';
+import { AntiCheatingSettings } from '@/components/assignments/AntiCheatingSettings';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Question {
@@ -48,6 +49,13 @@ export default function CreateMultiQuestionAssignment() {
     { id: uuidv4(), sequence: 1, question_type: null, question_data: {} }
   ]);
   const [showPublishConfirm, setShowPublishConfirm] = useState(false);
+  
+  // Anti-cheating settings
+  const [shuffleQuestions, setShuffleQuestions] = useState(false);
+  const [shuffleAnswers, setShuffleAnswers] = useState(false);
+  const [isolationMode, setIsolationMode] = useState(false);
+  const [focusDetection, setFocusDetection] = useState(false);
+  const [timePerQuestion, setTimePerQuestion] = useState<number | undefined>();
   
   const { groups } = useAssignmentGroups(editId || undefined);
 
@@ -88,6 +96,13 @@ export default function CreateMultiQuestionAssignment() {
       setMaxAttempts(assignment.max_attempts || 1);
       setIsGroupAssignment(assignment.is_group_assignment || false);
       setCategory((assignment.category || 'Homework') as 'Test' | 'Quiz' | 'Homework');
+      
+      // Load anti-cheating settings
+      setShuffleQuestions(assignment.shuffle_questions || false);
+      setShuffleAnswers(assignment.shuffle_answers || false);
+      setIsolationMode(assignment.isolation_mode || false);
+      setFocusDetection(assignment.focus_detection || false);
+      setTimePerQuestion(assignment.time_per_question_seconds || undefined);
       
       if (assignment.assignment_questions && assignment.assignment_questions.length > 0) {
         const loadedQuestions = assignment.assignment_questions.map((q: any) => ({
@@ -162,6 +177,11 @@ export default function CreateMultiQuestionAssignment() {
           timer_minutes: timerMinutes,
           max_attempts: maxAttempts,
           is_group_assignment: isGroupAssignment,
+          shuffle_questions: shuffleQuestions,
+          shuffle_answers: shuffleAnswers,
+          isolation_mode: isolationMode,
+          focus_detection: focusDetection,
+          time_per_question_seconds: timePerQuestion,
         },
         questions: questionData,
       });
@@ -176,6 +196,11 @@ export default function CreateMultiQuestionAssignment() {
         timer_minutes: timerMinutes,
         max_attempts: maxAttempts,
         is_group_assignment: isGroupAssignment,
+        shuffle_questions: shuffleQuestions,
+        shuffle_answers: shuffleAnswers,
+        isolation_mode: isolationMode,
+        focus_detection: focusDetection,
+        time_per_question_seconds: timePerQuestion,
         questions: questionData,
       });
     }
@@ -208,6 +233,11 @@ export default function CreateMultiQuestionAssignment() {
           timer_minutes: timerMinutes,
           max_attempts: maxAttempts,
           is_group_assignment: isGroupAssignment,
+          shuffle_questions: shuffleQuestions,
+          shuffle_answers: shuffleAnswers,
+          isolation_mode: isolationMode,
+          focus_detection: focusDetection,
+          time_per_question_seconds: timePerQuestion,
         },
         questions: questionData,
       });
@@ -232,6 +262,11 @@ export default function CreateMultiQuestionAssignment() {
         timer_minutes: timerMinutes,
         max_attempts: maxAttempts,
         is_group_assignment: isGroupAssignment,
+        shuffle_questions: shuffleQuestions,
+        shuffle_answers: shuffleAnswers,
+        isolation_mode: isolationMode,
+        focus_detection: focusDetection,
+        time_per_question_seconds: timePerQuestion,
         status: 'published',
         questions: questionData,
       });
@@ -376,6 +411,20 @@ export default function CreateMultiQuestionAssignment() {
               </div>
             </div>
           </Card>
+
+          {/* Anti-Cheating Settings */}
+          <AntiCheatingSettings
+            shuffleQuestions={shuffleQuestions}
+            shuffleAnswers={shuffleAnswers}
+            isolationMode={isolationMode}
+            focusDetection={focusDetection}
+            timePerQuestion={timePerQuestion}
+            onShuffleQuestionsChange={setShuffleQuestions}
+            onShuffleAnswersChange={setShuffleAnswers}
+            onIsolationModeChange={setIsolationMode}
+            onFocusDetectionChange={setFocusDetection}
+            onTimePerQuestionChange={setTimePerQuestion}
+          />
 
           {/* Questions */}
           <div className="space-y-4">
