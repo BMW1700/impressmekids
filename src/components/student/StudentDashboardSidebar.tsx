@@ -1,4 +1,4 @@
-import { Home, Calendar, BookOpen, Users, Bell, GraduationCap, FolderOpen, User, Gamepad2 } from "lucide-react";
+import { Home, Calendar, BookOpen, Users, Bell, GraduationCap, FolderOpen, User, Gamepad2, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StudentDashboardSidebarProps {
@@ -14,6 +14,7 @@ const sections = [
   { id: "clubs", label: "Clubs & Organizations", icon: Users },
   { id: "calendar", label: "Calendar", icon: Calendar },
   { id: "announcements", label: "Announcements", icon: Bell },
+  { id: "safety", label: "Safety", icon: Shield },
   { id: "study-games", label: "Study Games", icon: Gamepad2, isExternal: true },
   { id: "gradebook", label: "Gradebook", icon: GraduationCap },
   { id: "directory", label: "Directory", icon: FolderOpen },

@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Plus, AlertTriangle, Shield, Activity, BarChart3, Users } from "lucide-react";
+import { Plus, AlertTriangle, Shield, Activity, BarChart3, Users, Calendar as CalendarIcon } from "lucide-react";
 import { CreateSafetyAlertModal } from "@/components/safety/CreateSafetyAlertModal";
+import { ScheduleDrillModal } from "@/components/admin/ScheduleDrillModal";
 import { DrillSessionCard } from "@/components/safety/DrillSessionCard";
 import { AdminLiveView } from "@/components/admin/AdminLiveView";
 import { SafetyAnalytics } from "@/components/admin/SafetyAnalytics";
@@ -27,8 +28,10 @@ export default function AdminSafetyDashboard() {
   const [loading, setLoading] = useState(true);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [drills, setDrills] = useState<any[]>([]);
+  const [scheduledDrills, setScheduledDrills] = useState<any[]>([]);
   const [activeDrill, setActiveDrill] = useState<any>(null);
   const [showCreateAlert, setShowCreateAlert] = useState(false);
+  const [showScheduleDrill, setShowScheduleDrill] = useState(false);
   const [selectedDrillType, setSelectedDrillType] = useState<string>("");
   const [startingSchoolWideDrill, setStartingSchoolWideDrill] = useState(false);
   const [classrooms, setClassrooms] = useState<any[]>([]);
@@ -60,7 +63,7 @@ export default function AdminSafetyDashboard() {
   };
 
   const fetchData = async () => {
-    const [alertsData, drillsData, classroomsData] = await Promise.all([
+    const [alertsData, drillsData, scheduledData, classroomsData] = await Promise.all([
       supabase
         .from("safety_alerts")
         .select("*")
@@ -68,8 +71,14 @@ export default function AdminSafetyDashboard() {
       supabase
         .from("drill_sessions")
         .select("*")
+        .in("status", ["in_progress", "completed"])
         .order("started_at", { ascending: false })
         .limit(10),
+      supabase
+        .from("drill_sessions")
+        .select("*")
+        .eq("status", "scheduled")
+        .order("scheduled_for", { ascending: true }),
       supabase
         .from("classrooms")
         .select("id, name")
@@ -82,7 +91,41 @@ export default function AdminSafetyDashboard() {
       const active = drillsData.data.find(d => d.status === "in_progress");
       setActiveDrill(active || null);
     }
+    if (scheduledData.data) setScheduledDrills(scheduledData.data);
     if (classroomsData.data) setClassrooms(classroomsData.data);
+  };
+
+  const handleScheduleDrill = async (drillType: string, scheduledFor: Date) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const { error } = await supabase
+        .from("drill_sessions")
+        .insert({
+          drill_type: drillType,
+          status: "scheduled",
+          scheduled_for: scheduledFor.toISOString(),
+          announced_at: new Date().toISOString(),
+          created_by: session.user.id
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Drill Scheduled",
+        description: `${drillType.replace(/_/g, ' ')} has been scheduled. All users will be notified.`,
+      });
+
+      await fetchData();
+    } catch (error) {
+      console.error("Error scheduling drill:", error);
+      toast({
+        title: "Error",
+        description: "Failed to schedule drill",
+        variant: "destructive",
+      });
+    }
   };
 
   const startSchoolWideDrill = async () => {
@@ -209,6 +252,10 @@ export default function AdminSafetyDashboard() {
               <Plus className="mr-2 h-5 w-5" />
               Create Alert
             </Button>
+            <Button onClick={() => setShowScheduleDrill(true)} size="lg" variant="outline">
+              <CalendarIcon className="mr-2 h-5 w-5" />
+              Schedule Drill
+            </Button>
             <div className="flex gap-2">
               <Select value={selectedDrillType} onValueChange={setSelectedDrillType}>
                 <SelectTrigger className="w-[180px]">
@@ -228,7 +275,7 @@ export default function AdminSafetyDashboard() {
                 disabled={!selectedDrillType || startingSchoolWideDrill}
               >
                 <Users className="mr-2 h-5 w-5" />
-                {startingSchoolWideDrill ? "Starting..." : "Start School-Wide Drill"}
+                {startingSchoolWideDrill ? "Starting..." : "Start Now"}
               </Button>
             </div>
           </div>
@@ -317,20 +364,39 @@ export default function AdminSafetyDashboard() {
           </TabsContent>
 
           <TabsContent value="drills" className="space-y-4">
-            {drills.length === 0 ? (
+            {scheduledDrills.length > 0 && (
+              <div className="space-y-3 mb-6">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <CalendarIcon className="h-5 w-5" />
+                  Scheduled Drills
+                </h3>
+                <div className="grid gap-3">
+                  {scheduledDrills.map((drill) => (
+                    <DrillSessionCard key={drill.id} drill={drill} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {drills.length === 0 && scheduledDrills.length === 0 ? (
               <Card className="p-12 text-center">
                 <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No Drill Sessions</h3>
+                <h3 className="text-lg font-semibold mb-2">No Drills Yet</h3>
                 <p className="text-muted-foreground">
-                  Drill sessions will appear here once created
+                  Schedule or start your first safety drill
                 </p>
               </Card>
             ) : (
-              <div className="grid gap-4">
-                {drills.map((drill) => (
-                  <DrillSessionCard key={drill.id} drill={drill} />
-                ))}
-              </div>
+              drills.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold">Recent Drills</h3>
+                  <div className="grid gap-3">
+                    {drills.map((drill) => (
+                      <DrillSessionCard key={drill.id} drill={drill} />
+                    ))}
+                  </div>
+                </div>
+              )
             )}
           </TabsContent>
 
@@ -353,6 +419,12 @@ export default function AdminSafetyDashboard() {
           setShowCreateAlert(false);
           fetchData();
         }}
+      />
+
+      <ScheduleDrillModal
+        open={showScheduleDrill}
+        onOpenChange={setShowScheduleDrill}
+        onSchedule={handleScheduleDrill}
       />
     </div>
   );
