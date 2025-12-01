@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import webpush from "https://esm.sh/web-push@3.6.6";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -34,6 +35,21 @@ serve(async (req) => {
       throw new Error('userId, title, and body are required');
     }
 
+    // Get VAPID keys
+    const VAPID_PUBLIC_KEY = 'BBOQmeU-GndAJbPRu4b5Dt7mmnIjOH3AxacLwY5oznBCrF4JBVzLRkeJr_w_qoDmqu2o3gRlEjjkD7gP9snuJoI';
+    const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY');
+    
+    if (!VAPID_PRIVATE_KEY) {
+      throw new Error('VAPID_PRIVATE_KEY not configured');
+    }
+
+    // Configure web-push with VAPID details
+    webpush.setVapidDetails(
+      'mailto:support@impressmekids.com',
+      VAPID_PUBLIC_KEY,
+      VAPID_PRIVATE_KEY
+    );
+
     // Get all push subscriptions for this user
     const { data: subscriptions, error: subsError } = await supabaseClient
       .from('push_subscriptions')
@@ -52,48 +68,44 @@ serve(async (req) => {
 
     console.log(`Found ${subscriptions.length} subscriptions for user ${userId}`);
 
-    // VAPID keys (you'll need to generate these using web-push library)
-    // For now, using Web Push Protocol directly
+    const pushPayload = JSON.stringify({
+      title,
+      body,
+      icon: icon || '/android-chrome-192x192.png',
+      badge: badge || '/favicon-32x32.png',
+      data: data || {},
+      tag: tag || 'default',
+    });
+
+    // Send push notifications using web-push library
     const results = await Promise.allSettled(
       subscriptions.map(async (subscription) => {
         try {
-          const pushPayload = {
-            title,
-            body,
-            icon: icon || '/android-chrome-192x192.png',
-            badge: badge || '/favicon-32x32.png',
-            data: data || {},
-            tag: tag || 'default',
-          };
-
-          // Send push notification using Web Push Protocol
-          const response = await fetch(subscription.endpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'TTL': '86400',
+          // Reconstruct subscription object from database fields
+          const subscriptionObject = {
+            endpoint: subscription.endpoint,
+            keys: {
+              p256dh: subscription.p256dh,
+              auth: subscription.auth,
             },
-            body: JSON.stringify({
-              notification: pushPayload,
-            }),
-          });
-
-          if (!response.ok) {
-            // If subscription is no longer valid, delete it
-            if (response.status === 404 || response.status === 410) {
-              await supabaseClient
-                .from('push_subscriptions')
-                .delete()
-                .eq('id', subscription.id);
-              console.log(`Deleted invalid subscription ${subscription.id}`);
-            }
-            throw new Error(`Push failed: ${response.statusText}`);
-          }
+          };
+          
+          await webpush.sendNotification(subscriptionObject, pushPayload);
 
           return { success: true, subscriptionId: subscription.id };
-        } catch (error) {
+        } catch (error: any) {
           console.error(`Error sending to subscription ${subscription.id}:`, error);
-          return { success: false, subscriptionId: subscription.id, error };
+          
+          // If subscription is no longer valid, delete it
+          if (error.statusCode === 404 || error.statusCode === 410) {
+            await supabaseClient
+              .from('push_subscriptions')
+              .delete()
+              .eq('id', subscription.id);
+            console.log(`Deleted invalid subscription ${subscription.id}`);
+          }
+          
+          return { success: false, subscriptionId: subscription.id, error: error.message };
         }
       })
     );
