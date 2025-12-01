@@ -100,7 +100,7 @@ export default function AdminSafetyDashboard() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
 
-      const { error } = await supabase
+      const { data: newDrill, error } = await supabase
         .from("drill_sessions")
         .insert({
           drill_type: drillType,
@@ -108,9 +108,23 @@ export default function AdminSafetyDashboard() {
           scheduled_for: scheduledFor.toISOString(),
           announced_at: new Date().toISOString(),
           created_by: session.user.id
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Send scheduled drill notification
+      try {
+        await supabase.functions.invoke('send-drill-notification', {
+          body: {
+            type: 'drill_scheduled',
+            drillSessionId: newDrill.id,
+          },
+        });
+      } catch (notifError) {
+        console.error('Error sending scheduled drill notification:', notifError);
+      }
 
       toast({
         title: "Drill Scheduled",
@@ -193,6 +207,18 @@ export default function AdminSafetyDashboard() {
             .from("drill_attendance")
             .insert(attendanceRecords);
         }
+      }
+
+      // Send drill started notification
+      try {
+        await supabase.functions.invoke('send-drill-notification', {
+          body: {
+            type: 'drill_started',
+            drillSessionId: parentDrill.id,
+          },
+        });
+      } catch (notifError) {
+        console.error('Error sending drill started notification:', notifError);
       }
 
       toast({

@@ -189,14 +189,34 @@ export const TeacherSafetyTab = ({ classroomId, students }: TeacherSafetyTabProp
         description: "Failed to send all-clear notification",
         variant: "destructive",
       });
-    } else {
+      setIsSendingAllClear(false);
+      return;
+    }
+
+    // Send notifications to parents and admins
+    try {
+      await supabase.functions.invoke('send-drill-notification', {
+        body: {
+          type: 'all_clear',
+          drillSessionId: activeDrill.id,
+          classroomId: classroomId,
+        },
+      });
+
       toast({
         title: "All Clear Sent!",
         description: "Parents and admins have been notified that all students are safe.",
       });
-      checkActiveDrill();
+    } catch (notifError) {
+      console.error('Error sending all-clear notifications:', notifError);
+      toast({
+        title: "Partial Success",
+        description: "All-clear recorded but some notifications may have failed.",
+        variant: "destructive",
+      });
     }
 
+    checkActiveDrill();
     setIsSendingAllClear(false);
   };
 

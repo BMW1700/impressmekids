@@ -117,14 +117,32 @@ export function SafetySection() {
         description: 'Could not mark you as safe. Please try again.',
         variant: 'destructive',
       });
-    } else {
-      toast({
-        title: 'Successfully Checked In!',
-        description: 'Your parents have been notified that you are safe.',
-      });
-      fetchDrillData();
+      setIsCheckingIn(false);
+      return;
     }
 
+    // Send notification to parents
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await supabase.functions.invoke('send-drill-notification', {
+          body: {
+            type: 'student_checkin',
+            drillSessionId: activeDrill.id,
+            studentId: session.user.id,
+          },
+        });
+      }
+    } catch (notifError) {
+      console.error('Error sending parent notification:', notifError);
+      // Don't fail the check-in if notification fails
+    }
+
+    toast({
+      title: 'Successfully Checked In!',
+      description: 'Your parents have been notified that you are safe.',
+    });
+    fetchDrillData();
     setIsCheckingIn(false);
   };
 
