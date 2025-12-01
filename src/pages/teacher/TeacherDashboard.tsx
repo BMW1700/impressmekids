@@ -6,6 +6,7 @@ import { Footer } from "@/components/Footer";
 import { ClassroomCard } from "@/components/ClassroomCard";
 import { CreateClassroomModal } from "@/components/CreateClassroomModal";
 import { MLModelTraining } from "@/components/teacher/MLModelTraining";
+import { AllStudentsDialog } from "@/components/teacher/AllStudentsDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,6 +21,8 @@ const TeacherDashboard = () => {
   const [classrooms, setClassrooms] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showStudentsDialog, setShowStudentsDialog] = useState(false);
+  const [classroomsWithStudents, setClassroomsWithStudents] = useState<any[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -106,6 +109,54 @@ const TeacherDashboard = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadAllStudents = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      // Fetch all classrooms with their students
+      const classroomsWithStudentsData = await Promise.all(
+        classrooms.map(async (classroom) => {
+          const { data: students } = await supabase
+            .from('classroom_students')
+            .select(`
+              student_id,
+              joined_at,
+              profiles:student_id (
+                id,
+                full_name,
+                email
+              )
+            `)
+            .eq('classroom_id', classroom.id)
+            .order('joined_at', { ascending: true });
+
+          return {
+            id: classroom.id,
+            name: classroom.name,
+            subject: classroom.subject,
+            grade: classroom.grade,
+            students: students?.map(s => ({
+              id: s.profiles.id,
+              full_name: s.profiles.full_name,
+              email: s.profiles.email,
+              joined_at: s.joined_at,
+            })) || [],
+          };
+        })
+      );
+
+      setClassroomsWithStudents(classroomsWithStudentsData);
+      setShowStudentsDialog(true);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to load student data",
+        variant: "destructive",
+      });
     }
   };
 
@@ -201,7 +252,10 @@ const TeacherDashboard = () => {
               </CardContent>
             </Card>
             
-            <Card className="hover:scale-[1.02] hover:shadow-purple transition-all duration-300 border-primary/10">
+            <Card 
+              className="hover:scale-[1.02] hover:shadow-purple transition-all duration-300 border-primary/10 cursor-pointer"
+              onClick={loadAllStudents}
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Total Students</CardTitle>
@@ -432,6 +486,13 @@ const TeacherDashboard = () => {
         open={showCreateModal}
         onOpenChange={setShowCreateModal}
         onSuccess={loadDashboardData}
+      />
+      
+      <AllStudentsDialog
+        open={showStudentsDialog}
+        onOpenChange={setShowStudentsDialog}
+        classrooms={classroomsWithStudents}
+        totalStudents={classrooms.reduce((acc, c) => acc + (c.classroom_students?.[0]?.count || 0), 0)}
       />
     </div>
   );
