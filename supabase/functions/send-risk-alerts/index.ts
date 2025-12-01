@@ -82,6 +82,7 @@ serve(async (req: Request): Promise<Response> => {
             const parentEmail = (link as any).parent_accounts.email;
             const parentName = (link as any).parent_accounts.full_name;
             const parentId = (link as any).parent_accounts.id;
+            const parentUserId = (link as any).parent_accounts.user_id;
 
             const parentEmailResult = await sendParentEmail(
               alert,
@@ -99,6 +100,27 @@ serve(async (req: Request): Promise<Response> => {
               risk_score: alert.riskScore,
               email_status: parentEmailResult.success ? "sent" : "failed",
             });
+
+            // Send push notification
+            try {
+              await supabase.functions.invoke('send-push-notification', {
+                body: {
+                  userId: parentUserId,
+                  title: `📚 ${alert.studentName} needs extra practice`,
+                  body: `Your child would benefit from some extra practice in ${alert.classroomName} this week.`,
+                  icon: '/android-chrome-192x192.png',
+                  tag: `risk-alert-${alert.studentId}`,
+                  data: {
+                    type: 'risk_alert',
+                    studentId: alert.studentId,
+                    classroomId: alert.classroomId,
+                    riskScore: alert.riskScore,
+                  },
+                },
+              });
+            } catch (pushError) {
+              console.error(`Failed to send push notification to parent ${parentEmail}:`, pushError);
+            }
           }
         }
       }

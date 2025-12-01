@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,6 +28,7 @@ interface UpcomingItem {
   classroom_id?: string;
   classroom_name?: string;
   student_id: string;
+  student_name?: string;
   event_category?: string;
 }
 
@@ -40,6 +42,8 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
+
+    const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
     console.log("Starting calendar notification check...");
 
@@ -67,10 +71,19 @@ serve(async (req) => {
 
         console.log(`Processing notifications for parent ${pref.parent_id}, target date: ${targetDateStr}`);
 
+        // Get parent account info
+        const { data: parentAccount } = await supabaseClient
+          .from("parent_accounts")
+          .select("email, full_name")
+          .eq("id", pref.parent_id)
+          .single();
+
+        if (!parentAccount) continue;
+
         // Get parent's approved children
         const { data: children, error: childrenError } = await supabaseClient
           .from("parent_student_links")
-          .select("student_id")
+          .select("student_id, profiles!inner(full_name)")
           .eq("parent_id", pref.parent_id)
           .eq("approved", true);
 
@@ -80,11 +93,14 @@ serve(async (req) => {
         }
 
         const studentIds = children.map((c) => c.student_id);
+        const studentNames = new Map(
+          children.map((c) => [c.student_id, (c.profiles as any).full_name])
+        );
 
         // Get classrooms for these students
         const { data: classroomStudents } = await supabaseClient
           .from("classroom_students")
-          .select("classroom_id, classrooms(id, name)")
+          .select("classroom_id, student_id, classrooms(id, name)")
           .in("student_id", studentIds);
 
         if (!classroomStudents || classroomStudents.length === 0) {
@@ -99,7 +115,7 @@ serve(async (req) => {
         if (pref.notify_assignments || pref.notify_tests) {
           const { data: assignments } = await supabaseClient
             .from("assignments")
-            .select("id, title, description, due_date, assignment_type, classroom_id, classrooms!inner(name)")
+            .select("id, title, description, due_date, category, classroom_id, classrooms!inner(name)")
             .in("classroom_id", classroomIds)
             .eq("status", "published")
             .eq("is_posted", true)
@@ -107,19 +123,13 @@ serve(async (req) => {
             .lte("due_date", targetDateStr);
 
           for (const assignment of assignments || []) {
-            const isTest = ["quiz", "test"].includes(assignment.assignment_type?.toLowerCase() || "");
+            const isTest = assignment.category === "Test";
             
             if ((isTest && pref.notify_tests) || (!isTest && pref.notify_assignments)) {
-              // Check which students from our list are in this classroom
+              // Get students in this classroom
               const studentsInClassroom = classroomStudents
                 .filter((cs) => cs.classroom_id === assignment.classroom_id)
-                .map((cs) => {
-                  const studentId = studentIds.find((sid) => 
-                    classroomStudents.some((cs2) => cs2.classroom_id === assignment.classroom_id)
-                  );
-                  return studentId;
-                })
-                .filter(Boolean);
+                .map((cs) => cs.student_id);
 
               for (const studentId of studentsInClassroom) {
                 upcomingItems.push({
@@ -130,8 +140,9 @@ serve(async (req) => {
                   date: assignment.due_date,
                   classroom_id: assignment.classroom_id,
                   classroom_name: (assignment.classrooms as any)?.name || "",
-                  student_id: studentId!,
-                  event_category: isTest ? "test" : "assignment",
+                  student_id: studentId,
+                  student_name: studentNames.get(studentId),
+                  event_category: assignment.category,
                 });
               }
             }
@@ -151,13 +162,7 @@ serve(async (req) => {
           for (const event of events || []) {
             const studentsInClassroom = classroomStudents
               .filter((cs) => cs.classroom_id === event.classroom_id)
-              .map((cs) => {
-                const studentId = studentIds.find((sid) => 
-                  classroomStudents.some((cs2) => cs2.classroom_id === event.classroom_id)
-                );
-                return studentId;
-              })
-              .filter(Boolean);
+              .map((cs) => cs.student_id);
 
             for (const studentId of studentsInClassroom) {
               upcomingItems.push({
@@ -168,7 +173,8 @@ serve(async (req) => {
                 date: event.event_date,
                 classroom_id: event.classroom_id,
                 classroom_name: (event.classrooms as any)?.name || "",
-                student_id: studentId!,
+                student_id: studentId,
+                student_name: studentNames.get(studentId),
                 event_category: event.event_category,
               });
             }
@@ -190,6 +196,7 @@ serve(async (req) => {
                 description: event.description,
                 date: event.event_date,
                 student_id: studentId,
+                student_name: studentNames.get(studentId),
               });
             }
           }
@@ -224,11 +231,72 @@ serve(async (req) => {
           }
         }
 
-        // TODO: Send email notifications if enabled
-        // This would require email service integration (e.g., Resend)
+        // Send email notifications if enabled
         if (pref.email_enabled && upcomingItems.length > 0) {
-          console.log(`Email notifications would be sent for parent ${pref.parent_id}`);
-          // Implementation would go here
+          const daysText = pref.notification_days_before === 1 ? "tomorrow" : `in ${pref.notification_days_before} days`;
+          
+          // Group items by student
+          const itemsByStudent = new Map<string, UpcomingItem[]>();
+          for (const item of upcomingItems) {
+            const items = itemsByStudent.get(item.student_id) || [];
+            items.push(item);
+            itemsByStudent.set(item.student_id, items);
+          }
+
+          // Create email HTML
+          let itemsHtml = '';
+          for (const [studentId, items] of itemsByStudent) {
+            const studentName = studentNames.get(studentId) || 'Your child';
+            itemsHtml += `<h3 style="color: #1f2937; margin-top: 20px;">${studentName}</h3>`;
+            
+            for (const item of items) {
+              const typeColor = item.type === 'assignment' ? '#8b5cf6' : '#10b981';
+              const typeLabel = item.event_category || item.type;
+              
+              itemsHtml += `
+                <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid ${typeColor};">
+                  <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                      <span style="display: inline-block; background: ${typeColor}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-bottom: 5px;">${typeLabel}</span>
+                      <h4 style="margin: 5px 0; color: #111827;">${item.title}</h4>
+                      ${item.classroom_name ? `<p style="margin: 5px 0; color: #6b7280; font-size: 14px;">📚 ${item.classroom_name}</p>` : ''}
+                      ${item.description ? `<p style="margin: 5px 0; color: #4b5563; font-size: 14px;">${item.description}</p>` : ''}
+                    </div>
+                  </div>
+                </div>
+              `;
+            }
+          }
+
+          const emailHtml = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 8px 8px 0 0;">
+                <h1 style="margin: 0; font-size: 24px;">📅 Upcoming Calendar Reminders</h1>
+                <p style="margin: 10px 0 0 0; opacity: 0.9;">Here's what's happening ${daysText}</p>
+              </div>
+              <div style="background-color: #ffffff; padding: 30px; border-radius: 0 0 8px 8px;">
+                ${itemsHtml}
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
+                  <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                    This is an automated reminder from ImpressMe Kids.<br>
+                    You can manage your notification preferences in your account settings.
+                  </p>
+                </div>
+              </div>
+            </div>
+          `;
+
+          try {
+            await resend.emails.send({
+              from: "ImpressMe Kids <notifications@impressmekids.com>",
+              to: [parentAccount.email],
+              subject: `📅 ${upcomingItems.length} upcoming ${upcomingItems.length === 1 ? 'item' : 'items'} ${daysText}`,
+              html: emailHtml,
+            });
+            console.log(`Email sent to ${parentAccount.email} for parent ${pref.parent_id}`);
+          } catch (emailError) {
+            console.error(`Failed to send email to ${parentAccount.email}:`, emailError);
+          }
         }
 
       } catch (error) {
