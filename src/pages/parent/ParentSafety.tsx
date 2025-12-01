@@ -7,7 +7,9 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, CloudRain, DoorClosed, Shield, MessageSquare, QrCode, CheckCircle2, Clock } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { AlertTriangle, CloudRain, DoorClosed, Shield, MessageSquare, QrCode, CheckCircle2, Clock, Settings } from "lucide-react";
 import { UnaccountedChildAlert } from "@/components/safety/UnaccountedChildAlert";
 import { ParentQuickMessagePanel } from "@/components/safety/ParentQuickMessagePanel";
 import { StudentQRCode } from "@/components/safety/StudentQRCode";
@@ -22,6 +24,7 @@ export default function ParentSafety() {
   const [alerts, setAlerts] = useState<any[]>([]);
   const [unaccountedChildren, setUnaccountedChildren] = useState<any[]>([]);
   const [activeDrillStatus, setActiveDrillStatus] = useState<any[]>([]);
+  const [recessNotificationEnabled, setRecessNotificationEnabled] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     checkAuth();
@@ -57,6 +60,7 @@ export default function ParentSafety() {
       .from("parent_student_links")
       .select(`
         student_id,
+        notify_on_recess_return,
         profiles!parent_student_links_student_id_fkey(full_name)
       `)
       .eq("parent_id", pId)
@@ -64,6 +68,14 @@ export default function ParentSafety() {
 
     if (links) {
       setStudents(links);
+      
+      // Set recess notification preferences
+      const prefs: Record<string, boolean> = {};
+      links.forEach((link: any) => {
+        prefs[link.student_id] = link.notify_on_recess_return || false;
+      });
+      setRecessNotificationEnabled(prefs);
+      
       await checkUnaccountedStatus(links.map(l => l.student_id));
     }
 
@@ -187,6 +199,37 @@ export default function ParentSafety() {
     return alerts.filter(a => a.alert_type === type);
   };
 
+  const toggleRecessNotification = async (studentId: string) => {
+    if (!parentId) return;
+
+    const newValue = !recessNotificationEnabled[studentId];
+
+    const { error } = await supabase
+      .from("parent_student_links")
+      .update({ notify_on_recess_return: newValue })
+      .eq("parent_id", parentId)
+      .eq("student_id", studentId);
+
+    if (!error) {
+      setRecessNotificationEnabled(prev => ({
+        ...prev,
+        [studentId]: newValue
+      }));
+      toast({
+        title: newValue ? "Notifications Enabled" : "Notifications Disabled",
+        description: newValue 
+          ? "You'll be notified when your child returns from recess"
+          : "Recess return notifications disabled"
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to update notification preference",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -266,7 +309,7 @@ export default function ParentSafety() {
         )}
 
         <Tabs defaultValue="all" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="all">
               <AlertTriangle className="mr-2 h-4 w-4" />
               All Alerts
@@ -290,6 +333,10 @@ export default function ParentSafety() {
             <TabsTrigger value="message">
               <MessageSquare className="mr-2 h-4 w-4" />
               Messages
+            </TabsTrigger>
+            <TabsTrigger value="settings">
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
             </TabsTrigger>
           </TabsList>
 
@@ -443,6 +490,49 @@ export default function ParentSafety() {
 
           <TabsContent value="message">
             {students.length > 0 && <ParentQuickMessagePanel students={students} />}
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <Card className="p-6">
+              <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                <Settings className="h-6 w-6" />
+                Notification Preferences
+              </h2>
+              <p className="text-muted-foreground mb-6">
+                Manage how you receive safety and activity notifications for your children
+              </p>
+
+              {students.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No students linked to your account
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Recess Return Notifications</h3>
+                    <div className="space-y-4">
+                      {students.map((student: any) => (
+                        <div key={student.student_id} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                          <div className="space-y-1">
+                            <Label htmlFor={`recess-${student.student_id}`} className="text-base font-medium">
+                              {student.profiles.full_name}
+                            </Label>
+                            <p className="text-sm text-muted-foreground">
+                              Get notified when your child returns to class from recess
+                            </p>
+                          </div>
+                          <Switch
+                            id={`recess-${student.student_id}`}
+                            checked={recessNotificationEnabled[student.student_id] || false}
+                            onCheckedChange={() => toggleRecessNotification(student.student_id)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </Card>
           </TabsContent>
         </Tabs>
       </main>
