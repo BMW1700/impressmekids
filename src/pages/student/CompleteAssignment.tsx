@@ -11,6 +11,8 @@ import { useAssignmentTimer } from '@/hooks/useAssignmentTimer';
 import { useAssignmentAnswers } from '@/hooks/useAssignmentAnswers';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { FocusDetectionProvider } from '@/components/assignments/FocusDetectionProvider';
+import { IsolationModeWrapper } from '@/components/assignments/IsolationModeWrapper';
 
 export default function CompleteAssignment() {
   const { assignmentId } = useParams();
@@ -22,6 +24,8 @@ export default function CompleteAssignment() {
   const { answers, saveAnswer } = useAssignmentAnswers(submissionId || undefined);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [hasStarted, setHasStarted] = useState(false);
+  const [focusViolations, setFocusViolations] = useState(0);
+  const [shuffledQuestions, setShuffledQuestions] = useState<any[]>([]);
 
   // Check authentication and role on mount
   useEffect(() => {
@@ -88,6 +92,21 @@ export default function CompleteAssignment() {
     }
   }, [hasStarted, assignment, submissionId]);
 
+  // Shuffle questions when assignment loads (if enabled)
+  useEffect(() => {
+    if (assignment && assignment.shuffle_questions && shuffledQuestions.length === 0) {
+      const questions = [...(assignment.assignment_questions || [])];
+      // Simple Fisher-Yates shuffle
+      for (let i = questions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [questions[i], questions[j]] = [questions[j], questions[i]];
+      }
+      setShuffledQuestions(questions);
+    } else if (assignment && !assignment.shuffle_questions) {
+      setShuffledQuestions(assignment.assignment_questions || []);
+    }
+  }, [assignment]);
+
   // Auto-navigate to first unanswered question when answers load
   useEffect(() => {
     // Safety checks - only run if we have all required data
@@ -95,7 +114,7 @@ export default function CompleteAssignment() {
       return;
     }
     
-    const questions = assignment.assignment_questions || [];
+    const questions = shuffledQuestions.length > 0 ? shuffledQuestions : assignment.assignment_questions || [];
     if (questions.length === 0) {
       return;
     }
@@ -108,7 +127,7 @@ export default function CompleteAssignment() {
       console.log('📍 [CompleteAssignment] Jumping to first unanswered question:', firstUnanswered + 1);
       setCurrentQuestionIndex(firstUnanswered);
     }
-  }, [answers.length, hasStarted, assignment, submissionId, currentQuestionIndex]);
+  }, [answers.length, hasStarted, assignment, submissionId, currentQuestionIndex, shuffledQuestions]);
 
   const checkForExistingSubmission = async () => {
     const { data: session } = await supabase.auth.getSession();
@@ -181,6 +200,13 @@ export default function CompleteAssignment() {
         status: 'in_progress',
         attempt_number: nextAttemptNumber,
         started_at: new Date().toISOString(),
+        focus_violations: 0,
+        anti_cheating_metadata: {
+          shuffle_questions: assignment?.shuffle_questions || false,
+          shuffle_answers: assignment?.shuffle_answers || false,
+          isolation_mode: assignment?.isolation_mode || false,
+          focus_detection: assignment?.focus_detection || false,
+        },
       })
       .select()
       .single();
@@ -216,6 +242,7 @@ export default function CompleteAssignment() {
       .update({
         status: 'submitted',
         submitted_at: new Date().toISOString(),
+        focus_violations: focusViolations,
       })
       .eq('id', submissionId);
 
@@ -226,6 +253,10 @@ export default function CompleteAssignment() {
 
     navigate(`/classrooms/${assignment.classroom_id}?tab=assignments`);
   }
+
+  const handleFocusViolation = () => {
+    setFocusViolations(prev => prev + 1);
+  };
 
   // 1. FIRST: Check if assignment is loading
   if (isLoading) {
@@ -259,7 +290,7 @@ export default function CompleteAssignment() {
     );
   }
 
-  const questions = assignment.assignment_questions || [];
+  const questions = shuffledQuestions.length > 0 ? shuffledQuestions : assignment.assignment_questions || [];
   console.log('📚 [CompleteAssignment] Questions loaded:', questions.length);
   
   // 3. THIRD: Check if questions are loaded
@@ -352,87 +383,111 @@ export default function CompleteAssignment() {
     currentQuestionId: currentQuestion.id
   });
 
-  return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">{assignment.title}</h1>
-              {currentSubmission?.attempt_number && assignment?.max_attempts && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  Attempt {currentSubmission.attempt_number} of {assignment.max_attempts}
-                </p>
-              )}
-            </div>
-            {formatTime && (
-              <div className="text-lg font-semibold">
-                Time Remaining: {formatTime}
-              </div>
-            )}
-          </div>
-
-          <StudentQuestionView
-            question={currentQuestion}
-            answer={answers.find((a: any) => a.question_id === currentQuestion?.id)}
-            onAnswerChange={(data) => {
-              console.log('🔄 [CompleteAssignment] Answer changed for question:', currentQuestion.id);
-              
-              if (!submissionId) {
-                console.error('❌ [CompleteAssignment] No submission ID available');
-                toast({
-                  title: 'Error',
-                  description: 'Assignment not started properly. Please refresh and try again.',
-                  variant: 'destructive',
-                });
-                return;
-              }
-              
-              console.log('💾 [CompleteAssignment] Saving answer:', {
-                submissionId,
-                questionId: currentQuestion.id,
-                questionType: currentQuestion.question_type,
-              });
-              
-              saveAnswer({
-                submissionId: submissionId,
-                questionId: currentQuestion.id,
-                answerType: currentQuestion.question_type,
-                answerData: data,
-                status: 'completed',
-                questionData: currentQuestion.question_data, // For auto-grading
-                questionPoints: currentQuestion.points || 10, // Points for grading
-              });
-            }}
-            questionNumber={currentQuestionIndex + 1}
-            totalQuestions={questions.length}
-          />
-
-          <div className="flex justify-between">
-            <Button
-              variant="outline"
-              onClick={() => setCurrentQuestionIndex(i => i - 1)}
-              disabled={currentQuestionIndex === 0}
-            >
-              <ChevronLeft className="mr-2 h-4 w-4" />
-              Previous
-            </Button>
-
-            {currentQuestionIndex < questions.length - 1 ? (
-              <Button onClick={() => setCurrentQuestionIndex(i => i + 1)}>
-                Next
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
-            ) : (
-              <Button onClick={handleSubmit} disabled={!allAnswered}>
-                Submit Assignment
-              </Button>
-            )}
-          </div>
+  const assignmentContent = (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">{assignment.title}</h1>
+          {currentSubmission?.attempt_number && assignment?.max_attempts && (
+            <p className="text-sm text-muted-foreground mt-1">
+              Attempt {currentSubmission.attempt_number} of {assignment.max_attempts}
+            </p>
+          )}
         </div>
-      </main>
-      <Footer />
+        {formatTime && (
+          <div className="text-lg font-semibold">
+            Time Remaining: {formatTime}
+          </div>
+        )}
+      </div>
+
+      <StudentQuestionView
+        question={currentQuestion}
+        answer={answers.find((a: any) => a.question_id === currentQuestion?.id)}
+        shuffleAnswers={assignment.shuffle_answers}
+        onAnswerChange={(data) => {
+          console.log('🔄 [CompleteAssignment] Answer changed for question:', currentQuestion.id);
+          
+          if (!submissionId) {
+            console.error('❌ [CompleteAssignment] No submission ID available');
+            toast({
+              title: 'Error',
+              description: 'Assignment not started properly. Please refresh and try again.',
+              variant: 'destructive',
+            });
+            return;
+          }
+          
+          console.log('💾 [CompleteAssignment] Saving answer:', {
+            submissionId,
+            questionId: currentQuestion.id,
+            questionType: currentQuestion.question_type,
+          });
+          
+          saveAnswer({
+            submissionId: submissionId,
+            questionId: currentQuestion.id,
+            answerType: currentQuestion.question_type,
+            answerData: data,
+            status: 'completed',
+            questionData: currentQuestion.question_data,
+            questionPoints: currentQuestion.points || 10,
+          });
+        }}
+        questionNumber={currentQuestionIndex + 1}
+        totalQuestions={questions.length}
+      />
+
+      {!assignment.isolation_mode && (
+        <div className="flex justify-between">
+          <Button
+            variant="outline"
+            onClick={() => setCurrentQuestionIndex(i => i - 1)}
+            disabled={currentQuestionIndex === 0}
+          >
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Previous
+          </Button>
+
+          {currentQuestionIndex < questions.length - 1 ? (
+            <Button onClick={() => setCurrentQuestionIndex(i => i + 1)}>
+              Next
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
+          ) : (
+            <Button onClick={handleSubmit} disabled={!allAnswered}>
+              Submit Assignment
+            </Button>
+          )}
+        </div>
+      )}
     </div>
+  );
+
+  return (
+    <FocusDetectionProvider 
+      enabled={assignment.focus_detection || false}
+      onViolation={handleFocusViolation}
+    >
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 container mx-auto px-4 py-8">
+          {assignment.isolation_mode ? (
+            <IsolationModeWrapper
+              currentQuestion={currentQuestionIndex}
+              totalQuestions={questions.length}
+              canProceed={!!answers.find((a: any) => a.question_id === currentQuestion?.id && a.status === 'completed')}
+              onNext={() => setCurrentQuestionIndex(i => i + 1)}
+              onSubmit={handleSubmit}
+            >
+              {assignmentContent}
+            </IsolationModeWrapper>
+          ) : (
+            assignmentContent
+          )}
+        </main>
+        <Footer />
+      </div>
+    </FocusDetectionProvider>
   );
 }

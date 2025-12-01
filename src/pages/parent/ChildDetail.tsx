@@ -9,9 +9,10 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, ArrowLeft, Mic, FileText, TrendingUp } from "lucide-react";
+import { Loader2, ArrowLeft, Mic, FileText, TrendingUp, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { StudentBehaviorHistory } from "@/components/behavior/StudentBehaviorHistory";
 
 interface ChildData {
   full_name: string;
@@ -45,6 +46,7 @@ const ChildDetail = () => {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [auraConsent, setAuraConsent] = useState(false);
   const [assignmentConsent, setAssignmentConsent] = useState(false);
+  const [classroomId, setClassroomId] = useState<string | null>(null);
 
   useEffect(() => {
     loadChildData();
@@ -71,6 +73,18 @@ const ChildDetail = () => {
         full_name: childInfo[0].full_name,
         email: childInfo[0].email
       });
+    }
+
+    // Get child's classroom
+    const { data: classrooms } = await supabase
+      .from("classroom_students")
+      .select("classroom_id")
+      .eq("student_id", studentId)
+      .limit(1)
+      .single();
+    
+    if (classrooms) {
+      setClassroomId(classrooms.classroom_id);
     }
 
     const { data: parentAccount } = await supabase
@@ -218,6 +232,7 @@ const ChildDetail = () => {
         <Tabs defaultValue="consents" className="space-y-6">
           <TabsList>
             <TabsTrigger value="consents">Privacy Consents</TabsTrigger>
+            <TabsTrigger value="behavior">Behavior</TabsTrigger>
             <TabsTrigger value="aura">AURA Progress</TabsTrigger>
             <TabsTrigger value="assignments">Assignments</TabsTrigger>
           </TabsList>
@@ -257,6 +272,19 @@ const ChildDetail = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="behavior">
+            {studentId && classroomId ? (
+              <StudentBehaviorHistory studentId={studentId} classroomId={classroomId} />
+            ) : (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Trophy className="h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No classroom data available</p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="aura">

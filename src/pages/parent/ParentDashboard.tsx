@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { Loader2, UserPlus, Calendar as CalendarIcon, BookOpen, Bell, TrendingUp } from "lucide-react";
+import { Loader2, UserPlus, Calendar as CalendarIcon, BookOpen, Bell, TrendingUp, Trophy } from "lucide-react";
 import { ParentNotificationBell } from "@/components/parent/ParentNotificationBell";
 import { StudentLookupModal } from "@/components/parent/StudentLookupModal";
 import { ParentOutgoingRequestsList } from "@/components/parent/ParentOutgoingRequestsList";
@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarWidget } from "@/components/calendar/CalendarWidget";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Directory } from "@/components/Directory";
+import { ParentBehaviorSummary } from "@/components/behavior/ParentBehaviorSummary";
 
 const ParentDashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -35,14 +36,23 @@ const ParentDashboard = () => {
     },
   });
 
-  // Get first approved child for calendar widget
+  // Get approved children with classroom IDs
   const { data: approvedChildren } = useQuery({
     queryKey: ["parent-children", parentId],
     queryFn: async () => {
       if (!parentId) return [];
       const { data } = await supabase
         .from("parent_student_links")
-        .select("student_id")
+        .select(`
+          student_id,
+          profiles:student_id (
+            id,
+            full_name,
+            classroom_students (
+              classroom_id
+            )
+          )
+        `)
         .eq("parent_id", parentId)
         .eq("approved", true);
       return data || [];
@@ -145,7 +155,9 @@ const ParentDashboard = () => {
 
   console.log("🔗 ParentDashboard rendering with parentId:", parentId);
 
-  const firstChildId = approvedChildren?.[0]?.student_id;
+  const firstChild = approvedChildren?.[0];
+  const firstChildId = firstChild?.student_id;
+  const firstChildClassroomId = (firstChild?.profiles as any)?.classroom_students?.[0]?.classroom_id;
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-primary/5">
@@ -241,6 +253,28 @@ const ParentDashboard = () => {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {/* Behavior Summary */}
+          {firstChildId && firstChildClassroomId ? (
+            <ParentBehaviorSummary studentId={firstChildId} classroomId={firstChildClassroomId} />
+          ) : (
+            <Card className="border shadow-sm bg-card/80 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Trophy className="h-5 w-5" />
+                  Behavior Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="text-center py-12">
+                  <Trophy className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
+                  <p className="text-sm text-muted-foreground">
+                    Link a student to view their behavior tracking and points
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Calendar Widget */}
           {parentId && firstChildId && session?.user?.id ? (
             <CalendarWidget
