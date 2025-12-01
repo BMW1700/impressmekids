@@ -3,22 +3,41 @@ import { Bell, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { supabase } from '@/integrations/supabase/client';
 
 export const PushNotificationPrompt = () => {
   const [isVisible, setIsVisible] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { isSupported, isSubscribed, isLoading, subscribe } = usePushNotifications();
 
   useEffect(() => {
-    // Show prompt after 5 seconds if notifications are supported and not subscribed
+    // Check authentication status
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+    };
+    
+    checkAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    // Show prompt after 5 seconds if authenticated, notifications supported, and not subscribed
     const timer = setTimeout(() => {
       const dismissed = localStorage.getItem('push-prompt-dismissed');
-      if (isSupported && !isSubscribed && !dismissed) {
+      if (isAuthenticated && isSupported && !isSubscribed && !dismissed) {
         setIsVisible(true);
       }
     }, 5000);
 
     return () => clearTimeout(timer);
-  }, [isSupported, isSubscribed]);
+  }, [isAuthenticated, isSupported, isSubscribed]);
 
   const handleDismiss = () => {
     setIsVisible(false);
