@@ -7,9 +7,10 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, CloudRain, DoorClosed, Shield, MessageSquare } from "lucide-react";
+import { AlertTriangle, CloudRain, DoorClosed, Shield, MessageSquare, QrCode } from "lucide-react";
 import { UnaccountedChildAlert } from "@/components/safety/UnaccountedChildAlert";
 import { ParentQuickMessagePanel } from "@/components/safety/ParentQuickMessagePanel";
+import { StudentQRCode } from "@/components/safety/StudentQRCode";
 import { useToast } from "@/hooks/use-toast";
 
 export default function ParentSafety() {
@@ -206,7 +207,7 @@ export default function ParentSafety() {
         )}
 
         <Tabs defaultValue="all" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="all">
               <AlertTriangle className="mr-2 h-4 w-4" />
               All Alerts
@@ -222,6 +223,10 @@ export default function ParentSafety() {
             <TabsTrigger value="drill">
               <Shield className="mr-2 h-4 w-4" />
               Drills
+            </TabsTrigger>
+            <TabsTrigger value="qr">
+              <QrCode className="mr-2 h-4 w-4" />
+              Emergency QR
             </TabsTrigger>
             <TabsTrigger value="message">
               <MessageSquare className="mr-2 h-4 w-4" />
@@ -349,6 +354,29 @@ export default function ParentSafety() {
                       </Button>
                     </div>
                   </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="qr">
+            {students.length === 0 ? (
+              <Card className="p-12 text-center">
+                <QrCode className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Students</h3>
+                <p className="text-muted-foreground">
+                  You need to have approved student access to view emergency QR codes
+                </p>
+              </Card>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2">
+                {students.map((student: any) => (
+                  <StudentQRCode
+                    key={student.student_id}
+                    studentId={student.student_id}
+                    studentName={student.profiles.full_name}
+                    parentId={parentId!}
+                  />
                 ))}
               </div>
             )}

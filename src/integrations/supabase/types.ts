@@ -1610,6 +1610,7 @@ export type Database = {
           ended_at: string | null
           id: string
           notes: string | null
+          school_drill_id: string | null
           school_id: string | null
           started_at: string | null
           status: string
@@ -1621,6 +1622,7 @@ export type Database = {
           ended_at?: string | null
           id?: string
           notes?: string | null
+          school_drill_id?: string | null
           school_id?: string | null
           started_at?: string | null
           status?: string
@@ -1632,6 +1634,7 @@ export type Database = {
           ended_at?: string | null
           id?: string
           notes?: string | null
+          school_drill_id?: string | null
           school_id?: string | null
           started_at?: string | null
           status?: string
@@ -1649,6 +1652,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drill_sessions_school_drill_id_fkey"
+            columns: ["school_drill_id"]
+            isOneToOne: false
+            referencedRelation: "drill_sessions"
             referencedColumns: ["id"]
           },
           {
@@ -3255,6 +3265,54 @@ export type Database = {
           },
         ]
       }
+      reunification_events: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          ended_at: string | null
+          id: string
+          location: string | null
+          school_id: string | null
+          started_at: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          ended_at?: string | null
+          id?: string
+          location?: string | null
+          school_id?: string | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          ended_at?: string | null
+          id?: string
+          location?: string | null
+          school_id?: string | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reunification_events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reunification_events_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["district_code"]
+          },
+        ]
+      }
       risk_alert_notifications: {
         Row: {
           email_status: string
@@ -3665,6 +3723,77 @@ export type Database = {
             columns: ["classroom_id"]
             isOneToOne: false
             referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_pickups: {
+        Row: {
+          created_at: string | null
+          id: string
+          location: string | null
+          notes: string | null
+          picked_up_by: string | null
+          pickup_time: string | null
+          qr_verified: boolean | null
+          relationship: string
+          released_by_teacher_id: string | null
+          reunification_event_id: string | null
+          student_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          location?: string | null
+          notes?: string | null
+          picked_up_by?: string | null
+          pickup_time?: string | null
+          qr_verified?: boolean | null
+          relationship: string
+          released_by_teacher_id?: string | null
+          reunification_event_id?: string | null
+          student_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          location?: string | null
+          notes?: string | null
+          picked_up_by?: string | null
+          pickup_time?: string | null
+          qr_verified?: boolean | null
+          relationship?: string
+          released_by_teacher_id?: string | null
+          reunification_event_id?: string | null
+          student_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_pickups_picked_up_by_fkey"
+            columns: ["picked_up_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_pickups_released_by_teacher_id_fkey"
+            columns: ["released_by_teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_pickups_reunification_event_id_fkey"
+            columns: ["reunification_event_id"]
+            isOneToOne: false
+            referencedRelation: "reunification_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_pickups_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
