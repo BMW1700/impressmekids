@@ -652,7 +652,7 @@ const ClassroomDetail = () => {
               {isTeacher && (
                 <TabsTrigger 
                   value="students" 
-                  className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
+                  className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
                 >
                   <Users className="mr-2 h-4 w-4" />
                   Students
@@ -661,7 +661,7 @@ const ClassroomDetail = () => {
               {isTeacher && (
                 <TabsTrigger 
                   value="attendance"
-                  className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
+                  className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
                 >
                   <UserCheck className="mr-2 h-4 w-4" />
                   Attendance
@@ -670,7 +670,7 @@ const ClassroomDetail = () => {
               {isTeacher && (
                 <TabsTrigger 
                   value="ai-insights"
-                  className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
+                  className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
                 >
                   <BarChart3 className="mr-2 h-4 w-4" />
                   AI Insights
@@ -679,7 +679,7 @@ const ClassroomDetail = () => {
               {isTeacher && (
                 <TabsTrigger 
                   value="parent-requests" 
-                  className="relative data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
+                  className="relative data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
                 >
                   <UserCheck className="mr-2 h-4 w-4" />
                   Parent Requests
@@ -696,7 +696,7 @@ const ClassroomDetail = () => {
               {isTeacher && (
                 <TabsTrigger 
                   value="leaderboard"
-                  className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
+                  className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
                 >
                   <Trophy className="mr-2 h-4 w-4" />
                   Leaderboard
@@ -705,21 +705,21 @@ const ClassroomDetail = () => {
               {/* Row 1: Syllabus, Assignments, Announcements */}
               <TabsTrigger 
                 value="syllabus"
-                className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
+                className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
               >
                 <FileText className="mr-2 h-4 w-4" />
                 Syllabus
               </TabsTrigger>
               <TabsTrigger 
                 value="assignments"
-                className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
+                className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
               >
                 <FileText className="mr-2 h-4 w-4" />
                 Assignments
               </TabsTrigger>
               <TabsTrigger 
                 value="announcements"
-                className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
+                className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
               >
                 <Megaphone className="mr-2 h-4 w-4" />
                 Announcements
@@ -727,14 +727,14 @@ const ClassroomDetail = () => {
               {/* Row 2: Study Materials, Tournaments, Trends */}
               <TabsTrigger 
                 value="study"
-                className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
+                className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
               >
                 <BookOpen className="mr-2 h-4 w-4" />
                 Study Materials
               </TabsTrigger>
               <TabsTrigger 
                 value="tournaments"
-                className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
+                className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
               >
                 <Trophy className="mr-2 h-4 w-4" />
                 Tournaments
@@ -742,7 +742,7 @@ const ClassroomDetail = () => {
               {isStudent && (
                 <TabsTrigger 
                   value="trends"
-                  className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-3 px-4 rounded-lg transition-all"
+                  className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all"
                 >
                   <BarChart3 className="mr-2 h-4 w-4" />
                   Trends
