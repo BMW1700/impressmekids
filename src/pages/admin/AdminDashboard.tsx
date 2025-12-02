@@ -19,6 +19,7 @@ import { BackupManagement } from "@/components/admin/BackupManagement";
 import { SchoolEventManager } from "@/components/admin/SchoolEventManager";
 import { BulkStudentImport } from "@/components/admin/BulkStudentImport";
 import { AccountVerificationRequests } from "@/components/admin/AccountVerificationRequests";
+import { CleverSyncPanel } from "@/components/admin/CleverSyncPanel";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -168,12 +169,13 @@ export default function AdminDashboard() {
 
           {/* Main Content Tabs */}
           <Tabs defaultValue="teacher-requests" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-10">
+            <TabsList className="grid w-full grid-cols-11">
               <TabsTrigger value="teacher-requests">Teacher Requests</TabsTrigger>
               <TabsTrigger value="teachers">Teachers</TabsTrigger>
               <TabsTrigger value="students">Students</TabsTrigger>
               <TabsTrigger value="admins">Admins</TabsTrigger>
               <TabsTrigger value="import">Import</TabsTrigger>
+              <TabsTrigger value="clever">Clever</TabsTrigger>
               <TabsTrigger value="parent-requests">Parent Requests</TabsTrigger>
               <TabsTrigger value="safety">Safety</TabsTrigger>
               <TabsTrigger value="backups">Backups</TabsTrigger>
@@ -262,6 +264,10 @@ export default function AdminDashboard() {
 
             <TabsContent value="import" className="space-y-4">
               <BulkStudentImport />
+            </TabsContent>
+
+            <TabsContent value="clever" className="space-y-4">
+              <CleverSyncPanel />
             </TabsContent>
 
             <TabsContent value="parent-requests" className="space-y-4">

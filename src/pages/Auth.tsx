@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Chrome, Building2 } from "lucide-react";
+import { Loader2, Chrome, Building2, BookOpen } from "lucide-react";
 import { detectUserTypeFromEmail } from "@/lib/districtDetection";
 import { RoleSelectionModal } from "@/components/auth/RoleSelectionModal";
 import { DistrictCombobox } from "@/components/auth/DistrictCombobox";
@@ -164,6 +164,14 @@ const Auth = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCleverSignIn = () => {
+    const cleverClientId = import.meta.env.VITE_CLEVER_CLIENT_ID || 'YOUR_CLEVER_CLIENT_ID';
+    const redirectUri = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/clever-sync-callback`;
+    const cleverAuthUrl = `https://clever.com/oauth/authorize?response_type=code&client_id=${cleverClientId}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+    
+    window.location.href = cleverAuthUrl;
   };
 
   const validateDistrictCode = async (code: string) => {
@@ -585,16 +593,29 @@ const Auth = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={handleGoogleSignIn}
-                    disabled={isLoading}
-                  >
-                    <Chrome className="mr-2 h-4 w-4" />
-                    Continue with Google
-                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={handleGoogleSignIn}
+                      disabled={isLoading}
+                    >
+                      <Chrome className="mr-2 h-4 w-4" />
+                      Google
+                    </Button>
+                    
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={handleCleverSignIn}
+                      disabled={isLoading}
+                    >
+                      <BookOpen className="mr-2 h-4 w-4" />
+                      Clever
+                    </Button>
+                  </div>
                   
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center">
@@ -667,16 +688,29 @@ const Auth = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={handleGoogleSignIn}
-                    disabled={isLoading}
-                  >
-                    <Chrome className="mr-2 h-4 w-4" />
-                    Continue with Google
-                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={handleGoogleSignIn}
+                      disabled={isLoading}
+                    >
+                      <Chrome className="mr-2 h-4 w-4" />
+                      Google
+                    </Button>
+                    
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={handleCleverSignIn}
+                      disabled={isLoading}
+                    >
+                      <BookOpen className="mr-2 h-4 w-4" />
+                      Clever
+                    </Button>
+                  </div>
                   
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center">
