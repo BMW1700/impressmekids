@@ -16,8 +16,9 @@ import RiskRegister from "./RiskRegister";
 import EvidenceLog from "./EvidenceLog";
 import VendorRiskAssessment from "./VendorRiskAssessment";
 import IncidentResponseTabletop from "./IncidentResponseTabletop";
+import VPATCompliance from "./VPATCompliance";
 
-type PolicyType = "password" | "access" | "incident" | "change" | "vertex" | "system" | "control-matrix" | "vendor" | "dataclass" | "backup" | "risk-register" | "evidence-log" | "vendor-assessment" | "ir-tabletop" | "all";
+type PolicyType = "password" | "access" | "incident" | "change" | "vertex" | "system" | "control-matrix" | "vendor" | "dataclass" | "backup" | "risk-register" | "evidence-log" | "vendor-assessment" | "ir-tabletop" | "vpat" | "all";
 
 export default function PolicyViewer() {
   const [selectedPolicy, setSelectedPolicy] = useState<PolicyType>("password");
@@ -83,6 +84,10 @@ export default function PolicyViewer() {
       name: "Backup & Disaster Recovery Policy",
       component: <BackupDisasterRecoveryPolicy />
     },
+    vpat: {
+      name: "VPAT® 2.5 Accessibility Compliance (WCAG 2.1 AA)",
+      component: <VPATCompliance />
+    },
     all: {
       name: "All Policies (Combined)",
       component: (
@@ -114,6 +119,8 @@ export default function PolicyViewer() {
           <DataClassificationPolicy />
           <div className="page-break" />
           <BackupDisasterRecoveryPolicy />
+          <div className="page-break" />
+          <VPATCompliance />
         </>
       )
     }
@@ -216,6 +223,7 @@ export default function PolicyViewer() {
                 <SelectItem value="vendor-assessment">Vendor Risk Assessment Summary</SelectItem>
                 <SelectItem value="dataclass">Data Classification &amp; Handling Policy</SelectItem>
                 <SelectItem value="backup">Backup &amp; Disaster Recovery Policy</SelectItem>
+                <SelectItem value="vpat">VPAT® 2.5 Accessibility Compliance (WCAG 2.1 AA)</SelectItem>
                 <SelectItem value="all">All Policies (Combined)</SelectItem>
               </SelectContent>
             </Select>
