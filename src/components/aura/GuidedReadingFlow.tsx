@@ -76,7 +76,6 @@ export const GuidedReadingFlow = ({
               reading_time_minutes: story.reading_time_minutes,
               difficulty_level: story.difficulty_level,
               cover_gradient: story.cover_gradient,
-              is_system: true,
             })
             .select('id')
             .single();
