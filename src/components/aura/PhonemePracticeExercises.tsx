@@ -6,6 +6,7 @@ import { Loader2, Volume2, CheckCircle } from 'lucide-react';
 import { generatePracticeExercises } from '@/lib/mispronunciationAnalysis';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { playCorrectPronunciation } from '@/lib/pronunciationPlayer';
 
 interface PhonemePracticeExercisesProps {
   studentId: string;
@@ -40,34 +41,28 @@ export const PhonemePracticeExercises = ({ studentId }: PhonemePracticeExercises
   };
 
   const playPhonemeSound = (phoneme: string) => {
-    // Use Web Speech API to pronounce example words
-    if ('speechSynthesis' in window) {
-      setPracticing(phoneme);
+    // Use the fixed pronunciationPlayer for voice preloading
+    setPracticing(phoneme);
+    
+    const words = exercises.find(e => e.phoneme === phoneme)?.words || [];
+    let index = 0;
+
+    const speakNext = () => {
+      if (index >= words.length) {
+        setPracticing(null);
+        return;
+      }
+
+      // Use the fixed playCorrectPronunciation instead of raw speechSynthesis
+      console.log('🔊 Practice Tab: Playing word:', words[index]);
+      playCorrectPronunciation(words[index]);
       
-      const words = exercises.find(e => e.phoneme === phoneme)?.words || [];
-      let index = 0;
+      index++;
+      // Move to next word after a delay
+      setTimeout(speakNext, 1200);
+    };
 
-      const speakNext = () => {
-        if (index >= words.length) {
-          setPracticing(null);
-          return;
-        }
-
-        const utterance = new SpeechSynthesisUtterance(words[index]);
-        utterance.rate = 0.7; // Slow down for clarity
-        utterance.pitch = 1.0;
-        utterance.lang = 'en-US';
-        
-        utterance.onend = () => {
-          index++;
-          setTimeout(speakNext, 800); // Pause between words
-        };
-
-        speechSynthesis.speak(utterance);
-      };
-
-      speakNext();
-    }
+    speakNext();
   };
 
   const markAsMastered = async (phoneme: string) => {
