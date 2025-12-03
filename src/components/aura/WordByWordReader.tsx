@@ -91,18 +91,34 @@ const normalizeWord = (word: string): string => {
   return word.toLowerCase().replace(/[^a-z0-9]/g, '');
 };
 
-const isWordMatch = (spoken: string, expected: string, tolerance = 2): boolean => {
+const isWordMatch = (spoken: string, expected: string): boolean => {
   const normalizedSpoken = normalizeWord(spoken);
   const normalizedExpected = normalizeWord(expected);
   
+  // Exact match
   if (normalizedSpoken === normalizedExpected) return true;
+  
+  // Empty check
+  if (!normalizedSpoken || !normalizedExpected) return false;
   
   const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
   const maxLen = Math.max(normalizedSpoken.length, normalizedExpected.length);
+  const minLen = Math.min(normalizedSpoken.length, normalizedExpected.length);
   
-  // Allow tolerance based on word length
-  const dynamicTolerance = Math.max(tolerance, Math.floor(maxLen * 0.3));
-  return distance <= dynamicTolerance;
+  // LENIENT MATCHING: Be generous with matching, only mark RED if clearly wrong
+  // For short words (≤3 chars): only wrong if distance > 1 (allows "Sam" vs "san")
+  // For medium words (4-6 chars): only wrong if distance > 2
+  // For long words (7+ chars): only wrong if distance > 3 or > 40% of word
+  
+  if (maxLen <= 3) {
+    return distance <= 1; // Very lenient for short words
+  } else if (maxLen <= 6) {
+    return distance <= 2; // Lenient for medium words
+  } else {
+    // For long words, use percentage-based tolerance (40% of word length)
+    const percentTolerance = Math.ceil(maxLen * 0.4);
+    return distance <= Math.max(3, percentTolerance);
+  }
 };
 
 export const WordByWordReader = ({ passageText, assignmentId, onComplete }: WordByWordReaderProps) => {
@@ -342,7 +358,10 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       });
     }
     
-    // Wait 250ms for word to stabilize before advancing
+    // STABILITY DELAY: Longer for short words (more prone to interim errors)
+    const expectedWordLen = words[currentIdx]?.length || 4;
+    const stabilityDelay = expectedWordLen <= 3 ? 400 : expectedWordLen <= 5 ? 300 : 250;
+    
     stabilityTimeoutRef.current = setTimeout(() => {
       const pending = pendingWordRef.current;
       if (!pending || pending.index !== realtimeWordIndexRef.current) return;
@@ -408,10 +427,11 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       setCurrentWordIndex(prev => Math.min(prev + 1, words.length));
       
       pendingWordRef.current = null;
-    }, 250); // 250ms stability delay
+    }, stabilityDelay);
   }, [words, auraCharacter]);
 
   // Process final results - confirm word readings AND play robot voice for errors
+  // CRITICAL: Final results can OVERRIDE incorrect interim markings if word was actually correct
   const processFinalResult = useCallback((transcript: string, timestamp: number) => {
     const spokenWords = transcript.split(/\s+/).filter(w => w.length > 0);
     
@@ -420,27 +440,43 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
     
     spokenWords.forEach((spokenWord, idx) => {
       const wordIndex = idx;
-      if (wordIndex < words.length && !processedWordsRef.current.has(wordIndex)) {
+      if (wordIndex < words.length) {
         const expectedWord = words[wordIndex];
         const isCorrect = isWordMatch(spokenWord, expectedWord);
         
-        newReadings.push({
-          word: spokenWord,
-          index: wordIndex,
-          startMs: timestamp - 500,
-          endMs: timestamp,
-          correct: isCorrect,
-          hesitation: false,
-        });
+        // OVERRIDE FIX: If final result shows correct but interim marked incorrect, fix it!
+        const currentStatus = realtimeWordStatusRef.current.get(wordIndex);
+        if (isCorrect && currentStatus === 'incorrect') {
+          // Override the incorrect status with correct
+          setRealtimeWordStatus(prev => {
+            const newMap = new Map(prev);
+            newMap.set(wordIndex, 'correct');
+            realtimeWordStatusRef.current = newMap;
+            return newMap;
+          });
+          console.log('OVERRIDE: Word was marked incorrect but final result shows correct:', expectedWord);
+        }
         
-        processedWordsRef.current.add(wordIndex);
-        
-        // ROBOT VOICE: Only play pronunciation for CONFIRMED incorrect words
-        if (!isCorrect && !spokenIncorrectWordsRef.current.has(wordIndex)) {
-          spokenIncorrectWordsRef.current.add(wordIndex);
-          setTimeout(() => {
-            playCorrectPronunciation(expectedWord);
-          }, 300);
+        if (!processedWordsRef.current.has(wordIndex)) {
+          newReadings.push({
+            word: spokenWord,
+            index: wordIndex,
+            startMs: timestamp - 500,
+            endMs: timestamp,
+            correct: isCorrect,
+            hesitation: false,
+          });
+          
+          processedWordsRef.current.add(wordIndex);
+          
+          // ROBOT VOICE: Only play pronunciation for CONFIRMED incorrect words
+          // AND only if we haven't already played it AND final result confirms it's wrong
+          if (!isCorrect && !spokenIncorrectWordsRef.current.has(wordIndex)) {
+            spokenIncorrectWordsRef.current.add(wordIndex);
+            setTimeout(() => {
+              playCorrectPronunciation(expectedWord);
+            }, 300);
+          }
         }
       }
     });
