@@ -177,9 +177,10 @@ serve(async (req) => {
 
     const { access_token } = await tokenResponse.json();
 
-    // Prepare audio content for Google Speech-to-Text
-    const binaryAudio = processBase64Chunks(audio);
-    const base64Audio = btoa(String.fromCharCode(...binaryAudio));
+// Prepare audio content for Google Speech-to-Text
+    // The input is already base64, so we can use it directly
+    // No need to decode and re-encode which causes stack overflow
+    const base64Audio = audio;
 
     // Call Google Cloud Speech-to-Text API
     const response = await fetch(GOOGLE_SPEECH_API, {
