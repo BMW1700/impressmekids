@@ -1,20 +1,65 @@
 /**
  * Plays correct pronunciation of a word using Web Speech API
+ * Fixed to handle Chrome's voice loading and cancel() bug
  */
-export const playCorrectPronunciation = (word: string) => {
-  if (!('speechSynthesis' in window)) {
-    console.warn('Speech synthesis not supported');
+
+let voicesLoaded = false;
+let preferredVoice: SpeechSynthesisVoice | null = null;
+
+// Pre-load voices on module initialization
+if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+  const loadVoices = () => {
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      // Prefer US English voices, fallback to any English, then any voice
+      preferredVoice = 
+        voices.find(v => v.lang === 'en-US') || 
+        voices.find(v => v.lang.startsWith('en')) || 
+        voices[0];
+      voicesLoaded = true;
+      console.log('🔊 Voices loaded, preferred:', preferredVoice?.name, preferredVoice?.lang);
+    }
+  };
+  
+  // Load immediately if already available
+  loadVoices();
+  
+  // Also listen for async voice loading (Chrome needs this)
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+export const playCorrectPronunciation = (word: string, retryCount = 0) => {
+  console.log('🔊 ATTEMPTING TO SPEAK:', word);
+  
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    console.warn('🔊 Speech synthesis not supported');
     return;
   }
 
-  // Cancel any ongoing speech
-  window.speechSynthesis.cancel();
+  // Wait for voices if not loaded yet (max 3 retries)
+  if (!voicesLoaded && retryCount < 3) {
+    console.log('🔊 Voices not loaded, retrying in 100ms... (attempt', retryCount + 1, ')');
+    setTimeout(() => playCorrectPronunciation(word, retryCount + 1), 100);
+    return;
+  }
 
+  // DON'T call cancel() before speak - this breaks Chrome!
+  // The cancel() call was causing speech to be silently dropped
+  
   const utterance = new SpeechSynthesisUtterance(word);
   utterance.rate = 0.8; // Slightly slower for clarity
   utterance.pitch = 1.1; // Slightly higher pitch
   utterance.volume = 1.0;
   utterance.lang = 'en-US';
+  
+  if (preferredVoice) {
+    utterance.voice = preferredVoice;
+  }
+  
+  // Add event listeners for debugging
+  utterance.onstart = () => console.log('🔊 Speech STARTED:', word);
+  utterance.onend = () => console.log('🔊 Speech ENDED:', word);
+  utterance.onerror = (e) => console.error('🔊 Speech ERROR:', word, e.error);
 
   window.speechSynthesis.speak(utterance);
 };
@@ -26,13 +71,18 @@ export class SoundEffects {
   private audioContext: AudioContext | null = null;
 
   constructor() {
-    if ('AudioContext' in window || 'webkitAudioContext' in window) {
+    if (typeof window !== 'undefined' && ('AudioContext' in window || 'webkitAudioContext' in window)) {
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
   }
 
   private playTone(frequency: number, duration: number, volume: number = 0.3) {
     if (!this.audioContext) return;
+
+    // Resume audio context if suspended (required after user gesture)
+    if (this.audioContext.state === 'suspended') {
+      this.audioContext.resume();
+    }
 
     const oscillator = this.audioContext.createOscillator();
     const gainNode = this.audioContext.createGain();
