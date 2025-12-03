@@ -56,28 +56,32 @@ serve(async (req) => {
       });
     }
 
-    // SECURITY: Use ANON key with RLS instead of service role
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
-
-    // Get user from JWT
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      console.error('[AUTH] Invalid token:', authError);
+    // Decode JWT directly (verify_jwt = true already validated it)
+    const token = authHeader.replace('Bearer ', '');
+    let userId: string;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      userId = payload.sub;
+      if (!userId) throw new Error('No user ID in token');
+    } catch (e) {
+      console.error('[AUTH] Failed to decode JWT:', e);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    // SECURITY: Use ANON key with RLS
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
     // SECURITY: Rate limiting (100 requests per minute per user)
-    const rateLimitResult = await checkRateLimit(user.id, 'generate-teacher-summary', RATE_LIMITS.AI_FUNCTION);
+    const rateLimitResult = await checkRateLimit(userId, 'generate-teacher-summary', RATE_LIMITS.AI_FUNCTION);
     if (!rateLimitResult.allowed) {
-      console.warn('[RATE_LIMIT] Rate limit exceeded:', user.id);
+      console.warn('[RATE_LIMIT] Rate limit exceeded:', userId);
       return new Response(JSON.stringify({ 
         error: 'Rate limit exceeded. Please try again later.',
         resetAt: rateLimitResult.resetAt,
@@ -368,7 +372,7 @@ Provide actionable insights for each student based on their assignments and AURA
       .from('teacher_summaries')
       .insert({
         classroom_id,
-        teacher_id: user.id,
+        teacher_id: userId,
         summary_data: summaryData,
         students_count: studentsData.length,
         assignments_analyzed: studentsData.reduce((sum, s) => sum + s.assignments.length, 0),
