@@ -47,23 +47,31 @@ serve(async (req) => {
     console.log('Phonemes received:', phonemes?.length || 0);
 
     // Initialize Supabase client
-    const authHeader = req.headers.get('Authorization')!;
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) throw new Error('Unauthorized');
+    
+    // Decode JWT to get user ID (already verified by Supabase gateway since verify_jwt = true)
+    const token = authHeader.replace('Bearer ', '');
+    const payloadBase64 = token.split('.')[1];
+    const payload = JSON.parse(atob(payloadBase64));
+    const userId = payload.sub;
+    
+    if (!userId) throw new Error('Unauthorized');
+    
+    console.log('[analyze-aura] User:', userId);
+    
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    // Get user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) throw new Error('Unauthorized');
-
     // READING MODE: Analyze reading comprehension
     if (readingMode) {
       console.log('📚 AURA Reading Comprehension Analysis Starting...');
       return await analyzeReadingComprehension({
         supabase,
-        userId: user.id,
+        userId,
         highlights,
         passageText,
         assignmentId,
@@ -240,7 +248,7 @@ Format as JSON:
 
     // COPPA COMPLIANCE: Log AURA record creation for audit trail
     const auditLogResult = await supabase.rpc('log_aura_access', {
-      p_student_id: user.id,
+      p_student_id: userId,
       p_record_id: null, // Will be set after insert
       p_access_type: 'create',
       p_access_context: readingMode ? 'reading_comprehension' : 'speaking_analysis'
@@ -254,7 +262,7 @@ Format as JSON:
     const { data: record, error: insertError } = await supabase
       .from('aura_records')
       .insert({
-        profile_id: user.id,
+        profile_id: userId,
         transcript,
         audio_url: audioUrl,
         language: 'en',
@@ -289,7 +297,7 @@ Format as JSON:
     const { data: existingVector } = await supabase
       .from('student_skill_vectors')
       .select('*')
-      .eq('student_id', user.id)
+      .eq('student_id', userId)
       .single();
 
     const currentVector = existingVector?.vector || {};
@@ -344,7 +352,7 @@ Format as JSON:
     await supabase
       .from('student_skill_vectors')
       .upsert({
-        student_id: user.id,
+        student_id: userId,
         vector: updatedVector,
         phoneme_scores: updatedPhonemeScores,
         prosody_metrics: updatedProsodyMetrics,
