@@ -9,7 +9,6 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { getIPAPronunciation } from '@/lib/cmuDictWrapper';
 import { analyzeMispronunciationPatterns } from '@/lib/mispronunciationAnalysis';
-import { detectPhonemes } from '@/lib/phonemeDetection';
 import { checkAndAwardAchievements, generateDailyMissions, updateMissionProgress } from '@/lib/achievementLogic';
 import { AchievementUnlockedModal } from './AchievementUnlockedModal';
 import { CelebrationEffect } from './CelebrationEffect';
@@ -161,15 +160,15 @@ const shouldSpeakWord = (spoken: string, expected: string): boolean => {
   const maxLen = Math.max(normalizedSpoken.length, normalizedExpected.length);
   const percentDifferent = distance / maxLen;
   
-  // For short words (1-4 chars): speak if 2+ characters are wrong
-  if (maxLen <= 4 && distance >= 2) {
-    console.log('🔊 VOICE MASCOT: Short word with 2+ errors, speaking:', expected, '(said:', spoken, ')');
+  // For short words (1-4 chars): speak if 1+ character is wrong (more aggressive)
+  if (maxLen <= 4 && distance >= 1) {
+    console.log('🔊 VOICE MASCOT: Short word error, speaking:', expected, '(said:', spoken, ')');
     return true;
   }
   
-  // For longer words: speak if >40% different (lowered from 30% threshold)
-  if (percentDifferent > 0.4) {
-    console.log('🔊 VOICE MASCOT: >40% different, speaking:', expected, '(said:', spoken, ', diff:', Math.round(percentDifferent * 100), '%)');
+  // For longer words: speak if >25% different (lowered threshold to catch more errors)
+  if (percentDifferent > 0.25) {
+    console.log('🔊 VOICE MASCOT: >25% different, speaking:', expected, '(said:', spoken, ', diff:', Math.round(percentDifferent * 100), '%)');
     return true;
   }
   
@@ -600,7 +599,25 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       return;
     }
 
-    // Save reading session
+    // Calculate phoneme accuracy from word readings for analytics
+    const phonemeAccuracy: Record<string, { correct: number; total: number }> = {};
+    wordReadings.forEach((wr) => {
+      const expectedWord = words[wr.index] || wr.word;
+      const phonemes = getIPAPronunciation(expectedWord)[0] || [];
+      phonemes.forEach((p: string) => {
+        if (!phonemeAccuracy[p]) phonemeAccuracy[p] = { correct: 0, total: 0 };
+        phonemeAccuracy[p].total += 1;
+        if (wr.correct) phonemeAccuracy[p].correct += 1;
+      });
+    });
+
+    // Convert to percentage scores
+    const phonemeScores: Record<string, number> = {};
+    Object.entries(phonemeAccuracy).forEach(([phoneme, stats]) => {
+      phonemeScores[phoneme] = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
+    });
+
+    // Save reading session WITH ML outputs
     const { data: session, error: sessionError } = await supabase
       .from('reading_sessions')
       .insert({
@@ -612,6 +629,8 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
         wpm,
         accuracy_percent: accuracy,
         fluency_score: calculateFluencyScore(wordReadings),
+        cognitive_load_avg: cognitiveLoad, // ML OUTPUT: Cognitive load during session
+        phoneme_accuracy: phonemeScores, // ML OUTPUT: Per-phoneme accuracy scores
       })
       .select()
       .single();
@@ -627,11 +646,13 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       return;
     }
 
-    // Save word readings
+    // Save word readings WITH detected phonemes (using CMU dict for sync phoneme lookup)
     if (wordReadings.length > 0) {
       const wordInserts = wordReadings.map((wr) => {
         const expectedWord = words[wr.index] || wr.word;
         const expectedPhonemes = getIPAPronunciation(expectedWord)[0] || [];
+        // Use CMU dictionary lookup for spoken word phonemes (sync, no ML needed)
+        const detectedPhonemes = getIPAPronunciation(wr.word)[0] || [];
         
         return {
           session_id: session.id,
@@ -639,7 +660,7 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
           word_index: wr.index,
           start_time_ms: wr.startMs,
           end_time_ms: wr.endMs,
-          phonemes_detected: [],
+          phonemes_detected: detectedPhonemes, // CMU dict phonemes for spoken word
           phonemes_expected: expectedPhonemes,
           was_correct: wr.correct,
           hesitation_detected: wr.hesitation,

@@ -1,7 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, TrendingUp } from "lucide-react";
+import { Sparkles, TrendingUp, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PhonemeHeatmapProps {
   students: any[];
@@ -25,10 +27,50 @@ const COMMON_PHONEMES = [
 const PhonemeHeatmap = ({ students, skillVectors }: PhonemeHeatmapProps) => {
   const [selectedCell, setSelectedCell] = useState<{ studentId: string; phoneme: string } | null>(null);
 
+  // Fetch reading sessions with phoneme_accuracy for students
+  const studentIds = students.map(s => s.student_id);
+  const { data: readingSessions, isLoading } = useQuery({
+    queryKey: ['reading-sessions-phonemes', studentIds],
+    queryFn: async () => {
+      if (studentIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('reading_sessions')
+        .select('student_id, phoneme_accuracy')
+        .in('student_id', studentIds)
+        .not('phoneme_accuracy', 'is', null);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: studentIds.length > 0,
+  });
+
+  // Calculate phoneme scores from reading_sessions if skill_vectors is empty
   const getPhonemeScore = (studentId: string, phoneme: string) => {
+    // First try skill_vectors (original source)
     const vector = skillVectors.find((v) => v.student_id === studentId);
-    if (!vector?.phoneme_scores) return null;
-    return vector.phoneme_scores[phoneme] || null;
+    if (vector?.phoneme_scores?.[phoneme] !== undefined) {
+      return vector.phoneme_scores[phoneme];
+    }
+
+    // Fallback: aggregate from reading_sessions phoneme_accuracy
+    if (readingSessions && readingSessions.length > 0) {
+      const studentSessions = readingSessions.filter(s => s.student_id === studentId);
+      if (studentSessions.length === 0) return null;
+
+      const scores: number[] = [];
+      studentSessions.forEach(session => {
+        const accuracy = session.phoneme_accuracy as Record<string, number> | null;
+        if (accuracy && accuracy[phoneme] !== undefined) {
+          scores.push(accuracy[phoneme]);
+        }
+      });
+
+      if (scores.length > 0) {
+        return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+      }
+    }
+
+    return null;
   };
 
   const getCellColor = (score: number | null) => {
@@ -55,6 +97,17 @@ const PhonemeHeatmap = ({ students, skillVectors }: PhonemeHeatmapProps) => {
     return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
   };
 
+  if (isLoading) {
+    return (
+      <Card className="shadow-elegant border-2 border-primary/20">
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2">Loading phoneme data...</span>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="shadow-elegant border-2 border-primary/20">
       <CardHeader>
@@ -65,7 +118,7 @@ const PhonemeHeatmap = ({ students, skillVectors }: PhonemeHeatmapProps) => {
           <div>
             <CardTitle className="text-2xl">Phoneme Mastery Heatmap</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              Interactive view of student phoneme accuracy • Click cells for details
+              Interactive view of student phoneme accuracy • Data from read-along sessions
             </p>
           </div>
         </div>
