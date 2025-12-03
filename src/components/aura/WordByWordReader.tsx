@@ -493,6 +493,8 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
           } catch (e) {
             console.log('Recognition already stopped');
           }
+          // CRITICAL: Set to null so resume logic can create new instance!
+          recognitionRef.current = null;
         }
         
         // Play pronunciation after brief pause to ensure recognition stopped
@@ -595,6 +597,8 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
               } catch (e) {
                 console.log('Recognition already stopped');
               }
+              // CRITICAL: Set to null so resume logic can create new instance!
+              recognitionRef.current = null;
             }
             
             setTimeout(() => {
