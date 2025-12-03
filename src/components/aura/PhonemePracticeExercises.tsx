@@ -6,7 +6,7 @@ import { Loader2, Volume2, CheckCircle } from 'lucide-react';
 import { generatePracticeExercises } from '@/lib/mispronunciationAnalysis';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { playCorrectPronunciation } from '@/lib/pronunciationPlayer';
+import { playCorrectPronunciation, unlockSpeechSynthesis } from '@/lib/pronunciationPlayer';
 
 interface PhonemePracticeExercisesProps {
   studentId: string;
@@ -41,7 +41,9 @@ export const PhonemePracticeExercises = ({ studentId }: PhonemePracticeExercises
   };
 
   const playPhonemeSound = (phoneme: string) => {
-    // Use the fixed pronunciationPlayer for voice preloading
+    // CRITICAL: Unlock speech on user gesture (Listen button click)
+    unlockSpeechSynthesis();
+    
     setPracticing(phoneme);
     
     const words = exercises.find(e => e.phoneme === phoneme)?.words || [];

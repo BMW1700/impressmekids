@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +20,7 @@ import { StoryLibrary } from "@/components/aura/StoryLibrary";
 import { GuidedReadingFlow } from "@/components/aura/GuidedReadingFlow";
 import { ReadingBookshelf } from "@/components/aura/ReadingBookshelf";
 import { SmartNotifications } from "@/components/aura/SmartNotifications";
+import { unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
 import type { CuratedStory as Story } from "@/data/curatedStories";
 
 const AuraPractice = () => {
@@ -29,6 +30,25 @@ const AuraPractice = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [isReadingStory, setIsReadingStory] = useState(false);
+
+  // Setup global voice error handler for toast notifications
+  useEffect(() => {
+    (window as any).__showVoiceError = () => {
+      toast({
+        title: "Voice unavailable",
+        description: "Click any button first to enable voice pronunciation.",
+        variant: "destructive",
+      });
+    };
+    return () => {
+      delete (window as any).__showVoiceError;
+    };
+  }, [toast]);
+
+  // Unlock speech synthesis on first user interaction with the page
+  const handlePageInteraction = useCallback(() => {
+    unlockSpeechSynthesis();
+  }, []);
 
   useEffect(() => {
     checkAuth();
@@ -157,7 +177,7 @@ const AuraPractice = () => {
 
   if (isReadingStory && selectedStory && user?.id) {
     return (
-      <div className="min-h-screen flex flex-col bg-background">
+      <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
         <Header />
         <main className="flex-1 container mx-auto px-4 py-8">
           <GuidedReadingFlow
@@ -173,7 +193,7 @@ const AuraPractice = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
       <Header />
       
       <main className="flex-1 container mx-auto px-4 py-8 animate-fade-in">
