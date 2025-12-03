@@ -137,39 +137,39 @@ const isWordMatch = (spoken: string, expected: string): boolean => {
   }
 };
 
-// LOWER THRESHOLD for robot voice - speak more often for wrong words
-// This ensures students get pronunciation help when they genuinely mispronounce
-const isClearlyWrong = (spoken: string, expected: string): boolean => {
+// SEPARATE function for voice mascot - INDEPENDENT of word matching
+// This ensures voice speaks when pronunciation is genuinely wrong, even if word was marked "correct"
+const shouldSpeakWord = (spoken: string, expected: string): boolean => {
   const normalizedSpoken = normalizeWord(spoken);
   const normalizedExpected = normalizeWord(expected);
   
+  // Exact match - never speak
   if (normalizedSpoken === normalizedExpected) return false;
   if (!normalizedSpoken || !normalizedExpected) return false;
   
-  // Partial matches are NOT clearly wrong
-  if (normalizedSpoken.startsWith(normalizedExpected) || normalizedExpected.startsWith(normalizedSpoken)) {
-    return false;
+  // FIRST LETTER DIFFERENT = SPEAK
+  if (normalizedSpoken[0] !== normalizedExpected[0]) {
+    console.log('🔊 VOICE MASCOT: First letter wrong, speaking:', expected, '(said:', spoken, ')');
+    return true;
   }
   
-  // CRITICAL: If first letter is different, it's clearly wrong - SPEAK IT
-  if (normalizedSpoken[0] !== normalizedExpected[0]) {
-    console.log('VOICE MASCOT: First letter mismatch, speaking:', expected);
-    return true;
+  // Partial matches - don't speak (probably just cut off)
+  if (normalizedSpoken.startsWith(normalizedExpected) || normalizedExpected.startsWith(normalizedSpoken)) {
+    return false;
   }
   
   const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
   const maxLen = Math.max(normalizedSpoken.length, normalizedExpected.length);
   
-  // LOWER THRESHOLD: 40% difference triggers voice (was 60%)
-  // This means voice mascot speaks for more pronunciation errors
-  const threshold = Math.ceil(maxLen * 0.4);
-  const isBad = distance > threshold;
+  // 30% difference threshold - speak if pronunciation is substantially different
+  const threshold = Math.ceil(maxLen * 0.3);
+  const shouldSpeak = distance > threshold;
   
-  if (isBad) {
-    console.log('VOICE MASCOT: Bad pronunciation, speaking:', expected, { spoken: normalizedSpoken, distance, threshold });
+  if (shouldSpeak) {
+    console.log('🔊 VOICE MASCOT: >30% different, speaking:', expected, '(said:', spoken, ', distance:', distance, ')');
   }
   
-  return isBad;
+  return shouldSpeak;
 };
 
 export const WordByWordReader = ({ passageText, assignmentId, onComplete }: WordByWordReaderProps) => {
@@ -381,13 +381,8 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
     // Track speech time for cognitive load estimation
     lastSpeechTimeRef.current = Date.now();
     
-    // ANTI-SKIP: Only process if word count increased by EXACTLY 1
-    // This prevents rapid-fire interim predictions that skip multiple words
+    // Process if word count increased (allow faster advancement)
     if (newWordCount <= previousWordCount) return;
-    if (newWordCount > lastConfirmedWordCountRef.current + 2) {
-      console.log('SKIP PREVENTION: Word count jumped too much, ignoring', { newWordCount, lastConfirmed: lastConfirmedWordCountRef.current });
-      return; // Don't accept jumps of more than 2 words
-    }
     
     const latestSpokenWord = spokenWords[newWordCount - 1];
     const currentIdx = realtimeWordIndexRef.current;
@@ -417,9 +412,9 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       });
     }
     
-    // INCREASED STABILITY DELAYS to prevent skipping ahead
+    // FASTER STABILITY DELAYS - responsive but stable
     const expectedWordLen = words[currentIdx]?.length || 4;
-    const stabilityDelay = expectedWordLen <= 3 ? 350 : expectedWordLen <= 5 ? 300 : 250;
+    const stabilityDelay = expectedWordLen <= 3 ? 180 : expectedWordLen <= 5 ? 150 : 120;
     
     stabilityTimeoutRef.current = setTimeout(() => {
       const pending = pendingWordRef.current;
@@ -477,17 +472,18 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
         auraCharacter.reactToIncorrect();
         setCorrectStreak(0);
         correctStreakRef.current = 0;
-        
-        // VOICE MASCOT: Speak incorrect word immediately in interim (for faster feedback)
-        const clearlyWrongPronunciation = isClearlyWrong(pending.word, finalExpectedWord);
-        if (clearlyWrongPronunciation && !spokenIncorrectWordsRef.current.has(pending.index)) {
-          spokenIncorrectWordsRef.current.add(pending.index);
-          console.log('VOICE MASCOT TRIGGERED:', finalExpectedWord);
-          // Delayed pronunciation - doesn't block word tracking
-          setTimeout(() => {
-            playCorrectPronunciation(normalizeWord(finalExpectedWord));
-          }, 100);
-        }
+      }
+      
+      // VOICE MASCOT: Check if we should speak this word (SEPARATE from correct/incorrect marking)
+      // This runs for BOTH correct and incorrect words - voice is independent of scoring
+      const shouldSpeak = shouldSpeakWord(pending.word, finalExpectedWord);
+      if (shouldSpeak && !spokenIncorrectWordsRef.current.has(pending.index)) {
+        spokenIncorrectWordsRef.current.add(pending.index);
+        console.log('🔊 VOICE MASCOT PLAYING:', finalExpectedWord);
+        // Play pronunciation - doesn't block word tracking
+        setTimeout(() => {
+          playCorrectPronunciation(normalizeWord(finalExpectedWord));
+        }, 50);
       }
       
       // Advance word index
@@ -541,16 +537,14 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
           
           processedWordsRef.current.add(wordIndex);
           
-          // ROBOT VOICE: Only play pronunciation for CLEARLY WRONG words
-          // Use strict matching - only speak if pronunciation was genuinely bad
-          // This does NOT affect word advancement - just provides audio feedback
-          const clearlyWrongPronunciation = isClearlyWrong(spokenWord, expectedWord);
-          if (clearlyWrongPronunciation && !spokenIncorrectWordsRef.current.has(wordIndex)) {
+          // Voice mascot check in final results (backup if interim didn't catch it)
+          const shouldSpeak = shouldSpeakWord(spokenWord, expectedWord);
+          if (shouldSpeak && !spokenIncorrectWordsRef.current.has(wordIndex)) {
             spokenIncorrectWordsRef.current.add(wordIndex);
-            // Play pronunciation after a short delay - doesn't block word tracking
+            console.log('🔊 VOICE (final):', expectedWord);
             setTimeout(() => {
               playCorrectPronunciation(normalizeWord(expectedWord));
-            }, 200);
+            }, 100);
           }
         }
       }
