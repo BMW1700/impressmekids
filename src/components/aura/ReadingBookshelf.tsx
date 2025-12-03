@@ -23,11 +23,13 @@ export const ReadingBookshelf = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
+      // ONLY show books that are FULLY completed AND student passed (best_accuracy >= 70%)
       const { data, error } = await supabase
         .from('student_reading_progress')
         .select('*, reading_library(*)')
         .eq('student_id', user.id)
         .eq('completed', true)
+        .gte('best_accuracy', 70) // Must have passed with 70%+ accuracy
         .order('completed_at', { ascending: false });
 
       if (error) throw error;
