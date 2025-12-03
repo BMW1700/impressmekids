@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Trophy, Star, TrendingUp, BookOpen, Sparkles, RefreshCw, XCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AuraCharacter } from "./AuraCharacter";
+import { EnhancedCompletionAnalysis } from "./EnhancedCompletionAnalysis";
 import { useEffect, useState } from "react";
 
 interface PassageCompleteCelebrationProps {
@@ -14,6 +15,9 @@ interface PassageCompleteCelebrationProps {
     wordsRead: number;
     xpEarned?: number;
     durationSeconds?: number;
+    sessionId?: string;
+    studentId?: string;
+    cognitiveLoad?: number;
   };
   achievements?: Array<{
     id: string;
@@ -225,6 +229,18 @@ export const PassageCompleteCelebration = ({
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* ADVANCED ANALYSIS - Areas to Practice, Cognitive Load, Difficulty */}
+            {stats.sessionId && stats.studentId && (
+              <EnhancedCompletionAnalysis
+                sessionId={stats.sessionId}
+                studentId={stats.studentId}
+                accuracy={stats.accuracy}
+                wpm={stats.wpm}
+                wordsRead={stats.wordsRead}
+                cognitiveLoad={stats.cognitiveLoad || 0}
+              />
+            )}
 
             {/* Achievements */}
             {achievements.length > 0 && (

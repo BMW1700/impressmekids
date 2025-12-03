@@ -484,10 +484,51 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       if (shouldSpeak && !spokenIncorrectWordsRef.current.has(pending.index)) {
         spokenIncorrectWordsRef.current.add(pending.index);
         console.log('🔊 VOICE MASCOT PLAYING:', finalExpectedWord);
-        // Play pronunciation - doesn't block word tracking
+        
+        // CRITICAL FIX: Pause recognition BEFORE speaking, then resume after
+        // SpeechRecognition and SpeechSynthesis fight for audio - must stop mic first!
+        if (recognitionRef.current) {
+          try {
+            recognitionRef.current.stop();
+          } catch (e) {
+            console.log('Recognition already stopped');
+          }
+        }
+        
+        // Play pronunciation after brief pause to ensure recognition stopped
         setTimeout(() => {
           playCorrectPronunciation(normalizeWord(finalExpectedWord));
-        }, 50);
+          
+          // Resume recognition after speech completes (estimate ~800ms for a word)
+          setTimeout(() => {
+            if (isRecording && recognitionRef.current === null) {
+              const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+              const recognition = new SpeechRecognition();
+              recognition.continuous = true;
+              recognition.interimResults = true;
+              recognition.lang = 'en-US';
+              recognition.maxAlternatives = 3;
+              recognition.onresult = (event: any) => {
+                const timestamp = Date.now() - startTimeRef.current;
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                  const result = event.results[i];
+                  const transcript = result[0].transcript.trim().toLowerCase();
+                  if (!result.isFinal) {
+                    processInterimResult(transcript, timestamp);
+                  } else {
+                    processFinalResult(transcript, timestamp);
+                  }
+                }
+              };
+              recognition.onerror = (event: any) => {
+                console.error('Speech recognition error:', event.error);
+              };
+              recognition.start();
+              recognitionRef.current = recognition;
+              console.log('🔊 Recognition resumed after voice mascot');
+            }
+          }, 1000); // Wait 1 second for speech to complete
+        }, 100);
       }
       
       // Advance word index
@@ -546,8 +587,47 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
           if (shouldSpeak && !spokenIncorrectWordsRef.current.has(wordIndex)) {
             spokenIncorrectWordsRef.current.add(wordIndex);
             console.log('🔊 VOICE (final):', expectedWord);
+            
+            // CRITICAL FIX: Pause recognition before speaking
+            if (recognitionRef.current) {
+              try {
+                recognitionRef.current.stop();
+              } catch (e) {
+                console.log('Recognition already stopped');
+              }
+            }
+            
             setTimeout(() => {
               playCorrectPronunciation(normalizeWord(expectedWord));
+              
+              // Resume recognition after speech
+              setTimeout(() => {
+                if (isRecording && recognitionRef.current === null) {
+                  const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+                  const recognition = new SpeechRecognition();
+                  recognition.continuous = true;
+                  recognition.interimResults = true;
+                  recognition.lang = 'en-US';
+                  recognition.maxAlternatives = 3;
+                  recognition.onresult = (event: any) => {
+                    const timestamp = Date.now() - startTimeRef.current;
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                      const result = event.results[i];
+                      const transcript = result[0].transcript.trim().toLowerCase();
+                      if (!result.isFinal) {
+                        processInterimResult(transcript, timestamp);
+                      } else {
+                        processFinalResult(transcript, timestamp);
+                      }
+                    }
+                  };
+                  recognition.onerror = (event: any) => {
+                    console.error('Speech recognition error:', event.error);
+                  };
+                  recognition.start();
+                  recognitionRef.current = recognition;
+                }
+              }, 1000);
             }, 100);
           }
         }
