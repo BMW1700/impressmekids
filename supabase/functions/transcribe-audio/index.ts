@@ -32,11 +32,12 @@ async function createJWT(serviceAccount: any): Promise<string> {
   const encodedPayload = btoa(JSON.stringify(payload)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
   const signatureInput = `${encodedHeader}.${encodedPayload}`;
 
-  // Import private key
+  // Import private key - properly clean PEM format (remove headers/footers and all whitespace/newlines)
   const privateKey = serviceAccount.private_key;
-  const pemHeader = '-----BEGIN PRIVATE KEY-----';
-  const pemFooter = '-----END PRIVATE KEY-----';
-  const pemContents = privateKey.substring(pemHeader.length, privateKey.length - pemFooter.length).trim();
+  const pemContents = privateKey
+    .replace(/-----BEGIN PRIVATE KEY-----/g, '')
+    .replace(/-----END PRIVATE KEY-----/g, '')
+    .replace(/[\n\r\s]/g, ''); // Remove all newlines, carriage returns, and whitespace
   const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
 
   const cryptoKey = await crypto.subtle.importKey(
