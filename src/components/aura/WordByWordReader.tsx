@@ -137,6 +137,9 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
   const processedWordsRef = useRef<Set<number>>(new Set());
   const lastInterimRef = useRef<string>('');
   
+  // PHASE 1 FIX: Track which incorrect words have already had pronunciation played
+  const spokenIncorrectWordsRef = useRef<Set<number>>(new Set());
+  
   // Phase 3: Smart Coach states
   const [cognitiveLoad, setCognitiveLoad] = useState(0);
   const [hesitationCount, setHesitationCount] = useState(0);
@@ -163,6 +166,7 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
     auraCharacter.setThinking();
     processedWordsRef.current = new Set();
     lastInterimRef.current = '';
+    spokenIncorrectWordsRef.current = new Set(); // Reset spoken words tracker
     setTotalXpEarned(0);
 
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
@@ -302,10 +306,13 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
         auraCharacter.reactToIncorrect();
         setCorrectStreak(0);
         
-        // Play correct pronunciation
-        setTimeout(() => {
-          playCorrectPronunciation(expectedWord);
-        }, 300);
+        // PHASE 1 FIX: Only play pronunciation ONCE per incorrect word
+        if (!spokenIncorrectWordsRef.current.has(currentIdx)) {
+          spokenIncorrectWordsRef.current.add(currentIdx);
+          setTimeout(() => {
+            playCorrectPronunciation(expectedWord);
+          }, 500);
+        }
       }
       
       setRealtimeWordIndex(prev => Math.min(prev + 1, words.length));
