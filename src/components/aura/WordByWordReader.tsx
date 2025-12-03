@@ -91,7 +91,8 @@ const normalizeWord = (word: string): string => {
   return word.toLowerCase().replace(/[^a-z0-9]/g, '');
 };
 
-// AGGRESSIVE LENIENT matching - Web Speech API is noisy, default to CORRECT
+// ULTRA LENIENT matching - Web Speech API is VERY noisy, default to CORRECT
+// Only mark RED if the word is COMPLETELY different
 const isWordMatch = (spoken: string, expected: string): boolean => {
   const normalizedSpoken = normalizeWord(spoken);
   const normalizedExpected = normalizeWord(expected);
@@ -102,35 +103,42 @@ const isWordMatch = (spoken: string, expected: string): boolean => {
   // Empty check
   if (!normalizedSpoken || !normalizedExpected) return false;
   
+  // FIRST LETTER MATCH = CORRECT (Web Speech often garbles endings)
+  if (normalizedSpoken[0] === normalizedExpected[0]) {
+    return true;
+  }
+  
   // Check if spoken starts with expected or expected starts with spoken (partial matches)
   if (normalizedSpoken.startsWith(normalizedExpected) || normalizedExpected.startsWith(normalizedSpoken)) {
     return true;
   }
   
-  // Check if first 2-3 characters match (common for Web Speech API noise)
-  const prefixLen = Math.min(3, Math.min(normalizedSpoken.length, normalizedExpected.length));
-  if (prefixLen >= 2 && normalizedSpoken.substring(0, prefixLen) === normalizedExpected.substring(0, prefixLen)) {
-    return true;
+  // Check if first 2 characters match - very lenient
+  if (normalizedSpoken.length >= 2 && normalizedExpected.length >= 2) {
+    if (normalizedSpoken.substring(0, 2) === normalizedExpected.substring(0, 2)) {
+      return true;
+    }
   }
   
   const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
   const maxLen = Math.max(normalizedSpoken.length, normalizedExpected.length);
   
-  // SUPER LENIENT: Only mark RED if CLEARLY wrong (high distance relative to word length)
-  // Short words (1-2 chars): always correct unless totally different
-  // Medium words (3-5 chars): only wrong if distance > half the word
-  // Long words (6+ chars): only wrong if distance > 50% of word
+  // ULTRA LENIENT: Only mark wrong if COMPLETELY different
+  // Short words (1-3 chars): always correct 
+  // Medium words (4-6 chars): only wrong if > 70% different
+  // Long words (7+ chars): only wrong if > 60% different
   
-  if (maxLen <= 2) {
-    return true; // Super short words - always give benefit of doubt
-  } else if (maxLen <= 5) {
-    return distance <= Math.ceil(maxLen / 2); // Allow up to half the word different
+  if (maxLen <= 3) {
+    return true; // Short words - always give benefit of doubt
+  } else if (maxLen <= 6) {
+    return distance <= Math.ceil(maxLen * 0.7); // 70% tolerance
   } else {
-    return distance <= Math.ceil(maxLen * 0.5); // 50% tolerance for long words
+    return distance <= Math.ceil(maxLen * 0.6); // 60% tolerance for long words
   }
 };
 
-// STRICT matching for robot voice - only pronounce if CLEARLY wrong
+// LOWER THRESHOLD for robot voice - speak more often for wrong words
+// This ensures students get pronunciation help when they genuinely mispronounce
 const isClearlyWrong = (spoken: string, expected: string): boolean => {
   const normalizedSpoken = normalizeWord(spoken);
   const normalizedExpected = normalizeWord(expected);
@@ -143,12 +151,25 @@ const isClearlyWrong = (spoken: string, expected: string): boolean => {
     return false;
   }
   
+  // CRITICAL: If first letter is different, it's clearly wrong - SPEAK IT
+  if (normalizedSpoken[0] !== normalizedExpected[0]) {
+    console.log('VOICE MASCOT: First letter mismatch, speaking:', expected);
+    return true;
+  }
+  
   const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
   const maxLen = Math.max(normalizedSpoken.length, normalizedExpected.length);
   
-  // Only "clearly wrong" if distance is MORE than 60% of the word
-  // This ensures robot voice only speaks for genuinely bad pronunciations
-  return distance > Math.ceil(maxLen * 0.6);
+  // LOWER THRESHOLD: 40% difference triggers voice (was 60%)
+  // This means voice mascot speaks for more pronunciation errors
+  const threshold = Math.ceil(maxLen * 0.4);
+  const isBad = distance > threshold;
+  
+  if (isBad) {
+    console.log('VOICE MASCOT: Bad pronunciation, speaking:', expected, { spoken: normalizedSpoken, distance, threshold });
+  }
+  
+  return isBad;
 };
 
 export const WordByWordReader = ({ passageText, assignmentId, onComplete }: WordByWordReaderProps) => {
@@ -343,6 +364,9 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
   const pendingWordRef = useRef<{ word: string; index: number; timestamp: number } | null>(null);
   const stabilityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
+  // Track last confirmed word count to prevent skipping
+  const lastConfirmedWordCountRef = useRef(0);
+  
   // Process interim (real-time) results - VISUAL ONLY, no robot voice
   const processInterimResult = useCallback((transcript: string, timestamp: number) => {
     // Only process if there's new content
@@ -357,8 +381,13 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
     // Track speech time for cognitive load estimation
     lastSpeechTimeRef.current = Date.now();
     
-    // Only process if we have MORE words than before (not just different interim predictions)
+    // ANTI-SKIP: Only process if word count increased by EXACTLY 1
+    // This prevents rapid-fire interim predictions that skip multiple words
     if (newWordCount <= previousWordCount) return;
+    if (newWordCount > lastConfirmedWordCountRef.current + 2) {
+      console.log('SKIP PREVENTION: Word count jumped too much, ignoring', { newWordCount, lastConfirmed: lastConfirmedWordCountRef.current });
+      return; // Don't accept jumps of more than 2 words
+    }
     
     const latestSpokenWord = spokenWords[newWordCount - 1];
     const currentIdx = realtimeWordIndexRef.current;
@@ -388,9 +417,9 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       });
     }
     
-    // STABILITY DELAY: Fast tracking - reduced delays for snappier response
+    // INCREASED STABILITY DELAYS to prevent skipping ahead
     const expectedWordLen = words[currentIdx]?.length || 4;
-    const stabilityDelay = expectedWordLen <= 2 ? 200 : expectedWordLen <= 4 ? 150 : 100;
+    const stabilityDelay = expectedWordLen <= 3 ? 350 : expectedWordLen <= 5 ? 300 : 250;
     
     stabilityTimeoutRef.current = setTimeout(() => {
       const pending = pendingWordRef.current;
@@ -409,6 +438,9 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
         realtimeWordStatusRef.current = newMap;
         return newMap;
       });
+      
+      // Update confirmed word count
+      lastConfirmedWordCountRef.current = newWordCount;
       
       // Sound effects only (NO robot voice here - that's in final results)
       if (finalIsCorrect) {
@@ -445,7 +477,17 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
         auraCharacter.reactToIncorrect();
         setCorrectStreak(0);
         correctStreakRef.current = 0;
-        // NO robot voice here - moved to processFinalResult
+        
+        // VOICE MASCOT: Speak incorrect word immediately in interim (for faster feedback)
+        const clearlyWrongPronunciation = isClearlyWrong(pending.word, finalExpectedWord);
+        if (clearlyWrongPronunciation && !spokenIncorrectWordsRef.current.has(pending.index)) {
+          spokenIncorrectWordsRef.current.add(pending.index);
+          console.log('VOICE MASCOT TRIGGERED:', finalExpectedWord);
+          // Delayed pronunciation - doesn't block word tracking
+          setTimeout(() => {
+            playCorrectPronunciation(normalizeWord(finalExpectedWord));
+          }, 100);
+        }
       }
       
       // Advance word index

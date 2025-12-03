@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, ArrowLeft, Sparkles, TrendingUp, Brain, Users, Activity } from "lucide-react";
+import { BarChart3, ArrowLeft, Sparkles, TrendingUp, Brain, Users, Activity, BookOpen, Timer, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const AuraAnalytics = () => {
@@ -79,6 +79,28 @@ const AuraAnalytics = () => {
     enabled: !!students,
   });
 
+  // NEW: Fetch reading_sessions data (this is where WordByWordReader saves data!)
+  const { data: readingSessions } = useQuery({
+    queryKey: ['classroom-reading-sessions', classroomId],
+    queryFn: async () => {
+      if (!students) return [];
+
+      const studentIds = students.map(s => s.student_id);
+      const { data, error } = await supabase
+        .from('reading_sessions')
+        .select('*')
+        .in('student_id', studentIds)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Reading sessions fetch error:', error);
+        return [];
+      }
+      return data || [];
+    },
+    enabled: !!students,
+  });
+
   const { data: skillVectors } = useQuery({
     queryKey: ['classroom-skill-vectors', classroomId],
     queryFn: async () => {
@@ -98,6 +120,19 @@ const AuraAnalytics = () => {
 
   const handleClassroomChange = (newClassroomId: string) => {
     navigate(`/teacher/aura-analytics/${newClassroomId}`);
+  };
+
+  // Calculate reading session stats
+  const readingStats = {
+    totalSessions: readingSessions?.length || 0,
+    avgAccuracy: readingSessions?.length 
+      ? Math.round(readingSessions.reduce((sum, r) => sum + (r.accuracy_percent || 0), 0) / readingSessions.length)
+      : 0,
+    totalWordsRead: readingSessions?.reduce((sum, r) => sum + (r.words_read || 0), 0) || 0,
+    avgWpm: readingSessions?.length 
+      ? Math.round(readingSessions.reduce((sum, r) => sum + (r.wpm || 0), 0) / readingSessions.length)
+      : 0,
+    activeReaders: new Set(readingSessions?.map(r => r.student_id) || []).size,
   };
 
   return (
@@ -144,52 +179,99 @@ const AuraAnalytics = () => {
             </Select>
           </div>
 
-          {/* Quick Stats Bar */}
-          {classroomId && auraRecords && students && (
-            <div className="grid grid-cols-4 gap-4 mb-6 animate-fade-in">
-              <Card className="border-2 border-primary/20">
-                <CardContent className="pt-6">
+          {/* Quick Stats Bar - COMBINED aura_records + reading_sessions */}
+          {classroomId && students && (
+            <div className="grid grid-cols-4 lg:grid-cols-8 gap-4 mb-6 animate-fade-in">
+              {/* READING PRACTICE STATS (from reading_sessions - WordByWordReader) */}
+              <Card className="border-2 border-green-500/30 bg-green-500/5">
+                <CardContent className="pt-4 pb-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">Active This Week</p>
-                      <p className="text-2xl font-bold">{students.filter(s => auraRecords.some(r => r.profile_id === s.student_id)).length}</p>
+                      <p className="text-xs text-muted-foreground mb-1">Reading Sessions</p>
+                      <p className="text-2xl font-bold text-green-600">{readingStats.totalSessions}</p>
                     </div>
-                    <Users className="h-8 w-8 text-primary opacity-50" />
+                    <BookOpen className="h-6 w-6 text-green-500 opacity-70" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-2 border-green-500/30 bg-green-500/5">
+                <CardContent className="pt-4 pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Avg Accuracy</p>
+                      <p className="text-2xl font-bold text-green-600">{readingStats.avgAccuracy}%</p>
+                    </div>
+                    <Target className="h-6 w-6 text-green-500 opacity-70" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-2 border-green-500/30 bg-green-500/5">
+                <CardContent className="pt-4 pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Words Read</p>
+                      <p className="text-2xl font-bold text-green-600">{readingStats.totalWordsRead.toLocaleString()}</p>
+                    </div>
+                    <Sparkles className="h-6 w-6 text-green-500 opacity-70" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-2 border-green-500/30 bg-green-500/5">
+                <CardContent className="pt-4 pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Avg WPM</p>
+                      <p className="text-2xl font-bold text-green-600">{readingStats.avgWpm}</p>
+                    </div>
+                    <Timer className="h-6 w-6 text-green-500 opacity-70" />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* AURA SPEAKING STATS (from aura_records - VoiceRecorder/Speaking) */}
+              <Card className="border-2 border-primary/20">
+                <CardContent className="pt-4 pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Active Readers</p>
+                      <p className="text-2xl font-bold">{readingStats.activeReaders}</p>
+                    </div>
+                    <Users className="h-6 w-6 text-primary opacity-50" />
                   </div>
                 </CardContent>
               </Card>
               <Card className="border-2 border-primary/20">
-                <CardContent className="pt-6">
+                <CardContent className="pt-4 pb-3">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">ML Predictions</p>
                       <p className="text-2xl font-bold">{skillVectors?.length || 0}</p>
                     </div>
-                    <Brain className="h-8 w-8 text-primary opacity-50" />
+                    <Brain className="h-6 w-6 text-primary opacity-50" />
                   </div>
                 </CardContent>
               </Card>
               <Card className="border-2 border-primary/20">
-                <CardContent className="pt-6">
+                <CardContent className="pt-4 pb-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">Practice Sessions</p>
+                      <p className="text-xs text-muted-foreground mb-1">Speaking Sessions</p>
                       <p className="text-2xl font-bold">{auraRecords?.length || 0}</p>
                     </div>
-                    <Activity className="h-8 w-8 text-primary opacity-50" />
+                    <Activity className="h-6 w-6 text-primary opacity-50" />
                   </div>
                 </CardContent>
               </Card>
               <Card className="border-2 border-primary/20">
-                <CardContent className="pt-6">
+                <CardContent className="pt-4 pb-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">Avg Class Score</p>
+                      <p className="text-xs text-muted-foreground mb-1">Avg Score</p>
                       <p className="text-2xl font-bold">
                         {auraRecords?.length ? Math.round(auraRecords.reduce((sum, r) => sum + (r.grade || 0), 0) / auraRecords.length) : 0}
                       </p>
                     </div>
-                    <TrendingUp className="h-8 w-8 text-primary opacity-50" />
+                    <TrendingUp className="h-6 w-6 text-primary opacity-50" />
                   </div>
                 </CardContent>
               </Card>
