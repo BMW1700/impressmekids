@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Volume2, Check } from "lucide-react";
+import { Volume2, Check, Mic, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AuraCharacter } from "./AuraCharacter";
 import { predictDifficultWords } from "@/lib/ml/crossModalTransferNetwork";
+import { playCorrectPronunciation } from "@/lib/pronunciationPlayer";
 
 interface PredictivePracticeProps {
   passageText: string;
@@ -17,7 +18,43 @@ interface PracticeWord {
   word: string;
   difficulty: number;
   practiced: boolean;
+  result?: 'correct' | 'incorrect';
 }
+
+// Normalize word for comparison
+const normalizeWord = (word: string): string => {
+  return word.toLowerCase().replace(/[^a-z0-9]/g, '');
+};
+
+// Fuzzy match using Levenshtein distance
+const levenshteinDistance = (a: string, b: string): number => {
+  const matrix: number[][] = [];
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+  return matrix[b.length][a.length];
+};
+
+const isWordMatch = (spoken: string, expected: string): boolean => {
+  const normalizedSpoken = normalizeWord(spoken);
+  const normalizedExpected = normalizeWord(expected);
+  if (normalizedSpoken === normalizedExpected) return true;
+  const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
+  const maxLen = Math.max(normalizedSpoken.length, normalizedExpected.length);
+  return distance <= Math.max(2, Math.floor(maxLen * 0.3));
+};
 
 export const PredictivePractice = ({
   passageText,
@@ -28,15 +65,16 @@ export const PredictivePractice = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isListening, setIsListening] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [spokenWord, setSpokenWord] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
+  
+  const recognitionRef = useRef<any>(null);
 
   // Initialize practice words using ML prediction
   useEffect(() => {
     const initializePractice = async () => {
       try {
-        // Use the cross-modal transfer network to predict difficult words
         const predictions = await predictDifficultWords(passageText, studentId);
-        
-        // Take top 5 most difficult words
         const topWords = predictions
           .sort((a, b) => b.difficulty - a.difficulty)
           .slice(0, 5)
@@ -45,12 +83,10 @@ export const PredictivePractice = ({
             difficulty: p.difficulty,
             practiced: false
           }));
-
         setPracticeWords(topWords);
         setLoading(false);
       } catch (error) {
         console.error('Error predicting difficult words:', error);
-        // Fallback: extract 5 random longer words
         const words = passageText.split(/\s+/)
           .filter(w => w.length > 5)
           .slice(0, 5)
@@ -63,51 +99,127 @@ export const PredictivePractice = ({
         setLoading(false);
       }
     };
-
     initializePractice();
   }, [passageText, studentId]);
 
   const currentWord = practiceWords[currentIndex];
-  const progress = ((currentIndex + 1) / practiceWords.length) * 100;
+  const progress = practiceWords.length > 0 ? ((currentIndex + 1) / practiceWords.length) * 100 : 0;
 
   // Text-to-speech to pronounce the word
-  const pronounceWord = () => {
-    if ('speechSynthesis' in window && currentWord) {
-      const utterance = new SpeechSynthesisUtterance(currentWord.word);
-      utterance.rate = 0.8;
-      utterance.pitch = 1.1;
-      window.speechSynthesis.speak(utterance);
+  const pronounceWord = useCallback(() => {
+    if (currentWord) {
+      playCorrectPronunciation(currentWord.word);
     }
-  };
+  }, [currentWord]);
 
-  // Listen to student pronunciation
-  const handlePractice = () => {
+  // Stop any ongoing recognition
+  const stopListening = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+    setIsListening(false);
+  }, []);
+
+  // PHASE 2 FIX: Listen to student pronunciation using Web Speech API
+  const handlePractice = useCallback(() => {
+    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+    
+    if (!SpeechRecognition) {
+      // Fallback for browsers without speech recognition
+      pronounceWord();
+      setTimeout(() => markWordPracticed('correct'), 1500);
+      return;
+    }
+
     setIsListening(true);
-    pronounceWord();
+    setSpokenWord(null);
+    setFeedback(null);
 
-    // Simulate listening for 2 seconds
-    setTimeout(() => {
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+    recognition.maxAlternatives = 3;
+
+    recognition.onresult = (event: any) => {
+      const results = event.results[0];
+      let bestMatch = false;
+      let spokenText = '';
+
+      // Check all alternatives for a match
+      for (let i = 0; i < results.length; i++) {
+        const transcript = results[i].transcript.trim();
+        spokenText = transcript;
+        if (isWordMatch(transcript, currentWord.word)) {
+          bestMatch = true;
+          break;
+        }
+      }
+
+      setSpokenWord(spokenText);
       setIsListening(false);
-      markWordPracticed();
-    }, 2000);
-  };
 
-  const markWordPracticed = () => {
+      if (bestMatch) {
+        setFeedback('correct');
+        setTimeout(() => markWordPracticed('correct'), 1000);
+      } else {
+        setFeedback('incorrect');
+        // Play correct pronunciation after showing incorrect feedback
+        setTimeout(() => {
+          playCorrectPronunciation(currentWord.word);
+        }, 500);
+        setTimeout(() => markWordPracticed('incorrect'), 2000);
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error:', event.error);
+      setIsListening(false);
+      // On error, let them try again or skip
+      if (event.error === 'no-speech') {
+        setFeedback(null);
+      }
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  }, [currentWord, pronounceWord]);
+
+  const markWordPracticed = (result: 'correct' | 'incorrect') => {
     const updatedWords = [...practiceWords];
     updatedWords[currentIndex].practiced = true;
+    updatedWords[currentIndex].result = result;
     setPracticeWords(updatedWords);
+
+    // Reset feedback state
+    setFeedback(null);
+    setSpokenWord(null);
 
     // Move to next word or complete
     if (currentIndex < practiceWords.length - 1) {
       setTimeout(() => {
         setCurrentIndex(currentIndex + 1);
-      }, 500);
+      }, 300);
     } else {
       setTimeout(() => {
         onComplete();
-      }, 1000);
+      }, 500);
     }
   };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -121,7 +233,6 @@ export const PredictivePractice = ({
   }
 
   if (practiceWords.length === 0) {
-    // No difficult words found - skip practice
     onComplete();
     return null;
   }
@@ -131,12 +242,20 @@ export const PredictivePractice = ({
       {/* Header */}
       <div className="text-center space-y-2">
         <AuraCharacter
-          state="encouraging"
-          message="Let's practice some tricky words before we read!"
+          state={isListening ? "thinking" : feedback === 'correct' ? "celebrating" : "encouraging"}
+          message={
+            isListening 
+              ? "I'm listening... say the word!" 
+              : feedback === 'correct'
+              ? "Perfect! You got it!"
+              : feedback === 'incorrect'
+              ? "Good try! Listen to the correct way..."
+              : "Let's practice some tricky words before we read!"
+          }
         />
         <h2 className="font-heading text-2xl font-bold">Pre-Reading Practice</h2>
         <p className="text-muted-foreground">
-          These words might be challenging. Let's practice them first!
+          Click "Hear It" to listen, then "Say It" to practice!
         </p>
       </div>
 
@@ -165,62 +284,102 @@ export const PredictivePractice = ({
                 <motion.div
                   initial={{ scale: 0.8 }}
                   animate={{ scale: 1 }}
-                  className="text-5xl font-bold text-primary"
+                  className={`text-5xl font-bold ${
+                    feedback === 'correct' 
+                      ? 'text-green-500' 
+                      : feedback === 'incorrect' 
+                      ? 'text-red-500' 
+                      : 'text-primary'
+                  }`}
                 >
                   {currentWord.word}
                 </motion.div>
 
+                {/* What student said */}
+                {spokenWord && (
+                  <div className="text-lg text-muted-foreground">
+                    You said: "<span className={feedback === 'correct' ? 'text-green-500' : 'text-red-500'}>{spokenWord}</span>"
+                  </div>
+                )}
+
+                {/* Feedback Icons */}
+                {feedback && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="flex items-center justify-center gap-2"
+                  >
+                    {feedback === 'correct' ? (
+                      <div className="flex items-center gap-2 text-green-600">
+                        <Check className="h-8 w-8" />
+                        <span className="text-xl font-semibold">Perfect!</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-amber-600">
+                        <Volume2 className="h-8 w-8 animate-pulse" />
+                        <span className="text-xl font-semibold">Listen carefully...</span>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+
                 {/* Difficulty Indicator */}
-                <div className="flex justify-center gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <div
-                      key={i}
-                      className={`h-2 w-8 rounded ${
-                        i < Math.ceil(currentWord.difficulty * 5)
-                          ? 'bg-yellow-500'
-                          : 'bg-gray-300'
-                      }`}
-                    />
-                  ))}
-                </div>
+                {!feedback && (
+                  <div className="flex justify-center gap-1">
+                    {[...Array(5)].map((_, i) => (
+                      <div
+                        key={i}
+                        className={`h-2 w-8 rounded ${
+                          i < Math.ceil(currentWord.difficulty * 5)
+                            ? 'bg-yellow-500'
+                            : 'bg-muted'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
 
-                {/* Practice Button */}
-                <div className="space-y-3">
-                  {!currentWord.practiced ? (
-                    <>
-                      <Button
-                        onClick={pronounceWord}
-                        variant="outline"
-                        className="mr-2"
-                      >
-                        <Volume2 className="mr-2 h-4 w-4" />
-                        Hear It
-                      </Button>
-                      <Button
-                        onClick={handlePractice}
-                        disabled={isListening}
-                        className="w-full"
-                      >
-                        {isListening ? 'Listening...' : 'Practice Now'}
-                      </Button>
-                    </>
-                  ) : (
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="flex items-center justify-center gap-2 text-green-600"
+                {/* Practice Buttons */}
+                {!currentWord.practiced && !feedback && (
+                  <div className="flex flex-col sm:flex-row justify-center gap-3">
+                    <Button
+                      onClick={pronounceWord}
+                      variant="outline"
+                      size="lg"
+                      disabled={isListening}
                     >
-                      <Check className="h-6 w-6" />
-                      <span className="font-semibold">Great job!</span>
-                    </motion.div>
-                  )}
-                </div>
+                      <Volume2 className="mr-2 h-5 w-5" />
+                      Hear It
+                    </Button>
+                    <Button
+                      onClick={handlePractice}
+                      size="lg"
+                      disabled={isListening}
+                      className="gap-2"
+                    >
+                      {isListening ? (
+                        <>
+                          <Mic className="h-5 w-5 animate-pulse text-red-500" />
+                          Listening...
+                        </>
+                      ) : (
+                        <>
+                          <Mic className="h-5 w-5" />
+                          Say It
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
 
-                {/* Instructions */}
-                {!currentWord.practiced && !isListening && (
-                  <p className="text-sm text-muted-foreground">
-                    Click "Hear It" to listen, then "Practice Now" to try saying it yourself!
-                  </p>
+                {/* Skip option when listening fails */}
+                {!isListening && !feedback && !currentWord.practiced && (
+                  <button
+                    onClick={() => markWordPracticed('correct')}
+                    className="text-sm text-muted-foreground hover:text-foreground underline"
+                  >
+                    Skip this word
+                  </button>
                 )}
               </div>
             </Card>
@@ -228,17 +387,19 @@ export const PredictivePractice = ({
         )}
       </AnimatePresence>
 
-      {/* Words Practiced */}
+      {/* Words Progress Dots */}
       <div className="flex justify-center gap-2">
         {practiceWords.map((word, i) => (
           <div
             key={i}
-            className={`h-2 w-12 rounded ${
+            className={`h-3 w-12 rounded-full transition-all ${
               word.practiced
-                ? 'bg-green-500'
+                ? word.result === 'correct'
+                  ? 'bg-green-500'
+                  : 'bg-amber-500'
                 : i === currentIndex
-                ? 'bg-primary'
-                : 'bg-gray-300'
+                ? 'bg-primary animate-pulse'
+                : 'bg-muted'
             }`}
           />
         ))}
