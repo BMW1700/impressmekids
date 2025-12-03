@@ -20,7 +20,7 @@ import { StoryLibrary } from "@/components/aura/StoryLibrary";
 import { GuidedReadingFlow } from "@/components/aura/GuidedReadingFlow";
 import { ReadingBookshelf } from "@/components/aura/ReadingBookshelf";
 import { SmartNotifications } from "@/components/aura/SmartNotifications";
-import { unlockVoiceMascot } from "@/lib/voiceMascot";
+import { unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
 import type { CuratedStory as Story } from "@/data/curatedStories";
 
 const AuraPractice = () => {
@@ -47,7 +47,7 @@ const AuraPractice = () => {
 
   // Unlock speech synthesis on first user interaction with the page
   const handlePageInteraction = useCallback(() => {
-    unlockVoiceMascot();
+    unlockSpeechSynthesis();
   }, []);
 
   useEffect(() => {

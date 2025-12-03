@@ -6,7 +6,7 @@ import { Volume2, Check, Mic, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AuraCharacter } from "./AuraCharacter";
 import { predictDifficultWords } from "@/lib/ml/crossModalTransferNetwork";
-import { unlockVoiceMascot, speakWord } from "@/lib/voiceMascot";
+import { playCorrectPronunciation, unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
 
 interface PredictivePracticeProps {
   passageText: string;
@@ -109,8 +109,8 @@ export const PredictivePractice = ({
   const pronounceWord = useCallback(() => {
     if (currentWord) {
       // CRITICAL: Unlock speech on user gesture
-      unlockVoiceMascot();
-      speakWord(currentWord.word);
+      unlockSpeechSynthesis();
+      playCorrectPronunciation(currentWord.word);
     }
   }, [currentWord]);
 
@@ -126,7 +126,7 @@ export const PredictivePractice = ({
   // PHASE 2 FIX: Listen to student pronunciation using Web Speech API
   const handlePractice = useCallback(() => {
     // CRITICAL: Unlock speech on user gesture (Say It button click)
-    unlockVoiceMascot();
+    unlockSpeechSynthesis();
     
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
     
@@ -172,7 +172,7 @@ export const PredictivePractice = ({
         setFeedback('incorrect');
         // Play correct pronunciation after showing incorrect feedback
         setTimeout(() => {
-          speakWord(currentWord.word);
+          playCorrectPronunciation(currentWord.word);
         }, 500);
         setTimeout(() => markWordPracticed('incorrect'), 2000);
       }
