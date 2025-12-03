@@ -1,6 +1,5 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 import { transcribeAudioSchema, validateInput } from '../_shared/validation.ts';
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from '../_shared/rateLimiter.ts';
 
@@ -98,7 +97,7 @@ serve(async (req) => {
   }
 
   try {
-    // Rate limiting check
+    // Get user ID from JWT (already verified by Supabase gateway since verify_jwt = true)
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Missing authorization' }), {
@@ -107,24 +106,25 @@ serve(async (req) => {
       });
     }
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
-    );
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+    // Decode JWT to get user ID (no need to verify - gateway already did)
+    const token = authHeader.replace('Bearer ', '');
+    const payloadBase64 = token.split('.')[1];
+    const payload = JSON.parse(atob(payloadBase64));
+    const userId = payload.sub;
+    
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'Invalid token' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    
+    console.log('[transcribe-audio] User:', userId);
 
     // SECURITY: Rate limiting (100 requests per minute per user)
-    const rateLimitResult = await checkRateLimit(user.id, 'transcribe-audio');
+    const rateLimitResult = await checkRateLimit(userId, 'transcribe-audio');
     if (!rateLimitResult.allowed) {
-      console.warn('[RATE_LIMIT] Rate limit exceeded:', user.id);
+      console.warn('[RATE_LIMIT] Rate limit exceeded:', userId);
       return new Response(JSON.stringify({ 
         error: 'Rate limit exceeded. Please try again later.',
         resetAt: rateLimitResult.resetAt,
