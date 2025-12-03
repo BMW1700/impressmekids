@@ -70,22 +70,31 @@ export const playCorrectPronunciation = (word: string, retryCount = 0) => {
     }
   }
 
-  // Wait for voices if not loaded yet (max 5 retries, 200ms each = 1 second total)
-  if (!voicesLoaded && retryCount < 5) {
-    console.log('🔊 Voices not loaded, retrying in 200ms... (attempt', retryCount + 1, ')');
-    setTimeout(() => playCorrectPronunciation(word, retryCount + 1), 200);
+  // Wait for voices if not loaded yet (max 8 retries, 250ms each = 2 seconds total)
+  if (!voicesLoaded && retryCount < 8) {
+    console.log('🔊 Voices not loaded, retrying in 250ms... (attempt', retryCount + 1, ')');
+    setTimeout(() => playCorrectPronunciation(word, retryCount + 1), 250);
     return;
   }
 
   if (!voicesLoaded) {
-    console.error('🔊 FAILED: Voices never loaded after 5 retries');
+    console.error('🔊 FAILED: Voices never loaded after 8 retries');
+    // Show user-visible error
+    if (typeof window !== 'undefined' && (window as any).__showVoiceError) {
+      (window as any).__showVoiceError();
+    }
     return;
+  }
+
+  // Resume if paused (Chrome sometimes pauses synthesis)
+  if (window.speechSynthesis.paused) {
+    window.speechSynthesis.resume();
   }
 
   // Cancel any pending speech first
   window.speechSynthesis.cancel();
   
-  // Small delay after cancel to ensure it completes
+  // Longer delay after cancel to ensure it completes (Chrome bug workaround)
   setTimeout(() => {
     const utterance = new SpeechSynthesisUtterance(word);
     utterance.rate = 0.8; // Slightly slower for clarity
@@ -106,11 +115,15 @@ export const playCorrectPronunciation = (word: string, retryCount = 0) => {
       if (e.error === 'not-allowed') {
         console.warn('🔊 Speech blocked - needs user gesture to unlock');
         speechUnlocked = false;
+        // Show user-visible error
+        if (typeof window !== 'undefined' && (window as any).__showVoiceError) {
+          (window as any).__showVoiceError();
+        }
       }
     };
 
     window.speechSynthesis.speak(utterance);
-  }, 50);
+  }, 100);
 };
 
 /**

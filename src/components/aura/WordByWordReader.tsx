@@ -90,8 +90,8 @@ const normalizeWord = (word: string): string => {
   return word.toLowerCase().replace(/[^a-z0-9]/g, '');
 };
 
-// ULTRA LENIENT matching - Web Speech API is VERY noisy, default to CORRECT
-// Only mark RED if the word is COMPLETELY different
+// MAXIMUM LENIENT matching - Web Speech API is EXTREMELY noisy, default to CORRECT
+// Only mark RED if the word is TOTALLY COMPLETELY different
 const isWordMatch = (spoken: string, expected: string): boolean => {
   const normalizedSpoken = normalizeWord(spoken);
   const normalizedExpected = normalizeWord(expected);
@@ -99,8 +99,14 @@ const isWordMatch = (spoken: string, expected: string): boolean => {
   // Exact match - definitely correct
   if (normalizedSpoken === normalizedExpected) return true;
   
-  // Empty check
-  if (!normalizedSpoken || !normalizedExpected) return false;
+  // Empty check - if no speech detected, still mark correct (benefit of doubt)
+  if (!normalizedSpoken) return true;
+  if (!normalizedExpected) return false;
+  
+  // SHORT WORDS (1-4 chars): ALWAYS CORRECT - too easy to mishear
+  if (normalizedExpected.length <= 4) {
+    return true;
+  }
   
   // FIRST LETTER MATCH = CORRECT (Web Speech often garbles endings)
   if (normalizedSpoken[0] === normalizedExpected[0]) {
@@ -119,20 +125,23 @@ const isWordMatch = (spoken: string, expected: string): boolean => {
     }
   }
   
+  // ANY shared characters = probably correct (Web Speech is just bad)
+  const sharedChars = normalizedSpoken.split('').filter(c => normalizedExpected.includes(c)).length;
+  if (sharedChars >= 2) {
+    return true;
+  }
+  
   const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
   const maxLen = Math.max(normalizedSpoken.length, normalizedExpected.length);
   
-  // ULTRA LENIENT: Only mark wrong if COMPLETELY different
-  // Short words (1-3 chars): always correct 
-  // Medium words (4-6 chars): only wrong if > 70% different
-  // Long words (7+ chars): only wrong if > 60% different
+  // MAXIMUM LENIENT: Only mark wrong if COMPLETELY different (>50% different)
+  // Medium words (5-7 chars): only wrong if > 80% different
+  // Long words (8+ chars): only wrong if > 70% different
   
-  if (maxLen <= 3) {
-    return true; // Short words - always give benefit of doubt
-  } else if (maxLen <= 6) {
-    return distance <= Math.ceil(maxLen * 0.7); // 70% tolerance
+  if (maxLen <= 7) {
+    return distance <= Math.ceil(maxLen * 0.8); // 80% tolerance
   } else {
-    return distance <= Math.ceil(maxLen * 0.6); // 60% tolerance for long words
+    return distance <= Math.ceil(maxLen * 0.7); // 70% tolerance for long words
   }
 };
 
