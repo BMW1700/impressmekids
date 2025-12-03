@@ -1,8 +1,11 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Clock, Star } from "lucide-react";
+import { BookOpen, Clock, Star, Bookmark, BookmarkCheck } from "lucide-react";
 import { motion } from "framer-motion";
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface StoryCardProps {
   title: string;
@@ -16,7 +19,10 @@ interface StoryCardProps {
   completed?: boolean;
   best_wpm?: number;
   times_read?: number;
+  inBookshelf?: boolean;
+  storyId?: string;
   onStartReading: () => void;
+  onBookshelfChange?: () => void;
 }
 
 const categoryIcons: Record<string, string> = {
@@ -54,8 +60,96 @@ export const StoryCard = ({
   completed = false,
   best_wpm,
   times_read = 0,
-  onStartReading
+  inBookshelf = false,
+  storyId,
+  onStartReading,
+  onBookshelfChange
 }: StoryCardProps) => {
+  const [isInBookshelf, setIsInBookshelf] = useState(inBookshelf);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleAddToBookshelf = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (isLoading) return;
+    setIsLoading(true);
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to save stories",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // First ensure story exists in reading_library
+      const { data: existingStory } = await supabase
+        .from('reading_library')
+        .select('id')
+        .eq('title', title)
+        .single();
+      
+      let libraryStoryId = existingStory?.id || storyId;
+      
+      if (!libraryStoryId) {
+        // Story doesn't exist in library, we can't add it to bookshelf
+        // This is a curated story not yet in DB
+        toast({
+          title: "Start reading first",
+          description: "Read this story to add it to your bookshelf!",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      if (isInBookshelf) {
+        // Remove from bookshelf
+        await supabase
+          .from('student_reading_progress')
+          .delete()
+          .eq('student_id', user.id)
+          .eq('story_id', libraryStoryId);
+        
+        setIsInBookshelf(false);
+        toast({
+          title: "Removed from Bookshelf",
+          description: "Story removed from your reading list",
+        });
+      } else {
+        // Add to bookshelf (want to read)
+        await supabase
+          .from('student_reading_progress')
+          .insert({
+            student_id: user.id,
+            story_id: libraryStoryId,
+            completed: false,
+            times_read: 0,
+          });
+        
+        setIsInBookshelf(true);
+        toast({
+          title: "Added to Bookshelf! 📚",
+          description: "Story saved to your reading list",
+        });
+      }
+      
+      onBookshelfChange?.();
+    } catch (error) {
+      console.error('Bookshelf error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update bookshelf",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -67,18 +161,40 @@ export const StoryCard = ({
         {/* Cover Art */}
         <div className={`h-40 bg-gradient-to-br ${cover_gradient} relative`}>
           <div className={`absolute inset-0 bg-gradient-to-br ${getCategoryColor(category)} backdrop-blur-sm`} />
-          <div className="absolute top-3 right-3">
+          
+          {/* Top right badges */}
+          <div className="absolute top-3 right-3 flex gap-2">
             <Badge variant="secondary" className="bg-white/90 text-xs">
               Grade {grade_level === 0 ? 'K' : grade_level}
             </Badge>
           </div>
+          
+          {/* Bookmark button */}
+          <button
+            onClick={handleAddToBookshelf}
+            className={`absolute top-3 left-3 p-2 rounded-full transition-all ${
+              isInBookshelf || completed
+                ? 'bg-yellow-500 text-white' 
+                : 'bg-white/80 text-gray-600 hover:bg-white'
+            }`}
+            disabled={isLoading}
+          >
+            {isInBookshelf || completed ? (
+              <BookmarkCheck className="h-4 w-4" />
+            ) : (
+              <Bookmark className="h-4 w-4" />
+            )}
+          </button>
+          
+          {/* Completion star */}
           {completed && (
-            <div className="absolute top-3 left-3">
+            <div className="absolute bottom-3 right-3">
               <div className="bg-yellow-500 text-white rounded-full p-2">
                 <Star className="h-4 w-4 fill-current" />
               </div>
             </div>
           )}
+          
           <div className="absolute bottom-3 left-3 text-4xl">
             {categoryIcons[category]}
           </div>

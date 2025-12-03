@@ -9,6 +9,8 @@ import { PredictivePractice } from "./PredictivePractice";
 import { WordByWordReader } from "./WordByWordReader";
 import { PassageCompleteCelebration } from "./PassageCompleteCelebration";
 import { CuratedStory } from "@/data/curatedStories";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface GuidedReadingFlowProps {
   story: CuratedStory;
@@ -28,6 +30,7 @@ export const GuidedReadingFlow = ({
   const [currentStep, setCurrentStep] = useState<Step>('intro');
   const [readingStats, setReadingStats] = useState<any>(null);
   const [showCelebration, setShowCelebration] = useState(false);
+  const { toast } = useToast();
 
   const steps: Step[] = ['intro', 'practice', 'reading'];
   const currentStepIndex = steps.indexOf(currentStep);
@@ -41,8 +44,97 @@ export const GuidedReadingFlow = ({
     setCurrentStep('reading');
   };
 
-  const handleReadingComplete = (stats: any) => {
+  const handleReadingComplete = async (stats: any) => {
     setReadingStats(stats);
+    
+    // Save progress to database if accuracy >= 50%
+    const passed = stats.accuracy >= 50;
+    
+    if (passed) {
+      try {
+        // First, check if story exists in reading_library, if not create it
+        const { data: existingStory } = await supabase
+          .from('reading_library')
+          .select('id')
+          .eq('title', story.title)
+          .single();
+        
+        let storyId = existingStory?.id;
+        
+        if (!storyId) {
+          // Insert story into reading_library
+          const { data: newStory, error: insertError } = await supabase
+            .from('reading_library')
+            .insert({
+              title: story.title,
+              description: story.description,
+              passage_text: story.passage_text,
+              grade_level: story.grade_level,
+              category: story.category,
+              target_phonemes: story.target_phonemes,
+              word_count: story.word_count,
+              reading_time_minutes: story.reading_time_minutes,
+              difficulty_level: story.difficulty_level,
+              cover_gradient: story.cover_gradient,
+              is_system: true,
+            })
+            .select('id')
+            .single();
+          
+          if (insertError) {
+            console.error('Error inserting story:', insertError);
+          } else {
+            storyId = newStory?.id;
+          }
+        }
+        
+        if (storyId) {
+          // Check for existing progress
+          const { data: existingProgress } = await supabase
+            .from('student_reading_progress')
+            .select('*')
+            .eq('student_id', studentId)
+            .eq('story_id', storyId)
+            .single();
+          
+          if (existingProgress) {
+            // Update existing progress
+            await supabase
+              .from('student_reading_progress')
+              .update({
+                completed: true,
+                times_read: (existingProgress.times_read || 0) + 1,
+                best_wpm: Math.max(existingProgress.best_wpm || 0, stats.wpm),
+                best_accuracy: Math.max(existingProgress.best_accuracy || 0, stats.accuracy),
+                completed_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', existingProgress.id);
+          } else {
+            // Create new progress
+            await supabase
+              .from('student_reading_progress')
+              .insert({
+                student_id: studentId,
+                story_id: storyId,
+                completed: true,
+                times_read: 1,
+                best_wpm: stats.wpm,
+                best_accuracy: stats.accuracy,
+                completed_at: new Date().toISOString(),
+              });
+          }
+          
+          toast({
+            title: "Progress Saved! 📚",
+            description: "This story has been added to your bookshelf!",
+          });
+        }
+      } catch (error) {
+        console.error('Error saving reading progress:', error);
+      }
+    }
+    
     setShowCelebration(true);
   };
 
@@ -50,6 +142,12 @@ export const GuidedReadingFlow = ({
     setShowCelebration(false);
     onComplete(readingStats);
     onBack();
+  };
+
+  const handleTryAgain = () => {
+    setShowCelebration(false);
+    setReadingStats(null);
+    setCurrentStep('reading');
   };
 
   return (
@@ -181,8 +279,14 @@ export const GuidedReadingFlow = ({
         <PassageCompleteCelebration
           open={showCelebration}
           onClose={handleCelebrationClose}
-          stats={readingStats}
+          stats={{
+            wpm: readingStats.wpm || 0,
+            accuracy: readingStats.accuracy || 0,
+            wordsRead: readingStats.wordsRead || 0,
+            xpEarned: readingStats.xpEarned || readingStats.wordsRead || 0,
+          }}
           onReadAnother={onBack}
+          onTryAgain={handleTryAgain}
         />
       )}
     </div>
