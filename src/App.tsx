@@ -48,6 +48,7 @@ import PolicyViewer from "./pages/policies/PolicyViewer";
 import NotFound from "./pages/NotFound";
 import ReadingAnalyticsCalibration from "./components/aura/ReadingAnalyticsCalibration";
 import ConsentVerification from "./pages/ConsentVerification";
+import StoryManagement from "./pages/teacher/StoryManagement";
 
 const queryClient = new QueryClient();
 
@@ -76,6 +77,7 @@ const App = () => (
           <Route path="/teacher/aura-analytics/:classroomId?" element={<AuraAnalytics />} />
           <Route path="/teacher/student/:studentId" element={<StudentProfile />} />
           <Route path="/teacher/reading-calibration" element={<ReadingAnalyticsCalibration />} />
+          <Route path="/teacher/story-library" element={<StoryManagement />} />
           <Route path="/student/assignment/:assignmentId" element={<CompleteAssignment />} />
           <Route path="/student/review-submission/:submissionId" element={<ReviewMySubmission />} />
           <Route path="/student/review-annotations/:submissionId" element={<ReviewMyAnnotations />} />
