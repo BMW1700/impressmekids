@@ -116,6 +116,22 @@ serve(async (req) => {
       );
     }
 
+    // Decode JWT to get user ID (already verified by Supabase gateway since verify_jwt = true)
+    const token = authHeader.replace('Bearer ', '');
+    const payloadBase64 = token.split('.')[1];
+    const payload = JSON.parse(atob(payloadBase64));
+    const userId = payload.sub;
+    
+    if (!userId) {
+      console.error('[AUTH] Invalid token - no user ID');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('[generate-practice-exercises] User:', userId);
+
     // SECURITY: Use ANON key with RLS
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -123,19 +139,10 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      console.error('[AUTH] Invalid token:', authError);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     // SECURITY: Rate limiting (100 requests per minute per user)
-    const rateLimitResult = await checkRateLimit(user.id, 'generate-practice-exercises', RATE_LIMITS.AI_FUNCTION);
+    const rateLimitResult = await checkRateLimit(userId, 'generate-practice-exercises', RATE_LIMITS.AI_FUNCTION);
     if (!rateLimitResult.allowed) {
-      console.warn('[RATE_LIMIT] Rate limit exceeded:', user.id);
+      console.warn('[RATE_LIMIT] Rate limit exceeded:', userId);
       return new Response(JSON.stringify({ 
         error: 'Rate limit exceeded. Please try again later.',
         resetAt: rateLimitResult.resetAt,
@@ -165,7 +172,7 @@ serve(async (req) => {
 
     // CRITICAL SECURITY: Verify user is authorized to generate exercises for this student
     // User must be either the student themselves OR their teacher
-    const isOwnData = user.id === studentId;
+    const isOwnData = userId === studentId;
     
     let isTeacher = false;
     if (!isOwnData) {
@@ -174,11 +181,11 @@ serve(async (req) => {
         .select('classroom_id, classrooms!inner(teacher_id)')
         .eq('student_id', studentId);
       
-      isTeacher = classrooms?.some((cs: any) => cs.classrooms.teacher_id === user.id) || false;
+      isTeacher = classrooms?.some((cs: any) => cs.classrooms.teacher_id === userId) || false;
     }
 
     if (!isOwnData && !isTeacher) {
-      console.error('[AUTH] User not authorized for student:', { userId: user.id, studentId });
+      console.error('[AUTH] User not authorized for student:', { userId, studentId });
       return new Response(
         JSON.stringify({ error: 'Not authorized' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
