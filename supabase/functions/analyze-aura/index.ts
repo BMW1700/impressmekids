@@ -214,7 +214,7 @@ Format as JSON:
 }`;
 
     // Import Vertex AI helper
-    const { callVertexAI } = await import('./_shared/vertexAuth.ts');
+    const { callVertexAI } = await import('../_shared/vertexAuth.ts');
 
     const systemInstruction = 'You are an expert speech analysis AI. Always respond with valid JSON.';
     
@@ -515,7 +515,7 @@ Format as JSON:
 }`;
 
   // Import Vertex AI helper
-  const { callVertexAI } = await import('./_shared/vertexAuth.ts');
+  const { callVertexAI } = await import('../_shared/vertexAuth.ts');
   
   const systemInstruction = 'You are an expert reading comprehension AI with proprietary analysis algorithms. Always respond with valid JSON.';
   
