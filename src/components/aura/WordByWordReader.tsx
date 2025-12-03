@@ -304,23 +304,29 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
     
     lastInterimRef.current = transcript;
     
+    // Track speech time for cognitive load estimation
+    lastSpeechTimeRef.current = Date.now();
+    
     // Process each new spoken word
     if (newWordCount > previousWordCount) {
       const latestSpokenWord = spokenWords[newWordCount - 1];
-      const currentIdx = realtimeWordIndex;
+      // CRITICAL FIX: Use ref instead of state to avoid stale closure
+      const currentIdx = realtimeWordIndexRef.current;
       
       if (currentIdx >= words.length) return;
       
       const expectedWord = words[currentIdx];
       const isCorrect = isWordMatch(latestSpokenWord, expectedWord);
       
-      // Update real-time status
+      // CRITICAL FIX: Update BOTH state AND ref for real-time status
       setRealtimeWordStatus(prev => {
         const newMap = new Map(prev);
         newMap.set(currentIdx, isCorrect ? 'correct' : 'incorrect');
         if (currentIdx + 1 < words.length) {
           newMap.set(currentIdx + 1, 'current');
         }
+        // Update ref immediately
+        realtimeWordStatusRef.current = newMap;
         return newMap;
       });
       
@@ -337,6 +343,7 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
         
         setCorrectStreak(prev => {
           const newStreak = prev + 1;
+          correctStreakRef.current = newStreak; // CRITICAL FIX: Update ref too
           if (newStreak === 5) {
             setCelebrationMessage('On Fire! 🔥');
             setCelebrationTrigger(Date.now());
@@ -358,6 +365,7 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
         soundEffectsRef.current.incorrectWord();
         auraCharacter.reactToIncorrect();
         setCorrectStreak(0);
+        correctStreakRef.current = 0;
         
         // PHASE 1 FIX: Only play pronunciation ONCE per incorrect word
         if (!spokenIncorrectWordsRef.current.has(currentIdx)) {
@@ -368,10 +376,15 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
         }
       }
       
-      setRealtimeWordIndex(prev => Math.min(prev + 1, words.length));
+      // CRITICAL FIX: Update BOTH state AND ref for word index
+      setRealtimeWordIndex(prev => {
+        const newIdx = Math.min(prev + 1, words.length);
+        realtimeWordIndexRef.current = newIdx;
+        return newIdx;
+      });
       setCurrentWordIndex(prev => Math.min(prev + 1, words.length));
     }
-  }, [words, realtimeWordIndex, auraCharacter]);
+  }, [words, auraCharacter]);
 
   // Process final results - confirm and save word readings
   const processFinalResult = useCallback((transcript: string, timestamp: number) => {
@@ -424,12 +437,15 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
 
     const totalDuration = (Date.now() - startTimeRef.current) / 1000;
     
-    // Calculate stats from real-time tracking
-    const correctCount = Array.from(realtimeWordStatus.values()).filter(s => s === 'correct').length;
-    const incorrectCount = Array.from(realtimeWordStatus.values()).filter(s => s === 'incorrect').length;
+    // CRITICAL FIX: Calculate stats from REFS (not state) to avoid stale closure
+    const statusMap = realtimeWordStatusRef.current;
+    const correctCount = Array.from(statusMap.values()).filter(s => s === 'correct').length;
+    const incorrectCount = Array.from(statusMap.values()).filter(s => s === 'incorrect').length;
     const wordsRead = correctCount + incorrectCount;
     const wpm = totalDuration > 0 ? Math.round((wordsRead / totalDuration) * 60) : 0;
     const accuracy = wordsRead > 0 ? Math.round((correctCount / wordsRead) * 100) : 0;
+    
+    console.log('SCORING DEBUG:', { correctCount, incorrectCount, wordsRead, wpm, accuracy, totalDuration });
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -699,7 +715,7 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       {isRecording && (
         <RealtimeCoachingFeedback
           cognitiveLoad={cognitiveLoad}
-          recentAccuracy={0.8}
+          recentAccuracy={recentAccuracy}
           streakCount={correctStreak}
           isVisible={true}
         />
