@@ -13,7 +13,7 @@ import { checkAndAwardAchievements, generateDailyMissions, updateMissionProgress
 import { AchievementUnlockedModal } from './AchievementUnlockedModal';
 import { CelebrationEffect } from './CelebrationEffect';
 import { XPPopup } from './XPPopup';
-import { playCorrectPronunciation, SoundEffects } from '@/lib/pronunciationPlayer';
+import { playCorrectPronunciation, SoundEffects, unlockSpeechSynthesis } from '@/lib/pronunciationPlayer';
 import { AuraCharacter, useAuraCharacterState } from './AuraCharacter';
 import { RealtimeCoachingFeedback } from './RealtimeCoachingFeedback';
 import { DifficultyLevelDisplay } from './DifficultyLevelDisplay';
@@ -138,6 +138,7 @@ const isWordMatch = (spoken: string, expected: string): boolean => {
 
 // SEPARATE function for voice mascot - INDEPENDENT of word matching
 // This ensures voice speaks when pronunciation is genuinely wrong, even if word was marked "correct"
+// LESS AGGRESSIVE: Only speak for clear errors, not minor variations
 const shouldSpeakWord = (spoken: string, expected: string): boolean => {
   const normalizedSpoken = normalizeWord(spoken);
   const normalizedExpected = normalizeWord(expected);
@@ -152,23 +153,24 @@ const shouldSpeakWord = (spoken: string, expected: string): boolean => {
     return true;
   }
   
-  // REMOVED the partial match loophole - it was blocking too many genuine errors
-  // Previously: if word started with expected or vice versa, we wouldn't speak
-  // But "catt" for "cat" was being skipped when it shouldn't be
+  // If spoken starts with expected or vice versa - DON'T speak (partial match is fine)
+  if (normalizedSpoken.startsWith(normalizedExpected) || normalizedExpected.startsWith(normalizedSpoken)) {
+    return false;
+  }
   
   const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
   const maxLen = Math.max(normalizedSpoken.length, normalizedExpected.length);
   const percentDifferent = distance / maxLen;
   
-  // For short words (1-4 chars): speak if 1+ character is wrong (more aggressive)
-  if (maxLen <= 4 && distance >= 1) {
-    console.log('🔊 VOICE MASCOT: Short word error, speaking:', expected, '(said:', spoken, ')');
+  // For short words (1-4 chars): only speak if 2+ characters wrong (less aggressive)
+  if (maxLen <= 4 && distance >= 2) {
+    console.log('🔊 VOICE MASCOT: Short word error (2+ chars), speaking:', expected, '(said:', spoken, ')');
     return true;
   }
   
-  // For longer words: speak if >25% different (lowered threshold to catch more errors)
-  if (percentDifferent > 0.25) {
-    console.log('🔊 VOICE MASCOT: >25% different, speaking:', expected, '(said:', spoken, ', diff:', Math.round(percentDifferent * 100), '%)');
+  // For longer words: speak if >35% different (raised threshold to reduce false triggers)
+  if (percentDifferent > 0.35) {
+    console.log('🔊 VOICE MASCOT: >35% different, speaking:', expected, '(said:', spoken, ', diff:', Math.round(percentDifferent * 100), '%)');
     return true;
   }
   
@@ -285,6 +287,9 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       });
       return;
     }
+
+    // CRITICAL: Unlock speech synthesis on user gesture (start button click)
+    unlockSpeechSynthesis();
 
     auraCharacter.setThinking();
     processedWordsRef.current = new Set();

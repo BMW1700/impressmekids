@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, BookOpen, Edit2, Trash2, Star, ChevronLeft, Search } from "lucide-react";
+import { Plus, BookOpen, Edit2, Trash2, Star, ChevronLeft, Search, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -483,27 +483,37 @@ const StoryManagement = () => {
                       
                       <div className="flex gap-2 pt-2">
                         <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1"
-                            onClick={() => handleEdit(story)}
-                          >
-                            <Edit2 className="h-3 w-3 mr-1" />
-                            Edit
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => {
-                              if (confirm('Are you sure you want to delete this story?')) {
-                                deleteStory.mutate(story.id);
-                              }
-                            }}
-                          >
+                          variant="default"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => {
+                            // Navigate to assignment creation with story pre-selected
+                            navigate(`/classrooms?createAssignment=true&storyId=${story.id}&storyTitle=${encodeURIComponent(story.title)}`);
+                          }}
+                        >
+                          <Send className="h-3 w-3 mr-1" />
+                          Assign
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(story)}
+                        >
+                          <Edit2 className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => {
+                            if (confirm('Are you sure you want to delete this story?')) {
+                              deleteStory.mutate(story.id);
+                            }
+                          }}
+                        >
                           <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
+                        </Button>
+                      </div>
                     </div>
                   </Card>
                 </motion.div>

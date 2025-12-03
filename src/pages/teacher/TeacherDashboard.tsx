@@ -424,21 +424,21 @@ const TeacherDashboard = () => {
             </TabsContent>
 
             <TabsContent value="actions" className="mt-6">
-              <div className="grid md:grid-cols-3 gap-6">
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <Card className="hover:scale-[1.02] hover:shadow-purple transition-all duration-300 cursor-pointer border-primary/20 bg-gradient-to-br from-primary/5 to-background" onClick={() => navigate('/games')}>
                   <CardHeader>
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 rounded-lg bg-gradient-primary">
                         <Trophy className="h-5 w-5 text-white" />
                       </div>
-                      <CardTitle className="text-xl">Browse Games</CardTitle>
+                      <CardTitle className="text-lg">Browse Games</CardTitle>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-muted-foreground mb-4">
-                      Explore our collection of educational games for your classroom
+                    <p className="text-muted-foreground text-sm mb-4">
+                      Explore educational games for your classroom
                     </p>
-                    <Button variant="outline" className="w-full group">
+                    <Button variant="outline" className="w-full group" size="sm">
                       View Games
                       <span className="ml-2 group-hover:translate-x-1 transition-transform">→</span>
                     </Button>
@@ -451,15 +451,35 @@ const TeacherDashboard = () => {
                       <div className="p-2 rounded-lg bg-gradient-hero">
                         <BarChart3 className="h-5 w-5 text-white" />
                       </div>
-                      <CardTitle className="text-xl">AURA Analytics</CardTitle>
+                      <CardTitle className="text-lg">AURA Analytics</CardTitle>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-muted-foreground mb-4">
-                      Track student speaking progress and pronunciation with AI
+                    <p className="text-muted-foreground text-sm mb-4">
+                      Track student pronunciation with AI
                     </p>
-                    <Button variant="outline" className="w-full group">
+                    <Button variant="outline" className="w-full group" size="sm">
                       View Analytics
+                      <span className="ml-2 group-hover:translate-x-1 transition-transform">→</span>
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="hover:scale-[1.02] hover:shadow-purple transition-all duration-300 cursor-pointer border-amber-500/20 bg-gradient-to-br from-amber-500/5 to-background" onClick={() => navigate('/teacher/story-library')}>
+                  <CardHeader>
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500">
+                        <BookOpen className="h-5 w-5 text-white" />
+                      </div>
+                      <CardTitle className="text-lg">Story Library</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground text-sm mb-4">
+                      Create & manage reading stories
+                    </p>
+                    <Button variant="outline" className="w-full group" size="sm">
+                      Manage Stories
                       <span className="ml-2 group-hover:translate-x-1 transition-transform">→</span>
                     </Button>
                   </CardContent>
@@ -469,18 +489,18 @@ const TeacherDashboard = () => {
                   <CardHeader>
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 rounded-lg bg-muted">
-                        <BookOpen className="h-5 w-5 text-muted-foreground" />
+                        <Sparkles className="h-5 w-5 text-muted-foreground" />
                       </div>
-                      <CardTitle className="text-xl">Resources</CardTitle>
+                      <CardTitle className="text-lg">Resources</CardTitle>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-muted-foreground mb-4">
-                      Check out our teacher guides and best practices
+                    <p className="text-muted-foreground text-sm mb-4">
+                      Teacher guides and best practices
                     </p>
-                    <Button variant="outline" className="w-full justify-between" disabled>
+                    <Button variant="outline" className="w-full justify-between" size="sm" disabled>
                       View Resources
-                      <Badge variant="secondary" className="ml-2">Coming Soon</Badge>
+                      <Badge variant="secondary" className="ml-2 text-xs">Soon</Badge>
                     </Button>
                   </CardContent>
                 </Card>

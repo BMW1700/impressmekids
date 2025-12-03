@@ -5,6 +5,7 @@
 
 let voicesLoaded = false;
 let preferredVoice: SpeechSynthesisVoice | null = null;
+let speechUnlocked = false;
 
 // Pre-load voices on module initialization
 if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -28,40 +29,88 @@ if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
   window.speechSynthesis.onvoiceschanged = loadVoices;
 }
 
-export const playCorrectPronunciation = (word: string, retryCount = 0) => {
-  console.log('🔊 ATTEMPTING TO SPEAK:', word);
+/**
+ * Unlock speech synthesis - must be called from user gesture (click/tap)
+ * Call this on first user interaction with the reading component
+ */
+export const unlockSpeechSynthesis = () => {
+  if (speechUnlocked) return;
   
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
     console.warn('🔊 Speech synthesis not supported');
     return;
   }
 
-  // Wait for voices if not loaded yet (max 3 retries)
-  if (!voicesLoaded && retryCount < 3) {
-    console.log('🔊 Voices not loaded, retrying in 100ms... (attempt', retryCount + 1, ')');
-    setTimeout(() => playCorrectPronunciation(word, retryCount + 1), 100);
+  // Speak empty utterance to unlock
+  const unlockUtterance = new SpeechSynthesisUtterance('');
+  unlockUtterance.volume = 0;
+  window.speechSynthesis.speak(unlockUtterance);
+  speechUnlocked = true;
+  console.log('🔊 Speech synthesis UNLOCKED via user gesture');
+};
+
+export const playCorrectPronunciation = (word: string, retryCount = 0) => {
+  console.log('🔊 ATTEMPTING TO SPEAK:', word, '(attempt', retryCount + 1, ')');
+  
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    console.warn('🔊 Speech synthesis not supported');
     return;
   }
 
-  // DON'T call cancel() before speak - this breaks Chrome!
-  // The cancel() call was causing speech to be silently dropped
-  
-  const utterance = new SpeechSynthesisUtterance(word);
-  utterance.rate = 0.8; // Slightly slower for clarity
-  utterance.pitch = 1.1; // Slightly higher pitch
-  utterance.volume = 1.0;
-  utterance.lang = 'en-US';
-  
-  if (preferredVoice) {
-    utterance.voice = preferredVoice;
+  // Force load voices if not loaded yet
+  if (!voicesLoaded) {
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      preferredVoice = 
+        voices.find(v => v.lang === 'en-US') || 
+        voices.find(v => v.lang.startsWith('en')) || 
+        voices[0];
+      voicesLoaded = true;
+      console.log('🔊 Voices force-loaded:', preferredVoice?.name);
+    }
   }
-  
-  // Add event listeners for debugging
-  utterance.onstart = () => console.log('🔊 Speech STARTED:', word);
-  utterance.onend = () => console.log('🔊 Speech ENDED:', word);
-  utterance.onerror = (e) => console.error('🔊 Speech ERROR:', word, e.error);
 
-  window.speechSynthesis.speak(utterance);
+  // Wait for voices if not loaded yet (max 5 retries, 200ms each = 1 second total)
+  if (!voicesLoaded && retryCount < 5) {
+    console.log('🔊 Voices not loaded, retrying in 200ms... (attempt', retryCount + 1, ')');
+    setTimeout(() => playCorrectPronunciation(word, retryCount + 1), 200);
+    return;
+  }
+
+  if (!voicesLoaded) {
+    console.error('🔊 FAILED: Voices never loaded after 5 retries');
+    return;
+  }
+
+  // Cancel any pending speech first
+  window.speechSynthesis.cancel();
+  
+  // Small delay after cancel to ensure it completes
+  setTimeout(() => {
+    const utterance = new SpeechSynthesisUtterance(word);
+    utterance.rate = 0.8; // Slightly slower for clarity
+    utterance.pitch = 1.1; // Slightly higher pitch
+    utterance.volume = 1.0;
+    utterance.lang = 'en-US';
+    
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
+    
+    // Add event listeners for debugging
+    utterance.onstart = () => console.log('🔊 Speech STARTED:', word);
+    utterance.onend = () => console.log('🔊 Speech ENDED:', word);
+    utterance.onerror = (e) => {
+      console.error('🔊 Speech ERROR:', word, e.error);
+      // If error is "not-allowed", speech wasn't unlocked
+      if (e.error === 'not-allowed') {
+        console.warn('🔊 Speech blocked - needs user gesture to unlock');
+        speechUnlocked = false;
+      }
+    };
+
+    window.speechSynthesis.speak(utterance);
+  }, 50);
 };
 
 /**
