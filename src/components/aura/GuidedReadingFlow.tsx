@@ -283,6 +283,9 @@ export const GuidedReadingFlow = ({
             accuracy: readingStats.accuracy || 0,
             wordsRead: readingStats.wordsRead || 0,
             xpEarned: readingStats.xpEarned || readingStats.wordsRead || 0,
+            sessionId: readingStats.sessionId,
+            studentId: studentId,
+            cognitiveLoad: readingStats.cognitiveLoad || 0,
           }}
           onReadAnother={onBack}
           onTryAgain={handleTryAgain}
