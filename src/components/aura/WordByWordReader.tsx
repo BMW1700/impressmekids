@@ -140,18 +140,71 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
   // PHASE 1 FIX: Track which incorrect words have already had pronunciation played
   const spokenIncorrectWordsRef = useRef<Set<number>>(new Set());
   
+  // CRITICAL FIX: Use refs to avoid stale closure issues in callbacks
+  const realtimeWordStatusRef = useRef<Map<number, 'correct' | 'incorrect' | 'current' | 'pending'>>(new Map());
+  const realtimeWordIndexRef = useRef(0);
+  const correctStreakRef = useRef(0);
+  
   // Phase 3: Smart Coach states
   const [cognitiveLoad, setCognitiveLoad] = useState(0);
   const [hesitationCount, setHesitationCount] = useState(0);
   const [adaptiveDifficulty, setAdaptiveDifficulty] = useState<any>(null);
   const [generatedExercises, setGeneratedExercises] = useState<any[]>([]);
+  const [recentAccuracy, setRecentAccuracy] = useState(0.5);
+  
+  // Track speech pauses for cognitive load
+  const speechPausesRef = useRef<number[]>([]);
+  const lastSpeechTimeRef = useRef<number>(0);
 
   // Initialize word status
   useEffect(() => {
     const initialStatus = new Map<number, 'correct' | 'incorrect' | 'current' | 'pending'>();
     words.forEach((_, idx) => initialStatus.set(idx, 'pending'));
     setRealtimeWordStatus(initialStatus);
+    realtimeWordStatusRef.current = initialStatus;
+    realtimeWordIndexRef.current = 0;
+    correctStreakRef.current = 0;
   }, [words.length]);
+  
+  // WIRE UP: Cognitive load estimation during recording
+  useEffect(() => {
+    if (!isRecording) return;
+    
+    const interval = setInterval(() => {
+      const now = Date.now();
+      
+      // Track pause if no speech for 1+ seconds
+      if (lastSpeechTimeRef.current > 0 && now - lastSpeechTimeRef.current > 1000) {
+        speechPausesRef.current.push(now - lastSpeechTimeRef.current);
+      }
+      
+      // Calculate cognitive load from behavioral signals
+      const statusMap = realtimeWordStatusRef.current;
+      const correctCount = Array.from(statusMap.values()).filter(s => s === 'correct').length;
+      const totalProcessed = Array.from(statusMap.values()).filter(s => s === 'correct' || s === 'incorrect').length;
+      const currentAccuracy = totalProcessed > 0 ? correctCount / totalProcessed : 0.5;
+      
+      // Update recent accuracy for coaching feedback
+      setRecentAccuracy(currentAccuracy);
+      
+      // Estimate cognitive load
+      const loadResult = cognitiveLoadEstimator.estimateLoad({
+        speechPauses: speechPausesRef.current.slice(-10), // Last 10 pauses
+        speechConfidence: currentAccuracy, // Use accuracy as proxy for confidence
+        hesitationMarkers: [], // Would need transcript analysis
+        taskDifficulty: 0.5, // Default moderate
+        previousAttempts: 0,
+        responseDelay: speechPausesRef.current.length > 0 
+          ? speechPausesRef.current[speechPausesRef.current.length - 1] 
+          : undefined,
+      });
+      
+      setCognitiveLoad(loadResult.loadScore);
+      setHesitationCount(speechPausesRef.current.length);
+    }, 3000); // Check every 3 seconds
+    
+    return () => clearInterval(interval);
+  }, [isRecording]);
 
   const startReading = useCallback(async () => {
     if (!browserSupport.isSupported) {
