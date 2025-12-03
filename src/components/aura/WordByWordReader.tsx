@@ -91,34 +91,64 @@ const normalizeWord = (word: string): string => {
   return word.toLowerCase().replace(/[^a-z0-9]/g, '');
 };
 
+// AGGRESSIVE LENIENT matching - Web Speech API is noisy, default to CORRECT
 const isWordMatch = (spoken: string, expected: string): boolean => {
   const normalizedSpoken = normalizeWord(spoken);
   const normalizedExpected = normalizeWord(expected);
   
-  // Exact match
+  // Exact match - definitely correct
   if (normalizedSpoken === normalizedExpected) return true;
   
   // Empty check
   if (!normalizedSpoken || !normalizedExpected) return false;
   
+  // Check if spoken starts with expected or expected starts with spoken (partial matches)
+  if (normalizedSpoken.startsWith(normalizedExpected) || normalizedExpected.startsWith(normalizedSpoken)) {
+    return true;
+  }
+  
+  // Check if first 2-3 characters match (common for Web Speech API noise)
+  const prefixLen = Math.min(3, Math.min(normalizedSpoken.length, normalizedExpected.length));
+  if (prefixLen >= 2 && normalizedSpoken.substring(0, prefixLen) === normalizedExpected.substring(0, prefixLen)) {
+    return true;
+  }
+  
   const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
   const maxLen = Math.max(normalizedSpoken.length, normalizedExpected.length);
-  const minLen = Math.min(normalizedSpoken.length, normalizedExpected.length);
   
-  // LENIENT MATCHING: Be generous with matching, only mark RED if clearly wrong
-  // For short words (≤3 chars): only wrong if distance > 1 (allows "Sam" vs "san")
-  // For medium words (4-6 chars): only wrong if distance > 2
-  // For long words (7+ chars): only wrong if distance > 3 or > 40% of word
+  // SUPER LENIENT: Only mark RED if CLEARLY wrong (high distance relative to word length)
+  // Short words (1-2 chars): always correct unless totally different
+  // Medium words (3-5 chars): only wrong if distance > half the word
+  // Long words (6+ chars): only wrong if distance > 50% of word
   
-  if (maxLen <= 3) {
-    return distance <= 1; // Very lenient for short words
-  } else if (maxLen <= 6) {
-    return distance <= 2; // Lenient for medium words
+  if (maxLen <= 2) {
+    return true; // Super short words - always give benefit of doubt
+  } else if (maxLen <= 5) {
+    return distance <= Math.ceil(maxLen / 2); // Allow up to half the word different
   } else {
-    // For long words, use percentage-based tolerance (40% of word length)
-    const percentTolerance = Math.ceil(maxLen * 0.4);
-    return distance <= Math.max(3, percentTolerance);
+    return distance <= Math.ceil(maxLen * 0.5); // 50% tolerance for long words
   }
+};
+
+// STRICT matching for robot voice - only pronounce if CLEARLY wrong
+const isClearlyWrong = (spoken: string, expected: string): boolean => {
+  const normalizedSpoken = normalizeWord(spoken);
+  const normalizedExpected = normalizeWord(expected);
+  
+  if (normalizedSpoken === normalizedExpected) return false;
+  if (!normalizedSpoken || !normalizedExpected) return false;
+  
+  // Partial matches are NOT clearly wrong
+  if (normalizedSpoken.startsWith(normalizedExpected) || normalizedExpected.startsWith(normalizedSpoken)) {
+    return false;
+  }
+  
+  const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
+  const maxLen = Math.max(normalizedSpoken.length, normalizedExpected.length);
+  
+  // Only "clearly wrong" if distance is MORE than 60% of the word
+  // This ensures robot voice only speaks for genuinely bad pronunciations
+  return distance > Math.ceil(maxLen * 0.6);
 };
 
 export const WordByWordReader = ({ passageText, assignmentId, onComplete }: WordByWordReaderProps) => {
@@ -358,9 +388,9 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       });
     }
     
-    // STABILITY DELAY: Longer for short words (more prone to interim errors)
+    // STABILITY DELAY: Fast tracking - reduced delays for snappier response
     const expectedWordLen = words[currentIdx]?.length || 4;
-    const stabilityDelay = expectedWordLen <= 3 ? 400 : expectedWordLen <= 5 ? 300 : 250;
+    const stabilityDelay = expectedWordLen <= 2 ? 200 : expectedWordLen <= 4 ? 150 : 100;
     
     stabilityTimeoutRef.current = setTimeout(() => {
       const pending = pendingWordRef.current;
@@ -469,13 +499,16 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
           
           processedWordsRef.current.add(wordIndex);
           
-          // ROBOT VOICE: Only play pronunciation for CONFIRMED incorrect words
-          // AND only if we haven't already played it AND final result confirms it's wrong
-          if (!isCorrect && !spokenIncorrectWordsRef.current.has(wordIndex)) {
+          // ROBOT VOICE: Only play pronunciation for CLEARLY WRONG words
+          // Use strict matching - only speak if pronunciation was genuinely bad
+          // This does NOT affect word advancement - just provides audio feedback
+          const clearlyWrongPronunciation = isClearlyWrong(spokenWord, expectedWord);
+          if (clearlyWrongPronunciation && !spokenIncorrectWordsRef.current.has(wordIndex)) {
             spokenIncorrectWordsRef.current.add(wordIndex);
+            // Play pronunciation after a short delay - doesn't block word tracking
             setTimeout(() => {
-              playCorrectPronunciation(expectedWord);
-            }, 300);
+              playCorrectPronunciation(normalizeWord(expectedWord));
+            }, 200);
           }
         }
       }
