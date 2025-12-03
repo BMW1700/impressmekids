@@ -90,8 +90,7 @@ const normalizeWord = (word: string): string => {
   return word.toLowerCase().replace(/[^a-z0-9]/g, '');
 };
 
-// MAXIMUM LENIENT matching - Web Speech API is EXTREMELY noisy, default to CORRECT
-// Only mark RED if the word is TOTALLY COMPLETELY different
+// STABLE word matching - consistent tolerances based on word length
 const isWordMatch = (spoken: string, expected: string): boolean => {
   const normalizedSpoken = normalizeWord(spoken);
   const normalizedExpected = normalizeWord(expected);
@@ -99,55 +98,33 @@ const isWordMatch = (spoken: string, expected: string): boolean => {
   // Exact match - definitely correct
   if (normalizedSpoken === normalizedExpected) return true;
   
-  // Empty check - if no speech detected, still mark correct (benefit of doubt)
+  // Empty check - if no speech detected, benefit of doubt
   if (!normalizedSpoken) return true;
   if (!normalizedExpected) return false;
   
-  // SHORT WORDS (1-4 chars): ALWAYS CORRECT - too easy to mishear
-  if (normalizedExpected.length <= 4) {
-    return true;
+  // SHORT WORDS (1-3 chars): Correct if first letter matches
+  if (normalizedExpected.length <= 3) {
+    return normalizedSpoken[0] === normalizedExpected[0];
   }
   
-  // FIRST LETTER MATCH = CORRECT (Web Speech often garbles endings)
-  if (normalizedSpoken[0] === normalizedExpected[0]) {
-    return true;
-  }
-  
-  // Check if spoken starts with expected or expected starts with spoken (partial matches)
+  // Check if spoken starts with expected or vice versa (partial matches are fine)
   if (normalizedSpoken.startsWith(normalizedExpected) || normalizedExpected.startsWith(normalizedSpoken)) {
     return true;
   }
   
-  // Check if first 2 characters match - very lenient
-  if (normalizedSpoken.length >= 2 && normalizedExpected.length >= 2) {
-    if (normalizedSpoken.substring(0, 2) === normalizedExpected.substring(0, 2)) {
-      return true;
-    }
-  }
-  
-  // ANY shared characters = probably correct (Web Speech is just bad)
-  const sharedChars = normalizedSpoken.split('').filter(c => normalizedExpected.includes(c)).length;
-  if (sharedChars >= 2) {
-    return true;
-  }
-  
   const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
-  const maxLen = Math.max(normalizedSpoken.length, normalizedExpected.length);
   
-  // MAXIMUM LENIENT: Only mark wrong if COMPLETELY different (>50% different)
-  // Medium words (5-7 chars): only wrong if > 80% different
-  // Long words (8+ chars): only wrong if > 70% different
-  
-  if (maxLen <= 7) {
-    return distance <= Math.ceil(maxLen * 0.8); // 80% tolerance
-  } else {
-    return distance <= Math.ceil(maxLen * 0.7); // 70% tolerance for long words
+  // MEDIUM WORDS (4-6 chars): 60% tolerance
+  if (normalizedExpected.length <= 6) {
+    return distance <= Math.ceil(normalizedExpected.length * 0.6);
   }
+  
+  // LONG WORDS (7+ chars): 50% tolerance
+  return distance <= Math.ceil(normalizedExpected.length * 0.5);
 };
 
-// SEPARATE function for voice mascot - INDEPENDENT of word matching
-// This ensures voice speaks when pronunciation is genuinely wrong, even if word was marked "correct"
-// LESS AGGRESSIVE: Only speak for clear errors, not minor variations
+// Voice mascot triggers when pronunciation is >25% different
+// INDEPENDENT of word matching - provides pronunciation help
 const shouldSpeakWord = (spoken: string, expected: string): boolean => {
   const normalizedSpoken = normalizeWord(spoken);
   const normalizedExpected = normalizeWord(expected);
@@ -156,30 +133,13 @@ const shouldSpeakWord = (spoken: string, expected: string): boolean => {
   if (normalizedSpoken === normalizedExpected) return false;
   if (!normalizedSpoken || !normalizedExpected) return false;
   
-  // FIRST LETTER DIFFERENT = ALWAYS SPEAK (clearly said a different word)
-  if (normalizedSpoken[0] !== normalizedExpected[0]) {
-    console.log('🔊 VOICE MASCOT: First letter wrong, speaking:', expected, '(said:', spoken, ')');
-    return true;
-  }
-  
-  // If spoken starts with expected or vice versa - DON'T speak (partial match is fine)
-  if (normalizedSpoken.startsWith(normalizedExpected) || normalizedExpected.startsWith(normalizedSpoken)) {
-    return false;
-  }
-  
   const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
   const maxLen = Math.max(normalizedSpoken.length, normalizedExpected.length);
   const percentDifferent = distance / maxLen;
   
-  // For short words (1-4 chars): only speak if 2+ characters wrong (less aggressive)
-  if (maxLen <= 4 && distance >= 2) {
-    console.log('🔊 VOICE MASCOT: Short word error (2+ chars), speaking:', expected, '(said:', spoken, ')');
-    return true;
-  }
-  
-  // For longer words: speak if >35% different (raised threshold to reduce false triggers)
-  if (percentDifferent > 0.35) {
-    console.log('🔊 VOICE MASCOT: >35% different, speaking:', expected, '(said:', spoken, ', diff:', Math.round(percentDifferent * 100), '%)');
+  // SPEAK if >25% different (covers most mispronunciations)
+  if (percentDifferent > 0.25) {
+    console.log('🔊 VOICE MASCOT: >25% different, speaking:', expected, '(said:', spoken, ', diff:', Math.round(percentDifferent * 100), '%)');
     return true;
   }
   
@@ -497,6 +457,8 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       if (shouldSpeak && !spokenIncorrectWordsRef.current.has(pending.index)) {
         spokenIncorrectWordsRef.current.add(pending.index);
         console.log('🔊 VOICE MASCOT PLAYING:', finalExpectedWord);
+        // DEBUG toast to confirm voice is triggering
+        toast({ title: `🔊 Saying: ${finalExpectedWord}`, description: `(heard: ${pending.word})`, duration: 2000 });
         // Play pronunciation - doesn't block word tracking
         setTimeout(() => {
           playCorrectPronunciation(normalizeWord(finalExpectedWord));
@@ -559,6 +521,8 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
           if (shouldSpeak && !spokenIncorrectWordsRef.current.has(wordIndex)) {
             spokenIncorrectWordsRef.current.add(wordIndex);
             console.log('🔊 VOICE (final):', expectedWord);
+            // DEBUG toast to confirm voice is triggering
+            toast({ title: `🔊 Saying: ${expectedWord}`, description: `(heard: ${spokenWord})`, duration: 2000 });
             setTimeout(() => {
               playCorrectPronunciation(normalizeWord(expectedWord));
             }, 100);
