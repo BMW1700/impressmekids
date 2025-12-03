@@ -3,8 +3,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { User, Mail, CreditCard, Lock, Edit, Phone, MoreVertical, Plus } from "lucide-react";
-import { useState, useEffect } from "react";
+import { User, Mail, CreditCard, Lock, Edit, Phone, MoreVertical, Plus, Camera, Check, X } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -39,6 +39,14 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
   const [selectedContact, setSelectedContact] = useState<any>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<string | null>(null);
+  
+  // Edit states
+  const [isEditingPreferredName, setIsEditingPreferredName] = useState(false);
+  const [preferredName, setPreferredName] = useState("");
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const { toast } = useToast();
 
   const getInitials = (name: string) => {
@@ -51,7 +59,26 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
 
   useEffect(() => {
     fetchEmergencyContacts();
-  }, []);
+    initializeUserData();
+  }, [studentProfile, userProfile]);
+
+  const initializeUserData = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // Initialize preferred name from auth metadata or profile
+    if (user?.user_metadata?.preferred_name) {
+      setPreferredName(user.user_metadata.preferred_name);
+    } else if (userProfile?.full_name) {
+      setPreferredName(userProfile.full_name.split(" ")[0]);
+    }
+    
+    // Initialize avatar from auth metadata or profile
+    if (user?.user_metadata?.avatar_url) {
+      setAvatarUrl(user.user_metadata.avatar_url);
+    } else if (studentProfile?.avatar_url) {
+      setAvatarUrl(studentProfile.avatar_url);
+    }
+  };
 
   const fetchEmergencyContacts = async () => {
     try {
@@ -146,6 +173,126 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
     }
   };
 
+  const handlePhotoClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Error",
+        description: "Please select an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "Image must be less than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploadingPhoto(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Upload to Supabase Storage
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${user.id}/avatar.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(fileName);
+
+      // Update user metadata with avatar URL
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: { avatar_url: publicUrl }
+      });
+
+      if (updateError) throw updateError;
+
+      setAvatarUrl(publicUrl);
+      toast({
+        title: "Success",
+        description: "Profile photo updated successfully",
+      });
+    } catch (error: any) {
+      console.error("Photo upload error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to upload photo",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingPhoto(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleSavePreferredName = async () => {
+    if (!preferredName.trim()) {
+      toast({
+        title: "Error",
+        description: "Preferred name cannot be empty",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { preferred_name: preferredName.trim() }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Preferred name updated successfully",
+      });
+      setIsEditingPreferredName(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancelPreferredName = () => {
+    // Reset to original value
+    if (studentProfile?.preferred_name) {
+      setPreferredName(studentProfile.preferred_name);
+    } else if (userProfile?.full_name) {
+      setPreferredName(userProfile.full_name.split(" ")[0]);
+    }
+    setIsEditingPreferredName(false);
+  };
+
   return (
     <div className="space-y-6 max-w-3xl">
       <h1 className="text-3xl font-bold text-foreground">Account Settings</h1>
@@ -157,18 +304,43 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
         <CardContent className="space-y-6">
           {/* Avatar */}
           <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20">
-              <AvatarImage src={studentProfile?.avatar_url} />
-              <AvatarFallback className="text-2xl">
-                {getInitials(userProfile?.full_name || "")}
-              </AvatarFallback>
-            </Avatar>
-            <Button variant="outline" size="sm">
-              Change Photo
-            </Button>
+            <div className="relative">
+              <Avatar className="h-20 w-20">
+                <AvatarImage src={avatarUrl || studentProfile?.avatar_url} />
+                <AvatarFallback className="text-2xl">
+                  {getInitials(userProfile?.full_name || "")}
+                </AvatarFallback>
+              </Avatar>
+              {isUploadingPhoto && (
+                <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-full">
+                  <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+            </div>
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoChange}
+                className="hidden"
+              />
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handlePhotoClick}
+                disabled={isUploadingPhoto}
+              >
+                <Camera className="h-4 w-4 mr-2" />
+                {isUploadingPhoto ? "Uploading..." : "Change Photo"}
+              </Button>
+              <p className="text-xs text-muted-foreground mt-1">
+                Max 5MB, JPG or PNG
+              </p>
+            </div>
           </div>
 
-          {/* Full Name */}
+          {/* Full Name - Read Only */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <User className="h-4 w-4" />
@@ -177,22 +349,63 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
             <div className="p-3 border border-border rounded-lg bg-muted/50">
               <p className="text-foreground">{userProfile?.full_name || "N/A"}</p>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Contact your school administrator to change your legal name
+            </p>
           </div>
 
-          {/* Preferred Name */}
+          {/* Preferred Name - Editable */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <User className="h-4 w-4" />
               Preferred Name
             </Label>
-            <div className="p-3 border border-border rounded-lg bg-muted/50">
-              <p className="text-foreground">
-                {userProfile?.full_name?.split(" ")[0] || "N/A"}
-              </p>
-            </div>
+            {isEditingPreferredName ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={preferredName}
+                  onChange={(e) => setPreferredName(e.target.value)}
+                  placeholder="Enter preferred name"
+                  className="flex-1"
+                />
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={handleSavePreferredName}
+                  disabled={isLoading}
+                  className="text-green-600 hover:text-green-700 hover:bg-green-100"
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={handleCancelPreferredName}
+                  disabled={isLoading}
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <div className="p-3 border border-border rounded-lg bg-muted/50 flex-1">
+                  <p className="text-foreground">
+                    {preferredName || userProfile?.full_name?.split(" ")[0] || "N/A"}
+                  </p>
+                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => setIsEditingPreferredName(true)}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
 
-          {/* Email */}
+          {/* Email - Read Only */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <Mail className="h-4 w-4" />
@@ -203,7 +416,7 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
             </div>
           </div>
 
-          {/* Student ID */}
+          {/* Student ID - Read Only */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <CreditCard className="h-4 w-4" />
@@ -214,7 +427,7 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
             </div>
           </div>
 
-          {/* Grade */}
+          {/* Grade - Read Only */}
           {studentProfile?.grade !== undefined && (
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
