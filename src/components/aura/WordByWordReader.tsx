@@ -147,29 +147,33 @@ const shouldSpeakWord = (spoken: string, expected: string): boolean => {
   if (normalizedSpoken === normalizedExpected) return false;
   if (!normalizedSpoken || !normalizedExpected) return false;
   
-  // FIRST LETTER DIFFERENT = SPEAK
+  // FIRST LETTER DIFFERENT = ALWAYS SPEAK (clearly said a different word)
   if (normalizedSpoken[0] !== normalizedExpected[0]) {
     console.log('🔊 VOICE MASCOT: First letter wrong, speaking:', expected, '(said:', spoken, ')');
     return true;
   }
   
-  // Partial matches - don't speak (probably just cut off)
-  if (normalizedSpoken.startsWith(normalizedExpected) || normalizedExpected.startsWith(normalizedSpoken)) {
-    return false;
-  }
+  // REMOVED the partial match loophole - it was blocking too many genuine errors
+  // Previously: if word started with expected or vice versa, we wouldn't speak
+  // But "catt" for "cat" was being skipped when it shouldn't be
   
   const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
   const maxLen = Math.max(normalizedSpoken.length, normalizedExpected.length);
+  const percentDifferent = distance / maxLen;
   
-  // 30% difference threshold - speak if pronunciation is substantially different
-  const threshold = Math.ceil(maxLen * 0.3);
-  const shouldSpeak = distance > threshold;
-  
-  if (shouldSpeak) {
-    console.log('🔊 VOICE MASCOT: >30% different, speaking:', expected, '(said:', spoken, ', distance:', distance, ')');
+  // For short words (1-4 chars): speak if 2+ characters are wrong
+  if (maxLen <= 4 && distance >= 2) {
+    console.log('🔊 VOICE MASCOT: Short word with 2+ errors, speaking:', expected, '(said:', spoken, ')');
+    return true;
   }
   
-  return shouldSpeak;
+  // For longer words: speak if >40% different (lowered from 30% threshold)
+  if (percentDifferent > 0.4) {
+    console.log('🔊 VOICE MASCOT: >40% different, speaking:', expected, '(said:', spoken, ', diff:', Math.round(percentDifferent * 100), '%)');
+    return true;
+  }
+  
+  return false;
 };
 
 export const WordByWordReader = ({ passageText, assignmentId, onComplete }: WordByWordReaderProps) => {
