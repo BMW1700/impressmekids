@@ -428,19 +428,24 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
           </div>
 
           {/* Grade - Read Only */}
-          {studentProfile?.grade !== undefined && (
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Grade
-              </Label>
-              <div className="p-3 border border-border rounded-lg bg-muted/50">
-                <p className="text-foreground">
-                  {studentProfile.grade === 0 ? "Kindergarten" : `Grade ${studentProfile.grade}`}
-                </p>
-              </div>
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Grade
+            </Label>
+            <div className="p-3 border border-border rounded-lg bg-muted/50">
+              <p className="text-foreground">
+                {studentProfile?.grade === 0 
+                  ? "Kindergarten" 
+                  : studentProfile?.grade 
+                    ? `Grade ${studentProfile.grade}`
+                    : "Not Set"}
+              </p>
             </div>
-          )}
+            <p className="text-xs text-muted-foreground">
+              Contact your teacher to update your grade level
+            </p>
+          </div>
         </CardContent>
       </Card>
 
