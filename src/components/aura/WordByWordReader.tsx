@@ -293,7 +293,11 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
     });
   }, [words, toast, browserSupport]);
 
-  // Process interim (real-time) results
+  // Track pending word for stability check
+  const pendingWordRef = useRef<{ word: string; index: number; timestamp: number } | null>(null);
+  const stabilityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Process interim (real-time) results - VISUAL ONLY, no robot voice
   const processInterimResult = useCallback((transcript: string, timestamp: number) => {
     // Only process if there's new content
     if (transcript === lastInterimRef.current) return;
@@ -307,55 +311,69 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
     // Track speech time for cognitive load estimation
     lastSpeechTimeRef.current = Date.now();
     
-    // Process each new spoken word
-    if (newWordCount > previousWordCount) {
-      const latestSpokenWord = spokenWords[newWordCount - 1];
-      // CRITICAL FIX: Use ref instead of state to avoid stale closure
-      const currentIdx = realtimeWordIndexRef.current;
+    // Only process if we have MORE words than before (not just different interim predictions)
+    if (newWordCount <= previousWordCount) return;
+    
+    const latestSpokenWord = spokenWords[newWordCount - 1];
+    const currentIdx = realtimeWordIndexRef.current;
+    
+    if (currentIdx >= words.length) return;
+    
+    const expectedWord = words[currentIdx];
+    const isCorrect = isWordMatch(latestSpokenWord, expectedWord);
+    
+    // STABILITY CHECK: Don't advance immediately - wait for word to stabilize
+    // Clear any pending advancement
+    if (stabilityTimeoutRef.current) {
+      clearTimeout(stabilityTimeoutRef.current);
+    }
+    
+    // Set pending word - we'll confirm it after stability delay
+    pendingWordRef.current = { word: latestSpokenWord, index: currentIdx, timestamp };
+    
+    // REAL-TIME PHONEME DETECTION: Log for analysis
+    const expectedPhonemes = getIPAPronunciation(expectedWord)[0] || [];
+    if (!isCorrect && expectedPhonemes.length > 0) {
+      console.log('PHONEME DEBUG:', { 
+        spoken: latestSpokenWord, 
+        expected: expectedWord, 
+        expectedPhonemes,
+        wordIndex: currentIdx 
+      });
+    }
+    
+    // Wait 250ms for word to stabilize before advancing
+    stabilityTimeoutRef.current = setTimeout(() => {
+      const pending = pendingWordRef.current;
+      if (!pending || pending.index !== realtimeWordIndexRef.current) return;
       
-      if (currentIdx >= words.length) return;
+      const finalExpectedWord = words[pending.index];
+      const finalIsCorrect = isWordMatch(pending.word, finalExpectedWord);
       
-      const expectedWord = words[currentIdx];
-      const isCorrect = isWordMatch(latestSpokenWord, expectedWord);
-      
-      // REAL-TIME PHONEME DETECTION: Compare spoken vs expected phonemes
-      const expectedPhonemes = getIPAPronunciation(expectedWord)[0] || [];
-      if (!isCorrect && expectedPhonemes.length > 0) {
-        // Log phoneme mismatch for analysis (detectPhonemes is async, so we fire-and-forget)
-        console.log('PHONEME DEBUG:', { 
-          spoken: latestSpokenWord, 
-          expected: expectedWord, 
-          expectedPhonemes,
-          wordIndex: currentIdx 
-        });
-      }
-      
-      // CRITICAL FIX: Update BOTH state AND ref for real-time status
+      // Update word status
       setRealtimeWordStatus(prev => {
         const newMap = new Map(prev);
-        newMap.set(currentIdx, isCorrect ? 'correct' : 'incorrect');
-        if (currentIdx + 1 < words.length) {
-          newMap.set(currentIdx + 1, 'current');
+        newMap.set(pending.index, finalIsCorrect ? 'correct' : 'incorrect');
+        if (pending.index + 1 < words.length) {
+          newMap.set(pending.index + 1, 'current');
         }
-        // Update ref immediately
         realtimeWordStatusRef.current = newMap;
         return newMap;
       });
       
-      // Immediate feedback
-      if (isCorrect) {
+      // Sound effects only (NO robot voice here - that's in final results)
+      if (finalIsCorrect) {
         soundEffectsRef.current.correctWord();
         auraCharacter.reactToCorrect();
         
         // Add XP
-        const xp = 1;
-        setTotalXpEarned(prev => prev + xp);
-        setXpAmount(xp);
+        setTotalXpEarned(prev => prev + 1);
+        setXpAmount(1);
         setXpPopupTrigger(Date.now());
         
         setCorrectStreak(prev => {
           const newStreak = prev + 1;
-          correctStreakRef.current = newStreak; // CRITICAL FIX: Update ref too
+          correctStreakRef.current = newStreak;
           if (newStreak === 5) {
             setCelebrationMessage('On Fire! 🔥');
             setCelebrationTrigger(Date.now());
@@ -378,27 +396,22 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
         auraCharacter.reactToIncorrect();
         setCorrectStreak(0);
         correctStreakRef.current = 0;
-        
-        // PHASE 1 FIX: Only play pronunciation ONCE per incorrect word
-        if (!spokenIncorrectWordsRef.current.has(currentIdx)) {
-          spokenIncorrectWordsRef.current.add(currentIdx);
-          setTimeout(() => {
-            playCorrectPronunciation(expectedWord);
-          }, 500);
-        }
+        // NO robot voice here - moved to processFinalResult
       }
       
-      // CRITICAL FIX: Update BOTH state AND ref for word index
+      // Advance word index
       setRealtimeWordIndex(prev => {
         const newIdx = Math.min(prev + 1, words.length);
         realtimeWordIndexRef.current = newIdx;
         return newIdx;
       });
       setCurrentWordIndex(prev => Math.min(prev + 1, words.length));
-    }
+      
+      pendingWordRef.current = null;
+    }, 250); // 250ms stability delay
   }, [words, auraCharacter]);
 
-  // Process final results - confirm and save word readings
+  // Process final results - confirm word readings AND play robot voice for errors
   const processFinalResult = useCallback((transcript: string, timestamp: number) => {
     const spokenWords = transcript.split(/\s+/).filter(w => w.length > 0);
     
@@ -421,6 +434,14 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
         });
         
         processedWordsRef.current.add(wordIndex);
+        
+        // ROBOT VOICE: Only play pronunciation for CONFIRMED incorrect words
+        if (!isCorrect && !spokenIncorrectWordsRef.current.has(wordIndex)) {
+          spokenIncorrectWordsRef.current.add(wordIndex);
+          setTimeout(() => {
+            playCorrectPronunciation(expectedWord);
+          }, 300);
+        }
       }
     });
     
