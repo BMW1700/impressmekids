@@ -4,9 +4,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Upload, FileText } from 'lucide-react';
+import { Upload, FileText, BookOpen, Search, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ReadingComprehensionData {
   passage_text?: string;
@@ -24,7 +32,28 @@ export const ReadingComprehensionForm = ({ data, onChange }: ReadingComprehensio
     enable_coaching: false,
   });
   const [isExtracting, setIsExtracting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
+
+  // Fetch stories from reading_library
+  const { data: stories, isLoading: loadingStories } = useQuery({
+    queryKey: ['reading-library-stories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('reading_library')
+        .select('id, title, description, passage_text, grade_level, category, word_count')
+        .order('title');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Filter stories based on search
+  const filteredStories = stories?.filter(story => 
+    story.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    story.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    story.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
 
   // Update local state when data prop changes (e.g., when editing existing question)
   useEffect(() => {
@@ -37,6 +66,22 @@ export const ReadingComprehensionForm = ({ data, onChange }: ReadingComprehensio
     const updated = { ...localData, [field]: value };
     setLocalData(updated);
     onChange(updated);
+  };
+
+  const handleStorySelect = (storyId: string) => {
+    const story = stories?.find(s => s.id === storyId);
+    if (story) {
+      const updated = {
+        ...localData,
+        passage_text: story.passage_text,
+      };
+      setLocalData(updated);
+      onChange(updated);
+      toast({
+        title: 'Story Selected',
+        description: `"${story.title}" has been loaded into the passage.`,
+      });
+    }
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -108,6 +153,63 @@ export const ReadingComprehensionForm = ({ data, onChange }: ReadingComprehensio
 
   return (
     <div className="space-y-4">
+      {/* Story Library Selection */}
+      <div className="p-4 border-2 border-dashed rounded-lg bg-primary/5">
+        <div className="flex items-center gap-2 mb-3">
+          <BookOpen className="h-5 w-5 text-primary" />
+          <Label className="text-base font-semibold">Select from AURA Library</Label>
+        </div>
+        
+        <div className="flex gap-2 mb-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search stories by title, category..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+        </div>
+
+        {loadingStories ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading library...
+          </div>
+        ) : (
+          <Select onValueChange={handleStorySelect}>
+            <SelectTrigger>
+              <SelectValue placeholder={`Choose from ${stories?.length || 0} stories...`} />
+            </SelectTrigger>
+            <SelectContent className="max-h-[300px]">
+              {filteredStories.map((story) => (
+                <SelectItem key={story.id} value={story.id}>
+                  <div className="flex flex-col">
+                    <span className="font-medium">{story.title}</span>
+                    <span className="text-xs text-muted-foreground">
+                      Grade {story.grade_level} • {story.category} • {story.word_count} words
+                    </span>
+                  </div>
+                </SelectItem>
+              ))}
+              {filteredStories.length === 0 && (
+                <div className="p-2 text-sm text-muted-foreground text-center">
+                  No stories found. Try a different search.
+                </div>
+              )}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+
+      <div className="relative">
+        <div className="absolute inset-x-0 top-1/2 border-t border-muted-foreground/20" />
+        <div className="relative flex justify-center">
+          <span className="bg-background px-2 text-sm text-muted-foreground">or paste/type manually</span>
+        </div>
+      </div>
+
       <div>
         <Label>Reading Passage</Label>
         <Textarea 

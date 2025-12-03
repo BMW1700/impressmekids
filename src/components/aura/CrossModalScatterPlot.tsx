@@ -1,13 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from "recharts";
-import { TrendingUp, Sparkles } from "lucide-react";
+import { TrendingUp, Sparkles, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CrossModalScatterPlotProps {
   students: any[];
   skillVectors: any[];
   auraRecords: any[];
+  classroomId?: string;
 }
 
 interface StudentPoint {
@@ -17,24 +20,44 @@ interface StudentPoint {
   readingScore: number;
   riskScore: number;
   quadrant: string;
+  readingSessions: number;
+  speakingSessions: number;
 }
 
-const CrossModalScatterPlot = ({ students, skillVectors, auraRecords }: CrossModalScatterPlotProps) => {
+const CrossModalScatterPlot = ({ students, skillVectors, auraRecords, classroomId }: CrossModalScatterPlotProps) => {
   const [selectedStudent, setSelectedStudent] = useState<StudentPoint | null>(null);
 
-  // Prepare data points
+  // Fetch reading sessions to get READ-ALONG performance
+  const studentIds = students.map(s => s.student_id);
+  const { data: readingSessions, isLoading } = useQuery({
+    queryKey: ['cross-modal-reading-sessions', studentIds],
+    queryFn: async () => {
+      if (studentIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('reading_sessions')
+        .select('student_id, accuracy_percent, wpm, fluency_score')
+        .in('student_id', studentIds);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: studentIds.length > 0,
+  });
+
+  // Prepare data points combining aura_records (speaking) AND reading_sessions (read-along)
   const dataPoints: StudentPoint[] = students.map(student => {
     const vector = skillVectors.find(v => v.student_id === student.student_id);
-    const studentRecords = auraRecords?.filter(r => r.profile_id === student.student_id) || [];
-    const readingRecords = studentRecords.filter(r => r.reading_type === 'reading');
-    const speakingRecords = studentRecords.filter(r => r.reading_type === 'speaking');
-
-    const avgReadingScore = readingRecords.length > 0
-      ? Math.round(readingRecords.reduce((sum, r) => sum + (r.grade || 0), 0) / readingRecords.length)
-      : 0;
+    const studentAuraRecords = auraRecords?.filter(r => r.profile_id === student.student_id) || [];
     
+    // Speaking data from aura_records (practice sessions)
+    const speakingRecords = studentAuraRecords.filter(r => r.reading_type === 'speaking' || !r.reading_type);
     const avgSpeakingScore = speakingRecords.length > 0
       ? Math.round(speakingRecords.reduce((sum, r) => sum + (r.grade || 0), 0) / speakingRecords.length)
+      : 0;
+    
+    // CRITICAL: Reading data from reading_sessions table (read-along sessions)
+    const studentReadingSessions = readingSessions?.filter((s: any) => s.student_id === student.student_id) || [];
+    const avgReadingScore = studentReadingSessions.length > 0
+      ? Math.round(studentReadingSessions.reduce((sum: number, s: any) => sum + (s.accuracy_percent || 0), 0) / studentReadingSessions.length)
       : 0;
 
     const riskScore = vector?.cross_modal_risk_score || 0;
@@ -52,6 +75,8 @@ const CrossModalScatterPlot = ({ students, skillVectors, auraRecords }: CrossMod
       readingScore: avgReadingScore,
       riskScore,
       quadrant,
+      readingSessions: studentReadingSessions.length,
+      speakingSessions: speakingRecords.length,
     };
   }).filter(p => p.speakingScore > 0 || p.readingScore > 0);
 
@@ -69,8 +94,8 @@ const CrossModalScatterPlot = ({ students, skillVectors, auraRecords }: CrossMod
           <p className="font-semibold mb-1">{data.name}</p>
           <p className="text-xs text-muted-foreground mb-2">{data.quadrant}</p>
           <div className="space-y-1 text-xs">
-            <p>Speaking: <strong>{data.speakingScore}/100</strong></p>
-            <p>Reading: <strong>{data.readingScore}/100</strong></p>
+            <p>Speaking: <strong>{data.speakingScore}/100</strong> ({data.speakingSessions} sessions)</p>
+            <p>Reading: <strong>{data.readingScore}/100</strong> ({data.readingSessions} sessions)</p>
             <p>Risk: <Badge variant={data.riskScore > 60 ? "destructive" : "secondary"} className="text-xs">{data.riskScore}/100</Badge></p>
           </div>
         </div>
@@ -78,6 +103,17 @@ const CrossModalScatterPlot = ({ students, skillVectors, auraRecords }: CrossMod
     }
     return null;
   };
+
+  if (isLoading) {
+    return (
+      <Card className="shadow-elegant border-2 border-primary/20">
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2">Loading cross-modal data...</span>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="shadow-elegant border-2 border-primary/20">
@@ -87,7 +123,7 @@ const CrossModalScatterPlot = ({ students, skillVectors, auraRecords }: CrossMod
           Cross-Modal Performance Matrix
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Interactive scatter plot showing speaking vs reading performance
+          Speaking (practice) vs Reading (read-along) performance • {dataPoints.length} students with data
         </p>
       </CardHeader>
       <CardContent>
@@ -146,14 +182,14 @@ const CrossModalScatterPlot = ({ students, skillVectors, auraRecords }: CrossMod
                   dataKey="speakingScore" 
                   name="Speaking Score" 
                   domain={[0, 100]}
-                  label={{ value: 'Speaking Score', position: 'bottom', offset: 0 }}
+                  label={{ value: 'Speaking Score (Practice)', position: 'bottom', offset: 0 }}
                 />
                 <YAxis 
                   type="number" 
                   dataKey="readingScore" 
                   name="Reading Score" 
                   domain={[0, 100]}
-                  label={{ value: 'Reading Score', angle: -90, position: 'insideLeft' }}
+                  label={{ value: 'Reading Score (Read-Along)', angle: -90, position: 'insideLeft' }}
                 />
                 <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: '3 3' }} />
                 
@@ -178,21 +214,29 @@ const CrossModalScatterPlot = ({ students, skillVectors, auraRecords }: CrossMod
             <div className="h-[500px] flex flex-col items-center justify-center text-muted-foreground">
               <TrendingUp className="h-16 w-16 mb-4 opacity-20" />
               <p className="text-lg font-medium">No cross-modal data available yet</p>
-              <p className="text-sm">Students need both speaking and reading practice</p>
+              <p className="text-sm">Students need both speaking practice AND read-along sessions</p>
             </div>
           )}
 
           {selectedStudent && (
             <div className="mt-4 p-4 border-2 border-primary rounded-lg bg-primary/5 animate-fade-in">
               <p className="text-sm font-semibold mb-2">Selected: {selectedStudent.name}</p>
-              <div className="grid grid-cols-3 gap-3 text-sm">
+              <div className="grid grid-cols-4 gap-3 text-sm">
                 <div>
                   <div className="text-xs text-muted-foreground">Speaking</div>
                   <div className="font-bold">{selectedStudent.speakingScore}/100</div>
+                  <div className="text-xs text-muted-foreground">{selectedStudent.speakingSessions} sessions</div>
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">Reading</div>
                   <div className="font-bold">{selectedStudent.readingScore}/100</div>
+                  <div className="text-xs text-muted-foreground">{selectedStudent.readingSessions} sessions</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Risk</div>
+                  <Badge variant={selectedStudent.riskScore > 60 ? "destructive" : "secondary"}>
+                    {selectedStudent.riskScore}
+                  </Badge>
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">Quadrant</div>

@@ -3184,11 +3184,14 @@ export type Database = {
         Row: {
           accuracy_percent: number
           assignment_id: string | null
+          cognitive_load_avg: number | null
           created_at: string | null
           duration_seconds: number
           fluency_score: number | null
           id: string
           passage_text: string
+          phoneme_accuracy: Json | null
+          recommended_difficulty: number | null
           student_id: string
           words_read: number
           wpm: number
@@ -3196,11 +3199,14 @@ export type Database = {
         Insert: {
           accuracy_percent: number
           assignment_id?: string | null
+          cognitive_load_avg?: number | null
           created_at?: string | null
           duration_seconds: number
           fluency_score?: number | null
           id?: string
           passage_text: string
+          phoneme_accuracy?: Json | null
+          recommended_difficulty?: number | null
           student_id: string
           words_read: number
           wpm: number
@@ -3208,11 +3214,14 @@ export type Database = {
         Update: {
           accuracy_percent?: number
           assignment_id?: string | null
+          cognitive_load_avg?: number | null
           created_at?: string | null
           duration_seconds?: number
           fluency_score?: number | null
           id?: string
           passage_text?: string
+          phoneme_accuracy?: Json | null
+          recommended_difficulty?: number | null
           student_id?: string
           words_read?: number
           wpm?: number

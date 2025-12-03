@@ -337,6 +337,7 @@ const AuraAnalytics = () => {
                   <ProsodyInsights 
                     records={auraRecords}
                     skillVectors={skillVectors}
+                    classroomId={classroomId}
                   />
                 </TabsContent>
 
@@ -345,6 +346,7 @@ const AuraAnalytics = () => {
                     students={students || []}
                     skillVectors={skillVectors || []}
                     auraRecords={auraRecords || []}
+                    classroomId={classroomId}
                   />
                   
                   <Card>
