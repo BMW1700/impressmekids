@@ -310,6 +310,7 @@ const AuraAnalytics = () => {
                       <StudentAuraMetrics 
                         students={students || []} 
                         records={auraRecords}
+                        readingSessions={readingSessions || []}
                       />
                     </CardContent>
                   </Card>
