@@ -1,64 +1,104 @@
 /**
- * Simple, reliable pronunciation player using Web Speech API
- * Rebuilt from scratch to avoid Chrome cancel() bugs
+ * Plays correct pronunciation of a word using Web Speech API
+ * Fixed to handle Chrome's voice loading and cancel() bug
  */
 
+let voicesLoaded = false;
 let preferredVoice: SpeechSynthesisVoice | null = null;
-let voicesReady = false;
+let speechUnlocked = false;
 
-// Initialize voices
-const initVoices = () => {
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-  
-  const voices = window.speechSynthesis.getVoices();
-  if (voices.length > 0) {
-    preferredVoice = 
-      voices.find(v => v.lang === 'en-US' && v.localService) ||
-      voices.find(v => v.lang === 'en-US') || 
-      voices.find(v => v.lang.startsWith('en')) || 
-      voices[0];
-    voicesReady = true;
-  }
-};
-
-// Load voices on init and when they change
+// Pre-load voices on module initialization
 if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-  initVoices();
-  window.speechSynthesis.onvoiceschanged = initVoices;
+  const loadVoices = () => {
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      // Prefer US English voices, fallback to any English, then any voice
+      preferredVoice = 
+        voices.find(v => v.lang === 'en-US') || 
+        voices.find(v => v.lang.startsWith('en')) || 
+        voices[0];
+      voicesLoaded = true;
+      console.log('🔊 Voices loaded, preferred:', preferredVoice?.name, preferredVoice?.lang);
+    }
+  };
+  
+  // Load immediately if already available
+  loadVoices();
+  
+  // Also listen for async voice loading (Chrome needs this)
+  window.speechSynthesis.onvoiceschanged = loadVoices;
 }
 
 /**
- * Play pronunciation of a word - simple and reliable
+ * Unlock speech synthesis - must be called from user gesture (click/tap)
+ * Call this on first user interaction with the reading component
  */
-export const playCorrectPronunciation = (word: string): Promise<void> => {
-  return new Promise((resolve) => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      console.warn('Speech synthesis not supported');
-      resolve();
-      return;
-    }
+export const unlockSpeechSynthesis = () => {
+  if (speechUnlocked) return;
+  
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    console.warn('🔊 Speech synthesis not supported');
+    return;
+  }
 
-    // Ensure voices are loaded
-    if (!voicesReady) {
-      initVoices();
-      if (!voicesReady) {
-        console.warn('No voices available');
-        resolve();
-        return;
-      }
-    }
+  // Speak empty utterance to unlock
+  const unlockUtterance = new SpeechSynthesisUtterance('');
+  unlockUtterance.volume = 0;
+  window.speechSynthesis.speak(unlockUtterance);
+  speechUnlocked = true;
+  console.log('🔊 Speech synthesis UNLOCKED via user gesture');
+};
 
-    // Resume if paused (Chrome pauses when tab is backgrounded)
-    if (window.speechSynthesis.paused) {
-      window.speechSynthesis.resume();
-    }
+export const playCorrectPronunciation = (word: string, retryCount = 0) => {
+  console.log('🔊 ATTEMPTING TO SPEAK:', word, '(attempt', retryCount + 1, ')');
+  
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    console.warn('🔊 Speech synthesis not supported');
+    return;
+  }
 
-    // DON'T call cancel() - this is what was breaking everything!
-    // Just queue up the new speech
-    
+  // Force load voices if not loaded yet
+  if (!voicesLoaded) {
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      preferredVoice = 
+        voices.find(v => v.lang === 'en-US') || 
+        voices.find(v => v.lang.startsWith('en')) || 
+        voices[0];
+      voicesLoaded = true;
+      console.log('🔊 Voices force-loaded:', preferredVoice?.name);
+    }
+  }
+
+  // Wait for voices if not loaded yet (max 8 retries, 250ms each = 2 seconds total)
+  if (!voicesLoaded && retryCount < 8) {
+    console.log('🔊 Voices not loaded, retrying in 250ms... (attempt', retryCount + 1, ')');
+    setTimeout(() => playCorrectPronunciation(word, retryCount + 1), 250);
+    return;
+  }
+
+  if (!voicesLoaded) {
+    console.error('🔊 FAILED: Voices never loaded after 8 retries');
+    // Show user-visible error
+    if (typeof window !== 'undefined' && (window as any).__showVoiceError) {
+      (window as any).__showVoiceError();
+    }
+    return;
+  }
+
+  // Resume if paused (Chrome sometimes pauses synthesis)
+  if (window.speechSynthesis.paused) {
+    window.speechSynthesis.resume();
+  }
+
+  // Cancel any pending speech first
+  window.speechSynthesis.cancel();
+  
+  // Longer delay after cancel to ensure it completes (Chrome bug workaround)
+  setTimeout(() => {
     const utterance = new SpeechSynthesisUtterance(word);
-    utterance.rate = 0.85;
-    utterance.pitch = 1.0;
+    utterance.rate = 0.8; // Slightly slower for clarity
+    utterance.pitch = 1.1; // Slightly higher pitch
     utterance.volume = 1.0;
     utterance.lang = 'en-US';
     
@@ -66,42 +106,28 @@ export const playCorrectPronunciation = (word: string): Promise<void> => {
       utterance.voice = preferredVoice;
     }
     
-    utterance.onend = () => resolve();
+    // Add event listeners for debugging
+    utterance.onstart = () => console.log('🔊 Speech STARTED:', word);
+    utterance.onend = () => console.log('🔊 Speech ENDED:', word);
     utterance.onerror = (e) => {
-      // Only log real errors, not 'interrupted' or 'canceled'
-      if (e.error !== 'interrupted' && e.error !== 'canceled') {
-        console.error('Speech error:', e.error);
+      console.error('🔊 Speech ERROR:', word, e.error);
+      // If error is "not-allowed", speech wasn't unlocked
+      if (e.error === 'not-allowed') {
+        console.warn('🔊 Speech blocked - needs user gesture to unlock');
+        speechUnlocked = false;
+        // Show user-visible error
+        if (typeof window !== 'undefined' && (window as any).__showVoiceError) {
+          (window as any).__showVoiceError();
+        }
       }
-      resolve();
     };
 
     window.speechSynthesis.speak(utterance);
-  });
+  }, 100);
 };
 
 /**
- * Stop all speech immediately
- */
-export const stopSpeech = () => {
-  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
-  }
-};
-
-/**
- * Unlock speech synthesis - call on user gesture
- */
-export const unlockSpeechSynthesis = () => {
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-  
-  // Speak empty string to unlock
-  const utterance = new SpeechSynthesisUtterance('');
-  utterance.volume = 0;
-  window.speechSynthesis.speak(utterance);
-};
-
-/**
- * Sound effects using Web Audio API
+ * Plays sound effects using Web Audio API
  */
 export class SoundEffects {
   private audioContext: AudioContext | null = null;
@@ -115,6 +141,7 @@ export class SoundEffects {
   private playTone(frequency: number, duration: number, volume: number = 0.3) {
     if (!this.audioContext) return;
 
+    // Resume audio context if suspended (required after user gesture)
     if (this.audioContext.state === 'suspended') {
       this.audioContext.resume();
     }
@@ -136,23 +163,25 @@ export class SoundEffects {
   }
 
   correctWord() {
-    this.playTone(800, 0.1);
+    this.playTone(800, 0.1); // Higher pitch, short
   }
 
   incorrectWord() {
-    this.playTone(200, 0.15);
+    this.playTone(200, 0.15); // Lower pitch, slightly longer
   }
 
   streakAchieved() {
-    setTimeout(() => this.playTone(523, 0.1), 0);
-    setTimeout(() => this.playTone(659, 0.1), 100);
-    setTimeout(() => this.playTone(784, 0.2), 200);
+    // Play ascending notes
+    setTimeout(() => this.playTone(523, 0.1), 0);    // C
+    setTimeout(() => this.playTone(659, 0.1), 100);  // E
+    setTimeout(() => this.playTone(784, 0.2), 200);  // G
   }
 
   celebrationSound() {
-    this.playTone(523, 0.3);
-    this.playTone(659, 0.3);
-    this.playTone(784, 0.3);
-    this.playTone(1047, 0.3);
+    // Play a celebratory chord
+    this.playTone(523, 0.3); // C
+    this.playTone(659, 0.3); // E
+    this.playTone(784, 0.3); // G
+    this.playTone(1047, 0.3); // C (octave higher)
   }
 }
