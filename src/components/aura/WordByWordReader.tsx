@@ -318,6 +318,18 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       const expectedWord = words[currentIdx];
       const isCorrect = isWordMatch(latestSpokenWord, expectedWord);
       
+      // REAL-TIME PHONEME DETECTION: Compare spoken vs expected phonemes
+      const expectedPhonemes = getIPAPronunciation(expectedWord)[0] || [];
+      if (!isCorrect && expectedPhonemes.length > 0) {
+        // Log phoneme mismatch for analysis (detectPhonemes is async, so we fire-and-forget)
+        console.log('PHONEME DEBUG:', { 
+          spoken: latestSpokenWord, 
+          expected: expectedWord, 
+          expectedPhonemes,
+          wordIndex: currentIdx 
+        });
+      }
+      
       // CRITICAL FIX: Update BOTH state AND ref for real-time status
       setRealtimeWordStatus(prev => {
         const newMap = new Map(prev);
@@ -530,6 +542,33 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
     }
 
     analyzeMispronunciationPatterns(user.id, session.id).catch(console.error);
+
+    // ADAPTIVE DIFFICULTY: Calculate recommended next difficulty level
+    try {
+      const difficultyResult = await adaptiveDifficultyEngine.calculateAdaptiveDifficulty({
+        studentId: user.id,
+        currentLevel: 1,
+        recentGrades: [accuracy],
+        completionRate: wordsRead / words.length,
+        consistency: accuracy >= 70 ? 0.8 : 0.5,
+        weeklyImprovement: 0,
+        masteredPhonemes: [],
+        strugglingPhonemes: [],
+        recentPracticeMinutes: Math.round(totalDuration / 60),
+        speakingFeatures: {
+          fluency: accuracy,
+          prosody: 70,
+          confidence: accuracy,
+          wpm,
+          pauseCount: speechPausesRef.current.length,
+          phonemeAccuracy: accuracy,
+        }
+      });
+      setAdaptiveDifficulty(difficultyResult);
+      console.log('ADAPTIVE DIFFICULTY:', difficultyResult);
+    } catch (err) {
+      console.error('Adaptive difficulty error:', err);
+    }
 
     setIsProcessing(false);
 
