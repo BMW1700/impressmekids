@@ -48,14 +48,29 @@ export const EnhancedCompletionAnalysis = ({
         const diffResult = await adaptiveDifficultyEngine.calculateAdaptiveDifficulty({
           studentId,
           currentLevel: 1,
-          recentAccuracy: [accuracy / 100],
-          recentWPM: [wpm],
+          recentGrades: [accuracy],
+          completionRate: 1.0,
+          consistency: accuracy / 100,
+          weeklyImprovement: 0,
+          recentPracticeMinutes: Math.round(wordsRead / (wpm || 100) * 60),
           masteredPhonemes: [],
           strugglingPhonemes: exercises.map(e => e.phoneme),
-          mlFeatures: {
-            cognitiveLoad,
-            readingScore: accuracy,
-            speakingScore: accuracy,
+          readingFeatures: {
+            comprehensionScore: accuracy,
+            annotationQuality: 50,
+            criticalThinkingScore: 50,
+            highlightCount: 0,
+            avgAnnotationLength: 0,
+            vocabularyComplexity: 50,
+            readingTime: Math.round(wordsRead / (wpm || 100) * 60)
+          },
+          speakingFeatures: {
+            fluency: Math.min(100, wpm / 1.5),
+            prosody: 50,
+            confidence: accuracy,
+            wpm: wpm,
+            pauseCount: 0,
+            phonemeAccuracy: accuracy
           }
         });
         setDifficultyRecommendation(diffResult);
