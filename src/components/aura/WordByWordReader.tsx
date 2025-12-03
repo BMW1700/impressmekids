@@ -90,100 +90,70 @@ const normalizeWord = (word: string): string => {
   return word.toLowerCase().replace(/[^a-z0-9]/g, '');
 };
 
-// MAXIMUM LENIENT matching - Web Speech API is EXTREMELY noisy, default to CORRECT
-// Only mark RED if the word is TOTALLY COMPLETELY different
+// BALANCED word matching - accurate for teacher data but forgiving of Web Speech API noise
 const isWordMatch = (spoken: string, expected: string): boolean => {
   const normalizedSpoken = normalizeWord(spoken);
   const normalizedExpected = normalizeWord(expected);
   
-  // Exact match - definitely correct
+  // Exact match = correct
   if (normalizedSpoken === normalizedExpected) return true;
   
-  // Empty check - if no speech detected, still mark correct (benefit of doubt)
-  if (!normalizedSpoken) return true;
+  // No speech detected = mark incorrect (teacher needs real data)
+  if (!normalizedSpoken) return false;
   if (!normalizedExpected) return false;
   
-  // SHORT WORDS (1-4 chars): ALWAYS CORRECT - too easy to mishear
-  if (normalizedExpected.length <= 4) {
-    return true;
-  }
-  
-  // FIRST LETTER MATCH = CORRECT (Web Speech often garbles endings)
-  if (normalizedSpoken[0] === normalizedExpected[0]) {
-    return true;
-  }
-  
-  // Check if spoken starts with expected or expected starts with spoken (partial matches)
-  if (normalizedSpoken.startsWith(normalizedExpected) || normalizedExpected.startsWith(normalizedSpoken)) {
-    return true;
-  }
-  
-  // Check if first 2 characters match - very lenient
-  if (normalizedSpoken.length >= 2 && normalizedExpected.length >= 2) {
-    if (normalizedSpoken.substring(0, 2) === normalizedExpected.substring(0, 2)) {
-      return true;
-    }
-  }
-  
-  // ANY shared characters = probably correct (Web Speech is just bad)
-  const sharedChars = normalizedSpoken.split('').filter(c => normalizedExpected.includes(c)).length;
-  if (sharedChars >= 2) {
-    return true;
-  }
-  
+  // Calculate edit distance
   const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
   const maxLen = Math.max(normalizedSpoken.length, normalizedExpected.length);
   
-  // MAXIMUM LENIENT: Only mark wrong if COMPLETELY different (>50% different)
-  // Medium words (5-7 chars): only wrong if > 80% different
-  // Long words (8+ chars): only wrong if > 70% different
-  
-  if (maxLen <= 7) {
-    return distance <= Math.ceil(maxLen * 0.8); // 80% tolerance
-  } else {
-    return distance <= Math.ceil(maxLen * 0.7); // 70% tolerance for long words
+  // TINY WORDS (1-2 chars): correct if first letter matches
+  if (normalizedExpected.length <= 2) {
+    return normalizedSpoken[0] === normalizedExpected[0];
   }
+  
+  // SHORT WORDS (3-4 chars): correct if <= 1 edit away
+  if (normalizedExpected.length <= 4) {
+    return distance <= 1;
+  }
+  
+  // MEDIUM WORDS (5-7 chars): correct if <= 2 edits (roughly 30% tolerance)
+  if (normalizedExpected.length <= 7) {
+    return distance <= 2;
+  }
+  
+  // LONG WORDS (8+ chars): correct if <= 30% different
+  return distance <= Math.ceil(maxLen * 0.3);
 };
 
-// SEPARATE function for voice mascot - INDEPENDENT of word matching
-// This ensures voice speaks when pronunciation is genuinely wrong, even if word was marked "correct"
-// LESS AGGRESSIVE: Only speak for clear errors, not minor variations
+// Voice mascot - speaks correct pronunciation when student struggles
+// Only triggers on clear errors to avoid annoying the student
 const shouldSpeakWord = (spoken: string, expected: string): boolean => {
   const normalizedSpoken = normalizeWord(spoken);
   const normalizedExpected = normalizeWord(expected);
   
   // Exact match - never speak
   if (normalizedSpoken === normalizedExpected) return false;
-  if (!normalizedSpoken || !normalizedExpected) return false;
   
-  // FIRST LETTER DIFFERENT = ALWAYS SPEAK (clearly said a different word)
+  // No speech - don't speak (might just be mic issue)
+  if (!normalizedSpoken) return false;
+  if (!normalizedExpected) return false;
+  
+  // First letter completely different = speak (clearly wrong word)
   if (normalizedSpoken[0] !== normalizedExpected[0]) {
-    console.log('🔊 VOICE MASCOT: First letter wrong, speaking:', expected, '(said:', spoken, ')');
+    console.log('🔊 Voice help: Different word said:', spoken, 'vs', expected);
     return true;
-  }
-  
-  // If spoken starts with expected or vice versa - DON'T speak (partial match is fine)
-  if (normalizedSpoken.startsWith(normalizedExpected) || normalizedExpected.startsWith(normalizedSpoken)) {
-    return false;
   }
   
   const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
   const maxLen = Math.max(normalizedSpoken.length, normalizedExpected.length);
-  const percentDifferent = distance / maxLen;
   
-  // For short words (1-4 chars): only speak if 2+ characters wrong (less aggressive)
-  if (maxLen <= 4 && distance >= 2) {
-    console.log('🔊 VOICE MASCOT: Short word error (2+ chars), speaking:', expected, '(said:', spoken, ')');
-    return true;
+  // For short words: only speak if completely different (2+ errors)
+  if (normalizedExpected.length <= 4) {
+    return distance >= 2;
   }
   
-  // For longer words: speak if >35% different (raised threshold to reduce false triggers)
-  if (percentDifferent > 0.35) {
-    console.log('🔊 VOICE MASCOT: >35% different, speaking:', expected, '(said:', spoken, ', diff:', Math.round(percentDifferent * 100), '%)');
-    return true;
-  }
-  
-  return false;
+  // For longer words: speak if > 40% different
+  return (distance / maxLen) > 0.4;
 };
 
 export const WordByWordReader = ({ passageText, assignmentId, onComplete }: WordByWordReaderProps) => {
