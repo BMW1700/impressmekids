@@ -11,7 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, BookOpen, Edit2, Trash2, Star, ChevronLeft, Search, Send } from "lucide-react";
+import { Plus, BookOpen, Edit2, Trash2, Star, ChevronLeft, Search, Send, Globe, ThumbsUp, Award } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -49,6 +50,7 @@ interface StoryForm {
   category: string;
   cover_gradient: string;
   target_phonemes: string[];
+  is_published: boolean;
 }
 
 const StoryManagement = () => {
@@ -66,6 +68,7 @@ const StoryManagement = () => {
     category: 'animals',
     cover_gradient: gradients[0],
     target_phonemes: [],
+    is_published: false,
   });
 
   // Fetch stories
@@ -195,6 +198,33 @@ const StoryManagement = () => {
     }
   });
 
+  // Toggle publish mutation
+  const togglePublish = useMutation({
+    mutationFn: async ({ id, is_published }: { id: string; is_published: boolean }) => {
+      const { error } = await supabase
+        .from('reading_library')
+        .update({ is_published, updated_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: (_, { is_published }) => {
+      queryClient.invalidateQueries({ queryKey: ['teacher-stories'] });
+      toast({
+        title: is_published ? "Published to Community! 🌍" : "Unpublished",
+        description: is_published 
+          ? "Students can now discover your story and vote on it!"
+          : "Story removed from community library",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update publish status",
+        variant: "destructive",
+      });
+    }
+  });
+
   const resetForm = () => {
     setFormData({
       title: '',
@@ -204,6 +234,7 @@ const StoryManagement = () => {
       category: 'animals',
       cover_gradient: gradients[0],
       target_phonemes: [],
+      is_published: false,
     });
   };
 
@@ -217,6 +248,7 @@ const StoryManagement = () => {
       category: story.category,
       cover_gradient: story.cover_gradient,
       target_phonemes: story.target_phonemes || [],
+      is_published: story.is_published || false,
     });
     setIsDialogOpen(true);
   };
@@ -378,6 +410,24 @@ const StoryManagement = () => {
                     </p>
                   </div>
                   
+                  {/* Publish to Community Toggle */}
+                  <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Globe className="h-4 w-4 text-primary" />
+                        <Label htmlFor="publish">Publish to Community Library</Label>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Students can discover and vote on published stories. Popular stories get featured!
+                      </p>
+                    </div>
+                    <Switch
+                      id="publish"
+                      checked={formData.is_published}
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_published: checked }))}
+                    />
+                  </div>
+                  
                   <div className="flex justify-end gap-2 pt-4">
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                       Cancel
@@ -448,12 +498,24 @@ const StoryManagement = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <Card className="overflow-hidden">
+                  <Card className={`overflow-hidden ${story.is_featured ? 'ring-2 ring-primary' : ''}`}>
                     <div className={`h-32 bg-gradient-to-br ${story.cover_gradient} relative`}>
                       <div className="absolute bottom-3 left-3 text-4xl">
                         {categoryIcons[story.category]}
                       </div>
-                      <div className="absolute top-3 right-3">
+                      <div className="absolute top-3 right-3 flex gap-1">
+                        {story.is_featured && (
+                          <Badge className="bg-primary text-primary-foreground text-xs">
+                            <Award className="h-3 w-3 mr-1" />
+                            Featured
+                          </Badge>
+                        )}
+                        {story.is_published && (
+                          <Badge variant="secondary" className="bg-green-500/90 text-white text-xs">
+                            <Globe className="h-3 w-3 mr-1" />
+                            Published
+                          </Badge>
+                        )}
                         <Badge variant="secondary" className="bg-white/90">
                           Grade {story.grade_level === 0 ? 'K' : story.grade_level}
                         </Badge>
@@ -481,7 +543,34 @@ const StoryManagement = () => {
                         </div>
                       </div>
                       
-                      <div className="flex gap-2 pt-2">
+                      {/* Voting Stats */}
+                      {(story.thumbs_up_count > 0 || story.helped_yes_count > 0) && (
+                        <div className="flex items-center gap-3 text-xs">
+                          <span className="flex items-center gap-1 text-green-600">
+                            <ThumbsUp className="h-3 w-3" />
+                            {story.thumbs_up_count || 0}
+                          </span>
+                          <span className="text-muted-foreground">•</span>
+                          <span className="text-muted-foreground">
+                            {story.helped_yes_count || 0} found helpful
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Publish Toggle */}
+                      <div className="flex items-center justify-between py-2 border-t">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Globe className="h-3 w-3" />
+                          Community
+                        </span>
+                        <Switch
+                          checked={story.is_published || false}
+                          onCheckedChange={(checked) => togglePublish.mutate({ id: story.id, is_published: checked })}
+                          disabled={togglePublish.isPending}
+                        />
+                      </div>
+                      
+                      <div className="flex gap-2">
                         <Button
                           variant="default"
                           size="sm"

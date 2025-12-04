@@ -1,11 +1,12 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Clock, Star, Bookmark, BookmarkCheck } from "lucide-react";
+import { BookOpen, Clock, Star, Bookmark, BookmarkCheck, Award } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { StoryVotingButtons } from "./StoryVotingButtons";
 
 interface StoryCardProps {
   title: string;
@@ -21,6 +22,12 @@ interface StoryCardProps {
   times_read?: number;
   inBookshelf?: boolean;
   storyId?: string;
+  thumbsUpCount?: number;
+  thumbsDownCount?: number;
+  helpedYesCount?: number;
+  helpedNoCount?: number;
+  isFeatured?: boolean;
+  showVoting?: boolean;
   onStartReading: () => void;
   onBookshelfChange?: () => void;
 }
@@ -62,6 +69,12 @@ export const StoryCard = ({
   times_read = 0,
   inBookshelf = false,
   storyId,
+  thumbsUpCount = 0,
+  thumbsDownCount = 0,
+  helpedYesCount = 0,
+  helpedNoCount = 0,
+  isFeatured = false,
+  showVoting = true,
   onStartReading,
   onBookshelfChange
 }: StoryCardProps) => {
@@ -157,13 +170,19 @@ export const StoryCard = ({
       whileHover={{ y: -8 }}
       transition={{ duration: 0.3 }}
     >
-      <Card className={`overflow-hidden cursor-pointer transition-all ${completed ? 'ring-2 ring-yellow-500' : ''}`}>
+      <Card className={`overflow-hidden cursor-pointer transition-all ${completed ? 'ring-2 ring-yellow-500' : ''} ${isFeatured ? 'ring-2 ring-primary' : ''}`}>
         {/* Cover Art */}
         <div className={`h-40 bg-gradient-to-br ${cover_gradient} relative`}>
           <div className={`absolute inset-0 bg-gradient-to-br ${getCategoryColor(category)} backdrop-blur-sm`} />
           
           {/* Top right badges */}
           <div className="absolute top-3 right-3 flex gap-2">
+            {isFeatured && (
+              <Badge className="bg-primary text-primary-foreground text-xs">
+                <Award className="h-3 w-3 mr-1" />
+                Featured
+              </Badge>
+            )}
             <Badge variant="secondary" className="bg-white/90 text-xs">
               Grade {grade_level === 0 ? 'K' : grade_level}
             </Badge>
@@ -233,6 +252,18 @@ export const StoryCard = ({
               Read {times_read} {times_read === 1 ? 'time' : 'times'}
               {best_wpm && ` • Best: ${best_wpm} WPM`}
             </div>
+          )}
+
+          {/* Voting Buttons */}
+          {showVoting && storyId && (
+            <StoryVotingButtons
+              storyId={storyId}
+              thumbsUpCount={thumbsUpCount}
+              thumbsDownCount={thumbsDownCount}
+              helpedYesCount={helpedYesCount}
+              helpedNoCount={helpedNoCount}
+              compact
+            />
           )}
 
           {/* Action Button */}

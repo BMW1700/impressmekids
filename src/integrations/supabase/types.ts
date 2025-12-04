@@ -3091,12 +3091,19 @@ export type Database = {
           description: string | null
           difficulty_level: number | null
           grade_level: number
+          helped_no_count: number | null
+          helped_yes_count: number | null
           id: string
+          is_featured: boolean | null
+          is_published: boolean | null
           is_system: boolean | null
           passage_text: string
           reading_time_minutes: number | null
           target_phonemes: string[] | null
+          thumbs_down_count: number | null
+          thumbs_up_count: number | null
           title: string
+          total_reads: number | null
           updated_at: string | null
           word_count: number | null
         }
@@ -3108,12 +3115,19 @@ export type Database = {
           description?: string | null
           difficulty_level?: number | null
           grade_level: number
+          helped_no_count?: number | null
+          helped_yes_count?: number | null
           id?: string
+          is_featured?: boolean | null
+          is_published?: boolean | null
           is_system?: boolean | null
           passage_text: string
           reading_time_minutes?: number | null
           target_phonemes?: string[] | null
+          thumbs_down_count?: number | null
+          thumbs_up_count?: number | null
           title: string
+          total_reads?: number | null
           updated_at?: string | null
           word_count?: number | null
         }
@@ -3125,12 +3139,19 @@ export type Database = {
           description?: string | null
           difficulty_level?: number | null
           grade_level?: number
+          helped_no_count?: number | null
+          helped_yes_count?: number | null
           id?: string
+          is_featured?: boolean | null
+          is_published?: boolean | null
           is_system?: boolean | null
           passage_text?: string
           reading_time_minutes?: number | null
           target_phonemes?: string[] | null
+          thumbs_down_count?: number | null
+          thumbs_up_count?: number | null
           title?: string
+          total_reads?: number | null
           updated_at?: string | null
           word_count?: number | null
         }
@@ -3657,6 +3678,41 @@ export type Database = {
           user_role?: Database["public"]["Enums"]["app_role"] | null
         }
         Relationships: []
+      }
+      story_votes: {
+        Row: {
+          created_at: string | null
+          helped_learn: boolean | null
+          id: string
+          story_id: string
+          student_id: string
+          thumbs_up: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          helped_learn?: boolean | null
+          id?: string
+          story_id: string
+          student_id: string
+          thumbs_up?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          helped_learn?: boolean | null
+          id?: string
+          story_id?: string
+          student_id?: string
+          thumbs_up?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_votes_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "reading_library"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       student_behavior_stats: {
         Row: {
