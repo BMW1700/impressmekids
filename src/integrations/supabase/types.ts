@@ -3087,42 +3087,51 @@ export type Database = {
           category: string
           cover_gradient: string | null
           created_at: string | null
+          created_by: string | null
           description: string | null
           difficulty_level: number | null
           grade_level: number
           id: string
+          is_system: boolean | null
           passage_text: string
           reading_time_minutes: number | null
           target_phonemes: string[] | null
           title: string
+          updated_at: string | null
           word_count: number | null
         }
         Insert: {
           category: string
           cover_gradient?: string | null
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
           difficulty_level?: number | null
           grade_level: number
           id?: string
+          is_system?: boolean | null
           passage_text: string
           reading_time_minutes?: number | null
           target_phonemes?: string[] | null
           title: string
+          updated_at?: string | null
           word_count?: number | null
         }
         Update: {
           category?: string
           cover_gradient?: string | null
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
           difficulty_level?: number | null
           grade_level?: number
           id?: string
+          is_system?: boolean | null
           passage_text?: string
           reading_time_minutes?: number | null
           target_phonemes?: string[] | null
           title?: string
+          updated_at?: string | null
           word_count?: number | null
         }
         Relationships: []
