@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, Sparkles } from "lucide-react";
 import { StoryCard } from "./StoryCard";
 import { curatedStories, CuratedStory } from "@/data/curatedStories";
 import { useQuery } from "@tanstack/react-query";
@@ -36,20 +36,80 @@ export const StoryLibrary = ({ onSelectStory }: StoryLibraryProps) => {
     }
   });
 
-  // Create a map of story progress by title
+  // Fetch published community stories
+  const { data: communityStories } = useQuery({
+    queryKey: ['community-stories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('reading_library')
+        .select('*')
+        .eq('is_published', true)
+        .order('is_featured', { ascending: false })
+        .order('thumbs_up_count', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  // Create a map of story progress by story_id
   const progressMap = useMemo(() => {
     const map = new Map();
     progressData?.forEach(progress => {
-      // We'll need to match by story_id once stories are in DB
-      // For now, this is a placeholder
       map.set(progress.story_id, progress);
     });
     return map;
   }, [progressData]);
 
+  // Combine curated stories with community stories
+  const allStories = useMemo(() => {
+    const stories: (CuratedStory & { 
+      storyId?: string; 
+      thumbsUpCount?: number;
+      thumbsDownCount?: number;
+      helpedYesCount?: number;
+      helpedNoCount?: number;
+      isFeatured?: boolean;
+      isFromCommunity?: boolean;
+    })[] = [];
+
+    // Add curated stories first
+    curatedStories.forEach(story => {
+      stories.push({ ...story, isFromCommunity: false });
+    });
+
+    // Add community stories (avoid duplicates by title)
+    const curatedTitles = new Set(curatedStories.map(s => s.title.toLowerCase()));
+    communityStories?.forEach(story => {
+      if (!curatedTitles.has(story.title.toLowerCase())) {
+        stories.push({
+          title: story.title,
+          description: story.description || '',
+          passage_text: story.passage_text,
+          grade_level: story.grade_level,
+          category: story.category as CuratedStory['category'],
+          word_count: story.word_count || 0,
+          reading_time_minutes: story.reading_time_minutes || 1,
+          difficulty_level: story.difficulty_level || 1,
+          cover_gradient: story.cover_gradient || 'from-blue-400 to-cyan-500',
+          target_phonemes: story.target_phonemes || [],
+          storyId: story.id,
+          thumbsUpCount: story.thumbs_up_count || 0,
+          thumbsDownCount: story.thumbs_down_count || 0,
+          helpedYesCount: story.helped_yes_count || 0,
+          helpedNoCount: story.helped_no_count || 0,
+          isFeatured: story.is_featured || false,
+          isFromCommunity: true,
+        });
+      }
+    });
+
+    return stories;
+  }, [communityStories]);
+
   // Filter stories
   const filteredStories = useMemo(() => {
-    return curatedStories.filter(story => {
+    return allStories.filter(story => {
       const matchesSearch = story.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         story.description.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = selectedCategory === 'all' || story.category === selectedCategory;
@@ -59,12 +119,23 @@ export const StoryLibrary = ({ onSelectStory }: StoryLibraryProps) => {
       
       return matchesSearch && matchesCategory && matchesGrade;
     });
-  }, [searchQuery, selectedCategory, selectedGrade]);
+  }, [searchQuery, selectedCategory, selectedGrade, allStories]);
 
-  // Recommended stories (based on target phonemes - placeholder logic)
+  // Featured stories (community stories that got promoted)
+  const featuredStories = useMemo(() => {
+    return allStories.filter(story => story.isFeatured).slice(0, 3);
+  }, [allStories]);
+
+  // Recommended stories
   const recommendedStories = useMemo(() => {
-    return curatedStories.slice(0, 3);
-  }, []);
+    // Prioritize featured, then high-voted community stories
+    const sorted = [...allStories].sort((a, b) => {
+      if (a.isFeatured && !b.isFeatured) return -1;
+      if (!a.isFeatured && b.isFeatured) return 1;
+      return (b.thumbsUpCount || 0) - (a.thumbsUpCount || 0);
+    });
+    return sorted.slice(0, 3);
+  }, [allStories]);
 
   return (
     <div className="space-y-6">
@@ -115,8 +186,34 @@ export const StoryLibrary = ({ onSelectStory }: StoryLibraryProps) => {
         </div>
       </div>
 
+      {/* Featured Section */}
+      {featuredStories.length > 0 && selectedCategory === 'all' && !searchQuery && (
+        <div>
+          <h3 className="font-heading text-xl font-bold mb-4 flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            Featured by the Community
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {featuredStories.map((story, index) => (
+              <StoryCard
+                key={`featured-${index}`}
+                {...story}
+                storyId={story.storyId}
+                thumbsUpCount={story.thumbsUpCount}
+                thumbsDownCount={story.thumbsDownCount}
+                helpedYesCount={story.helpedYesCount}
+                helpedNoCount={story.helpedNoCount}
+                isFeatured={story.isFeatured}
+                showVoting={!!story.storyId}
+                onStartReading={() => onSelectStory(story)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Recommended Section */}
-      {recommendedStories.length > 0 && selectedCategory === 'all' && !searchQuery && (
+      {recommendedStories.length > 0 && selectedCategory === 'all' && !searchQuery && featuredStories.length === 0 && (
         <div>
           <h3 className="font-heading text-xl font-bold mb-4">✨ Recommended for You</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -124,6 +221,13 @@ export const StoryLibrary = ({ onSelectStory }: StoryLibraryProps) => {
               <StoryCard
                 key={`rec-${index}`}
                 {...story}
+                storyId={story.storyId}
+                thumbsUpCount={story.thumbsUpCount}
+                thumbsDownCount={story.thumbsDownCount}
+                helpedYesCount={story.helpedYesCount}
+                helpedNoCount={story.helpedNoCount}
+                isFeatured={story.isFeatured}
+                showVoting={!!story.storyId}
                 onStartReading={() => onSelectStory(story)}
               />
             ))}
@@ -143,6 +247,13 @@ export const StoryLibrary = ({ onSelectStory }: StoryLibraryProps) => {
             <StoryCard
               key={index}
               {...story}
+              storyId={story.storyId}
+              thumbsUpCount={story.thumbsUpCount}
+              thumbsDownCount={story.thumbsDownCount}
+              helpedYesCount={story.helpedYesCount}
+              helpedNoCount={story.helpedNoCount}
+              isFeatured={story.isFeatured}
+              showVoting={!!story.storyId}
               onStartReading={() => onSelectStory(story)}
             />
           ))}
