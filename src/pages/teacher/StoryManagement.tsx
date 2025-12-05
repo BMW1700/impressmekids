@@ -60,6 +60,8 @@ const StoryManagement = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingStory, setEditingStory] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [assignStory, setAssignStory] = useState<any>(null);
+  const [selectedClassroom, setSelectedClassroom] = useState<string>("");
   const [formData, setFormData] = useState<StoryForm>({
     title: '',
     description: '',
@@ -69,6 +71,24 @@ const StoryManagement = () => {
     cover_gradient: gradients[0],
     target_phonemes: [],
     is_published: false,
+  });
+
+  // Fetch teacher's classrooms for assignment
+  const { data: classrooms } = useQuery({
+    queryKey: ['teacher-classrooms-for-assign'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from('classrooms')
+        .select('id, name, subject, grade')
+        .eq('teacher_id', user.id)
+        .order('name');
+
+      if (error) throw error;
+      return data;
+    }
   });
 
   // Fetch stories
@@ -576,8 +596,8 @@ const StoryManagement = () => {
                           size="sm"
                           className="flex-1"
                           onClick={() => {
-                            // Navigate to assignment creation with story pre-selected
-                            navigate(`/classrooms?createAssignment=true&storyId=${story.id}&storyTitle=${encodeURIComponent(story.title)}`);
+                            setAssignStory(story);
+                            setSelectedClassroom("");
                           }}
                         >
                           <Send className="h-3 w-3 mr-1" />
@@ -611,6 +631,65 @@ const StoryManagement = () => {
           )}
         </div>
       </main>
+
+      {/* Assign Story Modal - Select Classroom */}
+      <Dialog open={!!assignStory} onOpenChange={(open) => !open && setAssignStory(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign Story to Classroom</DialogTitle>
+            <DialogDescription>
+              Select a classroom to create a reading assignment with "{assignStory?.title}"
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {classrooms && classrooms.length > 0 ? (
+              <>
+                <div className="space-y-2">
+                  <Label>Select Classroom</Label>
+                  <Select value={selectedClassroom} onValueChange={setSelectedClassroom}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a classroom..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {classrooms.map((classroom) => (
+                        <SelectItem key={classroom.id} value={classroom.id}>
+                          {classroom.name} {classroom.subject && `(${classroom.subject})`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button variant="outline" onClick={() => setAssignStory(null)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    disabled={!selectedClassroom}
+                    onClick={() => {
+                      navigate(`/teacher/assignment/create/${selectedClassroom}?storyId=${assignStory.id}`);
+                    }}
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    Create Assignment
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-6">
+                <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                <p className="text-muted-foreground mb-4">
+                  You don't have any classrooms yet. Create a classroom first to assign stories.
+                </p>
+                <Button onClick={() => navigate('/teacher/dashboard')}>
+                  Go to Dashboard
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>
