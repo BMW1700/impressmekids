@@ -32,7 +32,8 @@ export default function CreateMultiQuestionAssignment() {
   const { classroomId } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const editId = searchParams.get('edit');
+const editId = searchParams.get('edit');
+  const storyId = searchParams.get('storyId');
   const { createAssignment, updateAssignment, assignment } = useMultiQuestionAssignments(classroomId, editId || undefined);
 
   const [title, setTitle] = useState('');
@@ -48,6 +49,7 @@ export default function CreateMultiQuestionAssignment() {
   const [questions, setQuestions] = useState<Question[]>([
     { id: uuidv4(), sequence: 1, question_type: null, question_data: {} }
   ]);
+  const [storyInitialized, setStoryInitialized] = useState(false);
   const [showPublishConfirm, setShowPublishConfirm] = useState(false);
   
   // Anti-cheating settings
@@ -59,12 +61,41 @@ export default function CreateMultiQuestionAssignment() {
   
   const { groups } = useAssignmentGroups(editId || undefined);
 
-  // Load classroom students
+// Load classroom students
   useEffect(() => {
     if (classroomId) {
       loadClassroomStudents();
     }
   }, [classroomId]);
+
+  // Initialize from story ID (from Story Library Assign button)
+  useEffect(() => {
+    const loadStory = async () => {
+      if (storyId && !storyInitialized && !editId) {
+        const { data: story, error } = await supabase
+          .from('reading_library')
+          .select('title, passage_text, description')
+          .eq('id', storyId)
+          .single();
+        
+        if (story && !error) {
+          setTitle(story.title || '');
+          setDescription(`Read-aloud assignment based on the story "${story.title}"`);
+          setQuestions([{
+            id: uuidv4(),
+            sequence: 1,
+            question_type: 'reading_comprehension',
+            question_data: {
+              passage_text: story.passage_text,
+              enable_coaching: true,
+            }
+          }]);
+          setStoryInitialized(true);
+        }
+      }
+    };
+    loadStory();
+  }, [storyId, storyInitialized, editId]);
 
   const loadClassroomStudents = async () => {
     const { data, error } = await supabase
