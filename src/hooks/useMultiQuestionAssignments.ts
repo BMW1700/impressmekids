@@ -147,8 +147,8 @@ export const useMultiQuestionAssignments = (classroomId?: string, assignmentId?:
           category: data.category,
           classroom_id: data.classroom_id,
           teacher_id: session.session.user.id,
-          due_date: data.due_date || null,
-          timer_minutes: data.timer_minutes || null,
+          due_date: data.due_date,
+          timer_minutes: data.timer_minutes,
           max_attempts: data.max_attempts || 1,
           question_count: data.questions.length,
           status: data.status || 'draft',
@@ -210,8 +210,8 @@ export const useMultiQuestionAssignments = (classroomId?: string, assignmentId?:
       const updateData: any = {};
       if (updates.title !== undefined) updateData.title = updates.title;
       if (updates.description !== undefined) updateData.description = updates.description;
-      if (updates.due_date !== undefined) updateData.due_date = updates.due_date || null;
-      if (updates.timer_minutes !== undefined) updateData.timer_minutes = updates.timer_minutes || null;
+      if (updates.due_date !== undefined) updateData.due_date = updates.due_date;
+      if (updates.timer_minutes !== undefined) updateData.timer_minutes = updates.timer_minutes;
       if (updates.max_attempts !== undefined) updateData.max_attempts = updates.max_attempts;
       if (updates.shuffle_questions !== undefined) updateData.shuffle_questions = updates.shuffle_questions;
       if (updates.shuffle_answers !== undefined) updateData.shuffle_answers = updates.shuffle_answers;
