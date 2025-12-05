@@ -23,17 +23,72 @@ serve(async (req) => {
   }
 
   try {
+    // Verify authorization header exists
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      console.error('Missing authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Create client for auth user verification
     const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: { headers: { Authorization: authHeader } },
+        auth: { persistSession: false }
+      }
+    );
+
+    // Verify the calling user
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    if (userError || !user) {
+      console.error('Auth error:', userError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - invalid token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Create admin client for role checks and sending notifications
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
+
+    // Check if caller has teacher, admin, or is sending to themselves
+    const { data: roleData } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .in('role', ['admin', 'teacher']);
 
     const payload: PushNotificationPayload = await req.json();
     const { userId, title, body, icon, badge, data, tag } = payload;
 
     if (!userId || !title || !body) {
-      throw new Error('userId, title, and body are required');
+      return new Response(
+        JSON.stringify({ error: 'userId, title, and body are required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
+
+    // Authorization check: must be admin, teacher, or sending to self
+    const isAdminOrTeacher = roleData && roleData.length > 0;
+    const isSendingToSelf = userId === user.id;
+
+    if (!isAdminOrTeacher && !isSendingToSelf) {
+      console.warn(`Unauthorized push notification attempt by user ${user.id} to ${userId}`);
+      return new Response(
+        JSON.stringify({ error: 'Forbidden - insufficient permissions to send notifications' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`User ${user.id} sending notification to ${userId}`);
 
     // Get VAPID keys
     const VAPID_PUBLIC_KEY = 'BBOQmeU-GndAJbPRu4b5Dt7mmnIjOH3AxacLwY5oznBCrF4JBVzLRkeJr_w_qoDmqu2o3gRlEjjkD7gP9snuJoI';
@@ -51,7 +106,7 @@ serve(async (req) => {
     );
 
     // Get all push subscriptions for this user
-    const { data: subscriptions, error: subsError } = await supabaseClient
+    const { data: subscriptions, error: subsError } = await supabaseAdmin
       .from('push_subscriptions')
       .select('*')
       .eq('user_id', userId);
@@ -98,7 +153,7 @@ serve(async (req) => {
           
           // If subscription is no longer valid, delete it
           if (error.statusCode === 404 || error.statusCode === 410) {
-            await supabaseClient
+            await supabaseAdmin
               .from('push_subscriptions')
               .delete()
               .eq('id', subscription.id);
