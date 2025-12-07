@@ -90,7 +90,7 @@ const normalizeWord = (word: string): string => {
   return word.toLowerCase().replace(/[^a-z0-9]/g, '');
 };
 
-// STABLE word matching - consistent tolerances based on word length
+// VERY LENIENT word matching - prioritize student confidence over strict accuracy
 const isWordMatch = (spoken: string, expected: string): boolean => {
   const normalizedSpoken = normalizeWord(spoken);
   const normalizedExpected = normalizeWord(expected);
@@ -102,9 +102,9 @@ const isWordMatch = (spoken: string, expected: string): boolean => {
   if (!normalizedSpoken) return true;
   if (!normalizedExpected) return false;
   
-  // SHORT WORDS (1-3 chars): Correct if first letter matches
+  // SHORT WORDS (1-3 chars): Always correct (too easy to mishear)
   if (normalizedExpected.length <= 3) {
-    return normalizedSpoken[0] === normalizedExpected[0];
+    return true;
   }
   
   // Check if spoken starts with expected or vice versa (partial matches are fine)
@@ -112,19 +112,24 @@ const isWordMatch = (spoken: string, expected: string): boolean => {
     return true;
   }
   
-  const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
-  
-  // MEDIUM WORDS (4-6 chars): 60% tolerance
-  if (normalizedExpected.length <= 6) {
-    return distance <= Math.ceil(normalizedExpected.length * 0.6);
+  // Check if spoken contains expected or vice versa
+  if (normalizedSpoken.includes(normalizedExpected) || normalizedExpected.includes(normalizedSpoken)) {
+    return true;
   }
   
-  // LONG WORDS (7+ chars): 50% tolerance
-  return distance <= Math.ceil(normalizedExpected.length * 0.5);
+  const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
+  
+  // MEDIUM WORDS (4-6 chars): 70% tolerance (very lenient)
+  if (normalizedExpected.length <= 6) {
+    return distance <= Math.ceil(normalizedExpected.length * 0.7);
+  }
+  
+  // LONG WORDS (7+ chars): 65% tolerance (very lenient)
+  return distance <= Math.ceil(normalizedExpected.length * 0.65);
 };
 
-// Voice mascot triggers when pronunciation is >25% different
-// INDEPENDENT of word matching - provides pronunciation help
+// Voice mascot triggers when pronunciation is significantly different
+// INDEPENDENT of word matching - provides pronunciation help when really needed
 const shouldSpeakWord = (spoken: string, expected: string): boolean => {
   const normalizedSpoken = normalizeWord(spoken);
   const normalizedExpected = normalizeWord(expected);
@@ -133,13 +138,18 @@ const shouldSpeakWord = (spoken: string, expected: string): boolean => {
   if (normalizedSpoken === normalizedExpected) return false;
   if (!normalizedSpoken || !normalizedExpected) return false;
   
+  // Short words - only speak if completely wrong
+  if (normalizedExpected.length <= 3) {
+    return normalizedSpoken[0] !== normalizedExpected[0];
+  }
+  
   const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
   const maxLen = Math.max(normalizedSpoken.length, normalizedExpected.length);
   const percentDifferent = distance / maxLen;
   
-  // SPEAK if >25% different (covers most mispronunciations)
-  if (percentDifferent > 0.25) {
-    console.log('🔊 VOICE MASCOT: >25% different, speaking:', expected, '(said:', spoken, ', diff:', Math.round(percentDifferent * 100), '%)');
+  // SPEAK if >40% different (only for major mispronunciations)
+  if (percentDifferent > 0.40) {
+    console.log('🔊 VOICE MASCOT: >40% different, speaking:', expected, '(said:', spoken, ', diff:', Math.round(percentDifferent * 100), '%)');
     return true;
   }
   
@@ -459,9 +469,10 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
         console.log('🔊 VOICE MASCOT PLAYING:', finalExpectedWord);
         // DEBUG toast to confirm voice is triggering
         toast({ title: `🔊 Saying: ${finalExpectedWord}`, description: `(heard: ${pending.word})`, duration: 2000 });
-        // Play pronunciation - doesn't block word tracking
+        // Play pronunciation - use clean word (not normalized - keep case for better pronunciation)
+        const cleanWord = finalExpectedWord.replace(/[^a-zA-Z]/g, '');
         setTimeout(() => {
-          playCorrectPronunciation(normalizeWord(finalExpectedWord));
+          playCorrectPronunciation(cleanWord);
         }, 50);
       }
       
@@ -523,8 +534,9 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
             console.log('🔊 VOICE (final):', expectedWord);
             // DEBUG toast to confirm voice is triggering
             toast({ title: `🔊 Saying: ${expectedWord}`, description: `(heard: ${spokenWord})`, duration: 2000 });
+            const cleanWord = expectedWord.replace(/[^a-zA-Z]/g, '');
             setTimeout(() => {
-              playCorrectPronunciation(normalizeWord(expectedWord));
+              playCorrectPronunciation(cleanWord);
             }, 100);
           }
         }
@@ -716,23 +728,42 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
     });
   }, [wordReadings, passageText, assignmentId, onComplete, toast, words, realtimeWordStatus, totalXpEarned]);
 
+  // Click handler to hear word pronunciation
+  const handleWordClick = (word: string) => {
+    // Clean the word (remove punctuation for pronunciation)
+    const cleanWord = word.replace(/[^a-zA-Z]/g, '');
+    if (cleanWord) {
+      toast({
+        title: `🔊 ${cleanWord}`,
+        description: 'Tap any word to hear it!',
+        duration: 1500,
+      });
+      playCorrectPronunciation(cleanWord);
+    }
+  };
+
   const renderPassage = () => {
     return words.map((word, idx) => {
       const status = realtimeWordStatus.get(idx) || 'pending';
-      let className = 'px-2 py-1 rounded-lg transition-all duration-200 inline-block text-lg mr-1 mb-1 ';
+      let className = 'px-2 py-1 rounded-lg transition-all duration-200 inline-block text-lg mr-1 mb-1 cursor-pointer select-none ';
       
       if (status === 'correct') {
-        className += 'bg-gradient-to-br from-green-400 to-green-600 text-white shadow-lg shadow-green-500/50 scale-105';
+        className += 'bg-gradient-to-br from-green-400 to-green-600 text-white shadow-lg shadow-green-500/50 scale-105 hover:scale-110';
       } else if (status === 'incorrect') {
-        className += 'bg-gradient-to-br from-red-400 to-red-600 text-white shadow-lg shadow-red-500/50 scale-105';
+        className += 'bg-gradient-to-br from-red-400 to-red-600 text-white shadow-lg shadow-red-500/50 scale-105 hover:scale-110';
       } else if (status === 'current' || idx === realtimeWordIndex) {
-        className += 'bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-400 text-white font-bold ring-4 ring-primary ring-offset-2 animate-pulse scale-110 shadow-2xl shadow-yellow-500/50';
+        className += 'bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-400 text-white font-bold ring-4 ring-primary ring-offset-2 animate-pulse scale-110 shadow-2xl shadow-yellow-500/50 hover:scale-115';
       } else {
-        className += 'text-muted-foreground hover:text-foreground bg-muted/30';
+        className += 'text-muted-foreground hover:text-foreground hover:bg-primary/10 bg-muted/30';
       }
 
       return (
-        <span key={idx} className={className}>
+        <span 
+          key={idx} 
+          className={className}
+          onClick={() => handleWordClick(word)}
+          title="Click to hear pronunciation"
+        >
           {word}
         </span>
       );
