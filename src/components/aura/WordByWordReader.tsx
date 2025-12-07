@@ -90,7 +90,7 @@ const normalizeWord = (word: string): string => {
   return word.toLowerCase().replace(/[^a-z0-9]/g, '');
 };
 
-// BALANCED word matching - fair but catches obvious mispronunciations
+// VERY LENIENT word matching - prioritize student confidence over strict accuracy
 const isWordMatch = (spoken: string, expected: string): boolean => {
   const normalizedSpoken = normalizeWord(spoken);
   const normalizedExpected = normalizeWord(expected);
@@ -98,25 +98,34 @@ const isWordMatch = (spoken: string, expected: string): boolean => {
   // Exact match - definitely correct
   if (normalizedSpoken === normalizedExpected) return true;
   
-  // Empty check
-  if (!normalizedSpoken) return false; // No speech = wrong
+  // Empty check - if no speech detected, benefit of doubt
+  if (!normalizedSpoken) return true;
   if (!normalizedExpected) return false;
   
+  // SHORT WORDS (1-3 chars): Always correct (too easy to mishear)
+  if (normalizedExpected.length <= 3) {
+    return true;
+  }
+  
+  // Check if spoken starts with expected or vice versa (partial matches are fine)
+  if (normalizedSpoken.startsWith(normalizedExpected) || normalizedExpected.startsWith(normalizedSpoken)) {
+    return true;
+  }
+  
+  // Check if spoken contains expected or vice versa
+  if (normalizedSpoken.includes(normalizedExpected) || normalizedExpected.includes(normalizedSpoken)) {
+    return true;
+  }
+  
   const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
-  const len = normalizedExpected.length;
   
-  // SHORT WORDS (1-3 chars): Must match first letter at minimum
-  if (len <= 3) {
-    return normalizedSpoken[0] === normalizedExpected[0] && distance <= 1;
+  // MEDIUM WORDS (4-6 chars): 70% tolerance (very lenient)
+  if (normalizedExpected.length <= 6) {
+    return distance <= Math.ceil(normalizedExpected.length * 0.7);
   }
   
-  // MEDIUM WORDS (4-6 chars): Allow 1-2 errors (50% tolerance)
-  if (len <= 6) {
-    return distance <= Math.ceil(len * 0.5);
-  }
-  
-  // LONG WORDS (7+ chars): Allow ~45% tolerance
-  return distance <= Math.ceil(len * 0.45);
+  // LONG WORDS (7+ chars): 65% tolerance (very lenient)
+  return distance <= Math.ceil(normalizedExpected.length * 0.65);
 };
 
 // Voice mascot triggers when pronunciation is significantly different
