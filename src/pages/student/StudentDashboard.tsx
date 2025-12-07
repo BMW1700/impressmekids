@@ -131,6 +131,7 @@ const StudentDashboard = () => {
           activeSection={activeSection} 
           onSectionChange={setActiveSection}
           onNavigateToGames={() => navigate('/games')}
+          onNavigateToAuraReading={() => navigate('/student/aura-practice')}
         />
         <main className="flex-1 overflow-y-auto">
           <div className="container mx-auto px-4 py-8">{renderSection()}</div>
