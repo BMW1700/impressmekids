@@ -79,10 +79,6 @@ export const playCorrectPronunciation = (word: string, retryCount = 0) => {
 
   if (!voicesLoaded) {
     console.error('🔊 FAILED: Voices never loaded after 8 retries');
-    // Show user-visible error
-    if (typeof window !== 'undefined' && (window as any).__showVoiceError) {
-      (window as any).__showVoiceError();
-    }
     return;
   }
 
@@ -91,39 +87,39 @@ export const playCorrectPronunciation = (word: string, retryCount = 0) => {
     window.speechSynthesis.resume();
   }
 
-  // Cancel any pending speech first
-  window.speechSynthesis.cancel();
+  // DON'T cancel - this causes the "canceled" error!
+  // Instead, just speak directly
+  const utterance = new SpeechSynthesisUtterance(word);
+  utterance.rate = 0.8; // Slightly slower for clarity
+  utterance.pitch = 1.1; // Slightly higher pitch
+  utterance.volume = 1.0;
+  utterance.lang = 'en-US';
   
-  // Longer delay after cancel to ensure it completes (Chrome bug workaround)
-  setTimeout(() => {
-    const utterance = new SpeechSynthesisUtterance(word);
-    utterance.rate = 0.8; // Slightly slower for clarity
-    utterance.pitch = 1.1; // Slightly higher pitch
-    utterance.volume = 1.0;
-    utterance.lang = 'en-US';
-    
-    if (preferredVoice) {
-      utterance.voice = preferredVoice;
+  if (preferredVoice) {
+    utterance.voice = preferredVoice;
+  }
+  
+  // Add event listeners for debugging
+  utterance.onstart = () => console.log('🔊 Speech STARTED:', word);
+  utterance.onend = () => console.log('🔊 Speech ENDED:', word);
+  utterance.onerror = (e) => {
+    console.error('🔊 Speech ERROR:', word, e.error);
+    // If canceled, retry once after a delay
+    if (e.error === 'canceled' && retryCount < 2) {
+      console.log('🔊 Retrying after cancel...');
+      setTimeout(() => {
+        const retryUtterance = new SpeechSynthesisUtterance(word);
+        retryUtterance.rate = 0.8;
+        retryUtterance.pitch = 1.1;
+        retryUtterance.volume = 1.0;
+        retryUtterance.lang = 'en-US';
+        if (preferredVoice) retryUtterance.voice = preferredVoice;
+        window.speechSynthesis.speak(retryUtterance);
+      }, 200);
     }
-    
-    // Add event listeners for debugging
-    utterance.onstart = () => console.log('🔊 Speech STARTED:', word);
-    utterance.onend = () => console.log('🔊 Speech ENDED:', word);
-    utterance.onerror = (e) => {
-      console.error('🔊 Speech ERROR:', word, e.error);
-      // If error is "not-allowed", speech wasn't unlocked
-      if (e.error === 'not-allowed') {
-        console.warn('🔊 Speech blocked - needs user gesture to unlock');
-        speechUnlocked = false;
-        // Show user-visible error
-        if (typeof window !== 'undefined' && (window as any).__showVoiceError) {
-          (window as any).__showVoiceError();
-        }
-      }
-    };
+  };
 
-    window.speechSynthesis.speak(utterance);
-  }, 100);
+  window.speechSynthesis.speak(utterance);
 };
 
 /**
