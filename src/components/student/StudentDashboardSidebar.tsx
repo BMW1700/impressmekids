@@ -1,4 +1,4 @@
-import { Home, Calendar, BookOpen, Users, Bell, GraduationCap, FolderOpen, User, Gamepad2, Shield, Sparkles } from "lucide-react";
+import { Home, Calendar, BookOpen, Users, Bell, GraduationCap, FolderOpen, User, Gamepad2, Shield, Sparkles, BookOpenCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
@@ -6,6 +6,7 @@ interface StudentDashboardSidebarProps {
   activeSection: string;
   onSectionChange: (section: string) => void;
   onNavigateToGames?: () => void;
+  onNavigateToAuraReading?: () => void;
 }
 
 const sections = [
@@ -15,10 +16,11 @@ const sections = [
   { id: "clubs", label: "Clubs & Organizations", icon: Users, color: "from-pink-500 to-rose-500" },
   { id: "calendar", label: "Calendar", icon: Calendar, color: "from-amber-500 to-orange-500" },
   { id: "announcements", label: "Announcements", icon: Bell, color: "from-red-500 to-pink-500" },
-  { id: "safety", label: "Safety", icon: Shield, color: "from-green-500 to-emerald-500" },
   { id: "study-games", label: "Study Games", icon: Gamepad2, isExternal: true, color: "from-indigo-500 to-violet-500" },
+  { id: "aura-reading", label: "Aura Reading", icon: BookOpenCheck, isExternal: true, color: "from-amber-500 to-yellow-500" },
   { id: "gradebook", label: "Gradebook", icon: GraduationCap, color: "from-cyan-500 to-blue-500" },
   { id: "directory", label: "Directory", icon: FolderOpen, color: "from-slate-500 to-gray-600" },
+  { id: "safety", label: "Safety", icon: Shield, color: "from-green-500 to-emerald-500" },
   { id: "account", label: "Account", icon: User, color: "from-purple-500 to-indigo-500" },
 ];
 
@@ -26,6 +28,7 @@ export const StudentDashboardSidebar = ({
   activeSection,
   onSectionChange,
   onNavigateToGames,
+  onNavigateToAuraReading,
 }: StudentDashboardSidebarProps) => {
   return (
     <aside className="w-72 border-r border-border/50 bg-gradient-to-b from-background via-background to-muted/20 h-full relative overflow-hidden">
@@ -70,6 +73,8 @@ export const StudentDashboardSidebar = ({
                 onClick={() => {
                   if (section.id === 'study-games' && onNavigateToGames) {
                     onNavigateToGames();
+                  } else if (section.id === 'aura-reading' && onNavigateToAuraReading) {
+                    onNavigateToAuraReading();
                   } else {
                     onSectionChange(section.id);
                   }
