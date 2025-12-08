@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
-import { QrCode } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { QrCode, Download, RefreshCw } from "lucide-react";
+import QRCode from "qrcode";
 
 interface StudentQRCodeProps {
   studentId: string;
@@ -10,48 +12,61 @@ interface StudentQRCodeProps {
 
 export function StudentQRCode({ studentId, studentName, parentId }: StudentQRCodeProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [expiresAt, setExpiresAt] = useState<Date | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     generateQRCode();
   }, [studentId, parentId]);
 
   const generateQRCode = async () => {
-    // Generate verification hash (simple implementation - in production use proper crypto)
-    const data = `${studentId}:${parentId}:${Date.now()}`;
-    const hash = btoa(data); // Base64 encode for simplicity
+    setIsGenerating(true);
+    try {
+      // Create expiration timestamp (24 hours from now)
+      const expiration = new Date();
+      expiration.setHours(expiration.getHours() + 24);
+      setExpiresAt(expiration);
 
-    const qrData = JSON.stringify({
-      student_id: studentId,
-      parent_id: parentId,
-      verification_hash: hash,
-      timestamp: Date.now()
-    });
+      // Generate verification data with timestamp for security
+      const qrData = JSON.stringify({
+        student_id: studentId,
+        parent_id: parentId,
+        timestamp: Date.now(),
+        expires_at: expiration.getTime()
+      });
 
-    // Use QRCode library to generate QR code
-    // In a real implementation, you'd use a library like 'qrcode' npm package
-    // For this demo, we'll create a simple representation
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+      // Generate real QR code using qrcode library
+      const dataUrl = await QRCode.toDataURL(qrData, {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#ffffff'
+        },
+        errorCorrectionLevel: 'H' // High error correction for better scanning
+      });
 
-    canvas.width = 300;
-    canvas.height = 300;
-
-    // Simple QR-like pattern (in production, use actual QR library)
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, 300, 300);
-    
-    ctx.fillStyle = '#000000';
-    const cellSize = 10;
-    for (let i = 0; i < 30; i++) {
-      for (let j = 0; j < 30; j++) {
-        if (Math.random() > 0.5) {
-          ctx.fillRect(i * cellSize, j * cellSize, cellSize, cellSize);
-        }
-      }
+      setQrDataUrl(dataUrl);
+    } catch (error) {
+      console.error('Error generating QR code:', error);
+    } finally {
+      setIsGenerating(false);
     }
+  };
 
-    setQrDataUrl(canvas.toDataURL());
+  const downloadQRCode = () => {
+    if (!qrDataUrl) return;
+    
+    const link = document.createElement('a');
+    link.download = `pickup-qr-${studentName.replace(/\s+/g, '-')}.png`;
+    link.href = qrDataUrl;
+    link.click();
+  };
+
+  const formatExpirationTime = () => {
+    if (!expiresAt) return '';
+    return expiresAt.toLocaleString();
   };
 
   return (
@@ -62,18 +77,49 @@ export function StudentQRCode({ studentId, studentName, parentId }: StudentQRCod
       </div>
       
       <div className="mb-4">
-        <p className="text-sm text-muted-foreground mb-2">For: {studentName}</p>
+        <p className="text-sm text-muted-foreground mb-2">For: <span className="font-medium text-foreground">{studentName}</span></p>
         <p className="text-xs text-muted-foreground">
           Show this QR code to school staff during emergency reunification
         </p>
       </div>
 
-      {qrDataUrl ? (
-        <div className="bg-white p-4 rounded-lg inline-block border-2 border-muted">
-          <img src={qrDataUrl} alt="Student Pickup QR Code" className="w-64 h-64" />
+      {isGenerating ? (
+        <div className="w-64 h-64 bg-muted animate-pulse rounded-lg mx-auto flex items-center justify-center">
+          <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : qrDataUrl ? (
+        <div className="space-y-4">
+          <div className="bg-white p-4 rounded-lg inline-block border-2 border-muted shadow-sm">
+            <img 
+              src={qrDataUrl} 
+              alt="Student Pickup QR Code" 
+              className="w-64 h-64"
+            />
+          </div>
+          
+          <div className="flex justify-center gap-2">
+            <Button variant="outline" size="sm" onClick={downloadQRCode}>
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </Button>
+            <Button variant="outline" size="sm" onClick={generateQRCode}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
         </div>
       ) : (
-        <div className="w-64 h-64 bg-muted animate-pulse rounded-lg mx-auto"></div>
+        <div className="w-64 h-64 bg-muted rounded-lg mx-auto flex items-center justify-center">
+          <p className="text-muted-foreground">Failed to generate QR code</p>
+        </div>
+      )}
+
+      {expiresAt && (
+        <div className="mt-4 p-3 bg-muted/50 border border-border rounded-lg">
+          <p className="text-xs text-muted-foreground">
+            Valid until: <span className="font-medium">{formatExpirationTime()}</span>
+          </p>
+        </div>
       )}
 
       <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
