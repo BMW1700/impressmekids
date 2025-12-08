@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { QrCode, CheckCircle, AlertTriangle } from "lucide-react";
+import { QrCode, CheckCircle, Camera, CameraOff, AlertTriangle } from "lucide-react";
+import { Html5Qrcode } from "html5-qrcode";
 import {
   Dialog,
   DialogContent,
@@ -27,16 +28,79 @@ export function ReunificationScanner({ reunificationEventId, onPickupComplete }:
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pickupLocation, setPickupLocation] = useState("");
   const [pickupNotes, setPickupNotes] = useState("");
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerContainerId = "qr-reader";
 
-  const handleManualEntry = () => {
-    // In production, this would open a camera scanner
-    // For demo, we'll show a manual entry form
+  useEffect(() => {
+    return () => {
+      stopScanner();
+    };
+  }, []);
+
+  const startScanner = async () => {
     setScanning(true);
+    setCameraError(null);
+
+    try {
+      // Small delay to ensure DOM element is ready
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const html5QrCode = new Html5Qrcode(scannerContainerId);
+      scannerRef.current = html5QrCode;
+
+      await html5QrCode.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0
+        },
+        onScanSuccess,
+        onScanFailure
+      );
+    } catch (err: any) {
+      console.error("Error starting scanner:", err);
+      setCameraError(err.message || "Failed to access camera. Please ensure camera permissions are granted.");
+      setScanning(false);
+    }
+  };
+
+  const stopScanner = async () => {
+    if (scannerRef.current) {
+      try {
+        await scannerRef.current.stop();
+        scannerRef.current = null;
+      } catch (err) {
+        console.error("Error stopping scanner:", err);
+      }
+    }
+    setScanning(false);
+  };
+
+  const onScanSuccess = async (decodedText: string) => {
+    // Stop scanner immediately to prevent multiple scans
+    await stopScanner();
+    verifyQRCode(decodedText);
+  };
+
+  const onScanFailure = (error: string) => {
+    // This fires frequently when no QR code is detected - ignore
   };
 
   const verifyQRCode = async (qrData: string) => {
     try {
       const data = JSON.parse(qrData);
+
+      // Check if QR code has expired
+      if (data.expires_at && Date.now() > data.expires_at) {
+        toast({
+          title: "QR Code Expired",
+          description: "This QR code has expired. Please ask the guardian to generate a new one.",
+          variant: "destructive",
+        });
+        return;
+      }
       
       // Verify parent-student link
       const { data: link, error } = await supabase
@@ -56,33 +120,27 @@ export function ReunificationScanner({ reunificationEventId, onPickupComplete }:
         return;
       }
 
-      // Get student and parent details separately
-      const { data: student } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', data.student_id)
-        .single();
-
-      const { data: parent } = await supabase
-        .from('parent_accounts')
-        .select('full_name')
-        .eq('id', data.parent_id)
-        .single();
+      // Get student and parent details
+      const [studentRes, parentRes] = await Promise.all([
+        supabase.from('profiles').select('full_name').eq('id', data.student_id).single(),
+        supabase.from('parent_accounts').select('full_name').eq('id', data.parent_id).single()
+      ]);
 
       setVerificationData({
         student_id: data.student_id,
         parent_id: data.parent_id,
-        student_name: student?.full_name || 'Unknown Student',
-        parent_name: parent?.full_name || 'Unknown Parent',
-        relationship: 'Parent/Guardian'
+        student_name: studentRes.data?.full_name || 'Unknown Student',
+        parent_name: parentRes.data?.full_name || 'Unknown Parent',
+        relationship: 'Parent/Guardian',
+        scanned_at: new Date().toISOString()
       });
 
       setShowConfirmDialog(true);
-      setScanning(false);
     } catch (error) {
+      console.error("QR verification error:", error);
       toast({
         title: "Invalid QR Code",
-        description: "Could not parse QR code data",
+        description: "Could not parse QR code data. Please try again.",
         variant: "destructive",
       });
     }
@@ -140,32 +198,42 @@ export function ReunificationScanner({ reunificationEventId, onPickupComplete }:
           </p>
 
           {!scanning ? (
-            <Button onClick={handleManualEntry} size="lg">
-              <QrCode className="mr-2 h-5 w-5" />
-              Start Scanner
-            </Button>
+            <div className="space-y-4">
+              <Button onClick={startScanner} size="lg">
+                <Camera className="mr-2 h-5 w-5" />
+                Start Camera Scanner
+              </Button>
+              
+              {cameraError && (
+                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  <div className="flex items-center gap-2 text-destructive mb-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span className="font-medium">Camera Error</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{cameraError}</p>
+                </div>
+              )}
+            </div>
           ) : (
             <div className="space-y-4">
-              <div className="p-8 border-2 border-dashed border-primary rounded-lg bg-primary/5">
-                <p className="text-sm text-muted-foreground mb-4">
-                  Camera scanner would appear here in production
-                </p>
-                <p className="text-xs text-muted-foreground mb-4">
-                  For demo: Enter QR data manually
-                </p>
-                <Textarea
-                  placeholder='{"student_id":"...","parent_id":"...","verification_hash":"..."}'
-                  className="font-mono text-xs"
-                  rows={4}
-                  onChange={(e) => {
-                    if (e.target.value.trim()) {
-                      verifyQRCode(e.target.value);
-                    }
-                  }}
+              <div className="relative mx-auto max-w-[300px]">
+                <div 
+                  id={scannerContainerId} 
+                  className="rounded-lg overflow-hidden border-2 border-primary"
                 />
+                <div className="absolute inset-0 pointer-events-none border-4 border-primary/30 rounded-lg">
+                  <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-lg" />
+                  <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-lg" />
+                  <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-lg" />
+                  <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-lg" />
+                </div>
               </div>
-              <Button variant="outline" onClick={() => setScanning(false)}>
-                Cancel
+              <p className="text-sm text-muted-foreground animate-pulse">
+                Point camera at the QR code...
+              </p>
+              <Button variant="outline" onClick={stopScanner}>
+                <CameraOff className="mr-2 h-4 w-4" />
+                Stop Scanner
               </Button>
             </div>
           )}
