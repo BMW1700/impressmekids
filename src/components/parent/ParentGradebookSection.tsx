@@ -160,7 +160,7 @@ export const ParentGradebookSection = ({ studentId, studentName }: ParentGradebo
                         <div>
                           <p className="font-medium">{assignment.title}</p>
                           <p className="text-sm text-muted-foreground">
-                            Due {format(new Date(assignment.dueDate), "MMM d, yyyy")}
+                            {assignment.dueDate ? `Due ${format(new Date(assignment.dueDate), "MMM d, yyyy")}` : "No due date"}
                           </p>
                         </div>
                         {getStatusBadge(assignment.status)}
@@ -253,7 +253,7 @@ export const ParentGradebookSection = ({ studentId, studentName }: ParentGradebo
                   <div className="flex-1">
                     <p className="font-semibold">{assignment.title}</p>
                     <p className="text-sm text-muted-foreground">
-                      Due: {format(new Date(assignment.dueDate), "MMM d, yyyy")}
+                      {assignment.dueDate ? `Due: ${format(new Date(assignment.dueDate), "MMM d, yyyy")}` : "No due date"}
                     </p>
                   </div>
                   <div className="flex items-center gap-4">
@@ -291,7 +291,7 @@ export const ParentGradebookSection = ({ studentId, studentName }: ParentGradebo
               <div>
                 <h3 className="font-semibold text-lg">{selectedAssignment.title}</h3>
                 <p className="text-sm text-muted-foreground">
-                  Due: {format(new Date(selectedAssignment.dueDate), "MMMM d, yyyy")}
+                  {selectedAssignment.dueDate ? `Due: ${format(new Date(selectedAssignment.dueDate), "MMMM d, yyyy")}` : "No due date"}
                 </p>
               </div>
 
