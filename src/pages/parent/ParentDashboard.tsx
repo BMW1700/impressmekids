@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { Loader2, UserPlus, Calendar as CalendarIcon, Bell, Shield, ChevronRight } from "lucide-react";
+import { Loader2, UserPlus, Calendar as CalendarIcon, Bell, Shield, ChevronRight, GraduationCap } from "lucide-react";
 import { ParentNotificationBell } from "@/components/parent/ParentNotificationBell";
 import { StudentLookupModal } from "@/components/parent/StudentLookupModal";
 import { ParentOutgoingRequestsList } from "@/components/parent/ParentOutgoingRequestsList";
@@ -12,6 +12,7 @@ import { ParentRecentActivity } from "@/components/parent/ParentRecentActivity";
 import { ParentUpcomingAssignments } from "@/components/parent/ParentUpcomingAssignments";
 import { ParentAnnouncementsFeed } from "@/components/parent/ParentAnnouncementsFeed";
 import { ParentQuickInsights } from "@/components/parent/ParentQuickInsights";
+import { ParentGradebookSection } from "@/components/parent/ParentGradebookSection";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CalendarWidget } from "@/components/calendar/CalendarWidget";
@@ -167,52 +168,65 @@ const ParentDashboard = () => {
 
         {/* Main Dashboard Content */}
         {firstChildId && (
-          <div className="space-y-8">
-            {/* Student Overview */}
-            <ParentStudentOverview studentId={firstChildId} studentName={firstChildName} />
+          <Tabs defaultValue="overview" className="space-y-6">
+            <TabsList className="bg-card/80 backdrop-blur-sm shadow-sm">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="gradebook" className="gap-2">
+                <GraduationCap className="h-4 w-4" /> Gradebook
+              </TabsTrigger>
+            </TabsList>
 
-            {/* Multi-child tabs if needed */}
-            {approvedChildren && approvedChildren.length > 1 && (
-              <Tabs defaultValue={firstChildId} className="space-y-4">
-                <TabsList>
-                  {approvedChildren.map((child) => (
-                    <TabsTrigger key={child.student_id} value={child.student_id}>
-                      {child.full_name || "Student"}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
-            )}
+            <TabsContent value="overview" className="space-y-8">
+              {/* Student Overview */}
+              <ParentStudentOverview studentId={firstChildId} studentName={firstChildName} />
 
-            {/* Insights + Activity Row */}
-            <div className="grid lg:grid-cols-2 gap-6">
-              <ParentQuickInsights studentId={firstChildId} studentName={firstChildName} />
-              <ParentRecentActivity studentId={firstChildId} />
-            </div>
+              {/* Multi-child tabs if needed */}
+              {approvedChildren && approvedChildren.length > 1 && (
+                <Tabs defaultValue={firstChildId} className="space-y-4">
+                  <TabsList>
+                    {approvedChildren.map((child) => (
+                      <TabsTrigger key={child.student_id} value={child.student_id}>
+                        {child.full_name || "Student"}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </Tabs>
+              )}
 
-            {/* Assignments + Announcements Row */}
-            <div className="grid lg:grid-cols-2 gap-6">
-              <ParentUpcomingAssignments studentId={firstChildId} />
-              <ParentAnnouncementsFeed studentId={firstChildId} />
-            </div>
+              {/* Insights + Activity Row */}
+              <div className="grid lg:grid-cols-2 gap-6">
+                <ParentQuickInsights studentId={firstChildId} studentName={firstChildName} />
+                <ParentRecentActivity studentId={firstChildId} />
+              </div>
 
-            {/* Calendar Widget */}
-            {session?.user?.id && (
-              <CalendarWidget userId={session.user.id} userRole="parent" childId={firstChildId} />
-            )}
+              {/* Assignments + Announcements Row */}
+              <div className="grid lg:grid-cols-2 gap-6">
+                <ParentUpcomingAssignments studentId={firstChildId} />
+                <ParentAnnouncementsFeed studentId={firstChildId} />
+              </div>
 
-            {/* View Child Details Button */}
-            <div className="flex justify-center">
-              <Button 
-                variant="outline" 
-                size="lg"
-                onClick={() => navigate(`/parent/child/${firstChildId}`)}
-                className="gap-2 bg-card/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all"
-              >
-                View Full Student Profile <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+              {/* Calendar Widget */}
+              {session?.user?.id && (
+                <CalendarWidget userId={session.user.id} userRole="parent" childId={firstChildId} />
+              )}
+
+              {/* View Child Details Button */}
+              <div className="flex justify-center">
+                <Button 
+                  variant="outline" 
+                  size="lg"
+                  onClick={() => navigate(`/parent/child/${firstChildId}`)}
+                  className="gap-2 bg-card/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all"
+                >
+                  View Full Student Profile <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="gradebook">
+              <ParentGradebookSection studentId={firstChildId} studentName={firstChildName} />
+            </TabsContent>
+          </Tabs>
         )}
 
         {/* Access Requests */}
