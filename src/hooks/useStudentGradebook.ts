@@ -81,6 +81,7 @@ export const useStudentGradebook = (studentId: string | undefined) => {
             classroom_id,
             assignment_submissions (
               id,
+              student_id,
               grade,
               status,
               submitted_at,
@@ -105,9 +106,12 @@ export const useStudentGradebook = (studentId: string | undefined) => {
         const homeworkAssignments: any[] = [];
 
         const assignmentsList = (assignments || []).map((assignment) => {
-          const submission = assignment.assignment_submissions.find(
-            (sub: any) => sub
+          // Filter to only this student's submissions, then prioritize graded ones
+          const studentSubmissions = assignment.assignment_submissions.filter(
+            (sub: any) => sub.student_id === studentId
           );
+          const submission = studentSubmissions.find((sub: any) => sub.grade !== null) 
+            || studentSubmissions[0];
 
           let status: "Graded" | "Submitted" | "Incomplete" | "Past Due" | "Submitted Late" = "Incomplete";
           
