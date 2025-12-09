@@ -4993,8 +4993,8 @@ export type Database = {
         | {
             Args: {
               p_answer_text: string
+              p_match_event_id: string
               p_match_id: string
-              p_seq: number
               p_tournament_player_id: string
             }
             Returns: Json
@@ -5002,8 +5002,8 @@ export type Database = {
         | {
             Args: {
               p_answer_text: string
-              p_match_event_id: string
               p_match_id: string
+              p_seq: number
               p_tournament_player_id: string
             }
             Returns: Json
