@@ -3,16 +3,20 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { Loader2, UserPlus, Calendar as CalendarIcon, BookOpen, Bell, TrendingUp, Trophy } from "lucide-react";
+import { Loader2, UserPlus, Calendar as CalendarIcon, Bell, Shield, ChevronRight } from "lucide-react";
 import { ParentNotificationBell } from "@/components/parent/ParentNotificationBell";
 import { StudentLookupModal } from "@/components/parent/StudentLookupModal";
 import { ParentOutgoingRequestsList } from "@/components/parent/ParentOutgoingRequestsList";
+import { ParentStudentOverview } from "@/components/parent/ParentStudentOverview";
+import { ParentRecentActivity } from "@/components/parent/ParentRecentActivity";
+import { ParentUpcomingAssignments } from "@/components/parent/ParentUpcomingAssignments";
+import { ParentAnnouncementsFeed } from "@/components/parent/ParentAnnouncementsFeed";
+import { ParentQuickInsights } from "@/components/parent/ParentQuickInsights";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { CalendarWidget } from "@/components/calendar/CalendarWidget";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { Directory } from "@/components/Directory";
-import { ParentBehaviorSummary } from "@/components/behavior/ParentBehaviorSummary";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const ParentDashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -22,12 +26,11 @@ const ParentDashboard = () => {
   const queryClient = useQueryClient();
 
   const handleLookupSuccess = () => {
-    console.log("🔄 Invalidating queries after lookup success for parentId:", parentId);
     queryClient.invalidateQueries({ queryKey: ["parent-student-links"] });
     queryClient.invalidateQueries({ queryKey: ["parent-access-requests", parentId] });
+    queryClient.invalidateQueries({ queryKey: ["parent-children", parentId] });
   };
 
-  // Get current session
   const { data: session } = useQuery({
     queryKey: ["session"],
     queryFn: async () => {
@@ -36,7 +39,6 @@ const ParentDashboard = () => {
     },
   });
 
-  // Get approved children with classroom IDs
   const { data: approvedChildren } = useQuery({
     queryKey: ["parent-children", parentId],
     queryFn: async () => {
@@ -67,72 +69,33 @@ const ParentDashboard = () => {
   const checkAuth = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        navigate("/auth");
-        return;
-      }
+      if (!session) { navigate("/auth"); return; }
 
-      // Verify user is actually a parent
-      const { data: profileData } = await supabase
-        .rpc('get_user_profile', { _user_id: session.user.id });
-
-      if (!profileData || profileData.length === 0) {
-        console.error("Profile not found");
-        navigate("/auth");
-        return;
-      }
+      const { data: profileData } = await supabase.rpc('get_user_profile', { _user_id: session.user.id });
+      if (!profileData || profileData.length === 0) { navigate("/auth"); return; }
 
       const userRole = profileData[0].role;
-      
-      // Redirect non-parents to their correct dashboard
       if (userRole !== 'parent') {
-        if (userRole === 'teacher') {
-          navigate('/teacher/dashboard');
-        } else if (userRole === 'district_admin') {
-          navigate('/district/dashboard');
-        } else {
-          navigate('/student/dashboard');
-        }
+        if (userRole === 'teacher') navigate('/teacher/dashboard');
+        else if (userRole === 'district_admin') navigate('/district/dashboard');
+        else navigate('/student/dashboard');
         return;
       }
 
-      // Check verification status (parents must be verified to access dashboard)
       const { data: profileDetails } = await supabase
-        .from('profiles')
-        .select('is_verified')
-        .eq('id', session.user.id)
-        .single();
+        .from('profiles').select('is_verified').eq('id', session.user.id).single();
+      if (!profileDetails?.is_verified) { navigate('/pending-verification'); return; }
 
-      if (!profileDetails?.is_verified) {
-        navigate('/pending-verification');
-        return;
-      }
-
-      // Use security definer function to get parent account
-      const { data: parentAccount } = await supabase
-        .rpc("get_parent_account", { _user_id: session.user.id });
-
+      const { data: parentAccount } = await supabase.rpc("get_parent_account", { _user_id: session.user.id });
       if (!parentAccount || parentAccount.length === 0) {
-        // Create parent account if it doesn't exist
         const { data: newParent } = await supabase
           .from("parent_accounts")
-          .insert({
-            user_id: session.user.id,
-            email: session.user.email || "",
-            full_name: session.user.user_metadata?.full_name || "Parent"
-          })
-          .select()
-          .single();
-
-        if (newParent) {
-          setParentId(newParent.id);
-        }
+          .insert({ user_id: session.user.id, email: session.user.email || "", full_name: session.user.user_metadata?.full_name || "Parent" })
+          .select().single();
+        if (newParent) setParentId(newParent.id);
       } else {
-        console.log("✅ Parent account found:", parentAccount[0].id);
         setParentId(parentAccount[0].id);
       }
-
       setLoading(false);
     } catch (error) {
       console.error("Error in checkAuth:", error);
@@ -140,67 +103,54 @@ const ParentDashboard = () => {
     }
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    navigate('/');
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  console.log("🔗 ParentDashboard rendering with parentId:", parentId);
-
   const firstChild = approvedChildren?.[0];
   const firstChildId = firstChild?.student_id;
-  const firstChildClassroomId = (firstChild?.profiles as any)?.classroom_students?.[0]?.classroom_id;
+  const firstChildName = (firstChild?.profiles as any)?.full_name || "Student";
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-primary/5">
-      <Header showAuthButtons={false} onSignOut={handleSignOut}>
+      <Header>
         {parentId && <ParentNotificationBell parentId={parentId} />}
       </Header>
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
+      
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
+        {/* Header */}
         <div className="mb-8 flex items-start justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              Welcome, Parent! 👋
+              Parent Dashboard
             </h1>
-            <p className="text-muted-foreground mt-1">Monitor and support your children's learning journey</p>
+            <p className="text-muted-foreground mt-1">Stay connected with your child's education</p>
           </div>
           <div className="flex gap-2 flex-wrap">
-            {parentId && firstChildId && (
+            {firstChildId && (
               <>
-                <Button variant="outline" onClick={() => navigate("/parent/calendar")} className="gap-2 shadow-sm">
-                  <CalendarIcon className="h-4 w-4" />
-                  Calendar
+                <Button variant="outline" onClick={() => navigate("/parent/calendar")} className="gap-2 shadow-sm bg-card/80 backdrop-blur-sm">
+                  <CalendarIcon className="h-4 w-4" /> Calendar
                 </Button>
-                <Button variant="outline" onClick={() => navigate("/parent/safety")} className="gap-2 shadow-sm">
-                  <Bell className="h-4 w-4" />
-                  Safety
+                <Button variant="outline" onClick={() => navigate("/parent/safety")} className="gap-2 shadow-sm bg-card/80 backdrop-blur-sm">
+                  <Shield className="h-4 w-4" /> Safety
                 </Button>
               </>
             )}
-            {parentId && (
-              <>
-                <Button variant="outline" onClick={() => navigate("/parent/notification-settings")} className="gap-2 shadow-sm">
-                  <Bell className="h-4 w-4" />
-                  Notifications
-                </Button>
-                <Button onClick={() => setLookupModalOpen(true)} className="gap-2 shadow-sm">
-                  <UserPlus className="h-4 w-4" />
-                  Link Student
-                </Button>
-              </>
-            )}
+            <Button variant="outline" onClick={() => navigate("/parent/notification-settings")} className="gap-2 shadow-sm bg-card/80 backdrop-blur-sm">
+              <Bell className="h-4 w-4" /> Notifications
+            </Button>
+            <Button onClick={() => setLookupModalOpen(true)} className="gap-2 shadow-lg">
+              <UserPlus className="h-4 w-4" /> Link Student
+            </Button>
           </div>
         </div>
 
-        {/* Empty State: No Children Linked Yet */}
+        {/* No Children Linked */}
         {!firstChildId && (
           <Card className="mb-8 border-2 border-dashed shadow-lg bg-card/50 backdrop-blur-sm">
             <CardContent className="pt-6">
@@ -211,182 +161,78 @@ const ParentDashboard = () => {
                 <div>
                   <h3 className="text-2xl font-bold mb-2">Get Started</h3>
                   <p className="text-muted-foreground max-w-md mx-auto">
-                    Link your first student to start monitoring their progress, viewing assignments, and staying connected with their learning.
+                    Link your first student to start monitoring their progress, viewing assignments, and staying connected.
                   </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto text-left">
-                  <div className="flex items-start gap-3 p-4 rounded-lg bg-background/50">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <span className="text-primary font-bold">1</span>
-                    </div>
-                    <div>
-                      <p className="font-semibold text-sm">Click Link Student</p>
-                      <p className="text-xs text-muted-foreground">Find the button above</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-4 rounded-lg bg-background/50">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <span className="text-primary font-bold">2</span>
-                    </div>
-                    <div>
-                      <p className="font-semibold text-sm">Enter Student Code</p>
-                      <p className="text-xs text-muted-foreground">Get it from your child</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-4 rounded-lg bg-background/50">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <span className="text-primary font-bold">3</span>
-                    </div>
-                    <div>
-                      <p className="font-semibold text-sm">Wait for Approval</p>
-                      <p className="text-xs text-muted-foreground">Teacher will review</p>
-                    </div>
-                  </div>
-                </div>
                 <Button onClick={() => setLookupModalOpen(true)} size="lg" className="shadow-md">
-                  <UserPlus className="h-5 w-5 mr-2" />
-                  Link Your First Student
+                  <UserPlus className="h-5 w-5 mr-2" /> Link Your First Student
                 </Button>
               </div>
             </CardContent>
           </Card>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* Behavior Summary */}
-          {firstChildId && firstChildClassroomId ? (
-            <ParentBehaviorSummary studentId={firstChildId} classroomId={firstChildClassroomId} />
-          ) : (
-            <Card className="border shadow-sm bg-card/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Trophy className="h-5 w-5" />
-                  Behavior Summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-center py-12">
-                  <Trophy className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
-                  <p className="text-sm text-muted-foreground">
-                    Link a student to view their behavior tracking and points
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+        {/* Main Dashboard Content */}
+        {firstChildId && (
+          <div className="space-y-8">
+            {/* Student Overview */}
+            <ParentStudentOverview studentId={firstChildId} studentName={firstChildName} />
 
-          {/* Calendar Widget */}
-          {parentId && firstChildId && session?.user?.id ? (
-            <CalendarWidget
-              userId={session.user.id}
-              userRole="parent"
-              childId={firstChildId}
-            />
-          ) : (
-            <Card className="border shadow-sm bg-card/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CalendarIcon className="h-5 w-5" />
-                  Calendar Preview
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-center py-12">
-                  <CalendarIcon className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
-                  <p className="text-sm text-muted-foreground">
-                    Link a student to view their calendar and upcoming assignments
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+            {/* Multi-child tabs if needed */}
+            {approvedChildren && approvedChildren.length > 1 && (
+              <Tabs defaultValue={firstChildId} className="space-y-4">
+                <TabsList>
+                  {approvedChildren.map((child: any) => (
+                    <TabsTrigger key={child.student_id} value={child.student_id}>
+                      {child.profiles?.full_name || "Student"}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            )}
 
-          {/* Quick Actions or Benefits */}
-          {firstChildId ? (
-            <Card className="border shadow-sm bg-card/80 backdrop-blur-sm hover:shadow-md transition-shadow">
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button
-                  variant="outline"
-                  className="w-full justify-start hover:bg-accent/50 transition-colors"
-                  onClick={() => navigate("/parent/calendar")}
-                >
-                  <CalendarIcon className="h-4 w-4 mr-2" />
-                  View Full Calendar
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start hover:bg-accent/50 transition-colors"
-                  onClick={() => navigate("/parent/notification-settings")}
-                >
-                  <Bell className="h-4 w-4 mr-2" />
-                  Manage Notifications
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start hover:bg-accent/50 transition-colors"
-                  onClick={() => setLookupModalOpen(true)}
-                >
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Link Another Student
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="border shadow-sm bg-card/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle>What You'll Get</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <BookOpen className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-semibold">Track Progress</p>
-                    <p className="text-sm text-muted-foreground">Monitor assignments and grades in real-time</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Bell className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-semibold">Stay Informed</p>
-                    <p className="text-sm text-muted-foreground">Get notifications about important events</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <TrendingUp className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-semibold">Support Learning</p>
-                    <p className="text-sm text-muted-foreground">See what your child is working on</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+            {/* Insights + Activity Row */}
+            <div className="grid lg:grid-cols-2 gap-6">
+              <ParentQuickInsights studentId={firstChildId} studentName={firstChildName} />
+              <ParentRecentActivity studentId={firstChildId} />
+            </div>
 
+            {/* Assignments + Announcements Row */}
+            <div className="grid lg:grid-cols-2 gap-6">
+              <ParentUpcomingAssignments studentId={firstChildId} />
+              <ParentAnnouncementsFeed studentId={firstChildId} />
+            </div>
+
+            {/* Calendar Widget */}
+            {session?.user?.id && (
+              <CalendarWidget userId={session.user.id} userRole="parent" childId={firstChildId} />
+            )}
+
+            {/* View Child Details Button */}
+            <div className="flex justify-center">
+              <Button 
+                variant="outline" 
+                size="lg"
+                onClick={() => navigate(`/parent/child/${firstChildId}`)}
+                className="gap-2 bg-card/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all"
+              >
+                View Full Student Profile <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Access Requests */}
         {parentId && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
-              <UserPlus className="h-6 w-6" />
-              My Student Access Requests
+          <div className="mt-8">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <UserPlus className="h-5 w-5" /> My Student Access Requests
             </h2>
             <ParentOutgoingRequestsList parentId={parentId} />
           </div>
         )}
-
-        {/* Directory */}
-        <div className="mb-8">
-          <Directory />
-        </div>
       </main>
+
       <Footer />
 
       {parentId && (

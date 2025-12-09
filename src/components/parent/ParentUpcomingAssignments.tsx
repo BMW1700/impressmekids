@@ -1,0 +1,320 @@
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { 
+  Calendar, 
+  Clock, 
+  AlertTriangle,
+  BookOpen,
+  FileText,
+  Mic
+} from "lucide-react";
+import { format, differenceInDays, isPast, isToday } from "date-fns";
+
+interface ParentUpcomingAssignmentsProps {
+  studentId: string;
+}
+
+export const ParentUpcomingAssignments = ({ studentId }: ParentUpcomingAssignmentsProps) => {
+  const { data: assignments, isLoading } = useQuery({
+    queryKey: ["parent-upcoming-assignments", studentId],
+    queryFn: async () => {
+      // Get student's classrooms
+      const { data: classroomData } = await supabase
+        .from("classroom_students")
+        .select("classroom_id")
+        .eq("student_id", studentId);
+
+      const classroomIds = classroomData?.map((c) => c.classroom_id) || [];
+      if (classroomIds.length === 0) return [];
+
+      // Get assignments
+      const { data, error } = await supabase
+        .from("assignments")
+        .select(`
+          id,
+          title,
+          description,
+          due_date,
+          assignment_type,
+          category,
+          classrooms (
+            name
+          ),
+          assignment_submissions (
+            id,
+            status,
+            submitted_at
+          )
+        `)
+        .in("classroom_id", classroomIds)
+        .eq("is_posted", true)
+        .gte("due_date", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+        .order("due_date", { ascending: true })
+        .limit(20);
+
+      if (error) throw error;
+
+      return data?.map((a: any) => ({
+        ...a,
+        submission: a.assignment_submissions?.find((s: any) => s) || null,
+      }));
+    },
+    enabled: !!studentId,
+  });
+
+  const getAssignmentIcon = (type: string) => {
+    switch (type) {
+      case "reading":
+        return <Mic className="h-4 w-4" />;
+      case "multi_question":
+        return <FileText className="h-4 w-4" />;
+      default:
+        return <BookOpen className="h-4 w-4" />;
+    }
+  };
+
+  const getStatusBadge = (assignment: any) => {
+    const dueDate = new Date(assignment.due_date);
+    const submission = assignment.submission;
+    
+    if (submission?.submitted_at) {
+      return (
+        <Badge className="bg-green-500/10 text-green-700 border-0">
+          Submitted
+        </Badge>
+      );
+    }
+    
+    if (isPast(dueDate) && !isToday(dueDate)) {
+      return (
+        <Badge className="bg-red-500/10 text-red-700 border-0">
+          Past Due
+        </Badge>
+      );
+    }
+    
+    if (isToday(dueDate)) {
+      return (
+        <Badge className="bg-yellow-500/10 text-yellow-700 border-0">
+          Due Today
+        </Badge>
+      );
+    }
+    
+    const daysUntil = differenceInDays(dueDate, new Date());
+    if (daysUntil <= 2) {
+      return (
+        <Badge className="bg-orange-500/10 text-orange-700 border-0">
+          Due Soon
+        </Badge>
+      );
+    }
+    
+    return (
+      <Badge variant="secondary" className="border-0">
+        {daysUntil} days
+      </Badge>
+    );
+  };
+
+  const getUrgencyClass = (assignment: any) => {
+    const dueDate = new Date(assignment.due_date);
+    const submission = assignment.submission;
+    
+    if (submission?.submitted_at) return "";
+    if (isPast(dueDate) && !isToday(dueDate)) return "border-l-4 border-l-red-500";
+    if (isToday(dueDate)) return "border-l-4 border-l-yellow-500";
+    
+    const daysUntil = differenceInDays(dueDate, new Date());
+    if (daysUntil <= 2) return "border-l-4 border-l-orange-500";
+    
+    return "";
+  };
+
+  if (isLoading) {
+    return (
+      <Card className="border-0 bg-card/80 backdrop-blur-sm shadow-[var(--shadow-glass-md)]">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Calendar className="h-5 w-5" />
+            Upcoming Assignments
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex gap-3 animate-pulse p-3 rounded-lg bg-muted/30">
+                <div className="h-10 w-10 rounded-lg bg-muted" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-muted rounded w-3/4" />
+                  <div className="h-3 bg-muted rounded w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Separate past due, due today, and upcoming
+  const pastDue = assignments?.filter((a: any) => {
+    const dueDate = new Date(a.due_date);
+    return isPast(dueDate) && !isToday(dueDate) && !a.submission?.submitted_at;
+  }) || [];
+
+  const dueToday = assignments?.filter((a: any) => {
+    const dueDate = new Date(a.due_date);
+    return isToday(dueDate) && !a.submission?.submitted_at;
+  }) || [];
+
+  const upcoming = assignments?.filter((a: any) => {
+    const dueDate = new Date(a.due_date);
+    return !isPast(dueDate) && !isToday(dueDate) && !a.submission?.submitted_at;
+  }) || [];
+
+  const submitted = assignments?.filter((a: any) => a.submission?.submitted_at) || [];
+
+  return (
+    <Card className="border-0 bg-card/80 backdrop-blur-sm shadow-[var(--shadow-glass-md)]">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Calendar className="h-5 w-5" />
+          Assignments
+          {pastDue.length > 0 && (
+            <Badge className="ml-auto bg-red-500/10 text-red-700 border-0">
+              <AlertTriangle className="h-3 w-3 mr-1" />
+              {pastDue.length} overdue
+            </Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ScrollArea className="h-[350px] pr-4">
+          <div className="space-y-4">
+            {/* Past Due Section */}
+            {pastDue.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-red-600 flex items-center gap-1">
+                  <AlertTriangle className="h-4 w-4" />
+                  Past Due
+                </h4>
+                {pastDue.map((assignment: any) => (
+                  <AssignmentItem 
+                    key={assignment.id} 
+                    assignment={assignment}
+                    getAssignmentIcon={getAssignmentIcon}
+                    getStatusBadge={getStatusBadge}
+                    getUrgencyClass={getUrgencyClass}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Due Today Section */}
+            {dueToday.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-yellow-600 flex items-center gap-1">
+                  <Clock className="h-4 w-4" />
+                  Due Today
+                </h4>
+                {dueToday.map((assignment: any) => (
+                  <AssignmentItem 
+                    key={assignment.id} 
+                    assignment={assignment}
+                    getAssignmentIcon={getAssignmentIcon}
+                    getStatusBadge={getStatusBadge}
+                    getUrgencyClass={getUrgencyClass}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Upcoming Section */}
+            {upcoming.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-muted-foreground">Upcoming</h4>
+                {upcoming.slice(0, 5).map((assignment: any) => (
+                  <AssignmentItem 
+                    key={assignment.id} 
+                    assignment={assignment}
+                    getAssignmentIcon={getAssignmentIcon}
+                    getStatusBadge={getStatusBadge}
+                    getUrgencyClass={getUrgencyClass}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Recently Submitted */}
+            {submitted.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-green-600">Recently Submitted</h4>
+                {submitted.slice(0, 3).map((assignment: any) => (
+                  <AssignmentItem 
+                    key={assignment.id} 
+                    assignment={assignment}
+                    getAssignmentIcon={getAssignmentIcon}
+                    getStatusBadge={getStatusBadge}
+                    getUrgencyClass={getUrgencyClass}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Empty State */}
+            {(!assignments || assignments.length === 0) && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Calendar className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                <p>No upcoming assignments</p>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+      </CardContent>
+    </Card>
+  );
+};
+
+const AssignmentItem = ({ 
+  assignment, 
+  getAssignmentIcon, 
+  getStatusBadge,
+  getUrgencyClass 
+}: {
+  assignment: any;
+  getAssignmentIcon: (type: string) => React.ReactNode;
+  getStatusBadge: (assignment: any) => React.ReactNode;
+  getUrgencyClass: (assignment: any) => string;
+}) => {
+  const dueDate = new Date(assignment.due_date);
+  
+  return (
+    <div 
+      className={`flex gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors ${getUrgencyClass(assignment)}`}
+    >
+      <div className="h-10 w-10 rounded-lg bg-background flex items-center justify-center shadow-sm">
+        {getAssignmentIcon(assignment.assignment_type)}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="font-medium text-sm truncate">{assignment.title}</p>
+            <p className="text-xs text-muted-foreground">{assignment.classrooms?.name}</p>
+          </div>
+          {getStatusBadge(assignment)}
+        </div>
+        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+          <Clock className="h-3 w-3" />
+          {format(dueDate, "MMM d, h:mm a")}
+          <Badge variant="outline" className="text-xs py-0 h-5">
+            {assignment.category}
+          </Badge>
+        </div>
+      </div>
+    </div>
+  );
+};
