@@ -39,27 +39,20 @@ const ParentDashboard = () => {
     },
   });
 
-  const { data: approvedChildren } = useQuery({
-    queryKey: ["parent-children", parentId],
+  const { data: approvedChildren, isLoading: childrenLoading } = useQuery({
+    queryKey: ["parent-children", session?.user?.id],
     queryFn: async () => {
-      if (!parentId) return [];
-      const { data } = await supabase
-        .from("parent_student_links")
-        .select(`
-          student_id,
-          profiles:student_id (
-            id,
-            full_name,
-            classroom_students (
-              classroom_id
-            )
-          )
-        `)
-        .eq("parent_id", parentId)
-        .eq("approved", true);
+      if (!session?.user?.id) return [];
+      const { data, error } = await supabase.rpc("get_parent_children", { 
+        _parent_user_id: session.user.id 
+      });
+      if (error) {
+        console.error("Error fetching children:", error);
+        return [];
+      }
       return data || [];
     },
-    enabled: !!parentId,
+    enabled: !!session?.user?.id,
   });
 
   useEffect(() => {
@@ -103,7 +96,7 @@ const ParentDashboard = () => {
     }
   };
 
-  if (loading) {
+  if (loading || childrenLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -113,7 +106,7 @@ const ParentDashboard = () => {
 
   const firstChild = approvedChildren?.[0];
   const firstChildId = firstChild?.student_id;
-  const firstChildName = (firstChild?.profiles as any)?.full_name || "Student";
+  const firstChildName = firstChild?.full_name || "Student";
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-primary/5">
@@ -182,9 +175,9 @@ const ParentDashboard = () => {
             {approvedChildren && approvedChildren.length > 1 && (
               <Tabs defaultValue={firstChildId} className="space-y-4">
                 <TabsList>
-                  {approvedChildren.map((child: any) => (
+                  {approvedChildren.map((child) => (
                     <TabsTrigger key={child.student_id} value={child.student_id}>
-                      {child.profiles?.full_name || "Student"}
+                      {child.full_name || "Student"}
                     </TabsTrigger>
                   ))}
                 </TabsList>
