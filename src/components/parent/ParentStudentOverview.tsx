@@ -120,7 +120,11 @@ export const ParentStudentOverview = ({ studentId, studentName }: ParentStudentO
   const totalUpcoming = dueTodayData?.dueToday?.length || 0;
   const totalPastDue = dueTodayData?.pastDue?.length || 0;
   const totalAssignmentsCompleted = gradebook?.reduce((sum, c) => 
-    sum + c.assignments.filter(a => a.status === "Graded" || a.status === "Submitted").length, 0
+    sum + c.assignments.filter(a => 
+      a.status === "Graded" || 
+      a.status === "Submitted" || 
+      a.status === "Submitted Late"
+    ).length, 0
   ) || 0;
 
   const getGradeColor = (grade: number | null) => {
