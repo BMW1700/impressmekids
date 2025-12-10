@@ -115,7 +115,7 @@ const ParentDashboard = () => {
   const firstChildName = firstChild?.full_name || "Student";
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary/[0.02] via-background to-secondary/[0.03]">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-secondary/[0.06] via-secondary/[0.02] to-primary/[0.03]">
       <Header>
         {parentId && <ParentNotificationBell parentId={parentId} />}
       </Header>
