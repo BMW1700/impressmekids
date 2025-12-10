@@ -203,17 +203,17 @@ const TeacherDashboard = () => {
             <p className="text-muted-foreground text-lg">Your AI-Powered Classroom Command Center</p>
           </div>
 
-          {/* ML Spotlight Widget */}
+          {/* ML Spotlight Widget - Clean Fly Fit Style */}
           <Card variant="premium" className="mb-8 hover-lift">
             <CardContent className="pt-6">
               <div className="flex items-start gap-4">
-                <div className="icon-circle-purple w-16 h-16">
-                  <Brain className="h-8 w-8 text-white" />
+                <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Brain className="h-7 w-7 text-primary" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <h3 className="text-xl font-bold">AI Insights Dashboard</h3>
-                    <Badge variant="gold" className="shadow-glow-gold">
+                    <Badge variant="gold">
                       <Sparkles className="h-3 w-3 mr-1" />
                       4 Patents
                     </Badge>
@@ -225,7 +225,6 @@ const TeacherDashboard = () => {
                     <Button 
                       variant="gradient"
                       onClick={() => navigate('/teacher/aura-analytics')}
-                      className="shadow-glow-purple"
                     >
                       <BarChart3 className="h-4 w-4 mr-2" />
                       View Analytics
@@ -243,15 +242,13 @@ const TeacherDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Enhanced Quick Stats */}
+          {/* Enhanced Quick Stats - Clean Fly Fit Style */}
           <div className="grid md:grid-cols-3 gap-6 mb-8">
             <Card variant="glass" className="hover-lift">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Total Classrooms</CardTitle>
-                  <div className="icon-circle-blue w-10 h-10">
-                    <Users className="h-5 w-5 text-white" />
-                  </div>
+                  <Users className="h-5 w-5 text-primary" />
                 </div>
               </CardHeader>
               <CardContent>
@@ -259,7 +256,10 @@ const TeacherDashboard = () => {
                   <div className="text-4xl font-black">
                     {classrooms.length}
                   </div>
-                  <Badge variant="green" className="text-xs">Active</Badge>
+                  <span className="text-sm text-primary flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3" />
+                    Active
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -272,9 +272,7 @@ const TeacherDashboard = () => {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Total Students</CardTitle>
-                  <div className="icon-circle-green w-10 h-10">
-                    <BookOpen className="h-5 w-5 text-white" />
-                  </div>
+                  <BookOpen className="h-5 w-5 text-primary" />
                 </div>
               </CardHeader>
               <CardContent>
@@ -282,7 +280,10 @@ const TeacherDashboard = () => {
                   <div className="text-4xl font-black">
                     {totalStudentCount}
                   </div>
-                  <Badge variant="green" className="text-xs">Enrolled</Badge>
+                  <span className="text-sm text-primary flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3" />
+                    Enrolled
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -291,9 +292,7 @@ const TeacherDashboard = () => {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Active Assignments</CardTitle>
-                  <div className="icon-circle-purple w-10 h-10">
-                    <Brain className="h-5 w-5 text-white" />
-                  </div>
+                  <Brain className="h-5 w-5 text-primary" />
                 </div>
               </CardHeader>
               <CardContent>
@@ -301,7 +300,7 @@ const TeacherDashboard = () => {
                   <div className="text-4xl font-black">
                     {classrooms.length > 0 ? classrooms.length * 3 : 0}
                   </div>
-                  <Badge variant="purple" className="text-xs">ML-Powered</Badge>
+                  <Badge variant="gold" className="text-xs">ML-Powered</Badge>
                 </div>
               </CardContent>
             </Card>
