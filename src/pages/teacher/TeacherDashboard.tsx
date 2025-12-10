@@ -195,7 +195,7 @@ const TeacherDashboard = () => {
       <main className="flex-1 py-8 animate-fade-in">
         <div className="container mx-auto px-4">
           <div className="mb-8">
-            <h1 className="text-4xl md:text-5xl font-black mb-2 bg-gradient-to-b from-[#7C3AED] to-[#A78BFA] bg-clip-text text-transparent">
+            <h1 className="text-4xl md:text-5xl font-black italic mb-2 bg-gradient-to-r from-[#6B21A8] via-[#9333EA] to-[#C4A484] bg-clip-text text-transparent">
               Welcome, {profile?.full_name}! <span className="text-[#7C3AED]">👋</span>
             </h1>
             <p className="text-muted-foreground text-lg">Your AI-Powered Classroom Command Center</p>
