@@ -2,6 +2,56 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+// Helper function to extract storage path from URL
+const extractStoragePath = (audioUrl: string): string | null => {
+  if (!audioUrl) return null;
+  
+  // Handle Supabase storage URLs - extract path after /object/
+  const storageMatch = audioUrl.match(/\/storage\/v1\/object\/(?:public|sign)\/aura-audio\/(.+)/);
+  if (storageMatch) {
+    return storageMatch[1].split('?')[0]; // Remove query params
+  }
+  
+  // Handle direct paths
+  if (!audioUrl.startsWith('http')) {
+    return audioUrl;
+  }
+  
+  return null;
+};
+
+// Get signed URL for audio with consent verification
+const getSecureAudioUrl = async (
+  studentId: string,
+  audioUrl: string,
+  expiresIn: number = 3600
+): Promise<string> => {
+  const path = extractStoragePath(audioUrl);
+  if (!path) {
+    // If we can't extract path, return empty to hide the audio
+    console.warn('[SECURITY] Could not extract audio path, denying access');
+    return '';
+  }
+  
+  try {
+    const { data, error } = await supabase.rpc('get_signed_audio_url', {
+      p_student_id: studentId,
+      p_audio_path: path,
+      p_expires_in: expiresIn
+    });
+    
+    if (error) {
+      console.warn('[SECURITY] Audio access denied:', error.message);
+      return ''; // Return empty if access denied
+    }
+    
+    return data || '';
+  } catch (err) {
+    console.warn('[SECURITY] Failed to get signed URL:', err);
+    return '';
+  }
+};
+
 export const useAuraRecordings = (studentId?: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -19,16 +69,39 @@ export const useAuraRecordings = (studentId?: string) => {
 
       if (error) throw error;
 
+      // SECURITY: Process audio URLs through consent-checked signed URL function
+      const recordsWithSecureUrls = await Promise.all(
+        (data || []).map(async (record) => {
+          if (record.audio_url) {
+            const secureUrl = await getSecureAudioUrl(studentId, record.audio_url);
+            return { ...record, audio_url: secureUrl };
+          }
+          return record;
+        })
+      );
+
       // SECURITY: Log AURA record access for COPPA compliance
-      if (data && data.length > 0) {
-        console.log('[AUDIT] AURA records accessed:', {
+      if (recordsWithSecureUrls.length > 0) {
+        console.log('[AUDIT] AURA records accessed with secure URLs:', {
           student_id: studentId,
-          record_count: data.length,
+          record_count: recordsWithSecureUrls.length,
           timestamp: new Date().toISOString(),
         });
+        
+        // Also log to database for audit trail
+        try {
+          await supabase.rpc('log_aura_access', {
+            p_student_id: studentId,
+            p_record_id: recordsWithSecureUrls[0].id,
+            p_access_type: 'VIEW_RECORDS',
+            p_access_context: 'useAuraRecordings hook'
+          });
+        } catch {
+          // Don't fail if logging fails
+        }
       }
 
-      return data || [];
+      return recordsWithSecureUrls;
     },
     enabled: !!studentId,
   });
