@@ -203,17 +203,17 @@ const TeacherDashboard = () => {
             <p className="text-muted-foreground text-lg">Your AI-Powered Classroom Command Center</p>
           </div>
 
-          {/* ML Spotlight Widget - Clean Fly Fit Style */}
-          <Card variant="premium" className="mb-8 hover-lift">
+          {/* ML Spotlight Widget - Exact Match */}
+          <Card className="mb-8 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent border-0 shadow-sm">
             <CardContent className="pt-6">
               <div className="flex items-start gap-4">
-                <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Brain className="h-7 w-7 text-primary" />
+                <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center flex-shrink-0">
+                  <Brain className="h-7 w-7 text-white" />
                 </div>
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-1">
                     <h3 className="text-xl font-bold">AI Insights Dashboard</h3>
-                    <Badge variant="gold">
+                    <Badge className="bg-amber-400 text-amber-900 hover:bg-amber-400 border-0">
                       <Sparkles className="h-3 w-3 mr-1" />
                       4 Patents
                     </Badge>
@@ -223,7 +223,7 @@ const TeacherDashboard = () => {
                   </p>
                   <div className="flex flex-wrap gap-3">
                     <Button 
-                      variant="gradient"
+                      className="bg-primary hover:bg-primary/90 text-white"
                       onClick={() => navigate('/teacher/aura-analytics')}
                     >
                       <BarChart3 className="h-4 w-4 mr-2" />
@@ -231,6 +231,7 @@ const TeacherDashboard = () => {
                     </Button>
                     <Button 
                       variant="outline"
+                      className="bg-white hover:bg-gray-50"
                       onClick={() => navigate('/teacher/aura-analytics')}
                     >
                       <AlertCircle className="h-4 w-4 mr-2" />
@@ -242,10 +243,10 @@ const TeacherDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Enhanced Quick Stats - Clean Fly Fit Style */}
+          {/* Stats Cards - Exact Match */}
           <div className="grid md:grid-cols-3 gap-6 mb-8">
-            <Card variant="glass" className="hover-lift">
-              <CardHeader className="pb-3">
+            <Card className="bg-white border shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Total Classrooms</CardTitle>
                   <Users className="h-5 w-5 text-primary" />
@@ -253,23 +254,21 @@ const TeacherDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex items-baseline gap-2">
-                  <div className="text-4xl font-black">
+                  <span className="text-4xl font-black text-foreground">
                     {classrooms.length}
-                  </div>
-                  <span className="text-sm text-primary flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3" />
-                    Active
+                  </span>
+                  <span className="text-sm text-primary font-medium flex items-center gap-0.5">
+                    ↗ Active
                   </span>
                 </div>
               </CardContent>
             </Card>
             
             <Card 
-              variant="glass"
-              className="hover-lift cursor-pointer"
+              className="bg-white border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
               onClick={loadAllStudents}
             >
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Total Students</CardTitle>
                   <BookOpen className="h-5 w-5 text-primary" />
@@ -277,19 +276,18 @@ const TeacherDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex items-baseline gap-2">
-                  <div className="text-4xl font-black">
+                  <span className="text-4xl font-black text-foreground">
                     {totalStudentCount}
-                  </div>
-                  <span className="text-sm text-primary flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3" />
-                    Enrolled
+                  </span>
+                  <span className="text-sm text-primary font-medium flex items-center gap-0.5">
+                    ↗ Enrolled
                   </span>
                 </div>
               </CardContent>
             </Card>
             
-            <Card variant="glass" className="hover-lift">
-              <CardHeader className="pb-3">
+            <Card className="bg-white border shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Active Assignments</CardTitle>
                   <Brain className="h-5 w-5 text-primary" />
@@ -297,10 +295,10 @@ const TeacherDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex items-baseline gap-2">
-                  <div className="text-4xl font-black">
+                  <span className="text-4xl font-black text-foreground">
                     {classrooms.length > 0 ? classrooms.length * 3 : 0}
-                  </div>
-                  <Badge variant="gold" className="text-xs">ML-Powered</Badge>
+                  </span>
+                  <Badge className="bg-amber-500 text-white hover:bg-amber-500 border-0 text-xs">ML-Powered</Badge>
                 </div>
               </CardContent>
             </Card>
