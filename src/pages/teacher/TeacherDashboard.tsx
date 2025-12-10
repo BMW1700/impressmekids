@@ -289,7 +289,7 @@ const TeacherDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-black bg-gradient-to-b from-[#9B6DD6] to-[#D4A04A] bg-clip-text text-transparent">
+                  <span className="text-4xl font-black bg-gradient-to-b from-[#9B6DD6] to-[#D4A04A] bg-clip-text text-[#22c0c0]">
                     {classrooms.length > 0 ? classrooms.length * 3 : 0}
                   </span>
                   <Badge className="bg-amber-400 text-amber-900 hover:bg-amber-400 border-0 text-xs">ML-Powered</Badge>
