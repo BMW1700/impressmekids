@@ -23,6 +23,7 @@ const ParentDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [parentId, setParentId] = useState<string | null>(null);
   const [lookupModalOpen, setLookupModalOpen] = useState(false);
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -111,8 +112,13 @@ const ParentDashboard = () => {
   }
 
   const firstChild = approvedChildren?.[0];
-  const firstChildId = firstChild?.student_id;
-  const firstChildName = firstChild?.full_name || "Student";
+  const hasChildren = approvedChildren && approvedChildren.length > 0;
+  const hasMultipleChildren = approvedChildren && approvedChildren.length > 1;
+  
+  // Set initial selected child when children load
+  const activeChildId = selectedChildId || firstChild?.student_id;
+  const activeChild = approvedChildren?.find(c => c.student_id === activeChildId) || firstChild;
+  const activeChildName = activeChild?.full_name || "Student";
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-secondary/[0.06] via-secondary/[0.02] to-primary/[0.03]">
@@ -140,7 +146,7 @@ const ParentDashboard = () => {
             </p>
           </div>
           <div className="flex gap-3 flex-wrap">
-            {firstChildId && (
+            {hasChildren && (
               <>
                 <Button 
                   variant="outline" 
@@ -176,7 +182,7 @@ const ParentDashboard = () => {
         </div>
 
         {/* No Children Linked - Premium Empty State */}
-        {!firstChildId && (
+        {!hasChildren && (
           <Card variant="glass" className="mb-8 border-2 border-dashed border-primary/20">
             <CardContent className="pt-6">
               <div className="text-center space-y-8 py-12">
@@ -202,78 +208,83 @@ const ParentDashboard = () => {
         )}
 
         {/* Main Dashboard Content */}
-        {firstChildId && (
-          <Tabs defaultValue="overview" className="space-y-8">
-            <TabsList className="glass-card border-0 p-1.5 h-auto">
-              <TabsTrigger 
-                value="overview" 
-                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary-dark data-[state=active]:text-white rounded-lg px-6 py-2.5 transition-all"
-              >
-                Overview
-              </TabsTrigger>
-              <TabsTrigger 
-                value="gradebook" 
-                className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary-dark data-[state=active]:text-white rounded-lg px-6 py-2.5 transition-all"
-              >
-                <GraduationCap className="h-4 w-4" /> Gradebook
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="overview" className="space-y-8">
-              {/* Student Overview */}
-              <ParentStudentOverview studentId={firstChildId} studentName={firstChildName} />
-
-              {/* Multi-child tabs if needed */}
-              {approvedChildren && approvedChildren.length > 1 && (
-                <Tabs defaultValue={firstChildId} className="space-y-4">
-                  <TabsList className="glass-card border-0">
-                    {approvedChildren.map((child) => (
-                      <TabsTrigger 
-                        key={child.student_id} 
-                        value={child.student_id}
-                        className="data-[state=active]:bg-primary data-[state=active]:text-white"
-                      >
-                        {child.full_name || "Student"}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
-              )}
-
-              {/* Insights + Activity Row */}
-              <div className="grid lg:grid-cols-2 gap-6">
-                <ParentQuickInsights studentId={firstChildId} studentName={firstChildName} />
-                <ParentRecentActivity studentId={firstChildId} />
+        {hasChildren && activeChildId && (
+          <div className="space-y-6">
+            {/* Student Tabs - Only show if multiple children */}
+            {hasMultipleChildren && (
+              <div className="flex gap-2 flex-wrap">
+                {approvedChildren.map((child) => (
+                  <Button
+                    key={child.student_id}
+                    variant={activeChildId === child.student_id ? "gradient" : "outline"}
+                    onClick={() => setSelectedChildId(child.student_id)}
+                    className={activeChildId === child.student_id 
+                      ? "" 
+                      : "glass-card border-0 hover:bg-primary/5"
+                    }
+                  >
+                    {child.full_name || "Student"}
+                  </Button>
+                ))}
               </div>
+            )}
 
-              {/* Assignments + Announcements Row */}
-              <div className="grid lg:grid-cols-2 gap-6">
-                <ParentUpcomingAssignments studentId={firstChildId} />
-                <ParentAnnouncementsFeed studentId={firstChildId} />
-              </div>
-
-              {/* Calendar Widget */}
-              {session?.user?.id && (
-                <CalendarWidget userId={session.user.id} userRole="parent" childId={firstChildId} />
-              )}
-
-              {/* View Child Details Button */}
-              <div className="flex justify-center">
-                <Button 
-                  variant="outline" 
-                  size="lg"
-                  onClick={() => navigate(`/parent/child/${firstChildId}`)}
-                  className="gap-2 glass-card border-0 hover:bg-primary/5 transition-all hover:-translate-y-1"
+            {/* Overview/Gradebook Tabs */}
+            <Tabs defaultValue="overview" className="space-y-8">
+              <TabsList className="glass-card border-0 p-1.5 h-auto">
+                <TabsTrigger 
+                  value="overview" 
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary-dark data-[state=active]:text-white rounded-lg px-6 py-2.5 transition-all"
                 >
-                  View Full Student Profile <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </TabsContent>
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="gradebook" 
+                  className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary-dark data-[state=active]:text-white rounded-lg px-6 py-2.5 transition-all"
+                >
+                  <GraduationCap className="h-4 w-4" /> Gradebook
+                </TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="gradebook">
-              <ParentGradebookSection studentId={firstChildId} studentName={firstChildName} />
-            </TabsContent>
-          </Tabs>
+              <TabsContent value="overview" className="space-y-8">
+                {/* Student Overview */}
+                <ParentStudentOverview studentId={activeChildId} studentName={activeChildName} />
+
+                {/* Insights + Activity Row */}
+                <div className="grid lg:grid-cols-2 gap-6">
+                  <ParentQuickInsights studentId={activeChildId} studentName={activeChildName} />
+                  <ParentRecentActivity studentId={activeChildId} />
+                </div>
+
+                {/* Assignments + Announcements Row */}
+                <div className="grid lg:grid-cols-2 gap-6">
+                  <ParentUpcomingAssignments studentId={activeChildId} />
+                  <ParentAnnouncementsFeed studentId={activeChildId} />
+                </div>
+
+                {/* Calendar Widget */}
+                {session?.user?.id && (
+                  <CalendarWidget userId={session.user.id} userRole="parent" childId={activeChildId} />
+                )}
+
+                {/* View Child Details Button */}
+                <div className="flex justify-center">
+                  <Button 
+                    variant="outline" 
+                    size="lg"
+                    onClick={() => navigate(`/parent/child/${activeChildId}`)}
+                    className="gap-2 glass-card border-0 hover:bg-primary/5 transition-all hover:-translate-y-1"
+                  >
+                    View Full Student Profile <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="gradebook">
+                <ParentGradebookSection studentId={activeChildId} studentName={activeChildName} />
+              </TabsContent>
+            </Tabs>
+          </div>
         )}
 
         {/* Access Requests */}
