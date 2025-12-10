@@ -21,6 +21,8 @@ interface GradebookClassroom {
     status: "Graded" | "Submitted" | "Incomplete" | "Past Due" | "Submitted Late";
     grade: number | null;
     category: string;
+    pointsEarned: number | null;
+    totalPoints: number;
   }[];
   attendanceAverage: number | null;
   totalDaysRecorded: number;
@@ -79,6 +81,9 @@ export const useStudentGradebook = (studentId: string | undefined) => {
             category,
             passage_text,
             classroom_id,
+            assignment_questions (
+              points
+            ),
             assignment_submissions (
               id,
               student_id,
@@ -86,7 +91,10 @@ export const useStudentGradebook = (studentId: string | undefined) => {
               status,
               submitted_at,
               graded_at,
-              teacher_feedback
+              teacher_feedback,
+              assignment_answers (
+                points_earned
+              )
             )
           `)
           .eq("classroom_id", classroom.classroom_id)
@@ -106,12 +114,26 @@ export const useStudentGradebook = (studentId: string | undefined) => {
         const homeworkAssignments: any[] = [];
 
         const assignmentsList = (assignments || []).map((assignment) => {
+          // Calculate total points for this assignment from questions
+          const assignmentTotalPoints = assignment.assignment_questions?.reduce(
+            (sum: number, q: any) => sum + (q.points || 0), 0
+          ) || 100; // Default to 100 if no questions
+          
           // Filter to only this student's submissions, then prioritize graded ones
           const studentSubmissions = assignment.assignment_submissions.filter(
             (sub: any) => sub.student_id === studentId
           );
           const submission = studentSubmissions.find((sub: any) => sub.grade !== null) 
             || studentSubmissions[0];
+
+          // Calculate points earned from answers
+          let assignmentPointsEarned: number | null = null;
+          if (submission?.assignment_answers) {
+            const earnedFromAnswers = submission.assignment_answers.reduce(
+              (sum: number, a: any) => sum + (a.points_earned || 0), 0
+            );
+            assignmentPointsEarned = earnedFromAnswers;
+          }
 
           let status: "Graded" | "Submitted" | "Incomplete" | "Past Due" | "Submitted Late" = "Incomplete";
           
@@ -154,6 +176,8 @@ export const useStudentGradebook = (studentId: string | undefined) => {
             teacherFeedback: submission?.teacher_feedback || null,
             passageText: assignment.passage_text,
             classroomId: assignment.classroom_id,
+            pointsEarned: assignmentPointsEarned,
+            totalPoints: assignmentTotalPoints,
           };
         });
 
