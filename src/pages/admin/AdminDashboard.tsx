@@ -122,46 +122,52 @@ export default function AdminDashboard() {
     <div className="min-h-screen flex flex-col bg-background">
       <Header showAuthButtons={false} onSignOut={handleSignOut} />
       
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl animate-fade-in">
         <div className="space-y-6">
           <div>
-            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-4xl font-black text-gradient-purple">Admin Dashboard</h1>
+            <p className="text-muted-foreground mt-1 text-lg">
               Platform-wide user management and oversight
             </p>
           </div>
 
           {/* Statistics Cards */}
           <div className="grid gap-4 md:grid-cols-3">
-            <Card>
+            <Card variant="glass" className="hover-lift">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Teachers</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium text-muted-foreground">Teachers</CardTitle>
+                <div className="icon-circle-blue w-10 h-10">
+                  <Users className="h-5 w-5 text-white" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{teachers?.length || 0}</div>
+                <div className="text-4xl font-black">{teachers?.length || 0}</div>
                 <p className="text-xs text-muted-foreground">Total teachers on platform</p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card variant="glass" className="hover-lift">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Students</CardTitle>
-                <GraduationCap className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium text-muted-foreground">Students</CardTitle>
+                <div className="icon-circle-green w-10 h-10">
+                  <GraduationCap className="h-5 w-5 text-white" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{students?.length || 0}</div>
+                <div className="text-4xl font-black">{students?.length || 0}</div>
                 <p className="text-xs text-muted-foreground">Total students enrolled</p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card variant="glass" className="hover-lift">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Admins</CardTitle>
-                <Shield className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium text-muted-foreground">Admins</CardTitle>
+                <div className="icon-circle-purple w-10 h-10">
+                  <Shield className="h-5 w-5 text-white" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{admins?.length || 0}</div>
+                <div className="text-4xl font-black">{admins?.length || 0}</div>
                 <p className="text-xs text-muted-foreground">Platform administrators</p>
               </CardContent>
             </Card>
