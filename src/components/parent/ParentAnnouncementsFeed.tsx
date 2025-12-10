@@ -103,10 +103,12 @@ export const ParentAnnouncementsFeed = ({ studentId }: ParentAnnouncementsFeedPr
   }
 
   return (
-    <Card className="border-0 bg-card/80 backdrop-blur-sm shadow-[var(--shadow-glass-md)]">
+    <Card className="border-0 bg-gradient-to-br from-green-500/[0.04] to-primary/[0.02] backdrop-blur-sm shadow-[var(--shadow-glass-md)]">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Megaphone className="h-5 w-5" />
+        <CardTitle className="flex items-center gap-3 text-lg">
+          <div className="icon-circle icon-circle-sm icon-circle-green">
+            <Megaphone className="h-4 w-4 text-white" />
+          </div>
           Class Announcements
           {announcements && announcements.length > 0 && (
             <Badge variant="secondary" className="ml-auto text-xs">

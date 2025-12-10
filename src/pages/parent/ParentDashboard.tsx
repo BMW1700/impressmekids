@@ -115,12 +115,15 @@ const ParentDashboard = () => {
   const firstChildName = firstChild?.full_name || "Student";
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-primary/5">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary/[0.02] via-background to-secondary/[0.03]">
       <Header>
         {parentId && <ParentNotificationBell parentId={parentId} />}
       </Header>
       
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl relative">
+        {/* Subtle decorative elements */}
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/[0.03] rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-secondary/[0.04] rounded-full blur-3xl pointer-events-none" />
         {/* Premium Header */}
         <div className="mb-10 flex items-start justify-between flex-wrap gap-6">
           <div className="space-y-2">

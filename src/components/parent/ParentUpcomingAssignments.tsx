@@ -112,7 +112,7 @@ export const ParentUpcomingAssignments = ({ studentId }: ParentUpcomingAssignmen
   const submitted = assignments?.filter((a: any) => a.submission?.submitted_at) || [];
 
   return (
-    <Card variant="glass" className="border-0">
+    <Card variant="glass" className="border-0 bg-gradient-to-br from-orange-500/[0.04] to-secondary/[0.02]">
       <CardHeader>
         <CardTitle className="flex items-center gap-3 text-lg">
           <div className="icon-circle icon-circle-sm icon-circle-orange">

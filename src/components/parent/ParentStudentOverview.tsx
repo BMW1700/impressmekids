@@ -207,10 +207,10 @@ export const ParentStudentOverview = ({ studentId, studentName }: ParentStudentO
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Due Today */}
-        <Card className="border-0 bg-card/80 backdrop-blur-sm shadow-[var(--shadow-glass-sm)] hover:shadow-[var(--shadow-glass-md)] transition-shadow">
+        <Card className="border-0 bg-gradient-to-br from-blue-500/[0.08] to-blue-500/[0.02] backdrop-blur-sm shadow-[var(--shadow-glass-sm)] hover:shadow-[var(--shadow-glass-md)] transition-all hover:scale-[1.02]">
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10">
+              <div className="p-2.5 rounded-xl bg-blue-500/15 shadow-sm">
                 <Clock className="h-5 w-5 text-blue-600" />
               </div>
               <div>
@@ -222,10 +222,10 @@ export const ParentStudentOverview = ({ studentId, studentName }: ParentStudentO
         </Card>
 
         {/* Past Due */}
-        <Card className={`border-0 bg-card/80 backdrop-blur-sm shadow-[var(--shadow-glass-sm)] hover:shadow-[var(--shadow-glass-md)] transition-shadow ${totalPastDue > 0 ? "ring-2 ring-destructive/20" : ""}`}>
+        <Card className={`border-0 backdrop-blur-sm shadow-[var(--shadow-glass-sm)] hover:shadow-[var(--shadow-glass-md)] transition-all hover:scale-[1.02] ${totalPastDue > 0 ? "bg-gradient-to-br from-red-500/[0.08] to-red-500/[0.02] ring-2 ring-destructive/20" : "bg-gradient-to-br from-muted/50 to-muted/20"}`}>
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${totalPastDue > 0 ? "bg-red-500/10" : "bg-muted"}`}>
+              <div className={`p-2.5 rounded-xl shadow-sm ${totalPastDue > 0 ? "bg-red-500/15" : "bg-muted"}`}>
                 <AlertTriangle className={`h-5 w-5 ${totalPastDue > 0 ? "text-red-600" : "text-muted-foreground"}`} />
               </div>
               <div>
@@ -239,10 +239,10 @@ export const ParentStudentOverview = ({ studentId, studentName }: ParentStudentO
         </Card>
 
         {/* Completed */}
-        <Card className="border-0 bg-card/80 backdrop-blur-sm shadow-[var(--shadow-glass-sm)] hover:shadow-[var(--shadow-glass-md)] transition-shadow">
+        <Card className="border-0 bg-gradient-to-br from-green-500/[0.08] to-green-500/[0.02] backdrop-blur-sm shadow-[var(--shadow-glass-sm)] hover:shadow-[var(--shadow-glass-md)] transition-all hover:scale-[1.02]">
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-500/10">
+              <div className="p-2.5 rounded-xl bg-green-500/15 shadow-sm">
                 <CheckCircle2 className="h-5 w-5 text-green-600" />
               </div>
               <div>
@@ -254,10 +254,10 @@ export const ParentStudentOverview = ({ studentId, studentName }: ParentStudentO
         </Card>
 
         {/* Reading Sessions */}
-        <Card className="border-0 bg-card/80 backdrop-blur-sm shadow-[var(--shadow-glass-sm)] hover:shadow-[var(--shadow-glass-md)] transition-shadow">
+        <Card className="border-0 bg-gradient-to-br from-purple-500/[0.08] to-purple-500/[0.02] backdrop-blur-sm shadow-[var(--shadow-glass-sm)] hover:shadow-[var(--shadow-glass-md)] transition-all hover:scale-[1.02]">
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-500/10">
+              <div className="p-2.5 rounded-xl bg-purple-500/15 shadow-sm">
                 <Mic className="h-5 w-5 text-purple-600" />
               </div>
               <div>
