@@ -265,9 +265,16 @@ export const GradebookSection = ({ studentId }: GradebookSectionProps) => {
                   <div className="flex items-center gap-4">
                     {getStatusBadge(assignment.status)}
                     {assignment.grade !== null && (
-                      <span className="text-lg font-bold text-primary">
-                        {assignment.grade.toFixed(1)}%
-                      </span>
+                      <div className="text-right">
+                        <span className="text-lg font-bold text-primary">
+                          {assignment.grade.toFixed(1)}%
+                        </span>
+                        {assignment.pointsEarned !== null && (
+                          <div className="text-xs text-muted-foreground">
+                            {assignment.pointsEarned}/{assignment.totalPoints} pts
+                          </div>
+                        )}
+                      </div>
                     )}
                     {assignment.status === "Graded" && (
                       <Button
@@ -309,6 +316,11 @@ export const GradebookSection = ({ studentId }: GradebookSectionProps) => {
                     <p className="text-2xl font-bold text-primary">
                       {selectedAssignment.grade.toFixed(1)}%
                     </p>
+                    {selectedAssignment.pointsEarned !== null && (
+                      <p className="text-sm text-muted-foreground">
+                        {selectedAssignment.pointsEarned}/{selectedAssignment.totalPoints} points
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
