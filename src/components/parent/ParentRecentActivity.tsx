@@ -171,18 +171,33 @@ export const ParentRecentActivity = ({ studentId }: ParentRecentActivityProps) =
     enabled: !!studentId,
   });
 
-  const getActivityIcon = (type: string, metadata?: any) => {
+  const getActivityIconClass = (type: string, metadata?: any) => {
     switch (type) {
       case "assignment":
-        return <CheckCircle2 className="h-4 w-4 text-blue-600" />;
+        return "icon-circle icon-circle-sm icon-circle-blue";
       case "reading":
-        return <Mic className="h-4 w-4 text-purple-600" />;
+        return "icon-circle icon-circle-sm icon-circle-purple";
       case "behavior":
         return metadata?.isPositive 
-          ? <Star className="h-4 w-4 text-yellow-500" />
-          : <Trophy className="h-4 w-4 text-orange-500" />;
+          ? "icon-circle icon-circle-sm icon-circle-gold"
+          : "icon-circle icon-circle-sm icon-circle-orange";
       case "announcement":
-        return <MessageSquare className="h-4 w-4 text-green-600" />;
+        return "icon-circle icon-circle-sm icon-circle-green";
+      default:
+        return "icon-circle icon-circle-sm bg-muted";
+    }
+  };
+
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case "assignment":
+        return <CheckCircle2 className="h-4 w-4 text-white" />;
+      case "reading":
+        return <Mic className="h-4 w-4 text-white" />;
+      case "behavior":
+        return <Star className="h-4 w-4 text-white" />;
+      case "announcement":
+        return <MessageSquare className="h-4 w-4 text-white" />;
       default:
         return <Activity className="h-4 w-4" />;
     }
@@ -191,14 +206,14 @@ export const ParentRecentActivity = ({ studentId }: ParentRecentActivityProps) =
   const getActivityBadge = (type: string, metadata?: any) => {
     if (type === "assignment" && metadata?.grade !== undefined) {
       const grade = metadata.grade;
-      if (grade >= 90) return <Badge className="bg-green-500/10 text-green-700 border-0 text-xs">{grade}%</Badge>;
-      if (grade >= 80) return <Badge className="bg-blue-500/10 text-blue-700 border-0 text-xs">{grade}%</Badge>;
-      if (grade >= 70) return <Badge className="bg-yellow-500/10 text-yellow-700 border-0 text-xs">{grade}%</Badge>;
-      return <Badge className="bg-red-500/10 text-red-700 border-0 text-xs">{grade}%</Badge>;
+      if (grade >= 90) return <Badge variant="green">{grade}%</Badge>;
+      if (grade >= 80) return <Badge variant="blue">{grade}%</Badge>;
+      if (grade >= 70) return <Badge variant="gold">{grade}%</Badge>;
+      return <Badge variant="red">{grade}%</Badge>;
     }
     if (type === "behavior" && metadata?.points !== undefined) {
       return (
-        <Badge className={`${metadata.points > 0 ? "bg-green-500/10 text-green-700" : "bg-red-500/10 text-red-700"} border-0 text-xs`}>
+        <Badge variant={metadata.points > 0 ? "green" : "red"}>
           {metadata.points > 0 ? "+" : ""}{metadata.points}
         </Badge>
       );
@@ -208,23 +223,19 @@ export const ParentRecentActivity = ({ studentId }: ParentRecentActivityProps) =
 
   if (isLoading) {
     return (
-      <Card className="border-0 bg-card/80 backdrop-blur-sm shadow-[var(--shadow-glass-md)]">
+      <Card variant="glass" className="border-0">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Activity className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-3 text-lg">
+            <div className="icon-circle icon-circle-sm icon-circle-blue">
+              <Activity className="h-4 w-4 text-white" />
+            </div>
             Recent Activity
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex gap-3 animate-pulse">
-                <div className="h-8 w-8 rounded-full bg-muted" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-muted rounded w-3/4" />
-                  <div className="h-3 bg-muted rounded w-1/2" />
-                </div>
-              </div>
+              <div key={i} className="skeleton-shimmer h-16 rounded-xl" />
             ))}
           </div>
         </CardContent>
@@ -233,13 +244,15 @@ export const ParentRecentActivity = ({ studentId }: ParentRecentActivityProps) =
   }
 
   return (
-    <Card className="border-0 bg-card/80 backdrop-blur-sm shadow-[var(--shadow-glass-md)]">
+    <Card variant="glass" className="border-0">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Activity className="h-5 w-5" />
+        <CardTitle className="flex items-center gap-3 text-lg">
+          <div className="icon-circle icon-circle-sm icon-circle-blue">
+            <Activity className="h-4 w-4 text-white" />
+          </div>
           Recent Activity
           {activities && activities.length > 0 && (
-            <Badge variant="secondary" className="ml-auto text-xs">
+            <Badge variant="secondary" className="ml-auto">
               Last 7 days
             </Badge>
           )}
@@ -248,23 +261,25 @@ export const ParentRecentActivity = ({ studentId }: ParentRecentActivityProps) =
       <CardContent>
         {!activities || activities.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            <Activity className="h-12 w-12 mx-auto mb-3 opacity-30" />
+            <div className="icon-circle icon-circle-lg mx-auto mb-4 bg-muted">
+              <Activity className="h-6 w-6 text-muted-foreground" />
+            </div>
             <p>No recent activity</p>
           </div>
         ) : (
           <ScrollArea className="h-[300px] pr-4">
-            <div className="space-y-4">
+            <div className="space-y-3">
               {activities.map((activity) => (
                 <div 
                   key={activity.id}
-                  className="flex gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                  className="flex gap-3 p-4 rounded-xl bg-gradient-to-r from-muted/30 to-muted/10 hover:from-muted/50 hover:to-muted/20 transition-all duration-300 hover:scale-[1.01]"
                 >
-                  <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center shadow-sm">
-                    {getActivityIcon(activity.type, activity.metadata)}
+                  <div className={getActivityIconClass(activity.type, activity.metadata)}>
+                    {getActivityIcon(activity.type)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="font-medium text-sm truncate">{activity.title}</p>
+                      <p className="font-semibold text-sm truncate">{activity.title}</p>
                       {getActivityBadge(activity.type, activity.metadata)}
                     </div>
                     <p className="text-xs text-muted-foreground truncate">{activity.description}</p>
