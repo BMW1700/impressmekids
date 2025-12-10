@@ -12,7 +12,8 @@ import {
   BookOpen,
   ArrowUp,
   ArrowDown,
-  Minus
+  Minus,
+  Sparkles
 } from "lucide-react";
 
 interface ParentQuickInsightsProps {
@@ -187,30 +188,45 @@ export const ParentQuickInsights = ({ studentId, studentName }: ParentQuickInsig
   const getInsightIcon = (type: string) => {
     switch (type) {
       case "strength":
-        return <Award className="h-5 w-5 text-green-600" />;
+        return <Award className="h-5 w-5 text-white" />;
       case "improvement":
-        return <Target className="h-5 w-5 text-orange-600" />;
+        return <Target className="h-5 w-5 text-white" />;
       case "achievement":
-        return <TrendingUp className="h-5 w-5 text-blue-600" />;
+        return <TrendingUp className="h-5 w-5 text-white" />;
       case "tip":
-        return <Lightbulb className="h-5 w-5 text-yellow-600" />;
+        return <Lightbulb className="h-5 w-5 text-white" />;
       default:
-        return <Brain className="h-5 w-5 text-primary" />;
+        return <Brain className="h-5 w-5 text-white" />;
+    }
+  };
+
+  const getInsightIconClass = (type: string) => {
+    switch (type) {
+      case "strength":
+        return "icon-circle icon-circle-green";
+      case "improvement":
+        return "icon-circle icon-circle-orange";
+      case "achievement":
+        return "icon-circle icon-circle-blue";
+      case "tip":
+        return "icon-circle icon-circle-gold";
+      default:
+        return "icon-circle icon-circle-purple";
     }
   };
 
   const getInsightBg = (type: string) => {
     switch (type) {
       case "strength":
-        return "bg-green-500/5 border-green-500/20";
+        return "bg-gradient-to-r from-green-500/5 to-green-500/10 border-green-500/20";
       case "improvement":
-        return "bg-orange-500/5 border-orange-500/20";
+        return "bg-gradient-to-r from-orange-500/5 to-orange-500/10 border-orange-500/20";
       case "achievement":
-        return "bg-blue-500/5 border-blue-500/20";
+        return "bg-gradient-to-r from-blue-500/5 to-blue-500/10 border-blue-500/20";
       case "tip":
-        return "bg-yellow-500/5 border-yellow-500/20";
+        return "bg-gradient-to-r from-yellow-500/5 to-yellow-500/10 border-yellow-500/20";
       default:
-        return "bg-primary/5 border-primary/20";
+        return "bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20";
     }
   };
 
@@ -227,20 +243,19 @@ export const ParentQuickInsights = ({ studentId, studentName }: ParentQuickInsig
 
   if (isLoading) {
     return (
-      <Card className="border-0 bg-gradient-to-br from-primary/5 to-secondary/5 shadow-[var(--shadow-glass-md)] backdrop-blur-sm">
+      <Card variant="glass" className="border-0">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Brain className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-3 text-lg">
+            <div className="icon-circle icon-circle-sm icon-circle-purple">
+              <Brain className="h-4 w-4 text-white" />
+            </div>
             Quick Insights
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-3">
             {[1, 2].map((i) => (
-              <div key={i} className="animate-pulse p-4 rounded-lg bg-muted/30">
-                <div className="h-4 bg-muted rounded w-1/2 mb-2" />
-                <div className="h-3 bg-muted rounded w-full" />
-              </div>
+              <div key={i} className="skeleton-shimmer p-4 rounded-xl h-20" />
             ))}
           </div>
         </CardContent>
@@ -249,39 +264,44 @@ export const ParentQuickInsights = ({ studentId, studentName }: ParentQuickInsig
   }
 
   return (
-    <Card className="border-0 bg-gradient-to-br from-primary/5 to-secondary/5 shadow-[var(--shadow-glass-md)] backdrop-blur-sm">
+    <Card variant="glass" className="border-0">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Brain className="h-5 w-5" />
+        <CardTitle className="flex items-center gap-3 text-lg">
+          <div className="icon-circle icon-circle-sm icon-circle-purple">
+            <Brain className="h-4 w-4 text-white" />
+          </div>
           Quick Insights
-          <Badge variant="secondary" className="ml-auto text-xs">
+          <Badge variant="gold" className="ml-auto gap-1">
+            <Sparkles className="h-3 w-3" />
             AI-Powered
           </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent>
         {!insights || insights.length === 0 ? (
-          <div className="text-center py-6 text-muted-foreground">
-            <Brain className="h-12 w-12 mx-auto mb-3 opacity-30" />
+          <div className="text-center py-8 text-muted-foreground">
+            <div className="icon-circle icon-circle-lg mx-auto mb-4 bg-muted">
+              <Brain className="h-6 w-6 text-muted-foreground" />
+            </div>
             <p className="text-sm">Insights will appear as more data is collected</p>
           </div>
         ) : (
-          <div className="grid gap-3">
+          <div className="grid gap-4">
             {insights.map((insight, index) => (
               <div 
                 key={index}
-                className={`p-4 rounded-lg border ${getInsightBg(insight.type)} transition-all hover:scale-[1.01]`}
+                className={`p-4 rounded-xl border backdrop-blur-sm ${getInsightBg(insight.type)} transition-all duration-300 hover:scale-[1.02] hover:shadow-md`}
               >
-                <div className="flex items-start gap-3">
-                  <div className="h-10 w-10 rounded-full bg-background flex items-center justify-center shadow-sm">
+                <div className="flex items-start gap-4">
+                  <div className={getInsightIconClass(insight.type)}>
                     {getInsightIcon(insight.type)}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-semibold text-sm">{insight.title}</h4>
+                      <h4 className="font-semibold">{insight.title}</h4>
                       {insight.trend && getTrendIcon(insight.trend)}
                       {insight.metric !== undefined && (
-                        <Badge variant="secondary" className="text-xs ml-auto">
+                        <Badge variant="secondary" className="ml-auto font-bold">
                           {insight.metric}{insight.type === "strength" || insight.type === "improvement" ? "%" : ""}
                         </Badge>
                       )}

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { Loader2, UserPlus, Calendar as CalendarIcon, Bell, Shield, ChevronRight, GraduationCap } from "lucide-react";
+import { Loader2, UserPlus, Calendar as CalendarIcon, Bell, Shield, ChevronRight, GraduationCap, Sparkles } from "lucide-react";
 import { ParentNotificationBell } from "@/components/parent/ParentNotificationBell";
 import { StudentLookupModal } from "@/components/parent/StudentLookupModal";
 import { ParentOutgoingRequestsList } from "@/components/parent/ParentOutgoingRequestsList";
@@ -100,7 +100,12 @@ const ParentDashboard = () => {
   if (loading || childrenLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="flex flex-col items-center gap-4">
+          <div className="icon-circle icon-circle-lg icon-circle-purple animate-pulse">
+            <Loader2 className="h-8 w-8 animate-spin text-white" />
+          </div>
+          <p className="text-muted-foreground">Loading your dashboard...</p>
+        </div>
       </div>
     );
   }
@@ -116,49 +121,76 @@ const ParentDashboard = () => {
       </Header>
       
       <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
-        {/* Header */}
-        <div className="mb-8 flex items-start justify-between flex-wrap gap-4">
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              Parent Dashboard
-            </h1>
-            <p className="text-muted-foreground mt-1">Stay connected with your child's education</p>
+        {/* Premium Header */}
+        <div className="mb-10 flex items-start justify-between flex-wrap gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="icon-circle icon-circle-purple">
+                <Sparkles className="h-6 w-6 text-white" />
+              </div>
+              <h1 className="hero-title gradient-text">
+                Parent Dashboard
+              </h1>
+            </div>
+            <p className="text-lg text-muted-foreground ml-[68px]">
+              Stay connected with your child's education journey
+            </p>
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-3 flex-wrap">
             {firstChildId && (
               <>
-                <Button variant="outline" onClick={() => navigate("/parent/calendar")} className="gap-2 shadow-sm bg-card/80 backdrop-blur-sm">
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate("/parent/calendar")} 
+                  className="gap-2 glass-card border-0 hover:bg-primary/5"
+                >
                   <CalendarIcon className="h-4 w-4" /> Calendar
                 </Button>
-                <Button variant="outline" onClick={() => navigate("/parent/safety")} className="gap-2 shadow-sm bg-card/80 backdrop-blur-sm">
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate("/parent/safety")} 
+                  className="gap-2 glass-card border-0 hover:bg-primary/5"
+                >
                   <Shield className="h-4 w-4" /> Safety
                 </Button>
               </>
             )}
-            <Button variant="outline" onClick={() => navigate("/parent/notification-settings")} className="gap-2 shadow-sm bg-card/80 backdrop-blur-sm">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate("/parent/notification-settings")} 
+              className="gap-2 glass-card border-0 hover:bg-primary/5"
+            >
               <Bell className="h-4 w-4" /> Notifications
             </Button>
-            <Button onClick={() => setLookupModalOpen(true)} className="gap-2 shadow-lg">
+            <Button 
+              variant="gradient"
+              onClick={() => setLookupModalOpen(true)} 
+              className="gap-2"
+            >
               <UserPlus className="h-4 w-4" /> Link Student
             </Button>
           </div>
         </div>
 
-        {/* No Children Linked */}
+        {/* No Children Linked - Premium Empty State */}
         {!firstChildId && (
-          <Card className="mb-8 border-2 border-dashed shadow-lg bg-card/50 backdrop-blur-sm">
+          <Card variant="glass" className="mb-8 border-2 border-dashed border-primary/20">
             <CardContent className="pt-6">
-              <div className="text-center space-y-6 py-8">
-                <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                  <UserPlus className="h-8 w-8 text-primary" />
+              <div className="text-center space-y-8 py-12">
+                <div className="icon-circle icon-circle-lg icon-circle-purple mx-auto">
+                  <UserPlus className="h-8 w-8 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold mb-2">Get Started</h3>
-                  <p className="text-muted-foreground max-w-md mx-auto">
-                    Link your first student to start monitoring their progress, viewing assignments, and staying connected.
+                  <h3 className="text-3xl font-bold mb-3 gradient-text">Get Started</h3>
+                  <p className="text-muted-foreground max-w-lg mx-auto text-lg">
+                    Link your first student to start monitoring their progress, viewing assignments, and staying connected with their education.
                   </p>
                 </div>
-                <Button onClick={() => setLookupModalOpen(true)} size="lg" className="shadow-md">
+                <Button 
+                  variant="gradient"
+                  size="lg"
+                  onClick={() => setLookupModalOpen(true)} 
+                >
                   <UserPlus className="h-5 w-5 mr-2" /> Link Your First Student
                 </Button>
               </div>
@@ -168,10 +200,18 @@ const ParentDashboard = () => {
 
         {/* Main Dashboard Content */}
         {firstChildId && (
-          <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="bg-card/80 backdrop-blur-sm shadow-sm">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="gradebook" className="gap-2">
+          <Tabs defaultValue="overview" className="space-y-8">
+            <TabsList className="glass-card border-0 p-1.5 h-auto">
+              <TabsTrigger 
+                value="overview" 
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary-dark data-[state=active]:text-white rounded-lg px-6 py-2.5 transition-all"
+              >
+                Overview
+              </TabsTrigger>
+              <TabsTrigger 
+                value="gradebook" 
+                className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary-dark data-[state=active]:text-white rounded-lg px-6 py-2.5 transition-all"
+              >
                 <GraduationCap className="h-4 w-4" /> Gradebook
               </TabsTrigger>
             </TabsList>
@@ -183,9 +223,13 @@ const ParentDashboard = () => {
               {/* Multi-child tabs if needed */}
               {approvedChildren && approvedChildren.length > 1 && (
                 <Tabs defaultValue={firstChildId} className="space-y-4">
-                  <TabsList>
+                  <TabsList className="glass-card border-0">
                     {approvedChildren.map((child) => (
-                      <TabsTrigger key={child.student_id} value={child.student_id}>
+                      <TabsTrigger 
+                        key={child.student_id} 
+                        value={child.student_id}
+                        className="data-[state=active]:bg-primary data-[state=active]:text-white"
+                      >
                         {child.full_name || "Student"}
                       </TabsTrigger>
                     ))}
@@ -216,7 +260,7 @@ const ParentDashboard = () => {
                   variant="outline" 
                   size="lg"
                   onClick={() => navigate(`/parent/child/${firstChildId}`)}
-                  className="gap-2 bg-card/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all"
+                  className="gap-2 glass-card border-0 hover:bg-primary/5 transition-all hover:-translate-y-1"
                 >
                   View Full Student Profile <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -231,9 +275,12 @@ const ParentDashboard = () => {
 
         {/* Access Requests */}
         {parentId && (
-          <div className="mt-8">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <UserPlus className="h-5 w-5" /> My Student Access Requests
+          <div className="mt-10">
+            <h2 className="section-header flex items-center gap-3">
+              <div className="icon-circle icon-circle-sm icon-circle-blue">
+                <UserPlus className="h-4 w-4 text-white" />
+              </div>
+              My Student Access Requests
             </h2>
             <ParentOutgoingRequestsList parentId={parentId} />
           </div>
