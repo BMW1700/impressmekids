@@ -70,8 +70,8 @@ export const HomeSection = ({
               <Card variant="glass" className="hover-lift">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="icon-circle-blue">
-                      <BookOpen className="h-5 w-5 text-white" />
+                    <div className="icon-circle-sm icon-circle-blue">
+                      <BookOpen className="h-4 w-4 text-white" />
                     </div>
                     <div>
                       <div className="text-2xl font-black">{totalAssignments}</div>
@@ -86,8 +86,8 @@ export const HomeSection = ({
               <Card variant="glass" className="hover-lift">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="icon-circle-green">
-                      <CheckCircle className="h-5 w-5 text-white" />
+                    <div className="icon-circle-sm icon-circle-green">
+                      <CheckCircle className="h-4 w-4 text-white" />
                     </div>
                     <div>
                       <div className="text-2xl font-black">{completedAssignments}</div>
@@ -102,8 +102,8 @@ export const HomeSection = ({
               <Card variant="glass" className="hover-lift">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="icon-circle-purple">
-                      <Gamepad2 className="h-5 w-5 text-white" />
+                    <div className="icon-circle-sm icon-circle-purple">
+                      <Gamepad2 className="h-4 w-4 text-white" />
                     </div>
                     <div>
                       <div className="text-2xl font-black">{gamesPlayed}</div>
@@ -118,8 +118,8 @@ export const HomeSection = ({
               <Card variant="glass" className="hover-lift">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="icon-circle-gold">
-                      <Trophy className="h-5 w-5 text-white" />
+                    <div className="icon-circle-sm icon-circle-gold">
+                      <Trophy className="h-4 w-4 text-white" />
                     </div>
                     <div>
                       <div className="text-2xl font-black">{gamesWon}</div>
@@ -132,16 +132,16 @@ export const HomeSection = ({
           </div>
 
           {/* Urgent Action Card */}
-          <Card className="border-2 border-orange-400/50 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 animate-pulse-subtle">
+          <Card className="border border-orange-400/30 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30">
             <CardContent className="p-5">
               <div className="flex items-center gap-4">
-                <div className="icon-circle-orange animate-bounce">
-                  <AlertCircle className="h-6 w-6 text-white" />
+                <div className="icon-circle-orange">
+                  <AlertCircle className="h-5 w-5 text-white" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-bold text-orange-700 dark:text-orange-400">Urgent: Assignment Due Soon</h3>
-                    <Badge variant="red" className="animate-pulse">Due in 6h</Badge>
+                    <h3 className="font-semibold text-orange-700 dark:text-orange-400">Urgent: Assignment Due Soon</h3>
+                    <Badge variant="red">Due in 6h</Badge>
                   </div>
                   <p className="text-sm text-orange-600/80 dark:text-orange-300/80">Reading Comprehension Quiz - Chapter 5</p>
                 </div>

@@ -183,17 +183,17 @@ All colors MUST be HSL.
    ============================================ */
 
 @layer components {
-  /* Glass Morphism Card */
+  /* Glass Morphism Card - Subtle & Refined */
   .glass-card {
-    @apply relative rounded-2xl border backdrop-blur-xl transition-all duration-300;
+    @apply relative rounded-xl border backdrop-blur-lg transition-all duration-300;
     background: var(--glass-bg);
     border-color: var(--glass-border-light);
-    box-shadow: 0 8px 32px 0 hsla(0 0% 0% / 0.08);
+    box-shadow: 0 2px 12px 0 hsla(0 0% 0% / 0.04);
   }
   
   .glass-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 40px 0 hsla(0 0% 0% / 0.12);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px 0 hsla(0 0% 0% / 0.08);
   }
   
   /* Premium Glass Card with Gradient Border */
@@ -223,51 +223,81 @@ All colors MUST be HSL.
     background-clip: text;
   }
   
-  /* Glowing Icon Circles */
+  /* Icon Circles - Solid Colors with Subtle Shadows (Fly Fit Style) */
   .icon-circle {
     @apply flex items-center justify-center rounded-full transition-all duration-300;
+    width: 48px;
+    height: 48px;
+  }
+  
+  .icon-circle-sm {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .icon-circle-lg {
     width: 56px;
     height: 56px;
   }
   
-  .icon-circle-sm {
-    width: 40px;
-    height: 40px;
-  }
-  
-  .icon-circle-lg {
-    width: 64px;
-    height: 64px;
-  }
-  
   .icon-circle-purple {
-    background: linear-gradient(135deg, hsl(262 83% 58%), hsl(280 80% 60%));
-    box-shadow: 0 8px 24px hsla(262 83% 58% / 0.4);
+    background: hsl(262 83% 58%);
+    box-shadow: 0 2px 8px hsla(262 83% 58% / 0.25);
+  }
+  
+  .icon-circle-purple:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px hsla(262 83% 58% / 0.35);
   }
   
   .icon-circle-blue {
-    background: linear-gradient(135deg, hsl(217 91% 60%), hsl(213 93% 68%));
-    box-shadow: 0 8px 24px hsla(217 91% 60% / 0.4);
+    background: hsl(217 91% 60%);
+    box-shadow: 0 2px 8px hsla(217 91% 60% / 0.25);
+  }
+  
+  .icon-circle-blue:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px hsla(217 91% 60% / 0.35);
   }
   
   .icon-circle-green {
-    background: linear-gradient(135deg, hsl(160 84% 39%), hsl(162 79% 54%));
-    box-shadow: 0 8px 24px hsla(160 84% 39% / 0.4);
+    background: hsl(160 84% 39%);
+    box-shadow: 0 2px 8px hsla(160 84% 39% / 0.25);
+  }
+  
+  .icon-circle-green:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px hsla(160 84% 39% / 0.35);
   }
   
   .icon-circle-orange {
-    background: linear-gradient(135deg, hsl(24 95% 53%), hsl(27 96% 61%));
-    box-shadow: 0 8px 24px hsla(24 95% 53% / 0.4);
+    background: hsl(24 95% 53%);
+    box-shadow: 0 2px 8px hsla(24 95% 53% / 0.25);
+  }
+  
+  .icon-circle-orange:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px hsla(24 95% 53% / 0.35);
   }
   
   .icon-circle-gold {
-    background: linear-gradient(135deg, hsl(37 91% 55%), hsl(43 96% 58%));
-    box-shadow: 0 8px 24px hsla(37 91% 55% / 0.4);
+    background: hsl(37 91% 55%);
+    box-shadow: 0 2px 8px hsla(37 91% 55% / 0.25);
+  }
+  
+  .icon-circle-gold:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px hsla(37 91% 55% / 0.35);
   }
   
   .icon-circle-red {
-    background: linear-gradient(135deg, hsl(0 84% 60%), hsl(4 90% 64%));
-    box-shadow: 0 8px 24px hsla(0 84% 60% / 0.4);
+    background: hsl(0 84% 60%);
+    box-shadow: 0 2px 8px hsla(0 84% 60% / 0.25);
+  }
+  
+  .icon-circle-red:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px hsla(0 84% 60% / 0.35);
   }
   
   /* Premium Gradient Buttons */
@@ -339,39 +369,33 @@ All colors MUST be HSL.
     background: linear-gradient(90deg, hsl(262 83% 58%), hsl(37 91% 55%));
   }
   
-  /* Premium Badges */
+  /* Premium Badges - Clean & Solid (Fly Fit Style) */
   .badge-premium {
-    @apply inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold text-white transition-all duration-200;
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold text-white transition-all duration-200;
   }
   
   .badge-purple {
-    background: linear-gradient(135deg, hsl(262 83% 58%), hsl(280 80% 60%));
-    box-shadow: 0 4px 12px hsla(262 83% 58% / 0.3);
+    background: hsl(262 83% 58%);
   }
   
   .badge-gold {
-    background: linear-gradient(135deg, hsl(37 91% 55%), hsl(43 96% 58%));
-    box-shadow: 0 4px 12px hsla(37 91% 55% / 0.3);
+    background: hsl(37 91% 55%);
   }
   
   .badge-green {
-    background: linear-gradient(135deg, hsl(160 84% 39%), hsl(162 79% 54%));
-    box-shadow: 0 4px 12px hsla(160 84% 39% / 0.3);
+    background: hsl(160 84% 39%);
   }
   
   .badge-red {
-    background: linear-gradient(135deg, hsl(0 84% 60%), hsl(4 90% 64%));
-    box-shadow: 0 4px 12px hsla(0 84% 60% / 0.3);
+    background: hsl(0 84% 60%);
   }
   
   .badge-blue {
-    background: linear-gradient(135deg, hsl(217 91% 60%), hsl(213 93% 68%));
-    box-shadow: 0 4px 12px hsla(217 91% 60% / 0.3);
+    background: hsl(217 91% 60%);
   }
   
   .badge-orange {
-    background: linear-gradient(135deg, hsl(24 95% 53%), hsl(27 96% 61%));
-    box-shadow: 0 4px 12px hsla(24 95% 53% / 0.3);
+    background: hsl(24 95% 53%);
   }
   
   /* Urgent Alert Styling */
@@ -514,13 +538,14 @@ All colors MUST be HSL.
     box-shadow: 0 8px 24px hsla(0 0% 0% / 0.12);
   }
   
-  /* Hover Lift Effect */
+  /* Hover Lift Effect - Subtle */
   .hover-lift {
     @apply transition-all duration-300;
   }
   
   .hover-lift:hover {
-    transform: translateY(-6px);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px hsla(0 0% 0% / 0.06);
   }
   
   /* Shimmer Loading Effect */

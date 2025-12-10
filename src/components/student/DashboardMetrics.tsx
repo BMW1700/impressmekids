@@ -90,7 +90,7 @@ export const DashboardMetrics = ({
       <MetricCard
         title="Assignment Progress"
         value={`${completionRate}%`}
-        icon={<TrendingUp className="h-6 w-6 text-white" />}
+        icon={<TrendingUp className="h-5 w-5 text-white" />}
         iconClass="icon-circle-blue"
         trend={{ value: "+12%", positive: true }}
         progress={completionRate}
@@ -100,7 +100,7 @@ export const DashboardMetrics = ({
       <MetricCard
         title="Completion Rate"
         value={`${completedAssignments}/${totalAssignments}`}
-        icon={<Target className="h-6 w-6 text-white" />}
+        icon={<Target className="h-5 w-5 text-white" />}
         iconClass="icon-circle-green"
         progress={(completedAssignments / Math.max(totalAssignments, 1)) * 100}
         progressGradient="green"
@@ -109,7 +109,7 @@ export const DashboardMetrics = ({
       <MetricCard
         title="Current Streak"
         value="5 days"
-        icon={<Zap className="h-6 w-6 text-white" />}
+        icon={<Zap className="h-5 w-5 text-white" />}
         iconClass="icon-circle-orange"
         trend={{ value: "+2", positive: true }}
       />
@@ -117,7 +117,7 @@ export const DashboardMetrics = ({
       <MetricCard
         title="AURA Practice"
         value="24 min"
-        icon={<BookOpen className="h-6 w-6 text-white" />}
+        icon={<BookOpen className="h-5 w-5 text-white" />}
         iconClass="icon-circle-purple"
         progress={60}
         progressGradient="purple"
@@ -126,7 +126,7 @@ export const DashboardMetrics = ({
       <MetricCard
         title="Game Win Rate"
         value={`${winRate}%`}
-        icon={<Trophy className="h-6 w-6 text-white" />}
+        icon={<Trophy className="h-5 w-5 text-white" />}
         iconClass="icon-circle-gold"
         progress={winRate}
         progressGradient="gold"
@@ -135,7 +135,7 @@ export const DashboardMetrics = ({
       <MetricCard
         title="Games Played"
         value={gamesPlayed}
-        icon={<Gamepad2 className="h-6 w-6 text-white" />}
+        icon={<Gamepad2 className="h-5 w-5 text-white" />}
         iconClass="icon-circle-purple"
       />
     </div>
