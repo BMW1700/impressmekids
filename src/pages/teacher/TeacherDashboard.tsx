@@ -195,8 +195,8 @@ const TeacherDashboard = () => {
       <main className="flex-1 py-8 animate-fade-in">
         <div className="container mx-auto px-4">
           <div className="mb-8">
-            <h1 className="text-4xl md:text-5xl font-black mb-2 italic bg-gradient-to-r from-purple-400 via-purple-500 to-purple-600 bg-clip-text text-transparent">
-              Welcome, {profile?.full_name}! <span className="text-purple-500">👋</span>
+            <h1 className="text-4xl md:text-5xl font-black mb-2 italic bg-gradient-to-b from-[#9b59b6] to-[#c39bd3] bg-clip-text text-transparent">
+              Welcome, {profile?.full_name}! <span className="text-purple-400">👋</span>
             </h1>
             <p className="text-muted-foreground text-lg">Your AI-Powered Classroom Command Center</p>
           </div>
@@ -247,7 +247,7 @@ const TeacherDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-black text-primary">
+                  <span className="text-4xl font-black bg-gradient-to-b from-[#9b87f5] to-[#d4a574] bg-clip-text text-transparent">
                     {classrooms.length}
                   </span>
                   <span className="text-sm text-emerald-500 font-medium flex items-center gap-0.5">
@@ -268,7 +268,7 @@ const TeacherDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-black text-[#b061fa]">
+                  <span className="text-4xl font-black bg-gradient-to-b from-[#9b87f5] to-[#d4a574] bg-clip-text text-transparent">
                     {totalStudentCount}
                   </span>
                   <span className="text-sm text-emerald-500 font-medium flex items-center gap-0.5">
@@ -289,7 +289,7 @@ const TeacherDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-black text-[#34afa9]">
+                  <span className="text-4xl font-black bg-gradient-to-b from-[#9b87f5] to-[#d4a574] bg-clip-text text-transparent">
                     {classrooms.length > 0 ? classrooms.length * 3 : 0}
                   </span>
                   <Badge className="bg-amber-400 text-amber-900 hover:bg-amber-400 border-0 text-xs">ML-Powered</Badge>
