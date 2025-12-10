@@ -1,7 +1,7 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Target, Users, TrendingUp } from "lucide-react";
+import { Clock, Target, Users, TrendingUp, CheckCircle } from "lucide-react";
 
 interface Mission {
   id: string;
@@ -18,61 +18,93 @@ interface MissionCardProps {
   mission: Mission;
 }
 
-const missionIcons = {
-  daily_reading: Clock,
-  weekly_wpm: TrendingUp,
-  class_challenge: Users,
-  accuracy_goal: Target,
+const missionConfig = {
+  daily_reading: {
+    icon: Clock,
+    gradient: "from-purple-500 to-purple-400",
+    progressGradient: "purple" as const,
+    accentColor: "border-l-purple-500",
+  },
+  weekly_wpm: {
+    icon: TrendingUp,
+    gradient: "from-blue-500 to-blue-400",
+    progressGradient: "blue" as const,
+    accentColor: "border-l-blue-500",
+  },
+  class_challenge: {
+    icon: Users,
+    gradient: "from-green-500 to-green-400",
+    progressGradient: "green" as const,
+    accentColor: "border-l-green-500",
+  },
+  accuracy_goal: {
+    icon: Target,
+    gradient: "from-orange-500 to-orange-400",
+    progressGradient: "orange" as const,
+    accentColor: "border-l-orange-500",
+  },
 };
 
 export const MissionCard = ({ mission }: MissionCardProps) => {
-  const Icon = missionIcons[mission.mission_type as keyof typeof missionIcons] || Target;
+  const config = missionConfig[mission.mission_type as keyof typeof missionConfig] || missionConfig.daily_reading;
+  const Icon = config.icon;
   const progress = (mission.current_value / mission.target_value) * 100;
   const isCompleted = mission.status === 'completed';
   const isExpired = mission.status === 'expired';
 
-  const getStatusColor = () => {
-    if (isCompleted) return "bg-green-500";
-    if (isExpired) return "bg-muted";
-    if (progress >= 75) return "bg-yellow-500";
-    return "bg-primary";
-  };
-
   return (
-    <Card className={isCompleted ? "border-green-500" : isExpired ? "opacity-50" : ""}>
-      <CardHeader>
+    <Card 
+      variant="glass" 
+      className={`hover-lift relative overflow-hidden border-l-4 ${config.accentColor} ${
+        isCompleted ? 'ring-2 ring-green-500/50' : isExpired ? 'opacity-60' : ''
+      }`}
+    >
+      <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
-            <div className={`p-2 rounded-lg ${isCompleted ? 'bg-green-100' : 'bg-primary/10'}`}>
-              <Icon className={`h-5 w-5 ${isCompleted ? 'text-green-600' : 'text-primary'}`} />
+          <div className="flex items-center gap-3">
+            <div 
+              className={`w-12 h-12 rounded-xl bg-gradient-to-br ${config.gradient} flex items-center justify-center shadow-lg`}
+              style={{ boxShadow: `0 8px 20px ${isCompleted ? 'rgba(16, 185, 129, 0.3)' : 'rgba(139, 92, 246, 0.3)'}` }}
+            >
+              {isCompleted ? (
+                <CheckCircle className="h-6 w-6 text-white" />
+              ) : (
+                <Icon className="h-6 w-6 text-white" />
+              )}
             </div>
             <div>
-              <CardTitle className="text-base">{mission.title}</CardTitle>
-              <CardDescription className="text-xs">{mission.description}</CardDescription>
+              <CardTitle className="text-lg font-bold">{mission.title}</CardTitle>
+              <CardDescription className="text-sm">{mission.description}</CardDescription>
             </div>
           </div>
           {isCompleted && (
-            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+            <Badge variant="green" className="shadow-glow-green">
               ✓ Complete
             </Badge>
           )}
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Progress</span>
-            <span className="font-semibold">
-              {mission.current_value} / {mission.target_value}
-            </span>
-          </div>
-          <Progress value={progress} className="h-2" />
-          {mission.expires_at && !isCompleted && (
-            <p className="text-xs text-muted-foreground">
-              Expires: {new Date(mission.expires_at).toLocaleDateString()}
-            </p>
-          )}
+      
+      <CardContent className="space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground font-medium">Progress</span>
+          <span className="text-2xl font-black">
+            {mission.current_value} <span className="text-base text-muted-foreground font-medium">/ {mission.target_value}</span>
+          </span>
         </div>
+        
+        <Progress 
+          value={progress} 
+          variant="premium" 
+          gradient={isCompleted ? "green" : config.progressGradient} 
+          className="h-3" 
+        />
+        
+        {mission.expires_at && !isCompleted && (
+          <p className="text-xs text-muted-foreground">
+            Expires: {new Date(mission.expires_at).toLocaleDateString()}
+          </p>
+        )}
       </CardContent>
     </Card>
   );

@@ -1,73 +1,65 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import {
   BookOpen,
   CheckCircle,
   TrendingUp,
-  TrendingDown,
   Target,
   Trophy,
-  Award,
   Zap,
+  Gamepad2,
+  ArrowUp,
 } from "lucide-react";
 
 interface MetricCardProps {
   title: string;
   value: string | number;
   icon: React.ReactNode;
-  trend?: {
-    value: number;
-    direction: "up" | "down" | "neutral";
-  };
-  color: string;
+  iconClass: string;
+  trend?: { value: string; positive: boolean };
+  progress?: number;
+  progressGradient?: "purple" | "blue" | "green" | "gold" | "orange" | "multi";
 }
 
-const MetricCard = ({ title, value, icon, trend, color }: MetricCardProps) => {
-  const colorClasses = {
-    "blue-600": "border-blue-600/20 bg-blue-600/10 text-blue-600 dark:text-blue-400 progress-blue",
-    "green-600": "border-green-600/20 bg-green-600/10 text-green-600 dark:text-green-400 progress-green",
-    "yellow-600": "border-yellow-600/20 bg-yellow-600/10 text-yellow-600 dark:text-yellow-400 progress-yellow",
-    "purple-600": "border-purple-600/20 bg-purple-600/10 text-purple-600 dark:text-purple-400 progress-purple",
-    "orange-600": "border-orange-600/20 bg-orange-600/10 text-orange-600 dark:text-orange-400 progress-orange",
-    "pink-600": "border-pink-600/20 bg-pink-600/10 text-pink-600 dark:text-pink-400 progress-pink",
-  }[color] || "";
-
-  const [borderClass, bgClass, textClass, progressClass] = colorClasses.split(" ");
-  
-  // Extract progress value if it exists in the value string
-  const progressMatch = typeof value === 'string' && value.includes('%') ? parseInt(value) : null;
-
+const MetricCard = ({ title, value, icon, iconClass, trend, progress, progressGradient = "purple" }: MetricCardProps) => {
   return (
-    <Card className={`${borderClass} hover:shadow-lg transition-all duration-300 hover:scale-[1.02] group`}>
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className={`p-3 rounded-xl ${bgClass} group-hover:scale-110 transition-transform duration-300`}>
+    <Card variant="glass" className="hover-lift relative overflow-hidden">
+      {/* Top colored border */}
+      <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${
+        iconClass.includes('blue') ? 'from-blue-500 to-blue-400' :
+        iconClass.includes('green') ? 'from-green-500 to-green-400' :
+        iconClass.includes('purple') ? 'from-purple-500 to-purple-400' :
+        iconClass.includes('gold') ? 'from-amber-500 to-amber-400' :
+        iconClass.includes('orange') ? 'from-orange-500 to-orange-400' :
+        'from-purple-500 to-pink-400'
+      }`} />
+      
+      <CardContent className="p-5 pt-6">
+        <div className="flex items-start justify-between mb-3">
+          <div className={iconClass}>
             {icon}
           </div>
           {trend && (
-            <div
-              className={`flex items-center gap-1 text-sm font-medium ${
-                trend.direction === "up"
-                  ? "text-green-600 dark:text-green-400"
-                  : trend.direction === "down"
-                  ? "text-red-600 dark:text-red-400"
-                  : "text-muted-foreground"
-              }`}
+            <Badge 
+              variant={trend.positive ? "green" : "red"} 
+              className="text-xs flex items-center gap-1"
             >
-              {trend.direction === "up" ? (
-                <TrendingUp className="h-4 w-4" />
-              ) : trend.direction === "down" ? (
-                <TrendingDown className="h-4 w-4" />
-              ) : null}
-              {trend.value > 0 && "+"}
-              {trend.value}%
-            </div>
+              <ArrowUp className={`h-3 w-3 ${!trend.positive ? 'rotate-180' : ''}`} />
+              {trend.value}
+            </Badge>
           )}
         </div>
-        <div className={`text-3xl font-bold ${textClass} mb-1`}>{value}</div>
-        <div className="text-sm text-muted-foreground mb-3">{title}</div>
-        {progressMatch !== null && (
-          <Progress value={progressMatch} className={`h-2 ${progressClass}`} />
+        
+        <div className="space-y-1">
+          <p className="text-4xl font-black text-foreground">{value}</p>
+          <p className="text-sm font-medium text-muted-foreground">{title}</p>
+        </div>
+        
+        {progress !== undefined && (
+          <div className="mt-4">
+            <Progress value={progress} variant="premium" gradient={progressGradient} className="h-2" />
+          </div>
         )}
       </CardContent>
     </Card>
@@ -94,50 +86,58 @@ export const DashboardMetrics = ({
   const winRate = gamesPlayed > 0 ? Math.round((gamesWon / gamesPlayed) * 100) : 0;
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <MetricCard
-          title="Assignment Progress"
-          value={`${completionRate}%`}
-          icon={<BookOpen className="h-6 w-6 text-blue-600 dark:text-blue-400" />}
-          trend={{ value: 12, direction: "up" }}
-          color="blue-600"
-        />
-        <MetricCard
-          title="Completion Rate"
-          value={`${completedAssignments}/${totalAssignments}`}
-          icon={<CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />}
-          trend={{ value: 5, direction: "up" }}
-          color="green-600"
-        />
-        <MetricCard
-          title="Current Streak"
-          value="5 days"
-          icon={<Zap className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />}
-          trend={{ value: 2, direction: "up" }}
-          color="yellow-600"
-        />
-        <MetricCard
-          title="AURA Practice"
-          value="24 min"
-          icon={<Target className="h-6 w-6 text-purple-600 dark:text-purple-400" />}
-          trend={{ value: 15, direction: "up" }}
-          color="purple-600"
-        />
-        <MetricCard
-          title="Game Win Rate"
-          value={`${winRate}%`}
-          icon={<Trophy className="h-6 w-6 text-orange-600 dark:text-orange-400" />}
-          trend={{ value: 8, direction: "up" }}
-          color="orange-600"
-        />
-        <MetricCard
-          title="Total Games"
-          value={gamesPlayed}
-          icon={<Award className="h-6 w-6 text-pink-600 dark:text-pink-400" />}
-          color="pink-600"
-        />
-      </div>
+    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+      <MetricCard
+        title="Assignment Progress"
+        value={`${completionRate}%`}
+        icon={<TrendingUp className="h-6 w-6 text-white" />}
+        iconClass="icon-circle-blue"
+        trend={{ value: "+12%", positive: true }}
+        progress={completionRate}
+        progressGradient="blue"
+      />
+      
+      <MetricCard
+        title="Completion Rate"
+        value={`${completedAssignments}/${totalAssignments}`}
+        icon={<Target className="h-6 w-6 text-white" />}
+        iconClass="icon-circle-green"
+        progress={(completedAssignments / Math.max(totalAssignments, 1)) * 100}
+        progressGradient="green"
+      />
+      
+      <MetricCard
+        title="Current Streak"
+        value="5 days"
+        icon={<Zap className="h-6 w-6 text-white" />}
+        iconClass="icon-circle-orange"
+        trend={{ value: "+2", positive: true }}
+      />
+      
+      <MetricCard
+        title="AURA Practice"
+        value="24 min"
+        icon={<BookOpen className="h-6 w-6 text-white" />}
+        iconClass="icon-circle-purple"
+        progress={60}
+        progressGradient="purple"
+      />
+      
+      <MetricCard
+        title="Game Win Rate"
+        value={`${winRate}%`}
+        icon={<Trophy className="h-6 w-6 text-white" />}
+        iconClass="icon-circle-gold"
+        progress={winRate}
+        progressGradient="gold"
+      />
+      
+      <MetricCard
+        title="Games Played"
+        value={gamesPlayed}
+        icon={<Gamepad2 className="h-6 w-6 text-white" />}
+        iconClass="icon-circle-purple"
+      />
     </div>
   );
 };

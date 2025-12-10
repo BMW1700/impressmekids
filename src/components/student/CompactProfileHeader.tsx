@@ -18,18 +18,21 @@ export const CompactProfileHeader = ({
 
   return (
     <div className="flex items-center gap-4">
-      <Avatar className="h-16 w-16 ring-2 ring-primary/20 ring-offset-2 ring-offset-background">
-        <AvatarImage src={avatarUrl} alt={fullName} />
-        <AvatarFallback className="text-xl bg-gradient-primary text-white">
-          {initials}
-        </AvatarFallback>
-      </Avatar>
+      <div className="relative">
+        <div className="absolute -inset-1 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full blur-sm opacity-60" />
+        <Avatar className="relative h-16 w-16 ring-2 ring-white/50 ring-offset-2 ring-offset-background">
+          <AvatarImage src={avatarUrl} alt={fullName} />
+          <AvatarFallback className="text-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white font-bold">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
+      </div>
       <div>
         <h2 className="text-xl font-bold text-foreground">
           {fullName || "Student"}
         </h2>
         {grade && (
-          <Badge variant="secondary" className="mt-1">
+          <Badge variant="purple" className="mt-1">
             Grade {grade}
           </Badge>
         )}
