@@ -197,8 +197,8 @@ const TeacherDashboard = () => {
       <main className="flex-1 py-8 animate-fade-in">
         <div className="container mx-auto px-4">
           <div className="mb-8">
-            <h1 className="text-4xl md:text-5xl font-black mb-2 text-gradient-purple">
-              Welcome, {profile?.full_name}! 👋
+            <h1 className="text-4xl md:text-5xl font-black mb-2 bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
+              Welcome, {profile?.full_name}! <span className="text-primary">👋</span>
             </h1>
             <p className="text-muted-foreground text-lg">Your AI-Powered Classroom Command Center</p>
           </div>
@@ -245,11 +245,13 @@ const TeacherDashboard = () => {
 
           {/* Stats Cards - Exact Match */}
           <div className="grid md:grid-cols-3 gap-6 mb-8">
-            <Card className="bg-white border shadow-sm hover:shadow-md transition-shadow">
+            <Card className="bg-card border shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Total Classrooms</CardTitle>
-                  <Users className="h-5 w-5 text-primary" />
+                  <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center">
+                    <Users className="h-5 w-5 text-amber-500" />
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -257,7 +259,7 @@ const TeacherDashboard = () => {
                   <span className="text-4xl font-black text-foreground">
                     {classrooms.length}
                   </span>
-                  <span className="text-sm text-primary font-medium flex items-center gap-0.5">
+                  <span className="text-sm text-emerald-500 font-medium flex items-center gap-0.5">
                     ↗ Active
                   </span>
                 </div>
@@ -265,13 +267,15 @@ const TeacherDashboard = () => {
             </Card>
             
             <Card 
-              className="bg-white border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+              className="bg-card border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
               onClick={loadAllStudents}
             >
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Total Students</CardTitle>
-                  <BookOpen className="h-5 w-5 text-primary" />
+                  <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center">
+                    <BookOpen className="h-5 w-5 text-amber-500" />
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -279,18 +283,20 @@ const TeacherDashboard = () => {
                   <span className="text-4xl font-black text-foreground">
                     {totalStudentCount}
                   </span>
-                  <span className="text-sm text-primary font-medium flex items-center gap-0.5">
+                  <span className="text-sm text-emerald-500 font-medium flex items-center gap-0.5">
                     ↗ Enrolled
                   </span>
                 </div>
               </CardContent>
             </Card>
             
-            <Card className="bg-white border shadow-sm hover:shadow-md transition-shadow">
+            <Card className="bg-card border shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Active Assignments</CardTitle>
-                  <Brain className="h-5 w-5 text-primary" />
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Brain className="h-5 w-5 text-primary" />
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -298,7 +304,7 @@ const TeacherDashboard = () => {
                   <span className="text-4xl font-black text-foreground">
                     {classrooms.length > 0 ? classrooms.length * 3 : 0}
                   </span>
-                  <Badge className="bg-amber-500 text-white hover:bg-amber-500 border-0 text-xs">ML-Powered</Badge>
+                  <Badge className="bg-amber-400 text-amber-900 hover:bg-amber-400 border-0 text-xs">ML-Powered</Badge>
                 </div>
               </CardContent>
             </Card>
