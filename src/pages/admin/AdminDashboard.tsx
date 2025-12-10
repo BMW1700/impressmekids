@@ -124,11 +124,21 @@ export default function AdminDashboard() {
       
       <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl animate-fade-in">
         <div className="space-y-6">
-          <div>
-            <h1 className="text-4xl font-black text-gradient-purple">Admin Dashboard</h1>
-            <p className="text-muted-foreground mt-1 text-lg">
-              Platform-wide user management and oversight
-            </p>
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-4xl font-black text-gradient-purple">Admin Dashboard</h1>
+              <p className="text-muted-foreground mt-1 text-lg">
+                Platform-wide user management and oversight
+              </p>
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate("/admin/settings")}
+              className="flex items-center gap-2"
+            >
+              <Settings className="h-4 w-4" />
+              Settings
+            </Button>
           </div>
 
           {/* Statistics Cards */}
@@ -174,20 +184,25 @@ export default function AdminDashboard() {
           </div>
 
           {/* Main Content Tabs */}
-          <Tabs defaultValue="teacher-requests" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-11">
-              <TabsTrigger value="teacher-requests">Teacher Requests</TabsTrigger>
-              <TabsTrigger value="teachers">Teachers</TabsTrigger>
-              <TabsTrigger value="students">Students</TabsTrigger>
-              <TabsTrigger value="admins">Admins</TabsTrigger>
-              <TabsTrigger value="import">Import</TabsTrigger>
-              <TabsTrigger value="clever">Clever</TabsTrigger>
-              <TabsTrigger value="parent-requests">Parent Requests</TabsTrigger>
-              <TabsTrigger value="safety">Safety</TabsTrigger>
-              <TabsTrigger value="backups">Backups</TabsTrigger>
-              <TabsTrigger value="calendar">Calendar</TabsTrigger>
-              <TabsTrigger value="settings">Settings</TabsTrigger>
-            </TabsList>
+          <Tabs defaultValue="teachers" className="space-y-4">
+            <div className="space-y-2">
+              {/* Row 1: Teachers, Students, Admins, Teacher Requests, Parent Requests */}
+              <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger value="teachers">Teachers</TabsTrigger>
+                <TabsTrigger value="students">Students</TabsTrigger>
+                <TabsTrigger value="admins">Admins</TabsTrigger>
+                <TabsTrigger value="teacher-requests">Teacher Requests</TabsTrigger>
+                <TabsTrigger value="parent-requests">Parent Requests</TabsTrigger>
+              </TabsList>
+              {/* Row 2: Import, Clever, Calendar, Safety, Backups */}
+              <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger value="import">Import</TabsTrigger>
+                <TabsTrigger value="clever">Clever</TabsTrigger>
+                <TabsTrigger value="calendar">Calendar</TabsTrigger>
+                <TabsTrigger value="safety">Safety</TabsTrigger>
+                <TabsTrigger value="backups">Backups</TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="teacher-requests" className="space-y-4">
               <AccountVerificationRequests />
@@ -327,24 +342,6 @@ export default function AdminDashboard() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="settings" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Settings className="h-5 w-5" />
-                    School Settings
-                  </CardTitle>
-                  <CardDescription>
-                    Configure school year, timezone, and daily schedule
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button onClick={() => navigate("/admin/settings")}>
-                    Open Settings
-                  </Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
           </Tabs>
         </div>
       </main>
