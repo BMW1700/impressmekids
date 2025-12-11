@@ -6,31 +6,21 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface CleverStudent {
+interface CleverUserInfo {
+  type: string;
   data: {
     id: string;
-    name: { first: string; last: string };
+    district: string;
     email: string;
-    grade: string;
-  };
-}
-
-interface CleverTeacher {
-  data: {
-    id: string;
-    name: { first: string; last: string };
-    email: string;
-  };
-}
-
-interface CleverSection {
-  data: {
-    id: string;
-    name: string;
-    subject: string;
-    grade: string;
-    teacher: string;
-    students: string[];
+    name: {
+      first: string;
+      last: string;
+    };
+    roles: {
+      student?: { id: string };
+      teacher?: { id: string };
+      district_admin?: { id: string };
+    };
   };
 }
 
@@ -39,22 +29,35 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const appUrl = Deno.env.get('APP_URL') || 'https://impressmekids.com';
+  
   try {
     const url = new URL(req.url);
     const code = url.searchParams.get('code');
+    const error = url.searchParams.get('error');
 
-    if (!code) {
-      throw new Error('No authorization code provided');
+    // Handle OAuth errors
+    if (error) {
+      console.error('Clever OAuth error:', error);
+      return Response.redirect(`${appUrl}/auth?error=${encodeURIComponent(error)}`, 302);
     }
 
-    // Exchange code for access token
+    if (!code) {
+      console.error('No authorization code provided');
+      return Response.redirect(`${appUrl}/auth?error=no_code`, 302);
+    }
+
+    // Get Clever credentials
     const cleverClientId = Deno.env.get('CLEVER_CLIENT_ID');
     const cleverClientSecret = Deno.env.get('CLEVER_CLIENT_SECRET');
 
     if (!cleverClientId || !cleverClientSecret) {
-      throw new Error('Clever credentials not configured');
+      console.error('Clever credentials not configured');
+      return Response.redirect(`${appUrl}/auth?error=config_error`, 302);
     }
 
+    // Exchange code for access token
+    console.log('Exchanging code for token...');
     const tokenResponse = await fetch('https://clever.com/oauth/tokens', {
       method: 'POST',
       headers: {
@@ -69,11 +72,41 @@ serve(async (req) => {
     });
 
     const tokens = await tokenResponse.json();
-    const accessToken = tokens.access_token;
-
-    if (!accessToken) {
-      throw new Error('Failed to get access token from Clever');
+    
+    if (!tokens.access_token) {
+      console.error('Failed to get access token:', tokens);
+      return Response.redirect(`${appUrl}/auth?error=token_failed`, 302);
     }
+
+    const accessToken = tokens.access_token;
+    console.log('Got access token, fetching user info...');
+
+    // Get the current logged-in user's info from Clever
+    const meResponse = await fetch('https://api.clever.com/v3.0/me', {
+      headers: { 'Authorization': `Bearer ${accessToken}` },
+    });
+    
+    const meData: CleverUserInfo = await meResponse.json();
+    console.log('Clever user info:', JSON.stringify(meData));
+
+    if (!meData.data || !meData.data.email) {
+      console.error('Invalid user data from Clever:', meData);
+      return Response.redirect(`${appUrl}/auth?error=invalid_user`, 302);
+    }
+
+    const email = meData.data.email;
+    const fullName = `${meData.data.name.first} ${meData.data.name.last}`;
+    const cleverId = meData.data.id;
+    
+    // Determine role based on Clever user type
+    let role: 'student' | 'teacher' | 'admin' = 'student';
+    if (meData.data.roles?.teacher) {
+      role = 'teacher';
+    } else if (meData.data.roles?.district_admin) {
+      role = 'admin';
+    }
+
+    console.log(`User: ${fullName} (${email}), Role: ${role}`);
 
     // Initialize Supabase admin client
     const supabaseAdmin = createClient(
@@ -81,156 +114,79 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch district data
-    const districtResponse = await fetch('https://api.clever.com/v3.0/district', {
-      headers: { 'Authorization': `Bearer ${accessToken}` },
-    });
-    const districtData = await districtResponse.json();
+    // Check if user already exists
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const existingUser = existingUsers?.users?.find(u => u.email === email);
 
-    console.log('Syncing district:', districtData.data.name);
+    let userId: string;
 
-    // Fetch and sync students
-    const studentsResponse = await fetch('https://api.clever.com/v3.0/students', {
-      headers: { 'Authorization': `Bearer ${accessToken}` },
-    });
-    const studentsData = await studentsResponse.json();
-
-    for (const student of studentsData.data as CleverStudent[]) {
-      const email = student.data.email;
-      const fullName = `${student.data.name.first} ${student.data.name.last}`;
-      const grade = parseInt(student.data.grade);
-
-      // Create student account
+    if (existingUser) {
+      // User exists - update their metadata
+      console.log('User exists, updating metadata...');
+      userId = existingUser.id;
+      
+      await supabaseAdmin.auth.admin.updateUserById(userId, {
+        user_metadata: {
+          full_name: fullName,
+          clever_id: cleverId,
+          role: role,
+        },
+      });
+    } else {
+      // Create new user
+      console.log('Creating new user...');
+      const tempPassword = crypto.randomUUID();
+      
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email,
+        password: tempPassword,
         email_confirm: true,
         user_metadata: {
           full_name: fullName,
-          role: 'student',
-          clever_id: student.data.id,
+          clever_id: cleverId,
+          role: role,
         },
       });
 
-      if (authData?.user) {
-        // Update grade in public profile
-        await supabaseAdmin
-          .from('public_profiles')
-          .update({ grade })
-          .eq('id', authData.user.id);
-
-        console.log(`Created student: ${fullName} (${email})`);
-      } else if (authError?.message.includes('already registered')) {
-        console.log(`Student already exists: ${email}`);
+      if (authError || !authData?.user) {
+        console.error('Failed to create user:', authError);
+        return Response.redirect(`${appUrl}/auth?error=user_creation_failed`, 302);
       }
+
+      userId = authData.user.id;
+      console.log('Created user:', userId);
     }
 
-    // Fetch and sync teachers
-    const teachersResponse = await fetch('https://api.clever.com/v3.0/teachers', {
-      headers: { 'Authorization': `Bearer ${accessToken}` },
+    // Generate a magic link for the user to sign in
+    console.log('Generating sign-in link...');
+    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: email,
+      options: {
+        redirectTo: `${appUrl}/auth?clever_login=success`,
+      },
     });
-    const teachersData = await teachersResponse.json();
 
-    for (const teacher of teachersData.data as CleverTeacher[]) {
-      const email = teacher.data.email;
-      const fullName = `${teacher.data.name.first} ${teacher.data.name.last}`;
-
-      // Create teacher account
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email,
-        email_confirm: true,
-        user_metadata: {
-          full_name: fullName,
-          role: 'teacher',
-          clever_id: teacher.data.id,
-        },
-      });
-
-      if (authData?.user) {
-        console.log(`Created teacher: ${fullName} (${email})`);
-      } else if (authError?.message.includes('already registered')) {
-        console.log(`Teacher already exists: ${email}`);
-      }
+    if (linkError || !linkData?.properties?.hashed_token) {
+      console.error('Failed to generate magic link:', linkError);
+      return Response.redirect(`${appUrl}/auth?error=link_failed`, 302);
     }
 
-    // Fetch and sync sections (classrooms)
-    const sectionsResponse = await fetch('https://api.clever.com/v3.0/sections', {
-      headers: { 'Authorization': `Bearer ${accessToken}` },
-    });
-    const sectionsData = await sectionsResponse.json();
+    // Extract the token from the magic link
+    const magicLinkUrl = new URL(linkData.properties.action_link);
+    const token = magicLinkUrl.searchParams.get('token');
+    const tokenType = magicLinkUrl.searchParams.get('type');
+    
+    // Redirect to the app's auth page with the magic link token
+    // The Supabase client on the frontend will handle the token verification
+    const redirectUrl = `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify?token=${token}&type=${tokenType}&redirect_to=${encodeURIComponent(`${appUrl}/auth?clever_login=success`)}`;
+    
+    console.log('Redirecting to:', redirectUrl);
+    return Response.redirect(redirectUrl, 302);
 
-    for (const section of sectionsData.data as CleverSection[]) {
-      const classroomName = section.data.name;
-      const subject = section.data.subject;
-      const teacherCleverId = section.data.teacher;
-
-      // Find teacher by Clever ID
-      const { data: teacherProfile } = await supabaseAdmin
-        .from('profiles')
-        .select('id')
-        .eq('email', teacherCleverId)
-        .single();
-
-      if (teacherProfile) {
-        // Generate unique join code
-        const joinCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-
-        // Create classroom
-        const { data: classroom, error: classroomError } = await supabaseAdmin
-          .from('classrooms')
-          .insert({
-            name: classroomName,
-            subject,
-            teacher_id: teacherProfile.id,
-            join_code: joinCode,
-            grade: parseInt(section.data.grade),
-          })
-          .select()
-          .single();
-
-        if (classroom) {
-          // Enroll students
-          for (const studentCleverId of section.data.students) {
-            const { data: studentProfile } = await supabaseAdmin
-              .from('profiles')
-              .select('id')
-              .eq('email', studentCleverId)
-              .single();
-
-            if (studentProfile) {
-              await supabaseAdmin
-                .from('classroom_students')
-                .insert({
-                  classroom_id: classroom.id,
-                  student_id: studentProfile.id,
-                });
-            }
-          }
-
-          console.log(`Created classroom: ${classroomName} with ${section.data.students.length} students`);
-        }
-      }
-    }
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'Clever data synced successfully',
-        district: districtData.data.name,
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    );
   } catch (error) {
-    console.error('Clever sync error:', error);
+    console.error('Clever SSO error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      }
-    );
+    return Response.redirect(`${appUrl}/auth?error=${encodeURIComponent(errorMessage)}`, 302);
   }
 });
