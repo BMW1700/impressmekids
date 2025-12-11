@@ -77,6 +77,28 @@ const Auth = () => {
   };
 
   useEffect(() => {
+    // Handle Clever login success/error from URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const cleverLogin = urlParams.get('clever_login');
+    const cleverError = urlParams.get('error');
+    
+    if (cleverError) {
+      toast({
+        title: "Clever login failed",
+        description: cleverError,
+        variant: "destructive",
+      });
+      window.history.replaceState({}, '', '/auth');
+    }
+    
+    if (cleverLogin === 'success') {
+      toast({
+        title: "Success!",
+        description: "Successfully signed in with Clever",
+      });
+      window.history.replaceState({}, '', '/auth');
+    }
+    
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
