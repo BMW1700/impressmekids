@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, CloudRain, DoorClosed, Shield, MessageSquare, QrCode, CheckCircle2, Clock, Settings } from "lucide-react";
+import { AlertTriangle, CloudRain, DoorClosed, Shield, MessageSquare, QrCode, CheckCircle2, Clock, Settings, Smartphone } from "lucide-react";
 import { UnaccountedChildAlert } from "@/components/safety/UnaccountedChildAlert";
 import { ParentQuickMessagePanel } from "@/components/safety/ParentQuickMessagePanel";
 import { StudentQRCode } from "@/components/safety/StudentQRCode";
@@ -493,6 +493,20 @@ export default function ParentSafety() {
           </TabsContent>
 
           <TabsContent value="settings">
+            <Card className="p-6 mb-6">
+              <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                <Smartphone className="h-6 w-6" />
+                Install App for Instant Notifications
+              </h2>
+              <p className="text-muted-foreground mb-4">
+                Install ImpressMe Kids on your phone to receive instant push notifications during emergencies and drills.
+              </p>
+              <Button onClick={() => navigate("/parent/install-app")}>
+                <Smartphone className="h-4 w-4 mr-2" />
+                View Installation Guide
+              </Button>
+            </Card>
+
             <Card className="p-6">
               <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
                 <Settings className="h-6 w-6" />

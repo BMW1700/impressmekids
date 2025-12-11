@@ -338,8 +338,47 @@ serve(async (req) => {
       }
     }
 
+    // Determine if this is a critical notification that needs email fallback
+    const isCriticalNotification = ['unaccounted_child', 'drill_started', 'all_clear'].includes(type) || isEmergency;
+    
+    // Get parent emails for email fallback (for critical notifications)
+    let parentEmails: { email: string; userId: string; studentName?: string }[] = [];
+    
+    if (isCriticalNotification && studentId) {
+      // Single student - get their parents
+      const { data: parentLinks } = await supabaseClient
+        .from('parent_student_links')
+        .select(`
+          parent_accounts(email, user_id),
+          profiles(full_name)
+        `)
+        .eq('student_id', studentId)
+        .eq('approved', true);
+      
+      if (parentLinks) {
+        parentEmails = parentLinks
+          .filter(link => (link.parent_accounts as any)?.email)
+          .map(link => ({
+            email: (link.parent_accounts as any).email,
+            userId: (link.parent_accounts as any).user_id,
+            studentName: (link.profiles as any)?.full_name
+          }));
+      }
+    } else if (isCriticalNotification && (classroomId || !classroomId)) {
+      // School-wide or classroom drill - get all relevant parent emails
+      const { data: allParents } = await supabaseClient
+        .from('parent_accounts')
+        .select('email, user_id');
+      
+      if (allParents) {
+        parentEmails = allParents
+          .filter(p => p.email)
+          .map(p => ({ email: p.email, userId: p.user_id }));
+      }
+    }
+
     // Send push notifications to all target users
-    const results = await Promise.allSettled(
+    const pushResults = await Promise.allSettled(
       targetUserIds.map(async (userId) => {
         try {
           const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-push-notification`, {
@@ -371,15 +410,98 @@ serve(async (req) => {
       })
     );
 
-    const successCount = results.filter((r) => r.status === 'fulfilled' && (r.value as any).success).length;
-    console.log(`Drill notifications sent: ${successCount}/${targetUserIds.length}`);
+    const pushSuccessCount = pushResults.filter((r) => r.status === 'fulfilled' && (r.value as any).success).length;
+    console.log(`Push notifications sent: ${pushSuccessCount}/${targetUserIds.length}`);
+
+    // Send email fallback for critical notifications
+    let emailSuccessCount = 0;
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    
+    if (isCriticalNotification && resendApiKey && parentEmails.length > 0) {
+      console.log(`Sending email fallback for critical ${type} to ${parentEmails.length} parents`);
+      
+      const emailResults = await Promise.allSettled(
+        parentEmails.map(async (parent) => {
+          const severityColor = isEmergency ? '#dc2626' : 
+            type === 'unaccounted_child' ? '#dc2626' : 
+            type === 'all_clear' ? '#16a34a' : '#ea580c';
+          
+          const emailBody = {
+            from: 'ImpressMe Kids Safety <safety@impressmekids.com>',
+            to: parent.email,
+            subject: notificationTitle.replace(/[🚨✅📅]/g, '').trim(),
+            html: `
+              <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+                <div style="background-color: ${severityColor}; color: white; padding: 24px; text-align: center;">
+                  <h1 style="margin: 0; font-size: 24px; font-weight: 600;">${notificationTitle.replace(/[🚨✅📅]/g, '').trim()}</h1>
+                </div>
+                <div style="padding: 32px; background: #f9fafb;">
+                  <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                    ${notificationBody}
+                  </p>
+                  ${parent.studentName ? `
+                    <p style="color: #6b7280; font-size: 14px; margin: 20px 0 0 0;">
+                      Student: <strong>${parent.studentName}</strong>
+                    </p>
+                  ` : ''}
+                  <div style="margin-top: 24px; padding: 16px; background: #fff; border-radius: 8px; border: 1px solid #e5e7eb;">
+                    <p style="color: #374151; font-size: 14px; margin: 0;">
+                      <strong>What to do:</strong> ${
+                        type === 'unaccounted_child' 
+                          ? 'Staff are actively locating your child. You will receive another notification when they are found. Please keep your phone nearby.'
+                          : type === 'all_clear'
+                          ? 'No action required. The situation has been resolved safely.'
+                          : 'Follow school emergency protocols. Check the parent portal for updates.'
+                      }
+                    </p>
+                  </div>
+                </div>
+                <div style="padding: 20px; background: #f3f4f6; text-align: center; border-top: 1px solid #e5e7eb;">
+                  <p style="color: #6b7280; font-size: 12px; margin: 0;">
+                    This is an automated safety notification from ImpressMe Kids.<br>
+                    For immediate questions, contact your school directly.
+                  </p>
+                </div>
+              </div>
+            `,
+          };
+
+          try {
+            const response = await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${resendApiKey}`,
+              },
+              body: JSON.stringify(emailBody),
+            });
+
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error(`Failed to send email to ${parent.email}: ${errorText}`);
+              return { email: parent.email, success: false };
+            }
+
+            return { email: parent.email, success: true };
+          } catch (error) {
+            console.error(`Error sending email to ${parent.email}:`, error);
+            return { email: parent.email, success: false };
+          }
+        })
+      );
+
+      emailSuccessCount = emailResults.filter((r) => r.status === 'fulfilled' && (r.value as any).success).length;
+      console.log(`Email fallback sent: ${emailSuccessCount}/${parentEmails.length}`);
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
         notificationType: type,
         targetUsersCount: targetUserIds.length,
-        successCount,
+        pushSuccessCount,
+        emailSuccessCount,
+        emailsSent: parentEmails.length,
         notificationTitle,
         notificationBody,
       }),
