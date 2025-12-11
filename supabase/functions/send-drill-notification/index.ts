@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 interface DrillNotificationPayload {
-  type: 'student_checkin' | 'drill_scheduled' | 'drill_started' | 'all_clear' | 'recess_return';
+  type: 'student_checkin' | 'drill_scheduled' | 'drill_started' | 'all_clear' | 'recess_return' | 'unaccounted_child';
   drillSessionId?: string;
   studentId?: string;
   classroomId?: string;
@@ -83,6 +83,61 @@ serve(async (req) => {
         notificationBody = isEmergency 
           ? `EMERGENCY UPDATE: Your child has been marked SAFE during the ${drillTypeName.toUpperCase()} emergency.`
           : `Your child has been marked safe during the ${drillTypeName}.`;
+
+        // Log to audit
+        await supabaseClient.from('safety_audit_log').insert({
+          event_type: 'student_checkin',
+          drill_session_id: drillSessionId,
+          user_id: studentId,
+          event_data: {
+            student_name: student?.full_name,
+            is_emergency: isEmergency,
+            drill_type: drillTypeName,
+            parents_notified: targetUserIds.length
+          }
+        });
+        break;
+      }
+
+      case 'unaccounted_child': {
+        if (!studentId) throw new Error('studentId required for unaccounted_child');
+
+        // Get student info
+        const { data: student } = await supabaseClient
+          .from('profiles')
+          .select('full_name')
+          .eq('id', studentId)
+          .single();
+
+        // Get parent user_ids for this student
+        const { data: parentLinks } = await supabaseClient
+          .from('parent_student_links')
+          .select('parent_id, parent_accounts(user_id)')
+          .eq('student_id', studentId)
+          .eq('approved', true);
+
+        if (parentLinks && parentLinks.length > 0) {
+          targetUserIds = parentLinks
+            .map(link => (link.parent_accounts as any)?.user_id)
+            .filter(Boolean);
+        }
+
+        notificationTitle = `🚨 URGENT: ${student?.full_name || 'Your Child'} Unaccounted For`;
+        notificationBody = `Your child is currently unaccounted for during ${drillTypeName}. School staff are actively locating them. You will be notified when found.`;
+
+        // Log to audit - critical event
+        await supabaseClient.from('safety_audit_log').insert({
+          event_type: 'unaccounted_child_alert',
+          drill_session_id: drillSessionId,
+          user_id: studentId,
+          event_data: {
+            student_name: student?.full_name,
+            is_emergency: isEmergency,
+            drill_type: drillTypeName,
+            parents_notified: targetUserIds.length,
+            severity: 'critical'
+          }
+        });
         break;
       }
 
@@ -119,6 +174,18 @@ serve(async (req) => {
 
         notificationTitle = `📅 ${drillTypeName} Scheduled`;
         notificationBody = `A ${drillTypeName} has been scheduled for ${scheduledTime}`;
+
+        // Log to audit
+        await supabaseClient.from('safety_audit_log').insert({
+          event_type: 'drill_scheduled',
+          drill_session_id: drillSessionId,
+          event_data: {
+            drill_type: drillTypeName,
+            scheduled_for: drillSession.scheduled_for,
+            classroom_id: classroomId,
+            users_notified: targetUserIds.length
+          }
+        });
         break;
       }
 
@@ -162,6 +229,18 @@ serve(async (req) => {
         notificationBody = isEmergency
           ? `REAL ${drillTypeName.toUpperCase()} EMERGENCY - THIS IS NOT A DRILL. Follow emergency protocols immediately.`
           : `A ${drillTypeName} has started. Follow your teacher's instructions.`;
+
+        // Log to audit
+        await supabaseClient.from('safety_audit_log').insert({
+          event_type: isEmergency ? 'emergency_started' : 'drill_started',
+          drill_session_id: drillSessionId,
+          event_data: {
+            drill_type: drillTypeName,
+            is_emergency: isEmergency,
+            classroom_id: classroomId,
+            users_notified: targetUserIds.length
+          }
+        });
         break;
       }
 
@@ -205,6 +284,18 @@ serve(async (req) => {
         notificationBody = isEmergency
           ? `The ${drillTypeName.toUpperCase()} emergency has been resolved. All students in ${classroomName} are confirmed safe.`
           : `Drill complete - all students in ${classroomName} are safe.`;
+
+        // Log to audit
+        await supabaseClient.from('safety_audit_log').insert({
+          event_type: 'all_clear',
+          drill_session_id: drillSessionId,
+          event_data: {
+            drill_type: drillTypeName,
+            is_emergency: isEmergency,
+            classroom_name: classroomName,
+            users_notified: targetUserIds.length
+          }
+        });
         break;
       }
 
@@ -234,6 +325,15 @@ serve(async (req) => {
 
         notificationTitle = '✅ Children Returned from Recess';
         notificationBody = 'Your child has safely returned to class from recess.';
+
+        // Log to audit
+        await supabaseClient.from('safety_audit_log').insert({
+          event_type: 'recess_return',
+          event_data: {
+            student_count: studentIds.length,
+            parents_notified: targetUserIds.length
+          }
+        });
         break;
       }
     }

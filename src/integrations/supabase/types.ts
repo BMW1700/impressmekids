@@ -1502,7 +1502,9 @@ export type Database = {
           email_domains: string[]
           id: string
           is_visible: boolean
+          latitude: number | null
           logo_url: string | null
+          longitude: number | null
           name: string
           primary_contact_email: string | null
           slug: string
@@ -1515,7 +1517,9 @@ export type Database = {
           email_domains?: string[]
           id?: string
           is_visible?: boolean
+          latitude?: number | null
           logo_url?: string | null
+          longitude?: number | null
           name: string
           primary_contact_email?: string | null
           slug: string
@@ -1528,7 +1532,9 @@ export type Database = {
           email_domains?: string[]
           id?: string
           is_visible?: boolean
+          latitude?: number | null
           logo_url?: string | null
+          longitude?: number | null
           name?: string
           primary_contact_email?: string | null
           slug?: string
@@ -3492,6 +3498,7 @@ export type Database = {
       }
       safety_alerts: {
         Row: {
+          acknowledged_count: number | null
           alert_type: string
           authority_source: string | null
           authority_verified: boolean | null
@@ -3509,6 +3516,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          acknowledged_count?: number | null
           alert_type: string
           authority_source?: string | null
           authority_verified?: boolean | null
@@ -3526,6 +3534,7 @@ export type Database = {
           title: string
         }
         Update: {
+          acknowledged_count?: number | null
           alert_type?: string
           authority_source?: string | null
           authority_verified?: boolean | null
@@ -3556,6 +3565,57 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "districts"
             referencedColumns: ["district_code"]
+          },
+        ]
+      }
+      safety_audit_log: {
+        Row: {
+          alert_id: string | null
+          created_at: string
+          drill_session_id: string | null
+          event_data: Json
+          event_type: string
+          id: string
+          ip_address: unknown
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          alert_id?: string | null
+          created_at?: string
+          drill_session_id?: string | null
+          event_data?: Json
+          event_type: string
+          id?: string
+          ip_address?: unknown
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          alert_id?: string | null
+          created_at?: string
+          drill_session_id?: string | null
+          event_data?: Json
+          event_type?: string
+          id?: string
+          ip_address?: unknown
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "safety_audit_log_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "safety_alerts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_audit_log_drill_session_id_fkey"
+            columns: ["drill_session_id"]
+            isOneToOne: false
+            referencedRelation: "drill_sessions"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -4699,6 +4759,7 @@ export type Database = {
         Returns: boolean
       }
       check_email_exists_secure: { Args: { p_email: string }; Returns: boolean }
+      cleanup_expired_safety_alerts: { Args: never; Returns: undefined }
       compute_levenshtein: { Args: { a: string; b: string }; Returns: number }
       find_student_by_email_secure: {
         Args: { p_email: string }
