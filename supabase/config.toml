@@ -90,3 +90,9 @@ verify_jwt = true
 
 [functions.send-risk-alerts]
 verify_jwt = true
+
+[functions.check-weather-alerts]
+verify_jwt = false
+
+[functions.cleanup-expired-alerts]
+verify_jwt = false

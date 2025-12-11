@@ -22,18 +22,25 @@ serve(async (req) => {
       }
     );
 
-    // Get all districts with their locations (you'd need to add location data to districts table)
+    // Get all districts with their coordinates
     const { data: districts, error: districtsError } = await supabaseClient
       .from('districts')
-      .select('district_code, name');
+      .select('district_code, name, latitude, longitude');
 
     if (districtsError) throw districtsError;
 
+    let alertsCreated = 0;
+    let districtsProcessed = 0;
+
     for (const district of districts || []) {
-      // For demo: hardcoded coordinates for testing
-      // In production, you'd store coordinates with each district
-      const lat = 40.7128; // Example: New York City
-      const lon = -74.0060;
+      // Skip districts without coordinates
+      if (!district.latitude || !district.longitude) {
+        console.log(`Skipping ${district.name}: No coordinates configured`);
+        continue;
+      }
+
+      const lat = district.latitude;
+      const lon = district.longitude;
 
       // Fetch weather alerts from National Weather Service API
       const nwsUrl = `https://api.weather.gov/alerts/active?point=${lat},${lon}`;
@@ -64,7 +71,9 @@ serve(async (req) => {
             (event.includes('Tornado') || 
              event.includes('Severe Thunderstorm') ||
              event.includes('Flash Flood') ||
-             event.includes('Hurricane'))
+             event.includes('Hurricane') ||
+             event.includes('Blizzard') ||
+             event.includes('Ice Storm'))
           );
         });
 
@@ -101,7 +110,7 @@ serve(async (req) => {
           }
 
           // Create the safety alert
-          const { error: insertError } = await supabaseClient
+          const { data: newAlert, error: insertError } = await supabaseClient
             .from('safety_alerts')
             .insert({
               school_id: district.district_code,
@@ -116,21 +125,50 @@ serve(async (req) => {
               notify_students: true,
               notify_teachers: true,
               expires_at: props.expires ? new Date(props.expires).toISOString() : null
-            });
+            })
+            .select('id')
+            .single();
 
           if (insertError) {
             console.error(`Error creating weather alert for ${district.name}:`, insertError);
           } else {
+            alertsCreated++;
             console.log(`Created weather alert for ${district.name}: ${props.event}`);
+            
+            // Log to safety audit log
+            await supabaseClient
+              .from('safety_audit_log')
+              .insert({
+                event_type: 'weather_alert_created',
+                alert_id: newAlert?.id,
+                event_data: {
+                  district_code: district.district_code,
+                  district_name: district.name,
+                  alert_title: props.event,
+                  severity: props.severity,
+                  source: 'National Weather Service',
+                  nws_id: alert.id
+                }
+              });
           }
         }
+        
+        districtsProcessed++;
       } catch (error) {
         console.error(`Error processing weather alerts for ${district.name}:`, error);
       }
     }
 
+    // Also cleanup expired alerts
+    await supabaseClient.rpc('cleanup_expired_safety_alerts');
+
     return new Response(
-      JSON.stringify({ success: true, message: 'Weather alerts checked' }),
+      JSON.stringify({ 
+        success: true, 
+        message: 'Weather alerts checked',
+        districtsProcessed,
+        alertsCreated
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
