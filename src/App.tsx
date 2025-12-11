@@ -43,6 +43,7 @@ import ChildDetail from "./pages/parent/ChildDetail";
 import ParentSafety from "./pages/parent/ParentSafety";
 import ParentReviewSubmission from "./pages/parent/ParentReviewSubmission";
 import ParentReviewAnnotations from "./pages/parent/ParentReviewAnnotations";
+import PWAInstallGuide from "./pages/parent/PWAInstallGuide";
 import DistrictDashboard from "./pages/district/DistrictDashboard";
 import DistrictManagerDashboard from "./pages/district/DistrictManagerDashboard";
 import RegisterDistrict from "./pages/district/RegisterDistrict";
@@ -98,6 +99,7 @@ const App = () => (
           <Route path="/parent/safety" element={<ParentSafety />} />
           <Route path="/parent/review-submission/:submissionId" element={<ParentReviewSubmission />} />
           <Route path="/parent/review-annotations/:submissionId" element={<ParentReviewAnnotations />} />
+          <Route path="/parent/install-app" element={<PWAInstallGuide />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/calendar" element={<AdminCalendar />} />
