@@ -4680,6 +4680,80 @@ export type Database = {
           },
         ]
       }
+      teacher_game_scores: {
+        Row: {
+          game_type: string
+          id: string
+          played_at: string
+          score: number
+          teacher_id: string
+        }
+        Insert: {
+          game_type: string
+          id?: string
+          played_at?: string
+          score?: number
+          teacher_id: string
+        }
+        Update: {
+          game_type?: string
+          id?: string
+          played_at?: string
+          score?: number
+          teacher_id?: string
+        }
+        Relationships: []
+      }
+      teacher_journal_entries: {
+        Row: {
+          classroom_id: string | null
+          created_at: string
+          energy_level: number | null
+          entry_date: string
+          gratitude: string | null
+          id: string
+          mood: string
+          note: string | null
+          teacher_id: string
+          updated_at: string
+          win_of_the_day: string | null
+        }
+        Insert: {
+          classroom_id?: string | null
+          created_at?: string
+          energy_level?: number | null
+          entry_date?: string
+          gratitude?: string | null
+          id?: string
+          mood: string
+          note?: string | null
+          teacher_id: string
+          updated_at?: string
+          win_of_the_day?: string | null
+        }
+        Update: {
+          classroom_id?: string | null
+          created_at?: string
+          energy_level?: number | null
+          entry_date?: string
+          gratitude?: string | null
+          id?: string
+          mood?: string
+          note?: string | null
+          teacher_id?: string
+          updated_at?: string
+          win_of_the_day?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_journal_entries_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teacher_student_notes: {
         Row: {
           audio_url: string | null
