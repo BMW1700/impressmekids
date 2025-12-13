@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft, Save, User, Calendar, CheckCircle2, Volume2 } from "lucide-react";
 import { useAssignmentSubmissions } from "@/hooks/useAssignmentSubmissions";
 import { Separator } from "@/components/ui/separator";
+import { useAssignmentRubric } from "@/hooks/useRubrics";
+import { RubricGrader } from "@/components/rubrics/RubricGrader";
 
 export default function ReviewMultiQuestionSubmission() {
   const { submissionId } = useParams();
@@ -32,8 +34,10 @@ export default function ReviewMultiQuestionSubmission() {
   const [feedback, setFeedback] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [manualGrades, setManualGrades] = useState<Record<string, number>>({});
+  const [rubricScore, setRubricScore] = useState<{ total: number; max: number } | null>(null);
 
   const { gradeSubmission } = useAssignmentSubmissions(assignment?.id);
+  const { assignmentRubric } = useAssignmentRubric(assignment?.id);
 
   useEffect(() => {
     loadData();
@@ -193,11 +197,21 @@ export default function ReviewMultiQuestionSubmission() {
     }
   };
 
+  const handleRubricScoreChange = (total: number, max: number) => {
+    setRubricScore({ total, max });
+  };
+
   const handleSaveGrade = () => {
     if (!submissionId || !assignment?.classroom_id) return;
 
-    const { totalPoints, earnedPoints } = calculateTotalScore();
-    const gradePercentage = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
+    // Calculate final grade - use rubric if available, otherwise use question scores
+    let gradePercentage: number;
+    if (rubricScore && rubricScore.max > 0) {
+      gradePercentage = Math.round((rubricScore.total / rubricScore.max) * 100);
+    } else {
+      const { totalPoints, earnedPoints } = calculateTotalScore();
+      gradePercentage = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
+    }
 
     if (!feedback.trim()) {
       toast({
@@ -550,6 +564,17 @@ export default function ReviewMultiQuestionSubmission() {
             })}
           </div>
 
+          {/* Rubric Grading Section */}
+          {assignmentRubric && submission && (
+            <div className="mb-6">
+              <RubricGrader
+                rubricId={assignmentRubric.rubric_id}
+                submissionId={submission.id}
+                onScoreChange={handleRubricScoreChange}
+              />
+            </div>
+          )}
+
           {/* Grading Section */}
           <Card>
             <CardHeader>
@@ -560,15 +585,22 @@ export default function ReviewMultiQuestionSubmission() {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">Total Score</span>
                   <span className="text-2xl font-bold">
-                    {earnedPoints} / {totalPoints} points
+                    {rubricScore ? rubricScore.total : earnedPoints} / {rubricScore ? rubricScore.max : totalPoints} points
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Percentage</span>
                   <span className="text-lg font-semibold">
-                    {totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0}%
+                    {rubricScore 
+                      ? (rubricScore.max > 0 ? Math.round((rubricScore.total / rubricScore.max) * 100) : 0)
+                      : (totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0)}%
                   </span>
                 </div>
+                {rubricScore && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Grade calculated from rubric scores
+                  </p>
+                )}
               </div>
 
               <div>
