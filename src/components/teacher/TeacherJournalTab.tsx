@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { useTeacherJournal, useTeacherGameScores, MoodType } from "@/hooks/useTeacherJournal";
-import { Smile, Meh, Frown, Zap, Heart, Trophy, Star, Sparkles, Target, RefreshCw, Coffee } from "lucide-react";
+import { Smile, Meh, Frown, Zap, Heart, Trophy, Star, Sparkles, Target, RefreshCw, Coffee, Quote } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const MOODS: { value: MoodType; icon: React.ReactNode; label: string; color: string }[] = [
@@ -14,6 +14,19 @@ const MOODS: { value: MoodType; icon: React.ReactNode; label: string; color: str
   { value: 'okay', icon: <Meh className="h-6 w-6" />, label: 'Okay', color: 'bg-yellow-500 hover:bg-yellow-600' },
   { value: 'stressed', icon: <Coffee className="h-6 w-6" />, label: 'Stressed', color: 'bg-orange-500 hover:bg-orange-600' },
   { value: 'tough', icon: <Frown className="h-6 w-6" />, label: 'Tough', color: 'bg-red-500 hover:bg-red-600' },
+];
+
+const MOTIVATIONAL_QUOTES = [
+  { quote: "Every child you teach is an opportunity to change the world.", author: "Unknown" },
+  { quote: "Teaching is the one profession that creates all other professions.", author: "Unknown" },
+  { quote: "A good teacher can inspire hope, ignite the imagination, and instill a love of learning.", author: "Brad Henry" },
+  { quote: "The art of teaching is the art of assisting discovery.", author: "Mark Van Doren" },
+  { quote: "Teachers affect eternity; no one can tell where their influence stops.", author: "Henry Adams" },
+  { quote: "Education is not the filling of a pail, but the lighting of a fire.", author: "W.B. Yeats" },
+  { quote: "The best teachers teach from the heart, not from the book.", author: "Unknown" },
+  { quote: "What a teacher writes on the blackboard of life can never be erased.", author: "Unknown" },
+  { quote: "Teaching is the greatest act of optimism.", author: "Colleen Wilcox" },
+  { quote: "To teach is to touch a life forever.", author: "Unknown" },
 ];
 
 interface TeacherJournalTabProps {
@@ -98,6 +111,13 @@ export function TeacherJournalTab({ classroomId }: TeacherJournalTabProps) {
 
     return () => clearInterval(timer);
   }, [gameActive, gameScore, gameHighScore, saveScore]);
+
+  // Random quote selection
+  const dailyQuote = useMemo(() => {
+    const today = new Date().toDateString();
+    const hash = today.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return MOTIVATIONAL_QUOTES[hash % MOTIVATIONAL_QUOTES.length];
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -314,11 +334,11 @@ export function TeacherJournalTab({ classroomId }: TeacherJournalTabProps) {
           {/* Motivation Quote */}
           <Card className="shadow-card border-2 border-primary/10 bg-gradient-to-br from-primary/5 to-secondary/5">
             <CardContent className="py-6 text-center">
-              <Sparkles className="h-8 w-8 mx-auto mb-3 text-primary" />
+              <Quote className="h-8 w-8 mx-auto mb-3 text-primary" />
               <p className="text-lg italic text-muted-foreground">
-                "Every child you teach is an opportunity to change the world."
+                "{dailyQuote.quote}"
               </p>
-              <p className="text-sm text-muted-foreground mt-2">— Unknown</p>
+              <p className="text-sm text-muted-foreground mt-2">— {dailyQuote.author}</p>
             </CardContent>
           </Card>
         </div>
