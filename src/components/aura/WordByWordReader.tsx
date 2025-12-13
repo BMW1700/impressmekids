@@ -685,8 +685,9 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
     analyzeMispronunciationPatterns(user.id, session.id).catch(console.error);
 
     // ADAPTIVE DIFFICULTY: Calculate recommended next difficulty level
+    let difficultyResult: any = null;
     try {
-      const difficultyResult = await adaptiveDifficultyEngine.calculateAdaptiveDifficulty({
+      difficultyResult = await adaptiveDifficultyEngine.calculateAdaptiveDifficulty({
         studentId: user.id,
         currentLevel: 1,
         recentGrades: [accuracy],
@@ -709,6 +710,79 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       console.log('ADAPTIVE DIFFICULTY:', difficultyResult);
     } catch (err) {
       console.error('Adaptive difficulty error:', err);
+    }
+
+    // PHASE 1 FIX: Update student_skill_vectors with ML data from reading session
+    try {
+      // Fetch existing skill vector
+      const { data: existingVector } = await supabase
+        .from('student_skill_vectors')
+        .select('*')
+        .eq('student_id', user.id)
+        .maybeSingle();
+
+      // Merge phoneme scores with existing
+      const existingPhonemeScores = (existingVector?.phoneme_scores as Record<string, number>) || {};
+      const mergedPhonemeScores = { ...existingPhonemeScores };
+      Object.entries(phonemeScores).forEach(([phoneme, score]) => {
+        if (existingPhonemeScores[phoneme] !== undefined) {
+          // Weighted average (70% existing, 30% new)
+          mergedPhonemeScores[phoneme] = Math.round(existingPhonemeScores[phoneme] * 0.7 + score * 0.3);
+        } else {
+          mergedPhonemeScores[phoneme] = score;
+        }
+      });
+
+      // Calculate reading metrics with proper typing
+      const existingReadingMetrics = existingVector?.reading_metrics as { 
+        avg_wpm?: number; 
+        avg_accuracy?: number; 
+        sessions_count?: number;
+        last_session_at?: string;
+      } | null;
+      
+      const readingMetrics = {
+        avg_wpm: existingReadingMetrics?.avg_wpm 
+          ? Math.round((existingReadingMetrics.avg_wpm * 0.7) + (wpm * 0.3))
+          : wpm,
+        avg_accuracy: existingReadingMetrics?.avg_accuracy 
+          ? Math.round((existingReadingMetrics.avg_accuracy * 0.7) + (accuracy * 0.3))
+          : accuracy,
+        sessions_count: (existingReadingMetrics?.sessions_count || 0) + 1,
+        last_session_at: new Date().toISOString(),
+      };
+
+      // Calculate performance trend
+      const previousTrend = existingVector?.performance_trend || 0;
+      const performanceTrend = existingReadingMetrics?.avg_accuracy 
+        ? Math.round((accuracy - existingReadingMetrics.avg_accuracy) * 10) / 10
+        : 0;
+
+      // Upsert skill vector
+      await supabase
+        .from('student_skill_vectors')
+        .upsert({
+          student_id: user.id,
+          phoneme_scores: mergedPhonemeScores,
+          reading_metrics: readingMetrics,
+          current_difficulty_level: difficultyResult?.recommendedLevel || existingVector?.current_difficulty_level || 1,
+          performance_trend: (previousTrend * 0.7) + (performanceTrend * 0.3),
+          weekly_improvement: performanceTrend > 0 ? performanceTrend * 10 : 0,
+          cross_modal_risk_score: accuracy < 70 ? Math.min(100, 100 - accuracy) : (existingVector?.cross_modal_risk_score || 0) * 0.9,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'student_id',
+        });
+
+      console.log('✅ SKILL VECTOR UPDATED:', {
+        studentId: user.id,
+        phonemeScores: Object.keys(mergedPhonemeScores).length,
+        wpm,
+        accuracy,
+        difficultyLevel: difficultyResult?.recommendedLevel || 1,
+      });
+    } catch (err) {
+      console.error('Skill vector update error:', err);
     }
 
     setIsProcessing(false);
