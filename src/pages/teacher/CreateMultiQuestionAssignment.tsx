@@ -9,12 +9,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Save, Users } from 'lucide-react';
+import { Plus, Save, Users, Grid3X3 } from 'lucide-react';
 import { QuestionBuilder } from '@/components/assignments/QuestionBuilder';
 import { GroupManagementModal } from '@/components/assignments/GroupManagementModal';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useMultiQuestionAssignments } from '@/hooks/useMultiQuestionAssignments';
 import { useAssignmentGroups } from '@/hooks/useAssignmentGroups';
+import { useRubrics, useAssignmentRubric } from '@/hooks/useRubrics';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { StandardsSelector } from '@/components/classroom/StandardsSelector';
@@ -58,8 +59,11 @@ const editId = searchParams.get('edit');
   const [isolationMode, setIsolationMode] = useState(false);
   const [focusDetection, setFocusDetection] = useState(false);
   const [timePerQuestion, setTimePerQuestion] = useState<number | undefined>();
+  const [selectedRubricId, setSelectedRubricId] = useState<string>("");
   
   const { groups } = useAssignmentGroups(editId || undefined);
+  const { rubrics } = useRubrics(classroomId || undefined);
+  const { assignmentRubric, attachRubric, detachRubric } = useAssignmentRubric(editId || undefined);
 
 // Load classroom students
   useEffect(() => {
@@ -147,6 +151,13 @@ const editId = searchParams.get('edit');
     }
   }, [assignment]);
 
+  // Load rubric when editing
+  useEffect(() => {
+    if (assignmentRubric) {
+      setSelectedRubricId(assignmentRubric.rubric_id);
+    }
+  }, [assignmentRubric]);
+
   const addQuestion = () => {
     const newQuestion: Question = {
       id: uuidv4(),
@@ -187,7 +198,7 @@ const editId = searchParams.get('edit');
     setQuestions(resequenced);
   };
 
-  const handleSaveAndClose = () => {
+  const handleSaveAndClose = async () => {
     if (!classroomId) return;
     
     const questionData = questions.map(q => ({
@@ -216,6 +227,16 @@ const editId = searchParams.get('edit');
         },
         questions: questionData,
       });
+
+      // Handle rubric attachment/detachment
+      if (selectedRubricId && selectedRubricId !== assignmentRubric?.rubric_id) {
+        if (assignmentRubric) {
+          await detachRubric();
+        }
+        await attachRubric(selectedRubricId);
+      } else if (!selectedRubricId && assignmentRubric) {
+        await detachRubric();
+      }
     } else {
       // Create new assignment
       createAssignment({
@@ -234,6 +255,29 @@ const editId = searchParams.get('edit');
         time_per_question_seconds: timePerQuestion,
         questions: questionData,
       });
+
+      // Attach rubric after creation if selected
+      if (selectedRubricId) {
+        setTimeout(async () => {
+          const { data: recentAssignment } = await supabase
+            .from('assignments')
+            .select('id')
+            .eq('classroom_id', classroomId)
+            .eq('title', title)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (recentAssignment) {
+            await supabase
+              .from("assignment_rubrics")
+              .insert({
+                assignment_id: recentAssignment.id,
+                rubric_id: selectedRubricId,
+              });
+          }
+        }, 500);
+      }
     }
 
     navigate(`/classrooms/${classroomId}?tab=assignments`);
@@ -368,6 +412,32 @@ const editId = searchParams.get('edit');
                 selectedStandards={selectedStandards}
                 onStandardsChange={setSelectedStandards}
               />
+
+              {/* Rubric Selector */}
+              {rubrics && rubrics.length > 0 && (
+                <div>
+                  <Label htmlFor="rubric" className="flex items-center gap-2">
+                    <Grid3X3 className="h-4 w-4" />
+                    Grading Rubric (Optional)
+                  </Label>
+                  <Select value={selectedRubricId} onValueChange={setSelectedRubricId}>
+                    <SelectTrigger id="rubric" className="mt-1">
+                      <SelectValue placeholder="Select a rubric for grading..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No rubric</SelectItem>
+                      {rubrics.map((rubric) => (
+                        <SelectItem key={rubric.id} value={rubric.id}>
+                          {rubric.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Rubrics standardize grading and show students expectations upfront
+                  </p>
+                </div>
+              )}
 
               <div className="grid grid-cols-3 gap-4">
                 <div>

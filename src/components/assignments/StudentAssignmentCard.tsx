@@ -1,12 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Mic, FileText } from "lucide-react";
+import { BookOpen, Mic, FileText, Grid3X3, ChevronDown, ChevronUp } from "lucide-react";
 import { useStudentSubmissionAttempts } from "@/hooks/useStudentSubmissionAttempts";
+import { useAssignmentRubric, useRubricDetail } from "@/hooks/useRubrics";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 interface StudentAssignmentCardProps {
   assignment: any;
   classroomId: string;
@@ -15,6 +16,7 @@ interface StudentAssignmentCardProps {
 export function StudentAssignmentCard({ assignment, classroomId }: StudentAssignmentCardProps) {
   const navigate = useNavigate();
   const [studentId, setStudentId] = useState<string | null>(null);
+  const [showRubric, setShowRubric] = useState(false);
 
   useEffect(() => {
     const getStudentId = async () => {
@@ -25,6 +27,9 @@ export function StudentAssignmentCard({ assignment, classroomId }: StudentAssign
     };
     getStudentId();
   }, []);
+
+  const { assignmentRubric } = useAssignmentRubric(assignment.id);
+  const { rubric } = useRubricDetail(assignmentRubric?.rubric_id || "");
 
   const {
     inProgressSubmission,
@@ -139,6 +144,41 @@ export function StudentAssignmentCard({ assignment, classroomId }: StudentAssign
           <p className="text-xs text-muted-foreground">
             Created {new Date(assignment.created_at).toLocaleDateString()}
           </p>
+
+          {/* Rubric Preview */}
+          {rubric && (
+            <Collapsible open={showRubric} onOpenChange={setShowRubric}>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="w-full justify-between p-0 h-auto hover:bg-transparent">
+                  <span className="flex items-center gap-2 text-xs text-primary">
+                    <Grid3X3 className="h-3 w-3" />
+                    View Grading Rubric
+                  </span>
+                  {showRubric ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2">
+                <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                  <p className="text-sm font-medium">{rubric.title}</p>
+                  {rubric.criteria?.map((criteria) => (
+                    <div key={criteria.id} className="text-xs space-y-1">
+                      <div className="flex justify-between">
+                        <span className="font-medium">{criteria.name}</span>
+                        <span className="text-muted-foreground">{criteria.max_points} pts</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {criteria.levels?.map((level) => (
+                          <Badge key={level.id} variant="outline" className="text-xs">
+                            {level.name}: {level.points}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
           
           {renderButton()}
         </div>

@@ -6,14 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Upload, FileText, Eye, Calendar, BookOpen } from "lucide-react";
+import { Loader2, Upload, FileText, Eye, Calendar, BookOpen, Grid3X3 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useAssignments } from "@/hooks/useAssignments";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StandardsSelector } from "@/components/classroom/StandardsSelector";
-
+import { useRubrics } from "@/hooks/useRubrics";
 interface CreateAssignmentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -40,8 +40,10 @@ export const CreateAssignmentModal = ({
   const [isPosted, setIsPosted] = useState(true);
   const [category, setCategory] = useState<'Test' | 'Quiz' | 'Homework'>('Homework');
   const [selectedStandards, setSelectedStandards] = useState<string[]>([]);
+  const [selectedRubricId, setSelectedRubricId] = useState<string>("");
   const { toast } = useToast();
   const { createAssignment } = useAssignments(classroomId);
+  const { rubrics } = useRubrics(classroomId);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -153,8 +155,8 @@ export const CreateAssignmentModal = ({
         enableRealtimeCoaching,
       });
 
-      // Map standards if any selected - need to get the assignment ID after creation
-      if (selectedStandards.length > 0) {
+      // Map standards and rubric if any selected - need to get the assignment ID after creation
+      if (selectedStandards.length > 0 || selectedRubricId) {
         // Wait briefly for the mutation to complete
         setTimeout(async () => {
           try {
@@ -168,17 +170,30 @@ export const CreateAssignmentModal = ({
               .single();
 
             if (recentAssignment) {
-              await supabase
-                .from("assignment_standards")
-                .insert(
-                  selectedStandards.map((standardId) => ({
+              // Map standards
+              if (selectedStandards.length > 0) {
+                await supabase
+                  .from("assignment_standards")
+                  .insert(
+                    selectedStandards.map((standardId) => ({
+                      assignment_id: recentAssignment.id,
+                      standard_id: standardId,
+                    }))
+                  );
+              }
+              
+              // Attach rubric
+              if (selectedRubricId) {
+                await supabase
+                  .from("assignment_rubrics")
+                  .insert({
                     assignment_id: recentAssignment.id,
-                    standard_id: standardId,
-                  }))
-                );
+                    rubric_id: selectedRubricId,
+                  });
+              }
             }
           } catch (err) {
-            console.error("Error mapping standards:", err);
+            console.error("Error mapping standards/rubric:", err);
           }
         }, 500);
       }
@@ -195,6 +210,7 @@ export const CreateAssignmentModal = ({
       setIsPosted(true);
       setCategory('Homework');
       setSelectedStandards([]);
+      setSelectedRubricId("");
       onOpenChange(false);
       onSuccess?.();
     } catch (error: any) {
@@ -279,6 +295,32 @@ export const CreateAssignmentModal = ({
               selectedStandards={selectedStandards}
               onStandardsChange={setSelectedStandards}
             />
+
+            {/* Rubric Selector */}
+            {rubrics && rubrics.length > 0 && (
+              <div className="grid gap-2">
+                <Label htmlFor="rubric">
+                  <Grid3X3 className="inline mr-2 h-4 w-4" />
+                  Grading Rubric (Optional)
+                </Label>
+                <Select value={selectedRubricId} onValueChange={setSelectedRubricId}>
+                  <SelectTrigger id="rubric">
+                    <SelectValue placeholder="Select a rubric for grading..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No rubric</SelectItem>
+                    {rubrics.map((rubric) => (
+                      <SelectItem key={rubric.id} value={rubric.id}>
+                        {rubric.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Rubrics help standardize grading and show students expectations
+                </p>
+              </div>
+            )}
 
             <div className="grid gap-2">
               <Label htmlFor="dueDate">
