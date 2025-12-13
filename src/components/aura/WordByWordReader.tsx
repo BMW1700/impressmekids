@@ -661,8 +661,8 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       audioChunksRef.current = [];
     }
 
-    // Update student stats
-    await updateStudentStats(user.id, wordsRead, accuracy);
+    // Update student stats with XP
+    await updateStudentStats(user.id, wordsRead, accuracy, totalXpEarned);
     await generateDailyMissions(user.id);
     await updateMissionProgress(user.id, {
       wordsRead,
@@ -853,13 +853,42 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
     return Math.max(0, Math.round((correctCount / readings.length) * 100 - hesitationPenalty));
   };
 
-  const updateStudentStats = async (studentId: string, wordsRead: number, accuracy: number) => {
+  const updateStudentStats = async (studentId: string, wordsRead: number, accuracy: number, xpEarned: number) => {
     try {
       const { data: existingStats } = await supabase
         .from('student_reading_stats')
         .select('*')
         .eq('student_id', studentId)
-        .single();
+        .maybeSingle();
+
+      const today = new Date().toISOString().split('T')[0];
+      const lastActivityDate = existingStats?.last_activity_date;
+      
+      // Calculate streak
+      let newStreak = 1;
+      let longestStreak = existingStats?.longest_streak_days || 1;
+      
+      if (lastActivityDate) {
+        const lastDate = new Date(lastActivityDate);
+        const todayDate = new Date(today);
+        const diffDays = Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 0) {
+          // Same day - keep current streak
+          newStreak = existingStats?.current_streak_days || 1;
+        } else if (diffDays === 1) {
+          // Consecutive day - increment streak
+          newStreak = (existingStats?.current_streak_days || 0) + 1;
+        } else {
+          // Streak broken - reset to 1
+          newStreak = 1;
+        }
+      }
+      
+      // Update longest streak if needed
+      if (newStreak > longestStreak) {
+        longestStreak = newStreak;
+      }
 
       if (existingStats) {
         await supabase
@@ -867,6 +896,10 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
           .update({
             total_words_read: (existingStats.total_words_read || 0) + wordsRead,
             total_sessions: (existingStats.total_sessions || 0) + 1,
+            current_streak_days: newStreak,
+            longest_streak_days: longestStreak,
+            last_activity_date: today,
+            xp_points: (existingStats.xp_points || 0) + xpEarned,
             updated_at: new Date().toISOString(),
           })
           .eq('student_id', studentId);
@@ -877,8 +910,14 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
             student_id: studentId,
             total_words_read: wordsRead,
             total_sessions: 1,
+            current_streak_days: 1,
+            longest_streak_days: 1,
+            last_activity_date: today,
+            xp_points: xpEarned,
           });
       }
+      
+      console.log('✅ STREAK UPDATED:', { studentId, newStreak, longestStreak, xpEarned });
     } catch (error) {
       console.error('Error updating student stats:', error);
     }

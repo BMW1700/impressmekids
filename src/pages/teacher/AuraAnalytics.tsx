@@ -287,17 +287,17 @@ const AuraAnalytics = () => {
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="phonemes" className="gap-1">
                     <Sparkles className="w-4 h-4" />
-                    Phoneme Analysis
+                    Sound Accuracy
                   </TabsTrigger>
                   <TabsTrigger value="alerts">At-Risk Alerts</TabsTrigger>
-                  <TabsTrigger value="prosody">Prosody & Fluency</TabsTrigger>
+                  <TabsTrigger value="prosody">Reading Fluency</TabsTrigger>
                   <TabsTrigger value="cross-modal" className="gap-1">
                     <Sparkles className="w-4 h-4" />
-                    Cross-Modal
+                    Reading vs Speaking
                   </TabsTrigger>
                   <TabsTrigger value="transfer" className="gap-1">
                     <Sparkles className="w-4 h-4" />
-                    Transfer Learning
+                    Skill Progress
                   </TabsTrigger>
                 </TabsList>
 
