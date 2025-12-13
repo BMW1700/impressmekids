@@ -41,6 +41,36 @@ const ProsodyInsights = ({ records, skillVectors, classroomId }: ProsodyInsights
     enabled: !!classroomId,
   });
 
+  // Fetch student names for display
+  const { data: studentProfiles } = useQuery({
+    queryKey: ['prosody-student-names', classroomId],
+    queryFn: async () => {
+      if (!classroomId) return [];
+      
+      const { data: students } = await supabase
+        .from('classroom_students')
+        .select('student_id')
+        .eq('classroom_id', classroomId);
+      
+      if (!students || students.length === 0) return [];
+      
+      const studentIds = students.map(s => s.student_id);
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', studentIds);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!classroomId,
+  });
+
+  // Create name lookup map
+  const nameMap = new Map<string, string>();
+  studentProfiles?.forEach(p => nameMap.set(p.id, p.full_name || 'Unknown Student'));
+
   // Aggregate prosody metrics from BOTH practice records AND reading sessions
   const aggregateProsody = () => {
     const pitchVariances: number[] = [];
@@ -269,7 +299,7 @@ const ProsodyInsights = ({ records, skillVectors, classroomId }: ProsodyInsights
                       {studentStats.slice(0, 10).map((student, idx) => (
                         <tr key={student.studentId} className={idx % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
                           <td className="p-3 font-medium">
-                            Student {idx + 1}
+                            {nameMap.get(student.studentId) || `Student ${idx + 1}`}
                           </td>
                           <td className="p-3 text-center">
                             <Badge variant="outline">{student.sessionCount}</Badge>
