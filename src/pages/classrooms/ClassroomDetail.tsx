@@ -7,7 +7,8 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic, Eye, EyeOff, UserCheck, BarChart3, Calendar, Plus, Shield, MessageSquare, Grid3X3, BookHeart } from "lucide-react";
+import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic, Eye, EyeOff, UserCheck, BarChart3, Calendar, Plus, Shield, MessageSquare, Grid3X3, BookHeart, UserPlus } from "lucide-react";
+import { SubstituteAccessModal } from "@/components/teacher/SubstituteAccessModal";
 import { TeacherJournalTab } from "@/components/teacher/TeacherJournalTab";
 import { DiscussionBoard } from "@/components/discussions/DiscussionBoard";
 import { RubricsList } from "@/components/rubrics/RubricsList";
@@ -547,6 +548,7 @@ const ClassroomDetail = () => {
                       <BarChart3 className="mr-2 h-5 w-5" />
                       🧠 AI Class Insights
                     </Button>
+                    <SubstituteAccessModal classroomId={id!} classroomName={classroom.name} />
                   </>}
               </div>
             </CardContent>

@@ -4638,6 +4638,76 @@ export type Database = {
           },
         ]
       }
+      substitute_access_links: {
+        Row: {
+          access_code: string
+          access_end: string
+          access_start: string
+          classroom_id: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          permissions: Json | null
+          substitute_email: string | null
+          substitute_name: string | null
+          teacher_id: string
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          access_code: string
+          access_end: string
+          access_start: string
+          classroom_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          permissions?: Json | null
+          substitute_email?: string | null
+          substitute_name?: string | null
+          teacher_id: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          access_code?: string
+          access_end?: string
+          access_start?: string
+          classroom_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          permissions?: Json | null
+          substitute_email?: string | null
+          substitute_name?: string | null
+          teacher_id?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "substitute_access_links_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "substitute_access_links_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "substitute_access_links_used_by_fkey"
+            columns: ["used_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teacher_action_log: {
         Row: {
           action_data: Json
@@ -5395,6 +5465,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      has_substitute_access: {
+        Args: { _classroom_id: string; _user_id: string }
         Returns: boolean
       }
       is_classmate: {
