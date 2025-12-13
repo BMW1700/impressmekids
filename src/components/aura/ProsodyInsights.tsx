@@ -153,15 +153,61 @@ const ProsodyInsights = ({ records, skillVectors, classroomId }: ProsodyInsights
 
   const totalSessions = (records?.length || 0) + (readingSessions?.length || 0);
 
+  // Calculate individual student stats from reading sessions
+  const getStudentStats = () => {
+    if (!readingSessions || readingSessions.length === 0) return [];
+    
+    const studentMap = new Map<string, { 
+      studentId: string;
+      name: string;
+      sessions: any[];
+    }>();
+    
+    // Get student names from classroom_students query context
+    readingSessions.forEach((session: any) => {
+      if (!studentMap.has(session.student_id)) {
+        studentMap.set(session.student_id, {
+          studentId: session.student_id,
+          name: session.student_id, // Will be replaced with actual name
+          sessions: []
+        });
+      }
+      studentMap.get(session.student_id)?.sessions.push(session);
+    });
+    
+    return Array.from(studentMap.values()).map(student => {
+      const sessions = student.sessions;
+      const avgWpm = sessions.length > 0 
+        ? Math.round(sessions.reduce((sum, s) => sum + (s.wpm || 0), 0) / sessions.length)
+        : 0;
+      const avgAccuracy = sessions.length > 0
+        ? Math.round(sessions.reduce((sum, s) => sum + (s.accuracy_percent || 0), 0) / sessions.length)
+        : 0;
+      const avgFluency = sessions.length > 0
+        ? Math.round(sessions.reduce((sum, s) => sum + (s.fluency_score || 0), 0) / sessions.length)
+        : 0;
+      
+      return {
+        studentId: student.studentId,
+        sessionCount: sessions.length,
+        avgWpm,
+        avgAccuracy,
+        avgFluency,
+      };
+    }).sort((a, b) => b.sessionCount - a.sessionCount);
+  };
+
+  const studentStats = getStudentStats();
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Volume2 className="h-5 w-5 text-primary" />
-          Prosody & Fluency Insights
+          Reading Fluency Insights
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Speaking quality analysis from {totalSessions} sessions (practice + read-along)
+          How well students read aloud • {totalSessions} total sessions
         </p>
       </CardHeader>
       <CardContent>
@@ -172,56 +218,89 @@ const ProsodyInsights = ({ records, skillVectors, classroomId }: ProsodyInsights
           </div>
         ) : (
           <>
-            {/* Key Metrics - Updated to show reading data */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-              <div className="text-center p-4 border rounded-lg">
-                <p className="text-2xl font-bold">{avgWPM || '-'}</p>
-                <p className="text-xs text-muted-foreground">Avg WPM</p>
-                <Badge variant="secondary" className="mt-1 text-xs">
-                  Target: 130-160
-                </Badge>
-              </div>
-              <div className="text-center p-4 border rounded-lg bg-primary/5">
-                <p className="text-2xl font-bold text-primary">{avgReadingAccuracy || '-'}%</p>
-                <p className="text-xs text-muted-foreground">Reading Accuracy</p>
-                <Badge variant="default" className="mt-1 text-xs">
-                  Read-Along
-                </Badge>
-              </div>
-              <div className="text-center p-4 border rounded-lg bg-primary/5">
-                <p className="text-2xl font-bold text-primary">{avgFluency || '-'}</p>
-                <p className="text-xs text-muted-foreground">Fluency Score</p>
-                <Badge variant="default" className="mt-1 text-xs">
-                  Read-Along
-                </Badge>
-              </div>
-              <div className="text-center p-4 border rounded-lg">
-                <p className="text-2xl font-bold">{avgConfidence > 0 ? avgConfidence.toFixed(1) : '-'}/5</p>
-                <p className="text-xs text-muted-foreground">Avg Confidence</p>
-              </div>
-              <div className="text-center p-4 border rounded-lg">
-                <p className="text-2xl font-bold">
-                  {avgPitchVariance !== null ? avgPitchVariance : "-"}
-                </p>
-                <p className="text-xs text-muted-foreground">Pitch Variance</p>
-                <Badge variant="secondary" className="mt-1 text-xs">
-                  Expressiveness
-                </Badge>
+            {/* Class Averages */}
+            <div className="mb-4">
+              <h3 className="text-sm font-medium mb-3">Class Averages</h3>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="text-center p-4 border rounded-lg">
+                  <p className="text-2xl font-bold">{avgWPM || '-'}</p>
+                  <p className="text-xs text-muted-foreground">Words/Minute</p>
+                  <Badge variant="secondary" className="mt-1 text-xs">
+                    Target: 130-160
+                  </Badge>
+                </div>
+                <div className="text-center p-4 border rounded-lg bg-primary/5">
+                  <p className="text-2xl font-bold text-primary">{avgReadingAccuracy || '-'}%</p>
+                  <p className="text-xs text-muted-foreground">Reading Accuracy</p>
+                </div>
+                <div className="text-center p-4 border rounded-lg bg-primary/5">
+                  <p className="text-2xl font-bold text-primary">{avgFluency || '-'}</p>
+                  <p className="text-xs text-muted-foreground">Fluency Score</p>
+                </div>
+                <div className="text-center p-4 border rounded-lg">
+                  <p className="text-2xl font-bold">{avgConfidence > 0 ? avgConfidence.toFixed(1) : '-'}/5</p>
+                  <p className="text-xs text-muted-foreground">Confidence</p>
+                </div>
+                <div className="text-center p-4 border rounded-lg">
+                  <p className="text-2xl font-bold">
+                    {avgPitchVariance !== null ? avgPitchVariance : "-"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Expressiveness</p>
+                </div>
               </div>
             </div>
 
-            {/* Data source breakdown */}
-            <div className="mb-4 p-3 bg-muted/50 rounded-lg text-sm">
-              <div className="flex items-center gap-4">
-                <span className="font-medium">Data Sources:</span>
-                <Badge variant="outline">{records?.length || 0} Practice Sessions</Badge>
-                <Badge variant="default">{readingSessions?.length || 0} Read-Along Sessions</Badge>
+            {/* Individual Student Stats Table */}
+            {studentStats.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-medium mb-3">Individual Student Performance</h3>
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="p-3 text-left font-medium">Student</th>
+                        <th className="p-3 text-center font-medium">Sessions</th>
+                        <th className="p-3 text-center font-medium">WPM</th>
+                        <th className="p-3 text-center font-medium">Accuracy</th>
+                        <th className="p-3 text-center font-medium">Fluency</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {studentStats.slice(0, 10).map((student, idx) => (
+                        <tr key={student.studentId} className={idx % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
+                          <td className="p-3 font-medium">
+                            Student {idx + 1}
+                          </td>
+                          <td className="p-3 text-center">
+                            <Badge variant="outline">{student.sessionCount}</Badge>
+                          </td>
+                          <td className="p-3 text-center">
+                            <span className={student.avgWpm >= 130 && student.avgWpm <= 160 ? 'text-green-600 font-semibold' : ''}>
+                              {student.avgWpm}
+                            </span>
+                          </td>
+                          <td className="p-3 text-center">
+                            <Badge variant={student.avgAccuracy >= 90 ? 'default' : student.avgAccuracy >= 70 ? 'secondary' : 'destructive'}>
+                              {student.avgAccuracy}%
+                            </Badge>
+                          </td>
+                          <td className="p-3 text-center">{student.avgFluency}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {studentStats.length > 10 && (
+                    <div className="p-2 text-center text-xs text-muted-foreground bg-muted/30">
+                      Showing top 10 of {studentStats.length} students
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Speaking Rate Distribution */}
             <div className="mb-6">
-              <h3 className="text-sm font-medium mb-3">Speaking Rate Distribution</h3>
+              <h3 className="text-sm font-medium mb-3">Reading Speed Distribution</h3>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={rateDistribution}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -235,8 +314,8 @@ const ProsodyInsights = ({ records, skillVectors, classroomId }: ProsodyInsights
 
             {/* Class-Wide Insights */}
             {insights.length > 0 && (
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium">Class-Wide Patterns</h3>
+              <div className="space-y-2 mb-6">
+                <h3 className="text-sm font-medium">Class Patterns</h3>
                 {insights.map((insight, i) => (
                   <div
                     key={i}
@@ -253,14 +332,14 @@ const ProsodyInsights = ({ records, skillVectors, classroomId }: ProsodyInsights
               </div>
             )}
 
-            {/* Prosody Coaching Tips */}
-            <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-              <h3 className="text-sm font-medium mb-2">💡 Prosody Coaching Tips</h3>
+            {/* Coaching Tips */}
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <h3 className="text-sm font-medium mb-2">💡 Teaching Tips</h3>
               <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                <li>Encourage students to vary pitch when reading dialogue</li>
-                <li>Practice emphasizing key words in sentences</li>
-                <li>Use poetry and dramatic readings to build expressiveness</li>
-                <li>Record and playback to build self-awareness</li>
+                <li>Have students vary their voice when reading dialogue</li>
+                <li>Practice emphasizing important words</li>
+                <li>Use poetry to build expression</li>
+                <li>Let students record and listen to themselves</li>
               </ul>
             </div>
           </>

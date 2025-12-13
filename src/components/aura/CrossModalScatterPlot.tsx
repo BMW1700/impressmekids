@@ -120,31 +120,31 @@ const CrossModalScatterPlot = ({ students, skillVectors, auraRecords, classroomI
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-primary animate-pulse" />
-          Cross-Modal Performance Matrix
+          Reading vs Speaking Skills
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Speaking (practice) vs Reading (read-along) performance • {dataPoints.length} students with data
+          Compare how students perform in reading aloud vs speaking practice • {dataPoints.length} students with data
         </p>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {/* Quadrant Legend */}
+          {/* Simple Legend */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
             <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/30">
-              <div className="font-semibold text-green-700 dark:text-green-400">Top Right: Excelling</div>
-              <div className="text-muted-foreground">Strong in both</div>
+              <div className="font-semibold text-green-700 dark:text-green-400">⭐ Strong in Both</div>
+              <div className="text-muted-foreground">Keep challenging them!</div>
             </div>
             <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/30">
-              <div className="font-semibold text-blue-700 dark:text-blue-400">Top Left: Strong Reader</div>
-              <div className="text-muted-foreground">Needs speaking</div>
+              <div className="font-semibold text-blue-700 dark:text-blue-400">📚 Strong Reader</div>
+              <div className="text-muted-foreground">Needs speaking practice</div>
             </div>
             <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/30">
-              <div className="font-semibold text-purple-700 dark:text-purple-400">Bottom Right: Strong Speaker</div>
-              <div className="text-muted-foreground">Needs reading</div>
+              <div className="font-semibold text-purple-700 dark:text-purple-400">🎤 Strong Speaker</div>
+              <div className="text-muted-foreground">Needs reading practice</div>
             </div>
             <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/30">
-              <div className="font-semibold text-amber-700 dark:text-amber-400">Bottom Left: Needs Support</div>
-              <div className="text-muted-foreground">Both areas</div>
+              <div className="font-semibold text-amber-700 dark:text-amber-400">⚠️ Needs Support</div>
+              <div className="text-muted-foreground">Focus on both areas</div>
             </div>
           </div>
 
