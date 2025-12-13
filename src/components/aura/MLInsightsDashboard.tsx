@@ -56,11 +56,11 @@ const MLInsightsDashboard = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                ML Insights for {studentName}
-                <Badge variant="default" className="text-xs">4 Patents Active</Badge>
+                AI Insights for {studentName}
+                <Badge variant="default" className="text-xs">Personalized</Badge>
               </div>
               <CardDescription className="mt-1">
-                Comprehensive AI analysis across 4 patented models
+                Smart analysis of reading and speaking skills
               </CardDescription>
             </div>
           </CardTitle>
@@ -74,20 +74,20 @@ const MLInsightsDashboard = ({
             <span className="text-xs">Overview</span>
           </TabsTrigger>
           <TabsTrigger value="patent1" className="flex flex-col gap-1 py-2">
-            <Sparkles className="h-4 w-4" />
-            <span className="text-xs">Patent #1</span>
+            <TrendingUp className="h-4 w-4" />
+            <span className="text-xs">Skill Transfer</span>
           </TabsTrigger>
           <TabsTrigger value="patent2" className="flex flex-col gap-1 py-2">
-            <Sparkles className="h-4 w-4" />
-            <span className="text-xs">Patent #2</span>
+            <Brain className="h-4 w-4" />
+            <span className="text-xs">Highlights</span>
           </TabsTrigger>
           <TabsTrigger value="patent3" className="flex flex-col gap-1 py-2">
-            <Sparkles className="h-4 w-4" />
-            <span className="text-xs">Patent #3</span>
+            <Zap className="h-4 w-4" />
+            <span className="text-xs">Sound Practice</span>
           </TabsTrigger>
           <TabsTrigger value="patent4" className="flex flex-col gap-1 py-2">
-            <Sparkles className="h-4 w-4" />
-            <span className="text-xs">Patent #4</span>
+            <AlertTriangle className="h-4 w-4" />
+            <span className="text-xs">Difficulty</span>
           </TabsTrigger>
         </TabsList>
 
@@ -126,24 +126,26 @@ const MLInsightsDashboard = ({
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Risk Analysis</CardTitle>
+                <CardTitle className="text-base">Areas to Watch</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>
                   <div className="flex justify-between text-sm mb-1">
-                    <span className="font-medium">Cross-Modal Risk</span>
+                    <span className="font-medium">Skill Gap</span>
                     <Badge variant={crossModalRisk > 60 ? 'destructive' : 'secondary'} className="shadow-md">
-                      {crossModalRisk}/100
+                      {crossModalRisk > 60 ? 'Needs Attention' : crossModalRisk > 30 ? 'Moderate' : 'On Track'}
                     </Badge>
                   </div>
                   <Progress value={crossModalRisk} className="h-3" />
+                  <p className="text-xs text-muted-foreground mt-1">Reading vs speaking skill balance</p>
                 </div>
                 <div>
                   <div className="flex justify-between text-sm mb-1">
-                    <span className="font-medium">Cognitive Load (Avg)</span>
-                    <span className="text-xs font-semibold">{Math.round(avgCognitiveLoad * 100)}%</span>
+                    <span className="font-medium">Effort Level</span>
+                    <span className="text-xs font-semibold">{avgCognitiveLoad > 0.7 ? 'High' : avgCognitiveLoad > 0.4 ? 'Medium' : 'Low'}</span>
                   </div>
                   <Progress value={avgCognitiveLoad * 100} className="h-3" />
+                  <p className="text-xs text-muted-foreground mt-1">How hard the student is working</p>
                 </div>
               </CardContent>
             </Card>
@@ -155,12 +157,12 @@ const MLInsightsDashboard = ({
             <CardHeader>
               <CardTitle className="flex items-center gap-3">
                 <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 shadow-card">
-                  <Sparkles className="w-6 h-6 text-white" />
+                  <TrendingUp className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <div>Patent #1: Cross-Modal Transfer Network</div>
+                  <div>Reading ↔ Speaking Connection</div>
                   <CardDescription className="mt-1">
-                    Neural network predicting reading ↔ speaking transfer
+                    How skills transfer between reading and speaking
                   </CardDescription>
                 </div>
               </CardTitle>
@@ -170,11 +172,11 @@ const MLInsightsDashboard = ({
                 <div className="p-4 rounded-lg bg-gradient-to-r from-primary/10 to-primary/5 border-2 border-primary/20 shadow-md">
                   <p className="text-sm font-semibold mb-2 flex items-center gap-2">
                     <Brain className="h-4 w-4 text-primary" />
-                    How it works:
+                    What this shows:
                   </p>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Bidirectional LSTM network with attention mechanism analyzes features from one modality 
-                    (speaking OR reading) to predict performance in the other modality. Trained in-browser with TensorFlow.js.
+                    Students who read well often speak well too. This AI tracks how improvements in one area 
+                    help the other, identifying gaps where targeted practice would help most.
                   </p>
                 </div>
 
@@ -193,17 +195,17 @@ const MLInsightsDashboard = ({
                 />
 
                 <div>
-                  <p className="text-sm font-medium mb-2">Cross-Modal Risk Score:</p>
+                  <p className="text-sm font-medium mb-2">Skill Gap Score:</p>
                   <div className="flex items-center gap-3">
                     <Progress value={crossModalRisk} className="h-3 flex-1" />
                     <Badge variant={crossModalRisk > 60 ? 'destructive' : 'default'}>
-                      {crossModalRisk}/100
+                      {crossModalRisk > 60 ? 'Large Gap' : crossModalRisk > 30 ? 'Some Gap' : 'Aligned'}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
                     {crossModalRisk > 60 
-                      ? '⚠️ High divergence detected between speaking and reading skills'
-                      : '✅ Speaking and reading skills are well-aligned'}
+                      ? '⚠️ Reading and speaking skills are developing unevenly - focus on the weaker area'
+                      : '✅ Reading and speaking skills are developing together nicely'}
                   </p>
                 </div>
 
@@ -222,32 +224,32 @@ const MLInsightsDashboard = ({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-primary" />
-                Patent #2: Adaptive Semantic Clustering
+                <Brain className="w-5 h-5 text-primary" />
+                Highlighting Patterns
               </CardTitle>
               <CardDescription>
-                Student-specific clustering of highlight patterns
+                How this student approaches reading annotations
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-                  <p className="text-sm font-medium mb-2">🧠 How it works:</p>
+                  <p className="text-sm font-medium mb-2">💡 What this shows:</p>
                   <p className="text-xs text-muted-foreground">
-                    TF-IDF semantic embeddings + K-Means clustering learns each student's unique annotation patterns.
-                    Adaptive boundary manager personalizes cluster definitions based on historical data.
+                    The AI learns each student's unique way of highlighting important information.
+                    It tracks whether they focus on main ideas, details, or a mix - helping you understand their comprehension strategy.
                   </p>
                 </div>
 
                 {skillVector?.highlight_strategy_profile && (
                   <div>
-                    <p className="text-sm font-medium mb-2">Annotation Strategy Profile:</p>
+                    <p className="text-sm font-medium mb-2">Reading Style:</p>
                     <div className="space-y-2">
                       <div className="p-2 rounded bg-muted text-xs">
-                        <strong>Dominant Strategy:</strong> {(skillVector.highlight_strategy_profile as any)?.dominant_strategy || 'Developing'}
+                        <strong>Approach:</strong> {(skillVector.highlight_strategy_profile as any)?.dominant_strategy === 'scattered' ? 'Explores broadly' : (skillVector.highlight_strategy_profile as any)?.dominant_strategy === 'strategic' ? 'Focuses on key points' : 'Reads sequentially'}
                       </div>
                       <div className="p-2 rounded bg-muted text-xs">
-                        <strong>Sophistication Trend:</strong> {Math.round((skillVector.annotation_sophistication_trend || 0) * 100)}%
+                        <strong>Improvement:</strong> {Math.round((skillVector.annotation_sophistication_trend || 0) * 100)}% growth in highlighting quality
                       </div>
                     </div>
                   </div>
@@ -255,11 +257,11 @@ const MLInsightsDashboard = ({
 
                 {skillVector?.semantic_clusters && (
                   <div>
-                    <p className="text-sm font-medium mb-2">Recent Semantic Clusters:</p>
+                    <p className="text-sm font-medium mb-2">Topics They Focus On:</p>
                     <div className="flex flex-wrap gap-2">
                       {(skillVector.semantic_clusters as any[])?.slice(0, 5).map((cluster: any, idx: number) => (
                         <Badge key={idx} variant="outline">
-                          {cluster.label || `Cluster ${idx + 1}`}
+                          {cluster.label || `Topic ${idx + 1}`}
                         </Badge>
                       ))}
                     </div>
@@ -275,12 +277,12 @@ const MLInsightsDashboard = ({
             <CardHeader>
               <CardTitle className="flex items-center gap-3">
                 <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 shadow-card">
-                  <Sparkles className="w-6 h-6 text-white" />
+                  <Zap className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <div>Patent #3: RL-Based Phoneme Agent</div>
+                  <div>Sound Practice Recommendations</div>
                   <CardDescription className="mt-1">
-                    Q-learning with articulatory muscle fatigue modeling
+                    Smart suggestions for which sounds to practice next
                   </CardDescription>
                 </div>
               </CardTitle>
@@ -290,11 +292,11 @@ const MLInsightsDashboard = ({
                 <div className="p-4 rounded-lg bg-gradient-to-r from-primary/10 to-primary/5 border-2 border-primary/20 shadow-md">
                   <p className="text-sm font-semibold mb-2 flex items-center gap-2">
                     <Brain className="h-4 w-4 text-primary" />
-                    How it works:
+                    What this shows:
                   </p>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Q-learning agent learns optimal phoneme practice sequences. Models articulatory muscle groups 
-                    to prevent fatigue and interference. Adapts difficulty based on RL rewards + transfer predictions.
+                    The AI learns which sounds each student struggles with and recommends personalized practice.
+                    It also knows when students are getting tired and suggests breaks to prevent frustration.
                   </p>
                 </div>
 
@@ -307,20 +309,20 @@ const MLInsightsDashboard = ({
 
                 {latestRLExercise && (
                   <div className="p-3 rounded-lg bg-muted">
-                    <p className="text-xs font-medium mb-2">Latest RL-Adaptive Exercise:</p>
+                    <p className="text-xs font-medium mb-2">Latest Practice Session:</p>
                     <div className="space-y-2 text-xs">
                       <div className="flex justify-between">
-                        <span>Difficulty Level:</span>
+                        <span>Difficulty:</span>
                         <Badge>{latestRLExercise.difficulty_level}/5</Badge>
                       </div>
                       <div className="flex justify-between">
-                        <span>Fatigue Risk:</span>
+                        <span>Tiredness Level:</span>
                         <span>{Math.round(((latestRLExercise.adaptive_metadata as any)?.articulatory_fatigue_risk || 0) * 100)}%</span>
                       </div>
                       {(latestRLExercise.adaptive_metadata as any)?.recommended_rest_minutes > 0 && (
                         <div className="p-2 rounded bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300">
                           <AlertTriangle className="w-3 h-3 inline mr-1" />
-                          Rest recommended: {(latestRLExercise.adaptive_metadata as any).recommended_rest_minutes} min
+                          Break suggested: {(latestRLExercise.adaptive_metadata as any).recommended_rest_minutes} minutes
                         </div>
                       )}
                     </div>
@@ -329,7 +331,7 @@ const MLInsightsDashboard = ({
 
                 {transferInsights?.predictions && (
                   <div>
-                    <p className="text-sm font-medium mb-2">Transfer Learning Predictions:</p>
+                    <p className="text-sm font-medium mb-2">Sounds Ready to Improve:</p>
                     <div className="space-y-2">
                       {transferInsights.predictions.slice(0, 3).map((pred: any) => (
                         <div key={pred.phoneme} className="p-2 rounded bg-muted text-xs flex justify-between items-center">
@@ -338,7 +340,7 @@ const MLInsightsDashboard = ({
                             <span className="ml-2 text-muted-foreground">{pred.reasoning}</span>
                           </div>
                           <Badge variant={pred.readinessLevel === 'high' ? 'default' : 'secondary'}>
-                            {pred.transferProbability}%
+                            {pred.transferProbability}% ready
                           </Badge>
                         </div>
                       ))}
@@ -355,12 +357,12 @@ const MLInsightsDashboard = ({
             <CardHeader>
               <CardTitle className="flex items-center gap-3">
                 <div className="p-3 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 shadow-card">
-                  <Sparkles className="w-6 h-6 text-white" />
+                  <AlertTriangle className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <div>Patent #4: Real-Time Cognitive Load Estimator</div>
+                  <div>Difficulty & Effort Tracking</div>
                   <CardDescription className="mt-1">
-                    Speech pattern analysis for cognitive load detection
+                    How hard the student is working and when to adjust
                   </CardDescription>
                 </div>
               </CardTitle>
@@ -370,11 +372,11 @@ const MLInsightsDashboard = ({
                 <div className="p-4 rounded-lg bg-gradient-to-r from-primary/10 to-primary/5 border-2 border-primary/20 shadow-md">
                   <p className="text-sm font-semibold mb-2 flex items-center gap-2">
                     <Brain className="h-4 w-4 text-primary" />
-                    How it works:
+                    What this shows:
                   </p>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Analyzes speech pauses, hesitation markers, volume variability, and confidence dips in real-time.
-                    Uses adaptive feedback throttling to prevent cognitive overload during practice.
+                    The AI detects when students are struggling (hesitation, pauses, confidence dips) and 
+                    automatically adjusts the difficulty. It prevents frustration by giving easier content when needed.
                   </p>
                 </div>
 
@@ -390,11 +392,11 @@ const MLInsightsDashboard = ({
                 />
 
                 <div>
-                  <p className="text-sm font-medium mb-2">Average Cognitive Load (Last 5 sessions):</p>
+                  <p className="text-sm font-medium mb-2">Average Effort Level (Last 5 sessions):</p>
                   <div className="flex items-center gap-3">
                     <Progress value={avgCognitiveLoad * 100} className="h-3 flex-1" />
                     <Badge variant={avgCognitiveLoad > 0.7 ? 'destructive' : avgCognitiveLoad > 0.4 ? 'default' : 'secondary'}>
-                      {Math.round(avgCognitiveLoad * 100)}%
+                      {avgCognitiveLoad > 0.7 ? 'High Effort' : avgCognitiveLoad > 0.4 ? 'Moderate' : 'Low Effort'}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
