@@ -287,7 +287,7 @@ const AuraAnalytics = () => {
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="phonemes" className="gap-1">
                     <Sparkles className="w-4 h-4" />
-                    Sound Accuracy
+                    Phoneme Analysis
                   </TabsTrigger>
                   <TabsTrigger value="alerts">At-Risk Alerts</TabsTrigger>
                   <TabsTrigger value="prosody">Reading Fluency</TabsTrigger>
