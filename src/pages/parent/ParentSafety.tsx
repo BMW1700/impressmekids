@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, CloudRain, DoorClosed, Shield, MessageSquare, QrCode, CheckCircle2, Clock, Settings, Smartphone } from "lucide-react";
+import { AlertTriangle, CloudRain, DoorClosed, Shield, MessageSquare, QrCode, CheckCircle2, Clock, Settings, Smartphone, Bell, BellOff } from "lucide-react";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { UnaccountedChildAlert } from "@/components/safety/UnaccountedChildAlert";
 import { ParentQuickMessagePanel } from "@/components/safety/ParentQuickMessagePanel";
 import { StudentQRCode } from "@/components/safety/StudentQRCode";
@@ -18,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function ParentSafety() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isSupported, isSubscribed, isLoading: notifLoading, subscribe, unsubscribe } = usePushNotifications();
   const [loading, setLoading] = useState(true);
   const [parentId, setParentId] = useState<string | null>(null);
   const [students, setStudents] = useState<any[]>([]);
@@ -493,6 +495,46 @@ export default function ParentSafety() {
           </TabsContent>
 
           <TabsContent value="settings">
+            {/* Prominent Push Notification CTA */}
+            <Card className={`p-6 mb-6 border-2 ${isSubscribed ? 'border-green-500/50 bg-green-500/5' : 'border-primary/50 bg-primary/5'}`}>
+              <div className="flex items-start gap-4">
+                <div className={`p-3 rounded-full ${isSubscribed ? 'bg-green-500/20' : 'bg-primary/20'}`}>
+                  {isSubscribed ? (
+                    <Bell className="h-8 w-8 text-green-600" />
+                  ) : (
+                    <BellOff className="h-8 w-8 text-primary" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
+                    {isSubscribed ? "Push Notifications Enabled ✓" : "Enable Push Notifications"}
+                  </h2>
+                  <p className="text-muted-foreground mb-4">
+                    {isSubscribed 
+                      ? "You'll receive instant alerts during emergencies and drills. Your child's safety updates will be delivered in real-time."
+                      : "Get instant alerts on your phone when there's an emergency, drill, or when your child checks in safely. Don't miss critical safety updates!"}
+                  </p>
+                  {isSupported ? (
+                    isSubscribed ? (
+                      <Button variant="outline" onClick={unsubscribe} disabled={notifLoading}>
+                        <BellOff className="h-4 w-4 mr-2" />
+                        {notifLoading ? "Processing..." : "Disable Notifications"}
+                      </Button>
+                    ) : (
+                      <Button size="lg" onClick={subscribe} disabled={notifLoading} className="bg-primary hover:bg-primary/90">
+                        <Bell className="h-5 w-5 mr-2" />
+                        {notifLoading ? "Enabling..." : "Enable Push Notifications"}
+                      </Button>
+                    )
+                  ) : (
+                    <p className="text-sm text-destructive">
+                      Push notifications are not supported in this browser. Try opening in Chrome or Safari.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </Card>
+
             <Card className="p-6 mb-6">
               <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
                 <Smartphone className="h-6 w-6" />
