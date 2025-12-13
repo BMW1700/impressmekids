@@ -10,18 +10,23 @@ interface PhonemeHeatmapProps {
   skillVectors: any[];
 }
 
+// Use RAW IPA symbols (matches database) with teacher-friendly labels
 const COMMON_PHONEMES = [
-  { symbol: "/r/", label: "R" },
-  { symbol: "/θ/", label: "TH" },
-  { symbol: "/ð/", label: "TH-voiced" },
-  { symbol: "/l/", label: "L" },
-  { symbol: "/s/", label: "S" },
-  { symbol: "/z/", label: "Z" },
-  { symbol: "/ʃ/", label: "SH" },
-  { symbol: "/tʃ/", label: "CH" },
-  { symbol: "/dʒ/", label: "J" },
-  { symbol: "/v/", label: "V" },
-  { symbol: "/w/", label: "W" },
+  { symbol: "ɹ", label: "R Sound", example: "rabbit" },
+  { symbol: "θ", label: "TH Sound", example: "think" },
+  { symbol: "ð", label: "TH Sound", example: "the" },
+  { symbol: "l", label: "L Sound", example: "lamp" },
+  { symbol: "s", label: "S Sound", example: "snake" },
+  { symbol: "z", label: "Z Sound", example: "zebra" },
+  { symbol: "ʃ", label: "SH Sound", example: "ship" },
+  { symbol: "tʃ", label: "CH Sound", example: "chair" },
+  { symbol: "dʒ", label: "J Sound", example: "jump" },
+  { symbol: "v", label: "V Sound", example: "van" },
+  { symbol: "w", label: "W Sound", example: "water" },
+  { symbol: "æ", label: "A Sound", example: "cat" },
+  { symbol: "ʌ", label: "UH Sound", example: "cup" },
+  { symbol: "ɛ", label: "EH Sound", example: "bed" },
+  { symbol: "ɪ", label: "IH Sound", example: "sit" },
 ];
 
 const PhonemeHeatmap = ({ students, skillVectors }: PhonemeHeatmapProps) => {
@@ -116,10 +121,29 @@ const PhonemeHeatmap = ({ students, skillVectors }: PhonemeHeatmapProps) => {
             <Sparkles className="h-6 w-6 text-white" />
           </div>
           <div>
-            <CardTitle className="text-2xl">Phoneme Mastery Heatmap</CardTitle>
+            <CardTitle className="text-2xl">Sound Accuracy Heatmap</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              Interactive view of student phoneme accuracy • Data from read-along sessions
+              See which sounds each student has mastered • Click any cell for details
             </p>
+          </div>
+        </div>
+        {/* Visual Legend */}
+        <div className="flex items-center gap-4 mt-4 text-xs">
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-4 rounded bg-green-500/40 border border-green-500/50" />
+            <span>90%+ Mastered</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-4 rounded bg-yellow-500/40 border border-yellow-500/50" />
+            <span>70-89% Developing</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-4 rounded bg-red-500/40 border border-red-500/50" />
+            <span>&lt;70% Needs Practice</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-4 rounded bg-muted border border-muted-foreground/20" />
+            <span>No data yet</span>
           </div>
         </div>
       </CardHeader>
@@ -132,11 +156,12 @@ const PhonemeHeatmap = ({ students, skillVectors }: PhonemeHeatmapProps) => {
                 {COMMON_PHONEMES.map((p, idx) => (
                   <th 
                     key={p.symbol} 
-                    className="p-4 text-center border-2 border-primary/10 font-semibold min-w-[80px] animate-fade-in"
+                    className="p-4 text-center border-2 border-primary/10 font-semibold min-w-[90px] animate-fade-in"
                     style={{ animationDelay: `${idx * 50}ms` }}
+                    title={`Example: "${p.example}"`}
                   >
                     <div className="text-sm font-bold">{p.label}</div>
-                    <div className="text-xs text-muted-foreground font-mono">{p.symbol}</div>
+                    <div className="text-xs text-muted-foreground italic">"{p.example}"</div>
                   </th>
                 ))}
               </tr>
