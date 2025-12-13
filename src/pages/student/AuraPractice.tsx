@@ -11,7 +11,7 @@ import AuraProgressChart from "@/components/aura/AuraProgressChart";
 import SpeakerDiarizationView from "@/components/aura/SpeakerDiarizationView";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mic, TrendingUp, BookOpen, Library, Sparkles } from "lucide-react";
+import { Mic, TrendingUp, BookOpen, Library, Sparkles, Trophy } from "lucide-react";
 import GeneratedExercises from "@/components/aura/GeneratedExercises";
 import PhonemeMasteryPathway from "@/components/aura/PhonemeMasteryPathway";
 import DifficultyProgressCard from "@/components/aura/DifficultyProgressCard";
@@ -21,7 +21,42 @@ import { GuidedReadingFlow } from "@/components/aura/GuidedReadingFlow";
 import { ReadingBookshelf } from "@/components/aura/ReadingBookshelf";
 import { SmartNotifications } from "@/components/aura/SmartNotifications";
 import { unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
+import { GamificationHeader } from "@/components/aura/GamificationHeader";
+import { ActiveMissionsPanel } from "@/components/aura/ActiveMissionsPanel";
+import { ClassChallengeCard } from "@/components/aura/ClassChallengeCard";
+import { LeaderboardCard } from "@/components/aura/LeaderboardCard";
 import type { CuratedStory as Story } from "@/data/curatedStories";
+
+// Helper component to get student's classroom and show leaderboard
+const ClassroomLeaderboardWrapper = ({ studentId }: { studentId: string }) => {
+  const { data: enrollment, isLoading } = useQuery({
+    queryKey: ['student-enrollment', studentId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('classroom_students')
+        .select('classroom_id')
+        .eq('student_id', studentId)
+        .limit(1)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!studentId,
+  });
+
+  if (isLoading || !enrollment?.classroom_id) {
+    return null;
+  }
+
+  return (
+    <LeaderboardCard 
+      classroomId={enrollment.classroom_id} 
+      currentStudentId={studentId}
+      title="Class Leaderboard 🏆"
+    />
+  );
+};
 
 const AuraPractice = () => {
   const { toast } = useToast();
@@ -198,7 +233,8 @@ const AuraPractice = () => {
       
       <main className="flex-1 container mx-auto px-4 py-8 animate-fade-in">
         <div className="max-w-6xl mx-auto space-y-6">
-          <div className="flex items-center justify-between mb-8">
+          {/* Header with Gamification Stats */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
             <div className="flex items-center gap-3">
               <div className="p-3 rounded-full bg-gradient-to-br from-purple-500 to-blue-500">
                 <Sparkles className="h-6 w-6 text-white" />
@@ -208,12 +244,15 @@ const AuraPractice = () => {
                 <p className="text-muted-foreground">AI-powered reading comprehension practice</p>
               </div>
             </div>
+            
+            {/* Gamification Stats Header */}
+            {user?.id && <GamificationHeader studentId={user.id} />}
           </div>
 
           <SmartNotifications onNavigate={(path) => navigate(path)} />
 
           <Tabs defaultValue="stories" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="stories" className="hover:scale-105 transition-transform">
                 <Library className="h-4 w-4 mr-2" />
                 Stories
@@ -225,6 +264,10 @@ const AuraPractice = () => {
               <TabsTrigger value="practice" className="hover:scale-105 transition-transform">
                 <Mic className="h-4 w-4 mr-2" />
                 Practice
+              </TabsTrigger>
+              <TabsTrigger value="challenges" className="hover:scale-105 transition-transform">
+                <Trophy className="h-4 w-4 mr-2" />
+                Challenges
               </TabsTrigger>
               <TabsTrigger value="progress" className="hover:scale-105 transition-transform">
                 <TrendingUp className="h-4 w-4 mr-2" />
@@ -270,6 +313,22 @@ const AuraPractice = () => {
                       diarizationConfidence={latestAnalysis.diarizationConfidence}
                     />
                   )}
+                </>
+              )}
+            </TabsContent>
+
+            {/* NEW: Challenges Tab */}
+            <TabsContent value="challenges" className="mt-6 space-y-6">
+              {user?.id && (
+                <>
+                  {/* Active Missions */}
+                  <ActiveMissionsPanel studentId={user.id} />
+                  
+                  {/* Class Challenge */}
+                  <ClassChallengeCard studentId={user.id} />
+                  
+                  {/* Classroom Leaderboard */}
+                  <ClassroomLeaderboardWrapper studentId={user.id} />
                 </>
               )}
             </TabsContent>
