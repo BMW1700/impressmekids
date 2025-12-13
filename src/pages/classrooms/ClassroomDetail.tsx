@@ -7,7 +7,9 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic, Eye, EyeOff, UserCheck, BarChart3, Calendar, Plus, Shield } from "lucide-react";
+import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic, Eye, EyeOff, UserCheck, BarChart3, Calendar, Plus, Shield, MessageSquare, Grid3X3 } from "lucide-react";
+import { DiscussionBoard } from "@/components/discussions/DiscussionBoard";
+import { RubricsList } from "@/components/rubrics/RubricsList";
 import { ClassroomLeaderboard } from "@/components/ClassroomLeaderboard";
 import { LeaderboardCard } from "@/components/aura/LeaderboardCard";
 import { AttendanceTab } from "@/components/teacher/AttendanceTab";
@@ -629,6 +631,14 @@ const ClassroomDetail = () => {
                         {parentRequests.filter(r => r.status === 'pending').length}
                       </Badge>}
                   </TabsTrigger>
+                  <TabsTrigger value="discussions" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Discussions
+                  </TabsTrigger>
+                  <TabsTrigger value="rubrics" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
+                    <Grid3X3 className="mr-2 h-4 w-4" />
+                    Rubrics
+                  </TabsTrigger>
                 </>}
               {/* Student Tabs: Row 1: Syllabus, Assignments, Announcements; Row 2: Study Materials, Tournaments, Trends */}
               {!isTeacher && <>
@@ -655,6 +665,10 @@ const ClassroomDetail = () => {
                   <TabsTrigger value="trends" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <BarChart3 className="mr-2 h-4 w-4" />
                     Trends
+                  </TabsTrigger>
+                  <TabsTrigger value="discussions" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Discussions
                   </TabsTrigger>
                 </>}
             </TabsList>
@@ -773,6 +787,16 @@ const ClassroomDetail = () => {
                   </Card> : <div className="grid md:grid-cols-2 gap-6">
                     {parentRequests.map(request => <ParentAccessRequestCard key={request.id} id={request.id} parentName={request.parent_accounts?.full_name || 'Parent'} parentEmail={request.parent_accounts?.email || ''} studentName={request.profiles?.full_name || 'Student'} message={request.message} status={request.status} createdAt={request.created_at} onApprove={handleApproveParentRequest} onDeny={handleDenyParentRequest} />)}
                   </div>}
+              </TabsContent>}
+
+            {/* Discussions Tab */}
+            <TabsContent value="discussions" className="mt-6">
+              <DiscussionBoard classroomId={id!} isTeacher={isTeacher} />
+            </TabsContent>
+
+            {/* Rubrics Tab - Teachers Only */}
+            {isTeacher && <TabsContent value="rubrics" className="mt-6">
+                <RubricsList classroomId={id!} />
               </TabsContent>}
 
             <TabsContent value="assignments" className="mt-6">
