@@ -298,6 +298,42 @@ export type Database = {
           },
         ]
       }
+      assignment_rubrics: {
+        Row: {
+          assignment_id: string
+          created_at: string | null
+          id: string
+          rubric_id: string
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string | null
+          id?: string
+          rubric_id: string
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string | null
+          id?: string
+          rubric_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_rubrics_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: true
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_rubrics_rubric_id_fkey"
+            columns: ["rubric_id"]
+            isOneToOne: false
+            referencedRelation: "rubrics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignment_standards: {
         Row: {
           assignment_id: string
@@ -1440,6 +1476,109 @@ export type Database = {
             columns: ["backup_id"]
             isOneToOne: false
             referencedRelation: "cold_storage_backups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discussion_posts: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string | null
+          id: string
+          parent_id: string | null
+          topic_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string | null
+          id?: string
+          parent_id?: string | null
+          topic_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string | null
+          id?: string
+          parent_id?: string | null
+          topic_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discussion_posts_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discussion_posts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "discussion_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discussion_posts_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "discussion_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discussion_topics: {
+        Row: {
+          classroom_id: string
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          is_locked: boolean | null
+          is_pinned: boolean | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          classroom_id: string
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          is_locked?: boolean | null
+          is_pinned?: boolean | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          classroom_id?: string
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_locked?: boolean | null
+          is_pinned?: boolean | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discussion_topics_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discussion_topics_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -3456,6 +3595,179 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "parent_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rubric_criteria: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          max_points: number
+          name: string
+          rubric_id: string
+          sequence: number
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          max_points?: number
+          name: string
+          rubric_id: string
+          sequence?: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          max_points?: number
+          name?: string
+          rubric_id?: string
+          sequence?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rubric_criteria_rubric_id_fkey"
+            columns: ["rubric_id"]
+            isOneToOne: false
+            referencedRelation: "rubrics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rubric_levels: {
+        Row: {
+          created_at: string | null
+          criteria_id: string
+          description: string | null
+          id: string
+          name: string
+          points: number
+          sequence: number
+        }
+        Insert: {
+          created_at?: string | null
+          criteria_id: string
+          description?: string | null
+          id?: string
+          name: string
+          points: number
+          sequence?: number
+        }
+        Update: {
+          created_at?: string | null
+          criteria_id?: string
+          description?: string | null
+          id?: string
+          name?: string
+          points?: number
+          sequence?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rubric_levels_criteria_id_fkey"
+            columns: ["criteria_id"]
+            isOneToOne: false
+            referencedRelation: "rubric_criteria"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rubric_scores: {
+        Row: {
+          created_at: string | null
+          criteria_id: string
+          feedback: string | null
+          id: string
+          level_id: string | null
+          points_awarded: number
+          submission_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          criteria_id: string
+          feedback?: string | null
+          id?: string
+          level_id?: string | null
+          points_awarded?: number
+          submission_id: string
+        }
+        Update: {
+          created_at?: string | null
+          criteria_id?: string
+          feedback?: string | null
+          id?: string
+          level_id?: string | null
+          points_awarded?: number
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rubric_scores_criteria_id_fkey"
+            columns: ["criteria_id"]
+            isOneToOne: false
+            referencedRelation: "rubric_criteria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rubric_scores_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "rubric_levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rubric_scores_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rubrics: {
+        Row: {
+          classroom_id: string
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          classroom_id: string
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          classroom_id?: string
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rubrics_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rubrics_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
