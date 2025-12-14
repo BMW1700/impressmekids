@@ -20,6 +20,8 @@ import { DifficultyLevelDisplay } from './DifficultyLevelDisplay';
 import { SmartExercisesPanel } from './SmartExercisesPanel';
 import { cognitiveLoadEstimator, detectHesitationMarkers } from '@/lib/cognitiveLoadEstimator';
 import { adaptiveDifficultyEngine } from '@/lib/difficultyScalingV2';
+import { analyzeMiscues, getMiscueInterventions, type MiscueAnalysis } from '@/lib/miscueAnalysis';
+import { calculateProsodyScore, type ProsodyMetrics } from '@/lib/prosodyAnalysis';
 
 // Browser compatibility check
 const checkBrowserSupport = () => {
@@ -46,10 +48,14 @@ interface WordByWordReaderProps {
 interface ReadingSessionResult {
   sessionId: string;
   wpm: number;
+  wcpm: number;  // Words Correct Per Minute (WPM minus miscues)
   accuracy: number;
   wordsRead: number;
   durationSeconds: number;
   xpEarned: number;
+  miscueAnalysis?: MiscueAnalysis;
+  prosodyMetrics?: ProsodyMetrics;
+  fluencyLevel?: 'frustration' | 'instructional' | 'independent';
 }
 
 interface WordReading {
@@ -59,6 +65,7 @@ interface WordReading {
   endMs: number;
   correct: boolean;
   hesitation: boolean;
+  selfCorrected?: boolean;
 }
 
 // Fuzzy string matching using Levenshtein distance
@@ -576,7 +583,47 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
     const wpm = totalDuration > 0 ? Math.round((wordsRead / totalDuration) * 60) : 0;
     const accuracy = wordsRead > 0 ? Math.round((correctCount / wordsRead) * 100) : 0;
     
-    console.log('SCORING DEBUG:', { correctCount, incorrectCount, wordsRead, wpm, accuracy, totalDuration });
+    // ========== POLISHED AURA: WCPM & Miscue Analysis ==========
+    const miscueAnalysis = analyzeMiscues(wordReadings, words, totalDuration);
+    const wcpm = miscueAnalysis.wcpm;
+    const miscueInterventions = getMiscueInterventions(miscueAnalysis);
+    
+    console.log('WCPM & MISCUE ANALYSIS:', { 
+      wpm, 
+      wcpm, 
+      miscuesByType: miscueAnalysis.miscuesByType,
+      fluencyLevel: miscueAnalysis.fluencyLevel,
+      selfCorrectionRate: miscueAnalysis.selfCorrectionRate
+    });
+    
+    // ========== POLISHED AURA: Real Prosody Scoring ==========
+    const wordTimings = wordReadings.map(wr => ({
+      word: wr.word,
+      startMs: wr.startMs,
+      endMs: wr.endMs,
+      index: wr.index,
+    }));
+    
+    const hesitationCount = wordReadings.filter(wr => wr.hesitation).length;
+    const prosodyMetrics = calculateProsodyScore(
+      wordTimings,
+      words,
+      wpm,
+      miscueAnalysis.totalMiscues,
+      hesitationCount,
+      [], // pitchData - would come from audio analysis if available
+      [], // energyData - would come from audio analysis if available
+      undefined // gradeLevel - could be fetched from user profile
+    );
+    
+    console.log('PROSODY ANALYSIS:', { 
+      phrasing: prosodyMetrics.phrasing,
+      expression: prosodyMetrics.expression,
+      smoothness: prosodyMetrics.smoothness,
+      pace: prosodyMetrics.pace,
+      level: prosodyMetrics.level,
+      overallScore: prosodyMetrics.overallScore
+    });
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -607,7 +654,7 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       phonemeScores[phoneme] = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
     });
 
-    // Save reading session WITH ML outputs
+    // Save reading session WITH WCPM, miscue, and prosody data
     const { data: session, error: sessionError } = await supabase
       .from('reading_sessions')
       .insert({
@@ -617,8 +664,12 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
         words_read: wordsRead,
         duration_seconds: totalDuration,
         wpm,
+        wcpm, // NEW: Words Correct Per Minute
         accuracy_percent: accuracy,
-        fluency_score: calculateFluencyScore(wordReadings),
+        fluency_score: prosodyMetrics.overallScore, // Now using real prosody score
+        fluency_level: miscueAnalysis.fluencyLevel, // NEW: frustration/instructional/independent
+        miscue_analysis: miscueAnalysis, // NEW: Full miscue breakdown
+        prosody_metrics: prosodyMetrics, // NEW: Phrasing/expression/smoothness/pace
         cognitive_load_avg: cognitiveLoad, // ML OUTPUT: Cognitive load during session
         phoneme_accuracy: phonemeScores, // ML OUTPUT: Per-phoneme accuracy scores
       })
@@ -790,15 +841,24 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
     onComplete({
       sessionId: session.id,
       wpm,
+      wcpm, // NEW: Words Correct Per Minute
       accuracy,
       wordsRead,
       durationSeconds: totalDuration,
       xpEarned: totalXpEarned,
+      miscueAnalysis, // NEW: Full miscue breakdown
+      prosodyMetrics, // NEW: Prosody scores
+      fluencyLevel: miscueAnalysis.fluencyLevel, // NEW: Reading level
     });
 
+    // Enhanced feedback with WCPM and prosody
+    const fluencyEmoji = prosodyMetrics.level === 'advanced' ? '🌟' : 
+                         prosodyMetrics.level === 'proficient' ? '🎉' :
+                         prosodyMetrics.level === 'developing' ? '📚' : '💪';
+    
     toast({
-      title: accuracy >= 80 ? `Great job! 🎉` : accuracy >= 50 ? `Good effort! 📚` : `Keep practicing! 💪`,
-      description: `${wpm} WPM, ${accuracy}% accuracy, +${totalXpEarned} XP`,
+      title: `${fluencyEmoji} ${prosodyMetrics.level.charAt(0).toUpperCase() + prosodyMetrics.level.slice(1)} Reader!`,
+      description: `${wcpm} WCPM | ${prosodyMetrics.overallScore}% fluency | +${totalXpEarned} XP`,
     });
   }, [wordReadings, passageText, assignmentId, onComplete, toast, words, realtimeWordStatus, totalXpEarned]);
 
