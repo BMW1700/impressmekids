@@ -63,11 +63,23 @@ export function AudioPlaybackButton({
       audio.preload = 'metadata';
       
       audio.onloadedmetadata = () => {
-        setDuration(audio.duration);
+        // Handle NaN or Infinity duration
+        if (audio.duration && isFinite(audio.duration) && !isNaN(audio.duration)) {
+          setDuration(audio.duration);
+        }
+      };
+      
+      // Also try to get duration when audio can play
+      audio.oncanplaythrough = () => {
+        if (audio.duration && isFinite(audio.duration) && !isNaN(audio.duration) && duration === 0) {
+          setDuration(audio.duration);
+        }
       };
       
       audio.ontimeupdate = () => {
-        setProgress((audio.currentTime / audio.duration) * 100);
+        if (audio.duration && isFinite(audio.duration) && !isNaN(audio.duration)) {
+          setProgress((audio.currentTime / audio.duration) * 100);
+        }
       };
       
       audio.onended = () => {
@@ -76,6 +88,7 @@ export function AudioPlaybackButton({
       };
       
       audio.onerror = () => {
+        console.error('Audio playback error for URL:', resolvedUrl);
         toast({
           title: 'Playback Error',
           description: 'Could not play audio recording',
@@ -91,7 +104,7 @@ export function AudioPlaybackButton({
         audio.src = '';
       };
     }
-  }, [resolvedUrl, toast]);
+  }, [resolvedUrl, toast, duration]);
 
   const togglePlayback = () => {
     if (!audioRef.current || !resolvedUrl) return;
@@ -120,6 +133,10 @@ export function AudioPlaybackButton({
   };
 
   const formatTime = (seconds: number) => {
+    // Handle NaN, Infinity, and undefined values
+    if (!seconds || !isFinite(seconds) || isNaN(seconds)) {
+      return '--:--';
+    }
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;

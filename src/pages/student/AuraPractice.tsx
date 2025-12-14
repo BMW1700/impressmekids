@@ -284,28 +284,52 @@ const AuraPractice = () => {
 
           {/* Active Screening Banner */}
           {activeScreening?.passage && (
-            <Card className="border-2 border-amber-500 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30">
+            <Card className={`border-2 ${
+              activeScreening.hasCompleted 
+                ? 'border-green-500 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30'
+                : 'border-amber-500 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30'
+            }`}>
               <CardContent className="py-4">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-amber-500/20">
-                      <AlertTriangle className="h-5 w-5 text-amber-600" />
+                    <div className={`p-2 rounded-full ${
+                      activeScreening.hasCompleted ? 'bg-green-500/20' : 'bg-amber-500/20'
+                    }`}>
+                      {activeScreening.hasCompleted ? (
+                        <Trophy className="h-5 w-5 text-green-600" />
+                      ) : (
+                        <AlertTriangle className="h-5 w-5 text-amber-600" />
+                      )}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-amber-900 dark:text-amber-100">
-                        📊 Benchmark Screening Active
+                      <h3 className={`font-semibold ${
+                        activeScreening.hasCompleted 
+                          ? 'text-green-900 dark:text-green-100'
+                          : 'text-amber-900 dark:text-amber-100'
+                      }`}>
+                        {activeScreening.hasCompleted 
+                          ? '✅ Benchmark Complete!' 
+                          : '📊 Benchmark Screening Active'}
                       </h3>
-                      <p className="text-sm text-amber-700 dark:text-amber-300">
-                        Your teacher has assigned a {activeScreening.periodName} reading assessment
+                      <p className={`text-sm ${
+                        activeScreening.hasCompleted
+                          ? 'text-green-700 dark:text-green-300'
+                          : 'text-amber-700 dark:text-amber-300'
+                      }`}>
+                        {activeScreening.hasCompleted
+                          ? `Great job! You've completed the ${activeScreening.periodName} assessment`
+                          : `Your teacher has assigned a ${activeScreening.periodName} reading assessment`}
                       </p>
                     </div>
                   </div>
-                  <Button 
-                    onClick={handleStartScreening}
-                    className="bg-amber-600 hover:bg-amber-700"
-                  >
-                    Start Assessment
-                  </Button>
+                  {!activeScreening.hasCompleted && (
+                    <Button 
+                      onClick={handleStartScreening}
+                      className="bg-amber-600 hover:bg-amber-700"
+                    >
+                      Start Assessment
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

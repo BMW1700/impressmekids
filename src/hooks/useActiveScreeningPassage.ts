@@ -9,6 +9,7 @@ export interface ActiveScreening {
   gradeLevel: number;
   passage: ScreeningPassage | null;
   passageId: string | null;
+  hasCompleted: boolean;
 }
 
 /**
@@ -48,6 +49,16 @@ export const useActiveScreeningPassage = (studentId?: string) => {
           .single();
         
         if (activePeriod) {
+          // Check if student has already completed this benchmark
+          const { data: existingResult } = await supabase
+            .from("student_benchmark_results")
+            .select("id")
+            .eq("student_id", studentId)
+            .eq("period_id", activePeriod.id)
+            .maybeSingle();
+          
+          const hasCompleted = !!existingResult;
+          
           // Found an active period - get the passage
           let passage: ScreeningPassage | null = null;
           
@@ -71,6 +82,7 @@ export const useActiveScreeningPassage = (studentId?: string) => {
             gradeLevel,
             passage,
             passageId: passage?.id || null,
+            hasCompleted,
           };
         }
       }
