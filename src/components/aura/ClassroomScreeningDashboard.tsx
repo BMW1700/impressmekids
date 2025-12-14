@@ -22,6 +22,7 @@ import { useClassroomBenchmarkSummary, useBenchmarkPeriods } from "@/hooks/useBe
 import { BenchmarkStatusBadge } from "./BenchmarkStatusBadge";
 import { ProgressMonitoringChart } from "./ProgressMonitoringChart";
 import { BenchmarkReport } from "./BenchmarkReport";
+import { ScreeningPassageSelector } from "./ScreeningPassageSelector";
 import { UniversalScreeningCard } from "./UniversalScreeningCard";
 import { ScreeningModeSelector } from "./ScreeningModeSelector";
 import { 
@@ -55,7 +56,9 @@ export function ClassroomScreeningDashboard({
   const { data: periods } = useBenchmarkPeriods(classroomId);
   
   const [showScreeningSetup, setShowScreeningSetup] = useState(false);
+  const [showPassageSelector, setShowPassageSelector] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [selectedPassage, setSelectedPassage] = useState<any>(null);
 
   const getTrendIcon = (trend: string) => {
     switch (trend) {
@@ -346,7 +349,26 @@ export function ClassroomScreeningDashboard({
             classroomId={classroomId}
             onPeriodCreated={() => {
               setShowScreeningSetup(false);
+              setShowPassageSelector(true); // Show passage selector after creating period
               refetch();
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Standardized Passage Selection Dialog */}
+      <Dialog open={showPassageSelector} onOpenChange={setShowPassageSelector}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Select Screening Passage</DialogTitle>
+          </DialogHeader>
+          <ScreeningPassageSelector
+            gradeLevel={3} // Default to grade 3, could be made dynamic
+            onSelectPassage={(passage) => {
+              setSelectedPassage(passage);
+              setShowPassageSelector(false);
+              // TODO: Store selected passage for classroom screening session
+              console.log('Selected passage for screening:', passage);
             }}
           />
         </DialogContent>

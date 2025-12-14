@@ -7,13 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, TrendingUp, Activity, MessageSquare, Sparkles, ArrowLeft } from "lucide-react";
+import { Loader2, TrendingUp, Activity, MessageSquare, Sparkles, ArrowLeft, BookOpen } from "lucide-react";
 import { useStudentProfile } from "@/hooks/useStudentProfile";
 import { useTeacherNotes } from "@/hooks/useTeacherNotes";
 import { generateNextBestAction, getActionEmoji } from "@/lib/nextBestActionML";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format } from "date-fns";
 import MLInsightsDashboard from "@/components/aura/MLInsightsDashboard";
+import { ReadingSessionsList } from "@/components/aura/ReadingSessionsList";
+import { AudioPlaybackButton } from "@/components/aura/AudioPlaybackButton";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -245,17 +247,30 @@ export default function StudentProfile() {
 
           {/* Tabs */}
           <Tabs defaultValue="overview" className="mb-8">
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="readings" className="gap-1">
+                <BookOpen className="w-3 h-3" />
+                Readings
+              </TabsTrigger>
               <TabsTrigger value="ml-insights" className="gap-1">
                 <Sparkles className="w-3 h-3" />
                 ML Insights
               </TabsTrigger>
-              <TabsTrigger value="phonemes">Phoneme Mastery</TabsTrigger>
-              <TabsTrigger value="progress">Progress Charts</TabsTrigger>
-              <TabsTrigger value="timeline">Activity Timeline</TabsTrigger>
-              <TabsTrigger value="notes">Teacher Notes</TabsTrigger>
+              <TabsTrigger value="phonemes">Phonemes</TabsTrigger>
+              <TabsTrigger value="progress">Progress</TabsTrigger>
+              <TabsTrigger value="timeline">Timeline</TabsTrigger>
+              <TabsTrigger value="notes">Notes</TabsTrigger>
             </TabsList>
+
+            {/* Reading Sessions Tab - Teacher can listen to recordings! */}
+            <TabsContent value="readings" className="mt-6">
+              <ReadingSessionsList
+                studentId={studentId!}
+                studentName={profile?.full_name}
+                limit={20}
+              />
+            </TabsContent>
 
             {/* ML Insights Tab - Phase 5 Integration */}
             <TabsContent value="ml-insights" className="mt-6">
