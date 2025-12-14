@@ -90,13 +90,13 @@ export function ClassroomScreeningDashboard({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Universal Screening Dashboard</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Benchmark Assessment Dashboard</h2>
           <p className="text-muted-foreground">
-            {classroomName ? `${classroomName} • ` : ''}DIBELS-compatible benchmark assessments
+            {classroomName ? `${classroomName} • ` : ''}Oral Reading Fluency Assessments
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" className="shadow-sm">
             <Download className="h-4 w-4 mr-2" />
             Export Report
           </Button>
@@ -118,48 +118,63 @@ export function ClassroomScreeningDashboard({
               onStartScreening={() => setShowScreeningSetup(true)}
             />
 
-            {/* Quick Stats */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Quick Statistics
+            {/* Quick Stats - Professional Design */}
+            <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/80">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <BarChart3 className="h-4 w-4 text-primary" />
+                  </div>
+                  Class Overview
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 rounded-lg bg-muted/50 text-center">
-                    <p className="text-2xl font-bold">{summary?.totalStudents || 0}</p>
-                    <p className="text-xs text-muted-foreground">Total Students</p>
+              <CardContent className="space-y-5">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 border border-border/50 shadow-sm">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total</p>
+                    </div>
+                    <p className="text-3xl font-bold">{summary?.totalStudents || 0}</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-muted/50 text-center">
-                    <p className="text-2xl font-bold">{summary?.assessedStudents || 0}</p>
-                    <p className="text-xs text-muted-foreground">Assessed</p>
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/30 border border-blue-200/50 dark:border-blue-800/50 shadow-sm">
+                    <div className="flex items-center gap-2 mb-1">
+                      <CheckCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <p className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">Assessed</p>
+                    </div>
+                    <p className="text-3xl font-bold text-blue-700 dark:text-blue-300">{summary?.assessedStudents || 0}</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-muted/50 text-center">
-                    <p className="text-2xl font-bold text-primary">{summary?.avgWCPM || 0}</p>
-                    <p className="text-xs text-muted-foreground">Avg WCPM</p>
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/50 dark:to-emerald-900/30 border border-emerald-200/50 dark:border-emerald-800/50 shadow-sm">
+                    <div className="flex items-center gap-2 mb-1">
+                      <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                      <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Avg WCPM</p>
+                    </div>
+                    <p className="text-3xl font-bold text-emerald-700 dark:text-emerald-300">{summary?.avgWCPM || 0}</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-muted/50 text-center">
-                    <p className="text-2xl font-bold text-red-600">
-                      {summary?.tierDistribution.tier3 || 0}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Need Intervention</p>
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-rose-50 to-rose-100 dark:from-rose-950/50 dark:to-rose-900/30 border border-rose-200/50 dark:border-rose-800/50 shadow-sm">
+                    <div className="flex items-center gap-2 mb-1">
+                      <AlertTriangle className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+                      <p className="text-xs font-medium text-rose-600 dark:text-rose-400 uppercase tracking-wide">Intervention</p>
+                    </div>
+                    <p className="text-3xl font-bold text-rose-700 dark:text-rose-300">{summary?.tierDistribution.tier3 || 0}</p>
                   </div>
                 </div>
 
-                {/* Past Screening Periods */}
+                {/* Past Screening Periods - Refined */}
                 {periods && periods.length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium">Screening History</h4>
-                    <div className="space-y-1">
+                  <div className="space-y-3 pt-2 border-t border-border/50">
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Screening History</h4>
+                    <div className="space-y-2">
                       {periods.slice(0, 3).map(period => (
                         <div 
                           key={period.id}
-                          className="flex items-center justify-between text-sm p-2 rounded bg-muted/30"
+                          className="flex items-center justify-between text-sm p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
                         >
-                          <span>{period.period_name} {period.school_year}</span>
-                          <Badge variant={period.is_active ? "default" : "secondary"} className="text-xs">
+                          <span className="font-medium">{period.period_name} {period.school_year}</span>
+                          <Badge 
+                            variant={period.is_active ? "default" : "secondary"} 
+                            className={`text-xs ${period.is_active ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
+                          >
                             {period.is_active ? 'Active' : 'Completed'}
                           </Badge>
                         </div>
