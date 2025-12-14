@@ -10,10 +10,13 @@ interface PassageCompleteCelebrationProps {
   onClose: () => void;
   stats: {
     wpm: number;
+    wcpm?: number;  // Words Correct Per Minute
     accuracy: number;
     wordsRead: number;
     xpEarned?: number;
     durationSeconds?: number;
+    fluencyLevel?: 'frustration' | 'instructional' | 'independent';
+    prosodyScore?: number;
   };
   achievements?: Array<{
     id: string;
@@ -34,9 +37,11 @@ export const PassageCompleteCelebration = ({
 }: PassageCompleteCelebrationProps) => {
   const [showStats, setShowStats] = useState(false);
 
-  // Determine pass/fail status
-  const passed = stats.accuracy >= 50;
-  const excellent = stats.accuracy >= 80;
+  // Determine pass/fail status - use fluency level if available
+  const passed = stats.fluencyLevel 
+    ? stats.fluencyLevel !== 'frustration' 
+    : stats.accuracy >= 50;
+  const excellent = stats.fluencyLevel === 'independent' || stats.accuracy >= 80;
 
   useEffect(() => {
     if (open) {
@@ -170,19 +175,33 @@ export const PassageCompleteCelebration = ({
                   animate={{ opacity: 1 }}
                   className="grid grid-cols-2 gap-4 mt-6"
                 >
-                  {/* WPM */}
-                  <motion.div
-                    initial={{ x: -50, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.7 }}
-                    className="bg-white/10 backdrop-blur-sm rounded-xl p-4"
-                  >
-                    <TrendingUp className="h-6 w-6 mx-auto mb-2" />
-                    <div className="text-3xl font-bold">{stats.wpm || 0}</div>
-                    <div className="text-sm opacity-80">Words Per Minute</div>
-                  </motion.div>
+                  {/* WCPM - Primary Metric (if available) */}
+                  {stats.wcpm !== undefined ? (
+                    <motion.div
+                      initial={{ x: -50, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.7 }}
+                      className="bg-white/10 backdrop-blur-sm rounded-xl p-4"
+                    >
+                      <TrendingUp className="h-6 w-6 mx-auto mb-2" />
+                      <div className="text-3xl font-bold">{stats.wcpm}</div>
+                      <div className="text-sm opacity-80">WCPM</div>
+                      <div className="text-xs opacity-60">Words Correct/Min</div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      initial={{ x: -50, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.7 }}
+                      className="bg-white/10 backdrop-blur-sm rounded-xl p-4"
+                    >
+                      <TrendingUp className="h-6 w-6 mx-auto mb-2" />
+                      <div className="text-3xl font-bold">{stats.wpm || 0}</div>
+                      <div className="text-sm opacity-80">Words Per Minute</div>
+                    </motion.div>
+                  )}
 
-                  {/* Accuracy */}
+                  {/* Fluency/Prosody Score (if available) or Accuracy */}
                   <motion.div
                     initial={{ x: 50, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
@@ -192,10 +211,16 @@ export const PassageCompleteCelebration = ({
                     }`}
                   >
                     <Star className={`h-6 w-6 mx-auto mb-2 ${passed ? 'fill-current' : ''}`} />
-                    <div className="text-3xl font-bold">{stats.accuracy || 0}%</div>
-                    <div className="text-sm opacity-80">Accuracy</div>
-                    {!passed && (
-                      <div className="text-xs mt-1 opacity-70">Need 50% to pass</div>
+                    <div className="text-3xl font-bold">
+                      {stats.prosodyScore ?? stats.accuracy}%
+                    </div>
+                    <div className="text-sm opacity-80">
+                      {stats.prosodyScore !== undefined ? 'Fluency Score' : 'Accuracy'}
+                    </div>
+                    {stats.fluencyLevel && (
+                      <div className="text-xs mt-1 opacity-70 capitalize">
+                        {stats.fluencyLevel} Level
+                      </div>
                     )}
                   </motion.div>
 
