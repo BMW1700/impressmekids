@@ -205,8 +205,9 @@ const AuraPractice = () => {
   };
 
   const handleReadingComplete = () => {
-    setIsReadingStory(false);
-    setSelectedStory(null);
+    // Don't auto-exit - let student view detailed results first
+    // They will use the "Back to Library" button to leave
+    console.log('Reading completed - student viewing results');
     refetch(); // Refresh progress data
   };
 

@@ -964,7 +964,10 @@ export const WordByWordReader = ({
             period_id: screeningPeriodId,
             wcpm,
             accuracy_percentage: accuracy,
-            prosody_score: prosodyMetrics.overallScore,
+            // Convert percentage to NAEP 1-4 scale for database constraint compliance
+            prosody_score: prosodyMetrics.overallScore >= 80 ? 4 :
+                           prosodyMetrics.overallScore >= 65 ? 3 :
+                           prosodyMetrics.overallScore >= 50 ? 2 : 1,
             fluency_level: miscueAnalysis.fluencyLevel,
             benchmark_status: benchmarkStatus,
             grade_level: gradeLevel,
