@@ -3362,12 +3362,16 @@ export type Database = {
           cognitive_load_avg: number | null
           created_at: string | null
           duration_seconds: number
+          fluency_level: string | null
           fluency_score: number | null
           id: string
+          miscue_analysis: Json | null
           passage_text: string
           phoneme_accuracy: Json | null
+          prosody_metrics: Json | null
           recommended_difficulty: number | null
           student_id: string
+          wcpm: number | null
           words_read: number
           wpm: number
         }
@@ -3377,12 +3381,16 @@ export type Database = {
           cognitive_load_avg?: number | null
           created_at?: string | null
           duration_seconds: number
+          fluency_level?: string | null
           fluency_score?: number | null
           id?: string
+          miscue_analysis?: Json | null
           passage_text: string
           phoneme_accuracy?: Json | null
+          prosody_metrics?: Json | null
           recommended_difficulty?: number | null
           student_id: string
+          wcpm?: number | null
           words_read: number
           wpm: number
         }
@@ -3392,12 +3400,16 @@ export type Database = {
           cognitive_load_avg?: number | null
           created_at?: string | null
           duration_seconds?: number
+          fluency_level?: string | null
           fluency_score?: number | null
           id?: string
+          miscue_analysis?: Json | null
           passage_text?: string
           phoneme_accuracy?: Json | null
+          prosody_metrics?: Json | null
           recommended_difficulty?: number | null
           student_id?: string
+          wcpm?: number | null
           words_read?: number
           wpm?: number
         }

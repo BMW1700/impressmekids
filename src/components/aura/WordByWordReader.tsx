@@ -668,11 +668,11 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
         accuracy_percent: accuracy,
         fluency_score: prosodyMetrics.overallScore, // Now using real prosody score
         fluency_level: miscueAnalysis.fluencyLevel, // NEW: frustration/instructional/independent
-        miscue_analysis: miscueAnalysis, // NEW: Full miscue breakdown
-        prosody_metrics: prosodyMetrics, // NEW: Phrasing/expression/smoothness/pace
+        miscue_analysis: miscueAnalysis as any, // NEW: Full miscue breakdown
+        prosody_metrics: prosodyMetrics as any, // NEW: Phrasing/expression/smoothness/pace
         cognitive_load_avg: cognitiveLoad, // ML OUTPUT: Cognitive load during session
         phoneme_accuracy: phonemeScores, // ML OUTPUT: Per-phoneme accuracy scores
-      })
+      } as any)
       .select()
       .single();
 
