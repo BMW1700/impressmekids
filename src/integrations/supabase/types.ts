@@ -1026,6 +1026,7 @@ export type Database = {
           is_active: boolean | null
           period_name: string
           school_year: string
+          screening_passage_id: string | null
           start_date: string
         }
         Insert: {
@@ -1037,6 +1038,7 @@ export type Database = {
           is_active?: boolean | null
           period_name: string
           school_year: string
+          screening_passage_id?: string | null
           start_date: string
         }
         Update: {
@@ -1048,6 +1050,7 @@ export type Database = {
           is_active?: boolean | null
           period_name?: string
           school_year?: string
+          screening_passage_id?: string | null
           start_date?: string
         }
         Relationships: [
