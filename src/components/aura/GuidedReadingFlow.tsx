@@ -19,6 +19,12 @@ interface GuidedReadingFlowProps {
   studentId: string;
   onBack: () => void;
   onComplete: (stats: any) => void;
+  // Screening mode props
+  screeningPeriodId?: string | null;
+  screeningClassroomId?: string | null;
+  screeningPassageId?: string | null;
+  screeningPassageTitle?: string | null;
+  screeningGradeLevel?: number;
 }
 
 type Step = 'intro' | 'practice' | 'reading' | 'celebration';
@@ -27,7 +33,12 @@ export const GuidedReadingFlow = ({
   story,
   studentId,
   onBack,
-  onComplete
+  onComplete,
+  screeningPeriodId,
+  screeningClassroomId,
+  screeningPassageId,
+  screeningPassageTitle,
+  screeningGradeLevel,
 }: GuidedReadingFlowProps) => {
   const [currentStep, setCurrentStep] = useState<Step>('intro');
   const [readingStats, setReadingStats] = useState<any>(null);
@@ -270,6 +281,11 @@ export const GuidedReadingFlow = ({
               passageText={story.passage_text}
               assignmentId={null}
               onComplete={handleReadingComplete}
+              screeningPeriodId={screeningPeriodId}
+              screeningClassroomId={screeningClassroomId}
+              screeningPassageId={screeningPassageId}
+              screeningPassageTitle={screeningPassageTitle || story.title}
+              screeningGradeLevel={screeningGradeLevel}
             />
           </motion.div>
         )}

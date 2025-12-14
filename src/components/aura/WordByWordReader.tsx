@@ -44,6 +44,12 @@ interface WordByWordReaderProps {
   passageText: string;
   assignmentId?: string | null;
   onComplete: (sessionData: ReadingSessionResult) => void;
+  // Screening mode props
+  screeningPeriodId?: string | null;
+  screeningClassroomId?: string | null;
+  screeningPassageId?: string | null;
+  screeningPassageTitle?: string | null;
+  screeningGradeLevel?: number;
 }
 
 interface ReadingSessionResult {
@@ -164,7 +170,16 @@ const shouldSpeakWord = (spoken: string, expected: string): boolean => {
   return false;
 };
 
-export const WordByWordReader = ({ passageText, assignmentId, onComplete }: WordByWordReaderProps) => {
+export const WordByWordReader = ({ 
+  passageText, 
+  assignmentId, 
+  onComplete,
+  screeningPeriodId,
+  screeningClassroomId,
+  screeningPassageId,
+  screeningPassageTitle,
+  screeningGradeLevel,
+}: WordByWordReaderProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
@@ -697,11 +712,22 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
 
     // Upload audio to storage for teacher playback
     let audioUrl: string | null = null;
-    if (audioChunksRef.current.length > 0) {
+    const audioChunkCount = audioChunksRef.current.length;
+    console.log('🎤 AUDIO DEBUG: Chunks collected:', audioChunkCount);
+    
+    if (audioChunkCount > 0) {
       try {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        console.log('🎤 AUDIO DEBUG: Blob size:', audioBlob.size, 'bytes');
+        
+        if (audioBlob.size < 1000) {
+          console.warn('⚠️ AUDIO WARNING: Blob too small, likely empty recording');
+        }
+        
         const timestamp = Date.now();
         const audioPath = `${user.id}/${timestamp}.webm`;
+        
+        console.log('🎤 AUDIO DEBUG: Uploading to path:', audioPath);
         
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('aura-audio')
@@ -712,13 +738,21 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
         
         if (!uploadError && uploadData) {
           audioUrl = audioPath; // Store path, not signed URL (signed URL generated on demand)
-          console.log('✅ Audio uploaded:', audioPath);
+          console.log('✅ AUDIO SUCCESS: Uploaded to', audioPath);
         } else {
-          console.error('Audio upload error:', uploadError);
+          console.error('❌ AUDIO UPLOAD ERROR:', uploadError?.message, uploadError);
+          // Try to get more error details
+          toast({
+            title: 'Audio save issue',
+            description: 'Recording saved but audio playback may be unavailable',
+            variant: 'default',
+          });
         }
       } catch (err) {
-        console.error('Audio upload failed:', err);
+        console.error('❌ AUDIO UPLOAD EXCEPTION:', err);
       }
+    } else {
+      console.warn('⚠️ AUDIO WARNING: No audio chunks collected');
     }
 
     // Save reading session WITH WCPM, miscue, prosody data, AND audio URL
@@ -902,6 +936,61 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       });
     } catch (err) {
       console.error('Skill vector update error:', err);
+    }
+
+    // ========== CREATE BENCHMARK RESULT IF IN SCREENING MODE ==========
+    if (screeningPeriodId && screeningClassroomId) {
+      try {
+        const gradeLevel = screeningGradeLevel || 2;
+        
+        // Calculate benchmark status based on WCPM and grade level
+        let benchmarkStatus: 'above' | 'at' | 'below' | 'well_below' = 'well_below';
+        // Hasbrouck & Tindal approximate benchmarks (50th percentile)
+        const benchmarks: Record<number, number> = {
+          0: 23, 1: 53, 2: 72, 3: 92, 4: 112, 5: 127
+        };
+        const targetWCPM = benchmarks[gradeLevel] || 72;
+        
+        if (wcpm >= targetWCPM * 1.1) benchmarkStatus = 'above';
+        else if (wcpm >= targetWCPM * 0.9) benchmarkStatus = 'at';
+        else if (wcpm >= targetWCPM * 0.7) benchmarkStatus = 'below';
+        else benchmarkStatus = 'well_below';
+        
+        const { error: benchmarkError } = await supabase
+          .from('student_benchmark_results')
+          .insert({
+            student_id: user.id,
+            classroom_id: screeningClassroomId,
+            period_id: screeningPeriodId,
+            wcpm,
+            accuracy_percentage: accuracy,
+            prosody_score: prosodyMetrics.overallScore,
+            fluency_level: miscueAnalysis.fluencyLevel,
+            benchmark_status: benchmarkStatus,
+            grade_level: gradeLevel,
+            passage_title: screeningPassageTitle || 'Screening Passage',
+            passage_difficulty: String(gradeLevel),
+            miscue_count: miscueAnalysis.totalMiscues,
+            self_corrections: miscueAnalysis.miscuesByType.self_correction,
+            words_read: wordsRead,
+            duration_seconds: totalDuration,
+            audio_url: audioUrl, // Link audio for teacher playback
+          });
+        
+        if (benchmarkError) {
+          console.error('❌ Benchmark result save error:', benchmarkError);
+        } else {
+          console.log('✅ BENCHMARK RESULT CREATED:', {
+            wcpm,
+            accuracy,
+            benchmarkStatus,
+            gradeLevel,
+            periodId: screeningPeriodId,
+          });
+        }
+      } catch (err) {
+        console.error('Benchmark creation error:', err);
+      }
     }
 
     setIsProcessing(false);
