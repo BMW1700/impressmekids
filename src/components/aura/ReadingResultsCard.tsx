@@ -15,9 +15,10 @@ import {
   MessageSquare,
   AlertTriangle,
   CheckCircle2,
-  BookOpen
+  BookOpen,
+  Lightbulb
 } from 'lucide-react';
-import type { MiscueAnalysis } from '@/lib/miscueAnalysis';
+import type { MiscueAnalysis, getMiscueInterventions } from '@/lib/miscueAnalysis';
 import type { ProsodyMetrics } from '@/lib/prosodyAnalysis';
 
 interface ReadingResultsCardProps {
@@ -28,6 +29,7 @@ interface ReadingResultsCardProps {
   prosodyMetrics?: ProsodyMetrics;
   fluencyLevel?: 'frustration' | 'instructional' | 'independent';
   xpEarned?: number;
+  interventions?: string[];
 }
 
 const FluencyLevelBadge = ({ level }: { level: string }) => {
@@ -88,6 +90,7 @@ export const ReadingResultsCard = ({
   prosodyMetrics,
   fluencyLevel,
   xpEarned,
+  interventions,
 }: ReadingResultsCardProps) => {
   return (
     <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
@@ -208,6 +211,27 @@ export const ReadingResultsCard = ({
                   <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2">
                     <TrendingUp className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                     {tip}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </>
+        )}
+
+        {/* Intervention Recommendations */}
+        {interventions && interventions.length > 0 && (
+          <>
+            <Separator />
+            <div className="space-y-2">
+              <h4 className="font-semibold flex items-center gap-2">
+                <Lightbulb className="h-4 w-4 text-amber-500" />
+                What to Practice Next
+              </h4>
+              <ul className="space-y-1.5">
+                {interventions.slice(0, 4).map((intervention, idx) => (
+                  <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2">
+                    <span className="text-amber-500 mt-0.5 shrink-0">→</span>
+                    {intervention}
                   </li>
                 ))}
               </ul>
