@@ -8,9 +8,11 @@ import { AuraCharacter } from "./AuraCharacter";
 import { PredictivePractice } from "./PredictivePractice";
 import { WordByWordReader } from "./WordByWordReader";
 import { PassageCompleteCelebration } from "./PassageCompleteCelebration";
+import { ReadingResultsCard } from "./ReadingResultsCard";
 import { CuratedStory } from "@/data/curatedStories";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getMiscueInterventions } from "@/lib/miscueAnalysis";
 
 interface GuidedReadingFlowProps {
   story: CuratedStory;
@@ -287,6 +289,51 @@ export const GuidedReadingFlow = ({
           onReadAnother={onBack}
           onTryAgain={handleTryAgain}
         />
+      )}
+
+      {/* Detailed Reading Results (shown after celebration) */}
+      {readingStats && !showCelebration && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-4"
+        >
+          <ReadingResultsCard
+            wpm={readingStats.wpm || 0}
+            wcpm={readingStats.wcpm || 0}
+            accuracy={readingStats.accuracy || 0}
+            miscueAnalysis={readingStats.miscueAnalysis}
+            prosodyMetrics={readingStats.prosodyMetrics}
+            fluencyLevel={readingStats.fluencyLevel}
+            xpEarned={readingStats.xpEarned}
+          />
+          
+          {/* Intervention Recommendations */}
+          {readingStats.miscueAnalysis && (
+            <Card className="p-4">
+              <h4 className="font-semibold mb-3 flex items-center gap-2">
+                📚 What to Practice Next
+              </h4>
+              <ul className="space-y-2">
+                {getMiscueInterventions(readingStats.miscueAnalysis).map((intervention, idx) => (
+                  <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2">
+                    <span className="text-primary mt-0.5">→</span>
+                    {intervention}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+          
+          <div className="flex gap-3">
+            <Button onClick={handleTryAgain} variant="outline" className="flex-1">
+              Try Again
+            </Button>
+            <Button onClick={onBack} className="flex-1">
+              Read Another Story
+            </Button>
+          </div>
+        </motion.div>
       )}
     </div>
   );

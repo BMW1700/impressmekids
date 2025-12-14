@@ -22,6 +22,7 @@ import { cognitiveLoadEstimator, detectHesitationMarkers } from '@/lib/cognitive
 import { adaptiveDifficultyEngine } from '@/lib/difficultyScalingV2';
 import { analyzeMiscues, getMiscueInterventions, type MiscueAnalysis } from '@/lib/miscueAnalysis';
 import { calculateProsodyScore, type ProsodyMetrics } from '@/lib/prosodyAnalysis';
+import { RealtimeAudioAnalyzer, type LiveMetrics } from '@/lib/realtimeAudioAnalysis';
 
 // Browser compatibility check
 const checkBrowserSupport = () => {
@@ -213,6 +214,11 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
   // Track speech pauses for cognitive load
   const speechPausesRef = useRef<number[]>([]);
   const lastSpeechTimeRef = useRef<number>(0);
+  
+  // Real-time audio analysis for prosody (pitch + energy)
+  const audioAnalyzerRef = useRef<RealtimeAudioAnalyzer | null>(null);
+  const pitchHistoryRef = useRef<number[]>([]);
+  const energyHistoryRef = useRef<number[]>([]);
 
   // Initialize word status
   useEffect(() => {
@@ -297,6 +303,27 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       
       recorder.start(100);
       mediaRecorderRef.current = recorder;
+      
+      // Start real-time audio analysis for pitch/energy (prosody expression)
+      pitchHistoryRef.current = [];
+      energyHistoryRef.current = [];
+      
+      const analyzer = new RealtimeAudioAnalyzer(
+        (metrics: LiveMetrics) => {
+          // Collect pitch and energy data for prosody expression scoring
+          if (metrics.avgPitch > 0) {
+            pitchHistoryRef.current.push(metrics.avgPitch);
+          }
+          energyHistoryRef.current.push(metrics.energyLevel);
+        },
+        (feedback) => {
+          // Real-time feedback is handled elsewhere, but we can log
+          console.log('Audio feedback:', feedback.message);
+        }
+      );
+      
+      await analyzer.start(stream);
+      audioAnalyzerRef.current = analyzer;
     } catch (error) {
       console.error('Microphone access error:', error);
       toast({
@@ -569,6 +596,20 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       mediaRecorderRef.current.stop();
       await new Promise(resolve => setTimeout(resolve, 300));
     }
+    
+    // Stop audio analyzer and collect pitch/energy data
+    if (audioAnalyzerRef.current) {
+      audioAnalyzerRef.current.stop();
+      audioAnalyzerRef.current = null;
+    }
+    
+    // Get collected pitch and energy data for expression scoring
+    const pitchData = pitchHistoryRef.current;
+    const energyData = energyHistoryRef.current;
+    console.log('AUDIO ANALYSIS DATA:', { 
+      pitchSamples: pitchData.length, 
+      energySamples: energyData.length 
+    });
 
     setIsRecording(false);
     setIsProcessing(true);
@@ -604,15 +645,15 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       index: wr.index,
     }));
     
-    const hesitationCount = wordReadings.filter(wr => wr.hesitation).length;
+    const hesitationCountForProsody = wordReadings.filter(wr => wr.hesitation).length;
     const prosodyMetrics = calculateProsodyScore(
       wordTimings,
       words,
       wpm,
       miscueAnalysis.totalMiscues,
-      hesitationCount,
-      [], // pitchData - would come from audio analysis if available
-      [], // energyData - would come from audio analysis if available
+      hesitationCountForProsody,
+      pitchData, // REAL pitch data from audio analyzer
+      energyData, // REAL energy data from audio analyzer
       undefined // gradeLevel - could be fetched from user profile
     );
     
