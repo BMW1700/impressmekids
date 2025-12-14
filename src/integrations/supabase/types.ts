@@ -1016,6 +1016,57 @@ export type Database = {
           },
         ]
       }
+      benchmark_assessment_periods: {
+        Row: {
+          classroom_id: string
+          created_at: string
+          created_by: string
+          end_date: string
+          id: string
+          is_active: boolean | null
+          period_name: string
+          school_year: string
+          start_date: string
+        }
+        Insert: {
+          classroom_id: string
+          created_at?: string
+          created_by: string
+          end_date: string
+          id?: string
+          is_active?: boolean | null
+          period_name: string
+          school_year: string
+          start_date: string
+        }
+        Update: {
+          classroom_id?: string
+          created_at?: string
+          created_by?: string
+          end_date?: string
+          id?: string
+          is_active?: boolean | null
+          period_name?: string
+          school_year?: string
+          start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "benchmark_assessment_periods_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "benchmark_assessment_periods_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classroom_announcements: {
         Row: {
           announcement_type: string
@@ -4148,6 +4199,97 @@ export type Database = {
           },
           {
             foreignKeyName: "student_behavior_stats_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_benchmark_results: {
+        Row: {
+          accuracy_percentage: number | null
+          assessment_date: string
+          audio_url: string | null
+          benchmark_status: string
+          classroom_id: string
+          created_at: string
+          duration_seconds: number | null
+          fluency_level: string | null
+          grade_level: number
+          id: string
+          miscue_count: number | null
+          notes: string | null
+          passage_difficulty: string | null
+          passage_title: string | null
+          period_id: string | null
+          prosody_score: number | null
+          self_corrections: number | null
+          student_id: string
+          wcpm: number
+          words_read: number | null
+        }
+        Insert: {
+          accuracy_percentage?: number | null
+          assessment_date?: string
+          audio_url?: string | null
+          benchmark_status: string
+          classroom_id: string
+          created_at?: string
+          duration_seconds?: number | null
+          fluency_level?: string | null
+          grade_level: number
+          id?: string
+          miscue_count?: number | null
+          notes?: string | null
+          passage_difficulty?: string | null
+          passage_title?: string | null
+          period_id?: string | null
+          prosody_score?: number | null
+          self_corrections?: number | null
+          student_id: string
+          wcpm: number
+          words_read?: number | null
+        }
+        Update: {
+          accuracy_percentage?: number | null
+          assessment_date?: string
+          audio_url?: string | null
+          benchmark_status?: string
+          classroom_id?: string
+          created_at?: string
+          duration_seconds?: number | null
+          fluency_level?: string | null
+          grade_level?: number
+          id?: string
+          miscue_count?: number | null
+          notes?: string | null
+          passage_difficulty?: string | null
+          passage_title?: string | null
+          period_id?: string | null
+          prosody_score?: number | null
+          self_corrections?: number | null
+          student_id?: string
+          wcpm?: number
+          words_read?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_benchmark_results_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_benchmark_results_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "benchmark_assessment_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_benchmark_results_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "profiles"
