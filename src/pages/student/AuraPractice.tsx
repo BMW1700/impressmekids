@@ -11,7 +11,8 @@ import AuraProgressChart from "@/components/aura/AuraProgressChart";
 import SpeakerDiarizationView from "@/components/aura/SpeakerDiarizationView";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mic, TrendingUp, BookOpen, Library, Sparkles, Trophy } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Mic, TrendingUp, BookOpen, Library, Sparkles, Trophy, AlertTriangle } from "lucide-react";
 import GeneratedExercises from "@/components/aura/GeneratedExercises";
 import PhonemeMasteryPathway from "@/components/aura/PhonemeMasteryPathway";
 import DifficultyProgressCard from "@/components/aura/DifficultyProgressCard";
@@ -25,6 +26,7 @@ import { GamificationHeader } from "@/components/aura/GamificationHeader";
 import { ActiveMissionsPanel } from "@/components/aura/ActiveMissionsPanel";
 import { ClassChallengeCard } from "@/components/aura/ClassChallengeCard";
 import { LeaderboardCard } from "@/components/aura/LeaderboardCard";
+import { useActiveScreeningPassage, type ActiveScreening } from "@/hooks/useActiveScreeningPassage";
 import type { CuratedStory as Story } from "@/data/curatedStories";
 
 // Helper component to get student's classroom and show leaderboard
@@ -118,6 +120,9 @@ const AuraPractice = () => {
       return user;
     },
   });
+
+  // Check for active screening period
+  const { data: activeScreening } = useActiveScreeningPassage(user?.id);
 
   const { data: records, refetch } = useQuery({
     queryKey: ['aura-records', user?.id],
@@ -220,12 +225,37 @@ const AuraPractice = () => {
             studentId={user.id}
             onBack={handleReadingBack}
             onComplete={handleReadingComplete}
+            screeningPeriodId={activeScreening?.periodId}
+            screeningClassroomId={activeScreening?.classroomId}
+            screeningPassageId={activeScreening?.passageId}
+            screeningPassageTitle={activeScreening?.passage?.title}
+            screeningGradeLevel={activeScreening?.gradeLevel}
           />
         </main>
         <Footer />
       </div>
     );
   }
+
+  // Handler to start screening assessment
+  const handleStartScreening = () => {
+    if (activeScreening?.passage) {
+      const screeningStory: Story = {
+        title: activeScreening.passage.title,
+        description: `Grade ${activeScreening.gradeLevel} Screening Assessment - ${activeScreening.periodName}`,
+        passage_text: activeScreening.passage.passage,
+        grade_level: activeScreening.gradeLevel,
+        category: activeScreening.passage.genre === 'fiction' ? 'adventure' : 'science',
+        word_count: activeScreening.passage.wordCount,
+        reading_time_minutes: 1,
+        difficulty_level: activeScreening.gradeLevel,
+        cover_gradient: 'from-amber-500 to-orange-600',
+        target_phonemes: [],
+      };
+      setSelectedStory(screeningStory);
+      setIsReadingStory(true);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
@@ -250,6 +280,35 @@ const AuraPractice = () => {
           </div>
 
           <SmartNotifications onNavigate={(path) => navigate(path)} />
+
+          {/* Active Screening Banner */}
+          {activeScreening?.passage && (
+            <Card className="border-2 border-amber-500 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30">
+              <CardContent className="py-4">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full bg-amber-500/20">
+                      <AlertTriangle className="h-5 w-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-amber-900 dark:text-amber-100">
+                        📊 Benchmark Screening Active
+                      </h3>
+                      <p className="text-sm text-amber-700 dark:text-amber-300">
+                        Your teacher has assigned a {activeScreening.periodName} reading assessment
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={handleStartScreening}
+                    className="bg-amber-600 hover:bg-amber-700"
+                  >
+                    Start Assessment
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Tabs defaultValue="stories" className="w-full">
             <TabsList className="grid w-full grid-cols-6">
