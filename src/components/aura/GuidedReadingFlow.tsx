@@ -154,8 +154,8 @@ export const GuidedReadingFlow = ({
     // Just close the celebration - don't auto-navigate away
     // Let the student view the detailed results first
     setShowCelebration(false);
-    onComplete(readingStats);
-    // Remove onBack() - student will use the buttons in the results view to leave
+    // Don't call onComplete here - that triggers parent's exit logic
+    // Student will use "Back to Library" button to leave after viewing results
   };
 
   const handleTryAgain = () => {
