@@ -151,9 +151,11 @@ export const GuidedReadingFlow = ({
   };
 
   const handleCelebrationClose = () => {
+    // Just close the celebration - don't auto-navigate away
+    // Let the student view the detailed results first
     setShowCelebration(false);
     onComplete(readingStats);
-    onBack();
+    // Remove onBack() - student will use the buttons in the results view to leave
   };
 
   const handleTryAgain = () => {
