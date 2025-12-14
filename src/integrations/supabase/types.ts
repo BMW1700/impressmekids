@@ -3410,6 +3410,7 @@ export type Database = {
         Row: {
           accuracy_percent: number
           assignment_id: string | null
+          audio_url: string | null
           cognitive_load_avg: number | null
           created_at: string | null
           duration_seconds: number
@@ -3429,6 +3430,7 @@ export type Database = {
         Insert: {
           accuracy_percent: number
           assignment_id?: string | null
+          audio_url?: string | null
           cognitive_load_avg?: number | null
           created_at?: string | null
           duration_seconds: number
@@ -3448,6 +3450,7 @@ export type Database = {
         Update: {
           accuracy_percent?: number
           assignment_id?: string | null
+          audio_url?: string | null
           cognitive_load_avg?: number | null
           created_at?: string | null
           duration_seconds?: number

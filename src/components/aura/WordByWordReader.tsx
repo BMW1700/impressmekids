@@ -695,7 +695,33 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
       phonemeScores[phoneme] = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
     });
 
-    // Save reading session WITH WCPM, miscue, and prosody data
+    // Upload audio to storage for teacher playback
+    let audioUrl: string | null = null;
+    if (audioChunksRef.current.length > 0) {
+      try {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const timestamp = Date.now();
+        const audioPath = `${user.id}/${timestamp}.webm`;
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('aura-audio')
+          .upload(audioPath, audioBlob, {
+            contentType: 'audio/webm',
+            upsert: false,
+          });
+        
+        if (!uploadError && uploadData) {
+          audioUrl = audioPath; // Store path, not signed URL (signed URL generated on demand)
+          console.log('✅ Audio uploaded:', audioPath);
+        } else {
+          console.error('Audio upload error:', uploadError);
+        }
+      } catch (err) {
+        console.error('Audio upload failed:', err);
+      }
+    }
+
+    // Save reading session WITH WCPM, miscue, prosody data, AND audio URL
     const { data: session, error: sessionError } = await supabase
       .from('reading_sessions')
       .insert({
@@ -713,6 +739,7 @@ export const WordByWordReader = ({ passageText, assignmentId, onComplete }: Word
         prosody_metrics: prosodyMetrics as any, // NEW: Phrasing/expression/smoothness/pace
         cognitive_load_avg: cognitiveLoad, // ML OUTPUT: Cognitive load during session
         phoneme_accuracy: phonemeScores, // ML OUTPUT: Per-phoneme accuracy scores
+        audio_url: audioUrl, // NEW: Path to audio recording for teacher playback
       } as any)
       .select()
       .single();
