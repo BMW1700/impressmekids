@@ -9,11 +9,12 @@ import PhonemeHeatmap from "@/components/aura/PhonemeHeatmap";
 import CrossModalScatterPlot from "@/components/aura/CrossModalScatterPlot";
 import AtRiskAlerts from "@/components/aura/AtRiskAlerts";
 import ProsodyInsights from "@/components/aura/ProsodyInsights";
+import { ClassroomScreeningDashboard } from "@/components/aura/ClassroomScreeningDashboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, ArrowLeft, Sparkles, TrendingUp, Brain, Users, Activity, BookOpen, Timer, Target } from "lucide-react";
+import { BarChart3, ArrowLeft, Sparkles, TrendingUp, Brain, Users, Activity, BookOpen, Timer, Target, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const AuraAnalytics = () => {
@@ -283,8 +284,12 @@ const AuraAnalytics = () => {
               <ClassroomAuraOverview records={auraRecords} students={students || []} />
 
               <Tabs defaultValue="overview" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-6">
+                <TabsList className="grid w-full grid-cols-7">
                   <TabsTrigger value="overview">Overview</TabsTrigger>
+                  <TabsTrigger value="screening" className="gap-1">
+                    <ClipboardCheck className="w-4 h-4" />
+                    Benchmark Screening
+                  </TabsTrigger>
                   <TabsTrigger value="phonemes" className="gap-1">
                     <Sparkles className="w-4 h-4" />
                     Phoneme Analysis
@@ -314,6 +319,13 @@ const AuraAnalytics = () => {
                       />
                     </CardContent>
                   </Card>
+                </TabsContent>
+
+                <TabsContent value="screening" className="space-y-6">
+                  <ClassroomScreeningDashboard 
+                    classroomId={classroomId!}
+                    classroomName={classrooms?.find(c => c.id === classroomId)?.name}
+                  />
                 </TabsContent>
 
                 <TabsContent value="phonemes" className="space-y-6">
