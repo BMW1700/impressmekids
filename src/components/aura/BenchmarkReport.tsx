@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -16,7 +17,7 @@ import {
 import { BenchmarkStatusBadge } from "./BenchmarkStatusBadge";
 import { useStudentBenchmarkResults } from "@/hooks/useBenchmarkData";
 import { format } from "date-fns";
-import { Download, FileText, TrendingUp, TrendingDown, AlertTriangle, CheckCircle } from "lucide-react";
+import { Download, FileText, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Printer } from "lucide-react";
 
 interface BenchmarkReportProps {
   studentId: string;
@@ -34,6 +35,170 @@ export function BenchmarkReport({
   onExportPDF,
 }: BenchmarkReportProps) {
   const { data: results, isLoading } = useStudentBenchmarkResults(studentId, classroomId);
+  const printRef = useRef<HTMLDivElement>(null);
+
+  // PDF Export handler using browser print
+  const handleExportPDF = () => {
+    if (onExportPDF) {
+      onExportPDF();
+      return;
+    }
+
+    // Use browser print functionality with print-specific CSS
+    const printContent = printRef.current;
+    if (!printContent) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const styles = `
+      <style>
+        @page { margin: 0.75in; size: letter; }
+        body { font-family: system-ui, -apple-system, sans-serif; color: #1a1a1a; line-height: 1.5; }
+        .report-header { text-align: center; border-bottom: 2px solid #e5e5e5; padding-bottom: 16px; margin-bottom: 24px; }
+        .report-title { font-size: 24px; font-weight: bold; margin: 0; }
+        .report-subtitle { font-size: 14px; color: #666; margin-top: 4px; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0; }
+        .metric-card { padding: 16px; border: 1px solid #e5e5e5; border-radius: 8px; text-align: center; }
+        .metric-label { font-size: 10px; text-transform: uppercase; color: #666; letter-spacing: 0.5px; }
+        .metric-value { font-size: 28px; font-weight: bold; margin: 4px 0; }
+        .metric-detail { font-size: 11px; color: #666; }
+        .section { margin: 24px 0; }
+        .section-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+        .norms-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; text-align: center; }
+        .norm-cell { padding: 8px; background: #f5f5f5; border-radius: 4px; }
+        .norm-label { font-size: 10px; color: #666; }
+        .norm-value { font-size: 14px; font-weight: bold; }
+        .recommendation { padding: 16px; background: #f9fafb; border-radius: 8px; border-left: 4px solid #3b82f6; }
+        .history-item { display: flex; justify-content: space-between; padding: 8px 12px; background: #f5f5f5; border-radius: 4px; margin-bottom: 4px; }
+        .assessment-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .assessment-item { }
+        .assessment-label { font-size: 11px; color: #666; }
+        .assessment-value { font-size: 13px; font-weight: 500; }
+        .footer { text-align: center; font-size: 10px; color: #999; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e5e5; }
+        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+        .status-at { background: #dcfce7; color: #166534; }
+        .status-above { background: #dbeafe; color: #1e40af; }
+        .status-below { background: #fef3c7; color: #92400e; }
+        .status-well-below { background: #fee2e2; color: #991b1b; }
+        @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+      </style>
+    `;
+
+    const latestResult = results?.[0];
+    const rtiTier = latestResult ? getRTITier(latestResult.benchmark_status as BenchmarkStatus) : 1;
+    const percentileRange = latestResult ? getPercentileRange(latestResult.wcpm, gradeLevel, getCurrentScreeningPeriod()) : '';
+    const norm = getFluencyNorm(gradeLevel, getCurrentScreeningPeriod());
+
+    const statusClass = latestResult?.benchmark_status === 'at' ? 'status-at' :
+                        latestResult?.benchmark_status === 'above' ? 'status-above' :
+                        latestResult?.benchmark_status === 'below' ? 'status-below' : 'status-well-below';
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Benchmark Report - ${studentName}</title>
+        ${styles}
+      </head>
+      <body>
+        <div class="report-header">
+          <h1 class="report-title">${studentName}</h1>
+          <p class="report-subtitle">Grade ${gradeLevel} • Oral Reading Fluency Benchmark Report</p>
+          <p class="report-subtitle">Generated ${format(new Date(), "MMMM d, yyyy")}</p>
+        </div>
+
+        ${latestResult ? `
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-label">WCPM</div>
+            <div class="metric-value">${latestResult.wcpm}</div>
+            <div class="metric-detail">${percentileRange} percentile</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Accuracy</div>
+            <div class="metric-value">${latestResult.accuracy_percentage || 'N/A'}%</div>
+            <div class="metric-detail">${latestResult.fluency_level ? getFluencyLevelLabel(latestResult.fluency_level as FluencyLevel) : ''} Level</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Prosody</div>
+            <div class="metric-value">${latestResult.prosody_score || 'N/A'}/4</div>
+            <div class="metric-detail">NAEP Scale</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">RTI Tier</div>
+            <div class="metric-value">Tier ${rtiTier}</div>
+            <div class="metric-detail">${getRTITierDescription(rtiTier)}</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Benchmark Status</div>
+          <span class="status-badge ${statusClass}">${getBenchmarkStatusLabel(latestResult.benchmark_status as BenchmarkStatus)}</span>
+        </div>
+
+        ${norm ? `
+        <div class="section">
+          <div class="section-title">Grade ${gradeLevel} ${getCurrentScreeningPeriod()} Benchmark Norms</div>
+          <div class="norms-grid">
+            <div class="norm-cell"><div class="norm-label">10th %ile</div><div class="norm-value">${norm.percentile10}</div></div>
+            <div class="norm-cell"><div class="norm-label">25th %ile</div><div class="norm-value">${norm.percentile25}</div></div>
+            <div class="norm-cell"><div class="norm-label">50th %ile</div><div class="norm-value">${norm.percentile50}</div></div>
+            <div class="norm-cell"><div class="norm-label">75th %ile</div><div class="norm-value">${norm.percentile75}</div></div>
+            <div class="norm-cell"><div class="norm-label">90th %ile</div><div class="norm-value">${norm.percentile90}</div></div>
+          </div>
+          <p style="font-size: 10px; color: #999; margin-top: 8px; font-style: italic;">Based on Hasbrouck & Tindal (2017) Oral Reading Fluency Norms</p>
+        </div>
+        ` : ''}
+
+        <div class="section">
+          <div class="section-title">Assessment Details</div>
+          <div class="assessment-grid">
+            <div class="assessment-item"><div class="assessment-label">Date</div><div class="assessment-value">${format(new Date(latestResult.assessment_date), "MMMM d, yyyy")}</div></div>
+            <div class="assessment-item"><div class="assessment-label">Words Read</div><div class="assessment-value">${latestResult.words_read || 'N/A'}</div></div>
+            <div class="assessment-item"><div class="assessment-label">Miscues</div><div class="assessment-value">${latestResult.miscue_count}</div></div>
+            <div class="assessment-item"><div class="assessment-label">Self-Corrections</div><div class="assessment-value">${latestResult.self_corrections}</div></div>
+            ${latestResult.passage_title ? `<div class="assessment-item" style="grid-column: span 2;"><div class="assessment-label">Passage</div><div class="assessment-value">${latestResult.passage_title}</div></div>` : ''}
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="recommendation">
+            <div class="section-title" style="margin-bottom: 8px;">Recommendation</div>
+            <p style="margin: 0; font-size: 13px;">
+              ${rtiTier === 1 ? "Continue with core classroom instruction. Student is meeting grade-level expectations." : 
+                rtiTier === 2 ? "Consider supplemental small-group instruction 2-3 times per week focusing on fluency building." :
+                "Intensive intervention recommended. Daily 1-on-1 or small group instruction with progress monitoring every 1-2 weeks."}
+            </p>
+          </div>
+        </div>
+
+        ${results && results.length > 1 ? `
+        <div class="section">
+          <div class="section-title">Assessment History</div>
+          ${results.slice(0, 5).map((r: any) => `
+            <div class="history-item">
+              <span>${format(new Date(r.assessment_date), "MMM d, yyyy")}</span>
+              <span><strong>${r.wcpm} WCPM</strong> • ${getBenchmarkStatusLabel(r.benchmark_status as BenchmarkStatus)}</span>
+            </div>
+          `).join('')}
+        </div>
+        ` : ''}
+        ` : '<p>No benchmark data available for this student.</p>'}
+
+        <div class="footer">
+          <p>AURA Reading Assessment System • Confidential Student Record</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.print();
+    };
+  };
   
   const latestResult = results?.[0];
   const previousResult = results?.[1];
@@ -90,12 +255,10 @@ export function BenchmarkReport({
               status={latestResult.benchmark_status as BenchmarkStatus} 
               size="lg" 
             />
-            {onExportPDF && (
-              <Button variant="outline" size="sm" onClick={onExportPDF} className="print:hidden">
-                <Download className="h-4 w-4 mr-1" />
-                PDF
-              </Button>
-            )}
+            <Button variant="outline" size="sm" onClick={handleExportPDF} className="print:hidden">
+              <Printer className="h-4 w-4 mr-1" />
+              Export PDF
+            </Button>
           </div>
         </div>
       </CardHeader>
