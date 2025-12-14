@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 
 interface ScreeningModeSelectorProps {
   classroomId: string;
-  onPeriodCreated?: () => void;
+  onPeriodCreated?: (periodId: string) => void;
 }
 
 export function ScreeningModeSelector({ 
@@ -35,14 +35,15 @@ export function ScreeningModeSelector({
   const [endDate, setEndDate] = useState<Date>(addDays(new Date(), 14));
 
   const handleCreatePeriod = async () => {
-    await createPeriod.mutateAsync({
+    const result = await createPeriod.mutateAsync({
       classroomId,
       periodName: selectedPeriod,
       startDate: format(startDate, "yyyy-MM-dd"),
       endDate: format(endDate, "yyyy-MM-dd"),
       schoolYear,
     });
-    onPeriodCreated?.();
+    // Pass the created period ID to the callback
+    onPeriodCreated?.(result.id);
   };
 
   const periodDescriptions: Record<ScreeningPeriod, string> = {

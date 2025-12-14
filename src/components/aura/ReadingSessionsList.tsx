@@ -73,19 +73,14 @@ export function ReadingSessionsList({
             <div className="flex items-start justify-between">
               <div>
                 <p className="font-medium text-sm">
-                  {session.passage_title || 'Reading Session'}
+                  Reading Session
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {format(new Date(session.created_at), 'MMM d, yyyy h:mm a')}
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                {session.is_screening_passage && (
-                  <Badge variant="outline" className="text-xs">
-                    Screening
-                  </Badge>
-                )}
-                {session.wcpm !== null && (
+                {session.wcpm !== null && session.wcpm > 0 && (
                   <Badge className="bg-primary/10 text-primary border-primary/20">
                     {session.wcpm} WCPM
                   </Badge>
@@ -97,19 +92,19 @@ export function ReadingSessionsList({
             <div className="grid grid-cols-4 gap-2 text-center text-xs">
               <div className="p-2 bg-muted/50 rounded">
                 <p className="text-muted-foreground">Words</p>
-                <p className="font-bold">{session.total_words || '-'}</p>
+                <p className="font-bold">{session.words_read || '-'}</p>
               </div>
               <div className="p-2 bg-muted/50 rounded">
                 <p className="text-muted-foreground">Accuracy</p>
-                <p className="font-bold">{session.accuracy_percentage ? `${session.accuracy_percentage}%` : '-'}</p>
+                <p className="font-bold">{session.accuracy_percent ? `${Math.round(session.accuracy_percent)}%` : '-'}</p>
               </div>
               <div className="p-2 bg-muted/50 rounded">
                 <p className="text-muted-foreground">Duration</p>
                 <p className="font-bold">{session.duration_seconds ? `${Math.round(session.duration_seconds)}s` : '-'}</p>
               </div>
               <div className="p-2 bg-muted/50 rounded">
-                <p className="text-muted-foreground">Prosody</p>
-                <p className="font-bold">{session.prosody_score ? `${session.prosody_score}/4` : '-'}</p>
+                <p className="text-muted-foreground">Fluency</p>
+                <p className="font-bold">{session.fluency_score ? `${Math.round(session.fluency_score)}` : '-'}</p>
               </div>
             </div>
 
@@ -147,28 +142,28 @@ export function ReadingSessionsList({
 
             {expanded === session.id && (
               <div className="pt-2 border-t space-y-2 text-sm">
-                {session.miscue_count !== null && (
+                {session.miscue_analysis && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Miscues</span>
-                    <span>{session.miscue_count}</span>
-                  </div>
-                )}
-                {session.self_corrections !== null && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Self-Corrections</span>
-                    <span>{session.self_corrections}</span>
+                    <span>{(session.miscue_analysis as any)?.total_miscues || 0}</span>
                   </div>
                 )}
                 {session.cognitive_load_avg !== null && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Cognitive Load</span>
-                    <span>{session.cognitive_load_avg.toFixed(2)}</span>
+                    <span>{Number(session.cognitive_load_avg).toFixed(2)}</span>
                   </div>
                 )}
                 {session.fluency_level && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Fluency Level</span>
                     <Badge variant="outline">{session.fluency_level}</Badge>
+                  </div>
+                )}
+                {session.recommended_difficulty !== null && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Recommended Level</span>
+                    <span>Grade {session.recommended_difficulty}</span>
                   </div>
                 )}
               </div>

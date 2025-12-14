@@ -25,6 +25,9 @@ import { BenchmarkReport } from "./BenchmarkReport";
 import { ScreeningPassageSelector } from "./ScreeningPassageSelector";
 import { UniversalScreeningCard } from "./UniversalScreeningCard";
 import { ScreeningModeSelector } from "./ScreeningModeSelector";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { type ScreeningPassage } from "@/data/screeningPassages";
 import { 
   getRTITier, 
   getRTITierDescription,
@@ -53,12 +56,12 @@ export function ClassroomScreeningDashboard({
   classroomName 
 }: ClassroomScreeningDashboardProps) {
   const { data: summary, isLoading, refetch } = useClassroomBenchmarkSummary(classroomId);
-  const { data: periods } = useBenchmarkPeriods(classroomId);
+  const { data: periods, refetch: refetchPeriods } = useBenchmarkPeriods(classroomId);
   
   const [showScreeningSetup, setShowScreeningSetup] = useState(false);
   const [showPassageSelector, setShowPassageSelector] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
-  const [selectedPassage, setSelectedPassage] = useState<any>(null);
+  const [newPeriodId, setNewPeriodId] = useState<string | null>(null);
 
   const getTrendIcon = (trend: string) => {
     switch (trend) {
@@ -347,10 +350,12 @@ export function ClassroomScreeningDashboard({
           </DialogHeader>
           <ScreeningModeSelector 
             classroomId={classroomId}
-            onPeriodCreated={() => {
+            onPeriodCreated={(periodId) => {
+              setNewPeriodId(periodId);
               setShowScreeningSetup(false);
               setShowPassageSelector(true); // Show passage selector after creating period
               refetch();
+              refetchPeriods();
             }}
           />
         </DialogContent>
@@ -364,11 +369,24 @@ export function ClassroomScreeningDashboard({
           </DialogHeader>
           <ScreeningPassageSelector
             gradeLevel={3} // Default to grade 3, could be made dynamic
-            onSelectPassage={(passage) => {
-              setSelectedPassage(passage);
+            onSelectPassage={async (passage: ScreeningPassage) => {
+              // Store selected passage in the active period
+              if (newPeriodId) {
+                const { error } = await supabase
+                  .from('benchmark_assessment_periods')
+                  .update({ screening_passage_id: passage.id } as any)
+                  .eq('id', newPeriodId);
+                
+                if (error) {
+                  console.error('Failed to save passage:', error);
+                  toast.error('Failed to save screening passage');
+                } else {
+                  toast.success(`Selected passage: ${passage.title}`);
+                }
+              }
               setShowPassageSelector(false);
-              // TODO: Store selected passage for classroom screening session
-              console.log('Selected passage for screening:', passage);
+              setNewPeriodId(null);
+              refetchPeriods();
             }}
           />
         </DialogContent>
