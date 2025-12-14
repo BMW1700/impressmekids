@@ -301,22 +301,42 @@ export const useClassroomBenchmarkSummary = (classroomId?: string) => {
     queryFn: async () => {
       if (!classroomId) return null;
       
-      // Get all students in the classroom
+      console.log("🔍 useClassroomBenchmarkSummary: Fetching for classroom", classroomId);
+      
+      // Get all students in the classroom - use simpler query approach
       const { data: students, error: studentsError } = await supabase
         .from("classroom_students")
-        .select(`
-          student_id,
-          profiles:student_id (
-            id,
-            full_name
-          ),
-          public_profiles:student_id (
-            grade
-          )
-        `)
+        .select("student_id")
         .eq("classroom_id", classroomId);
       
-      if (studentsError) throw studentsError;
+      if (studentsError) {
+        console.error("❌ Failed to fetch students:", studentsError);
+        throw studentsError;
+      }
+      
+      console.log("✅ Found students:", students?.length);
+      
+      if (!students || students.length === 0) {
+        return {
+          students: [],
+          tierDistribution: { tier1: 0, tier2: 0, tier3: 0 },
+          avgWCPM: 0,
+          totalStudents: 0,
+          assessedStudents: 0,
+        };
+      }
+      
+      // Fetch profiles separately
+      const studentIds = students.map(s => s.student_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", studentIds);
+      
+      const { data: publicProfiles } = await supabase
+        .from("public_profiles")
+        .select("id, grade")
+        .in("id", studentIds);
       
       // Get all benchmark results for this classroom
       const { data: results, error: resultsError } = await supabase
@@ -325,13 +345,20 @@ export const useClassroomBenchmarkSummary = (classroomId?: string) => {
         .eq("classroom_id", classroomId)
         .order("assessment_date", { ascending: false });
       
-      if (resultsError) throw resultsError;
+      if (resultsError) {
+        console.error("❌ Failed to fetch benchmark results:", resultsError);
+        throw resultsError;
+      }
+      
+      console.log("✅ Found benchmark results:", results?.length);
       
       // Calculate summary for each student
       const summaries: StudentBenchmarkSummary[] = students.map(s => {
-        const studentResults = results.filter(r => r.student_id === s.student_id);
+        const studentResults = (results || []).filter(r => r.student_id === s.student_id);
         const latestResult = studentResults[0];
         const previousResult = studentResults[1];
+        const profile = profiles?.find(p => p.id === s.student_id);
+        const publicProfile = publicProfiles?.find(p => p.id === s.student_id);
         
         let trend: StudentBenchmarkSummary['trend'] = 'insufficient_data';
         let wcpmChange: number | null = null;
@@ -345,8 +372,8 @@ export const useClassroomBenchmarkSummary = (classroomId?: string) => {
         
         return {
           student_id: s.student_id,
-          student_name: (s.profiles as any)?.full_name || 'Unknown',
-          grade: (s.public_profiles as any)?.grade || 0,
+          student_name: profile?.full_name || 'Unknown',
+          grade: publicProfile?.grade || 0,
           latest_wcpm: latestResult?.wcpm || 0,
           latest_accuracy: latestResult?.accuracy_percentage || null,
           latest_benchmark_status: (latestResult?.benchmark_status as BenchmarkStatus) || 'well_below',
