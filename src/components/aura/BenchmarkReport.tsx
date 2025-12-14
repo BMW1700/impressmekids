@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { AudioPlaybackButton } from "./AudioPlaybackButton";
 import { 
   getFluencyNorm,
   getBenchmarkStatusLabel,
@@ -390,6 +391,18 @@ export function BenchmarkReport({
               </div>
             )}
           </div>
+          
+          {/* Audio Playback for the assessment - KEY INTEGRATION */}
+          {(latestResult as any).audio_url && (
+            <div className="mt-4 pt-4 border-t">
+              <p className="text-sm font-medium mb-2">Listen to Recording:</p>
+              <AudioPlaybackButton
+                audioUrl={null}
+                audioPath={(latestResult as any).audio_url}
+                showProgress={true}
+              />
+            </div>
+          )}
         </div>
 
         {/* Recommendations */}
