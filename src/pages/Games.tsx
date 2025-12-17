@@ -1,7 +1,7 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { GameTile } from "@/components/GameTile";
-import { Zap, Trophy, BookOpen, Brain, Calculator, Globe } from "lucide-react";
+import { Zap, Trophy, BookOpen, Brain, Calculator, Globe, Hash } from "lucide-react";
 
 const Games = () => {
   return (
@@ -26,6 +26,13 @@ const Games = () => {
               gradeRange="Grades K-12"
               path="/games/jeopardy-1v1"
               icon={<Zap className="h-6 w-6 text-white" />}
+            />
+            <GameTile
+              title="Number Maker"
+              description="Combine given numbers using math operations to create the target number."
+              gradeRange="Grades K-8"
+              path="/games/number-maker"
+              icon={<Hash className="h-6 w-6 text-white" />}
             />
             <GameTile
               title="Math Race"
