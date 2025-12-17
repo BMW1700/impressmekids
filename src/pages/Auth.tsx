@@ -584,7 +584,7 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden p-4 bg-gradient-hero">
-      <div className="w-full max-w-md px-6 py-10 relative z-10 bg-white/20 backdrop-blur-xl rounded-3xl border border-white/25 shadow-2xl">
+      <div className="w-full max-w-md px-6 py-10 relative z-10 bg-primary/40 backdrop-blur-xl rounded-3xl border border-primary/30 shadow-2xl">
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <Link to="/">
