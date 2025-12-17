@@ -24,11 +24,11 @@ export const StudentListCard = ({ student, onViewClassrooms, onViewParents }: St
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex gap-2">
-          <Badge variant="secondary" className="gap-1">
+          <Badge className="gap-1 bg-emerald-500 text-white">
             <School className="h-3 w-3" />
             {student.classroom_count} {student.classroom_count === 1 ? "Classroom" : "Classrooms"}
           </Badge>
-          <Badge variant="secondary" className="gap-1">
+          <Badge className="gap-1 bg-emerald-500 text-white">
             <Users className="h-3 w-3" />
             {student.parent_count} {student.parent_count === 1 ? "Parent" : "Parents"}
           </Badge>
@@ -36,16 +36,14 @@ export const StudentListCard = ({ student, onViewClassrooms, onViewParents }: St
         <div className="flex gap-2">
           <Button 
             size="sm" 
-            variant="outline"
-            className="flex-1"
+            className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white"
             onClick={() => onViewClassrooms(student.id, student.full_name)}
           >
             View Classrooms
           </Button>
           <Button 
             size="sm" 
-            variant="outline"
-            className="flex-1"
+            className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white"
             onClick={() => onViewParents(student.id, student.full_name)}
           >
             View Parents
