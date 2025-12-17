@@ -4642,36 +4642,48 @@ export type Database = {
           consent_given: boolean
           consent_token: string
           created_at: string
+          district_id: string | null
           expires_at: string
+          full_name: string | null
           id: string
           ip_address: string | null
           parent_email: string
           parent_name: string
+          password_temp: string | null
           student_email: string
+          student_role: string | null
         }
         Insert: {
           consent_date?: string | null
           consent_given?: boolean
           consent_token: string
           created_at?: string
+          district_id?: string | null
           expires_at?: string
+          full_name?: string | null
           id?: string
           ip_address?: string | null
           parent_email: string
           parent_name: string
+          password_temp?: string | null
           student_email: string
+          student_role?: string | null
         }
         Update: {
           consent_date?: string | null
           consent_given?: boolean
           consent_token?: string
           created_at?: string
+          district_id?: string | null
           expires_at?: string
+          full_name?: string | null
           id?: string
           ip_address?: string | null
           parent_email?: string
           parent_name?: string
+          password_temp?: string | null
           student_email?: string
+          student_role?: string | null
         }
         Relationships: []
       }
