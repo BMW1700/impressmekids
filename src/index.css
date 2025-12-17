@@ -171,6 +171,18 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground font-sans;
+    min-height: 100vh;
+  }
+
+  /* Premium dark mode gradient background */
+  .dark body {
+    background: linear-gradient(135deg, 
+      hsl(235 30% 8%) 0%, 
+      hsl(260 35% 10%) 25%,
+      hsl(270 40% 12%) 50%, 
+      hsl(280 35% 10%) 75%,
+      hsl(250 30% 8%) 100%);
+    background-attachment: fixed;
   }
 
   h1, h2, h3, h4, h5, h6 {
