@@ -6,6 +6,7 @@ import { StudentNotificationBell } from "@/components/student/StudentNotificatio
 import { SettingsMenu } from "@/components/SettingsMenu";
 import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/logo.png";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface HeaderProps {
   showAuthButtons?: boolean;
@@ -18,6 +19,7 @@ export const Header = ({ showAuthButtons = true, onSignOut, children, studentId 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   useEffect(() => {
     // Check initial auth state
@@ -135,10 +137,10 @@ export const Header = ({ showAuthButtons = true, onSignOut, children, studentId 
             {shouldShowAuthButtons && (
               <>
                 <Button variant="ghost" asChild>
-                  <Link to="/auth">Sign In</Link>
+                  <Link to="/auth">{t('nav.signIn')}</Link>
                 </Button>
                 <Button className="bg-gradient-primary hover:opacity-90" asChild>
-                  <Link to="/auth">Get Started</Link>
+                  <Link to="/auth">{t('nav.getStarted')}</Link>
                 </Button>
               </>
             )}
@@ -146,7 +148,7 @@ export const Header = ({ showAuthButtons = true, onSignOut, children, studentId 
             {/* Show Sign Out button when logged in */}
             {shouldShowSignOut && (
               <Button variant="outline" onClick={handleSignOut}>
-                Sign Out
+                {t('nav.signOut')}
               </Button>
             )}
           </div>

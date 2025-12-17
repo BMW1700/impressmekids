@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { Gamepad2 } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface GameTileProps {
   title: string;
@@ -21,6 +22,8 @@ export const GameTile = ({
   icon,
   isComingSoon = false 
 }: GameTileProps) => {
+  const { t } = useLanguage();
+
   return (
     <Card className="shadow-card hover:shadow-purple transition-all duration-300 hover:scale-105">
       <CardHeader>
@@ -38,11 +41,11 @@ export const GameTile = ({
       <CardFooter>
         {isComingSoon ? (
           <Button disabled className="w-full" variant="outline">
-            Coming Soon
+            {t('games.comingSoon')}
           </Button>
         ) : (
           <Button asChild className="w-full bg-gradient-primary hover:opacity-90">
-            <Link to={path}>Play Now</Link>
+            <Link to={path}>{t('games.playNow')}</Link>
           </Button>
         )}
       </CardFooter>

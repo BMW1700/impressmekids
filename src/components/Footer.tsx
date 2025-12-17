@@ -1,7 +1,10 @@
 import { Link } from "react-router-dom";
 import { Shield, Globe, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/contexts/LanguageContext";
+
 export const Footer = () => {
+  const { t } = useLanguage();
   return <footer className="border-t border-border bg-card/50 backdrop-blur-sm mt-auto">
       <div className="container mx-auto px-4 py-8">
         {/* Trust Badges Section */}
@@ -37,14 +40,14 @@ export const Footer = () => {
         {/* Footer Links */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} ImpressMe Kids. All rights reserved.
+            © {new Date().getFullYear()} ImpressMe Kids. {t('footer.copyright').replace('© {year} ImpressMe Family App. ', '')}
           </div>
           <div className="flex items-center gap-4 text-sm">
             <Link to="/privacy-policy" className="text-muted-foreground hover:text-primary transition-colors">
-              Privacy Policy
+              {t('footer.privacyPolicy')}
             </Link>
             <Link to="/terms-of-service" className="text-muted-foreground hover:text-primary transition-colors">
-              Terms of Service
+              {t('footer.termsOfService')}
             </Link>
             <a href="https://impressme.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-dark transition-colors font-medium">
               An ImpressMe Family App ✨

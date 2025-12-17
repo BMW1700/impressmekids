@@ -2,8 +2,11 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { GameTile } from "@/components/GameTile";
 import { Zap, Trophy, BookOpen, Brain, Calculator, Globe, Hash } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const Games = () => {
+  const { t } = useLanguage();
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header showAuthButtons={false} />
@@ -12,10 +15,10 @@ const Games = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              Educational Games Hub 🎮
+              {t('games.title')} 🎮
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Choose from our collection of fun and educational games
+              {t('games.subtitle')}
             </p>
           </div>
 

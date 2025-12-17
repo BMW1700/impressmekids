@@ -1,6 +1,7 @@
 import { Home, Calendar, BookOpen, Users, Bell, GraduationCap, FolderOpen, User, Gamepad2, Shield, Sparkles, BookOpenCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface StudentDashboardSidebarProps {
   activeSection: string;
@@ -11,19 +12,19 @@ interface StudentDashboardSidebarProps {
   onClose?: () => void;
 }
 
-const sections = [
-  { id: "home", label: "Home", icon: Home, color: "from-violet-500 to-purple-600" },
-  { id: "today", label: "Today", icon: Calendar, color: "from-blue-500 to-cyan-500" },
-  { id: "courses", label: "Courses", icon: BookOpen, color: "from-emerald-500 to-teal-500" },
-  { id: "clubs", label: "Clubs & Organizations", icon: Users, color: "from-pink-500 to-rose-500" },
-  { id: "calendar", label: "Calendar", icon: Calendar, color: "from-amber-500 to-orange-500" },
-  { id: "announcements", label: "Announcements", icon: Bell, color: "from-red-500 to-pink-500" },
-  { id: "study-games", label: "Study Games", icon: Gamepad2, isExternal: true, color: "from-indigo-500 to-violet-500" },
-  { id: "aura-reading", label: "Aura Reading", icon: BookOpenCheck, isExternal: true, color: "from-amber-500 to-yellow-500" },
-  { id: "gradebook", label: "Gradebook", icon: GraduationCap, color: "from-cyan-500 to-blue-500" },
-  { id: "directory", label: "Directory", icon: FolderOpen, color: "from-slate-500 to-gray-600" },
-  { id: "safety", label: "Safety", icon: Shield, color: "from-green-500 to-emerald-500" },
-  { id: "account", label: "Account", icon: User, color: "from-purple-500 to-indigo-500" },
+const getSections = (t: (key: string) => string) => [
+  { id: "home", label: t('sidebar.home'), icon: Home, color: "from-violet-500 to-purple-600" },
+  { id: "today", label: t('sidebar.today'), icon: Calendar, color: "from-blue-500 to-cyan-500" },
+  { id: "courses", label: t('sidebar.courses'), icon: BookOpen, color: "from-emerald-500 to-teal-500" },
+  { id: "clubs", label: t('sidebar.clubs'), icon: Users, color: "from-pink-500 to-rose-500" },
+  { id: "calendar", label: t('sidebar.calendar'), icon: Calendar, color: "from-amber-500 to-orange-500" },
+  { id: "announcements", label: t('sidebar.announcements'), icon: Bell, color: "from-red-500 to-pink-500" },
+  { id: "study-games", label: t('sidebar.studyGames'), icon: Gamepad2, isExternal: true, color: "from-indigo-500 to-violet-500" },
+  { id: "aura-reading", label: t('sidebar.auraReading'), icon: BookOpenCheck, isExternal: true, color: "from-amber-500 to-yellow-500" },
+  { id: "gradebook", label: t('sidebar.gradebook'), icon: GraduationCap, color: "from-cyan-500 to-blue-500" },
+  { id: "directory", label: t('sidebar.directory'), icon: FolderOpen, color: "from-slate-500 to-gray-600" },
+  { id: "safety", label: t('sidebar.safety'), icon: Shield, color: "from-green-500 to-emerald-500" },
+  { id: "account", label: t('sidebar.account'), icon: User, color: "from-purple-500 to-indigo-500" },
 ];
 
 export const StudentDashboardSidebar = ({
@@ -34,6 +35,9 @@ export const StudentDashboardSidebar = ({
   isSheet = false,
   onClose,
 }: StudentDashboardSidebarProps) => {
+  const { t } = useLanguage();
+  const sections = getSections(t);
+
   const handleNavigation = (sectionId: string, isExternal: boolean, navigateFn?: () => void) => {
     if (isExternal && navigateFn) {
       navigateFn();
@@ -67,9 +71,9 @@ export const StudentDashboardSidebar = ({
             </div>
             <div>
               <h2 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                Dashboard
+                {t('sidebar.dashboard')}
               </h2>
-              <p className="text-xs text-muted-foreground">Student Portal</p>
+              <p className="text-xs text-muted-foreground">{t('sidebar.studentPortal')}</p>
             </div>
           </div>
         </div>
@@ -151,8 +155,8 @@ export const StudentDashboardSidebar = ({
               <span className="text-lg">📚</span>
             </div>
             <div className="flex-1">
-              <p className="text-xs font-medium text-foreground">Keep Learning!</p>
-              <p className="text-[10px] text-muted-foreground">Every day is a new adventure</p>
+              <p className="text-xs font-medium text-foreground">{t('sidebar.keepLearning')}</p>
+              <p className="text-[10px] text-muted-foreground">{t('sidebar.newAdventure')}</p>
             </div>
           </div>
         </div>
