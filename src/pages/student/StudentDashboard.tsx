@@ -19,6 +19,7 @@ import { DirectorySection } from "@/components/student/sections/DirectorySection
 import { AccountSection } from "@/components/student/sections/AccountSection";
 import { SafetySection } from "@/components/student/sections/SafetySection";
 import { SafetyAlertBanner } from "@/components/safety/SafetyAlertBanner";
+import { DrillAlertOverlay } from "@/components/student/DrillAlertOverlay";
 
 const StudentDashboard = () => {
   const [profile, setProfile] = useState<any>(null);
@@ -125,6 +126,8 @@ const StudentDashboard = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Full-screen drill alert overlay - appears during active drills */}
+      <DrillAlertOverlay />
       <Header onSignOut={handleSignOut} studentId={profile?.id} />
       <div className="container mx-auto px-4 pt-6">
         <SafetyAlertBanner />
