@@ -583,299 +583,329 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-hero p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 mb-4">
-            <div className="rounded-lg bg-white shadow-lg overflow-hidden">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#0f0f12] relative overflow-hidden">
+      {/* Subtle background pattern */}
+      <div className="absolute inset-0 opacity-[0.03]">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        }} />
+      </div>
+
+      <div className="w-full max-w-md px-6 relative z-10">
+        {/* Logo */}
+        <div className="flex justify-center mb-8">
+          <Link to="/">
+            <div className="rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 p-3 shadow-2xl">
               <img 
                 src={logo} 
-                alt="ImpressMe Kids Logo" 
-                className="h-20 w-20 object-cover"
+                alt="ImpressMe Kids" 
+                className="h-16 w-16 rounded-lg"
               />
             </div>
           </Link>
-          <h1 className="text-3xl font-bold text-white mb-2">Welcome to ImpressMe Kids!</h1>
-          <p className="text-white/80">Sign in or create an account to start playing</p>
         </div>
 
-        <Card>
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
+        {/* Headline */}
+        <div className="text-center mb-10">
+          <h1 className="text-3xl md:text-4xl font-semibold text-white mb-3 tracking-tight">
+            Welcome to{" "}
+            <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-amber-400 bg-clip-text text-transparent">
+              ImpressMe Kids
+            </span>
+          </h1>
+          <p className="text-white/50 text-base">
+            The literacy platform trusted by schools
+          </p>
+        </div>
 
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn}>
-                <CardHeader>
-                  <CardTitle>Sign In</CardTitle>
-                  <CardDescription>
-                    Enter your credentials to access your account
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full"
-                      onClick={handleGoogleSignIn}
-                      disabled={isLoading}
-                    >
-                      <Chrome className="mr-2 h-4 w-4" />
-                      Google
-                    </Button>
-                    
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full"
-                      onClick={handleCleverSignIn}
-                      disabled={isLoading}
-                    >
-                      <BookOpen className="mr-2 h-4 w-4" />
-                      Clever
-                    </Button>
-                  </div>
-                  
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-card px-2 text-muted-foreground">Or continue with email</span>
-                    </div>
-                  </div>
+        {/* Auth Card */}
+        <Tabs defaultValue="signin" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 bg-white/5 border border-white/10 rounded-xl p-1 mb-6">
+            <TabsTrigger 
+              value="signin" 
+              className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-gray-900 text-white/70 transition-all"
+            >
+              Sign In
+            </TabsTrigger>
+            <TabsTrigger 
+              value="signup"
+              className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-gray-900 text-white/70 transition-all"
+            >
+              Sign Up
+            </TabsTrigger>
+          </TabsList>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
-                    <Input
-                      id="signin-email"
-                      type="email"
-                      placeholder="your@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="signin-password">Password</Label>
-                      <Button
-                        type="button"
-                        variant="link"
-                        className="px-0 h-auto text-xs text-muted-foreground hover:text-primary"
-                        onClick={handleResetPassword}
-                        disabled={isLoading}
-                      >
-                        Forgot Password?
-                      </Button>
-                    </div>
-                    <Input
-                      id="signin-password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-gradient-primary hover:opacity-90"
+          <TabsContent value="signin" className="space-y-4">
+            {/* SSO Buttons */}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-14 bg-white hover:bg-gray-50 text-gray-900 border-0 rounded-xl font-medium text-base shadow-lg"
+              onClick={handleGoogleSignIn}
+              disabled={isLoading}
+            >
+              <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              Continue with Google
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-14 bg-white/5 hover:bg-white/10 text-white border-white/10 rounded-xl font-medium text-base"
+              onClick={handleCleverSignIn}
+              disabled={isLoading}
+            >
+              <BookOpen className="mr-3 h-5 w-5 text-blue-400" />
+              Continue with Clever
+            </Button>
+
+            {/* Divider */}
+            <div className="relative py-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-white/10" />
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-[#0f0f12] px-4 text-sm text-white/40">or</span>
+              </div>
+            </div>
+
+            {/* Email Form */}
+            <form onSubmit={handleSignIn} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="signin-email" className="text-white/70 text-sm">Email</Label>
+                <Input
+                  id="signin-email"
+                  type="email"
+                  placeholder="you@school.edu"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-xl focus:border-purple-500 focus:ring-purple-500/20"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="signin-password" className="text-white/70 text-sm">Password</Label>
+                  <button
+                    type="button"
+                    className="text-sm text-purple-400 hover:text-purple-300"
+                    onClick={handleResetPassword}
                     disabled={isLoading}
                   >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Signing in...
-                      </>
-                    ) : (
-                      "Sign In"
-                    )}
-                  </Button>
-                </CardFooter>
-              </form>
-            </TabsContent>
+                    Forgot password?
+                  </button>
+                </div>
+                <Input
+                  id="signin-password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-xl focus:border-purple-500 focus:ring-purple-500/20"
+                  required
+                />
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full h-14 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white rounded-xl font-medium text-base shadow-lg shadow-purple-500/25"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  "Sign In"
+                )}
+              </Button>
+            </form>
+          </TabsContent>
 
-            <TabsContent value="signup">
-              <form id="signup-form" onSubmit={handleSignUp}>
-                <CardHeader>
-                  <CardTitle>Create Account</CardTitle>
-                  <CardDescription>
-                    Join Impress Me Kids and start learning!
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
+          <TabsContent value="signup" className="space-y-4">
+            {/* SSO Buttons */}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-14 bg-white hover:bg-gray-50 text-gray-900 border-0 rounded-xl font-medium text-base shadow-lg"
+              onClick={handleGoogleSignIn}
+              disabled={isLoading}
+            >
+              <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              Continue with Google
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-14 bg-white/5 hover:bg-white/10 text-white border-white/10 rounded-xl font-medium text-base"
+              onClick={handleCleverSignIn}
+              disabled={isLoading}
+            >
+              <BookOpen className="mr-3 h-5 w-5 text-blue-400" />
+              Continue with Clever
+            </Button>
+
+            {/* Divider */}
+            <div className="relative py-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-white/10" />
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-[#0f0f12] px-4 text-sm text-white/40">or sign up with email</span>
+              </div>
+            </div>
+
+            {/* Email Form */}
+            <form id="signup-form" onSubmit={handleSignUp} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="signup-name" className="text-white/70 text-sm">Full Name</Label>
+                <Input
+                  id="signup-name"
+                  type="text"
+                  placeholder="Your full name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-xl focus:border-purple-500 focus:ring-purple-500/20"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-email" className="text-white/70 text-sm">Email</Label>
+                <Input
+                  id="signup-email"
+                  type="email"
+                  placeholder="you@school.edu"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-xl focus:border-purple-500 focus:ring-purple-500/20"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-password" className="text-white/70 text-sm">Password</Label>
+                <Input
+                  id="signup-password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-xl focus:border-purple-500 focus:ring-purple-500/20"
+                  required
+                  minLength={6}
+                />
+              </div>
+
+              {/* Role Selection */}
+              <div className="space-y-3">
+                <Label className="text-white/70 text-sm">I am a...</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: 'student', label: 'Student' },
+                    { value: 'parent', label: 'Parent' },
+                    { value: 'teacher', label: 'Teacher' },
+                    { value: 'admin', label: 'District Admin' },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
                       type="button"
-                      variant="outline"
-                      className="w-full"
-                      onClick={handleGoogleSignIn}
-                      disabled={isLoading}
+                      onClick={() => setRole(option.value as typeof role)}
+                      className={`h-11 rounded-xl text-sm font-medium transition-all ${
+                        role === option.value
+                          ? 'bg-purple-600 text-white border-purple-500'
+                          : 'bg-white/5 text-white/70 border border-white/10 hover:bg-white/10'
+                      }`}
                     >
-                      <Chrome className="mr-2 h-4 w-4" />
-                      Google
-                    </Button>
-                    
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full"
-                      onClick={handleCleverSignIn}
-                      disabled={isLoading}
-                    >
-                      <BookOpen className="mr-2 h-4 w-4" />
-                      Clever
-                    </Button>
-                  </div>
-                  
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-card px-2 text-muted-foreground">Or sign up with email</span>
-                    </div>
-                  </div>
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-name">Full Name</Label>
-                    <Input
-                      id="signup-name"
-                      type="text"
-                      placeholder="Your Name"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="your@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      minLength={6}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>I am a...</Label>
-                    <RadioGroup value={role} onValueChange={(value) => setRole(value as typeof role)}>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="student" id="student" />
-                        <Label htmlFor="student" className="font-normal cursor-pointer">
-                          Student
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="parent" id="parent" />
-                        <Label htmlFor="parent" className="font-normal cursor-pointer">
-                          Parent
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="teacher" id="teacher" />
-                        <Label htmlFor="teacher" className="font-normal cursor-pointer">
-                          Teacher
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="admin" id="admin" />
-                        <Label htmlFor="admin" className="font-normal cursor-pointer">
-                          District Admin
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-
-                  {/* District Code Input for Teacher/Admin */}
-                  {(role === 'teacher' || role === 'admin') && (
-                    <div className="space-y-2">
-                      <Label htmlFor="district-code" className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4" />
-                        12-Digit District Code
-                      </Label>
-                      <Input
-                        id="district-code"
-                        type="text"
-                        placeholder="000000000000"
-                        maxLength={12}
-                        value={districtCode}
-                        onChange={(e) => setDistrictCode(e.target.value)}
-                        onBlur={(e) => validateDistrictCode(e.target.value)}
-                        required
-                      />
-                      {districtInfo && (
-                        <p className="text-sm text-primary">✓ {districtInfo.name}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground">
-                        Contact your district administrator for your district code
-                      </p>
-                    </div>
+              {/* District Code Input for Teacher/Admin */}
+              {(role === 'teacher' || role === 'admin') && (
+                <div className="space-y-2">
+                  <Label htmlFor="district-code" className="text-white/70 text-sm flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    District Code
+                  </Label>
+                  <Input
+                    id="district-code"
+                    type="text"
+                    placeholder="Enter 12-digit code"
+                    maxLength={12}
+                    value={districtCode}
+                    onChange={(e) => setDistrictCode(e.target.value)}
+                    onBlur={(e) => validateDistrictCode(e.target.value)}
+                    className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 font-mono"
+                    required
+                  />
+                  {districtInfo && (
+                    <p className="text-sm text-emerald-400">✓ {districtInfo.name}</p>
                   )}
+                </div>
+              )}
 
-                  {/* District Dropdown for Student/Parent */}
-                  {(role === 'student' || role === 'parent') && (
-                    <div className="space-y-2">
-                      <Label htmlFor="district-select" className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4" />
-                        Select Your School District
-                      </Label>
-                      <DistrictCombobox
-                        value={selectedDistrictId}
-                        onValueChange={setSelectedDistrictId}
-                        districts={districts || []}
-                        placeholder="Choose your district..."
-                      />
-                    </div>
-                  )}
+              {/* District Dropdown for Student/Parent */}
+              {(role === 'student' || role === 'parent') && (
+                <div className="space-y-2">
+                  <Label htmlFor="district-select" className="text-white/70 text-sm flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    School District
+                  </Label>
+                  <DistrictCombobox
+                    value={selectedDistrictId}
+                    onValueChange={setSelectedDistrictId}
+                    districts={districts || []}
+                    placeholder="Select your district..."
+                  />
+                </div>
+              )}
 
-                  <p className="text-xs text-muted-foreground">
-                    Note: All new accounts require verification and approval by district administrators.
-                  </p>
-                </CardContent>
-                <CardFooter>
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-gradient-primary hover:opacity-90"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating account...
-                      </>
-                    ) : (
-                      "Create Account"
-                    )}
-                  </Button>
-                </CardFooter>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </Card>
+              <Button 
+                type="submit" 
+                className="w-full h-14 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white rounded-xl font-medium text-base shadow-lg shadow-purple-500/25"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Creating account...
+                  </>
+                ) : (
+                  "Create Account"
+                )}
+              </Button>
 
-        <div className="text-center mt-4">
-          <Link to="/" className="text-white hover:text-white/80 text-sm">
+              <p className="text-xs text-white/40 text-center">
+                All accounts require district administrator approval
+              </p>
+            </form>
+          </TabsContent>
+        </Tabs>
+
+        {/* Footer */}
+        <div className="mt-8 text-center">
+          <p className="text-white/30 text-sm">
+            By continuing, you agree to our{" "}
+            <Link to="/policies" className="text-white/50 hover:text-white/70 underline">Terms of Service</Link>
+            {" "}and{" "}
+            <Link to="/policies" className="text-white/50 hover:text-white/70 underline">Privacy Policy</Link>
+          </p>
+        </div>
+
+        <div className="mt-6 text-center">
+          <Link to="/" className="text-white/40 hover:text-white/60 text-sm transition-colors">
             ← Back to Home
           </Link>
         </div>
@@ -883,10 +913,10 @@ const Auth = () => {
 
       {/* District Selection Modal for OAuth users without district email */}
       <Dialog open={showDistrictModal}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md bg-[#1a1a1f] border-white/10 text-white">
           <DialogHeader>
-            <DialogTitle className="text-2xl">Select Your District</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-2xl text-white">Select Your District</DialogTitle>
+            <DialogDescription className="text-white/60">
               Please select the district you're joining to continue
             </DialogDescription>
           </DialogHeader>
@@ -897,7 +927,7 @@ const Auth = () => {
               value={pendingDistrictId || ""}
               onValueChange={handleDistrictSelection}
             />
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-white/40">
               Can't find your district? Contact your district administrator.
             </p>
           </div>
@@ -920,7 +950,6 @@ const Auth = () => {
           if (under13) {
             setShowParentalConsentForm(true);
           } else {
-            // 13 or older, proceed with signup
             const form = document.getElementById('signup-form') as HTMLFormElement;
             form?.requestSubmit();
           }
