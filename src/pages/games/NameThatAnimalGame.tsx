@@ -26,8 +26,6 @@ const ANIMALS: Animal[] = [
   { name: "Dolphin", emoji: "🐬", firstLetter: "D" },
 ];
 
-const ALL_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-
 const shuffleArray = <T,>(array: T[]): T[] => {
   const shuffled = [...array];
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -40,7 +38,7 @@ const shuffleArray = <T,>(array: T[]): T[] => {
 const NameThatAnimalGame = () => {
   const [gameAnimals, setGameAnimals] = useState<Animal[]>([]);
   const [currentRound, setCurrentRound] = useState(0);
-  const [letterChoices, setLetterChoices] = useState<string[]>([]);
+  const [nameChoices, setNameChoices] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<"correct" | "incorrect" | null>(null);
   const [isGameComplete, setIsGameComplete] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -58,24 +56,25 @@ const NameThatAnimalGame = () => {
     initializeGame();
   }, [initializeGame]);
 
-  // Generate letter choices for current round
+  // Generate name choices for current round
   useEffect(() => {
     if (gameAnimals.length === 0) return;
     
     const currentAnimal = gameAnimals[currentRound];
     if (!currentAnimal) return;
 
-    const correctLetter = currentAnimal.firstLetter;
+    const correctName = currentAnimal.name;
     
-    // Get 2 random incorrect letters
-    const incorrectLetters = ALL_LETTERS
-      .filter(l => l !== correctLetter)
+    // Get 2 random incorrect animal names
+    const incorrectNames = ANIMALS
+      .filter(a => a.name !== correctName)
       .sort(() => Math.random() - 0.5)
-      .slice(0, 2);
+      .slice(0, 2)
+      .map(a => a.name);
     
     // Combine and shuffle
-    const choices = shuffleArray([correctLetter, ...incorrectLetters]);
-    setLetterChoices(choices);
+    const choices = shuffleArray([correctName, ...incorrectNames]);
+    setNameChoices(choices);
     
     // Auto-play audio on round start
     setTimeout(() => speakAnimalName(currentAnimal.name), 500);
@@ -123,12 +122,12 @@ const NameThatAnimalGame = () => {
     }
   };
 
-  // Handle letter selection
-  const handleLetterSelect = (letter: string) => {
+  // Handle name selection
+  const handleNameSelect = (name: string) => {
     if (feedback) return; // Prevent double-clicks during feedback
     
     const currentAnimal = gameAnimals[currentRound];
-    const isCorrect = letter === currentAnimal.firstLetter;
+    const isCorrect = name === currentAnimal.name;
     
     setFeedback(isCorrect ? "correct" : "incorrect");
     playFeedbackSound(isCorrect);
@@ -195,7 +194,7 @@ const NameThatAnimalGame = () => {
                   Great Job! 🎉
                 </h2>
                 <p className="text-lg text-green-600 dark:text-green-500 mb-8">
-                  You learned all the animal letters!
+                  You named all the animals!
                 </p>
                 <Button
                   onClick={initializeGame}
@@ -215,7 +214,7 @@ const NameThatAnimalGame = () => {
                   Name that Animal! 🐾
                 </h1>
                 <p className="text-muted-foreground">
-                  What letter does this animal start with?
+                  What is this animal called?
                 </p>
               </div>
 
@@ -257,28 +256,28 @@ const NameThatAnimalGame = () => {
                 </AnimatePresence>
               </Card>
 
-              {/* Letter Choices */}
-              <div className="grid grid-cols-3 gap-4">
-                {letterChoices.map((letter, index) => {
-                  const isCorrect = letter === currentAnimal.firstLetter;
+              {/* Name Choices */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {nameChoices.map((name, index) => {
+                  const isCorrect = name === currentAnimal.name;
                   const showCorrect = feedback === "correct" && isCorrect;
                   const showIncorrect = feedback === "incorrect" && !isCorrect;
 
                   return (
                     <motion.div
-                      key={`${currentRound}-${letter}`}
+                      key={`${currentRound}-${name}`}
                       initial={{ y: 20, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
                       transition={{ delay: index * 0.1 }}
                     >
                       <Button
-                        onClick={() => handleLetterSelect(letter)}
+                        onClick={() => handleNameSelect(name)}
                         disabled={!!feedback}
                         className={`
-                          w-full h-24 md:h-28 text-5xl md:text-6xl font-bold rounded-2xl
+                          w-full h-20 md:h-24 text-2xl md:text-3xl font-bold rounded-2xl
                           transition-all duration-200 transform
                           ${showCorrect 
-                            ? 'bg-green-500 hover:bg-green-500 text-white scale-110 ring-4 ring-green-300' 
+                            ? 'bg-green-500 hover:bg-green-500 text-white scale-105 ring-4 ring-green-300' 
                             : showIncorrect
                             ? 'bg-orange-400 hover:bg-orange-400 text-white opacity-50'
                             : 'bg-primary hover:bg-primary/90 text-primary-foreground hover:scale-105'
@@ -287,7 +286,7 @@ const NameThatAnimalGame = () => {
                           shadow-lg hover:shadow-xl
                         `}
                       >
-                        {letter}
+                        {name}
                       </Button>
                     </motion.div>
                   );
