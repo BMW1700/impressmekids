@@ -595,7 +595,7 @@ const Auth = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="signin-email">Email</Label>
-                    <Input id="signin-email" type="email" placeholder="your@email.com" value={email} onChange={e => setEmail(e.target.value)} required />
+                    <Input id="signin-email" type="email" placeholder="your@email.com" value={email} onChange={e => setEmail(e.target.value)} required className="bg-white/10 backdrop-blur-sm border-white/30 text-foreground placeholder:text-muted-foreground" />
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -604,7 +604,7 @@ const Auth = () => {
                         Forgot Password?
                       </Button>
                     </div>
-                    <Input id="signin-password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required />
+                    <Input id="signin-password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required className="bg-white/10 backdrop-blur-sm border-white/30 text-foreground placeholder:text-muted-foreground" />
                   </div>
                 </CardContent>
                 <CardFooter>
@@ -650,15 +650,15 @@ const Auth = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="signup-name">Full Name</Label>
-                    <Input id="signup-name" type="text" placeholder="Your Name" value={fullName} onChange={e => setFullName(e.target.value)} required />
+                    <Input id="signup-name" type="text" placeholder="Your Name" value={fullName} onChange={e => setFullName(e.target.value)} required className="bg-white/10 backdrop-blur-sm border-white/30 text-foreground placeholder:text-muted-foreground" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">Email</Label>
-                    <Input id="signup-email" type="email" placeholder="your@email.com" value={email} onChange={e => setEmail(e.target.value)} required />
+                    <Input id="signup-email" type="email" placeholder="your@email.com" value={email} onChange={e => setEmail(e.target.value)} required className="bg-white/10 backdrop-blur-sm border-white/30 text-foreground placeholder:text-muted-foreground" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Password</Label>
-                    <Input id="signup-password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
+                    <Input id="signup-password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} className="bg-white/10 backdrop-blur-sm border-white/30 text-foreground placeholder:text-muted-foreground" />
                   </div>
                   <div className="space-y-2">
                     <Label>I am a...</Label>
@@ -696,7 +696,7 @@ const Auth = () => {
                         <Building2 className="h-4 w-4" />
                         12-Digit District Code
                       </Label>
-                      <Input id="district-code" type="text" placeholder="000000000000" maxLength={12} value={districtCode} onChange={e => setDistrictCode(e.target.value)} onBlur={e => validateDistrictCode(e.target.value)} required />
+                      <Input id="district-code" type="text" placeholder="000000000000" maxLength={12} value={districtCode} onChange={e => setDistrictCode(e.target.value)} onBlur={e => validateDistrictCode(e.target.value)} required className="bg-white/10 backdrop-blur-sm border-white/30 text-foreground placeholder:text-muted-foreground" />
                       {districtInfo && <p className="text-sm text-primary">✓ {districtInfo.name}</p>}
                       <p className="text-xs text-muted-foreground">
                         Contact your district administrator for your district code
