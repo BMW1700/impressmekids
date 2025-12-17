@@ -104,7 +104,37 @@ const normalizeWord = (word: string): string => {
   return word.toLowerCase().replace(/[^a-z0-9]/g, '');
 };
 
-// VERY LENIENT word matching - prioritize student confidence over strict accuracy
+// STRICT word correctness check - determines if word was pronounced correctly
+// Used for marking words as correct/incorrect in the UI
+const isWordCorrect = (spoken: string, expected: string): boolean => {
+  const normalizedSpoken = normalizeWord(spoken);
+  const normalizedExpected = normalizeWord(expected);
+  
+  // Empty speech = incorrect (user said something but we couldn't recognize it as this word)
+  if (!normalizedSpoken) return false;
+  if (!normalizedExpected) return false;
+  
+  // Exact match - definitely correct
+  if (normalizedSpoken === normalizedExpected) return true;
+  
+  const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
+  
+  // SHORT WORDS (1-3 chars): Must be very close (1 char tolerance max)
+  if (normalizedExpected.length <= 3) {
+    return distance <= 1;
+  }
+  
+  // MEDIUM WORDS (4-6 chars): 40% tolerance
+  if (normalizedExpected.length <= 6) {
+    return distance <= Math.ceil(normalizedExpected.length * 0.4);
+  }
+  
+  // LONG WORDS (7+ chars): 35% tolerance
+  return distance <= Math.ceil(normalizedExpected.length * 0.35);
+};
+
+// LENIENT word matching - used for ADVANCING through the passage
+// Determines if spoken word could reasonably be an attempt at the expected word
 const isWordMatch = (spoken: string, expected: string): boolean => {
   const normalizedSpoken = normalizeWord(spoken);
   const normalizedExpected = normalizeWord(expected);
@@ -112,16 +142,20 @@ const isWordMatch = (spoken: string, expected: string): boolean => {
   // Exact match - definitely correct
   if (normalizedSpoken === normalizedExpected) return true;
   
-  // Empty check - if no speech detected, benefit of doubt
+  // Empty check - if no speech detected, still advance (user may have mumbled)
   if (!normalizedSpoken) return true;
   if (!normalizedExpected) return false;
   
-  // SHORT WORDS (1-3 chars): Always correct (too easy to mishear)
+  // SHORT WORDS (1-3 chars): Lenient for advancement
   if (normalizedExpected.length <= 3) {
-    return true;
+    // Still advance if first letter matches or close enough
+    if (normalizedSpoken.length > 0 && normalizedSpoken[0] === normalizedExpected[0]) {
+      return true;
+    }
+    return levenshteinDistance(normalizedSpoken, normalizedExpected) <= 2;
   }
   
-  // Check if spoken starts with expected or vice versa (partial matches are fine)
+  // Check if spoken starts with expected or vice versa (partial matches are fine for advancement)
   if (normalizedSpoken.startsWith(normalizedExpected) || normalizedExpected.startsWith(normalizedSpoken)) {
     return true;
   }
@@ -458,8 +492,9 @@ export const WordByWordReader = ({
           const expectedWord = words[currentIdx];
           
           if (isWordMatch(spokenWord, expectedWord)) {
-            // Direct match at current position
-            newMap.set(currentIdx, 'correct');
+            // Word matches current position - check if CORRECTLY pronounced
+            const wasCorrect = isWordCorrect(spokenWord, expectedWord);
+            newMap.set(currentIdx, wasCorrect ? 'correct' : 'incorrect');
           } else {
             // Look ahead up to 2 positions for a match (student might have skipped)
             let foundAhead = -1;
@@ -472,14 +507,15 @@ export const WordByWordReader = ({
             }
             
             if (foundAhead !== -1) {
-              // Mark all words between currentIdx and foundAhead as incorrect
+              // Mark all words between currentIdx and foundAhead as incorrect (skipped)
               for (let i = currentIdx; i < foundAhead; i++) {
                 newMap.set(i, 'incorrect');
               }
-              // Mark the matched word as correct
-              newMap.set(foundAhead, 'correct');
+              // Check if the matched word was CORRECTLY pronounced
+              const wasCorrect = isWordCorrect(spokenWord, words[foundAhead]);
+              newMap.set(foundAhead, wasCorrect ? 'correct' : 'incorrect');
             } else {
-              // No match found anywhere nearby - mark current as incorrect
+              // No match found anywhere nearby - mark current as incorrect and advance
               newMap.set(currentIdx, 'incorrect');
             }
           }
@@ -550,8 +586,8 @@ export const WordByWordReader = ({
       const expectedWord = words[currentPos];
       
       if (expectedWord && latestNewWord) {
-        const isCorrect = isWordMatch(latestNewWord, expectedWord);
-        if (isCorrect) {
+        const wasCorrect = isWordCorrect(latestNewWord, expectedWord);
+        if (wasCorrect) {
           soundEffectsRef.current.correctWord();
           auraCharacter.reactToCorrect();
         } else {
@@ -577,11 +613,11 @@ export const WordByWordReader = ({
       const wordIndex = idx;
       if (wordIndex < words.length) {
         const expectedWord = words[wordIndex];
-        const isCorrect = isWordMatch(spokenWord, expectedWord);
+        const wasCorrect = isWordCorrect(spokenWord, expectedWord);
         
         // OVERRIDE FIX: If final result shows correct but interim marked incorrect, fix it!
         const currentStatus = realtimeWordStatusRef.current.get(wordIndex);
-        if (isCorrect && currentStatus === 'incorrect') {
+        if (wasCorrect && currentStatus === 'incorrect') {
           // Override the incorrect status with correct
           setRealtimeWordStatus(prev => {
             const newMap = new Map(prev);
@@ -598,7 +634,7 @@ export const WordByWordReader = ({
             index: wordIndex,
             startMs: timestamp - 500,
             endMs: timestamp,
-            correct: isCorrect,
+            correct: wasCorrect,
             hesitation: false,
           });
           
