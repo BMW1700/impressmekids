@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { TeacherDrillAttendance } from "./TeacherDrillAttendance";
 
 interface TeacherSafetyTabProps {
   classroomId: string;
@@ -131,6 +132,12 @@ export const TeacherSafetyTab = ({ classroomId, students }: TeacherSafetyTabProp
 
   return (
     <div className="space-y-6">
+      {/* Active Drill Attendance - Shows during drills */}
+      <TeacherDrillAttendance 
+        classroomId={classroomId} 
+        students={students.map(s => ({ id: s.id, full_name: s.full_name }))} 
+      />
+
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">

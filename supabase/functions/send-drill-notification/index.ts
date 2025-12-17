@@ -12,6 +12,7 @@ interface DrillNotificationPayload {
   studentId?: string;
   classroomId?: string;
   studentIds?: string[];
+  markedByTeacher?: boolean;
 }
 
 serve(async (req) => {
@@ -26,9 +27,9 @@ serve(async (req) => {
     );
 
     const payload: DrillNotificationPayload = await req.json();
-    const { type, drillSessionId, studentId, classroomId, studentIds } = payload;
+    const { type, drillSessionId, studentId, classroomId, studentIds, markedByTeacher } = payload;
 
-    console.log('Processing drill notification:', { type, drillSessionId, studentId, classroomId, studentIds });
+    console.log('Processing drill notification:', { type, drillSessionId, studentId, classroomId, studentIds, markedByTeacher });
 
     let drillSession: any = null;
     let drillTypeName = '';
@@ -82,18 +83,21 @@ serve(async (req) => {
         notificationTitle = isEmergency ? `🚨 ${student?.full_name || 'Student'} is SAFE` : `✅ ${student?.full_name || 'Student'} Checked In`;
         notificationBody = isEmergency 
           ? `EMERGENCY UPDATE: Your child has been marked SAFE during the ${drillTypeName.toUpperCase()} emergency.`
+          : markedByTeacher
+          ? `Your child has been marked safe by their teacher during the ${drillTypeName}.`
           : `Your child has been marked safe during the ${drillTypeName}.`;
 
         // Log to audit
         await supabaseClient.from('safety_audit_log').insert({
-          event_type: 'student_checkin',
+          event_type: markedByTeacher ? 'teacher_marked_present' : 'student_checkin',
           drill_session_id: drillSessionId,
           user_id: studentId,
           event_data: {
             student_name: student?.full_name,
             is_emergency: isEmergency,
             drill_type: drillTypeName,
-            parents_notified: targetUserIds.length
+            parents_notified: targetUserIds.length,
+            marked_by_teacher: markedByTeacher || false
           }
         });
         break;
