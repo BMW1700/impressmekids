@@ -21,12 +21,13 @@ export const TeacherListCard = ({ teacher, onViewClassrooms }: TeacherListCardPr
         <CardDescription>{teacher.email}</CardDescription>
       </CardHeader>
       <CardContent className="flex items-center justify-between">
-        <Badge variant="secondary" className="gap-1">
+        <Badge className="gap-1 bg-blue-500 text-white">
           <Users className="h-3 w-3" />
           {teacher.classroom_count} {teacher.classroom_count === 1 ? "Classroom" : "Classrooms"}
         </Badge>
         <Button 
           size="sm" 
+          className="bg-blue-500 hover:bg-blue-600 text-white"
           onClick={() => onViewClassrooms(teacher.id, teacher.full_name)}
         >
           View Classrooms
