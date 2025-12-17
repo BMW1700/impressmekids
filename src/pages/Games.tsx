@@ -1,7 +1,7 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { GameTile } from "@/components/GameTile";
-import { Zap, Trophy, BookOpen, Brain, Calculator, Globe, Hash, PawPrint } from "lucide-react";
+import { Zap, Trophy, BookOpen, Brain, Calculator, Globe, Hash, PawPrint, Map } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const Games = () => {
@@ -43,6 +43,13 @@ const Games = () => {
               gradeRange="Grades K-8"
               path="/games/number-maker"
               icon={<Hash className="h-6 w-6 text-white" />}
+            />
+            <GameTile
+              title="U.S. States Map Quiz"
+              description="Learn U.S. geography by clicking on states! Test your knowledge of all 50 states."
+              gradeRange="Grades 2-8"
+              path="/games/us-states-quiz"
+              icon={<Map className="h-6 w-6 text-white" />}
             />
             <GameTile
               title="Math Race"

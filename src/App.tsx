@@ -23,6 +23,7 @@ import Games from "./pages/Games";
 import JeopardyGame from "./pages/games/JeopardyGame";
 import NumberMaker from "./pages/games/NumberMaker";
 import NameThatAnimalGame from "./pages/games/NameThatAnimalGame";
+import USStatesMapQuiz from "./pages/games/USStatesMapQuiz";
 import JoinClass from "./pages/JoinClass";
 import ClassroomDetail from "./pages/classrooms/ClassroomDetail";
 import QuestionsLibrary from "./pages/teacher/QuestionsLibrary";
@@ -97,6 +98,7 @@ const App = () => (
           <Route path="/games/jeopardy-1v1" element={<JeopardyGame />} />
           <Route path="/games/number-maker" element={<NumberMaker />} />
           <Route path="/games/name-that-animal" element={<NameThatAnimalGame />} />
+          <Route path="/games/us-states-quiz" element={<USStatesMapQuiz />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />
           <Route path="/parent/dashboard" element={<ParentDashboard />} />
