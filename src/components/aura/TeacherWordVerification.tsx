@@ -157,15 +157,15 @@ export const TeacherWordVerification = ({
       }));
       
       // Update the benchmark result with teacher-verified data
+      // Store verification info in notes field until schema is updated
+      const verificationNote = `Teacher verified: Original WCPM ${originalWcpm} → ${adjustedWcpm}, Accuracy ${originalAccuracy}% → ${adjustedAccuracy}%. ${verificationData.length} words reviewed.`;
+      
       const { error } = await supabase
         .from('student_benchmark_results')
         .update({
-          teacher_verified: true,
-          teacher_verification_data: verificationData,
-          verified_wcpm: adjustedWcpm,
-          verified_accuracy: adjustedAccuracy,
-          // Keep original AI values for comparison
-          // ai_wcpm and ai_accuracy are the original values
+          wcpm: adjustedWcpm,
+          accuracy_percentage: adjustedAccuracy,
+          notes: verificationNote,
         })
         .eq('id', resultId);
       
