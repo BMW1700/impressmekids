@@ -415,51 +415,107 @@ export const WordByWordReader = ({
   const lastSoundPlayedAtRef = useRef(0);
   const previousCorrectCountRef = useRef(0);
   
-  // Process interim (real-time) results - ULTRA FAST: Position = spoken word count
+  // Process interim (real-time) results - ULTRA FAST with proper repeated word handling
   const processInterimResult = useCallback((transcript: string, timestamp: number) => {
     if (transcript === lastInterimRef.current) return;
+    
+    // Get previous words BEFORE updating ref
+    const prevSpokenWords = lastInterimRef.current.split(/\s+/).filter(w => w.length > 0);
     lastInterimRef.current = transcript;
     
     const spokenWords = transcript.split(/\s+/).filter(w => w.length > 0);
-    const spokenCount = spokenWords.length;
     
-    // INSTANT SYNC: Target position = spoken word count (always after last word spoken)
-    const targetPosition = Math.min(spokenCount, words.length);
+    // Only process if we have NEW words
+    if (spokenWords.length <= prevSpokenWords.length) return;
     
-    if (targetPosition === 0) return;
+    // Get the newly spoken words
+    const newWords = spokenWords.slice(prevSpokenWords.length);
     
     // Track speech time for cognitive load
     lastSpeechTimeRef.current = Date.now();
     
-    // INSTANT UPDATE: Process ALL words up to target position in single batch
+    // INSTANT UPDATE: Process new words, matching to FIRST UNPROCESSED position
     requestAnimationFrame(() => {
       setRealtimeWordStatus(prev => {
         const newMap = new Map(prev);
-        let newCorrectCount = 0;
         
-        // Process all words up to target position
-        for (let i = 0; i < targetPosition; i++) {
-          const currentStatus = newMap.get(i);
-          // Only update if not already finalized (preserve earlier correct/incorrect decisions)
-          if (currentStatus === 'pending' || currentStatus === 'current' || currentStatus === undefined) {
-            const spokenWord = spokenWords[i] || '';
-            const expectedWord = words[i];
-            const isCorrect = isWordMatch(spokenWord, expectedWord);
-            newMap.set(i, isCorrect ? 'correct' : 'incorrect');
-            
-            // Voice mascot for significantly wrong words
-            if (!isCorrect && shouldSpeakWord(spokenWord, expectedWord) && !spokenIncorrectWordsRef.current.has(i)) {
-              spokenIncorrectWordsRef.current.add(i);
-              const cleanWord = expectedWord.replace(/[^a-zA-Z]/g, '');
-              setTimeout(() => playCorrectPronunciation(cleanWord), 50);
+        // Helper: find first unprocessed position
+        const getFirstUnprocessedIndex = () => {
+          for (let i = 0; i < words.length; i++) {
+            const status = newMap.get(i);
+            if (status !== 'correct' && status !== 'incorrect') {
+              return i;
             }
           }
-          if (newMap.get(i) === 'correct') newCorrectCount++;
+          return words.length; // All processed
+        };
+        
+        // Process each newly spoken word
+        for (const spokenWord of newWords) {
+          let currentIdx = getFirstUnprocessedIndex();
+          if (currentIdx >= words.length) break; // Done with passage
+          
+          const expectedWord = words[currentIdx];
+          
+          if (isWordMatch(spokenWord, expectedWord)) {
+            // Direct match at current position
+            newMap.set(currentIdx, 'correct');
+          } else {
+            // Look ahead up to 2 positions for a match (student might have skipped)
+            let foundAhead = -1;
+            for (let ahead = 1; ahead <= 2; ahead++) {
+              const aheadIdx = currentIdx + ahead;
+              if (aheadIdx < words.length && isWordMatch(spokenWord, words[aheadIdx])) {
+                foundAhead = aheadIdx;
+                break;
+              }
+            }
+            
+            if (foundAhead !== -1) {
+              // Mark all words between currentIdx and foundAhead as incorrect
+              for (let i = currentIdx; i < foundAhead; i++) {
+                newMap.set(i, 'incorrect');
+                // Voice mascot for skipped words
+                if (!spokenIncorrectWordsRef.current.has(i)) {
+                  spokenIncorrectWordsRef.current.add(i);
+                  const cleanWord = words[i].replace(/[^a-zA-Z]/g, '');
+                  setTimeout(() => playCorrectPronunciation(cleanWord), 50);
+                }
+              }
+              // Mark the matched word as correct
+              newMap.set(foundAhead, 'correct');
+            } else {
+              // No match found anywhere nearby - mark current as incorrect
+              newMap.set(currentIdx, 'incorrect');
+              // Voice mascot for wrong word
+              if (shouldSpeakWord(spokenWord, expectedWord) && !spokenIncorrectWordsRef.current.has(currentIdx)) {
+                spokenIncorrectWordsRef.current.add(currentIdx);
+                const cleanWord = expectedWord.replace(/[^a-zA-Z]/g, '');
+                setTimeout(() => playCorrectPronunciation(cleanWord), 50);
+              }
+            }
+          }
         }
         
-        // Set next word as current
-        if (targetPosition < words.length) {
-          newMap.set(targetPosition, 'current');
+        // Count correct words and update position
+        let newCorrectCount = 0;
+        let nextIdx = 0;
+        for (let i = 0; i < words.length; i++) {
+          const status = newMap.get(i);
+          if (status === 'correct') newCorrectCount++;
+          if (status === 'correct' || status === 'incorrect') {
+            nextIdx = i + 1;
+          }
+        }
+        
+        // Clear old 'current' markers and set new one
+        for (let i = 0; i < words.length; i++) {
+          if (newMap.get(i) === 'current') {
+            newMap.set(i, 'pending');
+          }
+        }
+        if (nextIdx < words.length) {
+          newMap.set(nextIdx, 'current');
         }
         
         // XP update based on new correct words
@@ -472,7 +528,6 @@ export const WordByWordReader = ({
           setCorrectStreak(prev => {
             const newStreak = prev + correctDelta;
             correctStreakRef.current = newStreak;
-            // Milestone celebrations
             if (newStreak >= 5 && prev < 5) {
               setCelebrationMessage('On Fire! 🔥');
               setCelebrationTrigger(Date.now());
@@ -486,25 +541,28 @@ export const WordByWordReader = ({
           });
         }
         
+        // Update position
+        realtimeWordIndexRef.current = nextIdx;
+        setRealtimeWordIndex(nextIdx);
+        setCurrentWordIndex(nextIdx);
+        
         realtimeWordStatusRef.current = newMap;
         return newMap;
       });
-      
-      // Update position to match spoken word count - ALWAYS INSTANT
-      realtimeWordIndexRef.current = targetPosition;
-      setRealtimeWordIndex(targetPosition);
-      setCurrentWordIndex(targetPosition);
     });
     
     // THROTTLED SOUND: Play sound for latest word (every 3rd at high speed)
-    const latestWord = spokenWords[spokenCount - 1];
-    const expectedWord = words[spokenCount - 1];
-    if (expectedWord && latestWord) {
-      const isCorrect = isWordMatch(latestWord, expectedWord);
-      const wordsSinceLastSound = spokenCount - lastSoundPlayedAtRef.current;
+    const processedCount = spokenWords.length;
+    const wordsSinceLastSound = processedCount - lastSoundPlayedAtRef.current;
+    
+    if (wordsSinceLastSound >= 3 || processedCount <= 3) {
+      // Get latest result from ref after update
+      const latestNewWord = newWords[newWords.length - 1];
+      const currentPos = realtimeWordIndexRef.current > 0 ? realtimeWordIndexRef.current - 1 : 0;
+      const expectedWord = words[currentPos];
       
-      // Play sound every 3 words at high speed, or always for first 3 words
-      if (wordsSinceLastSound >= 3 || spokenCount <= 3) {
+      if (expectedWord && latestNewWord) {
+        const isCorrect = isWordMatch(latestNewWord, expectedWord);
         if (isCorrect) {
           soundEffectsRef.current.correctWord();
           auraCharacter.reactToCorrect();
@@ -514,7 +572,7 @@ export const WordByWordReader = ({
           setCorrectStreak(0);
           correctStreakRef.current = 0;
         }
-        lastSoundPlayedAtRef.current = spokenCount;
+        lastSoundPlayedAtRef.current = processedCount;
       }
     }
   }, [words, auraCharacter]);
