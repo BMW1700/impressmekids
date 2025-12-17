@@ -475,24 +475,12 @@ export const WordByWordReader = ({
               // Mark all words between currentIdx and foundAhead as incorrect
               for (let i = currentIdx; i < foundAhead; i++) {
                 newMap.set(i, 'incorrect');
-                // Voice mascot for skipped words
-                if (!spokenIncorrectWordsRef.current.has(i)) {
-                  spokenIncorrectWordsRef.current.add(i);
-                  const cleanWord = words[i].replace(/[^a-zA-Z]/g, '');
-                  setTimeout(() => playCorrectPronunciation(cleanWord), 50);
-                }
               }
               // Mark the matched word as correct
               newMap.set(foundAhead, 'correct');
             } else {
               // No match found anywhere nearby - mark current as incorrect
               newMap.set(currentIdx, 'incorrect');
-              // Voice mascot for wrong word
-              if (shouldSpeakWord(spokenWord, expectedWord) && !spokenIncorrectWordsRef.current.has(currentIdx)) {
-                spokenIncorrectWordsRef.current.add(currentIdx);
-                const cleanWord = expectedWord.replace(/[^a-zA-Z]/g, '');
-                setTimeout(() => playCorrectPronunciation(cleanWord), 50);
-              }
             }
           }
         }
@@ -615,19 +603,6 @@ export const WordByWordReader = ({
           });
           
           processedWordsRef.current.add(wordIndex);
-          
-          // Voice mascot check in final results (backup if interim didn't catch it)
-          const shouldSpeak = shouldSpeakWord(spokenWord, expectedWord);
-          if (shouldSpeak && !spokenIncorrectWordsRef.current.has(wordIndex)) {
-            spokenIncorrectWordsRef.current.add(wordIndex);
-            console.log('🔊 VOICE (final):', expectedWord);
-            // DEBUG toast to confirm voice is triggering
-            toast({ title: `🔊 Saying: ${expectedWord}`, description: `(heard: ${spokenWord})`, duration: 2000 });
-            const cleanWord = expectedWord.replace(/[^a-zA-Z]/g, '');
-            setTimeout(() => {
-              playCorrectPronunciation(cleanWord);
-            }, 100);
-          }
         }
       }
     });
