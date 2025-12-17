@@ -584,10 +584,7 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden p-4 bg-gradient-hero">
-      {/* Contrast scrim so text/buttons stay readable while keeping the Home gradient */}
-      <div className="absolute inset-0 bg-foreground/35" />
-
-      <div className="w-full max-w-md px-6 py-10 relative z-10 bg-foreground/25 backdrop-blur-xl rounded-3xl border border-white/15 shadow-2xl">
+      <div className="w-full max-w-md px-6 py-10 relative z-10 bg-white/20 backdrop-blur-xl rounded-3xl border border-white/25 shadow-2xl">
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <Link to="/">
@@ -666,7 +663,7 @@ const Auth = () => {
                 <div className="w-full border-t border-white/10" />
               </div>
               <div className="relative flex justify-center">
-                <span className="bg-foreground/60 backdrop-blur px-4 py-1 rounded-full text-sm text-white/60 border border-white/10">or</span>
+                <span className="bg-white/20 backdrop-blur px-4 py-1 rounded-full text-sm text-white/70 border border-white/20">or</span>
               </div>
             </div>
 
@@ -758,7 +755,7 @@ const Auth = () => {
                 <div className="w-full border-t border-white/10" />
               </div>
               <div className="relative flex justify-center">
-                <span className="bg-foreground/60 backdrop-blur px-4 py-1 rounded-full text-sm text-white/60 border border-white/10">or sign up with email</span>
+                <span className="bg-white/20 backdrop-blur px-4 py-1 rounded-full text-sm text-white/70 border border-white/20">or sign up with email</span>
               </div>
             </div>
 
