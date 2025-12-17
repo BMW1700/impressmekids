@@ -1036,10 +1036,24 @@ export const WordByWordReader = ({
         else if (wcpm >= targetWCPM * 0.7) benchmarkStatus = 'below';
         else benchmarkStatus = 'well_below';
         
-        // Prepare notes with confidence data for teacher verification (until schema updated)
-        const confidenceNote = flaggedWords.length > 0 
-          ? `AI Confidence: ${sessionConfidence.score}% (${sessionConfidence.level}). ${flaggedWords.length} words flagged for verification.`
-          : `AI Confidence: ${sessionConfidence.score}% (${sessionConfidence.level}). High accuracy - no verification needed.`;
+        // Prepare notes with confidence data AND flagged words JSON for teacher verification
+        const flaggedWordsJson = flaggedWords.map(fw => ({
+          index: fw.wordIndex,
+          expected: fw.expected,
+          spoken: fw.spoken,
+          aiResult: fw.aiResult,
+          confidence: fw.confidence < 0.5 ? 'low' : fw.confidence < 0.8 ? 'medium' : 'high',
+          matchScore: Math.round(fw.confidence * 100),
+          speechConfidence: fw.confidence,
+          timestampMs: fw.timestamp || 0,
+        }));
+        
+        const confidenceNote = JSON.stringify({
+          aiConfidence: sessionConfidence.score,
+          level: sessionConfidence.level,
+          flaggedCount: flaggedWords.length,
+          flaggedWords: flaggedWordsJson,
+        });
         
         const { error: benchmarkError } = await supabase
           .from('student_benchmark_results')
@@ -1063,7 +1077,7 @@ export const WordByWordReader = ({
             words_read: wordsRead,
             duration_seconds: totalDuration,
             audio_url: audioUrl, // Link audio for teacher playback
-            notes: confidenceNote, // Store confidence info until schema updated
+            notes: confidenceNote, // Store full confidence data + flagged words as JSON
           });
         
         if (benchmarkError) {
