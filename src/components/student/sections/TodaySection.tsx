@@ -6,24 +6,26 @@ import { Calendar, AlertCircle } from "lucide-react";
 import { useDueToday } from "@/hooks/useDueToday";
 import { Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface TodaySectionProps {
   studentId: string;
 }
 
 export const TodaySection = ({ studentId }: TodaySectionProps) => {
+  const { t } = useLanguage();
   const { data, isLoading } = useDueToday(studentId);
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'Test':
-        return 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800';
-      case 'Quiz':
-        return 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800';
-      case 'Homework':
-        return 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800';
+      case "Test":
+        return "bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800";
+      case "Quiz":
+        return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800";
+      case "Homework":
+        return "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800";
       default:
-        return 'bg-muted text-muted-foreground';
+        return "bg-muted text-muted-foreground";
     }
   };
 
@@ -37,14 +39,14 @@ export const TodaySection = ({ studentId }: TodaySectionProps) => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground">Today's Tasks</h1>
+      <h1 className="text-3xl font-bold text-foreground">{t("student.today.title")}</h1>
 
       {/* Due Today */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-primary" />
-            <CardTitle>Due Today</CardTitle>
+            <CardTitle>{t("student.today.dueToday")}</CardTitle>
             <Badge variant="secondary">{data?.dueToday.length || 0}</Badge>
           </div>
         </CardHeader>
@@ -66,18 +68,22 @@ export const TodaySection = ({ studentId }: TodaySectionProps) => {
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {assignment.classrooms?.name} • Due {format(new Date(assignment.due_date), "h:mm a")}
+                      {assignment.classrooms?.name} •{" "}
+                      {t("student.today.dueAt").replace(
+                        "{time}",
+                        format(new Date(assignment.due_date), "h:mm a")
+                      )}
                     </p>
                   </div>
                   <Link to={`/student/assignments/${assignment.id}`}>
-                    <Button>Start</Button>
+                    <Button>{t("student.today.start")}</Button>
                   </Link>
                 </div>
               ))}
             </div>
           ) : (
             <p className="text-muted-foreground text-center py-8">
-              No assignments due today. Great job staying on top of your work!
+              {t("student.today.noDueToday")}
             </p>
           )}
         </CardContent>
@@ -89,7 +95,7 @@ export const TodaySection = ({ studentId }: TodaySectionProps) => {
           <CardHeader>
             <div className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-destructive" />
-              <CardTitle className="text-destructive">Past Due</CardTitle>
+              <CardTitle className="text-destructive">{t("student.today.pastDue")}</CardTitle>
               <Badge variant="destructive">{data.pastDue.length}</Badge>
             </div>
           </CardHeader>
@@ -110,11 +116,15 @@ export const TodaySection = ({ studentId }: TodaySectionProps) => {
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {assignment.classrooms?.name} • Was due {format(new Date(assignment.due_date), "MMM d")}
+                      {assignment.classrooms?.name} •{" "}
+                      {t("student.today.wasDue").replace(
+                        "{date}",
+                        format(new Date(assignment.due_date), "MMM d")
+                      )}
                     </p>
                   </div>
                   <Link to={`/student/assignments/${assignment.id}`}>
-                    <Button variant="destructive">Complete Now</Button>
+                    <Button variant="destructive">{t("student.today.completeNow")}</Button>
                   </Link>
                 </div>
               ))}

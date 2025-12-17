@@ -2,12 +2,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AnnouncementCard } from "@/components/AnnouncementCard";
 import { useAnnouncementHistory } from "@/hooks/useAnnouncementHistory";
 import { Loader2 } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface AnnouncementsSectionProps {
   studentId: string;
 }
 
 export const AnnouncementsSection = ({ studentId }: AnnouncementsSectionProps) => {
+  const { t } = useLanguage();
   const { data, isLoading } = useAnnouncementHistory(studentId);
 
   if (isLoading) {
@@ -20,13 +22,13 @@ export const AnnouncementsSection = ({ studentId }: AnnouncementsSectionProps) =
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground">Announcements</h1>
+      <h1 className="text-3xl font-bold text-foreground">{t("student.announcements.title")}</h1>
 
       {/* Today */}
       {data?.today && data.today.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Today</CardTitle>
+            <CardTitle>{t("student.announcements.today")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {data.today.map((announcement: any) => (
@@ -47,7 +49,7 @@ export const AnnouncementsSection = ({ studentId }: AnnouncementsSectionProps) =
       {data?.lastFourteenDays && data.lastFourteenDays.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Last 14 Days</CardTitle>
+            <CardTitle>{t("student.announcements.last14Days")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {data.lastFourteenDays.map((announcement: any) => (
@@ -67,7 +69,7 @@ export const AnnouncementsSection = ({ studentId }: AnnouncementsSectionProps) =
       {!data?.today?.length && !data?.lastFourteenDays?.length && (
         <Card>
           <CardContent className="text-center py-12">
-            <p className="text-muted-foreground">No announcements yet.</p>
+            <p className="text-muted-foreground">{t("student.announcements.none")}</p>
           </CardContent>
         </Card>
       )}

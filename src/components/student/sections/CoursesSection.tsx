@@ -2,20 +2,23 @@ import { ClassroomCard } from "@/components/ClassroomCard";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface CoursesSectionProps {
   classrooms: any[];
 }
 
 export const CoursesSection = ({ classrooms }: CoursesSectionProps) => {
+  const { t } = useLanguage();
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-foreground">My Courses</h1>
+        <h1 className="text-3xl font-bold text-foreground">{t("student.courses.title")}</h1>
         <Link to="/join-class">
           <Button>
             <Plus className="h-4 w-4 mr-2" />
-            Join Course
+            {t("student.courses.joinCourse")}
           </Button>
         </Link>
       </div>
@@ -36,11 +39,11 @@ export const CoursesSection = ({ classrooms }: CoursesSectionProps) => {
         </div>
       ) : (
         <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4">You haven't joined any courses yet.</p>
+          <p className="text-muted-foreground mb-4">{t("student.courses.noCourses")}</p>
           <Link to="/join-class">
             <Button>
               <Plus className="h-4 w-4 mr-2" />
-              Join Your First Course
+              {t("student.courses.joinFirst")}
             </Button>
           </Link>
         </div>
