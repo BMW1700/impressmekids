@@ -28,14 +28,36 @@ export function AccountVerificationRequests() {
   const { data: requests, isLoading } = useQuery({
     queryKey: ['account-verification-requests'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch pending requests
+      const { data: pendingRequests, error } = await supabase
         .from('account_verification_requests')
         .select('*')
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as VerificationRequest[];
+      if (!pendingRequests || pendingRequests.length === 0) return [];
+
+      // Get profile IDs to check verification status
+      const profileIds = pendingRequests.map(r => r.profile_id);
+      
+      // Fetch profiles to check is_verified status
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, is_verified')
+        .in('id', profileIds);
+
+      if (profilesError) throw profilesError;
+
+      // Create a set of already-verified profile IDs
+      const verifiedProfileIds = new Set(
+        profiles?.filter(p => p.is_verified === true).map(p => p.id) || []
+      );
+
+      // Filter out requests where profile is already verified
+      return pendingRequests.filter(
+        request => !verifiedProfileIds.has(request.profile_id)
+      ) as VerificationRequest[];
     },
   });
 
