@@ -10,8 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Loader2, ArrowLeft } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const RequestAccess = () => {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [childEmail, setChildEmail] = useState("");
   const [message, setMessage] = useState("");
@@ -129,31 +131,24 @@ const RequestAccess = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-2xl">
-        <Button 
-          variant="ghost" 
-          className="mb-6"
-          onClick={() => navigate("/parent/dashboard")}
-        >
+        <Button variant="ghost" className="mb-6" onClick={() => navigate("/parent/dashboard")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Dashboard
+          {t("parentRequestAccess.backToDashboard")}
         </Button>
 
         <Card>
           <CardHeader>
-            <CardTitle>Link Child Account</CardTitle>
-            <CardDescription>
-              Enter your child's email to request access to their progress. 
-              Their teacher will need to approve the request.
-            </CardDescription>
+            <CardTitle>{t("parentRequestAccess.title")}</CardTitle>
+            <CardDescription>{t("parentRequestAccess.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="childEmail">Child's Email</Label>
+                <Label htmlFor="childEmail">{t("parentRequestAccess.childEmailLabel")}</Label>
                 <Input
                   id="childEmail"
                   type="email"
-                  placeholder="student@school.edu"
+                  placeholder={t("parentRequestAccess.childEmailPlaceholder")}
                   value={childEmail}
                   onChange={(e) => setChildEmail(e.target.value)}
                   required
@@ -161,10 +156,10 @@ const RequestAccess = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="message">Message to Teacher (Optional)</Label>
+                <Label htmlFor="message">{t("parentRequestAccess.messageLabel")}</Label>
                 <Textarea
                   id="message"
-                  placeholder="Hello, I am [Child's Name]'s parent. I would like access to view their progress on Impress Me Kids."
+                  placeholder={t("parentRequestAccess.messagePlaceholder")}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   rows={4}
@@ -175,10 +170,10 @@ const RequestAccess = () => {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending Request...
+                    {t("parentRequestAccess.sending")}
                   </>
                 ) : (
-                  "Send Access Request"
+                  t("parentRequestAccess.send")
                 )}
               </Button>
             </form>

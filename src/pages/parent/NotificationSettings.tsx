@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ArrowLeft, Bell, Mail, Loader2 } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface NotificationPreferences {
   notify_assignments: boolean;
@@ -20,6 +21,7 @@ interface NotificationPreferences {
 }
 
 export default function NotificationSettings() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -126,36 +128,28 @@ export default function NotificationSettings() {
     <div className="min-h-screen flex flex-col bg-background">
       <Header onSignOut={() => navigate("/auth")} />
       <main className="flex-1 container max-w-4xl mx-auto px-4 py-8">
-        <Button
-          variant="ghost"
-          className="mb-6"
-          onClick={() => navigate(-1)}
-        >
+        <Button variant="ghost" className="mb-6" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
+          {t("parentNotificationSettings.back")}
         </Button>
 
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Bell className="h-5 w-5" />
-              Notification Preferences
+              {t("parentNotificationSettings.title")}
             </CardTitle>
-            <CardDescription>
-              Configure how and when you receive notifications about your child's activities
-            </CardDescription>
+            <CardDescription>{t("parentNotificationSettings.description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Notification Types */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">What to Notify About</h3>
-              
+              <h3 className="text-lg font-semibold">{t("parentNotificationSettings.section.what")}</h3>
+
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label htmlFor="notify-assignments">Assignments</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Get notified about upcoming assignments and homework
-                  </p>
+                  <Label htmlFor="notify-assignments">{t("parentNotificationSettings.assignments")}</Label>
+                  <p className="text-sm text-muted-foreground">{t("parentNotificationSettings.assignmentsDesc")}</p>
                 </div>
                 <Switch
                   id="notify-assignments"
@@ -168,10 +162,8 @@ export default function NotificationSettings() {
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label htmlFor="notify-tests">Tests & Quizzes</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Get notified about upcoming tests and quizzes
-                  </p>
+                  <Label htmlFor="notify-tests">{t("parentNotificationSettings.tests")}</Label>
+                  <p className="text-sm text-muted-foreground">{t("parentNotificationSettings.testsDesc")}</p>
                 </div>
                 <Switch
                   id="notify-tests"
@@ -184,10 +176,8 @@ export default function NotificationSettings() {
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label htmlFor="notify-events">Events & Field Trips</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Get notified about field trips, guest speakers, and special events
-                  </p>
+                  <Label htmlFor="notify-events">{t("parentNotificationSettings.events")}</Label>
+                  <p className="text-sm text-muted-foreground">{t("parentNotificationSettings.eventsDesc")}</p>
                 </div>
                 <Switch
                   id="notify-events"
@@ -201,10 +191,10 @@ export default function NotificationSettings() {
 
             {/* Notification Timing */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">When to Notify</h3>
-              
+              <h3 className="text-lg font-semibold">{t("parentNotificationSettings.section.when")}</h3>
+
               <div className="space-y-2">
-                <Label htmlFor="days-before">Notify me this many days before:</Label>
+                <Label htmlFor="days-before">{t("parentNotificationSettings.daysBeforeLabel")}</Label>
                 <Select
                   value={preferences.notification_days_before.toString()}
                   onValueChange={(value) =>
@@ -215,12 +205,12 @@ export default function NotificationSettings() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="0">On the day</SelectItem>
-                    <SelectItem value="1">1 day before</SelectItem>
-                    <SelectItem value="2">2 days before</SelectItem>
-                    <SelectItem value="3">3 days before</SelectItem>
-                    <SelectItem value="5">5 days before</SelectItem>
-                    <SelectItem value="7">1 week before</SelectItem>
+                    <SelectItem value="0">{t("parentNotificationSettings.dayOf")}</SelectItem>
+                    <SelectItem value="1">{t("parentNotificationSettings.oneDay")}</SelectItem>
+                    <SelectItem value="2">{t("parentNotificationSettings.twoDays")}</SelectItem>
+                    <SelectItem value="3">{t("parentNotificationSettings.threeDays")}</SelectItem>
+                    <SelectItem value="5">{t("parentNotificationSettings.fiveDays")}</SelectItem>
+                    <SelectItem value="7">{t("parentNotificationSettings.oneWeek")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -228,16 +218,14 @@ export default function NotificationSettings() {
 
             {/* Notification Channels */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">How to Notify</h3>
-              
+              <h3 className="text-lg font-semibold">{t("parentNotificationSettings.section.how")}</h3>
+
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5 flex items-center gap-2">
                   <Mail className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <Label htmlFor="email-notifications">Email Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Receive notifications via email
-                    </p>
+                    <Label htmlFor="email-notifications">{t("parentNotificationSettings.email")}</Label>
+                    <p className="text-sm text-muted-foreground">{t("parentNotificationSettings.emailDesc")}</p>
                   </div>
                 </div>
                 <Switch
@@ -253,10 +241,8 @@ export default function NotificationSettings() {
                 <div className="space-y-0.5 flex items-center gap-2">
                   <Bell className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <Label htmlFor="inapp-notifications">In-App Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      See notifications when you log in to the platform
-                    </p>
+                    <Label htmlFor="inapp-notifications">{t("parentNotificationSettings.inApp")}</Label>
+                    <p className="text-sm text-muted-foreground">{t("parentNotificationSettings.inAppDesc")}</p>
                   </div>
                 </div>
                 <Switch
@@ -271,13 +257,9 @@ export default function NotificationSettings() {
 
             {/* Save Button */}
             <div className="pt-4">
-              <Button
-                onClick={handleSave}
-                disabled={saving}
-                className="w-full sm:w-auto"
-              >
+              <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Preferences
+                {t("parentNotificationSettings.save")}
               </Button>
             </div>
           </CardContent>
