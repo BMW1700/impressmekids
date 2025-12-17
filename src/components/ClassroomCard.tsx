@@ -22,12 +22,12 @@ export const ClassroomCard = ({
   createdAt 
 }: ClassroomCardProps) => {
   return (
-    <Card variant="glass" className="hover-lift group">
+    <Card variant="glass" className="hover-lift group min-w-[320px]">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between mb-2">
-          <CardTitle className="text-2xl font-black text-gradient-purple">{name}</CardTitle>
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <CardTitle className="text-xl font-black text-gradient-purple">{name}</CardTitle>
           {joinCode && (
-            <Badge variant="purple" className="font-mono text-sm px-3 py-1.5">
+            <Badge variant="purple" className="font-mono text-xs px-2 py-1 shrink-0">
               {joinCode}
             </Badge>
           )}
@@ -37,10 +37,10 @@ export const ClassroomCard = ({
         )}
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center gap-4 text-sm">
+        <div className="flex flex-wrap items-center gap-3 text-sm">
           <div className="flex items-center gap-2 px-3 py-2 rounded-xl glass-card">
-            <div className="icon-circle-blue w-8 h-8">
-              <Users className="h-4 w-4 text-white" />
+            <div className="icon-circle-blue w-7 h-7 flex items-center justify-center">
+              <Users className="h-3.5 w-3.5 text-white" />
             </div>
             <span className="font-bold">{studentCount}</span>
             <span className="text-muted-foreground">students</span>
