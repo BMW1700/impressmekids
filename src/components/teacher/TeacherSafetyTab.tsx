@@ -74,12 +74,7 @@ export const TeacherSafetyTab = ({ classroomId, students }: TeacherSafetyTabProp
   };
 
   const handleReportEmergency = async () => {
-    if (!selectedEmergency || !description.trim()) {
-      toast({
-        title: "Missing Information",
-        description: "Please provide a description of the emergency.",
-        variant: "destructive",
-      });
+    if (!selectedEmergency) {
       return;
     }
 
@@ -211,7 +206,7 @@ export const TeacherSafetyTab = ({ classroomId, students }: TeacherSafetyTabProp
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="emergency-description">Description</Label>
+              <Label htmlFor="emergency-description">Description (Optional)</Label>
               <Textarea
                 id="emergency-description"
                 placeholder="Describe the emergency situation, location details, and any immediate actions taken..."
@@ -235,7 +230,7 @@ export const TeacherSafetyTab = ({ classroomId, students }: TeacherSafetyTabProp
             <Button
               variant="destructive"
               onClick={handleReportEmergency}
-              disabled={isSubmitting || !description.trim() || (selectedEmergency === "Other" && !otherTitle.trim())}
+              disabled={isSubmitting || (selectedEmergency === "Other" && !otherTitle.trim())}
             >
               {isSubmitting ? (
                 <>
