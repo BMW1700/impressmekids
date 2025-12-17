@@ -5,7 +5,6 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -199,7 +198,7 @@ const ChildDetail = () => {
       setAssignmentConsent(value);
     }
 
-    toast.success(`Consent ${value ? "granted" : "revoked"}`);
+    toast.success("Consent granted");
     loadChildData(); // Reload to fetch AURA records if consent was just granted
   };
 
@@ -245,30 +244,34 @@ const ChildDetail = () => {
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <Label htmlFor="aura-consent">AURA Recording Consent</Label>
+                    <Label>AURA Recording Consent</Label>
                     <p className="text-sm text-muted-foreground">
                       Allow collection of speech recordings for AI analysis
                     </p>
                   </div>
-                  <Switch
-                    id="aura-consent"
-                    checked={auraConsent}
-                    onCheckedChange={(val) => updateConsent("aura", val)}
-                  />
+                  {auraConsent ? (
+                    <span className="text-sm text-muted-foreground font-medium">Allowed</span>
+                  ) : (
+                    <Button onClick={() => updateConsent("aura", true)}>
+                      Allow
+                    </Button>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <Label htmlFor="assignment-consent">Assignment Data Consent</Label>
+                    <Label>Assignment Data Consent</Label>
                     <p className="text-sm text-muted-foreground">
                       Allow collection of assignment submissions and grades
                     </p>
                   </div>
-                  <Switch
-                    id="assignment-consent"
-                    checked={assignmentConsent}
-                    onCheckedChange={(val) => updateConsent("assignment", val)}
-                  />
+                  {assignmentConsent ? (
+                    <span className="text-sm text-muted-foreground font-medium">Allowed</span>
+                  ) : (
+                    <Button onClick={() => updateConsent("assignment", true)}>
+                      Allow
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
