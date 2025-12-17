@@ -583,12 +583,7 @@ const Auth = () => {
   };
 
   return (
-    <div 
-      className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden p-4"
-      style={{
-        background: 'linear-gradient(135deg, hsl(280 60% 50%) 0%, hsl(300 45% 55%) 35%, hsl(25 60% 65%) 70%, hsl(45 75% 65%) 100%)'
-      }}
-    >
+    <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden p-4 bg-gradient-hero">
       <div className="w-full max-w-md px-6 relative z-10">
         {/* Logo */}
         <div className="flex justify-center mb-8">
