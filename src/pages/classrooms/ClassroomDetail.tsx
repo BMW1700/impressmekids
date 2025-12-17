@@ -580,7 +580,7 @@ const ClassroomDetail = () => {
 
           <Tabs defaultValue={searchParams.get('tab') || (isStudent ? "assignments" : "students")} className="mb-8">
             <TabsList className={cn("grid w-full h-auto p-2 bg-muted/50 rounded-xl", isTeacher ? "grid-cols-5 gap-2" : "grid-cols-3 gap-2")}>
-              {/* Teacher Top Row: Syllabus, Attendance, Assignments, Announcements, Students */}
+              {/* Teacher Row 1: Syllabus, Attendance, Students, Safety, Leaderboard */}
               {isTeacher && <>
                   <TabsTrigger value="syllabus" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <FileText className="mr-2 h-4 w-4" />
@@ -590,57 +590,58 @@ const ClassroomDetail = () => {
                     <UserCheck className="mr-2 h-4 w-4" />
                     Attendance
                   </TabsTrigger>
+                  <TabsTrigger value="students" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
+                    <Users className="mr-2 h-4 w-4" />
+                    Students
+                  </TabsTrigger>
                   <TabsTrigger value="safety" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <Shield className="mr-2 h-4 w-4" />
                     Safety
                   </TabsTrigger>
-                  <TabsTrigger value="behavior" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
+                  <TabsTrigger value="leaderboard" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <Trophy className="mr-2 h-4 w-4" />
-                    Behavior
+                    Leaderboard
                   </TabsTrigger>
-                  <TabsTrigger value="assignments" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <FileText className="mr-2 h-4 w-4" />
-                    Assignments
+                  {/* Teacher Row 2: Rubrics, Announcements, Assignments, Discussions, AI Insights */}
+                  <TabsTrigger value="rubrics" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
+                    <Grid3X3 className="mr-2 h-4 w-4" />
+                    Rubrics
                   </TabsTrigger>
                   <TabsTrigger value="announcements" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <Megaphone className="mr-2 h-4 w-4" />
                     Announcements
                   </TabsTrigger>
-                  <TabsTrigger value="students" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <Users className="mr-2 h-4 w-4" />
-                    Students
+                  <TabsTrigger value="assignments" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
+                    <FileText className="mr-2 h-4 w-4" />
+                    Assignments
                   </TabsTrigger>
-                  {/* Teacher Bottom Row: Leaderboard, Study Materials, Tournaments, AI Insights, Parent Requests */}
-                  <TabsTrigger value="leaderboard" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
+                  <TabsTrigger value="discussions" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Discussions
+                  </TabsTrigger>
+                  <TabsTrigger value="ai-insights" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    AI Insights
+                  </TabsTrigger>
+                  {/* Teacher Row 3: Parent Requests, Behavior, Study Materials, Study Games, Journal */}
+                  <TabsTrigger value="parent-requests" className="relative data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Parent Requests
+                    {parentRequests.filter(r => r.status === 'pending').length > 0 && <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
+                        {parentRequests.filter(r => r.status === 'pending').length}
+                      </Badge>}
+                  </TabsTrigger>
+                  <TabsTrigger value="behavior" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <Trophy className="mr-2 h-4 w-4" />
-                    Leaderboard
+                    Behavior
                   </TabsTrigger>
                   <TabsTrigger value="study" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <BookOpen className="mr-2 h-4 w-4" />
                     Study Materials
                   </TabsTrigger>
                   <TabsTrigger value="tournaments" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <Trophy className="mr-2 h-4 w-4" />
+                    <Play className="mr-2 h-4 w-4" />
                     Study Games
-                  </TabsTrigger>
-                  <TabsTrigger value="ai-insights" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <BarChart3 className="mr-2 h-4 w-4" />
-                    AI Insights
-                  </TabsTrigger>
-                  <TabsTrigger value="parent-requests" className="relative data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <UserCheck className="mr-2 h-4 w-4" />
-                    Parent Requests
-                    {parentRequests.filter(r => r.status === 'pending').length > 0 && <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
-                        {parentRequests.filter(r => r.status === 'pending').length}
-                      </Badge>}
-                  </TabsTrigger>
-                  <TabsTrigger value="discussions" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    Discussions
-                  </TabsTrigger>
-                  <TabsTrigger value="rubrics" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <Grid3X3 className="mr-2 h-4 w-4" />
-                    Rubrics
                   </TabsTrigger>
                   <TabsTrigger value="journal" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
                     <BookHeart className="mr-2 h-4 w-4" />
