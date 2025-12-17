@@ -27,6 +27,7 @@ const StudentDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeSection, setActiveSection] = useState("home");
   const [tabletSidebarOpen, setTabletSidebarOpen] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: assignmentStats } = useStudentAssignmentStats(profile?.id);
@@ -139,6 +140,27 @@ const StudentDashboard = () => {
           />
         </div>
         
+        {/* Mobile hamburger menu + Sheet - visible below md only */}
+        <div className="block md:hidden fixed top-20 left-4 z-50">
+          <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
+            <SheetTrigger asChild>
+              <button className="p-2.5 rounded-xl bg-background/90 backdrop-blur-sm border border-border/50 shadow-lg hover:bg-muted/80 transition-colors">
+                <Menu className="h-5 w-5 text-foreground" />
+              </button>
+            </SheetTrigger>
+            <SheetContent side="left" className="p-0 w-72">
+              <StudentDashboardSidebar 
+                activeSection={activeSection} 
+                onSectionChange={setActiveSection}
+                onNavigateToGames={() => navigate('/games')}
+                onNavigateToAuraReading={() => navigate('/student/aura-practice')}
+                isSheet={true}
+                onClose={() => setMobileSidebarOpen(false)}
+              />
+            </SheetContent>
+          </Sheet>
+        </div>
+
         {/* Tablet hamburger menu + Sheet - visible on md to lg only */}
         <div className="hidden md:block lg:hidden fixed top-20 left-4 z-50">
           <Sheet open={tabletSidebarOpen} onOpenChange={setTabletSidebarOpen}>
