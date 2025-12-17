@@ -19,9 +19,14 @@ export const GradeWeightsForm = ({
   isSaving = false,
 }: GradeWeightsFormProps) => {
   const defaultWeights = { test: 35, quiz: 30, homework: 25, attendance: 10, behavior: 0 };
-  const mergedInitialWeights = { ...defaultWeights, ...initialWeights };
-  const [weights, setWeights] = useState<GradeWeights>(mergedInitialWeights);
+  const getMergedWeights = () => ({ ...defaultWeights, ...initialWeights });
+  const [weights, setWeights] = useState<GradeWeights>(getMergedWeights());
   const [isEditing, setIsEditing] = useState(false);
+
+  // Sync state when initialWeights changes (e.g., after data fetch)
+  useEffect(() => {
+    setWeights(getMergedWeights());
+  }, [initialWeights?.test, initialWeights?.quiz, initialWeights?.homework, initialWeights?.attendance, initialWeights?.behavior]);
 
   const total = weights.test + weights.quiz + weights.homework + weights.attendance + (weights.behavior ?? 0);
   const isValid = total === 100;
@@ -41,7 +46,7 @@ export const GradeWeightsForm = ({
   };
 
   const handleCancel = () => {
-    setWeights(mergedInitialWeights);
+    setWeights(getMergedWeights());
     setIsEditing(false);
   };
 
@@ -78,7 +83,7 @@ export const GradeWeightsForm = ({
             </div>
           </div>
           <Button onClick={() => {
-            setWeights(mergedInitialWeights);
+            setWeights(getMergedWeights());
             setIsEditing(true);
           }} className="w-full">
             Edit Weights
