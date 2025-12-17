@@ -556,7 +556,7 @@ const Auth = () => {
           <p className="text-white/80">Sign in or create an account to start playing</p>
         </div>
 
-        <Card>
+        <Card className="bg-transparent border-0 shadow-none">
           <Tabs defaultValue="signin" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
@@ -771,14 +771,25 @@ const Auth = () => {
     }} />
       
       {/* Parental Consent Form Modal */}
-      <ParentalConsentForm open={showParentalConsentForm} studentEmail={email} onConsentRequested={parentEmail => {
-      setParentEmailForConsent(parentEmail);
-      setShowParentalConsentForm(false);
-      setShowConsentPending(true);
-    }} onCancel={() => {
-      setShowParentalConsentForm(false);
-      setIsUnder13(false);
-    }} />
+      <ParentalConsentForm 
+        open={showParentalConsentForm} 
+        studentEmail={email} 
+        signupData={{
+          password: password,
+          fullName: fullName,
+          role: role,
+          districtId: selectedDistrictId
+        }}
+        onConsentRequested={parentEmail => {
+          setParentEmailForConsent(parentEmail);
+          setShowParentalConsentForm(false);
+          setShowConsentPending(true);
+        }} 
+        onCancel={() => {
+          setShowParentalConsentForm(false);
+          setIsUnder13(false);
+        }} 
+      />
       
       {/* Consent Pending Modal */}
       <ConsentPending open={showConsentPending} parentEmail={parentEmailForConsent} onClose={() => {
