@@ -3,7 +3,19 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { User, Mail, CreditCard, Lock, Edit, Phone, MoreVertical, Plus, Camera, Check, X } from "lucide-react";
+import {
+  User,
+  Mail,
+  CreditCard,
+  Lock,
+  Edit,
+  Phone,
+  MoreVertical,
+  Plus,
+  Camera,
+  Check,
+  X,
+} from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EmergencyContactModal } from "../EmergencyContactModal";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface AccountSectionProps {
   userProfile: any;
@@ -29,6 +42,7 @@ interface AccountSectionProps {
 }
 
 export const AccountSection = ({ userProfile, studentProfile }: AccountSectionProps) => {
+  const { t } = useLanguage();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -39,14 +53,13 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
   const [selectedContact, setSelectedContact] = useState<any>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<string | null>(null);
-  
-  // Edit states
+
   const [isEditingPreferredName, setIsEditingPreferredName] = useState(false);
   const [preferredName, setPreferredName] = useState("");
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const { toast } = useToast();
 
   const getInitials = (name: string) => {
@@ -63,16 +76,16 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
   }, [studentProfile, userProfile]);
 
   const initializeUserData = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    // Initialize preferred name from auth metadata or profile
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (user?.user_metadata?.preferred_name) {
       setPreferredName(user.user_metadata.preferred_name);
     } else if (userProfile?.full_name) {
       setPreferredName(userProfile.full_name.split(" ")[0]);
     }
-    
-    // Initialize avatar from auth metadata or profile
+
     if (user?.user_metadata?.avatar_url) {
       setAvatarUrl(user.user_metadata.avatar_url);
     } else if (studentProfile?.avatar_url) {
@@ -82,7 +95,9 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
 
   const fetchEmergencyContacts = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       const { data, error } = await supabase
@@ -102,16 +117,15 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
     if (!contactToDelete) return;
 
     try {
-      const { error } = await supabase
-        .from("emergency_contacts")
-        .delete()
-        .eq("id", contactToDelete);
+      const { error } = await supabase.from("emergency_contacts").delete().eq("id", contactToDelete);
 
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "Emergency contact deleted successfully",
+        title: t("common.success"),
+        description: t("student.account.noneContacts").includes("Aún")
+          ? "Contacto de emergencia eliminado"
+          : "Emergency contact deleted successfully",
       });
 
       fetchEmergencyContacts();
@@ -119,7 +133,7 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
       setContactToDelete(null);
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: t("common.error"),
         description: error.message,
         variant: "destructive",
       });
@@ -129,8 +143,11 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
   const handlePasswordChange = async () => {
     if (newPassword !== confirmPassword) {
       toast({
-        title: "Error",
-        description: "New passwords do not match",
+        title: t("common.error"),
+        description:
+          t("student.account.cancel") === "Cancelar"
+            ? "Las nuevas contraseñas no coinciden"
+            : "New passwords do not match",
         variant: "destructive",
       });
       return;
@@ -138,8 +155,11 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
 
     if (newPassword.length < 6) {
       toast({
-        title: "Error",
-        description: "Password must be at least 6 characters",
+        title: t("common.error"),
+        description:
+          t("student.account.cancel") === "Cancelar"
+            ? "La contraseña debe tener al menos 6 caracteres"
+            : "Password must be at least 6 characters",
         variant: "destructive",
       });
       return;
@@ -147,15 +167,15 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
 
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "Password changed successfully",
+        title: t("common.success"),
+        description:
+          t("student.account.cancel") === "Cancelar"
+            ? "Contraseña cambiada con éxito"
+            : "Password changed successfully",
       });
 
       setShowPasswordModal(false);
@@ -164,7 +184,7 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
       setConfirmPassword("");
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: t("common.error"),
         description: error.message,
         variant: "destructive",
       });
@@ -181,21 +201,25 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith("image/")) {
       toast({
-        title: "Error",
-        description: "Please select an image file",
+        title: t("common.error"),
+        description:
+          t("student.account.cancel") === "Cancelar"
+            ? "Por favor selecciona una imagen"
+            : "Please select an image file",
         variant: "destructive",
       });
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast({
-        title: "Error",
-        description: "Image must be less than 5MB",
+        title: t("common.error"),
+        description:
+          t("student.account.maxPhotoNote") === "Máx 5MB, JPG o PNG"
+            ? "La imagen debe ser menor de 5MB"
+            : "Image must be less than 5MB",
         variant: "destructive",
       });
       return;
@@ -203,57 +227,57 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
 
     setIsUploadingPhoto(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Upload to Supabase Storage
       const fileExt = file.name.split(".").pop();
       const fileName = `${user.id}/avatar.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(fileName, file, { upsert: true });
-
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(fileName);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("avatars").getPublicUrl(fileName);
 
-      // Update user metadata with avatar URL
       const { error: updateError } = await supabase.auth.updateUser({
-        data: { avatar_url: publicUrl }
+        data: { avatar_url: publicUrl },
       });
-
       if (updateError) throw updateError;
 
       setAvatarUrl(publicUrl);
       toast({
-        title: "Success",
-        description: "Profile photo updated successfully",
+        title: t("common.success"),
+        description:
+          t("student.account.cancel") === "Cancelar"
+            ? "Foto de perfil actualizada"
+            : "Profile photo updated successfully",
       });
     } catch (error: any) {
       console.error("Photo upload error:", error);
       toast({
-        title: "Error",
+        title: t("common.error"),
         description: error.message || "Failed to upload photo",
         variant: "destructive",
       });
     } finally {
       setIsUploadingPhoto(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
   const handleSavePreferredName = async () => {
     if (!preferredName.trim()) {
       toast({
-        title: "Error",
-        description: "Preferred name cannot be empty",
+        title: t("common.error"),
+        description:
+          t("student.account.cancel") === "Cancelar"
+            ? "El nombre preferido no puede estar vacío"
+            : "Preferred name cannot be empty",
         variant: "destructive",
       });
       return;
@@ -262,19 +286,22 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.updateUser({
-        data: { preferred_name: preferredName.trim() }
+        data: { preferred_name: preferredName.trim() },
       });
 
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "Preferred name updated successfully",
+        title: t("common.success"),
+        description:
+          t("student.account.cancel") === "Cancelar"
+            ? "Nombre preferido actualizado"
+            : "Preferred name updated successfully",
       });
       setIsEditingPreferredName(false);
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: t("common.error"),
         description: error.message,
         variant: "destructive",
       });
@@ -284,7 +311,6 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
   };
 
   const handleCancelPreferredName = () => {
-    // Reset to original value
     if (studentProfile?.preferred_name) {
       setPreferredName(studentProfile.preferred_name);
     } else if (userProfile?.full_name) {
@@ -295,14 +321,13 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <h1 className="text-3xl font-bold text-foreground">Account Settings</h1>
+      <h1 className="text-3xl font-bold text-foreground">{t("student.account.title")}</h1>
 
       <Card>
         <CardHeader>
-          <CardTitle>Profile Information</CardTitle>
+          <CardTitle>{t("student.account.profileInfo")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Avatar */}
           <div className="flex items-center gap-4">
             <div className="relative">
               <Avatar className="h-20 w-20">
@@ -325,47 +350,41 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
                 onChange={handlePhotoChange}
                 className="hidden"
               />
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handlePhotoClick}
                 disabled={isUploadingPhoto}
               >
                 <Camera className="h-4 w-4 mr-2" />
-                {isUploadingPhoto ? "Uploading..." : "Change Photo"}
+                {isUploadingPhoto ? t("student.account.uploading") : t("student.account.changePhoto")}
               </Button>
-              <p className="text-xs text-muted-foreground mt-1">
-                Max 5MB, JPG or PNG
-              </p>
+              <p className="text-xs text-muted-foreground mt-1">{t("student.account.maxPhotoNote")}</p>
             </div>
           </div>
 
-          {/* Full Name - Read Only */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <User className="h-4 w-4" />
-              Full Name
+              {t("student.account.fullName")}
             </Label>
             <div className="p-3 border border-border rounded-lg bg-muted/50">
-              <p className="text-foreground">{userProfile?.full_name || "N/A"}</p>
+              <p className="text-foreground">{userProfile?.full_name || t("student.common.na")}</p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Contact your school administrator to change your legal name
-            </p>
+            <p className="text-xs text-muted-foreground">{t("student.account.contactAdminName")}</p>
           </div>
 
-          {/* Preferred Name - Editable */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <User className="h-4 w-4" />
-              Preferred Name
+              {t("student.account.preferredName")}
             </Label>
             {isEditingPreferredName ? (
               <div className="flex items-center gap-2">
                 <Input
                   value={preferredName}
                   onChange={(e) => setPreferredName(e.target.value)}
-                  placeholder="Enter preferred name"
+                  placeholder={t("student.account.preferredNamePlaceholder")}
                   className="flex-1"
                 />
                 <Button
@@ -391,68 +410,58 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
               <div className="flex items-center gap-2">
                 <div className="p-3 border border-border rounded-lg bg-muted/50 flex-1">
                   <p className="text-foreground">
-                    {preferredName || userProfile?.full_name?.split(" ")[0] || "N/A"}
+                    {preferredName || userProfile?.full_name?.split(" ")[0] || t("student.common.na")}
                   </p>
                 </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => setIsEditingPreferredName(true)}
-                >
+                <Button size="icon" variant="ghost" onClick={() => setIsEditingPreferredName(true)}>
                   <Edit className="h-4 w-4" />
                 </Button>
               </div>
             )}
           </div>
 
-          {/* Email - Read Only */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <Mail className="h-4 w-4" />
-              Email Address
+              {t("student.account.email")}
             </Label>
             <div className="p-3 border border-border rounded-lg bg-muted/50">
-              <p className="text-foreground">{userProfile?.email || "N/A"}</p>
+              <p className="text-foreground">{userProfile?.email || t("student.common.na")}</p>
             </div>
           </div>
 
-          {/* Student ID - Read Only */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <CreditCard className="h-4 w-4" />
-              Student ID
+              {t("student.account.studentId")}
             </Label>
             <div className="p-3 border border-border rounded-lg bg-muted/50 font-mono">
-              <p className="text-foreground">{userProfile?.id || "N/A"}</p>
+              <p className="text-foreground">{userProfile?.id || t("student.common.na")}</p>
             </div>
           </div>
 
-          {/* Grade - Read Only */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <User className="h-4 w-4" />
-              Grade
+              {t("student.account.grade")}
             </Label>
             <div className="p-3 border border-border rounded-lg bg-muted/50">
               <p className="text-foreground">
-                {studentProfile?.grade === 0 
-                  ? "Kindergarten" 
-                  : studentProfile?.grade 
-                    ? `Grade ${studentProfile.grade}`
-                    : "Not Set"}
+                {studentProfile?.grade === 0
+                  ? t("student.account.kindergarten")
+                  : studentProfile?.grade
+                    ? t("student.account.gradeNumber").replace("{n}", String(studentProfile.grade))
+                    : t("student.account.notSet")}
               </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Contact your teacher to update your grade level
-            </p>
+            <p className="text-xs text-muted-foreground">{t("student.account.contactTeacherGrade")}</p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Emergency Contacts Section */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Emergency Contacts</CardTitle>
+          <CardTitle>{t("student.account.emergencyContacts")}</CardTitle>
           <Button
             size="sm"
             onClick={() => {
@@ -461,14 +470,12 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
             }}
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add Contact
+            {t("student.account.addContact")}
           </Button>
         </CardHeader>
         <CardContent>
           {emergencyContacts.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              No emergency contacts added yet
-            </p>
+            <p className="text-muted-foreground text-center py-8">{t("student.account.noneContacts")}</p>
           ) : (
             <div className="space-y-3">
               {emergencyContacts.map((contact) => (
@@ -478,11 +485,7 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
                 >
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-2 right-2"
-                      >
+                      <Button variant="ghost" size="icon" className="absolute top-2 right-2">
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -494,7 +497,7 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
                         }}
                       >
                         <Edit className="h-4 w-4 mr-2" />
-                        Edit
+                        {t("student.account.edit")}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-destructive"
@@ -503,7 +506,7 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
                           setShowDeleteConfirm(true);
                         }}
                       >
-                        Delete
+                        {t("student.account.delete")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -515,17 +518,12 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground">
-                        {contact.relationship === "Other"
-                          ? contact.custom_relationship
-                          : contact.relationship}
+                        {contact.relationship === "Other" ? contact.custom_relationship : contact.relationship}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-muted-foreground" />
-                      <a
-                        href={`tel:${contact.phone_number}`}
-                        className="text-sm text-primary hover:underline"
-                      >
+                      <a href={`tel:${contact.phone_number}`} className="text-sm text-primary hover:underline">
                         {contact.phone_number}
                       </a>
                     </div>
@@ -539,49 +537,42 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
 
       <Card>
         <CardHeader>
-          <CardTitle>Security</CardTitle>
+          <CardTitle>{t("student.account.security")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => setShowPasswordModal(true)}
-          >
+          <Button variant="outline" className="w-full" onClick={() => setShowPasswordModal(true)}>
             <Lock className="h-4 w-4 mr-2" />
-            Change Password
+            {t("student.account.changePassword")}
           </Button>
         </CardContent>
       </Card>
 
-      {/* Change Password Modal */}
       <Dialog open={showPasswordModal} onOpenChange={setShowPasswordModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Change Password</DialogTitle>
-            <DialogDescription>
-              Enter your new password below. Make sure it's at least 6 characters long.
-            </DialogDescription>
+            <DialogTitle>{t("student.account.changePasswordTitle")}</DialogTitle>
+            <DialogDescription>{t("student.account.changePasswordDesc")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="newPassword">New Password</Label>
+              <Label htmlFor="newPassword">{t("student.account.newPassword")}</Label>
               <Input
                 id="newPassword"
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Enter new password"
+                placeholder={t("student.account.newPasswordPlaceholder")}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm New Password</Label>
+              <Label htmlFor="confirmPassword">{t("student.account.confirmNewPassword")}</Label>
               <Input
                 id="confirmPassword"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm new password"
+                placeholder={t("student.account.confirmNewPasswordPlaceholder")}
               />
             </div>
 
@@ -595,20 +586,16 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
                 }}
                 disabled={isLoading}
               >
-                Cancel
+                {t("student.account.cancel")}
               </Button>
-              <Button
-                onClick={handlePasswordChange}
-                disabled={isLoading || !newPassword || !confirmPassword}
-              >
-                {isLoading ? "Changing..." : "Change Password"}
+              <Button onClick={handlePasswordChange} disabled={isLoading || !newPassword || !confirmPassword}>
+                {isLoading ? t("student.account.changing") : t("student.account.changePassword")}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Emergency Contact Modal */}
       <EmergencyContactModal
         open={showContactModal}
         onOpenChange={setShowContactModal}
@@ -616,13 +603,12 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
         onSave={fetchEmergencyContacts}
       />
 
-      {/* Delete Confirmation Modal */}
       <ConfirmModal
         open={showDeleteConfirm}
         onOpenChange={setShowDeleteConfirm}
         onConfirm={handleDeleteContact}
-        title="Delete Emergency Contact"
-        description="Are you sure you want to delete this emergency contact? This action cannot be undone."
+        title={t("student.account.deleteEmergencyContactTitle")}
+        description={t("student.account.deleteEmergencyContactDesc")}
       />
     </div>
   );
