@@ -38,24 +38,53 @@ export function ParentalConsentForm({ open, studentEmail, onConsentRequested, on
     setIsLoading(true);
 
     try {
-      // Generate consent token
-      const consentToken = crypto.randomUUID();
-      
-      // Create consent request in database
-      const { error: dbError } = await supabase
+      // Check if consent request already exists
+      const { data: existingRequest } = await supabase
         .from('student_signup_consents')
-        .insert({
-          student_email: studentEmail,
-          parent_email: parentEmail,
-          parent_name: parentName,
-          consent_token: consentToken,
-          ip_address: null, // Will be set by trigger if needed
-        });
+        .select('id, consent_given')
+        .eq('student_email', studentEmail)
+        .maybeSingle();
 
-      if (dbError) throw dbError;
+      // If consent already given, inform user
+      if (existingRequest?.consent_given) {
+        toast.info("Parental consent has already been verified for this email.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Generate new consent token
+      const consentToken = crypto.randomUUID();
+      const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+
+      if (existingRequest) {
+        // UPDATE existing record with new token and info
+        const { error: dbError } = await supabase
+          .from('student_signup_consents')
+          .update({
+            parent_email: parentEmail,
+            parent_name: parentName,
+            consent_token: consentToken,
+            expires_at: expiresAt,
+          })
+          .eq('id', existingRequest.id);
+
+        if (dbError) throw dbError;
+      } else {
+        // INSERT new record
+        const { error: dbError } = await supabase
+          .from('student_signup_consents')
+          .insert({
+            student_email: studentEmail,
+            parent_email: parentEmail,
+            parent_name: parentName,
+            consent_token: consentToken,
+          });
+
+        if (dbError) throw dbError;
+      }
 
       // Send verification email
-      const { error: emailError } = await supabase.functions.invoke('send-parent-consent-email', {
+      const { data, error: emailError } = await supabase.functions.invoke('send-parent-consent-email', {
         body: {
           parentEmail,
           parentName,
@@ -64,7 +93,9 @@ export function ParentalConsentForm({ open, studentEmail, onConsentRequested, on
         },
       });
 
+      // Check both the invoke error AND any error in the response body
       if (emailError) throw emailError;
+      if (data?.error) throw new Error(data.error);
 
       toast.success("Verification email sent! Please check your parent's inbox.");
       onConsentRequested(parentEmail);

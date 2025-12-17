@@ -4,6 +4,9 @@ project_id = "sjigkjwkgovculkovcjy"
 [functions]
 import_map = './functions/import_map.json'
 
+[functions.send-parent-consent-email]
+verify_jwt = false
+
 [functions.send-calendar-notifications]
 verify_jwt = false
 

@@ -35,8 +35,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Construct verification URL
-    const verificationUrl = `${Deno.env.get("SUPABASE_URL")?.replace('//', '//')}/consent/${consentToken}`;
+    // Construct verification URL using APP_URL for the frontend domain
+    const verificationUrl = `${Deno.env.get("APP_URL") || "https://impressmekids.com"}/consent/${consentToken}`;
 
     const emailResponse = await resend.emails.send({
       from: "ImpressMe Kids <onboarding@resend.dev>",
