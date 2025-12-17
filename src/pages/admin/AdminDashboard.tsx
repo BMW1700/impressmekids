@@ -191,7 +191,7 @@ export default function AdminDashboard() {
                 <TabsTrigger value="teachers">Teachers</TabsTrigger>
                 <TabsTrigger value="students">Students</TabsTrigger>
                 <TabsTrigger value="admins">Admins</TabsTrigger>
-                <TabsTrigger value="teacher-requests">Admin Requests</TabsTrigger>
+                <TabsTrigger value="teacher-requests">Account Requests</TabsTrigger>
                 <TabsTrigger value="parent-requests">Parent Requests</TabsTrigger>
               </TabsList>
               {/* Row 2: Import, Clever, Calendar, Safety, Backups */}
