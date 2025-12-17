@@ -96,3 +96,6 @@ verify_jwt = false
 
 [functions.cleanup-expired-alerts]
 verify_jwt = false
+
+[functions.report-emergency]
+verify_jwt = true
