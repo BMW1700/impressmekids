@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Chrome, Building2, BookOpen } from "lucide-react";
+import { Loader2, Chrome, Building2, BookOpen, Eye, EyeOff } from "lucide-react";
 import { detectUserTypeFromEmail } from "@/lib/districtDetection";
 import { RoleSelectionModal } from "@/components/auth/RoleSelectionModal";
 import { DistrictCombobox } from "@/components/auth/DistrictCombobox";
@@ -44,6 +44,7 @@ const Auth = () => {
   const [showConsentPending, setShowConsentPending] = useState(false);
   const [parentEmailForConsent, setParentEmailForConsent] = useState("");
   const [isUnder13, setIsUnder13] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -693,15 +694,24 @@ const Auth = () => {
                     Forgot password?
                   </button>
                 </div>
-                <Input
-                  id="signin-password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur"
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    id="signin-password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur pr-12"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
               </div>
               <Button 
                 type="submit" 
@@ -787,16 +797,25 @@ const Auth = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="signup-password" className="text-white text-sm font-medium">Password</Label>
-                <Input
-                  id="signup-password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur"
-                  required
-                  minLength={6}
-                />
+                <div className="relative">
+                  <Input
+                    id="signup-password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur pr-12"
+                    required
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
               </div>
 
               {/* Role Selection */}
