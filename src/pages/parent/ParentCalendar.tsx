@@ -502,7 +502,7 @@ export default function ParentCalendar() {
       <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
         <div className="space-y-8">
           <div className="text-center">
-            <h1 className="text-5xl font-luxury font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-fade-in">
+            <h1 className="text-5xl font-luxury font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent animate-fade-in">
               Calendar
             </h1>
             <p className="text-muted-foreground mt-2 text-lg">View your child's schedule and events</p>
