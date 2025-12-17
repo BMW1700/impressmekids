@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Home } from "lucide-react";
 import { ReactNode, useEffect, useState } from "react";
 import { StudentNotificationBell } from "@/components/student/StudentNotificationBell";
+import { SettingsMenu } from "@/components/SettingsMenu";
 import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/logo.png";
 
@@ -114,6 +115,9 @@ export const Header = ({ showAuthButtons = true, onSignOut, children, studentId 
           
           <div className="flex items-center gap-2">
             {children}
+            
+            {/* Settings Menu (Theme + Language) */}
+            <SettingsMenu />
             
             {/* Show notification bell for students */}
             {studentId && <StudentNotificationBell studentId={studentId} />}
