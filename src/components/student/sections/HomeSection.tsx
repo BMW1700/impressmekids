@@ -11,6 +11,7 @@ import { AchievementBadge } from "@/components/aura/AchievementBadge";
 import { StreakCounter } from "@/components/aura/StreakCounter";
 import { MissionCard } from "@/components/aura/MissionCard";
 import { BehaviorPointsCard } from "@/components/behavior/BehaviorPointsCard";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface HomeSectionProps {
   userProfile: any;
@@ -19,19 +20,13 @@ interface HomeSectionProps {
   classrooms?: Array<{ id: string }>;
 }
 
-const getGreeting = () => {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
-};
-
 export const HomeSection = ({
   userProfile,
   studentProfile,
   assignmentStats,
   classrooms
 }: HomeSectionProps) => {
+  const { t } = useLanguage();
   const firstName = userProfile?.full_name?.split(" ")[0] || "Student";
   const totalAssignments = assignmentStats?.total_assignments || 0;
   const completedAssignments = assignmentStats?.completed_assignments || 0;
@@ -39,6 +34,13 @@ export const HomeSection = ({
   const gamesWon = studentProfile?.stats?.games_won || 0;
   
   const { achievements, streak, missions } = useReadingGamification(studentProfile?.id);
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return t('greeting.morning');
+    if (hour < 18) return t('greeting.afternoon');
+    return t('greeting.evening');
+  };
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -60,7 +62,7 @@ export const HomeSection = ({
               {getGreeting()}, {firstName}!
             </h1>
             <p className="text-lg text-muted-foreground">
-              Here's what's happening with your learning today.
+              {t('home.subtitle')}
             </p>
           </div>
 
@@ -75,7 +77,7 @@ export const HomeSection = ({
                     </div>
                     <div>
                       <div className="text-2xl font-black">{totalAssignments}</div>
-                      <div className="text-xs text-muted-foreground font-medium">Assignments</div>
+                      <div className="text-xs text-muted-foreground font-medium">{t('home.assignments')}</div>
                     </div>
                   </div>
                 </CardContent>
@@ -91,7 +93,7 @@ export const HomeSection = ({
                     </div>
                     <div>
                       <div className="text-2xl font-black">{completedAssignments}</div>
-                      <div className="text-xs text-muted-foreground font-medium">Completed</div>
+                      <div className="text-xs text-muted-foreground font-medium">{t('home.completed')}</div>
                     </div>
                   </div>
                 </CardContent>
@@ -107,7 +109,7 @@ export const HomeSection = ({
                     </div>
                     <div>
                       <div className="text-2xl font-black">{gamesPlayed}</div>
-                      <div className="text-xs text-muted-foreground font-medium">Games Played</div>
+                      <div className="text-xs text-muted-foreground font-medium">{t('home.gamesPlayed')}</div>
                     </div>
                   </div>
                 </CardContent>
@@ -123,7 +125,7 @@ export const HomeSection = ({
                     </div>
                     <div>
                       <div className="text-2xl font-black">{gamesWon}</div>
-                      <div className="text-xs text-muted-foreground font-medium">Games Won</div>
+                      <div className="text-xs text-muted-foreground font-medium">{t('home.gamesWon')}</div>
                     </div>
                   </div>
                 </CardContent>
@@ -140,8 +142,8 @@ export const HomeSection = ({
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-semibold text-orange-700 dark:text-orange-400">Urgent: Assignment Due Soon</h3>
-                    <Badge variant="red">Due in 6h</Badge>
+                    <h3 className="font-semibold text-orange-700 dark:text-orange-400">{t('home.urgentAssignment')}</h3>
+                    <Badge variant="red">{t('home.dueIn')} 6h</Badge>
                   </div>
                   <p className="text-sm text-orange-600/80 dark:text-orange-300/80">Reading Comprehension Quiz - Chapter 5</p>
                 </div>
@@ -156,7 +158,7 @@ export const HomeSection = ({
 
       {/* Dashboard Metrics */}
       <div>
-        <h2 className="text-2xl font-bold mb-6 text-gradient-purple">Your Performance</h2>
+        <h2 className="text-2xl font-bold mb-6 text-gradient-purple">{t('home.yourPerformance')}</h2>
         <DashboardMetrics assignmentStats={assignmentStats} studentStats={studentProfile?.stats} />
       </div>
 
@@ -185,7 +187,7 @@ export const HomeSection = ({
                   <div className="icon-circle-gold w-10 h-10">
                     <Trophy className="h-5 w-5 text-white" />
                   </div>
-                  Achievements
+                  {t('home.achievements')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -201,7 +203,7 @@ export const HomeSection = ({
           {/* Active Missions */}
           {missions.length > 0 && (
             <div className="space-y-4 md:col-span-2 lg:col-span-1">
-              <h3 className="font-bold text-lg text-gradient-purple">Active Missions</h3>
+              <h3 className="font-bold text-lg text-gradient-purple">{t('home.activeMissions')}</h3>
               {missions.slice(0, 2).map(mission => (
                 <MissionCard key={mission.id} mission={mission} />
               ))}
@@ -215,7 +217,7 @@ export const HomeSection = ({
 
       {/* Quick Actions */}
       <div>
-        <h2 className="text-2xl font-bold mb-6 text-gradient-purple">Quick Actions</h2>
+        <h2 className="text-2xl font-bold mb-6 text-gradient-purple">{t('home.quickActions')}</h2>
         <div className="grid md:grid-cols-2 gap-6">
           <Link to="/games" className="group relative block p-8 rounded-2xl bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-500 hover:shadow-2xl hover:shadow-blue-500/30 transition-all duration-300 hover:-translate-y-2 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
@@ -224,10 +226,10 @@ export const HomeSection = ({
                 <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
                   <Gamepad2 className="h-8 w-8 text-white" />
                 </div>
-                <h3 className="text-2xl font-black text-white">Ready to Play?</h3>
+                <h3 className="text-2xl font-black text-white">{t('home.readyToPlay')}</h3>
               </div>
               <p className="text-white/90 text-base leading-relaxed">
-                Challenge yourself with educational games and compete with your classmates!
+                {t('home.readyToPlayDesc')}
               </p>
             </div>
           </Link>
@@ -239,10 +241,10 @@ export const HomeSection = ({
                 <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300">
                   <Sparkles className="h-8 w-8 text-white" />
                 </div>
-                <h3 className="text-2xl font-black text-white">Practice with AURA</h3>
+                <h3 className="text-2xl font-black text-white">{t('home.practiceWithAura')}</h3>
               </div>
               <p className="text-white/90 text-base leading-relaxed">
-                Improve your reading skills with AI-powered feedback and personalized exercises.
+                {t('home.practiceWithAuraDesc')}
               </p>
             </div>
           </Link>
