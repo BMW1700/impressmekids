@@ -7,6 +7,8 @@ interface StudentDashboardSidebarProps {
   onSectionChange: (section: string) => void;
   onNavigateToGames?: () => void;
   onNavigateToAuraReading?: () => void;
+  isSheet?: boolean;
+  onClose?: () => void;
 }
 
 const sections = [
@@ -29,9 +31,23 @@ export const StudentDashboardSidebar = ({
   onSectionChange,
   onNavigateToGames,
   onNavigateToAuraReading,
+  isSheet = false,
+  onClose,
 }: StudentDashboardSidebarProps) => {
+  const handleNavigation = (sectionId: string, isExternal: boolean, navigateFn?: () => void) => {
+    if (isExternal && navigateFn) {
+      navigateFn();
+    } else {
+      onSectionChange(sectionId);
+    }
+    onClose?.();
+  };
+
   return (
-    <aside className="w-72 border-r border-border/50 bg-gradient-to-b from-background via-background to-muted/20 h-full relative overflow-hidden">
+    <aside className={cn(
+      "border-r border-border/50 bg-gradient-to-b from-background via-background to-muted/20 h-full relative overflow-hidden",
+      isSheet ? "w-full" : "w-72"
+    )}>
       {/* Decorative background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/5 rounded-full blur-3xl" />
@@ -71,12 +87,12 @@ export const StudentDashboardSidebar = ({
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.03, duration: 0.3 }}
                 onClick={() => {
-                  if (section.id === 'study-games' && onNavigateToGames) {
-                    onNavigateToGames();
-                  } else if (section.id === 'aura-reading' && onNavigateToAuraReading) {
-                    onNavigateToAuraReading();
+                  if (section.id === 'study-games') {
+                    handleNavigation(section.id, true, onNavigateToGames);
+                  } else if (section.id === 'aura-reading') {
+                    handleNavigation(section.id, true, onNavigateToAuraReading);
                   } else {
-                    onSectionChange(section.id);
+                    handleNavigation(section.id, false);
                   }
                 }}
                 className={cn(
