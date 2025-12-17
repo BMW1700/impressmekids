@@ -186,25 +186,48 @@ export const useUpdateGradeWeights = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Use upsert to create or update the record
-      const { data, error } = await supabase
+      // Check if record exists
+      const { data: existing } = await supabase
         .from("classroom_syllabus")
-        .upsert({
-          classroom_id: classroomId,
-          grade_weights: weights as any,
-          updated_at: new Date().toISOString(),
-          uploaded_by: user.id,
-          // Default values for required fields if creating new record
-          file_url: '',
-          file_name: '',
-          file_size: 0,
-          mime_type: '',
-          is_posted: false,
-        }, {
-          onConflict: 'classroom_id',
-        })
-        .select()
-        .single();
+        .select("id")
+        .eq("classroom_id", classroomId)
+        .maybeSingle();
+
+      let data, error;
+
+      if (existing) {
+        // Update only grade_weights, preserve file data
+        const result = await supabase
+          .from("classroom_syllabus")
+          .update({
+            grade_weights: weights as any,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("classroom_id", classroomId)
+          .select()
+          .single();
+        data = result.data;
+        error = result.error;
+      } else {
+        // Create new record with empty file fields
+        const result = await supabase
+          .from("classroom_syllabus")
+          .insert({
+            classroom_id: classroomId,
+            grade_weights: weights as any,
+            updated_at: new Date().toISOString(),
+            uploaded_by: user.id,
+            file_url: '',
+            file_name: '',
+            file_size: 0,
+            mime_type: '',
+            is_posted: false,
+          })
+          .select()
+          .single();
+        data = result.data;
+        error = result.error;
+      }
 
       if (error) throw error;
       
