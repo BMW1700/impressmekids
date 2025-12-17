@@ -23,6 +23,14 @@ import { adaptiveDifficultyEngine } from '@/lib/difficultyScalingV2';
 import { analyzeMiscues, getMiscueInterventions, type MiscueAnalysis } from '@/lib/miscueAnalysis';
 import { calculateProsodyScore, type ProsodyMetrics } from '@/lib/prosodyAnalysis';
 import { RealtimeAudioAnalyzer, type LiveMetrics } from '@/lib/realtimeAudioAnalysis';
+// DUAL-MODE MATCHING: Import strict/lenient matchers for benchmark vs practice
+import { 
+  isWordMatchStrict, 
+  isWordMatchLenient, 
+  analyzeWordMatch,
+  calculateSessionConfidence,
+  type WordMatchResult 
+} from '@/lib/wordMatchingModes';
 
 // Browser compatibility check
 const checkBrowserSupport = () => {
@@ -63,6 +71,15 @@ interface ReadingSessionResult {
   miscueAnalysis?: MiscueAnalysis;
   prosodyMetrics?: ProsodyMetrics;
   fluencyLevel?: 'frustration' | 'instructional' | 'independent';
+  // NEW: Confidence tracking for teacher verification
+  aiConfidenceScore?: number;
+  flaggedWords?: Array<{
+    wordIndex: number;
+    expected: string;
+    spoken: string;
+    confidence: number;
+    aiResult: boolean;
+  }>;
 }
 
 interface WordReading {
@@ -73,6 +90,8 @@ interface WordReading {
   correct: boolean;
   hesitation: boolean;
   selfCorrected?: boolean;
+  // NEW: Speech API confidence for this word
+  speechConfidence?: number;
 }
 
 // Fuzzy string matching using Levenshtein distance
@@ -104,42 +123,21 @@ const normalizeWord = (word: string): string => {
   return word.toLowerCase().replace(/[^a-z0-9]/g, '');
 };
 
-// VERY LENIENT word matching - prioritize student confidence over strict accuracy
+// DUAL-MODE WORD MATCHING: Uses strict for benchmarks, lenient for practice
+// This wrapper function automatically chooses the right matcher based on context
+const createWordMatcher = (isStrictMode: boolean) => {
+  return (spoken: string, expected: string): boolean => {
+    if (isStrictMode) {
+      return isWordMatchStrict(spoken, expected);
+    }
+    return isWordMatchLenient(spoken, expected);
+  };
+};
+
+// Fallback for places that don't have access to mode context (legacy)
 const isWordMatch = (spoken: string, expected: string): boolean => {
-  const normalizedSpoken = normalizeWord(spoken);
-  const normalizedExpected = normalizeWord(expected);
-  
-  // Exact match - definitely correct
-  if (normalizedSpoken === normalizedExpected) return true;
-  
-  // Empty check - if no speech detected, benefit of doubt
-  if (!normalizedSpoken) return true;
-  if (!normalizedExpected) return false;
-  
-  // SHORT WORDS (1-3 chars): Always correct (too easy to mishear)
-  if (normalizedExpected.length <= 3) {
-    return true;
-  }
-  
-  // Check if spoken starts with expected or vice versa (partial matches are fine)
-  if (normalizedSpoken.startsWith(normalizedExpected) || normalizedExpected.startsWith(normalizedSpoken)) {
-    return true;
-  }
-  
-  // Check if spoken contains expected or vice versa
-  if (normalizedSpoken.includes(normalizedExpected) || normalizedExpected.includes(normalizedSpoken)) {
-    return true;
-  }
-  
-  const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
-  
-  // MEDIUM WORDS (4-6 chars): 70% tolerance (very lenient)
-  if (normalizedExpected.length <= 6) {
-    return distance <= Math.ceil(normalizedExpected.length * 0.7);
-  }
-  
-  // LONG WORDS (7+ chars): 65% tolerance (very lenient)
-  return distance <= Math.ceil(normalizedExpected.length * 0.65);
+  // Default to lenient for backwards compatibility
+  return isWordMatchLenient(spoken, expected);
 };
 
 // Voice mascot triggers when pronunciation is significantly different
@@ -234,6 +232,24 @@ export const WordByWordReader = ({
   const audioAnalyzerRef = useRef<RealtimeAudioAnalyzer | null>(null);
   const pitchHistoryRef = useRef<number[]>([]);
   const energyHistoryRef = useRef<number[]>([]);
+  
+  // DUAL-MODE MATCHING: Determine if we're in strict benchmark mode or lenient practice mode
+  const isStrictMode = Boolean(screeningPeriodId);
+  const wordMatcher = useCallback((spoken: string, expected: string) => {
+    return isStrictMode ? isWordMatchStrict(spoken, expected) : isWordMatchLenient(spoken, expected);
+  }, [isStrictMode]);
+  
+  // NEW: Track speech API confidence for each word (for teacher verification)
+  const wordConfidencesRef = useRef<Map<number, number>>(new Map());
+  const flaggedWordsRef = useRef<Array<{
+    wordIndex: number;
+    expected: string;
+    spoken: string;
+    confidence: number;
+    aiResult: boolean;
+    timestamp: number;
+  }>>([]);
+  const lastSpeechConfidenceRef = useRef<number>(1);
 
   // Initialize word status
   useEffect(() => {
@@ -365,12 +381,16 @@ export const WordByWordReader = ({
         const transcript = result[0].transcript.trim().toLowerCase();
         const isFinal = result.isFinal;
         
+        // CAPTURE SPEECH API CONFIDENCE (0-1 scale, default 1 if not provided)
+        const speechConfidence = result[0].confidence ?? 1;
+        lastSpeechConfidenceRef.current = speechConfidence;
+        
         // REAL-TIME WORD TRACKING - Process interim results immediately
         if (!isFinal) {
-          processInterimResult(transcript, timestamp);
+          processInterimResult(transcript, timestamp, speechConfidence);
         } else {
-          // Final result - confirm word readings
-          processFinalResult(transcript, timestamp);
+          // Final result - confirm word readings with confidence
+          processFinalResult(transcript, timestamp, speechConfidence);
         }
       }
     };
@@ -416,7 +436,8 @@ export const WordByWordReader = ({
   const previousCorrectCountRef = useRef(0);
   
   // Process interim (real-time) results - ULTRA FAST with proper repeated word handling
-  const processInterimResult = useCallback((transcript: string, timestamp: number) => {
+  // NOW WITH DUAL-MODE MATCHING AND CONFIDENCE TRACKING
+  const processInterimResult = useCallback((transcript: string, timestamp: number, speechConfidence: number = 1) => {
     if (transcript === lastInterimRef.current) return;
     
     // Get previous words BEFORE updating ref
@@ -457,7 +478,30 @@ export const WordByWordReader = ({
           
           const expectedWord = words[currentIdx];
           
-          if (isWordMatch(spokenWord, expectedWord)) {
+          // DUAL-MODE MATCHING: Use strict mode for benchmarks, lenient for practice
+          const matchResult = wordMatcher(spokenWord, expectedWord);
+          
+          // Store confidence for this word
+          wordConfidencesRef.current.set(currentIdx, speechConfidence);
+          
+          // FLAG LOW-CONFIDENCE WORDS for teacher verification
+          // In strict mode, also flag words where strict/lenient modes disagree
+          const lenientResult = isWordMatchLenient(spokenWord, expectedWord);
+          const strictResult = isWordMatchStrict(spokenWord, expectedWord);
+          const modesDisagree = lenientResult !== strictResult;
+          
+          if (speechConfidence < 0.7 || (isStrictMode && modesDisagree)) {
+            flaggedWordsRef.current.push({
+              wordIndex: currentIdx,
+              expected: expectedWord,
+              spoken: spokenWord,
+              confidence: speechConfidence,
+              aiResult: matchResult,
+              timestamp: timestamp,
+            });
+          }
+          
+          if (matchResult) {
             // Direct match at current position
             newMap.set(currentIdx, 'correct');
           } else {
@@ -465,7 +509,7 @@ export const WordByWordReader = ({
             let foundAhead = -1;
             for (let ahead = 1; ahead <= 2; ahead++) {
               const aheadIdx = currentIdx + ahead;
-              if (aheadIdx < words.length && isWordMatch(spokenWord, words[aheadIdx])) {
+              if (aheadIdx < words.length && wordMatcher(spokenWord, words[aheadIdx])) {
                 foundAhead = aheadIdx;
                 break;
               }
@@ -550,7 +594,7 @@ export const WordByWordReader = ({
       const expectedWord = words[currentPos];
       
       if (expectedWord && latestNewWord) {
-        const isCorrect = isWordMatch(latestNewWord, expectedWord);
+        const isCorrect = wordMatcher(latestNewWord, expectedWord);
         if (isCorrect) {
           soundEffectsRef.current.correctWord();
           auraCharacter.reactToCorrect();
@@ -563,11 +607,12 @@ export const WordByWordReader = ({
         lastSoundPlayedAtRef.current = processedCount;
       }
     }
-  }, [words, auraCharacter]);
+  }, [words, auraCharacter, wordMatcher, isStrictMode]);
 
   // Process final results - confirm word readings AND play robot voice for errors
   // CRITICAL: Final results can OVERRIDE incorrect interim markings if word was actually correct
-  const processFinalResult = useCallback((transcript: string, timestamp: number) => {
+  // NOW WITH CONFIDENCE TRACKING
+  const processFinalResult = useCallback((transcript: string, timestamp: number, speechConfidence: number = 1) => {
     const spokenWords = transcript.split(/\s+/).filter(w => w.length > 0);
     
     // Create confirmed word readings
@@ -577,7 +622,10 @@ export const WordByWordReader = ({
       const wordIndex = idx;
       if (wordIndex < words.length) {
         const expectedWord = words[wordIndex];
-        const isCorrect = isWordMatch(spokenWord, expectedWord);
+        const isCorrect = wordMatcher(spokenWord, expectedWord);
+        
+        // Store confidence for this word
+        wordConfidencesRef.current.set(wordIndex, speechConfidence);
         
         // OVERRIDE FIX: If final result shows correct but interim marked incorrect, fix it!
         const currentStatus = realtimeWordStatusRef.current.get(wordIndex);
@@ -600,6 +648,7 @@ export const WordByWordReader = ({
             endMs: timestamp,
             correct: isCorrect,
             hesitation: false,
+            speechConfidence: speechConfidence, // NEW: Track confidence
           });
           
           processedWordsRef.current.add(wordIndex);
@@ -614,7 +663,7 @@ export const WordByWordReader = ({
         return [...prev, ...uniqueNew];
       });
     }
-  }, [words]);
+  }, [words, wordMatcher]);
 
   const stopReading = useCallback(async () => {
     if (recognitionRef.current) {
@@ -953,6 +1002,22 @@ export const WordByWordReader = ({
       console.error('Skill vector update error:', err);
     }
 
+    // ========== CALCULATE AI CONFIDENCE SCORE FOR TEACHER VERIFICATION ==========
+    const wordConfidenceArray: Array<{ confidence: 'high' | 'medium' | 'low'; speechConfidence: number }> = 
+      Array.from(wordConfidencesRef.current.entries()).map(([idx, conf]) => ({
+        confidence: (conf < 0.7 ? 'low' : conf < 0.9 ? 'medium' : 'high') as 'high' | 'medium' | 'low',
+        speechConfidence: conf,
+      }));
+    const sessionConfidence = calculateSessionConfidence(wordConfidenceArray);
+    const flaggedWords = flaggedWordsRef.current;
+    
+    console.log('AI CONFIDENCE METRICS:', {
+      sessionScore: sessionConfidence.score,
+      sessionLevel: sessionConfidence.level,
+      flaggedWordCount: flaggedWords.length,
+      isStrictMode,
+    });
+
     // ========== CREATE BENCHMARK RESULT IF IN SCREENING MODE ==========
     if (screeningPeriodId && screeningClassroomId) {
       try {
@@ -970,6 +1035,11 @@ export const WordByWordReader = ({
         else if (wcpm >= targetWCPM * 0.9) benchmarkStatus = 'at';
         else if (wcpm >= targetWCPM * 0.7) benchmarkStatus = 'below';
         else benchmarkStatus = 'well_below';
+        
+        // Prepare notes with confidence data for teacher verification (until schema updated)
+        const confidenceNote = flaggedWords.length > 0 
+          ? `AI Confidence: ${sessionConfidence.score}% (${sessionConfidence.level}). ${flaggedWords.length} words flagged for verification.`
+          : `AI Confidence: ${sessionConfidence.score}% (${sessionConfidence.level}). High accuracy - no verification needed.`;
         
         const { error: benchmarkError } = await supabase
           .from('student_benchmark_results')
@@ -993,6 +1063,7 @@ export const WordByWordReader = ({
             words_read: wordsRead,
             duration_seconds: totalDuration,
             audio_url: audioUrl, // Link audio for teacher playback
+            notes: confidenceNote, // Store confidence info until schema updated
           });
         
         if (benchmarkError) {
@@ -1004,6 +1075,8 @@ export const WordByWordReader = ({
             benchmarkStatus,
             gradeLevel,
             periodId: screeningPeriodId,
+            aiConfidence: sessionConfidence.score,
+            flaggedWords: flaggedWords.length,
           });
         }
       } catch (err) {
@@ -1024,10 +1097,21 @@ export const WordByWordReader = ({
       miscueAnalysis, // NEW: Full miscue breakdown
       prosodyMetrics, // NEW: Prosody scores
       fluencyLevel: miscueAnalysis.fluencyLevel, // NEW: Reading level
+      // NEW: AI Confidence tracking for teacher verification
+      aiConfidenceScore: sessionConfidence.score,
+      flaggedWords: flaggedWords.map(fw => ({
+        wordIndex: fw.wordIndex,
+        expected: fw.expected,
+        spoken: fw.spoken,
+        confidence: fw.confidence,
+        aiResult: fw.aiResult,
+      })),
     });
 
     // Enhanced feedback with WCPM and prosody
     const fluencyEmoji = prosodyMetrics.level === 'advanced' ? '🌟' : 
+                         prosodyMetrics.level === 'proficient' ? '🎉' :
+                         prosodyMetrics.level === 'developing' ? '📚' : '💪';
                          prosodyMetrics.level === 'proficient' ? '🎉' :
                          prosodyMetrics.level === 'developing' ? '📚' : '💪';
     

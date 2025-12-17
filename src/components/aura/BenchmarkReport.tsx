@@ -1,8 +1,10 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AudioPlaybackButton } from "./AudioPlaybackButton";
+import { AIConfidenceBadge } from "./AIConfidenceBadge";
+import { TeacherWordVerification } from "./TeacherWordVerification";
 import { 
   getFluencyNorm,
   getBenchmarkStatusLabel,
@@ -18,7 +20,7 @@ import {
 import { BenchmarkStatusBadge } from "./BenchmarkStatusBadge";
 import { useStudentBenchmarkResults } from "@/hooks/useBenchmarkData";
 import { format } from "date-fns";
-import { Download, FileText, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Printer } from "lucide-react";
+import { Download, FileText, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Printer, Shield } from "lucide-react";
 
 interface BenchmarkReportProps {
   studentId: string;
@@ -35,8 +37,31 @@ export function BenchmarkReport({
   classroomId,
   onExportPDF,
 }: BenchmarkReportProps) {
-  const { data: results, isLoading } = useStudentBenchmarkResults(studentId, classroomId);
+  const { data: results, isLoading, refetch } = useStudentBenchmarkResults(studentId, classroomId);
   const printRef = useRef<HTMLDivElement>(null);
+  const [showVerification, setShowVerification] = useState(false);
+  
+  // Parse confidence info from notes field (temporary until schema updated)
+  const parseConfidenceFromNotes = (notes: string | null): { score: number; level: 'high' | 'medium' | 'low'; flaggedCount: number } | null => {
+    if (!notes) return null;
+    const match = notes.match(/AI Confidence: (\d+)% \((high|medium|low)\)\. (\d+) words flagged/);
+    if (match) {
+      return {
+        score: parseInt(match[1]),
+        level: match[2] as 'high' | 'medium' | 'low',
+        flaggedCount: parseInt(match[3]),
+      };
+    }
+    const noFlagMatch = notes.match(/AI Confidence: (\d+)% \((high|medium|low)\)\./);
+    if (noFlagMatch) {
+      return {
+        score: parseInt(noFlagMatch[1]),
+        level: noFlagMatch[2] as 'high' | 'medium' | 'low',
+        flaggedCount: 0,
+      };
+    }
+    return null;
+  };
 
   // PDF Export handler using browser print
   const handleExportPDF = () => {
@@ -265,6 +290,35 @@ export function BenchmarkReport({
       </CardHeader>
       
       <CardContent className="space-y-6">
+        {/* AI Confidence Badge - Show if confidence data available */}
+        {(() => {
+          const confidence = parseConfidenceFromNotes((latestResult as any).notes);
+          if (confidence) {
+            return (
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
+                <div className="flex items-center gap-3">
+                  <Shield className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">AI Assessment Confidence</p>
+                    <p className="text-xs text-muted-foreground">
+                      {confidence.flaggedCount > 0 
+                        ? `${confidence.flaggedCount} words flagged for verification`
+                        : 'High confidence - no verification needed'}
+                    </p>
+                  </div>
+                </div>
+                <AIConfidenceBadge 
+                  score={confidence.score} 
+                  level={confidence.level}
+                  flaggedWordCount={confidence.flaggedCount}
+                  showTooltip
+                />
+              </div>
+            );
+          }
+          return null;
+        })()}
+
         {/* Key Metrics */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {/* WCPM */}
