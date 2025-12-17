@@ -386,6 +386,54 @@ export const WordByWordReader = ({
       }
     };
 
+    // FIX 3: Add onend handler to process pending/last words and restart if needed
+    recognition.onend = () => {
+      console.log('Speech recognition ended - processing any pending words');
+      
+      // Process any pending word that was waiting for stability
+      if (pendingWordRef.current) {
+        const pending = pendingWordRef.current;
+        const finalExpectedWord = words[pending.index];
+        const finalIsCorrect = isWordMatch(pending.word, finalExpectedWord);
+        
+        // Mark the word and advance
+        setRealtimeWordStatus(prev => {
+          const newMap = new Map(prev);
+          newMap.set(pending.index, finalIsCorrect ? 'correct' : 'incorrect');
+          if (pending.index + 1 < words.length) {
+            newMap.set(pending.index + 1, 'current');
+          }
+          realtimeWordStatusRef.current = newMap;
+          return newMap;
+        });
+        
+        if (finalIsCorrect) {
+          soundEffectsRef.current.correctWord();
+          setTotalXpEarned(prev => prev + 1);
+        } else {
+          soundEffectsRef.current.incorrectWord();
+        }
+        
+        setRealtimeWordIndex(prev => {
+          const newIdx = Math.min(prev + 1, words.length);
+          realtimeWordIndexRef.current = newIdx;
+          return newIdx;
+        });
+        setCurrentWordIndex(prev => Math.min(prev + 1, words.length));
+        pendingWordRef.current = null;
+      }
+      
+      // Restart recognition if still recording (continuous mode recovery)
+      if (isRecording && realtimeWordIndexRef.current < words.length) {
+        try {
+          console.log('Restarting speech recognition...');
+          recognition.start();
+        } catch (e) {
+          console.log('Recognition restart skipped:', e);
+        }
+      }
+    };
+
     recognition.start();
     recognitionRef.current = recognition;
     setIsRecording(true);
@@ -417,16 +465,69 @@ export const WordByWordReader = ({
     // Track speech time for cognitive load estimation
     lastSpeechTimeRef.current = Date.now();
     
-    // Process if word count increased (allow faster advancement)
-    if (newWordCount <= previousWordCount) return;
+    // FIX 2: Process if word count increased OR if the last spoken word changed
+    const previousWords = lastInterimRef.current.split(/\s+/).filter(w => w.length > 0);
+    const lastPreviousWord = previousWords[previousWords.length - 1] || '';
+    const lastNewWord = spokenWords[newWordCount - 1] || '';
+    const wordChanged = lastNewWord !== lastPreviousWord;
+    
+    // Skip only if nothing meaningful changed
+    if (newWordCount < previousWordCount || (newWordCount === previousWordCount && !wordChanged)) return;
     
     const latestSpokenWord = spokenWords[newWordCount - 1];
     const currentIdx = realtimeWordIndexRef.current;
     
     if (currentIdx >= words.length) return;
     
-    const expectedWord = words[currentIdx];
-    const isCorrect = isWordMatch(latestSpokenWord, expectedWord);
+    let expectedWord = words[currentIdx];
+    let isCorrect = isWordMatch(latestSpokenWord, expectedWord);
+    let matchIndex = currentIdx;
+    
+    // FIX 4: LOOK-AHEAD MATCHING - if current word doesn't match, check next 1-2 words
+    if (!isCorrect && currentIdx + 1 < words.length) {
+      // Check if spoken word matches the NEXT expected word (student skipped a word)
+      if (isWordMatch(latestSpokenWord, words[currentIdx + 1])) {
+        console.log('LOOK-AHEAD: Skipped word detected, marking', words[currentIdx], 'as skipped');
+        // Mark current word as skipped/incorrect
+        setRealtimeWordStatus(prev => {
+          const newMap = new Map(prev);
+          newMap.set(currentIdx, 'incorrect'); // Skipped word
+          realtimeWordStatusRef.current = newMap;
+          return newMap;
+        });
+        soundEffectsRef.current.incorrectWord();
+        setCorrectStreak(0);
+        correctStreakRef.current = 0;
+        
+        // Advance to the matched word
+        matchIndex = currentIdx + 1;
+        expectedWord = words[matchIndex];
+        isCorrect = true;
+        realtimeWordIndexRef.current = matchIndex;
+        setRealtimeWordIndex(matchIndex);
+        setCurrentWordIndex(matchIndex);
+      } else if (currentIdx + 2 < words.length && isWordMatch(latestSpokenWord, words[currentIdx + 2])) {
+        console.log('LOOK-AHEAD: Skipped 2 words, marking', words[currentIdx], 'and', words[currentIdx + 1], 'as skipped');
+        // Mark two words as skipped
+        setRealtimeWordStatus(prev => {
+          const newMap = new Map(prev);
+          newMap.set(currentIdx, 'incorrect');
+          newMap.set(currentIdx + 1, 'incorrect');
+          realtimeWordStatusRef.current = newMap;
+          return newMap;
+        });
+        soundEffectsRef.current.incorrectWord();
+        setCorrectStreak(0);
+        correctStreakRef.current = 0;
+        
+        matchIndex = currentIdx + 2;
+        expectedWord = words[matchIndex];
+        isCorrect = true;
+        realtimeWordIndexRef.current = matchIndex;
+        setRealtimeWordIndex(matchIndex);
+        setCurrentWordIndex(matchIndex);
+      }
+    }
     
     // STABILITY CHECK: Don't advance immediately - wait for word to stabilize
     // Clear any pending advancement
@@ -435,7 +536,7 @@ export const WordByWordReader = ({
     }
     
     // Set pending word - we'll confirm it after stability delay
-    pendingWordRef.current = { word: latestSpokenWord, index: currentIdx, timestamp };
+    pendingWordRef.current = { word: latestSpokenWord, index: matchIndex, timestamp };
     
     // REAL-TIME PHONEME DETECTION: Log for analysis
     const expectedPhonemes = getIPAPronunciation(expectedWord)[0] || [];
@@ -448,9 +549,9 @@ export const WordByWordReader = ({
       });
     }
     
-    // FASTER STABILITY DELAYS - responsive but stable
+    // FIX 1: FASTER STABILITY DELAYS - super responsive (60-80ms instead of 120-180ms)
     const expectedWordLen = words[currentIdx]?.length || 4;
-    const stabilityDelay = expectedWordLen <= 3 ? 180 : expectedWordLen <= 5 ? 150 : 120;
+    const stabilityDelay = expectedWordLen <= 3 ? 80 : expectedWordLen <= 5 ? 70 : 60;
     
     stabilityTimeoutRef.current = setTimeout(() => {
       const pending = pendingWordRef.current;
