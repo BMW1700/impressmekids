@@ -14,14 +14,16 @@ interface GradeWeightsFormProps {
 }
 
 export const GradeWeightsForm = ({
-  initialWeights = { test: 35, quiz: 30, homework: 25, attendance: 10 },
+  initialWeights,
   onSave,
   isSaving = false,
 }: GradeWeightsFormProps) => {
-  const [weights, setWeights] = useState<GradeWeights>(initialWeights);
+  const defaultWeights = { test: 35, quiz: 30, homework: 25, attendance: 10, behavior: 0 };
+  const mergedInitialWeights = { ...defaultWeights, ...initialWeights };
+  const [weights, setWeights] = useState<GradeWeights>(mergedInitialWeights);
   const [isEditing, setIsEditing] = useState(false);
 
-  const total = weights.test + weights.quiz + weights.homework + weights.attendance;
+  const total = weights.test + weights.quiz + weights.homework + weights.attendance + (weights.behavior ?? 0);
   const isValid = total === 100;
 
   const handleWeightChange = (category: keyof GradeWeights, value: string) => {
@@ -39,7 +41,7 @@ export const GradeWeightsForm = ({
   };
 
   const handleCancel = () => {
-    setWeights(initialWeights);
+    setWeights(mergedInitialWeights);
     setIsEditing(false);
   };
 
@@ -70,9 +72,13 @@ export const GradeWeightsForm = ({
               <span className="text-sm font-medium">Attendance:</span>
               <span className="text-lg font-bold text-primary">{weights.attendance}%</span>
             </div>
+            <div className="flex justify-between items-center p-3 rounded-lg bg-muted">
+              <span className="text-sm font-medium">Behavior:</span>
+              <span className="text-lg font-bold text-primary">{weights.behavior ?? 0}%</span>
+            </div>
           </div>
           <Button onClick={() => {
-            setWeights(initialWeights);
+            setWeights(mergedInitialWeights);
             setIsEditing(true);
           }} className="w-full">
             Edit Weights
@@ -94,7 +100,7 @@ export const GradeWeightsForm = ({
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription>
-            <strong>Note:</strong> Set Attendance to 0% if you don't want attendance to count toward the final grade.
+            <strong>Note:</strong> Set Attendance or Behavior to 0% if you don't want them to count toward the final grade.
           </AlertDescription>
         </Alert>
 
@@ -157,6 +163,22 @@ export const GradeWeightsForm = ({
                 max="100"
                 value={weights.attendance}
                 onChange={(e) => handleWeightChange("attendance", e.target.value)}
+                className="flex-1"
+              />
+              <span className="text-muted-foreground font-medium">%</span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="behavior-weight">Behavior Weight</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="behavior-weight"
+                type="number"
+                min="0"
+                max="100"
+                value={weights.behavior}
+                onChange={(e) => handleWeightChange("behavior", e.target.value)}
                 className="flex-1"
               />
               <span className="text-muted-foreground font-medium">%</span>

@@ -7,6 +7,7 @@ export interface GradeWeights {
   quiz: number;
   homework: number;
   attendance: number;
+  behavior: number;
 }
 
 export interface ClassroomSyllabus {
@@ -176,7 +177,7 @@ export const useUpdateGradeWeights = () => {
       weights: GradeWeights;
     }) => {
       // Validate weights sum to 100
-      const total = weights.test + weights.quiz + weights.homework + weights.attendance;
+      const total = weights.test + weights.quiz + weights.homework + weights.attendance + weights.behavior;
       if (total !== 100) {
         throw new Error(`Grade weights must sum to 100% (currently: ${total}%)`);
       }

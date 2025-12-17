@@ -26,7 +26,7 @@ export const useStudentClassroomTrends = (classroomId: string | undefined, stude
 
       const weights = syllabus?.grade_weights 
         ? (syllabus.grade_weights as any)
-        : { test: 25, quiz: 25, homework: 25, attendance: 25 };
+        : { test: 35, quiz: 30, homework: 25, attendance: 10, behavior: 0 };
 
       // Fetch all students in this classroom
       const { data: classroomStudents, error: studentsError } = await supabase

@@ -12,6 +12,7 @@ export const GradeWeightsDisplay = ({ weights }: GradeWeightsDisplayProps) => {
     { name: "Quizzes", value: weights.quiz, color: "bg-yellow-500" },
     { name: "Homework", value: weights.homework, color: "bg-blue-500" },
     { name: "Attendance", value: weights.attendance, color: "bg-green-500" },
+    { name: "Behavior", value: weights.behavior ?? 0, color: "bg-purple-500" },
   ];
 
   return (
