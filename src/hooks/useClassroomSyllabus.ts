@@ -182,13 +182,27 @@ export const useUpdateGradeWeights = () => {
         throw new Error(`Grade weights must sum to 100% (currently: ${total}%)`);
       }
 
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Use upsert to create or update the record
       const { data, error } = await supabase
         .from("classroom_syllabus")
-        .update({
+        .upsert({
+          classroom_id: classroomId,
           grade_weights: weights as any,
           updated_at: new Date().toISOString(),
+          uploaded_by: user.id,
+          // Default values for required fields if creating new record
+          file_url: '',
+          file_name: '',
+          file_size: 0,
+          mime_type: '',
+          is_posted: false,
+        }, {
+          onConflict: 'classroom_id',
         })
-        .eq("classroom_id", classroomId)
         .select()
         .single();
 
