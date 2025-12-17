@@ -584,7 +584,10 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden p-4 bg-gradient-hero">
-      <div className="w-full max-w-md px-6 relative z-10">
+      {/* Contrast scrim so text/buttons stay readable while keeping the Home gradient */}
+      <div className="absolute inset-0 bg-foreground/35" />
+
+      <div className="w-full max-w-md px-6 py-10 relative z-10 bg-foreground/25 backdrop-blur-xl rounded-3xl border border-white/15 shadow-2xl">
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <Link to="/">
@@ -613,7 +616,7 @@ const Auth = () => {
 
         {/* Auth Card */}
         <Tabs defaultValue="signin" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 bg-white/5 border border-white/10 rounded-xl p-1 mb-6">
+          <TabsList className="grid w-full grid-cols-2 bg-white/15 border border-white/20 rounded-xl p-1 mb-6 backdrop-blur">
             <TabsTrigger 
               value="signin" 
               className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-gray-900 text-white/70 transition-all"
@@ -649,11 +652,11 @@ const Auth = () => {
             <Button
               type="button"
               variant="outline"
-              className="w-full h-14 bg-white/5 hover:bg-white/10 text-white border-white/10 rounded-xl font-medium text-base"
+              className="w-full h-14 bg-white/15 hover:bg-white/20 text-white border-white/20 rounded-xl font-medium text-base backdrop-blur"
               onClick={handleCleverSignIn}
               disabled={isLoading}
             >
-              <BookOpen className="mr-3 h-5 w-5 text-blue-400" />
+              <BookOpen className="mr-3 h-5 w-5 text-blue-300" />
               Continue with Clever
             </Button>
 
@@ -663,7 +666,7 @@ const Auth = () => {
                 <div className="w-full border-t border-white/10" />
               </div>
               <div className="relative flex justify-center">
-                <span className="bg-[#0f0f12] px-4 text-sm text-white/40">or</span>
+                <span className="bg-foreground/60 backdrop-blur px-4 py-1 rounded-full text-sm text-white/60 border border-white/10">or</span>
               </div>
             </div>
 
@@ -677,7 +680,7 @@ const Auth = () => {
                   placeholder="you@school.edu"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-xl focus:border-purple-500 focus:ring-purple-500/20"
+                  className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur"
                   required
                 />
               </div>
@@ -699,7 +702,7 @@ const Auth = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-xl focus:border-purple-500 focus:ring-purple-500/20"
+                  className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur"
                   required
                 />
               </div>
@@ -741,11 +744,11 @@ const Auth = () => {
             <Button
               type="button"
               variant="outline"
-              className="w-full h-14 bg-white/5 hover:bg-white/10 text-white border-white/10 rounded-xl font-medium text-base"
+              className="w-full h-14 bg-white/15 hover:bg-white/20 text-white border-white/20 rounded-xl font-medium text-base backdrop-blur"
               onClick={handleCleverSignIn}
               disabled={isLoading}
             >
-              <BookOpen className="mr-3 h-5 w-5 text-blue-400" />
+              <BookOpen className="mr-3 h-5 w-5 text-blue-300" />
               Continue with Clever
             </Button>
 
@@ -755,7 +758,7 @@ const Auth = () => {
                 <div className="w-full border-t border-white/10" />
               </div>
               <div className="relative flex justify-center">
-                <span className="bg-[#0f0f12] px-4 text-sm text-white/40">or sign up with email</span>
+                <span className="bg-foreground/60 backdrop-blur px-4 py-1 rounded-full text-sm text-white/60 border border-white/10">or sign up with email</span>
               </div>
             </div>
 
@@ -769,7 +772,7 @@ const Auth = () => {
                   placeholder="Your full name"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-xl focus:border-purple-500 focus:ring-purple-500/20"
+                  className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur"
                   required
                 />
               </div>
@@ -781,7 +784,7 @@ const Auth = () => {
                   placeholder="you@school.edu"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-xl focus:border-purple-500 focus:ring-purple-500/20"
+                  className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur"
                   required
                 />
               </div>
@@ -793,7 +796,7 @@ const Auth = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-xl focus:border-purple-500 focus:ring-purple-500/20"
+                  className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur"
                   required
                   minLength={6}
                 />
@@ -840,7 +843,7 @@ const Auth = () => {
                     value={districtCode}
                     onChange={(e) => setDistrictCode(e.target.value)}
                     onBlur={(e) => validateDistrictCode(e.target.value)}
-                    className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 font-mono"
+                    className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 font-mono backdrop-blur"
                     required
                   />
                   {districtInfo && (
