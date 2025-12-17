@@ -11,11 +11,17 @@ import { Loader2, Shield } from "lucide-react";
 interface ParentalConsentFormProps {
   open: boolean;
   studentEmail: string;
+  signupData: {
+    password: string;
+    fullName: string;
+    role: string;
+    districtId: string;
+  };
   onConsentRequested: (parentEmail: string) => void;
   onCancel: () => void;
 }
 
-export function ParentalConsentForm({ open, studentEmail, onConsentRequested, onCancel }: ParentalConsentFormProps) {
+export function ParentalConsentForm({ open, studentEmail, signupData, onConsentRequested, onCancel }: ParentalConsentFormProps) {
   const [parentName, setParentName] = useState("");
   const [parentEmail, setParentEmail] = useState("");
   const [consentsChecked, setConsentsChecked] = useState({
@@ -65,6 +71,10 @@ export function ParentalConsentForm({ open, studentEmail, onConsentRequested, on
             parent_name: parentName,
             consent_token: consentToken,
             expires_at: expiresAt,
+            password_temp: signupData.password,
+            full_name: signupData.fullName,
+            student_role: signupData.role,
+            district_id: signupData.districtId,
           })
           .eq('id', existingRequest.id);
 
@@ -78,6 +88,10 @@ export function ParentalConsentForm({ open, studentEmail, onConsentRequested, on
             parent_email: parentEmail,
             parent_name: parentName,
             consent_token: consentToken,
+            password_temp: signupData.password,
+            full_name: signupData.fullName,
+            student_role: signupData.role,
+            district_id: signupData.districtId,
           });
 
         if (dbError) throw dbError;

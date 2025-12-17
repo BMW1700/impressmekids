@@ -931,6 +931,12 @@ const Auth = () => {
       <ParentalConsentForm
         open={showParentalConsentForm}
         studentEmail={email}
+        signupData={{
+          password,
+          fullName,
+          role,
+          districtId: selectedDistrictId,
+        }}
         onConsentRequested={(parentEmail) => {
           setParentEmailForConsent(parentEmail);
           setShowParentalConsentForm(false);

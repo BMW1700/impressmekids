@@ -9,11 +9,12 @@ import { CheckCircle2, XCircle, Loader2, Shield } from "lucide-react";
 export default function ConsentVerification() {
   const { token } = useParams();
   const navigate = useNavigate();
-  const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'expired'>('loading');
+  const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'expired' | 'creating_account'>('loading');
   const [consentData, setConsentData] = useState<{
     studentEmail: string;
     parentName: string;
   } | null>(null);
+  const [accountCreated, setAccountCreated] = useState(false);
 
   useEffect(() => {
     verifyConsent();
@@ -26,7 +27,7 @@ export default function ConsentVerification() {
     }
 
     try {
-      // Fetch consent request
+      // Fetch consent request with signup data
       const { data: consent, error: fetchError } = await supabase
         .from('student_signup_consents')
         .select('*')
@@ -38,12 +39,13 @@ export default function ConsentVerification() {
         return;
       }
 
-      // Check if already verified
+      // Check if already verified and account created
       if (consent.consent_given) {
         setConsentData({
           studentEmail: consent.student_email,
           parentName: consent.parent_name,
         });
+        setAccountCreated(true);
         setStatus('success');
         toast.info("This consent has already been verified");
         return;
@@ -73,8 +75,54 @@ export default function ConsentVerification() {
 
       if (updateError) throw updateError;
 
+      // Check if we have signup data to create the account
+      if (consent.password_temp && consent.full_name) {
+        setStatus('creating_account');
+        
+        // Create the student account
+        const { data: signupData, error: signupError } = await supabase.auth.signUp({
+          email: consent.student_email,
+          password: consent.password_temp,
+          options: {
+            data: {
+              full_name: consent.full_name,
+              role: consent.student_role || 'student',
+            },
+            emailRedirectTo: window.location.origin + '/auth',
+          },
+        });
+
+        if (signupError) {
+          console.error('Error creating account:', signupError);
+          toast.error("Consent verified but account creation failed: " + signupError.message);
+          setStatus('success');
+          return;
+        }
+
+        // Clear the temporary password for security
+        await supabase
+          .from('student_signup_consents')
+          .update({ password_temp: null })
+          .eq('consent_token', token);
+
+        // If we have district_id, update the profile
+        if (signupData.user && consent.district_id) {
+          // Wait for trigger to create profile
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          
+          await supabase
+            .from('profiles')
+            .update({ district_id: consent.district_id })
+            .eq('id', signupData.user.id);
+        }
+
+        setAccountCreated(true);
+        toast.success("Account created successfully! The student can now sign in.");
+      } else {
+        toast.success("Parental consent verified! The student can now complete signup.");
+      }
+
       setStatus('success');
-      toast.success("Parental consent verified successfully!");
     } catch (error: any) {
       console.error('Error verifying consent:', error);
       setStatus('error');
@@ -87,7 +135,7 @@ export default function ConsentVerification() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            {status === 'loading' && (
+            {(status === 'loading' || status === 'creating_account') && (
               <div className="rounded-full bg-primary/10 p-4">
                 <Loader2 className="h-12 w-12 text-primary animate-spin" />
               </div>
@@ -105,13 +153,15 @@ export default function ConsentVerification() {
           </div>
           <CardTitle className="text-2xl">
             {status === 'loading' && "Verifying Consent..."}
-            {status === 'success' && "Consent Verified!"}
+            {status === 'creating_account' && "Creating Account..."}
+            {status === 'success' && (accountCreated ? "Account Created!" : "Consent Verified!")}
             {status === 'expired' && "Consent Link Expired"}
             {status === 'error' && "Verification Failed"}
           </CardTitle>
           <CardDescription>
             {status === 'loading' && "Please wait while we verify your consent"}
-            {status === 'success' && "Your child can now complete their account setup"}
+            {status === 'creating_account' && "Setting up your child's account..."}
+            {status === 'success' && (accountCreated ? "Your child can now sign in with their email and password" : "Your child can now complete their account setup")}
             {status === 'expired' && "This verification link has expired"}
             {status === 'error' && "We couldn't verify this consent request"}
           </CardDescription>
@@ -138,7 +188,9 @@ export default function ConsentVerification() {
               </div>
 
               <p className="text-sm text-muted-foreground text-center">
-                Your child can now return to the signup page and complete their account creation.
+                {accountCreated 
+                  ? "Your child's account has been created and is ready to use. They can sign in with their email and password."
+                  : "Your child can now return to the signup page and complete their account creation."}
               </p>
             </>
           )}
@@ -158,9 +210,9 @@ export default function ConsentVerification() {
           <Button
             onClick={() => navigate('/auth')}
             className="w-full"
-            disabled={status === 'loading'}
+            disabled={status === 'loading' || status === 'creating_account'}
           >
-            {status === 'success' ? 'Go to Login' : 'Back to Signup'}
+            {status === 'success' ? (accountCreated ? 'Go to Sign In' : 'Go to Signup') : 'Back to Signup'}
           </Button>
         </CardContent>
       </Card>
