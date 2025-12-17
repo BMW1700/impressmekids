@@ -128,6 +128,69 @@ const translations: Record<Language, Translations> = {
     'teacherDashboard.quickActions.resources.cta': 'View Resources',
     'teacherDashboard.quickActions.resources.soon': 'Soon',
 
+    // Parent Dashboard
+    'parentDashboard.loading': 'Loading your dashboard...',
+    'parentDashboard.title': 'Parent Dashboard',
+    'parentDashboard.subtitle': "Stay connected with your child's education journey",
+    'parentDashboard.studentFallback': 'Student',
+
+    'parentDashboard.actions.calendar': 'Calendar',
+    'parentDashboard.actions.safety': 'Safety',
+    'parentDashboard.actions.notifications': 'Notifications',
+    'parentDashboard.actions.linkStudent': 'Link Student',
+    'parentDashboard.actions.viewFullProfile': 'View Full Student Profile',
+
+    'parentDashboard.empty.title': 'Get Started',
+    'parentDashboard.empty.description':
+      'Link your first student to start monitoring their progress, viewing assignments, and staying connected with their education.',
+    'parentDashboard.empty.cta': 'Link Your First Student',
+
+    'parentDashboard.tabs.overview': 'Overview',
+    'parentDashboard.tabs.gradebook': 'Gradebook',
+
+    'parentDashboard.accessRequests.title': 'My Student Access Requests',
+
+    // Parent: Request Access
+    'parentRequestAccess.backToDashboard': 'Back to Dashboard',
+    'parentRequestAccess.title': 'Link Child Account',
+    'parentRequestAccess.description':
+      "Enter your child's email to request access to their progress. Their teacher will need to approve the request.",
+    'parentRequestAccess.childEmailLabel': "Child's Email",
+    'parentRequestAccess.childEmailPlaceholder': 'student@school.edu',
+    'parentRequestAccess.messageLabel': 'Message to Teacher (Optional)',
+    'parentRequestAccess.messagePlaceholder':
+      "Hello, I am [Child's Name]'s parent. I would like access to view their progress on ImpressMe Kids.",
+    'parentRequestAccess.sending': 'Sending Request...',
+    'parentRequestAccess.send': 'Send Access Request',
+
+    // Parent: Notifications Settings
+    'parentNotificationSettings.back': 'Back',
+    'parentNotificationSettings.title': 'Notification Preferences',
+    'parentNotificationSettings.description':
+      "Configure how and when you receive notifications about your child's activities",
+    'parentNotificationSettings.section.what': 'What to Notify About',
+    'parentNotificationSettings.assignments': 'Assignments',
+    'parentNotificationSettings.assignmentsDesc': 'Get notified about upcoming assignments and homework',
+    'parentNotificationSettings.tests': 'Tests & Quizzes',
+    'parentNotificationSettings.testsDesc': 'Get notified about upcoming tests and quizzes',
+    'parentNotificationSettings.events': 'Events & Field Trips',
+    'parentNotificationSettings.eventsDesc':
+      'Get notified about field trips, guest speakers, and special events',
+    'parentNotificationSettings.section.when': 'When to Notify',
+    'parentNotificationSettings.daysBeforeLabel': 'Notify me this many days before:',
+    'parentNotificationSettings.dayOf': 'On the day',
+    'parentNotificationSettings.oneDay': '1 day before',
+    'parentNotificationSettings.twoDays': '2 days before',
+    'parentNotificationSettings.threeDays': '3 days before',
+    'parentNotificationSettings.fiveDays': '5 days before',
+    'parentNotificationSettings.oneWeek': '1 week before',
+    'parentNotificationSettings.section.how': 'How to Notify',
+    'parentNotificationSettings.email': 'Email Notifications',
+    'parentNotificationSettings.emailDesc': 'Receive notifications via email',
+    'parentNotificationSettings.inApp': 'In-App Notifications',
+    'parentNotificationSettings.inAppDesc': 'See notifications when you log in to the platform',
+    'parentNotificationSettings.save': 'Save Preferences',
+
     // Games
     'games.title': 'Educational Games Hub',
     'games.subtitle': 'Choose from our collection of educational games designed to make learning fun!',
@@ -266,6 +329,69 @@ const translations: Record<Language, Translations> = {
     'teacherDashboard.quickActions.resources.description': 'Guías para docentes y buenas prácticas',
     'teacherDashboard.quickActions.resources.cta': 'Ver Recursos',
     'teacherDashboard.quickActions.resources.soon': 'Pronto',
+
+    // Parent Dashboard
+    'parentDashboard.loading': 'Cargando tu panel...',
+    'parentDashboard.title': 'Panel para Padres',
+    'parentDashboard.subtitle': 'Mantente conectado con el progreso educativo de tu hijo/a',
+    'parentDashboard.studentFallback': 'Estudiante',
+
+    'parentDashboard.actions.calendar': 'Calendario',
+    'parentDashboard.actions.safety': 'Seguridad',
+    'parentDashboard.actions.notifications': 'Notificaciones',
+    'parentDashboard.actions.linkStudent': 'Vincular Estudiante',
+    'parentDashboard.actions.viewFullProfile': 'Ver Perfil Completo del Estudiante',
+
+    'parentDashboard.empty.title': 'Comenzar',
+    'parentDashboard.empty.description':
+      'Vincula a tu primer estudiante para monitorear su progreso, ver tareas y mantenerte conectado con su educación.',
+    'parentDashboard.empty.cta': 'Vincular Tu Primer Estudiante',
+
+    'parentDashboard.tabs.overview': 'Resumen',
+    'parentDashboard.tabs.gradebook': 'Calificaciones',
+
+    'parentDashboard.accessRequests.title': 'Mis Solicitudes de Acceso',
+
+    // Parent: Request Access
+    'parentRequestAccess.backToDashboard': 'Volver al Panel',
+    'parentRequestAccess.title': 'Vincular Cuenta del Niño/a',
+    'parentRequestAccess.description':
+      'Ingresa el correo de tu hijo/a para solicitar acceso a su progreso. El docente deberá aprobar la solicitud.',
+    'parentRequestAccess.childEmailLabel': 'Correo del Niño/a',
+    'parentRequestAccess.childEmailPlaceholder': 'estudiante@escuela.edu',
+    'parentRequestAccess.messageLabel': 'Mensaje al Docente (Opcional)',
+    'parentRequestAccess.messagePlaceholder':
+      'Hola, soy el/la padre/madre de [Nombre del Niño/a]. Me gustaría acceder para ver su progreso en ImpressMe Kids.',
+    'parentRequestAccess.sending': 'Enviando solicitud...',
+    'parentRequestAccess.send': 'Enviar Solicitud de Acceso',
+
+    // Parent: Notifications Settings
+    'parentNotificationSettings.back': 'Volver',
+    'parentNotificationSettings.title': 'Preferencias de Notificación',
+    'parentNotificationSettings.description':
+      'Configura cómo y cuándo recibes notificaciones sobre las actividades de tu hijo/a',
+    'parentNotificationSettings.section.what': 'Qué Notificar',
+    'parentNotificationSettings.assignments': 'Tareas',
+    'parentNotificationSettings.assignmentsDesc': 'Recibe avisos sobre tareas y trabajos próximos',
+    'parentNotificationSettings.tests': 'Exámenes y Quizzes',
+    'parentNotificationSettings.testsDesc': 'Recibe avisos sobre exámenes y quizzes próximos',
+    'parentNotificationSettings.events': 'Eventos y Excursiones',
+    'parentNotificationSettings.eventsDesc':
+      'Recibe avisos sobre excursiones, invitados y eventos especiales',
+    'parentNotificationSettings.section.when': 'Cuándo Notificar',
+    'parentNotificationSettings.daysBeforeLabel': 'Notifícame con estos días de anticipación:',
+    'parentNotificationSettings.dayOf': 'El mismo día',
+    'parentNotificationSettings.oneDay': '1 día antes',
+    'parentNotificationSettings.twoDays': '2 días antes',
+    'parentNotificationSettings.threeDays': '3 días antes',
+    'parentNotificationSettings.fiveDays': '5 días antes',
+    'parentNotificationSettings.oneWeek': '1 semana antes',
+    'parentNotificationSettings.section.how': 'Cómo Notificar',
+    'parentNotificationSettings.email': 'Notificaciones por Email',
+    'parentNotificationSettings.emailDesc': 'Recibe notificaciones por correo',
+    'parentNotificationSettings.inApp': 'Notificaciones en la App',
+    'parentNotificationSettings.inAppDesc': 'Ver notificaciones cuando ingresas a la plataforma',
+    'parentNotificationSettings.save': 'Guardar Preferencias',
 
     // Games
     'games.title': 'Centro de Juegos Educativos',
@@ -406,6 +532,69 @@ const translations: Record<Language, Translations> = {
       'Guides enseignants et bonnes pratiques',
     'teacherDashboard.quickActions.resources.cta': 'Voir les Ressources',
     'teacherDashboard.quickActions.resources.soon': 'Bientôt',
+
+    // Parent Dashboard
+    'parentDashboard.loading': 'Chargement de votre tableau de bord...',
+    'parentDashboard.title': 'Tableau de Bord Parent',
+    'parentDashboard.subtitle': "Restez connecté au parcours scolaire de votre enfant",
+    'parentDashboard.studentFallback': 'Élève',
+
+    'parentDashboard.actions.calendar': 'Calendrier',
+    'parentDashboard.actions.safety': 'Sécurité',
+    'parentDashboard.actions.notifications': 'Notifications',
+    'parentDashboard.actions.linkStudent': 'Lier un Élève',
+    'parentDashboard.actions.viewFullProfile': 'Voir le Profil Complet',
+
+    'parentDashboard.empty.title': 'Commencer',
+    'parentDashboard.empty.description':
+      'Liez votre premier élève pour suivre ses progrès, consulter les devoirs et rester connecté à sa scolarité.',
+    'parentDashboard.empty.cta': 'Lier Votre Premier Élève',
+
+    'parentDashboard.tabs.overview': 'Aperçu',
+    'parentDashboard.tabs.gradebook': 'Notes',
+
+    'parentDashboard.accessRequests.title': 'Mes Demandes d’Accès',
+
+    // Parent: Request Access
+    'parentRequestAccess.backToDashboard': 'Retour au Tableau de Bord',
+    'parentRequestAccess.title': 'Lier le Compte de l’Enfant',
+    'parentRequestAccess.description':
+      "Saisissez l’email de votre enfant pour demander l’accès à ses progrès. Son enseignant devra approuver la demande.",
+    'parentRequestAccess.childEmailLabel': "Email de l’Enfant",
+    'parentRequestAccess.childEmailPlaceholder': 'eleve@ecole.fr',
+    'parentRequestAccess.messageLabel': "Message à l’Enseignant (Optionnel)",
+    'parentRequestAccess.messagePlaceholder':
+      "Bonjour, je suis le parent de [Nom de l’Enfant]. Je souhaite accéder à ses progrès sur ImpressMe Kids.",
+    'parentRequestAccess.sending': 'Envoi de la demande...',
+    'parentRequestAccess.send': 'Envoyer la Demande d’Accès',
+
+    // Parent: Notifications Settings
+    'parentNotificationSettings.back': 'Retour',
+    'parentNotificationSettings.title': 'Préférences de Notification',
+    'parentNotificationSettings.description':
+      "Configurez comment et quand vous recevez des notifications sur les activités de votre enfant",
+    'parentNotificationSettings.section.what': 'Quoi Notifier',
+    'parentNotificationSettings.assignments': 'Devoirs',
+    'parentNotificationSettings.assignmentsDesc': 'Recevez des alertes sur les devoirs à venir',
+    'parentNotificationSettings.tests': 'Tests & Quiz',
+    'parentNotificationSettings.testsDesc': 'Recevez des alertes sur les tests et quiz à venir',
+    'parentNotificationSettings.events': 'Événements & Sorties',
+    'parentNotificationSettings.eventsDesc':
+      'Recevez des alertes sur les sorties, intervenants et événements spéciaux',
+    'parentNotificationSettings.section.when': 'Quand Notifier',
+    'parentNotificationSettings.daysBeforeLabel': 'Me prévenir ce nombre de jours avant :',
+    'parentNotificationSettings.dayOf': 'Le jour même',
+    'parentNotificationSettings.oneDay': '1 jour avant',
+    'parentNotificationSettings.twoDays': '2 jours avant',
+    'parentNotificationSettings.threeDays': '3 jours avant',
+    'parentNotificationSettings.fiveDays': '5 jours avant',
+    'parentNotificationSettings.oneWeek': '1 semaine avant',
+    'parentNotificationSettings.section.how': 'Comment Notifier',
+    'parentNotificationSettings.email': 'Notifications Email',
+    'parentNotificationSettings.emailDesc': 'Recevez des notifications par email',
+    'parentNotificationSettings.inApp': 'Notifications dans l’App',
+    'parentNotificationSettings.inAppDesc': 'Voir les notifications lorsque vous vous connectez',
+    'parentNotificationSettings.save': 'Enregistrer',
 
     // Games
     'games.title': 'Centre de Jeux Éducatifs',

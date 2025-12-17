@@ -3,7 +3,16 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { Loader2, UserPlus, Calendar as CalendarIcon, Bell, Shield, ChevronRight, GraduationCap, Sparkles } from "lucide-react";
+import {
+  Loader2,
+  UserPlus,
+  Calendar as CalendarIcon,
+  Bell,
+  Shield,
+  ChevronRight,
+  GraduationCap,
+  Sparkles,
+} from "lucide-react";
 import { ParentNotificationBell } from "@/components/parent/ParentNotificationBell";
 import { StudentLookupModal } from "@/components/parent/StudentLookupModal";
 import { ParentOutgoingRequestsList } from "@/components/parent/ParentOutgoingRequestsList";
@@ -18,8 +27,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CalendarWidget } from "@/components/calendar/CalendarWidget";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const ParentDashboard = () => {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [parentId, setParentId] = useState<string | null>(null);
   const [lookupModalOpen, setLookupModalOpen] = useState(false);
@@ -105,7 +116,7 @@ const ParentDashboard = () => {
           <div className="icon-circle icon-circle-lg icon-circle-purple">
             <Loader2 className="h-7 w-7 animate-spin text-white" />
           </div>
-          <p className="text-muted-foreground">Loading your dashboard...</p>
+          <p className="text-muted-foreground">{t("parentDashboard.loading")}</p>
         </div>
       </div>
     );
@@ -118,7 +129,7 @@ const ParentDashboard = () => {
   // Set initial selected child when children load
   const activeChildId = selectedChildId || firstChild?.student_id;
   const activeChild = approvedChildren?.find(c => c.student_id === activeChildId) || firstChild;
-  const activeChildName = activeChild?.full_name || "Student";
+  const activeChildName = activeChild?.full_name || t("parentDashboard.studentFallback");
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-secondary/[0.06] via-secondary/[0.02] to-primary/[0.03]">
@@ -137,46 +148,38 @@ const ParentDashboard = () => {
               <div className="icon-circle icon-circle-purple">
                 <Sparkles className="h-6 w-6 text-white" />
               </div>
-              <h1 className="hero-title gradient-text">
-                Parent Dashboard
-              </h1>
+              <h1 className="hero-title gradient-text">{t("parentDashboard.title")}</h1>
             </div>
-            <p className="text-lg text-muted-foreground ml-[68px]">
-              Stay connected with your child's education journey
-            </p>
+            <p className="text-lg text-muted-foreground ml-[68px]">{t("parentDashboard.subtitle")}</p>
           </div>
           <div className="flex gap-3 flex-wrap">
             {hasChildren && (
               <>
-                <Button 
-                  variant="outline" 
-                  onClick={() => navigate("/parent/calendar")} 
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/parent/calendar")}
                   className="gap-2 glass-card border-0 hover:bg-primary/5"
                 >
-                  <CalendarIcon className="h-4 w-4" /> Calendar
+                  <CalendarIcon className="h-4 w-4" /> {t("parentDashboard.actions.calendar")}
                 </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => navigate("/parent/safety")} 
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/parent/safety")}
                   className="gap-2 glass-card border-0 hover:bg-primary/5"
                 >
-                  <Shield className="h-4 w-4" /> Safety
+                  <Shield className="h-4 w-4" /> {t("parentDashboard.actions.safety")}
                 </Button>
               </>
             )}
-            <Button 
-              variant="outline" 
-              onClick={() => navigate("/parent/notification-settings")} 
+            <Button
+              variant="outline"
+              onClick={() => navigate("/parent/notification-settings")}
               className="gap-2 glass-card border-0 hover:bg-primary/5"
             >
-              <Bell className="h-4 w-4" /> Notifications
+              <Bell className="h-4 w-4" /> {t("parentDashboard.actions.notifications")}
             </Button>
-            <Button 
-              variant="gradient"
-              onClick={() => setLookupModalOpen(true)} 
-              className="gap-2"
-            >
-              <UserPlus className="h-4 w-4" /> Link Student
+            <Button variant="gradient" onClick={() => setLookupModalOpen(true)} className="gap-2">
+              <UserPlus className="h-4 w-4" /> {t("parentDashboard.actions.linkStudent")}
             </Button>
           </div>
         </div>
@@ -190,17 +193,13 @@ const ParentDashboard = () => {
                   <UserPlus className="h-8 w-8 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-3xl font-bold mb-3 gradient-text">Get Started</h3>
+                  <h3 className="text-3xl font-bold mb-3 gradient-text">{t("parentDashboard.empty.title")}</h3>
                   <p className="text-muted-foreground max-w-lg mx-auto text-lg">
-                    Link your first student to start monitoring their progress, viewing assignments, and staying connected with their education.
+                    {t("parentDashboard.empty.description")}
                   </p>
                 </div>
-                <Button 
-                  variant="gradient"
-                  size="lg"
-                  onClick={() => setLookupModalOpen(true)} 
-                >
-                  <UserPlus className="h-5 w-5 mr-2" /> Link Your First Student
+                <Button variant="gradient" size="lg" onClick={() => setLookupModalOpen(true)}>
+                  <UserPlus className="h-5 w-5 mr-2" /> {t("parentDashboard.empty.cta")}
                 </Button>
               </div>
             </CardContent>
@@ -223,7 +222,7 @@ const ParentDashboard = () => {
                       : "glass-card border-0 hover:bg-primary/5"
                     }
                   >
-                    {child.full_name || "Student"}
+                    {child.full_name || t("parentDashboard.studentFallback")}
                   </Button>
                 ))}
               </div>
@@ -236,13 +235,13 @@ const ParentDashboard = () => {
                   value="overview" 
                   className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary-dark data-[state=active]:text-white rounded-lg px-6 py-2.5 transition-all"
                 >
-                  Overview
+                  {t("parentDashboard.tabs.overview")}
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="gradebook" 
+                <TabsTrigger
+                  value="gradebook"
                   className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary-dark data-[state=active]:text-white rounded-lg px-6 py-2.5 transition-all"
                 >
-                  <GraduationCap className="h-4 w-4" /> Gradebook
+                  <GraduationCap className="h-4 w-4" /> {t("parentDashboard.tabs.gradebook")}
                 </TabsTrigger>
               </TabsList>
 
@@ -269,13 +268,13 @@ const ParentDashboard = () => {
 
                 {/* View Child Details Button */}
                 <div className="flex justify-center">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="lg"
                     onClick={() => navigate(`/parent/child/${activeChildId}`)}
                     className="gap-2 glass-card border-0 hover:bg-primary/5 transition-all hover:-translate-y-1"
                   >
-                    View Full Student Profile <ChevronRight className="h-4 w-4" />
+                    {t("parentDashboard.actions.viewFullProfile")} <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
               </TabsContent>
@@ -294,7 +293,7 @@ const ParentDashboard = () => {
               <div className="icon-circle icon-circle-sm icon-circle-blue">
                 <UserPlus className="h-4 w-4 text-white" />
               </div>
-              My Student Access Requests
+              {t("parentDashboard.accessRequests.title")}
             </h2>
             <ParentOutgoingRequestsList parentId={parentId} />
           </div>
