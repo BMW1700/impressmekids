@@ -98,9 +98,13 @@ export const TeacherSyllabusView = ({ classroomId }: TeacherSyllabusViewProps) =
 
   const handleSaveWeights = useCallback(
     (weights: GradeWeights) => {
+      if (!syllabus) {
+        toast.error("Please upload a syllabus file first");
+        return;
+      }
       updateWeightsMutation.mutate({ classroomId, weights });
     },
-    [classroomId, updateWeightsMutation]
+    [classroomId, updateWeightsMutation, syllabus]
   );
 
   const handleTogglePublish = useCallback(
