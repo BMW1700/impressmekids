@@ -22,7 +22,7 @@ const translations: Record<Language, Translations> = {
     'nav.signOut': 'Sign Out',
     'nav.getStarted': 'Get Started',
     'nav.home': 'Home',
-    
+
     // Settings
     'settings.title': 'Settings',
     'settings.theme': 'Theme',
@@ -30,8 +30,8 @@ const translations: Record<Language, Translations> = {
     'settings.light': 'Light',
     'settings.dark': 'Dark',
     'settings.system': 'System',
-    
-    // Sidebar
+
+    // Sidebar (Student)
     'sidebar.dashboard': 'Dashboard',
     'sidebar.studentPortal': 'Student Portal',
     'sidebar.home': 'Home',
@@ -48,13 +48,13 @@ const translations: Record<Language, Translations> = {
     'sidebar.account': 'Account',
     'sidebar.keepLearning': 'Keep Learning!',
     'sidebar.newAdventure': 'Every day is a new adventure',
-    
+
     // Greetings
     'greeting.morning': 'Good morning',
     'greeting.afternoon': 'Good afternoon',
     'greeting.evening': 'Good evening',
-    
-    // Home Section
+
+    // Home Section (Student)
     'home.subtitle': "Here's what's happening with your learning today.",
     'home.assignments': 'Assignments',
     'home.completed': 'Completed',
@@ -73,7 +73,61 @@ const translations: Record<Language, Translations> = {
     'home.playGames': 'Play Games',
     'home.startPractice': 'Start Practice',
     'home.recentActivity': 'Recent Activity',
-    
+
+    // Teacher Dashboard
+    'teacherDashboard.loading': 'Loading your dashboard...',
+    'teacherDashboard.welcome': 'Welcome, {name}!',
+    'teacherDashboard.subtitle': 'Your AI-Powered Classroom Command Center',
+
+    'teacherDashboard.aiInsights.title': 'AI Insights Dashboard',
+    'teacherDashboard.aiInsights.badge': '4 Patents',
+    'teacherDashboard.aiInsights.description':
+      'Revolutionary machine learning models predict reading outcomes, identify at-risk students, and prescribe personalized interventions.',
+    'teacherDashboard.aiInsights.viewAnalytics': 'View Analytics',
+    'teacherDashboard.aiInsights.atRiskStudents': 'At-Risk Students',
+
+    'teacherDashboard.stats.totalClassrooms': 'Total Classrooms',
+    'teacherDashboard.stats.totalStudents': 'Total Students',
+    'teacherDashboard.stats.activeAssignments': 'Active Assignments',
+    'teacherDashboard.stats.activeLabel': 'Active',
+    'teacherDashboard.stats.enrolledLabel': 'Enrolled',
+    'teacherDashboard.stats.mlPowered': 'ML-Powered',
+
+    'teacherDashboard.tabs.classrooms': 'Classrooms',
+    'teacherDashboard.tabs.leaderboard': 'Leaderboard',
+    'teacherDashboard.tabs.calendar': 'Calendar',
+    'teacherDashboard.tabs.directory': 'Directory',
+    'teacherDashboard.tabs.quickActions': 'Quick Actions',
+    'teacherDashboard.tabs.mlTraining': 'ML Training',
+
+    'teacherDashboard.classrooms.title': 'My Classrooms',
+    'teacherDashboard.classrooms.create': 'Create Classroom',
+    'teacherDashboard.classrooms.emptyTitle': 'No Classrooms Yet',
+    'teacherDashboard.classrooms.emptyDescription':
+      'Create your first classroom to start inviting students and playing games!',
+    'teacherDashboard.classrooms.emptyCTA': 'Create Your First Classroom',
+
+    'teacherDashboard.leaderboard.empty': 'Create a classroom to view leaderboards',
+    'teacherDashboard.leaderboard.viewFull': 'View Full Leaderboard →',
+
+    'teacherDashboard.quickActions.browseGames.title': 'Browse Games',
+    'teacherDashboard.quickActions.browseGames.description':
+      'Explore educational games for your classroom',
+    'teacherDashboard.quickActions.browseGames.cta': 'View Games',
+
+    'teacherDashboard.quickActions.auraAnalytics.title': 'AURA Analytics',
+    'teacherDashboard.quickActions.auraAnalytics.description': 'Track student pronunciation with AI',
+    'teacherDashboard.quickActions.auraAnalytics.cta': 'View Analytics',
+
+    'teacherDashboard.quickActions.storyLibrary.title': 'Story Library',
+    'teacherDashboard.quickActions.storyLibrary.description': 'Create & manage reading stories',
+    'teacherDashboard.quickActions.storyLibrary.cta': 'Manage Stories',
+
+    'teacherDashboard.quickActions.resources.title': 'Resources',
+    'teacherDashboard.quickActions.resources.description': 'Teacher guides and best practices',
+    'teacherDashboard.quickActions.resources.cta': 'View Resources',
+    'teacherDashboard.quickActions.resources.soon': 'Soon',
+
     // Games
     'games.title': 'Educational Games Hub',
     'games.subtitle': 'Choose from our collection of educational games designed to make learning fun!',
@@ -87,13 +141,13 @@ const translations: Record<Language, Translations> = {
     'games.wordWizard.description': 'Build vocabulary and spelling skills with word puzzles.',
     'games.mathQuest.title': 'Math Quest',
     'games.mathQuest.description': 'Embark on mathematical adventures solving problems.',
-    
+
     // Common
     'common.back': 'Back',
     'common.loading': 'Loading...',
     'common.error': 'Error',
     'common.success': 'Success',
-    
+
     // Footer
     'footer.privacyPolicy': 'Privacy Policy',
     'footer.termsOfService': 'Terms of Service',
@@ -105,7 +159,7 @@ const translations: Record<Language, Translations> = {
     'nav.signOut': 'Cerrar Sesión',
     'nav.getStarted': 'Comenzar',
     'nav.home': 'Inicio',
-    
+
     // Settings
     'settings.title': 'Configuración',
     'settings.theme': 'Tema',
@@ -113,8 +167,8 @@ const translations: Record<Language, Translations> = {
     'settings.light': 'Claro',
     'settings.dark': 'Oscuro',
     'settings.system': 'Sistema',
-    
-    // Sidebar
+
+    // Sidebar (Student)
     'sidebar.dashboard': 'Panel',
     'sidebar.studentPortal': 'Portal del Estudiante',
     'sidebar.home': 'Inicio',
@@ -131,13 +185,13 @@ const translations: Record<Language, Translations> = {
     'sidebar.account': 'Cuenta',
     'sidebar.keepLearning': '¡Sigue Aprendiendo!',
     'sidebar.newAdventure': 'Cada día es una nueva aventura',
-    
+
     // Greetings
     'greeting.morning': 'Buenos días',
     'greeting.afternoon': 'Buenas tardes',
     'greeting.evening': 'Buenas noches',
-    
-    // Home Section
+
+    // Home Section (Student)
     'home.subtitle': 'Esto es lo que está pasando con tu aprendizaje hoy.',
     'home.assignments': 'Tareas',
     'home.completed': 'Completadas',
@@ -156,7 +210,63 @@ const translations: Record<Language, Translations> = {
     'home.playGames': 'Jugar',
     'home.startPractice': 'Comenzar Práctica',
     'home.recentActivity': 'Actividad Reciente',
-    
+
+    // Teacher Dashboard
+    'teacherDashboard.loading': 'Cargando tu panel...',
+    'teacherDashboard.welcome': '¡Bienvenido/a, {name}!',
+    'teacherDashboard.subtitle': 'Tu Centro de Control del Aula con IA',
+
+    'teacherDashboard.aiInsights.title': 'Panel de Insights con IA',
+    'teacherDashboard.aiInsights.badge': '4 Patentes',
+    'teacherDashboard.aiInsights.description':
+      'Modelos de aprendizaje automático predicen resultados de lectura, identifican estudiantes en riesgo y recomiendan intervenciones personalizadas.',
+    'teacherDashboard.aiInsights.viewAnalytics': 'Ver Analítica',
+    'teacherDashboard.aiInsights.atRiskStudents': 'Estudiantes en Riesgo',
+
+    'teacherDashboard.stats.totalClassrooms': 'Total de Clases',
+    'teacherDashboard.stats.totalStudents': 'Total de Estudiantes',
+    'teacherDashboard.stats.activeAssignments': 'Tareas Activas',
+    'teacherDashboard.stats.activeLabel': 'Activo',
+    'teacherDashboard.stats.enrolledLabel': 'Inscritos',
+    'teacherDashboard.stats.mlPowered': 'Impulsado por ML',
+
+    'teacherDashboard.tabs.classrooms': 'Clases',
+    'teacherDashboard.tabs.leaderboard': 'Clasificación',
+    'teacherDashboard.tabs.calendar': 'Calendario',
+    'teacherDashboard.tabs.directory': 'Directorio',
+    'teacherDashboard.tabs.quickActions': 'Acciones Rápidas',
+    'teacherDashboard.tabs.mlTraining': 'Entrenamiento ML',
+
+    'teacherDashboard.classrooms.title': 'Mis Clases',
+    'teacherDashboard.classrooms.create': 'Crear Clase',
+    'teacherDashboard.classrooms.emptyTitle': 'Aún No Hay Clases',
+    'teacherDashboard.classrooms.emptyDescription':
+      'Crea tu primera clase para invitar estudiantes y jugar juegos.',
+    'teacherDashboard.classrooms.emptyCTA': 'Crear Tu Primera Clase',
+
+    'teacherDashboard.leaderboard.empty': 'Crea una clase para ver clasificaciones',
+    'teacherDashboard.leaderboard.viewFull': 'Ver Clasificación Completa →',
+
+    'teacherDashboard.quickActions.browseGames.title': 'Explorar Juegos',
+    'teacherDashboard.quickActions.browseGames.description':
+      'Explora juegos educativos para tu clase',
+    'teacherDashboard.quickActions.browseGames.cta': 'Ver Juegos',
+
+    'teacherDashboard.quickActions.auraAnalytics.title': 'Analítica AURA',
+    'teacherDashboard.quickActions.auraAnalytics.description':
+      'Sigue la pronunciación del estudiante con IA',
+    'teacherDashboard.quickActions.auraAnalytics.cta': 'Ver Analítica',
+
+    'teacherDashboard.quickActions.storyLibrary.title': 'Biblioteca de Historias',
+    'teacherDashboard.quickActions.storyLibrary.description':
+      'Crea y administra historias de lectura',
+    'teacherDashboard.quickActions.storyLibrary.cta': 'Administrar Historias',
+
+    'teacherDashboard.quickActions.resources.title': 'Recursos',
+    'teacherDashboard.quickActions.resources.description': 'Guías para docentes y buenas prácticas',
+    'teacherDashboard.quickActions.resources.cta': 'Ver Recursos',
+    'teacherDashboard.quickActions.resources.soon': 'Pronto',
+
     // Games
     'games.title': 'Centro de Juegos Educativos',
     'games.subtitle': '¡Elige de nuestra colección de juegos educativos diseñados para hacer el aprendizaje divertido!',
@@ -170,13 +280,13 @@ const translations: Record<Language, Translations> = {
     'games.wordWizard.description': 'Desarrolla vocabulario y ortografía con puzzles de palabras.',
     'games.mathQuest.title': 'Aventura Matemática',
     'games.mathQuest.description': 'Embárcate en aventuras matemáticas resolviendo problemas.',
-    
+
     // Common
     'common.back': 'Volver',
     'common.loading': 'Cargando...',
     'common.error': 'Error',
     'common.success': 'Éxito',
-    
+
     // Footer
     'footer.privacyPolicy': 'Política de Privacidad',
     'footer.termsOfService': 'Términos de Servicio',
@@ -188,7 +298,7 @@ const translations: Record<Language, Translations> = {
     'nav.signOut': 'Se Déconnecter',
     'nav.getStarted': 'Commencer',
     'nav.home': 'Accueil',
-    
+
     // Settings
     'settings.title': 'Paramètres',
     'settings.theme': 'Thème',
@@ -196,8 +306,8 @@ const translations: Record<Language, Translations> = {
     'settings.light': 'Clair',
     'settings.dark': 'Sombre',
     'settings.system': 'Système',
-    
-    // Sidebar
+
+    // Sidebar (Student)
     'sidebar.dashboard': 'Tableau de bord',
     'sidebar.studentPortal': 'Portail Étudiant',
     'sidebar.home': 'Accueil',
@@ -214,13 +324,13 @@ const translations: Record<Language, Translations> = {
     'sidebar.account': 'Compte',
     'sidebar.keepLearning': "Continue d'Apprendre!",
     'sidebar.newAdventure': 'Chaque jour est une nouvelle aventure',
-    
+
     // Greetings
     'greeting.morning': 'Bonjour',
     'greeting.afternoon': 'Bon après-midi',
     'greeting.evening': 'Bonsoir',
-    
-    // Home Section
+
+    // Home Section (Student)
     'home.subtitle': "Voici ce qui se passe avec ton apprentissage aujourd'hui.",
     'home.assignments': 'Devoirs',
     'home.completed': 'Terminés',
@@ -239,7 +349,64 @@ const translations: Record<Language, Translations> = {
     'home.playGames': 'Jouer',
     'home.startPractice': 'Commencer',
     'home.recentActivity': 'Activité Récente',
-    
+
+    // Teacher Dashboard
+    'teacherDashboard.loading': 'Chargement de votre tableau de bord...',
+    'teacherDashboard.welcome': 'Bienvenue, {name}!',
+    'teacherDashboard.subtitle': 'Votre Centre de Commandement de Classe (IA)',
+
+    'teacherDashboard.aiInsights.title': 'Tableau de Bord des Insights IA',
+    'teacherDashboard.aiInsights.badge': '4 Brevets',
+    'teacherDashboard.aiInsights.description':
+      'Des modèles de machine learning prédisent les résultats de lecture, identifient les élèves à risque et recommandent des interventions personnalisées.',
+    'teacherDashboard.aiInsights.viewAnalytics': 'Voir Analyses',
+    'teacherDashboard.aiInsights.atRiskStudents': 'Élèves à Risque',
+
+    'teacherDashboard.stats.totalClassrooms': 'Total des Classes',
+    'teacherDashboard.stats.totalStudents': "Total des Élèves",
+    'teacherDashboard.stats.activeAssignments': 'Devoirs Actifs',
+    'teacherDashboard.stats.activeLabel': 'Actif',
+    'teacherDashboard.stats.enrolledLabel': 'Inscrits',
+    'teacherDashboard.stats.mlPowered': 'Propulsé par ML',
+
+    'teacherDashboard.tabs.classrooms': 'Classes',
+    'teacherDashboard.tabs.leaderboard': 'Classement',
+    'teacherDashboard.tabs.calendar': 'Calendrier',
+    'teacherDashboard.tabs.directory': 'Répertoire',
+    'teacherDashboard.tabs.quickActions': 'Actions Rapides',
+    'teacherDashboard.tabs.mlTraining': 'Entraînement ML',
+
+    'teacherDashboard.classrooms.title': 'Mes Classes',
+    'teacherDashboard.classrooms.create': 'Créer une Classe',
+    'teacherDashboard.classrooms.emptyTitle': 'Aucune Classe Pour le Moment',
+    'teacherDashboard.classrooms.emptyDescription':
+      'Créez votre première classe pour inviter des élèves et lancer des jeux.',
+    'teacherDashboard.classrooms.emptyCTA': 'Créer Votre Première Classe',
+
+    'teacherDashboard.leaderboard.empty': 'Créez une classe pour voir les classements',
+    'teacherDashboard.leaderboard.viewFull': 'Voir le Classement Complet →',
+
+    'teacherDashboard.quickActions.browseGames.title': 'Parcourir les Jeux',
+    'teacherDashboard.quickActions.browseGames.description':
+      'Découvrez des jeux éducatifs pour votre classe',
+    'teacherDashboard.quickActions.browseGames.cta': 'Voir les Jeux',
+
+    'teacherDashboard.quickActions.auraAnalytics.title': 'Analyses AURA',
+    'teacherDashboard.quickActions.auraAnalytics.description':
+      'Suivez la prononciation des élèves avec l’IA',
+    'teacherDashboard.quickActions.auraAnalytics.cta': 'Voir Analyses',
+
+    'teacherDashboard.quickActions.storyLibrary.title': 'Bibliothèque d’Histoires',
+    'teacherDashboard.quickActions.storyLibrary.description':
+      'Créez et gérez des histoires de lecture',
+    'teacherDashboard.quickActions.storyLibrary.cta': 'Gérer les Histoires',
+
+    'teacherDashboard.quickActions.resources.title': 'Ressources',
+    'teacherDashboard.quickActions.resources.description':
+      'Guides enseignants et bonnes pratiques',
+    'teacherDashboard.quickActions.resources.cta': 'Voir les Ressources',
+    'teacherDashboard.quickActions.resources.soon': 'Bientôt',
+
     // Games
     'games.title': 'Centre de Jeux Éducatifs',
     'games.subtitle': "Choisissez parmi notre collection de jeux éducatifs conçus pour rendre l'apprentissage amusant!",
@@ -253,13 +420,13 @@ const translations: Record<Language, Translations> = {
     'games.wordWizard.description': 'Développez votre vocabulaire et orthographe avec des puzzles de mots.',
     'games.mathQuest.title': 'Quête Mathématique',
     'games.mathQuest.description': "Partez à l'aventure mathématique en résolvant des problèmes.",
-    
+
     // Common
     'common.back': 'Retour',
     'common.loading': 'Chargement...',
     'common.error': 'Erreur',
     'common.success': 'Succès',
-    
+
     // Footer
     'footer.privacyPolicy': 'Politique de Confidentialité',
     'footer.termsOfService': "Conditions d'Utilisation",
