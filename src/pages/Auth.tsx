@@ -670,7 +670,7 @@ const Auth = () => {
             {/* Email Form */}
             <form onSubmit={handleSignIn} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="signin-email" className="text-white/70 text-sm">Email</Label>
+                <Label htmlFor="signin-email" className="text-white text-sm font-medium">Email</Label>
                 <Input
                   id="signin-email"
                   type="email"
@@ -683,7 +683,7 @@ const Auth = () => {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="signin-password" className="text-white/70 text-sm">Password</Label>
+                  <Label htmlFor="signin-password" className="text-white text-sm font-medium">Password</Label>
                   <button
                     type="button"
                     className="text-sm text-purple-400 hover:text-purple-300"
@@ -762,7 +762,7 @@ const Auth = () => {
             {/* Email Form */}
             <form id="signup-form" onSubmit={handleSignUp} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="signup-name" className="text-white/70 text-sm">Full Name</Label>
+                <Label htmlFor="signup-name" className="text-white text-sm font-medium">Full Name</Label>
                 <Input
                   id="signup-name"
                   type="text"
@@ -774,7 +774,7 @@ const Auth = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="signup-email" className="text-white/70 text-sm">Email</Label>
+                <Label htmlFor="signup-email" className="text-white text-sm font-medium">Email</Label>
                 <Input
                   id="signup-email"
                   type="email"
@@ -786,7 +786,7 @@ const Auth = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="signup-password" className="text-white/70 text-sm">Password</Label>
+                <Label htmlFor="signup-password" className="text-white text-sm font-medium">Password</Label>
                 <Input
                   id="signup-password"
                   type="password"
@@ -801,7 +801,7 @@ const Auth = () => {
 
               {/* Role Selection */}
               <div className="space-y-3">
-                <Label className="text-white/70 text-sm">I am a...</Label>
+                <Label className="text-white text-sm font-medium">I am a...</Label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { value: 'student', label: 'Student' },
@@ -816,7 +816,7 @@ const Auth = () => {
                       className={`h-11 rounded-xl text-sm font-medium transition-all ${
                         role === option.value
                           ? 'bg-purple-600 text-white border-purple-500'
-                          : 'bg-white/5 text-white/70 border border-white/10 hover:bg-white/10'
+                          : 'bg-white/5 text-white border border-white/10 hover:bg-white/10'
                       }`}
                     >
                       {option.label}
@@ -828,7 +828,7 @@ const Auth = () => {
               {/* District Code Input for Teacher/Admin */}
               {(role === 'teacher' || role === 'admin') && (
                 <div className="space-y-2">
-                  <Label htmlFor="district-code" className="text-white/70 text-sm flex items-center gap-2">
+                  <Label htmlFor="district-code" className="text-white text-sm font-medium flex items-center gap-2">
                     <Building2 className="h-4 w-4" />
                     District Code
                   </Label>
@@ -852,7 +852,7 @@ const Auth = () => {
               {/* District Dropdown for Student/Parent */}
               {(role === 'student' || role === 'parent') && (
                 <div className="space-y-2">
-                  <Label htmlFor="district-select" className="text-white/70 text-sm flex items-center gap-2">
+                  <Label htmlFor="district-select" className="text-white text-sm font-medium flex items-center gap-2">
                     <Building2 className="h-4 w-4" />
                     School District
                   </Label>
@@ -880,7 +880,7 @@ const Auth = () => {
                 )}
               </Button>
 
-              <p className="text-xs text-white/40 text-center">
+              <p className="text-xs text-white/80 text-center">
                 All accounts require district administrator approval
               </p>
             </form>
@@ -889,16 +889,16 @@ const Auth = () => {
 
         {/* Footer */}
         <div className="mt-8 text-center">
-          <p className="text-white/30 text-sm">
+          <p className="text-white/70 text-sm">
             By continuing, you agree to our{" "}
-            <Link to="/policies" className="text-white/50 hover:text-white/70 underline">Terms of Service</Link>
+            <Link to="/policies" className="text-white hover:text-white underline">Terms of Service</Link>
             {" "}and{" "}
-            <Link to="/policies" className="text-white/50 hover:text-white/70 underline">Privacy Policy</Link>
+            <Link to="/policies" className="text-white hover:text-white underline">Privacy Policy</Link>
           </p>
         </div>
 
         <div className="mt-6 text-center">
-          <Link to="/" className="text-white/40 hover:text-white/60 text-sm transition-colors">
+          <Link to="/" className="text-white/80 hover:text-white text-sm transition-colors">
             ← Back to Home
           </Link>
         </div>
