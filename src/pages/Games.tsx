@@ -1,7 +1,7 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { GameTile } from "@/components/GameTile";
-import { Zap, Trophy, BookOpen, Brain, Calculator, Globe, Hash } from "lucide-react";
+import { Zap, Trophy, BookOpen, Brain, Calculator, Globe, Hash, PawPrint } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const Games = () => {
@@ -29,6 +29,13 @@ const Games = () => {
               gradeRange="Grades K-12"
               path="/games/jeopardy-1v1"
               icon={<Zap className="h-6 w-6 text-white" />}
+            />
+            <GameTile
+              title="Name that Animal"
+              description="Learn letter sounds by identifying the first letter of animal names. Perfect for early readers!"
+              gradeRange="Ages 3-6"
+              path="/games/name-that-animal"
+              icon={<PawPrint className="h-6 w-6 text-white" />}
             />
             <GameTile
               title="Number Maker"
