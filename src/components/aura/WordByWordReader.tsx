@@ -31,6 +31,9 @@ import {
   calculateSessionConfidence,
   type WordMatchResult 
 } from '@/lib/wordMatchingModes';
+// ENHANCED PHONEME INFERENCE: $0/month phoneme pattern analysis
+import { usePhonemePatterns } from '@/hooks/usePhonemePatterns';
+import { compareWordPhonemes, analyzePhonemePatterns, getPhonemeDisplayName } from '@/lib/phonemeInference';
 
 // Browser compatibility check
 const checkBrowserSupport = () => {
@@ -80,6 +83,19 @@ interface ReadingSessionResult {
     confidence: number;
     aiResult: boolean;
   }>;
+  // ENHANCED PHONEME INFERENCE: Specific substitution patterns
+  phonemeInference?: {
+    substitutions: Array<{
+      expected: string;
+      spoken: string;
+      word: string;
+      position: string;
+    }>;
+    problematicPhonemes: string[];
+    phonemeAccuracyBySound: Record<string, number>;
+    overallPhonemeAccuracy: number;
+    interventionPriority: string[];
+  };
 }
 
 interface WordReading {
@@ -250,6 +266,10 @@ export const WordByWordReader = ({
     timestamp: number;
   }>>([]);
   const lastSpeechConfidenceRef = useRef<number>(1);
+  
+  // ENHANCED PHONEME INFERENCE: Track phoneme patterns across sessions ($0/month)
+  const [phonemeMessages, setPhonemeMessages] = useState<string[]>([]);
+  const phonemePatternsInitialized = useRef(false);
 
   // Initialize word status
   useEffect(() => {
@@ -774,6 +794,41 @@ export const WordByWordReader = ({
       phonemeScores[phoneme] = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
     });
 
+    // ========== ENHANCED PHONEME INFERENCE: Detect specific substitutions ($0/month) ==========
+    const incorrectReadings = wordReadings.filter(wr => !wr.correct);
+    let phonemeInferenceData: any = null;
+    
+    if (incorrectReadings.length > 0) {
+      try {
+        // Compare phonemes for each incorrect word
+        const comparisons = incorrectReadings.map(wr => {
+          const expectedWord = words[wr.index] || '';
+          return compareWordPhonemes(wr.word, expectedWord, wr.index);
+        });
+        
+        // Analyze patterns across all comparisons
+        phonemeInferenceData = analyzePhonemePatterns(comparisons);
+        
+        console.log('🎯 PHONEME INFERENCE:', {
+          substitutions: phonemeInferenceData.substitutions.length,
+          problematicPhonemes: phonemeInferenceData.problematicPhonemes,
+          overallAccuracy: phonemeInferenceData.overallPhonemeAccuracy,
+          interventionPriority: phonemeInferenceData.interventionPriority,
+        });
+        
+        // Show improvement/awareness messages for problematic phonemes
+        if (phonemeInferenceData.problematicPhonemes.length > 0) {
+          const topPhoneme = phonemeInferenceData.interventionPriority[0];
+          if (topPhoneme) {
+            const displayName = getPhonemeDisplayName(topPhoneme);
+            setPhonemeMessages([`Keep practicing the ${displayName}! You're getting better! 💪`]);
+          }
+        }
+      } catch (err) {
+        console.error('Phoneme inference error:', err);
+      }
+    }
+
     // Upload audio to storage for teacher playback
     let audioUrl: string | null = null;
     const audioChunkCount = audioChunksRef.current.length;
@@ -836,7 +891,16 @@ export const WordByWordReader = ({
         miscue_analysis: miscueAnalysis as any, // NEW: Full miscue breakdown
         prosody_metrics: prosodyMetrics as any, // NEW: Phrasing/expression/smoothness/pace
         cognitive_load_avg: cognitiveLoad, // ML OUTPUT: Cognitive load during session
-        phoneme_accuracy: phonemeScores, // ML OUTPUT: Per-phoneme accuracy scores
+        phoneme_accuracy: {
+          ...phonemeScores,
+          // Include enhanced phoneme inference data
+          _inference: phonemeInferenceData ? {
+            substitutions: phonemeInferenceData.substitutions.slice(0, 20), // Cap at 20 for storage
+            problematicPhonemes: phonemeInferenceData.problematicPhonemes,
+            interventionPriority: phonemeInferenceData.interventionPriority,
+            overallAccuracy: phonemeInferenceData.overallPhonemeAccuracy,
+          } : null,
+        }, // ML OUTPUT: Per-phoneme accuracy scores + inference
         audio_url: audioUrl, // NEW: Path to audio recording for teacher playback
       } as any)
       .select()
@@ -1120,6 +1184,19 @@ export const WordByWordReader = ({
         confidence: fw.confidence,
         aiResult: fw.aiResult,
       })),
+      // ENHANCED PHONEME INFERENCE: Specific substitution patterns
+      phonemeInference: phonemeInferenceData ? {
+        substitutions: phonemeInferenceData.substitutions.map((s: any) => ({
+          expected: s.expected,
+          spoken: s.spoken,
+          word: s.word,
+          position: s.position,
+        })),
+        problematicPhonemes: phonemeInferenceData.problematicPhonemes,
+        phonemeAccuracyBySound: phonemeInferenceData.phonemeAccuracyBySound,
+        overallPhonemeAccuracy: phonemeInferenceData.overallPhonemeAccuracy,
+        interventionPriority: phonemeInferenceData.interventionPriority,
+      } : undefined,
     });
 
     // Enhanced feedback with WCPM and prosody
