@@ -4,8 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Menu } from "lucide-react";
 import { useStudentAssignmentStats } from "@/hooks/useStudentAssignmentStats";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { StudentDashboardSidebar } from "@/components/student/StudentDashboardSidebar";
 import { HomeSection } from "@/components/student/sections/HomeSection";
 import { TodaySection } from "@/components/student/sections/TodaySection";
@@ -25,6 +26,7 @@ const StudentDashboard = () => {
   const [classrooms, setClassrooms] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeSection, setActiveSection] = useState("home");
+  const [tabletSidebarOpen, setTabletSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: assignmentStats } = useStudentAssignmentStats(profile?.id);
@@ -127,12 +129,37 @@ const StudentDashboard = () => {
         <SafetyAlertBanner />
       </div>
       <div className="flex flex-1">
-        <StudentDashboardSidebar 
-          activeSection={activeSection} 
-          onSectionChange={setActiveSection}
-          onNavigateToGames={() => navigate('/games')}
-          onNavigateToAuraReading={() => navigate('/student/aura-practice')}
-        />
+        {/* Desktop sidebar - visible on lg and above */}
+        <div className="hidden lg:block">
+          <StudentDashboardSidebar 
+            activeSection={activeSection} 
+            onSectionChange={setActiveSection}
+            onNavigateToGames={() => navigate('/games')}
+            onNavigateToAuraReading={() => navigate('/student/aura-practice')}
+          />
+        </div>
+        
+        {/* Tablet hamburger menu + Sheet - visible on md to lg only */}
+        <div className="hidden md:block lg:hidden fixed top-20 left-4 z-50">
+          <Sheet open={tabletSidebarOpen} onOpenChange={setTabletSidebarOpen}>
+            <SheetTrigger asChild>
+              <button className="p-2.5 rounded-xl bg-background/90 backdrop-blur-sm border border-border/50 shadow-lg hover:bg-muted/80 transition-colors">
+                <Menu className="h-5 w-5 text-foreground" />
+              </button>
+            </SheetTrigger>
+            <SheetContent side="left" className="p-0 w-72">
+              <StudentDashboardSidebar 
+                activeSection={activeSection} 
+                onSectionChange={setActiveSection}
+                onNavigateToGames={() => navigate('/games')}
+                onNavigateToAuraReading={() => navigate('/student/aura-practice')}
+                isSheet={true}
+                onClose={() => setTabletSidebarOpen(false)}
+              />
+            </SheetContent>
+          </Sheet>
+        </div>
+        
         <main className="flex-1 overflow-y-auto">
           <div className="container mx-auto px-4 py-8">{renderSection()}</div>
         </main>
