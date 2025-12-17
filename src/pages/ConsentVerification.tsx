@@ -105,19 +105,51 @@ export default function ConsentVerification() {
           .update({ password_temp: null })
           .eq('consent_token', token);
 
-        // If we have district_id, update the profile
+        // If we have district_id, update the profile and create verification request
         if (signupData.user && consent.district_id) {
           // Wait for trigger to create profile
           await new Promise(resolve => setTimeout(resolve, 1500));
           
+          // Update profile with district_id and ensure is_verified is false
           await supabase
             .from('profiles')
-            .update({ district_id: consent.district_id })
+            .update({ 
+              district_id: consent.district_id,
+              is_verified: false 
+            })
             .eq('id', signupData.user.id);
+
+          // Fetch district name for the verification request
+          const { data: districtData } = await supabase
+            .from('districts')
+            .select('name')
+            .eq('district_code', consent.district_id)
+            .single();
+
+          const districtName = districtData?.name || consent.district_id;
+
+          // Create account verification request for district admin approval
+          const { error: verificationError } = await supabase
+            .from('account_verification_requests')
+            .insert({
+              user_id: signupData.user.id,
+              profile_id: signupData.user.id,
+              district_id: consent.district_id,
+              district_name: districtName,
+              full_name: consent.full_name,
+              email: consent.student_email,
+              requested_role: 'student',
+              status: 'pending'
+            });
+
+          if (verificationError) {
+            console.error('Error creating verification request:', verificationError);
+            // Don't fail the whole flow, just log it
+          }
         }
 
         setAccountCreated(true);
-        toast.success("Account created successfully! The student can now sign in.");
+        toast.success("Account created! Pending district admin approval before the student can sign in.");
       } else {
         toast.success("Parental consent verified! The student can now complete signup.");
       }
@@ -161,7 +193,7 @@ export default function ConsentVerification() {
           <CardDescription>
             {status === 'loading' && "Please wait while we verify your consent"}
             {status === 'creating_account' && "Setting up your child's account..."}
-            {status === 'success' && (accountCreated ? "Your child can now sign in with their email and password" : "Your child can now complete their account setup")}
+            {status === 'success' && (accountCreated ? "Your child's account is pending district admin approval" : "Your child can now complete their account setup")}
             {status === 'expired' && "This verification link has expired"}
             {status === 'error' && "We couldn't verify this consent request"}
           </CardDescription>
@@ -189,7 +221,7 @@ export default function ConsentVerification() {
 
               <p className="text-sm text-muted-foreground text-center">
                 {accountCreated 
-                  ? "Your child's account has been created and is ready to use. They can sign in with their email and password."
+                  ? "Your child's account has been created and is awaiting district admin approval. Once approved, they can sign in with their email and password."
                   : "Your child can now return to the signup page and complete their account creation."}
               </p>
             </>
