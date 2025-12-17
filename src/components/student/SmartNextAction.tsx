@@ -70,18 +70,16 @@ export const SmartNextAction = ({ assignmentStats, studentStats }: SmartNextActi
       <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 via-transparent to-pink-500/20 pointer-events-none" />
       
       <CardHeader className="relative">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <div className={recommendation.iconClass}>
-              {recommendation.icon}
-            </div>
-            <div>
-              <CardTitle className="text-2xl mb-2">{recommendation.title}</CardTitle>
-              <Badge variant="gold" className="shadow-glow-gold">
-                <Sparkles className="h-3 w-3 mr-1" />
-                AI Recommended
-              </Badge>
-            </div>
+        <div className="flex items-start gap-3 md:gap-4">
+          <div className={`${recommendation.iconClass} shrink-0`}>
+            {recommendation.icon}
+          </div>
+          <div className="min-w-0 flex-1">
+            <CardTitle className="text-xl md:text-lg lg:text-2xl mb-2 break-words">{recommendation.title}</CardTitle>
+            <Badge variant="gold" className="shadow-glow-gold">
+              <Sparkles className="h-3 w-3 mr-1" />
+              AI Recommended
+            </Badge>
           </div>
         </div>
       </CardHeader>
@@ -102,7 +100,7 @@ export const SmartNextAction = ({ assignmentStats, studentStats }: SmartNextActi
             </div>
           </div>
           
-          <div className="grid grid-cols-3 gap-4 pt-3 border-t border-border/50">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-2 lg:gap-4 pt-3 border-t border-border/50">
             <div>
               <p className="text-xs text-muted-foreground mb-1">Expected Outcome</p>
               <p className="text-sm font-bold text-green-500">
