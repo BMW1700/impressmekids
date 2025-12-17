@@ -41,15 +41,49 @@ export function BenchmarkReport({
   const printRef = useRef<HTMLDivElement>(null);
   const [showVerification, setShowVerification] = useState(false);
   
-  // Parse confidence info from notes field (temporary until schema updated)
-  const parseConfidenceFromNotes = (notes: string | null): { score: number; level: 'high' | 'medium' | 'low'; flaggedCount: number } | null => {
+  // Parse confidence info from notes field (supports both JSON and legacy text format)
+  interface ParsedConfidence {
+    score: number;
+    level: 'high' | 'medium' | 'low';
+    flaggedCount: number;
+    flaggedWords: Array<{
+      index: number;
+      expected: string;
+      spoken: string;
+      aiResult: boolean;
+      confidence: 'high' | 'medium' | 'low';
+      matchScore: number;
+      speechConfidence: number;
+      timestampMs: number;
+    }>;
+  }
+
+  const parseConfidenceFromNotes = (notes: string | null): ParsedConfidence | null => {
     if (!notes) return null;
+    
+    // Try JSON format first (new format)
+    try {
+      const parsed = JSON.parse(notes);
+      if (parsed.aiConfidence !== undefined) {
+        return {
+          score: parsed.aiConfidence,
+          level: parsed.level as 'high' | 'medium' | 'low',
+          flaggedCount: parsed.flaggedCount || 0,
+          flaggedWords: parsed.flaggedWords || [],
+        };
+      }
+    } catch {
+      // Not JSON, try legacy text format
+    }
+    
+    // Legacy text format fallback
     const match = notes.match(/AI Confidence: (\d+)% \((high|medium|low)\)\. (\d+) words flagged/);
     if (match) {
       return {
         score: parseInt(match[1]),
         level: match[2] as 'high' | 'medium' | 'low',
         flaggedCount: parseInt(match[3]),
+        flaggedWords: [],
       };
     }
     const noFlagMatch = notes.match(/AI Confidence: (\d+)% \((high|medium|low)\)\./);
@@ -58,6 +92,7 @@ export function BenchmarkReport({
         score: parseInt(noFlagMatch[1]),
         level: noFlagMatch[2] as 'high' | 'medium' | 'low',
         flaggedCount: 0,
+        flaggedWords: [],
       };
     }
     return null;
@@ -290,29 +325,61 @@ export function BenchmarkReport({
       </CardHeader>
       
       <CardContent className="space-y-6">
-        {/* AI Confidence Badge - Show if confidence data available */}
+        {/* AI Confidence Badge & Verify Button */}
         {(() => {
           const confidence = parseConfidenceFromNotes((latestResult as any).notes);
           if (confidence) {
             return (
-              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
-                <div className="flex items-center gap-3">
-                  <Shield className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">AI Assessment Confidence</p>
-                    <p className="text-xs text-muted-foreground">
-                      {confidence.flaggedCount > 0 
-                        ? `${confidence.flaggedCount} words flagged for verification`
-                        : 'High confidence - no verification needed'}
-                    </p>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
+                  <div className="flex items-center gap-3">
+                    <Shield className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">AI Assessment Confidence</p>
+                      <p className="text-xs text-muted-foreground">
+                        {confidence.flaggedCount > 0 
+                          ? `${confidence.flaggedCount} words flagged for verification`
+                          : 'High confidence - no verification needed'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <AIConfidenceBadge 
+                      score={confidence.score} 
+                      level={confidence.level}
+                      flaggedWordCount={confidence.flaggedCount}
+                      showTooltip
+                    />
+                    {confidence.flaggedCount > 0 && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setShowVerification(!showVerification)}
+                        className="print:hidden"
+                      >
+                        <AlertTriangle className="h-4 w-4 mr-1 text-amber-500" />
+                        {showVerification ? 'Hide' : 'Verify'}
+                      </Button>
+                    )}
                   </div>
                 </div>
-                <AIConfidenceBadge 
-                  score={confidence.score} 
-                  level={confidence.level}
-                  flaggedWordCount={confidence.flaggedCount}
-                  showTooltip
-                />
+                
+                {/* Teacher Verification Panel */}
+                {showVerification && confidence.flaggedWords.length > 0 && (
+                  <TeacherWordVerification
+                    resultId={latestResult.id}
+                    studentName={studentName}
+                    flaggedWords={confidence.flaggedWords}
+                    audioPath={(latestResult as any).audio_url}
+                    originalWcpm={latestResult.wcpm}
+                    originalAccuracy={latestResult.accuracy_percentage || 0}
+                    totalWords={latestResult.words_read || 0}
+                    onVerificationComplete={() => {
+                      refetch();
+                      setShowVerification(false);
+                    }}
+                  />
+                )}
               </div>
             );
           }
