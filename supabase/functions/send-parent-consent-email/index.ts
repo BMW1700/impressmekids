@@ -39,7 +39,7 @@ const handler = async (req: Request): Promise<Response> => {
     const verificationUrl = `${Deno.env.get("APP_URL") || "https://impressmekids.com"}/consent/${consentToken}`;
 
     const emailResponse = await resend.emails.send({
-      from: "ImpressMe Kids <onboarding@resend.dev>",
+      from: "ImpressMe Kids <noreply@impressmekids.com>",
       to: [parentEmail],
       subject: "Parental Consent Required - ImpressMe Kids",
       html: `
