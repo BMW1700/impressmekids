@@ -44,15 +44,18 @@ export function ParentalConsentForm({ open, studentEmail, signupData, onConsentR
     setIsLoading(true);
 
     try {
-      // Check if consent request already exists
-      const { data: existingRequest } = await supabase
-        .from('student_signup_consents')
-        .select('id, consent_given')
-        .eq('student_email', studentEmail)
-        .maybeSingle();
+      // Check if consent request already exists using secure RPC (no PII exposure)
+      const { data: existingRequest, error: checkError } = await supabase
+        .rpc('check_consent_exists', { p_student_email: studentEmail });
+
+      if (checkError) {
+        console.error('Error checking consent:', checkError);
+      }
+
+      const existingConsent = existingRequest?.[0];
 
       // If consent already given, inform user
-      if (existingRequest?.consent_given) {
+      if (existingConsent?.consent_given) {
         toast.info("Parental consent has already been verified for this email.");
         setIsLoading(false);
         return;
@@ -62,7 +65,7 @@ export function ParentalConsentForm({ open, studentEmail, signupData, onConsentR
       const consentToken = crypto.randomUUID();
       const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
 
-      if (existingRequest) {
+      if (existingConsent) {
         // UPDATE existing record with new token and info
         const { error: dbError } = await supabase
           .from('student_signup_consents')
@@ -76,7 +79,7 @@ export function ParentalConsentForm({ open, studentEmail, signupData, onConsentR
             student_role: signupData.role,
             district_id: signupData.districtId,
           })
-          .eq('id', existingRequest.id);
+          .eq('id', existingConsent.id);
 
         if (dbError) throw dbError;
       } else {

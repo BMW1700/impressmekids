@@ -5386,6 +5386,13 @@ export type Database = {
         Args: { _tournament_id: string; _user_id: string }
         Returns: boolean
       }
+      check_consent_exists: {
+        Args: { p_student_email: string }
+        Returns: {
+          consent_given: boolean
+          id: string
+        }[]
+      }
       check_email_exists_secure: { Args: { p_email: string }; Returns: boolean }
       cleanup_expired_safety_alerts: { Args: never; Returns: undefined }
       compute_levenshtein: { Args: { a: string; b: string }; Returns: number }
@@ -5476,6 +5483,20 @@ export type Database = {
           full_name: string
           joined_at: string
           student_id: string
+        }[]
+      }
+      get_consent_by_token: {
+        Args: { p_token: string }
+        Returns: {
+          consent_given: boolean
+          district_id: string
+          expires_at: string
+          full_name: string
+          id: string
+          parent_name: string
+          password_temp: string
+          student_email: string
+          student_role: string
         }[]
       }
       get_directory_admins: {

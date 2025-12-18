@@ -43,17 +43,16 @@ export default function ConsentVerification() {
     }
 
     try {
-      // Fetch consent request with signup data
-      const { data: consent, error: fetchError } = await supabase
-        .from('student_signup_consents')
-        .select('*')
-        .eq('consent_token', token)
-        .single();
+      // Fetch consent request using secure RPC function (token-based access only)
+      const { data: consentData, error: fetchError } = await supabase
+        .rpc('get_consent_by_token', { p_token: token });
 
-      if (fetchError || !consent) {
+      if (fetchError || !consentData || consentData.length === 0) {
         setStatus('error');
         return;
       }
+
+      const consent = consentData[0];
 
       // Check if already verified and account created
       if (consent.consent_given) {
