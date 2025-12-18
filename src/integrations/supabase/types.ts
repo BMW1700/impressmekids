@@ -5615,6 +5615,7 @@ export type Database = {
           status: string
         }[]
       }
+      get_user_district_id: { Args: { _user_id: string }; Returns: string }
       get_user_profile: {
         Args: { _user_id: string }
         Returns: {
