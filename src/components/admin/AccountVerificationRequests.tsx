@@ -63,10 +63,14 @@ export function AccountVerificationRequests() {
 
   const approveMutation = useMutation({
     mutationFn: async (request: VerificationRequest) => {
-      // Step 1: Mark profile as verified
+      // Step 1: Mark profile as verified AND ensure district_id is set
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ is_verified: true })
+        .update({ 
+          is_verified: true,
+          district_id: request.district_id,
+          district_name: request.district_name
+        })
         .eq('id', request.profile_id);
 
       if (profileError) throw profileError;
