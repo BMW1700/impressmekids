@@ -422,12 +422,19 @@ const Auth = () => {
 
       // Create verification request for all non-admin roles
       if (role === 'teacher' || role === 'student' || role === 'parent') {
+        // Validate district_id before creating verification request
+        if (!districtId) {
+          // Clean up orphan profile if district validation fails
+          await supabase.from('profiles').delete().eq('id', data.user.id);
+          throw new Error('District ID is required. Please select a valid district.');
+        }
+
         const { error: requestError } = await supabase
           .from('account_verification_requests')
           .insert({
             user_id: data.user.id,
             profile_id: data.user.id,
-            district_id: districtId!,
+            district_id: districtId,
             district_name: districtName || '',
             full_name: fullName,
             email: email,
@@ -435,7 +442,12 @@ const Auth = () => {
             status: 'pending'
           });
 
-        if (requestError) throw requestError;
+        if (requestError) {
+          // Clean up orphan profile if verification request fails
+          console.error('Verification request failed, cleaning up profile:', requestError);
+          await supabase.from('profiles').delete().eq('id', data.user.id);
+          throw new Error('Failed to create verification request. Please try again.');
+        }
 
         toast({
           title: "Account Created",
