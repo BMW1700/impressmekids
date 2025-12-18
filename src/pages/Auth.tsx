@@ -393,8 +393,33 @@ const Auth = () => {
       if (error) throw error;
       if (!data.user) throw new Error('User creation failed');
 
-      // Wait for trigger to create profile
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Wait for trigger to create profile - with retry verification
+      let profileExists = false;
+      let attempts = 0;
+      const maxAttempts = 10;
+
+      while (!profileExists && attempts < maxAttempts) {
+        attempts++;
+        
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', data.user.id)
+          .maybeSingle();
+        
+        if (existingProfile) {
+          profileExists = true;
+        } else {
+          // Wait 500ms before retrying
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
+      if (!profileExists) {
+        // Profile trigger failed - clean up auth user
+        await supabase.auth.signOut();
+        throw new Error('Account setup failed. Please try again.');
+      }
 
       // Get district info
       const districtId = (role === 'teacher' || role === 'admin') 
@@ -409,16 +434,20 @@ const Auth = () => {
       const isVerified = role === 'admin';
 
       // Update profile with district info and verification status
-      const { error: profileError } = await supabase
+      const { data: updatedProfile, error: profileError } = await supabase
         .from('profiles')
         .update({ 
           district_id: districtId,
           district_name: districtName,
           is_verified: isVerified
         })
-        .eq('id', data.user.id);
+        .eq('id', data.user.id)
+        .select();
 
       if (profileError) throw profileError;
+      if (!updatedProfile || updatedProfile.length === 0) {
+        throw new Error('Failed to update profile. Please try again.');
+      }
 
       // Create verification request for all non-admin roles
       if (role === 'teacher' || role === 'student' || role === 'parent') {
