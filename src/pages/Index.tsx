@@ -11,6 +11,34 @@ import { TestimonialSection } from "@/components/landing/TestimonialSection";
 import { TrustSection } from "@/components/landing/TrustSection";
 import { ResearchSection } from "@/components/landing/ResearchSection";
 import { Badge } from "@/components/ui/badge";
+import { motion } from "framer-motion";
+
+const fadeInUp = {
+  hidden: { opacity: 0, y: 30 },
+  visible: (delay: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.6,
+      delay: delay,
+      ease: "easeOut" as const
+    }
+  })
+};
+
+const fadeInScale = {
+  hidden: { opacity: 0, scale: 0.9 },
+  visible: (delay: number) => ({
+    opacity: 1,
+    scale: 1,
+    transition: {
+      duration: 0.5,
+      delay: delay,
+      ease: "easeOut" as const
+    }
+  })
+};
+
 const Index = () => {
   const navigate = useNavigate();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -61,22 +89,49 @@ const Index = () => {
       <Header />
       
       {/* Hero Section */}
-      <section className="bg-gradient-hero text-white py-24 md:py-32 animate-fade-in relative overflow-hidden">
+      <section className="bg-gradient-hero text-white py-24 md:py-32 relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItaDJWMzRoLTJ6bTAgNGgydjJoLTJ2LTJ6bTAtOGgydjJoLTJ2LTJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
         
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
-            <Badge variant="secondary" className="mb-6 px-4 py-2 text-sm font-semibold">
-              Complete Classroom Solution
-            </Badge>
+            <motion.div
+              variants={fadeInScale}
+              initial="hidden"
+              animate="visible"
+              custom={0.1}
+            >
+              <Badge variant="secondary" className="mb-6 px-4 py-2 text-sm font-semibold">
+                Complete Classroom Solution
+              </Badge>
+            </motion.div>
             
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
+            <motion.h1 
+              className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight"
+              variants={fadeInUp}
+              initial="hidden"
+              animate="visible"
+              custom={0.2}
+            >
               Your Complete Platform for <span className="text-secondary">Teaching & Learning</span>
-            </h1>
+            </motion.h1>
             
-            <p className="text-lg md:text-xl lg:text-2xl mb-8 opacity-95 max-w-3xl mx-auto">A collaborative learning platform that empowers teachers, students, and parents to connect, communicate, and inspire academic growth in and beyond the classroom.</p>
+            <motion.p 
+              className="text-lg md:text-xl lg:text-2xl mb-8 opacity-95 max-w-3xl mx-auto"
+              variants={fadeInUp}
+              initial="hidden"
+              animate="visible"
+              custom={0.4}
+            >
+              A collaborative learning platform that empowers teachers, students, and parents to connect, communicate, and inspire academic growth in and beyond the classroom.
+            </motion.p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+            <motion.div 
+              className="flex flex-col sm:flex-row gap-4 justify-center mb-12"
+              variants={fadeInUp}
+              initial="hidden"
+              animate="visible"
+              custom={0.6}
+            >
               <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary-light text-lg px-8 py-6" asChild>
                 <Link to="/auth">
                   Request a Demo
@@ -88,9 +143,15 @@ const Index = () => {
                   Start Free Trial
                 </Link>
               </Button>
-            </div>
+            </motion.div>
 
-            <div className="flex flex-wrap justify-center gap-6 text-sm">
+            <motion.div 
+              className="flex flex-wrap justify-center gap-6 text-sm"
+              variants={fadeInUp}
+              initial="hidden"
+              animate="visible"
+              custom={0.8}
+            >
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5" />
                 <span>One stop shop for all classrooms</span>
@@ -103,7 +164,7 @@ const Index = () => {
                 <CheckCircle className="h-5 w-5" />
                 <span>No credit card required</span>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
