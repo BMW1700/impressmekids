@@ -57,6 +57,8 @@ import NotFound from "./pages/NotFound";
 import ReadingAnalyticsCalibration from "./components/aura/ReadingAnalyticsCalibration";
 import ConsentVerification from "./pages/ConsentVerification";
 import StoryManagement from "./pages/teacher/StoryManagement";
+import AdminSecurityDashboard from "./pages/admin/AdminSecurityDashboard";
+import SecurityPortal from "./pages/SecurityPortal";
 
 const queryClient = new QueryClient();
 
@@ -116,6 +118,8 @@ const App = () => (
           <Route path="/admin/settings" element={<SchoolSettings />} />
           <Route path="/admin/safety" element={<AdminSafetyDashboard />} />
           <Route path="/admin/safety/drill/:drillId" element={<AdminDrillMonitor />} />
+          <Route path="/admin/security" element={<AdminSecurityDashboard />} />
+          <Route path="/security" element={<SecurityPortal />} />
           <Route path="/district/dashboard" element={<DistrictDashboard />} />
           <Route path="/district-manager/dashboard" element={<DistrictManagerDashboard />} />
           <Route path="/district/register" element={<RegisterDistrict />} />
