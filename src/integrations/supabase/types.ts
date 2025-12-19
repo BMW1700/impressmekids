@@ -1740,11 +1740,17 @@ export type Database = {
         Row: {
           classroom_id: string
           drill_session_id: string
+          escalation_acknowledged_at: string | null
+          escalation_acknowledged_by: string | null
+          escalation_level: number | null
+          escalation_started_at: string | null
           id: string
           location_notes: string | null
           marked_at: string | null
           marked_by: string | null
           parent_notified: boolean | null
+          resolution_notes: string | null
+          resolved_at: string | null
           status: string
           student_checked_in: boolean | null
           student_checkin_at: string | null
@@ -1753,11 +1759,17 @@ export type Database = {
         Insert: {
           classroom_id: string
           drill_session_id: string
+          escalation_acknowledged_at?: string | null
+          escalation_acknowledged_by?: string | null
+          escalation_level?: number | null
+          escalation_started_at?: string | null
           id?: string
           location_notes?: string | null
           marked_at?: string | null
           marked_by?: string | null
           parent_notified?: boolean | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
           status?: string
           student_checked_in?: boolean | null
           student_checkin_at?: string | null
@@ -1766,11 +1778,17 @@ export type Database = {
         Update: {
           classroom_id?: string
           drill_session_id?: string
+          escalation_acknowledged_at?: string | null
+          escalation_acknowledged_by?: string | null
+          escalation_level?: number | null
+          escalation_started_at?: string | null
           id?: string
           location_notes?: string | null
           marked_at?: string | null
           marked_by?: string | null
           parent_notified?: boolean | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
           status?: string
           student_checked_in?: boolean | null
           student_checkin_at?: string | null
@@ -1789,6 +1807,13 @@ export type Database = {
             columns: ["drill_session_id"]
             isOneToOne: false
             referencedRelation: "drill_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drill_attendance_escalation_acknowledged_by_fkey"
+            columns: ["escalation_acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -1929,6 +1954,137 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      escalation_notifications: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          drill_attendance_id: string | null
+          drill_session_id: string | null
+          escalation_level: number
+          id: string
+          message: string
+          notification_channel: string
+          response_notes: string | null
+          sent_at: string
+          student_id: string | null
+          target_role: string
+          target_user_id: string | null
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          drill_attendance_id?: string | null
+          drill_session_id?: string | null
+          escalation_level: number
+          id?: string
+          message: string
+          notification_channel: string
+          response_notes?: string | null
+          sent_at?: string
+          student_id?: string | null
+          target_role: string
+          target_user_id?: string | null
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          drill_attendance_id?: string | null
+          drill_session_id?: string | null
+          escalation_level?: number
+          id?: string
+          message?: string
+          notification_channel?: string
+          response_notes?: string | null
+          sent_at?: string
+          student_id?: string | null
+          target_role?: string
+          target_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escalation_notifications_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escalation_notifications_drill_attendance_id_fkey"
+            columns: ["drill_attendance_id"]
+            isOneToOne: false
+            referencedRelation: "drill_attendance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escalation_notifications_drill_session_id_fkey"
+            columns: ["drill_session_id"]
+            isOneToOne: false
+            referencedRelation: "drill_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escalation_notifications_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escalation_notifications_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escalation_rules: {
+        Row: {
+          created_at: string
+          escalation_level: number
+          id: string
+          is_active: boolean
+          message_template: string
+          notification_channels: string[]
+          role_target: string
+          school_id: string | null
+          sla_seconds: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          escalation_level: number
+          id?: string
+          is_active?: boolean
+          message_template: string
+          notification_channels?: string[]
+          role_target: string
+          school_id?: string | null
+          sla_seconds: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          escalation_level?: number
+          id?: string
+          is_active?: boolean
+          message_template?: string
+          notification_channels?: string[]
+          role_target?: string
+          school_id?: string | null
+          sla_seconds?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escalation_rules_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["district_code"]
+          },
+        ]
       }
       events: {
         Row: {
@@ -4000,6 +4156,76 @@ export type Database = {
           },
         ]
       }
+      safety_verification_log: {
+        Row: {
+          actor_id: string | null
+          actor_role: string | null
+          classroom_id: string | null
+          created_at: string
+          drill_session_id: string | null
+          event_data: Json | null
+          event_hash: string | null
+          event_type: string
+          id: string
+          ip_address: unknown
+          previous_hash: string | null
+          student_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_role?: string | null
+          classroom_id?: string | null
+          created_at?: string
+          drill_session_id?: string | null
+          event_data?: Json | null
+          event_hash?: string | null
+          event_type: string
+          id?: string
+          ip_address?: unknown
+          previous_hash?: string | null
+          student_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          actor_role?: string | null
+          classroom_id?: string | null
+          created_at?: string
+          drill_session_id?: string | null
+          event_data?: Json | null
+          event_hash?: string | null
+          event_type?: string
+          id?: string
+          ip_address?: unknown
+          previous_hash?: string | null
+          student_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "safety_verification_log_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_verification_log_drill_session_id_fkey"
+            columns: ["drill_session_id"]
+            isOneToOne: false
+            referencedRelation: "drill_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_verification_log_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       school_events: {
         Row: {
           blocks_classes: boolean | null
@@ -5513,6 +5739,23 @@ export type Database = {
           email: string
           full_name: string
           id: string
+        }[]
+      }
+      get_missing_students_with_escalation: {
+        Args: { p_drill_session_id: string }
+        Returns: {
+          attendance_id: string
+          classroom_id: string
+          classroom_name: string
+          escalation_level: number
+          escalation_started_at: string
+          parent_phone: string
+          status: string
+          student_id: string
+          student_name: string
+          teacher_id: string
+          teacher_name: string
+          time_missing_seconds: number
         }[]
       }
       get_parent_account: {
