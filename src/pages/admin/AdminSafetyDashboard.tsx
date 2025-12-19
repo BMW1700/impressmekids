@@ -13,6 +13,7 @@ import { ScheduleDrillModal } from "@/components/admin/ScheduleDrillModal";
 import { DrillSessionCard } from "@/components/safety/DrillSessionCard";
 import { AdminLiveView } from "@/components/admin/AdminLiveView";
 import { SafetyAnalytics } from "@/components/admin/SafetyAnalytics";
+import { MissingStudentsQueue } from "@/components/admin/MissingStudentsQueue";
 import { useToast } from "@/hooks/use-toast";
 import {
   Select,
@@ -330,22 +331,30 @@ export default function AdminSafetyDashboard() {
         </div>
 
         {activeDrill && (
-          <Card className="p-6 mb-6 border-red-500 border-2 bg-red-500/10">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Activity className="h-6 w-6 text-red-500 animate-pulse" />
-                <div>
-                  <h3 className="font-semibold text-lg">Active Drill in Progress</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {activeDrill.drill_type} - Started {new Date(activeDrill.started_at).toLocaleTimeString()}
-                  </p>
+          <div className="space-y-6 mb-6">
+            <Card className="p-6 border-red-500 border-2 bg-red-500/10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Activity className="h-6 w-6 text-red-500 animate-pulse" />
+                  <div>
+                    <h3 className="font-semibold text-lg">Active Drill in Progress</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {activeDrill.drill_type} - Started {new Date(activeDrill.started_at).toLocaleTimeString()}
+                    </p>
+                  </div>
                 </div>
+                <Button variant="outline" onClick={() => navigate(`/admin/safety/drill/${activeDrill.id}`)}>
+                  Monitor Live
+                </Button>
               </div>
-              <Button variant="outline" onClick={() => navigate(`/admin/safety/drill/${activeDrill.id}`)}>
-                Monitor Live
-              </Button>
-            </div>
-          </Card>
+            </Card>
+            
+            {/* Missing Students Queue - Shows during active drills */}
+            <MissingStudentsQueue 
+              drillSessionId={activeDrill.id} 
+              isRealEmergency={activeDrill.is_real_emergency} 
+            />
+          </div>
         )}
 
         <Tabs defaultValue="alerts" className="space-y-6">
