@@ -5,13 +5,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Plus, Trash2, Calendar, Edit2, Save, X } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Clock, Plus, Trash2, Calendar } from "lucide-react";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+
+interface OfficeHour {
+  id: string;
+  days_of_week: string[];
+  start_time: string;
+  end_time: string;
+  location: string | null;
+  notes: string | null;
+}
 
 interface MeetingRequestsTabProps {
   classroomId: string;
@@ -26,10 +31,8 @@ const DAYS_OF_WEEK = [
 ];
 
 export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const [officeHours, setOfficeHours] = useState<OfficeHour[]>([]);
   const [showAddHours, setShowAddHours] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
   
   // Form state
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
@@ -38,76 +41,31 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
 
-  // Fetch office hours for this classroom
-  const { data: officeHours, isLoading } = useQuery({
-    queryKey: ["office-hours", classroomId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("teacher_office_hours")
-        .select("*")
-        .eq("classroom_id", classroomId)
-        .order("created_at", { ascending: false });
-      
-      if (error) throw error;
-      return data || [];
-    },
-  });
+  const addOfficeHoursHandler = () => {
+    if (selectedDays.length === 0) {
+      toast.error("Please select at least one day");
+      return;
+    }
 
-  const addOfficeHours = useMutation({
-    mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+    const newHours: OfficeHour = {
+      id: crypto.randomUUID(),
+      days_of_week: selectedDays,
+      start_time: startTime,
+      end_time: endTime,
+      location: location || null,
+      notes: notes || null,
+    };
 
-      const { error } = await supabase
-        .from("teacher_office_hours")
-        .insert({
-          classroom_id: classroomId,
-          teacher_id: user.id,
-          days_of_week: selectedDays,
-          start_time: startTime,
-          end_time: endTime,
-          location: location || null,
-          notes: notes || null,
-        });
+    setOfficeHours([...officeHours, newHours]);
+    toast.success("Office hours added successfully");
+    resetForm();
+    setShowAddHours(false);
+  };
 
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["office-hours", classroomId] });
-      toast({ title: "Office hours added successfully" });
-      resetForm();
-      setShowAddHours(false);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error adding office hours",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const deleteOfficeHours = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("teacher_office_hours")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["office-hours", classroomId] });
-      toast({ title: "Office hours deleted" });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error deleting office hours",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  const deleteOfficeHoursHandler = (id: string) => {
+    setOfficeHours(officeHours.filter(h => h.id !== id));
+    toast.success("Office hours deleted");
+  };
 
   const resetForm = () => {
     setSelectedDays([]);
@@ -219,19 +177,17 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
 
               <Button 
                 className="w-full" 
-                onClick={() => addOfficeHours.mutate()}
-                disabled={selectedDays.length === 0 || addOfficeHours.isPending}
+                onClick={addOfficeHoursHandler}
+                disabled={selectedDays.length === 0}
               >
-                {addOfficeHours.isPending ? "Adding..." : "Add Office Hours"}
+                Add Office Hours
               </Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
-      {isLoading ? (
-        <div className="text-center py-8">Loading...</div>
-      ) : !officeHours || officeHours.length === 0 ? (
+      {officeHours.length === 0 ? (
         <Card className="p-12 text-center">
           <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
           <h3 className="text-xl font-bold mb-2">No Office Hours Set</h3>
@@ -248,7 +204,7 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
         </Card>
       ) : (
         <div className="grid md:grid-cols-2 gap-6">
-          {officeHours.map((hours: any) => (
+          {officeHours.map((hours) => (
             <Card key={hours.id} className="shadow-card hover:shadow-elegant transition-all duration-300">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
@@ -265,7 +221,7 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() => deleteOfficeHours.mutate(hours.id)}
+                    onClick={() => deleteOfficeHoursHandler(hours.id)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
