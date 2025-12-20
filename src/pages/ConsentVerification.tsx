@@ -5,7 +5,9 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CheckCircle2, XCircle, Loader2, Shield, UserCheck, FileText, Scale } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { CheckCircle2, XCircle, Loader2, Shield, UserCheck, FileText, Scale, Eye, EyeOff } from "lucide-react";
 
 type ConsentStatus = 'loading' | 'awaiting_confirmation' | 'confirming' | 'creating_account' | 'success' | 'error' | 'expired';
 
@@ -14,7 +16,6 @@ interface ConsentData {
   parentName: string;
   fullName: string;
   districtId: string | null;
-  passwordTemp: string | null;
   studentRole: string | null;
 }
 
@@ -25,12 +26,23 @@ export default function ConsentVerification() {
   const [consentData, setConsentData] = useState<ConsentData | null>(null);
   const [accountCreated, setAccountCreated] = useState(false);
   
+  // Password fields (student sets password securely after consent)
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
   // Consent checkboxes
   const [dataCollectionConsent, setDataCollectionConsent] = useState(false);
   const [parentGuardianConsent, setParentGuardianConsent] = useState(false);
   const [parentalRightsConsent, setParentalRightsConsent] = useState(false);
 
   const allConsentsChecked = dataCollectionConsent && parentGuardianConsent && parentalRightsConsent;
+  
+  // Password validation
+  const passwordValid = password.length >= 8;
+  const passwordsMatch = password === confirmPassword && password.length > 0;
+  const canSubmit = allConsentsChecked && passwordValid && passwordsMatch;
 
   useEffect(() => {
     loadConsentData();
@@ -61,7 +73,6 @@ export default function ConsentVerification() {
           parentName: consent.parent_name,
           fullName: consent.full_name || '',
           districtId: consent.district_id,
-          passwordTemp: null,
           studentRole: consent.student_role,
         });
         setAccountCreated(true);
@@ -84,7 +95,6 @@ export default function ConsentVerification() {
         parentName: consent.parent_name,
         fullName: consent.full_name || '',
         districtId: consent.district_id,
-        passwordTemp: consent.password_temp,
         studentRole: consent.student_role,
       });
       setStatus('awaiting_confirmation');
@@ -96,7 +106,7 @@ export default function ConsentVerification() {
   };
 
   const handleConfirmConsent = async () => {
-    if (!token || !consentData || !allConsentsChecked) return;
+    if (!token || !consentData || !canSubmit) return;
 
     setStatus('confirming');
 
@@ -112,14 +122,14 @@ export default function ConsentVerification() {
 
       if (updateError) throw updateError;
 
-      // Check if we have signup data to create the account
-      if (consentData.passwordTemp && consentData.fullName) {
+      // Create the student account with the password entered securely here
+      if (consentData.fullName) {
         setStatus('creating_account');
         
-        // Create the student account
+        // Create the student account with password entered on this secure page
         const { data: signupData, error: signupError } = await supabase.auth.signUp({
           email: consentData.studentEmail,
-          password: consentData.passwordTemp,
+          password: password,
           options: {
             data: {
               full_name: consentData.fullName,
@@ -135,12 +145,6 @@ export default function ConsentVerification() {
           setStatus('success');
           return;
         }
-
-        // Clear the temporary password for security
-        await supabase
-          .from('student_signup_consents')
-          .update({ password_temp: null })
-          .eq('consent_token', token);
 
         // If we have district_id, update the profile and create verification request
         if (signupData.user && consentData.districtId) {
@@ -224,6 +228,71 @@ export default function ConsentVerification() {
         </div>
       </div>
 
+      {/* Secure Password Entry */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Shield className="h-4 w-4 text-primary" />
+          <span>Set Student Password</span>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Create a secure password for your child's account. They will use this to sign in.
+        </p>
+        
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter password (min 8 characters)"
+                className="pr-10"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
+            {password && !passwordValid && (
+              <p className="text-xs text-destructive">Password must be at least 8 characters</p>
+            )}
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <div className="relative">
+              <Input
+                id="confirmPassword"
+                type={showConfirmPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm password"
+                className="pr-10"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
+            {confirmPassword && !passwordsMatch && (
+              <p className="text-xs text-destructive">Passwords do not match</p>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* COPPA Consent Statements */}
       <div className="space-y-4">
         <div className="flex items-center gap-2 text-sm font-medium">
@@ -286,11 +355,11 @@ export default function ConsentVerification() {
       <Button
         onClick={handleConfirmConsent}
         className="w-full"
-        disabled={!allConsentsChecked}
+        disabled={!canSubmit}
         size="lg"
       >
         <CheckCircle2 className="h-4 w-4 mr-2" />
-        I Confirm My Consent
+        I Confirm My Consent & Create Account
       </Button>
 
       <p className="text-xs text-muted-foreground text-center">

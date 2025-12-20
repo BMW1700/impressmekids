@@ -66,7 +66,7 @@ export function ParentalConsentForm({ open, studentEmail, signupData, onConsentR
       const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
 
       if (existingConsent) {
-        // UPDATE existing record with new token and info
+        // UPDATE existing record with new token and info (NO password stored)
         const { error: dbError } = await supabase
           .from('student_signup_consents')
           .update({
@@ -74,7 +74,6 @@ export function ParentalConsentForm({ open, studentEmail, signupData, onConsentR
             parent_name: parentName,
             consent_token: consentToken,
             expires_at: expiresAt,
-            password_temp: signupData.password,
             full_name: signupData.fullName,
             student_role: signupData.role,
             district_id: signupData.districtId,
@@ -83,7 +82,7 @@ export function ParentalConsentForm({ open, studentEmail, signupData, onConsentR
 
         if (dbError) throw dbError;
       } else {
-        // INSERT new record
+        // INSERT new record (NO password stored - student will set password after consent)
         const { error: dbError } = await supabase
           .from('student_signup_consents')
           .insert({
@@ -91,7 +90,6 @@ export function ParentalConsentForm({ open, studentEmail, signupData, onConsentR
             parent_email: parentEmail,
             parent_name: parentName,
             consent_token: consentToken,
-            password_temp: signupData.password,
             full_name: signupData.fullName,
             student_role: signupData.role,
             district_id: signupData.districtId,
