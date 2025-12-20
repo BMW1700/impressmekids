@@ -5526,6 +5526,60 @@ export type Database = {
           },
         ]
       }
+      teacher_office_hours: {
+        Row: {
+          classroom_id: string
+          created_at: string
+          days_of_week: string[]
+          end_time: string
+          id: string
+          location: string | null
+          notes: string | null
+          start_time: string
+          teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          classroom_id: string
+          created_at?: string
+          days_of_week: string[]
+          end_time: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          start_time: string
+          teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          classroom_id?: string
+          created_at?: string
+          days_of_week?: string[]
+          end_time?: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          start_time?: string
+          teacher_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_office_hours_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_office_hours_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teacher_student_notes: {
         Row: {
           audio_url: string | null

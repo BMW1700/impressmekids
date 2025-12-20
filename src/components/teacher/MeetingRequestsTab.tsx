@@ -5,18 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Plus, Trash2, Calendar } from "lucide-react";
+import { Clock, Plus, Trash2, Calendar, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-
-interface OfficeHour {
-  id: string;
-  days_of_week: string[];
-  start_time: string;
-  end_time: string;
-  location: string | null;
-  notes: string | null;
-}
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface MeetingRequestsTabProps {
   classroomId: string;
@@ -31,7 +24,7 @@ const DAYS_OF_WEEK = [
 ];
 
 export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => {
-  const [officeHours, setOfficeHours] = useState<OfficeHour[]>([]);
+  const queryClient = useQueryClient();
   const [showAddHours, setShowAddHours] = useState(false);
   
   // Form state
@@ -41,31 +34,70 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
 
-  const addOfficeHoursHandler = () => {
-    if (selectedDays.length === 0) {
-      toast.error("Please select at least one day");
-      return;
-    }
+  // Fetch office hours
+  const { data: officeHours = [], isLoading } = useQuery({
+    queryKey: ["office-hours", classroomId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("teacher_office_hours")
+        .select("*")
+        .eq("classroom_id", classroomId)
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
-    const newHours: OfficeHour = {
-      id: crypto.randomUUID(),
-      days_of_week: selectedDays,
-      start_time: startTime,
-      end_time: endTime,
-      location: location || null,
-      notes: notes || null,
-    };
+  // Add office hours mutation
+  const addMutation = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
 
-    setOfficeHours([...officeHours, newHours]);
-    toast.success("Office hours added successfully");
-    resetForm();
-    setShowAddHours(false);
-  };
+      const { error } = await supabase
+        .from("teacher_office_hours")
+        .insert({
+          classroom_id: classroomId,
+          teacher_id: user.id,
+          days_of_week: selectedDays,
+          start_time: startTime,
+          end_time: endTime,
+          location: location || null,
+          notes: notes || null,
+        });
 
-  const deleteOfficeHoursHandler = (id: string) => {
-    setOfficeHours(officeHours.filter(h => h.id !== id));
-    toast.success("Office hours deleted");
-  };
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["office-hours", classroomId] });
+      toast.success("Office hours added successfully");
+      resetForm();
+      setShowAddHours(false);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  // Delete office hours mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("teacher_office_hours")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["office-hours", classroomId] });
+      toast.success("Office hours deleted");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
 
   const resetForm = () => {
     setSelectedDays([]);
@@ -94,6 +126,14 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
   const formatDays = (days: string[]) => {
     return days.map(d => d.charAt(0).toUpperCase() + d.slice(1, 3)).join(", ");
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -177,10 +217,10 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
 
               <Button 
                 className="w-full" 
-                onClick={addOfficeHoursHandler}
-                disabled={selectedDays.length === 0}
+                onClick={() => addMutation.mutate()}
+                disabled={selectedDays.length === 0 || addMutation.isPending}
               >
-                Add Office Hours
+                {addMutation.isPending ? "Adding..." : "Add Office Hours"}
               </Button>
             </div>
           </DialogContent>
@@ -221,7 +261,8 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() => deleteOfficeHoursHandler(hours.id)}
+                    onClick={() => deleteMutation.mutate(hours.id)}
+                    disabled={deleteMutation.isPending}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
