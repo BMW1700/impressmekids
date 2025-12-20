@@ -1029,6 +1029,68 @@ const ClassroomDetail = () => {
             <TabsContent value="syllabus" className="mt-6">
               <SyllabusTab classroomId={id!} isTeacher={isTeacher} />
             </TabsContent>
+
+            {/* Student Grades Tab */}
+            <TabsContent value="grades" className="mt-6">
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold">Your Grades</h2>
+                  <p className="text-muted-foreground">
+                    View your current grades and performance in this class
+                  </p>
+                </div>
+                <StudentClassroomTrends 
+                  classroomId={id!} 
+                  studentId={profile?.id}
+                />
+              </div>
+            </TabsContent>
+
+            {/* Student Calendar Tab */}
+            <TabsContent value="calendar" className="mt-6">
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold">Class Calendar</h2>
+                  <p className="text-muted-foreground">
+                    View upcoming assignments and events for this class
+                  </p>
+                </div>
+                <Card className="p-6">
+                  <div className="space-y-4">
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <Calendar className="h-5 w-5 text-primary" />
+                      Upcoming Deadlines
+                    </h3>
+                    {assignments.filter((a: any) => a.status === 'published' && a.due_date).length === 0 ? (
+                      <p className="text-muted-foreground text-sm">No upcoming deadlines</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {assignments
+                          .filter((a: any) => a.status === 'published' && a.due_date)
+                          .sort((a: any, b: any) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+                          .slice(0, 10)
+                          .map((assignment: any) => (
+                            <div key={assignment.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <FileText className="h-4 w-4 text-primary" />
+                                <div>
+                                  <p className="font-medium text-sm">{assignment.title}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {assignment.category || 'Assignment'}
+                                  </p>
+                                </div>
+                              </div>
+                              <Badge variant="outline">
+                                {new Date(assignment.due_date).toLocaleDateString()}
+                              </Badge>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </div>
+            </TabsContent>
           </Tabs>
         </div>
       </main>

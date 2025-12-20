@@ -23,6 +23,7 @@ import {
   Trophy,
   Users,
 } from "lucide-react";
+import { liquidGlassTabClass } from "@/components/ui/liquid-glass-button";
 import { Badge } from "@/components/ui/badge";
 import { Directory } from "@/components/Directory";
 import { ClassroomLeaderboard } from "@/components/ClassroomLeaderboard";
@@ -382,28 +383,28 @@ const TeacherDashboard = () => {
           </div>
 
           <Tabs defaultValue="classrooms" className="w-full">
-            <TabsList className="grid w-full grid-cols-6">
-              <TabsTrigger value="classrooms">
+            <TabsList className="grid w-full grid-cols-6 h-auto p-2 bg-muted/50 rounded-xl gap-2">
+              <TabsTrigger value="classrooms" className={liquidGlassTabClass}>
                 <Users className="h-4 w-4 mr-2" />
                 {t("teacherDashboard.tabs.classrooms")}
               </TabsTrigger>
-              <TabsTrigger value="leaderboard">
+              <TabsTrigger value="leaderboard" className={liquidGlassTabClass}>
                 <Trophy className="h-4 w-4 mr-2" />
                 {t("teacherDashboard.tabs.leaderboard")}
               </TabsTrigger>
-              <TabsTrigger value="calendar" onClick={() => navigate("/teacher/calendar")}>
+              <TabsTrigger value="calendar" className={liquidGlassTabClass} onClick={() => navigate("/teacher/calendar")}>
                 <CalendarIcon className="h-4 w-4 mr-2" />
                 {t("teacherDashboard.tabs.calendar")}
               </TabsTrigger>
-              <TabsTrigger value="directory">
+              <TabsTrigger value="directory" className={liquidGlassTabClass}>
                 <Users className="h-4 w-4 mr-2" />
                 {t("teacherDashboard.tabs.directory")}
               </TabsTrigger>
-              <TabsTrigger value="actions">
+              <TabsTrigger value="actions" className={liquidGlassTabClass}>
                 <BookOpen className="h-4 w-4 mr-2" />
                 {t("teacherDashboard.tabs.quickActions")}
               </TabsTrigger>
-              <TabsTrigger value="ml-training">
+              <TabsTrigger value="ml-training" className={liquidGlassTabClass}>
                 <Brain className="h-4 w-4 mr-2" />
                 {t("teacherDashboard.tabs.mlTraining")}
               </TabsTrigger>
