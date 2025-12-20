@@ -98,12 +98,6 @@ export const ClassroomTabsList = ({
   const visibleTabs = isTeacher ? getVisibleTeacherTabs() : STUDENT_TABS;
   const pendingCount = parentRequests.filter((r) => r.status === "pending").length;
 
-  // Keep a strict visual grid (5 columns teacher / 3 columns student) while still using flex-wrap
-  // so the drag-and-drop placeholder can "push" items apart.
-  const tabItemStyle: React.CSSProperties = isTeacher
-    ? { flex: "0 0 calc(20% - 0.5rem)", maxWidth: "calc(20% - 0.5rem)" }
-    : { flex: "0 0 calc(33.333% - 0.5rem)", maxWidth: "calc(33.333% - 0.5rem)" };
-
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
 
@@ -163,15 +157,15 @@ export const ClassroomTabsList = ({
               ref={provided.innerRef}
               {...provided.draggableProps}
               {...provided.dragHandleProps}
-              style={{
-                ...provided.draggableProps.style,
-                ...tabItemStyle,
-              }}
-              className={cn("shrink-0", snapshot.isDragging && "z-50 opacity-90")}
+              style={provided.draggableProps.style}
+              className={cn(
+                "transition-transform duration-200 ease-out",
+                snapshot.isDragging && "z-50 scale-105 shadow-lg"
+              )}
             >
               <TabsTrigger
                 value={tabId}
-                className={cn("relative w-full min-w-0 cursor-grab", triggerClass)}
+                className={cn("relative cursor-grab", triggerClass)}
                 disabled
               >
                 {renderTabContent(tabId)}
@@ -186,8 +180,7 @@ export const ClassroomTabsList = ({
       <TabsTrigger
         key={tabId}
         value={tabId}
-        style={tabItemStyle}
-        className={cn("relative w-full min-w-0", triggerClass)}
+        className={cn("relative", triggerClass)}
       >
         {renderTabContent(tabId)}
       </TabsTrigger>
@@ -196,24 +189,20 @@ export const ClassroomTabsList = ({
 
   const renderClone = (provided: any, snapshot: any, rubric: any) => {
     const tabId = visibleTabs[rubric.source.index];
-
-    // IMPORTANT: the clone is rendered in a portal outside the Tabs roving-focus context.
-    // Rendering <TabsTrigger /> here will crash (RovingFocusGroupItem must be within RovingFocusGroup).
     return (
       <div
         ref={provided.innerRef}
         {...provided.draggableProps}
         {...provided.dragHandleProps}
-        style={tabItemStyle}
-        className={cn(
-          "pointer-events-none shrink-0 z-50 scale-105 shadow-lg",
-          // mimic the trigger styling without using Radix Tabs primitives
-          "relative flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium",
-          triggerClass
-        )}
-        aria-hidden="true"
+        className="z-50 scale-105 shadow-lg"
       >
-        {renderTabContent(tabId)}
+        <TabsTrigger
+          value={tabId}
+          className={cn("relative cursor-grabbing", triggerClass)}
+          disabled
+        >
+          {renderTabContent(tabId)}
+        </TabsTrigger>
       </div>
     );
   };
@@ -260,7 +249,7 @@ export const ClassroomTabsList = ({
               <TabsList
                 ref={provided.innerRef}
                 {...provided.droppableProps}
-                className="flex flex-wrap w-full h-auto p-2 bg-muted/50 rounded-xl gap-2"
+                className="grid grid-cols-5 w-full h-auto p-2 bg-muted/50 rounded-xl gap-2"
               >
                 {visibleTabs.map((tabId, index) =>
                   renderTabTrigger(tabId, index, true)
@@ -276,7 +265,7 @@ export const ClassroomTabsList = ({
 
   // Student view - no drag and drop
   return (
-    <TabsList className="flex flex-wrap w-full h-auto p-2 bg-muted/50 rounded-xl gap-2">
+    <TabsList className="grid grid-cols-3 w-full h-auto p-2 bg-muted/50 rounded-xl gap-2">
       {STUDENT_TABS.map((tabId, index) => renderTabTrigger(tabId, index, false))}
     </TabsList>
   );
