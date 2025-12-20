@@ -2,6 +2,7 @@ import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useClassroomFeatures } from "@/hooks/useClassroomFeatures";
+import { liquidGlassTabClass } from "@/components/ui/liquid-glass-button";
 import {
   FileText,
   UserCheck,
@@ -31,8 +32,7 @@ export const ClassroomTabsList = ({
 }: ClassroomTabsListProps) => {
   const { isFeatureEnabled } = useClassroomFeatures(classroomId);
 
-  const triggerClass =
-    "data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all";
+  const triggerClass = liquidGlassTabClass;
 
   // Count enabled toolkit features to adjust grid columns
   const enabledToolkitCount = ["leaderboard", "rubrics", "ai-insights", "behavior", "journal"].filter(
