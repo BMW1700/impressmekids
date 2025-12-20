@@ -45,17 +45,20 @@ export const ParentAccessRequestsList = () => {
         throw new Error("Not authenticated");
       }
 
-      // Check user role
-      const { data: roleData, error: roleError } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id);
-      
-      console.log("🔑 [ADMIN REQUESTS] User roles:", {
-        roles: roleData,
-        roleError,
-        hasAdminRole: roleData?.some(r => r.role === 'admin')
-      });
+      // Get admin's district_id
+      const { data: adminProfile, error: profileError } = await supabase
+        .from("profiles")
+        .select("district_id")
+        .eq("id", session.user.id)
+        .single();
+
+      if (profileError) {
+        console.error("❌ [ADMIN REQUESTS] Error fetching admin profile:", profileError);
+        throw profileError;
+      }
+
+      const adminDistrictId = adminProfile?.district_id;
+      console.log("🏫 [ADMIN REQUESTS] Admin district_id:", adminDistrictId);
 
       // First fetch the requests
       console.log("📊 [ADMIN REQUESTS] Fetching parent_access_requests...");
@@ -64,18 +67,6 @@ export const ParentAccessRequestsList = () => {
         .select("*")
         .eq("approval_type", "admin")
         .order("created_at", { ascending: false });
-
-      console.log("📋 [ADMIN REQUESTS] Query result:", {
-        requestsCount: requestsData?.length || 0,
-        requestsData,
-        error: requestsError,
-        errorDetails: requestsError ? {
-          message: requestsError.message,
-          code: requestsError.code,
-          details: requestsError.details,
-          hint: requestsError.hint
-        } : null
-      });
 
       if (requestsError) {
         console.error("❌ [ADMIN REQUESTS] Error fetching requests:", requestsError);
@@ -87,10 +78,42 @@ export const ParentAccessRequestsList = () => {
         return [];
       }
 
-      console.log("✅ [ADMIN REQUESTS] Found requests:", requestsData.length);
+      // Get all student IDs from requests
+      const studentIdsFromRequests = [...new Set(requestsData.map(r => r.student_id))];
+      
+      // Fetch student profiles with district info to filter by district
+      const { data: studentsWithDistrict, error: districtStudentsError } = await supabase
+        .from("profiles")
+        .select("id, full_name, district_id")
+        .in("id", studentIdsFromRequests);
+
+      if (districtStudentsError) {
+        console.error("❌ [ADMIN REQUESTS] Error fetching students for district filter:", districtStudentsError);
+        throw districtStudentsError;
+      }
+
+      // Filter to only students in the admin's district
+      const studentsInDistrict = studentsWithDistrict?.filter(
+        s => adminDistrictId ? s.district_id === adminDistrictId : true
+      ) || [];
+      const studentIdsInDistrict = new Set(studentsInDistrict.map(s => s.id));
+
+      // Filter requests to only those for students in the admin's district
+      const filteredRequests = requestsData.filter(r => studentIdsInDistrict.has(r.student_id));
+
+      console.log("📋 [ADMIN REQUESTS] Filtered requests for district:", {
+        totalRequests: requestsData.length,
+        filteredCount: filteredRequests.length,
+        adminDistrictId
+      });
+
+      if (filteredRequests.length === 0) {
+        console.log("📭 [ADMIN REQUESTS] No requests found for this district");
+        return [];
+      }
 
       // Fetch parent account details for each request
-      const parentIds = [...new Set(requestsData.map(r => r.parent_id))];
+      const parentIds = [...new Set(filteredRequests.map(r => r.parent_id))];
       console.log("👪 [ADMIN REQUESTS] Fetching parent accounts for IDs:", parentIds);
       
       const { data: parentsDataRaw, error: parentsError } = await supabase
@@ -100,66 +123,21 @@ export const ParentAccessRequestsList = () => {
 
       let parentsData = parentsDataRaw;
 
-      console.log("👪 [ADMIN REQUESTS] Parent accounts result:", {
-        parentsCount: parentsData?.length || 0,
-        parentsData,
-        parentsError,
-        errorDetails: parentsError ? {
-          message: parentsError.message,
-          code: parentsError.code,
-          details: parentsError.details,
-          hint: parentsError.hint
-        } : null
-      });
-
       if (parentsError) {
-        console.error("❌ [ADMIN REQUESTS] Error fetching parents:", {
-          error: parentsError,
-          message: parentsError.message,
-          code: parentsError.code,
-          details: parentsError.details,
-          hint: parentsError.hint
-        });
-        
+        console.error("❌ [ADMIN REQUESTS] Error fetching parents:", parentsError);
         // Don't throw - instead use fallback data
-        console.warn("⚠️ [ADMIN REQUESTS] Using fallback for parent accounts");
-        parentsData = requestsData.map(r => ({
+        parentsData = filteredRequests.map(r => ({
           id: r.parent_id,
           full_name: "Parent",
           email: "Email unavailable"
         }));
       }
 
-      // Fetch student profiles
-      const studentIds = [...new Set(requestsData.map(r => r.student_id))];
-      console.log("🎓 [ADMIN REQUESTS] Fetching student profiles for IDs:", studentIds);
-      
-      const { data: studentsDataRaw, error: studentsError } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .in("id", studentIds);
-
-      let studentsData = studentsDataRaw;
-
-      console.log("🎓 [ADMIN REQUESTS] Student profiles result:", {
-        studentsCount: studentsData?.length || 0,
-        studentsData,
-        studentsError
-      });
-
-      if (studentsError) {
-        console.error("❌ [ADMIN REQUESTS] Error fetching students:", studentsError);
-        
-        // Don't throw - instead use fallback data
-        console.warn("⚠️ [ADMIN REQUESTS] Using fallback for student profiles");
-        studentsData = requestsData.map(r => ({
-          id: r.student_id,
-          full_name: "Student"
-        }));
-      }
+      // Use the already fetched student data
+      const studentsData = studentsInDistrict;
 
       // Combine the data
-      const enrichedRequests = requestsData.map(request => ({
+      const enrichedRequests = filteredRequests.map(request => ({
         ...request,
         parent_accounts: parentsData?.find(p => p.id === request.parent_id) || { full_name: "Unknown", email: "Unknown" },
         student: studentsData?.find(s => s.id === request.student_id) || { full_name: "Unknown" }
