@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -61,9 +61,9 @@ export function DrillComplianceReport({ drillId, onClose }: DrillComplianceRepor
   const [loading, setLoading] = useState(true);
   const [previousDrill, setPreviousDrill] = useState<{ completion_time: number; rate_2min: number } | null>(null);
 
-  useState(() => {
+  useEffect(() => {
     fetchReportData();
-  });
+  }, [drillId]);
 
   const fetchReportData = async () => {
     try {
