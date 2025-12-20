@@ -174,14 +174,18 @@ All colors MUST be HSL.
     min-height: 100vh;
   }
 
-  /* Premium dark mode gradient background */
+  /* Premium dark mode gradient background - deep cosmic purple */
   .dark body {
-    background: linear-gradient(135deg, 
-      hsl(235 30% 8%) 0%, 
-      hsl(260 35% 10%) 25%,
-      hsl(270 40% 12%) 50%, 
-      hsl(280 35% 10%) 75%,
-      hsl(250 30% 8%) 100%);
+    background: 
+      radial-gradient(ellipse 120% 80% at 50% 0%, hsl(270 60% 18% / 0.5) 0%, transparent 50%),
+      radial-gradient(ellipse 80% 60% at 80% 20%, hsl(280 70% 15% / 0.4) 0%, transparent 40%),
+      radial-gradient(ellipse 60% 50% at 10% 80%, hsl(260 50% 12% / 0.3) 0%, transparent 40%),
+      linear-gradient(180deg, 
+        hsl(250 45% 6%) 0%, 
+        hsl(260 50% 8%) 20%,
+        hsl(270 55% 10%) 40%, 
+        hsl(265 50% 8%) 70%,
+        hsl(255 45% 5%) 100%);
     background-attachment: fixed;
   }
 
