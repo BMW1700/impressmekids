@@ -1,4 +1,5 @@
 import { useOfflineSync } from "@/hooks/useOfflineSync";
+import { useLocation } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Wifi, WifiOff, RefreshCw, Cloud } from "lucide-react";
@@ -11,6 +12,12 @@ interface OfflineIndicatorProps {
 
 export function OfflineIndicator({ className, showSyncButton = true }: OfflineIndicatorProps) {
   const { isOnline, pendingCount, isSyncing, syncPendingActions } = useOfflineSync();
+  const location = useLocation();
+  
+  // Hide on landing page
+  if (location.pathname === "/") {
+    return null;
+  }
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
