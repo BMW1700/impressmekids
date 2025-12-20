@@ -159,8 +159,7 @@ export const ClassroomTabsList = ({
               {...provided.dragHandleProps}
               style={provided.draggableProps.style}
               className={cn(
-                "transition-transform duration-200 ease-out",
-                snapshot.isDragging && "z-50 scale-105 shadow-lg"
+                snapshot.isDragging && "z-50 opacity-90"
               )}
             >
               <TabsTrigger
@@ -253,7 +252,7 @@ export const ClassroomTabsList = ({
               <TabsList
                 ref={provided.innerRef}
                 {...provided.droppableProps}
-                className="grid grid-cols-5 w-full h-auto p-2 bg-muted/50 rounded-xl gap-2"
+                className="flex flex-wrap w-full h-auto p-2 bg-muted/50 rounded-xl gap-2"
               >
                 {visibleTabs.map((tabId, index) =>
                   renderTabTrigger(tabId, index, true)
@@ -269,7 +268,7 @@ export const ClassroomTabsList = ({
 
   // Student view - no drag and drop
   return (
-    <TabsList className="grid grid-cols-3 w-full h-auto p-2 bg-muted/50 rounded-xl gap-2">
+    <TabsList className="flex flex-wrap w-full h-auto p-2 bg-muted/50 rounded-xl gap-2">
       {STUDENT_TABS.map((tabId, index) => renderTabTrigger(tabId, index, false))}
     </TabsList>
   );
