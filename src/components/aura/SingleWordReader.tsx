@@ -58,13 +58,20 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
   const recognitionRef = useRef<any>(null);
   const startTimeRef = useRef<number>(0);
   const soundEffectsRef = useRef<SoundEffects>(new SoundEffects());
+  const currentIndexRef = useRef(currentIndex);
+  const isProcessingRef = useRef(false);
   const { toast } = useToast();
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    currentIndexRef.current = currentIndex;
+  }, [currentIndex]);
 
   const currentWord = words[currentIndex] || '';
   const cleanWord = currentWord.replace(/[^a-zA-Z']/g, '');
   const isComplete = currentIndex >= words.length;
 
-  // Start session timer on first word
+  // Start session timer and auto-start listening on first word
   useEffect(() => {
     if (startTimeRef.current === 0 && !isComplete) {
       startTimeRef.current = Date.now();
@@ -72,6 +79,9 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
   }, [isComplete]);
 
   const handleCorrect = useCallback(() => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    
     setFeedback('correct');
     soundEffectsRef.current.correctWord();
     
@@ -106,10 +116,13 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
       setFeedback(null);
       setAttempts(0);
       setCurrentIndex(prev => prev + 1);
-    }, 800);
+      isProcessingRef.current = false;
+    }, 600);
   }, [correctStreak, cleanWord, attempts]);
 
   const handleIncorrect = useCallback((spokenWord: string) => {
+    if (isProcessingRef.current) return;
+    
     setFeedback('incorrect');
     soundEffectsRef.current.incorrectWord();
     setCorrectStreak(0);
@@ -120,10 +133,10 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
       playCorrectPronunciation(cleanWord);
     }, 500);
     
-    // Reset feedback after delay to allow retry
+    // Reset feedback after delay to continue listening
     setTimeout(() => {
       setFeedback(null);
-    }, 1500);
+    }, 1200);
   }, [cleanWord]);
 
   const handleSkip = useCallback(() => {
@@ -140,7 +153,7 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
     setCurrentIndex(prev => prev + 1);
   }, [cleanWord, attempts]);
 
-  const startListening = useCallback(() => {
+  const startContinuousListening = useCallback(() => {
     unlockSpeechSynthesis();
     
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
@@ -154,8 +167,8 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
     }
 
     const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.continuous = true;
+    recognition.interimResults = true;
     recognition.lang = 'en-US';
     recognition.maxAlternatives = 3;
 
@@ -164,20 +177,28 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
     };
 
     recognition.onresult = (event: any) => {
-      const result = event.results[0];
-      const transcript = result[0].transcript.trim().toLowerCase();
+      if (isProcessingRef.current) return;
+      
+      // Get the latest result
+      const latestResult = event.results[event.results.length - 1];
+      if (!latestResult.isFinal) return;
+      
+      const transcript = latestResult[0].transcript.trim().toLowerCase();
       const cleanedTranscript = cleanupTranscript(transcript);
       const spokenWords = cleanedTranscript.split(/\s+/).filter((w: string) => w.length > 0);
       
+      // Get current expected word from ref to avoid stale closure
+      const expectedWord = words[currentIndexRef.current]?.replace(/[^a-zA-Z']/g, '') || '';
+      
       // Check all alternatives
       let matched = false;
-      for (let i = 0; i < result.length && !matched; i++) {
-        const alt = result[i]?.transcript?.trim().toLowerCase() || '';
+      for (let i = 0; i < latestResult.length && !matched; i++) {
+        const alt = latestResult[i]?.transcript?.trim().toLowerCase() || '';
         const cleanedAlt = cleanupTranscript(alt);
         const altWords = cleanedAlt.split(/\s+/).filter((w: string) => w.length > 0);
         
         for (const word of altWords) {
-          if (isWordMatchLenient(word, cleanWord)) {
+          if (isWordMatchLenient(word, expectedWord)) {
             matched = true;
             break;
           }
@@ -187,7 +208,7 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
       // Also check if any word in spoken matches
       if (!matched) {
         for (const word of spokenWords) {
-          if (isWordMatchLenient(word, cleanWord)) {
+          if (isWordMatchLenient(word, expectedWord)) {
             matched = true;
             break;
           }
@@ -196,34 +217,55 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
       
       if (matched) {
         handleCorrect();
-      } else {
+      } else if (spokenWords.length > 0) {
         handleIncorrect(spokenWords[0] || transcript);
       }
     };
 
     recognition.onerror = (event: any) => {
       console.error('Speech recognition error:', event.error);
-      if (event.error !== 'no-speech') {
-        toast({
-          title: 'Recognition error',
-          description: 'Please try again.',
-          variant: 'destructive',
-        });
+      if (event.error === 'no-speech') {
+        // Restart recognition if no speech detected
+        setTimeout(() => {
+          if (recognitionRef.current && !isComplete) {
+            try {
+              recognitionRef.current.start();
+            } catch (e) {
+              // Already running
+            }
+          }
+        }, 100);
+      } else if (event.error !== 'aborted') {
+        setIsListening(false);
       }
-      setIsListening(false);
     };
 
     recognition.onend = () => {
-      setIsListening(false);
+      // Auto-restart if not complete and not manually stopped
+      if (!isComplete && !isProcessingRef.current) {
+        setTimeout(() => {
+          if (recognitionRef.current && !isComplete) {
+            try {
+              recognitionRef.current.start();
+            } catch (e) {
+              // Create new recognition if needed
+              startContinuousListening();
+            }
+          }
+        }, 100);
+      } else {
+        setIsListening(false);
+      }
     };
 
     recognitionRef.current = recognition;
     recognition.start();
-  }, [cleanWord, handleCorrect, handleIncorrect, toast]);
+  }, [words, currentIndex, handleCorrect, handleIncorrect, toast, isComplete]);
 
   const stopListening = useCallback(() => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
+      recognitionRef.current = null;
       setIsListening(false);
     }
   }, []);
@@ -277,10 +319,10 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
             feedback === 'correct'
               ? correctStreak >= 5 ? `${correctStreak} in a row! Incredible!` : "Perfect! 🎉"
               : feedback === 'incorrect'
-              ? "Listen carefully and try again!"
+              ? "Listen and try again!"
               : isListening
-              ? "Say the word..."
-              : "Click the microphone to speak!"
+              ? "Listening... say the word!"
+              : "Press Start to begin!"
           }
         />
       </div>
@@ -401,7 +443,7 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
           variant="outline"
           size="lg"
           onClick={hearWord}
-          disabled={isListening || !!feedback}
+          disabled={!!feedback}
           className="gap-2"
         >
           <Volume2 className="h-5 w-5" />
@@ -411,23 +453,26 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
         {/* Main Microphone Button */}
         {!isListening ? (
           <Button
-            onClick={startListening}
+            onClick={startContinuousListening}
             size="lg"
             className="gap-2 min-w-[160px]"
             disabled={!!feedback}
           >
             <Mic className="h-5 w-5" />
-            Speak
+            Start
           </Button>
         ) : (
           <Button
             onClick={stopListening}
             size="lg"
-            variant="destructive"
-            className="gap-2 min-w-[160px] animate-pulse"
+            variant="secondary"
+            className="gap-2 min-w-[160px]"
           >
             <StopCircle className="h-5 w-5" />
-            Listening...
+            <span className="flex items-center gap-1">
+              Listening
+              <span className="animate-pulse">●</span>
+            </span>
           </Button>
         )}
 
@@ -436,7 +481,7 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
           variant="outline"
           size="lg"
           onClick={handleSkip}
-          disabled={isListening || !!feedback}
+          disabled={!!feedback}
           className="gap-2"
         >
           <SkipForward className="h-5 w-5" />
@@ -445,9 +490,9 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
       </div>
 
       {/* Retry hint after multiple attempts */}
-      {attempts >= 2 && !feedback && (
+      {attempts >= 2 && !feedback && isListening && (
         <p className="text-center text-sm text-muted-foreground">
-          Having trouble? Try clicking "Hear It" first, then speak the word.
+          Having trouble? Try clicking "Hear It" to hear the correct pronunciation.
         </p>
       )}
     </div>
