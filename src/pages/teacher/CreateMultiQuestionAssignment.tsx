@@ -229,12 +229,12 @@ const editId = searchParams.get('edit');
       });
 
       // Handle rubric attachment/detachment
-      if (selectedRubricId && selectedRubricId !== assignmentRubric?.rubric_id) {
+      if (selectedRubricId && selectedRubricId !== "none" && selectedRubricId !== assignmentRubric?.rubric_id) {
         if (assignmentRubric) {
           await detachRubric();
         }
         await attachRubric(selectedRubricId);
-      } else if (!selectedRubricId && assignmentRubric) {
+      } else if ((!selectedRubricId || selectedRubricId === "none") && assignmentRubric) {
         await detachRubric();
       }
     } else {
@@ -257,7 +257,7 @@ const editId = searchParams.get('edit');
       });
 
       // Attach rubric after creation if selected
-      if (selectedRubricId) {
+      if (selectedRubricId && selectedRubricId !== "none") {
         setTimeout(async () => {
           const { data: recentAssignment } = await supabase
             .from('assignments')
@@ -425,7 +425,7 @@ const editId = searchParams.get('edit');
                       <SelectValue placeholder="Select a rubric for grading..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No rubric</SelectItem>
+                      <SelectItem value="none">No rubric</SelectItem>
                       {rubrics.map((rubric) => (
                         <SelectItem key={rubric.id} value={rubric.id}>
                           {rubric.title}
