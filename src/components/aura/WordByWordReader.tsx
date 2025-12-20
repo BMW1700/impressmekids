@@ -25,6 +25,7 @@ import { calculateProsodyScore, type ProsodyMetrics } from '@/lib/prosodyAnalysi
 import { RealtimeAudioAnalyzer, type LiveMetrics } from '@/lib/realtimeAudioAnalysis';
 // DUAL-MODE MATCHING: Import strict/lenient matchers for benchmark vs practice
 // SUPERCHARGED V2: Added window matching, phoneme fallback, and multi-alternative support
+// SUPERCHARGED V3: Added homophones dictionary and transcript cleanup integration
 import { 
   isWordMatchStrict, 
   isWordMatchLenient, 
@@ -34,8 +35,11 @@ import {
   matchWithAlternatives,
   matchWithPhonemes,
   findWordInFullTranscript,
+  isHomophone,
   type WordMatchResult 
 } from '@/lib/wordMatchingModes';
+// SUPERCHARGED V3: Transcript cleanup for filler words and self-corrections
+import { cleanupTranscript, extractWords, isFillerWord } from '@/lib/transcriptCleanup';
 // ENHANCED PHONEME INFERENCE: $0/month phoneme pattern analysis
 import { usePhonemePatterns } from '@/hooks/usePhonemePatterns';
 import { compareWordPhonemes, analyzePhonemePatterns, getPhonemeDisplayName } from '@/lib/phonemeInference';
@@ -244,6 +248,8 @@ export const WordByWordReader = ({
   const pendingIncorrectTimersRef = useRef<Map<number, NodeJS.Timeout>>(new Map());
   // SUPERCHARGED V2: Store full transcript for final result override
   const fullTranscriptRef = useRef<string>('');
+  // SUPERCHARGED V3: Store cleaned transcript separately
+  const cleanedTranscriptRef = useRef<string>('');
   
   // Phase 3: Smart Coach states
   const [cognitiveLoad, setCognitiveLoad] = useState(0);
@@ -472,22 +478,29 @@ export const WordByWordReader = ({
   
   // Process interim (real-time) results - ULTRA FAST with proper repeated word handling
   // SUPERCHARGED V2: Expanded look-ahead (5 words), pending-incorrect state, phoneme fallback
+  // SUPERCHARGED V3: Added transcript cleanup and confidence thresholds
   const processInterimResult = useCallback((transcript: string, timestamp: number, speechConfidence: number = 1) => {
     if (transcript === lastInterimRef.current) return;
     
+    // SUPERCHARGED V3: Clean the transcript BEFORE processing
+    const cleanedTranscript = cleanupTranscript(transcript);
+    
     // SUPERCHARGED V2: Store full transcript for final result override
     fullTranscriptRef.current = transcript;
+    cleanedTranscriptRef.current = cleanedTranscript;
     
-    // Get previous words BEFORE updating ref
-    const prevSpokenWords = lastInterimRef.current.split(/\s+/).filter(w => w.length > 0);
+    // Get previous words BEFORE updating ref (using cleaned transcripts)
+    const prevCleanedTranscript = cleanupTranscript(lastInterimRef.current);
+    const prevSpokenWords = prevCleanedTranscript.split(/\s+/).filter(w => w.length > 0);
     lastInterimRef.current = transcript;
     
-    const spokenWords = transcript.split(/\s+/).filter(w => w.length > 0);
+    // SUPERCHARGED V3: Use cleaned transcript for word extraction
+    const spokenWords = cleanedTranscript.split(/\s+/).filter(w => w.length > 0);
     
     // Only process if we have NEW words
     if (spokenWords.length <= prevSpokenWords.length) return;
     
-    // Get the newly spoken words
+    // Get the newly spoken words (already cleaned)
     const newWords = spokenWords.slice(prevSpokenWords.length);
     
     // Track speech time for cognitive load
@@ -549,12 +562,37 @@ export const WordByWordReader = ({
           }
           
           if (matchResult) {
-            // Direct match at current position - clear any pending-incorrect timer
-            if (pendingIncorrectTimersRef.current.has(currentIdx)) {
-              clearTimeout(pendingIncorrectTimersRef.current.get(currentIdx));
-              pendingIncorrectTimersRef.current.delete(currentIdx);
+            // SUPERCHARGED V3: Only mark as instant 'correct' if confidence >= 0.8
+            // Otherwise use pending-incorrect to allow for verification
+            if (speechConfidence >= 0.8) {
+              // High confidence - direct match at current position
+              if (pendingIncorrectTimersRef.current.has(currentIdx)) {
+                clearTimeout(pendingIncorrectTimersRef.current.get(currentIdx));
+                pendingIncorrectTimersRef.current.delete(currentIdx);
+              }
+              newMap.set(currentIdx, 'correct');
+            } else {
+              // Lower confidence match - set as pending-incorrect with shorter timer
+              // Will become 'correct' after 1.5 seconds if not contradicted
+              newMap.set(currentIdx, 'pending-incorrect');
+              
+              if (!pendingIncorrectTimersRef.current.has(currentIdx)) {
+                const wordIdx = currentIdx;
+                const timer = setTimeout(() => {
+                  setRealtimeWordStatus(prevStatus => {
+                    const updated = new Map(prevStatus);
+                    // If still pending-incorrect, upgrade to correct (benefit of doubt)
+                    if (updated.get(wordIdx) === 'pending-incorrect') {
+                      updated.set(wordIdx, 'correct');
+                      realtimeWordStatusRef.current = updated;
+                    }
+                    return updated;
+                  });
+                  pendingIncorrectTimersRef.current.delete(wordIdx);
+                }, 1500); // 1.5 second grace period for low-confidence matches
+                pendingIncorrectTimersRef.current.set(currentIdx, timer);
+              }
             }
-            newMap.set(currentIdx, 'correct');
           } else {
             // SUPERCHARGED V2: Look ahead up to 5 positions (expanded from 2)
             let foundAhead = -1;
