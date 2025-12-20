@@ -14,7 +14,15 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { UnaccountedChildAlert } from "@/components/safety/UnaccountedChildAlert";
 import { ParentQuickMessagePanel } from "@/components/safety/ParentQuickMessagePanel";
 import { StudentQRCode } from "@/components/safety/StudentQRCode";
+import { ParentDrillConfirmation } from "@/components/safety/ParentDrillConfirmation";
 import { useToast } from "@/hooks/use-toast";
+
+interface ParentDrillResponse {
+  student_id: string;
+  response_type: string;
+  notes: string | null;
+  created_at: string;
+}
 
 export default function ParentSafety() {
   const navigate = useNavigate();
@@ -26,6 +34,7 @@ export default function ParentSafety() {
   const [alerts, setAlerts] = useState<any[]>([]);
   const [unaccountedChildren, setUnaccountedChildren] = useState<any[]>([]);
   const [activeDrillStatus, setActiveDrillStatus] = useState<any[]>([]);
+  const [parentDrillResponses, setParentDrillResponses] = useState<Record<string, ParentDrillResponse>>({});
   const [recessNotificationEnabled, setRecessNotificationEnabled] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -96,7 +105,7 @@ export default function ParentSafety() {
       .from("drill_attendance")
       .select(`
         *,
-        drill_sessions(drill_type, status, is_real_emergency),
+        drill_sessions(id, drill_type, status, is_real_emergency),
         profiles(full_name)
       `)
       .in("student_id", studentIds)
@@ -111,7 +120,7 @@ export default function ParentSafety() {
       .from("drill_attendance")
       .select(`
         *,
-        drill_sessions(drill_type, status, is_real_emergency, started_at),
+        drill_sessions(id, drill_type, status, is_real_emergency, started_at),
         profiles(full_name)
       `)
       .in("student_id", studentIds)
@@ -119,6 +128,24 @@ export default function ParentSafety() {
 
     if (activeStatus) {
       setActiveDrillStatus(activeStatus);
+      
+      // Fetch existing parent responses for active drills
+      const drillSessionIds = [...new Set(activeStatus.map((s: any) => s.drill_sessions?.id).filter(Boolean))];
+      if (drillSessionIds.length > 0 && parentId) {
+        const { data: existingResponses } = await supabase
+          .from("parent_drill_responses")
+          .select("*")
+          .eq("parent_id", parentId)
+          .in("drill_session_id", drillSessionIds);
+        
+        if (existingResponses) {
+          const responsesMap: Record<string, ParentDrillResponse> = {};
+          existingResponses.forEach((r: any) => {
+            responsesMap[r.student_id] = r;
+          });
+          setParentDrillResponses(responsesMap);
+        }
+      }
     }
   };
 
@@ -258,41 +285,64 @@ export default function ParentSafety() {
         {activeDrillStatus.length > 0 && (
           <Card className={`mb-6 p-6 ${
             activeDrillStatus.some((s: any) => s.drill_sessions?.is_real_emergency)
-              ? "border-red-600 border-2 bg-red-600/20 animate-pulse"
+              ? "border-red-600 border-2 bg-red-600/20"
               : "border-yellow-500 border-2 bg-yellow-500/10"
           }`}>
             <div className="flex items-center gap-3 mb-4">
-              <Shield className="h-6 w-6 text-yellow-600" />
+              <Shield className={`h-6 w-6 ${
+                activeDrillStatus.some((s: any) => s.drill_sessions?.is_real_emergency)
+                  ? "text-red-600"
+                  : "text-yellow-600"
+              }`} />
               <h2 className="text-xl font-bold">
                 {activeDrillStatus.some((s: any) => s.drill_sessions?.is_real_emergency)
                   ? "🚨 EMERGENCY IN PROGRESS"
-                  : "Active Drill Status"}
+                  : "Active Drill - Please Confirm Your Child's Status"}
               </h2>
             </div>
-            <div className="space-y-3">
+            
+            <p className="text-sm text-muted-foreground mb-4">
+              Please confirm each child's status to help the school ensure everyone is accounted for.
+            </p>
+            
+            <div className="space-y-4">
               {activeDrillStatus.map((status: any) => (
-                <div key={status.id} className="flex items-center justify-between p-3 bg-background/50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    {status.student_checked_in ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    ) : (
-                      <Clock className="h-5 w-5 text-orange-600 animate-pulse" />
-                    )}
-                    <div>
-                      <p className="font-semibold">{status.profiles.full_name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {status.drill_sessions.drill_type.replace(/_/g, " ")} 
-                        {status.drill_sessions.is_real_emergency && " (REAL EMERGENCY)"}
-                      </p>
-                    </div>
-                  </div>
-                  <Badge className={status.student_checked_in ? "bg-green-600" : "bg-orange-600"}>
-                    {status.student_checked_in 
-                      ? `✓ SAFE (${new Date(status.student_checkin_at).toLocaleTimeString()})`
-                      : "Awaiting check-in..."}
-                  </Badge>
-                </div>
+                <ParentDrillConfirmation
+                  key={status.id}
+                  drillSessionId={status.drill_sessions?.id}
+                  studentId={status.student_id}
+                  studentName={status.profiles?.full_name || "Student"}
+                  drillType={status.drill_sessions?.drill_type || "drill"}
+                  isRealEmergency={status.drill_sessions?.is_real_emergency || false}
+                  parentId={parentId!}
+                  existingResponse={parentDrillResponses[status.student_id]}
+                  onResponseSubmitted={() => checkUnaccountedStatus(students.map(s => s.student_id))}
+                />
               ))}
+            </div>
+            
+            {/* Student check-in status summary */}
+            <div className="mt-4 pt-4 border-t border-border/50">
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">Student Check-in Status</h3>
+              <div className="space-y-2">
+                {activeDrillStatus.map((status: any) => (
+                  <div key={`status-${status.id}`} className="flex items-center justify-between p-2 bg-background/50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      {status.student_checked_in ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <Clock className="h-4 w-4 text-orange-600 animate-pulse" />
+                      )}
+                      <span className="text-sm">{status.profiles?.full_name}</span>
+                    </div>
+                    <Badge variant={status.student_checked_in ? "default" : "outline"} className={status.student_checked_in ? "bg-green-600" : ""}>
+                      {status.student_checked_in 
+                        ? `✓ SAFE`
+                        : "Awaiting check-in"}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
             </div>
           </Card>
         )}

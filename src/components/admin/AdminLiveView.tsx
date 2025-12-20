@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, CheckCircle, AlertTriangle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ParentResponseStats } from "./ParentResponseStats";
 
 interface DrillAttendance {
   id: string;
@@ -202,6 +203,12 @@ export function AdminLiveView({ activeDrillId }: { activeDrillId: string | null 
           </div>
         </div>
       </Card>
+
+      {/* Parent Response Stats */}
+      <ParentResponseStats 
+        drillSessionId={activeDrillId!} 
+        totalStudents={totalStudents} 
+      />
 
       {/* Classroom Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -2865,6 +2865,61 @@ export type Database = {
         }
         Relationships: []
       }
+      parent_drill_responses: {
+        Row: {
+          created_at: string
+          drill_session_id: string
+          id: string
+          notes: string | null
+          parent_id: string
+          response_type: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          drill_session_id: string
+          id?: string
+          notes?: string | null
+          parent_id: string
+          response_type: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          drill_session_id?: string
+          id?: string
+          notes?: string | null
+          parent_id?: string
+          response_type?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_drill_responses_drill_session_id_fkey"
+            columns: ["drill_session_id"]
+            isOneToOne: false
+            referencedRelation: "drill_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parent_drill_responses_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parent_drill_responses_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parent_notification_preferences: {
         Row: {
           created_at: string | null
