@@ -867,7 +867,7 @@ All colors MUST be HSL.
 
 /* SUPERCHARGED V2: Pending-incorrect word styling (grace period before definitively wrong) */
 .word-pending-incorrect {
-  @apply text-orange-500 dark:text-orange-400;
+  @apply text-orange-600 dark:text-orange-300 bg-orange-200 dark:bg-orange-900/50 px-1 rounded;
   animation: pending-pulse 1.5s ease-in-out infinite;
 }
 
