@@ -44,7 +44,7 @@ const TAB_CONFIG: Record<
   attendance: { icon: UserCheck, label: "Attendance" },
   students: { icon: Users, label: "Students" },
   safety: { icon: Shield, label: "Safety" },
-  "parent-requests": { icon: UserPlus, label: "Parent Requests" },
+  "meeting-requests": { icon: Calendar, label: "Meeting Requests" },
   announcements: { icon: Megaphone, label: "Announcements" },
   assignments: { icon: FileText, label: "Assignments" },
   discussions: { icon: MessageSquare, label: "Discussions" },
