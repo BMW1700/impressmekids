@@ -152,7 +152,7 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-4xl font-black">{teachers?.length || 0}</div>
-                <p className="text-xs text-muted-foreground">Total teachers on platform</p>
+                <p className="text-xs text-muted-foreground">Teachers in your district</p>
               </CardContent>
             </Card>
 
@@ -165,7 +165,7 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-4xl font-black">{students?.length || 0}</div>
-                <p className="text-xs text-muted-foreground">Total students enrolled</p>
+                <p className="text-xs text-muted-foreground">Students in your district</p>
               </CardContent>
             </Card>
 
@@ -178,7 +178,7 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-4xl font-black">{admins?.length || 0}</div>
-                <p className="text-xs text-muted-foreground">Platform administrators</p>
+                <p className="text-xs text-muted-foreground">Admins in your district</p>
               </CardContent>
             </Card>
           </div>
