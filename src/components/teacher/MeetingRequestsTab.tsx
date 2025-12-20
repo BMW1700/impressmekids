@@ -209,7 +209,7 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
     <div className="space-y-6">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Meeting Requests</h2>
+          <h2 className="text-2xl font-bold">Office Hours</h2>
           <p className="text-muted-foreground mt-1">
             Set your office hours and availability for parent/student meetings
           </p>
