@@ -6018,27 +6018,31 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          school_id: string
+          school_name: string
         }[]
       }
       get_all_students: {
         Args: never
         Returns: {
           classroom_count: number
-          created_at: string
           email: string
           full_name: string
           id: string
           parent_count: number
+          school_id: string
+          school_name: string
         }[]
       }
       get_all_teachers: {
         Args: never
         Returns: {
           classroom_count: number
-          created_at: string
           email: string
           full_name: string
           id: string
+          school_id: string
+          school_name: string
         }[]
       }
       get_classroom_detail: {
