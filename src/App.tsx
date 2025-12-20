@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { PushNotificationPrompt } from "@/components/notifications/PushNotificationPrompt";
+import { OfflineIndicator } from "@/components/safety/OfflineIndicator";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import PendingVerification from "./pages/PendingVerification";
@@ -68,8 +69,9 @@ const App = () => (
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Toaster />
-      <Sonner />
-      <PushNotificationPrompt />
+          <Sonner />
+          <PushNotificationPrompt />
+          <OfflineIndicator />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
