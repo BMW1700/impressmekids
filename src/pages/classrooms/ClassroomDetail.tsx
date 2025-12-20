@@ -46,7 +46,7 @@ import { TeacherSafetyTab } from "@/components/teacher/TeacherSafetyTab";
 import { TeacherBehaviorTab } from "@/components/behavior/TeacherBehaviorTab";
 import { ToolkitSidebar } from "@/components/classroom/ToolkitSidebar";
 import { useClassroomFeatures } from "@/hooks/useClassroomFeatures";
-import { DraggableTabsList } from "@/components/classroom/DraggableTabsList";
+import { ClassroomTabsList } from "@/components/classroom/ClassroomTabsList";
 const ClassroomDetail = () => {
   const {
     id
@@ -584,7 +584,7 @@ const ClassroomDetail = () => {
             </div>}
 
           <Tabs defaultValue={searchParams.get('tab') || (isStudent ? "assignments" : "students")} className="mb-8">
-            <DraggableTabsList 
+            <ClassroomTabsList 
               classroomId={id!}
               isTeacher={isTeacher}
               parentRequests={parentRequests}

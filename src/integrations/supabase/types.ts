@@ -1112,7 +1112,6 @@ export type Database = {
         Row: {
           classroom_id: string
           created_at: string | null
-          display_order: number | null
           enabled_at: string | null
           feature_id: string
           id: string
@@ -1121,7 +1120,6 @@ export type Database = {
         Insert: {
           classroom_id: string
           created_at?: string | null
-          display_order?: number | null
           enabled_at?: string | null
           feature_id: string
           id?: string
@@ -1130,7 +1128,6 @@ export type Database = {
         Update: {
           classroom_id?: string
           created_at?: string | null
-          display_order?: number | null
           enabled_at?: string | null
           feature_id?: string
           id?: string
