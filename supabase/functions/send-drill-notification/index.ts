@@ -431,7 +431,7 @@ serve(async (req) => {
             type === 'all_clear' ? '#16a34a' : '#ea580c';
           
           const emailBody = {
-            from: 'ImpressMe Kids Safety <safety@impressmekids.com>',
+            from: "ImpressMe Kids Safety <safety@impressmekids.com>",
             to: parent.email,
             subject: notificationTitle.replace(/[🚨✅📅]/g, '').trim(),
             html: `

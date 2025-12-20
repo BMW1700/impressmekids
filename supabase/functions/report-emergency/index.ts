@@ -100,7 +100,7 @@ serve(async (req) => {
     if (resendApiKey && adminEmails.length > 0) {
       const emailPromises = adminEmails.map(async (adminEmail) => {
         const emailBody = {
-          from: "emergencies@impressmekids.com",
+          from: "ImpressMe Kids Emergencies <emergencies@impressmekids.com>",
           to: adminEmail,
           subject: `🚨 EMERGENCY REPORT: ${emergencyTypeDisplay}`,
           html: `
