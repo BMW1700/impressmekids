@@ -14,8 +14,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 
+// Office hours are teacher-wide, not classroom-specific
 interface MeetingRequestsTabProps {
-  classroomId: string;
+  classroomId?: string; // Optional - kept for routing but not used in queries
 }
 
 const DAYS_OF_WEEK = [
@@ -50,14 +51,17 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
 
-  // Fetch office hours
+  // Fetch office hours (teacher-wide, not classroom-specific)
   const { data: officeHours = [], isLoading } = useQuery({
-    queryKey: ["office-hours", classroomId],
+    queryKey: ["office-hours"],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      
       const { data, error } = await supabase
         .from("teacher_office_hours")
         .select("*")
-        .eq("classroom_id", classroomId)
+        .eq("teacher_id", user.id)
         .order("created_at", { ascending: false });
       
       if (error) throw error;
@@ -106,7 +110,6 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
       }
 
       const records = slots.map(slot => ({
-        classroom_id: classroomId,
         teacher_id: user.id,
         is_recurring: isRecurring,
         days_of_week: isRecurring ? selectedDays : [],
@@ -127,7 +130,7 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["office-hours", classroomId] });
+      queryClient.invalidateQueries({ queryKey: ["office-hours"] });
       toast.success("Office hours added successfully");
       resetForm();
       setShowAddHours(false);
@@ -148,7 +151,7 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["office-hours", classroomId] });
+      queryClient.invalidateQueries({ queryKey: ["office-hours"] });
       toast.success("Office hours deleted");
     },
     onError: (error: Error) => {
