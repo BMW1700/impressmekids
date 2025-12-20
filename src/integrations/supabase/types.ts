@@ -5934,6 +5934,10 @@ export type Database = {
         Args: { _submission_id: string; _user_id: string }
         Returns: boolean
       }
+      is_teacher_of_student: {
+        Args: { _student_id: string; _teacher_id: string }
+        Returns: boolean
+      }
       is_tournament_classroom_member: {
         Args: { _tournament_id: string; _user_id: string }
         Returns: boolean
