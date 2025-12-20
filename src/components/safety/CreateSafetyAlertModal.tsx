@@ -34,17 +34,31 @@ export function CreateSafetyAlertModal({ open, onOpenChange, onSuccess }: Create
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
 
-      const { error } = await supabase.from("safety_alerts").insert({
+      const { data: alertData, error } = await supabase.from("safety_alerts").insert({
         ...formData,
         created_by: session.user.id
-      });
+      }).select('id').single();
 
       if (error) throw error;
 
-      toast({
-        title: "Alert Created",
-        description: "Safety alert has been sent to all parents and students"
+      // Actually send emails and push notifications
+      const { error: sendError } = await supabase.functions.invoke('send-safety-alert', {
+        body: { alertId: alertData.id }
       });
+
+      if (sendError) {
+        console.error('Error sending notifications:', sendError);
+        toast({
+          title: "Alert Created",
+          description: "Alert saved but notifications may have failed to send",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Alert Created",
+          description: "Safety alert has been sent to all parents"
+        });
+      }
 
       setFormData({
         title: "",
