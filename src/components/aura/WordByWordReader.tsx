@@ -24,11 +24,16 @@ import { analyzeMiscues, getMiscueInterventions, type MiscueAnalysis } from '@/l
 import { calculateProsodyScore, type ProsodyMetrics } from '@/lib/prosodyAnalysis';
 import { RealtimeAudioAnalyzer, type LiveMetrics } from '@/lib/realtimeAudioAnalysis';
 // DUAL-MODE MATCHING: Import strict/lenient matchers for benchmark vs practice
+// SUPERCHARGED V2: Added window matching, phoneme fallback, and multi-alternative support
 import { 
   isWordMatchStrict, 
   isWordMatchLenient, 
   analyzeWordMatch,
   calculateSessionConfidence,
+  findWordInWindow,
+  matchWithAlternatives,
+  matchWithPhonemes,
+  findWordInFullTranscript,
   type WordMatchResult 
 } from '@/lib/wordMatchingModes';
 // ENHANCED PHONEME INFERENCE: $0/month phoneme pattern analysis
@@ -204,7 +209,8 @@ export const WordByWordReader = ({
   
   // Real-time tracking states
   const [realtimeWordIndex, setRealtimeWordIndex] = useState(0);
-  const [realtimeWordStatus, setRealtimeWordStatus] = useState<Map<number, 'correct' | 'incorrect' | 'current' | 'pending'>>(new Map());
+  // SUPERCHARGED V2: Added 'pending-incorrect' status for grace period before marking definitively incorrect
+  const [realtimeWordStatus, setRealtimeWordStatus] = useState<Map<number, 'correct' | 'incorrect' | 'pending-incorrect' | 'current' | 'pending'>>(new Map());
   const [correctStreak, setCorrectStreak] = useState(0);
   const [celebrationTrigger, setCelebrationTrigger] = useState(0);
   const [xpPopupTrigger, setXpPopupTrigger] = useState(0);
@@ -229,9 +235,15 @@ export const WordByWordReader = ({
   const spokenIncorrectWordsRef = useRef<Set<number>>(new Set());
   
   // CRITICAL FIX: Use refs to avoid stale closure issues in callbacks
-  const realtimeWordStatusRef = useRef<Map<number, 'correct' | 'incorrect' | 'current' | 'pending'>>(new Map());
+  // SUPERCHARGED V2: Added 'pending-incorrect' status type
+  const realtimeWordStatusRef = useRef<Map<number, 'correct' | 'incorrect' | 'pending-incorrect' | 'current' | 'pending'>>(new Map());
   const realtimeWordIndexRef = useRef(0);
   const correctStreakRef = useRef(0);
+  
+  // SUPERCHARGED V2: Track pending-incorrect words for grace period (3 seconds before marking definitively incorrect)
+  const pendingIncorrectTimersRef = useRef<Map<number, NodeJS.Timeout>>(new Map());
+  // SUPERCHARGED V2: Store full transcript for final result override
+  const fullTranscriptRef = useRef<string>('');
   
   // Phase 3: Smart Coach states
   const [cognitiveLoad, setCognitiveLoad] = useState(0);
@@ -409,8 +421,11 @@ export const WordByWordReader = ({
         if (!isFinal) {
           processInterimResult(transcript, timestamp, speechConfidence);
         } else {
-          // Final result - confirm word readings with confidence
-          processFinalResult(transcript, timestamp, speechConfidence);
+          // SUPERCHARGED V2: Pass all alternatives for better override logic
+          const alternatives = Array.from({ length: result.length }, (_, idx) => 
+            result[idx]?.transcript?.trim().toLowerCase() || ''
+          ).filter(Boolean);
+          processFinalResult(transcript, timestamp, speechConfidence, alternatives);
         }
       }
     };
@@ -456,9 +471,12 @@ export const WordByWordReader = ({
   const previousCorrectCountRef = useRef(0);
   
   // Process interim (real-time) results - ULTRA FAST with proper repeated word handling
-  // NOW WITH DUAL-MODE MATCHING AND CONFIDENCE TRACKING
+  // SUPERCHARGED V2: Expanded look-ahead (5 words), pending-incorrect state, phoneme fallback
   const processInterimResult = useCallback((transcript: string, timestamp: number, speechConfidence: number = 1) => {
     if (transcript === lastInterimRef.current) return;
+    
+    // SUPERCHARGED V2: Store full transcript for final result override
+    fullTranscriptRef.current = transcript;
     
     // Get previous words BEFORE updating ref
     const prevSpokenWords = lastInterimRef.current.split(/\s+/).filter(w => w.length > 0);
@@ -480,10 +498,11 @@ export const WordByWordReader = ({
       setRealtimeWordStatus(prev => {
         const newMap = new Map(prev);
         
-        // Helper: find first unprocessed position
+        // SUPERCHARGED V2: Helper finds first unprocessed index (ignores pending-incorrect)
         const getFirstUnprocessedIndex = () => {
           for (let i = 0; i < words.length; i++) {
             const status = newMap.get(i);
+            // pending-incorrect is still considered "unprocessed" for matching purposes
             if (status !== 'correct' && status !== 'incorrect') {
               return i;
             }
@@ -499,13 +518,21 @@ export const WordByWordReader = ({
           const expectedWord = words[currentIdx];
           
           // DUAL-MODE MATCHING: Use strict mode for benchmarks, lenient for practice
-          const matchResult = wordMatcher(spokenWord, expectedWord);
+          let matchResult = wordMatcher(spokenWord, expectedWord);
+          
+          // SUPERCHARGED V2: If text matching fails, try phoneme matching as fallback
+          if (!matchResult && !isStrictMode) {
+            const phonemeResult = matchWithPhonemes(spokenWord, expectedWord, 0.70);
+            if (phonemeResult.isMatch) {
+              matchResult = true;
+              console.log('PHONEME MATCH:', spokenWord, '→', expectedWord, 'similarity:', phonemeResult.similarity.toFixed(2));
+            }
+          }
           
           // Store confidence for this word
           wordConfidencesRef.current.set(currentIdx, speechConfidence);
           
           // FLAG LOW-CONFIDENCE WORDS for teacher verification
-          // In strict mode, also flag words where strict/lenient modes disagree
           const lenientResult = isWordMatchLenient(spokenWord, expectedWord);
           const strictResult = isWordMatchStrict(spokenWord, expectedWord);
           const modesDisagree = lenientResult !== strictResult;
@@ -522,40 +549,94 @@ export const WordByWordReader = ({
           }
           
           if (matchResult) {
-            // Direct match at current position
+            // Direct match at current position - clear any pending-incorrect timer
+            if (pendingIncorrectTimersRef.current.has(currentIdx)) {
+              clearTimeout(pendingIncorrectTimersRef.current.get(currentIdx));
+              pendingIncorrectTimersRef.current.delete(currentIdx);
+            }
             newMap.set(currentIdx, 'correct');
           } else {
-            // Look ahead up to 2 positions for a match (student might have skipped)
+            // SUPERCHARGED V2: Look ahead up to 5 positions (expanded from 2)
             let foundAhead = -1;
-            for (let ahead = 1; ahead <= 2; ahead++) {
+            for (let ahead = 1; ahead <= 5; ahead++) {
               const aheadIdx = currentIdx + ahead;
-              if (aheadIdx < words.length && wordMatcher(spokenWord, words[aheadIdx])) {
-                foundAhead = aheadIdx;
-                break;
+              if (aheadIdx < words.length) {
+                // Try text match first
+                if (wordMatcher(spokenWord, words[aheadIdx])) {
+                  foundAhead = aheadIdx;
+                  break;
+                }
+                // SUPERCHARGED V2: Try phoneme match as fallback
+                if (!isStrictMode) {
+                  const phonemeResult = matchWithPhonemes(spokenWord, words[aheadIdx], 0.70);
+                  if (phonemeResult.isMatch) {
+                    foundAhead = aheadIdx;
+                    console.log('PHONEME LOOKAHEAD MATCH:', spokenWord, '→', words[aheadIdx]);
+                    break;
+                  }
+                }
               }
             }
             
             if (foundAhead !== -1) {
-              // Mark all words between currentIdx and foundAhead as incorrect
+              // SUPERCHARGED V2: Mark skipped words as pending-incorrect (not definitive)
               for (let i = currentIdx; i < foundAhead; i++) {
-                newMap.set(i, 'incorrect');
+                // Only mark as pending-incorrect if not already correct
+                if (newMap.get(i) !== 'correct') {
+                  newMap.set(i, 'pending-incorrect');
+                  
+                  // Set up timer to convert to definitive incorrect after 3 seconds
+                  if (!pendingIncorrectTimersRef.current.has(i)) {
+                    const wordIdx = i;
+                    const timer = setTimeout(() => {
+                      setRealtimeWordStatus(prevStatus => {
+                        const updated = new Map(prevStatus);
+                        if (updated.get(wordIdx) === 'pending-incorrect') {
+                          updated.set(wordIdx, 'incorrect');
+                          realtimeWordStatusRef.current = updated;
+                        }
+                        return updated;
+                      });
+                      pendingIncorrectTimersRef.current.delete(wordIdx);
+                    }, 3000); // 3 second grace period
+                    pendingIncorrectTimersRef.current.set(i, timer);
+                  }
+                }
               }
               // Mark the matched word as correct
               newMap.set(foundAhead, 'correct');
             } else {
-              // No match found anywhere nearby - mark current as incorrect
-              newMap.set(currentIdx, 'incorrect');
+              // SUPERCHARGED V2: No match - mark as pending-incorrect (not definitive yet)
+              newMap.set(currentIdx, 'pending-incorrect');
+              
+              // Set up timer to convert to definitive incorrect after 3 seconds
+              if (!pendingIncorrectTimersRef.current.has(currentIdx)) {
+                const wordIdx = currentIdx;
+                const timer = setTimeout(() => {
+                  setRealtimeWordStatus(prevStatus => {
+                    const updated = new Map(prevStatus);
+                    if (updated.get(wordIdx) === 'pending-incorrect') {
+                      updated.set(wordIdx, 'incorrect');
+                      realtimeWordStatusRef.current = updated;
+                    }
+                    return updated;
+                  });
+                  pendingIncorrectTimersRef.current.delete(wordIdx);
+                }, 3000); // 3 second grace period
+                pendingIncorrectTimersRef.current.set(currentIdx, timer);
+              }
             }
           }
         }
         
         // Count correct words and update position
+        // SUPERCHARGED V2: Include pending-incorrect in position tracking
         let newCorrectCount = 0;
         let nextIdx = 0;
         for (let i = 0; i < words.length; i++) {
           const status = newMap.get(i);
           if (status === 'correct') newCorrectCount++;
-          if (status === 'correct' || status === 'incorrect') {
+          if (status === 'correct' || status === 'incorrect' || status === 'pending-incorrect') {
             nextIdx = i + 1;
           }
         }
@@ -630,14 +711,81 @@ export const WordByWordReader = ({
   }, [words, auraCharacter, wordMatcher, isStrictMode]);
 
   // Process final results - confirm word readings AND play robot voice for errors
-  // CRITICAL: Final results can OVERRIDE incorrect interim markings if word was actually correct
-  // NOW WITH CONFIDENCE TRACKING
-  const processFinalResult = useCallback((transcript: string, timestamp: number, speechConfidence: number = 1) => {
+  // SUPERCHARGED V2: Full transcript re-scan, pending-incorrect recovery, all alternatives checked
+  const processFinalResult = useCallback((transcript: string, timestamp: number, speechConfidence: number = 1, alternatives?: string[]) => {
     const spokenWords = transcript.split(/\s+/).filter(w => w.length > 0);
+    
+    // SUPERCHARGED V2: Store full transcript for override logic
+    fullTranscriptRef.current = transcript;
     
     // Create confirmed word readings
     const newReadings: WordReading[] = [];
     
+    // SUPERCHARGED V2: Full re-scan of ALL incorrect/pending-incorrect words against entire transcript
+    setRealtimeWordStatus(prev => {
+      const newMap = new Map(prev);
+      let overrideCount = 0;
+      
+      // Check every incorrect or pending-incorrect word
+      for (let i = 0; i < words.length; i++) {
+        const status = newMap.get(i);
+        if (status === 'incorrect' || status === 'pending-incorrect') {
+          const expectedWord = words[i];
+          
+          // SUPERCHARGED V2: Search ENTIRE transcript for this word
+          const foundInTranscript = findWordInFullTranscript(expectedWord, transcript, !isStrictMode);
+          
+          // SUPERCHARGED V2: Also check all alternatives if provided
+          let foundInAlternatives = false;
+          if (!foundInTranscript && alternatives && alternatives.length > 1) {
+            for (let alt = 1; alt < alternatives.length; alt++) {
+              if (findWordInFullTranscript(expectedWord, alternatives[alt], !isStrictMode)) {
+                foundInAlternatives = true;
+                break;
+              }
+            }
+          }
+          
+          // SUPERCHARGED V2: Try phoneme matching as last resort
+          let phonemeMatch = false;
+          if (!foundInTranscript && !foundInAlternatives && !isStrictMode) {
+            for (const spokenWord of spokenWords) {
+              const result = matchWithPhonemes(spokenWord, expectedWord, 0.70);
+              if (result.isMatch) {
+                phonemeMatch = true;
+                console.log('FINAL PHONEME OVERRIDE:', spokenWord, '→', expectedWord, 'similarity:', result.similarity.toFixed(2));
+                break;
+              }
+            }
+          }
+          
+          if (foundInTranscript || foundInAlternatives || phonemeMatch) {
+            // Override to correct!
+            newMap.set(i, 'correct');
+            overrideCount++;
+            
+            // Clear any pending timer
+            if (pendingIncorrectTimersRef.current.has(i)) {
+              clearTimeout(pendingIncorrectTimersRef.current.get(i));
+              pendingIncorrectTimersRef.current.delete(i);
+            }
+            
+            console.log('SUPERCHARGED OVERRIDE:', words[i], 
+              foundInTranscript ? '(in transcript)' : 
+              foundInAlternatives ? '(in alternatives)' : '(phoneme match)');
+          }
+        }
+      }
+      
+      if (overrideCount > 0) {
+        console.log(`SUPERCHARGED V2: Recovered ${overrideCount} false negatives from final result`);
+      }
+      
+      realtimeWordStatusRef.current = newMap;
+      return newMap;
+    });
+    
+    // Create word readings for new words
     spokenWords.forEach((spokenWord, idx) => {
       const wordIndex = idx;
       if (wordIndex < words.length) {
@@ -647,19 +795,6 @@ export const WordByWordReader = ({
         // Store confidence for this word
         wordConfidencesRef.current.set(wordIndex, speechConfidence);
         
-        // OVERRIDE FIX: If final result shows correct but interim marked incorrect, fix it!
-        const currentStatus = realtimeWordStatusRef.current.get(wordIndex);
-        if (isCorrect && currentStatus === 'incorrect') {
-          // Override the incorrect status with correct
-          setRealtimeWordStatus(prev => {
-            const newMap = new Map(prev);
-            newMap.set(wordIndex, 'correct');
-            realtimeWordStatusRef.current = newMap;
-            return newMap;
-          });
-          console.log('OVERRIDE: Word was marked incorrect but final result shows correct:', expectedWord);
-        }
-        
         if (!processedWordsRef.current.has(wordIndex)) {
           newReadings.push({
             word: spokenWord,
@@ -668,7 +803,7 @@ export const WordByWordReader = ({
             endMs: timestamp,
             correct: isCorrect,
             hesitation: false,
-            speechConfidence: speechConfidence, // NEW: Track confidence
+            speechConfidence: speechConfidence,
           });
           
           processedWordsRef.current.add(wordIndex);
@@ -683,7 +818,7 @@ export const WordByWordReader = ({
         return [...prev, ...uniqueNew];
       });
     }
-  }, [words, wordMatcher]);
+  }, [words, wordMatcher, isStrictMode]);
 
   const stopReading = useCallback(async () => {
     if (recognitionRef.current) {
@@ -1235,6 +1370,8 @@ export const WordByWordReader = ({
         className += 'bg-gradient-to-br from-green-400 to-green-600 text-white shadow-lg shadow-green-500/50 scale-105 hover:scale-110';
       } else if (status === 'incorrect') {
         className += 'bg-gradient-to-br from-red-400 to-red-600 text-white shadow-lg shadow-red-500/50 scale-105 hover:scale-110';
+      } else if (status === 'pending-incorrect') {
+        className += 'word-pending-incorrect bg-gradient-to-br from-orange-300 to-orange-500 text-white shadow-md shadow-orange-500/40 scale-102 hover:scale-105';
       } else if (status === 'current' || idx === realtimeWordIndex) {
         className += 'bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-400 text-white font-bold ring-4 ring-primary ring-offset-2 animate-pulse scale-110 shadow-2xl shadow-yellow-500/50 hover:scale-115';
       } else {
