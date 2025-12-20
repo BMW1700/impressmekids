@@ -4232,6 +4232,7 @@ export type Database = {
           authority_verified: boolean | null
           created_at: string | null
           created_by: string
+          district_id: string | null
           expires_at: string | null
           id: string
           is_active: boolean | null
@@ -4251,6 +4252,7 @@ export type Database = {
           authority_verified?: boolean | null
           created_at?: string | null
           created_by: string
+          district_id?: string | null
           expires_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -4270,6 +4272,7 @@ export type Database = {
           authority_verified?: boolean | null
           created_at?: string | null
           created_by?: string
+          district_id?: string | null
           expires_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -4288,6 +4291,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_alerts_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["district_code"]
           },
           {
             foreignKeyName: "safety_alerts_school_id_fkey"
