@@ -5,7 +5,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Users, GraduationCap, Shield, Calendar, Settings } from "lucide-react";
+import { Loader2, Users, GraduationCap, Shield, Calendar, Settings, School } from "lucide-react";
 import { useAdminData } from "@/hooks/useAdminData";
 import { liquidGlassTabClass } from "@/components/ui/liquid-glass-button";
 import { TeacherListCard } from "@/components/admin/TeacherListCard";
@@ -21,6 +21,8 @@ import { SchoolEventManager } from "@/components/admin/SchoolEventManager";
 import { BulkStudentImport } from "@/components/admin/BulkStudentImport";
 import { AccountVerificationRequests } from "@/components/admin/AccountVerificationRequests";
 import { CleverSyncPanel } from "@/components/admin/CleverSyncPanel";
+import { SchoolsManagementModal } from "@/components/admin/SchoolsManagementModal";
+import { ConnectToSchoolDialog } from "@/components/admin/ConnectToSchoolDialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -49,6 +51,15 @@ export default function AdminDashboard() {
   const [selectedStudentIdForParents, setSelectedStudentIdForParents] = useState<string | null>(null);
   const [selectedStudentNameForParents, setSelectedStudentNameForParents] = useState("");
 
+  // Schools management modal state
+  const [schoolsModalOpen, setSchoolsModalOpen] = useState(false);
+
+  // Connect to school dialog state
+  const [connectSchoolOpen, setConnectSchoolOpen] = useState(false);
+  const [connectSchoolUserId, setConnectSchoolUserId] = useState<string>("");
+  const [connectSchoolUserName, setConnectSchoolUserName] = useState<string>("");
+  const [connectSchoolCurrentId, setConnectSchoolCurrentId] = useState<string | null>(null);
+
   useEffect(() => {
     checkAdminAccess();
   }, []);
@@ -74,7 +85,6 @@ export default function AdminDashboard() {
         return;
       }
 
-      // Note: Admins are always verified - no verification check needed
       setLoading(false);
     } catch (error) {
       console.error("Error checking admin access:", error);
@@ -111,6 +121,13 @@ export default function AdminDashboard() {
     setStudentParentsOpen(true);
   };
 
+  const handleConnectToSchool = (userId: string, userName: string, currentSchoolId?: string | null) => {
+    setConnectSchoolUserId(userId);
+    setConnectSchoolUserName(userName);
+    setConnectSchoolCurrentId(currentSchoolId || null);
+    setConnectSchoolOpen(true);
+  };
+
   if (loading || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -132,14 +149,24 @@ export default function AdminDashboard() {
                 Platform-wide user management and oversight
               </p>
             </div>
-            <Button 
-              variant="outline" 
-              onClick={() => navigate("/admin/settings")}
-              className="flex items-center gap-2"
-            >
-              <Settings className="h-4 w-4" />
-              Settings
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setSchoolsModalOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <School className="h-4 w-4" />
+                Schools
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => navigate("/admin/settings")}
+                className="flex items-center gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                Settings
+              </Button>
+            </div>
           </div>
 
           {/* Statistics Cards */}
@@ -227,6 +254,7 @@ export default function AdminDashboard() {
                           key={teacher.id}
                           teacher={teacher}
                           onViewClassrooms={handleViewTeacherClassrooms}
+                          onConnectToSchool={handleConnectToSchool}
                         />
                       ))}
                     </div>
@@ -254,6 +282,7 @@ export default function AdminDashboard() {
                           student={student}
                           onViewClassrooms={handleViewStudentClassrooms}
                           onViewParents={handleViewStudentParents}
+                          onConnectToSchool={handleConnectToSchool}
                         />
                       ))}
                     </div>
@@ -276,7 +305,11 @@ export default function AdminDashboard() {
                   ) : (
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {admins.map((admin) => (
-                        <AdminListCard key={admin.id} admin={admin} />
+                        <AdminListCard 
+                          key={admin.id} 
+                          admin={admin} 
+                          onConnectToSchool={handleConnectToSchool}
+                        />
                       ))}
                     </div>
                   )}
@@ -377,6 +410,19 @@ export default function AdminDashboard() {
         onClose={() => setStudentParentsOpen(false)}
         studentId={selectedStudentIdForParents}
         studentName={selectedStudentNameForParents}
+      />
+
+      <SchoolsManagementModal
+        open={schoolsModalOpen}
+        onClose={() => setSchoolsModalOpen(false)}
+      />
+
+      <ConnectToSchoolDialog
+        open={connectSchoolOpen}
+        onClose={() => setConnectSchoolOpen(false)}
+        userId={connectSchoolUserId}
+        userName={connectSchoolUserName}
+        currentSchoolId={connectSchoolCurrentId}
       />
     </div>
   );

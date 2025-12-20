@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { School, Users } from "lucide-react";
+import { School, Users, Building } from "lucide-react";
 
 interface StudentListCardProps {
   student: {
@@ -10,20 +10,34 @@ interface StudentListCardProps {
     email: string;
     classroom_count: number;
     parent_count: number;
+    school_id?: string | null;
+    school_name?: string | null;
   };
   onViewClassrooms: (studentId: string, studentName: string) => void;
   onViewParents: (studentId: string, studentName: string) => void;
+  onConnectToSchool?: (userId: string, userName: string, currentSchoolId?: string | null) => void;
 }
 
-export const StudentListCard = ({ student, onViewClassrooms, onViewParents }: StudentListCardProps) => {
+export const StudentListCard = ({ 
+  student, 
+  onViewClassrooms, 
+  onViewParents,
+  onConnectToSchool 
+}: StudentListCardProps) => {
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">{student.full_name}</CardTitle>
         <CardDescription>{student.email}</CardDescription>
+        {student.school_name && (
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+            <Building className="h-3 w-3" />
+            {student.school_name}
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Badge className="gap-1 bg-emerald-500 text-white">
             <School className="h-3 w-3" />
             {student.classroom_count} {student.classroom_count === 1 ? "Classroom" : "Classrooms"}
@@ -33,7 +47,7 @@ export const StudentListCard = ({ student, onViewClassrooms, onViewParents }: St
             {student.parent_count} {student.parent_count === 1 ? "Parent" : "Parents"}
           </Badge>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button 
             size="sm" 
             className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white"
@@ -49,6 +63,17 @@ export const StudentListCard = ({ student, onViewClassrooms, onViewParents }: St
             View Parents
           </Button>
         </div>
+        {onConnectToSchool && (
+          <Button 
+            size="sm" 
+            variant="outline"
+            className="w-full"
+            onClick={() => onConnectToSchool(student.id, student.full_name, student.school_id)}
+          >
+            <Building className="h-3 w-3 mr-1" />
+            {student.school_id ? "Change School" : "Connect to School"}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

@@ -3376,6 +3376,7 @@ export type Database = {
           id: string
           is_verified: boolean | null
           role: Database["public"]["Enums"]["user_role"]
+          school_id: string | null
           signup_domain: string | null
         }
         Insert: {
@@ -3387,6 +3388,7 @@ export type Database = {
           id: string
           is_verified?: boolean | null
           role?: Database["public"]["Enums"]["user_role"]
+          school_id?: string | null
           signup_domain?: string | null
         }
         Update: {
@@ -3398,6 +3400,7 @@ export type Database = {
           id?: string
           is_verified?: boolean | null
           role?: Database["public"]["Enums"]["user_role"]
+          school_id?: string | null
           signup_domain?: string | null
         }
         Relationships: [
@@ -3407,6 +3410,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "districts"
             referencedColumns: ["district_code"]
+          },
+          {
+            foreignKeyName: "profiles_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -4506,6 +4516,41 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: []
+      }
+      schools: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          district_id: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          district_id: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          district_id?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schools_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["district_code"]
+          },
+        ]
       }
       security_audit_log: {
         Row: {
