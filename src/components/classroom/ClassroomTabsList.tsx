@@ -201,26 +201,20 @@ export const ClassroomTabsList = ({
             ref={provided.innerRef}
             {...provided.draggableProps}
             {...provided.dragHandleProps}
-            style={{
-              ...provided.draggableProps.style,
-              width: "100%",
-            }}
+            style={provided.draggableProps.style}
             className={cn(
-              "min-w-0 transition-transform duration-200 ease-out",
-              snapshot.isDragging && "z-50 scale-[1.02]"
+              "transition-transform duration-200 ease-out",
+              snapshot.isDragging && "z-50"
             )}
           >
-            {/* Use plain div to avoid Radix roving-focus issues during drag */}
-            <div
-              className={cn(
-                "relative flex h-12 w-full select-none items-center justify-center whitespace-nowrap rounded-md px-3 text-sm font-medium",
-                "cursor-grab",
-                triggerClass
-              )}
-              aria-hidden="true"
+            {/* Match normal TabsTrigger sizing exactly; just add grab cursor and disable clicks */}
+            <TabsTrigger
+              value={tabId}
+              disabled
+              className={cn("relative cursor-grab", triggerClass)}
             >
               {renderTabContent(tabId)}
-            </div>
+            </TabsTrigger>
           </div>
         )}
       </Draggable>
