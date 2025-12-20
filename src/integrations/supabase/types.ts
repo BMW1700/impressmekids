@@ -5991,7 +5991,7 @@ export type Database = {
     }
     Enums: {
       answer_status: "not_attempted" | "in_progress" | "completed"
-      app_role: "admin" | "teacher" | "student" | "district_manager"
+      app_role: "admin" | "teacher" | "student" | "district_manager" | "parent"
       difficulty_level: "easy" | "medium" | "hard"
       elimination_status: "active" | "eliminated"
       event_category:
@@ -6153,7 +6153,7 @@ export const Constants = {
   public: {
     Enums: {
       answer_status: ["not_attempted", "in_progress", "completed"],
-      app_role: ["admin", "teacher", "student", "district_manager"],
+      app_role: ["admin", "teacher", "student", "district_manager", "parent"],
       difficulty_level: ["easy", "medium", "hard"],
       elimination_status: ["active", "eliminated"],
       event_category: [
