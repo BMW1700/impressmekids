@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useStudentGradebook } from "@/hooks/useStudentGradebook";
-import { Loader2, TrendingUp, TrendingDown, Minus, Eye, GraduationCap } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Minus, Eye, GraduationCap, CalendarPlus } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { StudentClassroomTrends } from "@/components/StudentClassroomTrends";
+import { RequestMeetingDialog } from "./RequestMeetingDialog";
 
 interface ParentGradebookSectionProps {
   studentId: string;
@@ -25,6 +26,11 @@ export const ParentGradebookSection = ({ studentId, studentName }: ParentGradebo
   const [selectedClassroom, setSelectedClassroom] = useState<string | null>(null);
   const [showAllGrades, setShowAllGrades] = useState<string | null>(null);
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
+  const [meetingDialogData, setMeetingDialogData] = useState<{
+    teacherId: string;
+    teacherName: string;
+    classroomName: string;
+  } | null>(null);
 
   if (isLoading) {
     return (
@@ -99,6 +105,18 @@ export const ParentGradebookSection = ({ studentId, studentName }: ParentGradebo
                       onClick={() => setShowAllGrades(classroom.id)}
                     >
                       View All Grades
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setMeetingDialogData({
+                        teacherId: classroom.teacherId,
+                        teacherName: classroom.teacherName,
+                        classroomName: classroom.name,
+                      })}
+                    >
+                      <CalendarPlus className="h-4 w-4 mr-2" />
+                      Request Meeting
                     </Button>
                   </div>
                 </div>
@@ -357,6 +375,19 @@ export const ParentGradebookSection = ({ studentId, studentName }: ParentGradebo
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Request Meeting Dialog */}
+      {meetingDialogData && (
+        <RequestMeetingDialog
+          open={!!meetingDialogData}
+          onOpenChange={(open) => !open && setMeetingDialogData(null)}
+          teacherId={meetingDialogData.teacherId}
+          teacherName={meetingDialogData.teacherName}
+          studentId={studentId}
+          studentName={studentName}
+          classroomName={meetingDialogData.classroomName}
+        />
+      )}
     </div>
   );
 };

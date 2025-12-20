@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 interface GradebookClassroom {
   id: string;
   name: string;
+  teacherId: string;
+  teacherName: string;
   currentGrade: number | null;
   finalGrade: number | null;
   gradeHistory: { date: string; grade: number }[];
@@ -43,14 +45,19 @@ export const useStudentGradebook = (studentId: string | undefined) => {
     queryFn: async () => {
       if (!studentId) throw new Error("Student ID required");
 
-      // Get student's classrooms
+      // Get student's classrooms with teacher info
       const { data: classrooms, error: classroomsError } = await supabase
         .from("classroom_students")
         .select(`
           classroom_id,
           classrooms (
             id,
-            name
+            name,
+            teacher_id,
+            profiles!classrooms_teacher_id_fkey (
+              id,
+              full_name
+            )
           )
         `)
         .eq("student_id", studentId);
@@ -293,6 +300,8 @@ export const useStudentGradebook = (studentId: string | undefined) => {
         return {
           id: classroom.classroom_id,
           name: classroom.classrooms?.name || "Unknown Classroom",
+          teacherId: classroom.classrooms?.teacher_id || "",
+          teacherName: (classroom.classrooms?.profiles as any)?.full_name || "Teacher",
           currentGrade,
           finalGrade,
           gradeHistory,

@@ -7,12 +7,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Clock, Plus, Trash2, Calendar, Loader2, Repeat } from "lucide-react";
+import { Clock, Plus, Trash2, Calendar, Loader2, Repeat, Users, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, startOfToday, isBefore } from "date-fns";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Office hours are teacher-wide, not classroom-specific
 interface MeetingRequestsTabProps {
@@ -63,6 +64,38 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
         .select("*")
         .eq("teacher_id", user.id)
         .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Fetch upcoming meeting bookings
+  const { data: upcomingBookings = [], isLoading: loadingBookings } = useQuery({
+    queryKey: ["teacher-meeting-bookings"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      
+      const today = format(startOfToday(), "yyyy-MM-dd");
+      
+      const { data, error } = await supabase
+        .from("meeting_bookings")
+        .select(`
+          *,
+          parent_accounts (
+            full_name,
+            email
+          ),
+          profiles!meeting_bookings_student_id_fkey (
+            full_name
+          )
+        `)
+        .eq("teacher_id", user.id)
+        .eq("status", "booked")
+        .gte("booking_date", today)
+        .order("booking_date", { ascending: true })
+        .order("start_time", { ascending: true });
       
       if (error) throw error;
       return data || [];
@@ -365,82 +398,163 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
         </Dialog>
       </div>
 
-      {officeHours.length === 0 ? (
-        <Card className="p-12 text-center">
-          <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <h3 className="text-xl font-bold mb-2">No Office Hours Set</h3>
-          <p className="text-muted-foreground mb-4">
-            Add your availability so parents and students can schedule meetings with you
-          </p>
-          <Button 
-            className="bg-gradient-primary hover:opacity-90"
-            onClick={() => setShowAddHours(true)}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Office Hours
-          </Button>
-        </Card>
-      ) : (
-        <div className="grid md:grid-cols-2 gap-6">
-          {officeHours.map((hours) => (
-            <Card key={hours.id} className="shadow-card hover:shadow-elegant transition-all duration-300">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      {hours.is_recurring ? (
-                        <Repeat className="h-5 w-5 text-primary" />
-                      ) : (
-                        <Calendar className="h-5 w-5 text-primary" />
-                      )}
-                      {hours.is_recurring 
-                        ? formatDays(hours.days_of_week || [])
-                        : hours.specific_date ? formatDate(hours.specific_date) : "One-time"
-                      }
-                    </CardTitle>
-                    <CardDescription className="mt-1 space-y-1">
-                      <div>{formatTime(hours.start_time)} - {formatTime(hours.end_time)}</div>
-                      <div className="text-xs">{hours.meeting_duration_minutes}-minute meetings</div>
-                      {hours.is_recurring && hours.start_date && hours.end_date && (
-                        <div className="text-xs">
-                          {formatDate(hours.start_date)} - {formatDate(hours.end_date)}
+      <Tabs defaultValue="bookings" className="w-full">
+        <TabsList>
+          <TabsTrigger value="bookings">
+            <Users className="h-4 w-4 mr-2" />
+            Upcoming Bookings ({upcomingBookings.length})
+          </TabsTrigger>
+          <TabsTrigger value="hours">
+            <Clock className="h-4 w-4 mr-2" />
+            My Office Hours ({officeHours.length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="bookings" className="mt-6">
+          {loadingBookings ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : upcomingBookings.length === 0 ? (
+            <Card className="p-12 text-center">
+              <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-xl font-bold mb-2">No Upcoming Meetings</h3>
+              <p className="text-muted-foreground">
+                You don't have any scheduled meetings yet. Parents can book meetings during your office hours.
+              </p>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {upcomingBookings.map((booking: any) => (
+                <Card key={booking.id} className="shadow-card">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Calendar className="h-5 w-5 text-primary" />
+                          {format(new Date(booking.booking_date + 'T00:00:00'), "EEEE, MMMM d, yyyy")}
+                        </CardTitle>
+                        <CardDescription className="mt-1">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+                          </div>
+                        </CardDescription>
+                      </div>
+                      <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+                        Booked
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="p-3 bg-muted/50 rounded-lg space-y-2">
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Booked by:</span>{" "}
+                        <span className="font-medium">{booking.parent_accounts?.full_name || "Unknown Parent"}</span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Student:</span>{" "}
+                        <span className="font-medium">{booking.profiles?.full_name || "Unknown Student"}</span>
+                      </div>
+                      {booking.parent_accounts?.email && (
+                        <div className="text-sm">
+                          <span className="text-muted-foreground">Email:</span>{" "}
+                          <span>{booking.parent_accounts.email}</span>
                         </div>
                       )}
-                    </CardDescription>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() => deleteMutation.mutate(hours.id)}
-                    disabled={deleteMutation.isPending}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {hours.location && (
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Location:</span>{" "}
-                    <span className="font-medium">{hours.location}</span>
-                  </div>
-                )}
-                {hours.notes && (
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Notes:</span>{" "}
-                    <span>{hours.notes}</span>
-                  </div>
-                )}
-                <Badge variant="secondary" className="mt-2">
-                  <Clock className="h-3 w-3 mr-1" />
-                  Active
-                </Badge>
-              </CardContent>
+                    </div>
+                    {booking.meeting_reason && (
+                      <div className="p-3 border rounded-lg">
+                        <div className="text-xs text-muted-foreground mb-1">Meeting Purpose:</div>
+                        <p className="text-sm">{booking.meeting_reason}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="hours" className="mt-6">
+          {officeHours.length === 0 ? (
+            <Card className="p-12 text-center">
+              <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-xl font-bold mb-2">No Office Hours Set</h3>
+              <p className="text-muted-foreground mb-4">
+                Add your availability so parents and students can schedule meetings with you
+              </p>
+              <Button 
+                className="bg-gradient-primary hover:opacity-90"
+                onClick={() => setShowAddHours(true)}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Office Hours
+              </Button>
             </Card>
-          ))}
-        </div>
-      )}
+          ) : (
+            <div className="grid md:grid-cols-2 gap-6">
+              {officeHours.map((hours) => (
+                <Card key={hours.id} className="shadow-card hover:shadow-elegant transition-all duration-300">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          {hours.is_recurring ? (
+                            <Repeat className="h-5 w-5 text-primary" />
+                          ) : (
+                            <Calendar className="h-5 w-5 text-primary" />
+                          )}
+                          {hours.is_recurring 
+                            ? formatDays(hours.days_of_week || [])
+                            : hours.specific_date ? formatDate(hours.specific_date) : "One-time"
+                          }
+                        </CardTitle>
+                        <CardDescription className="mt-1 space-y-1">
+                          <div>{formatTime(hours.start_time)} - {formatTime(hours.end_time)}</div>
+                          <div className="text-xs">{hours.meeting_duration_minutes}-minute meetings</div>
+                          {hours.is_recurring && hours.start_date && hours.end_date && (
+                            <div className="text-xs">
+                              {formatDate(hours.start_date)} - {formatDate(hours.end_date)}
+                            </div>
+                          )}
+                        </CardDescription>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => deleteMutation.mutate(hours.id)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {hours.location && (
+                      <div className="text-sm flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{hours.location}</span>
+                      </div>
+                    )}
+                    {hours.notes && (
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Notes:</span>{" "}
+                        <span>{hours.notes}</span>
+                      </div>
+                    )}
+                    <Badge variant="secondary" className="mt-2">
+                      <Clock className="h-3 w-3 mr-1" />
+                      Active
+                    </Badge>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
