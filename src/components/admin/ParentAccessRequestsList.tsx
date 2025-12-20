@@ -277,6 +277,9 @@ export const ParentAccessRequestsList = () => {
     );
   }
 
+  const pendingRequests = requests?.filter(r => r.status === "pending") || [];
+  const approvedRequests = requests?.filter(r => r.status === "approved") || [];
+
   if (!requests || requests.length === 0) {
     return (
       <Card>
@@ -287,70 +290,95 @@ export const ParentAccessRequestsList = () => {
     );
   }
 
-  return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {requests.map((request) => (
-        <Card key={request.id}>
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div className="space-y-1">
-                <CardTitle className="text-base">
-                  {request.parent_accounts.full_name}
-                </CardTitle>
-                <CardDescription className="text-sm">
-                  {request.parent_accounts.email}
-                </CardDescription>
-              </div>
-              {getStatusBadge(request.status)}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm font-medium">Student:</p>
-              <p className="text-sm text-muted-foreground">{request.student.full_name}</p>
-            </div>
-            
-            {request.message && (
-              <div>
-                <p className="text-sm font-medium">Message:</p>
-                <p className="text-sm text-muted-foreground">{request.message}</p>
-              </div>
-            )}
-            
-            <div>
-              <p className="text-xs text-muted-foreground">
-                Requested: {new Date(request.created_at).toLocaleDateString()}
-              </p>
-            </div>
+  const renderRequestCard = (request: ParentAccessRequest, showActions: boolean) => (
+    <Card key={request.id}>
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-base">
+              {request.parent_accounts.full_name}
+            </CardTitle>
+            <CardDescription className="text-sm">
+              {request.parent_accounts.email}
+            </CardDescription>
+          </div>
+          {getStatusBadge(request.status)}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <p className="text-sm font-medium">Student:</p>
+          <p className="text-sm text-muted-foreground">{request.student.full_name}</p>
+        </div>
+        
+        {request.message && (
+          <div>
+            <p className="text-sm font-medium">Message:</p>
+            <p className="text-sm text-muted-foreground">{request.message}</p>
+          </div>
+        )}
+        
+        <div>
+          <p className="text-xs text-muted-foreground">
+            Requested: {new Date(request.created_at).toLocaleDateString()}
+          </p>
+        </div>
 
-            {request.status === "pending" && (
-              <div className="flex gap-2 pt-2">
-                <Button
-                  size="sm"
-                  onClick={() => handleApprove(request.id, request.parent_id, request.student_id)}
-                  disabled={processingId === request.id}
-                  className="flex-1"
-                >
-                  {processingId === request.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    "Approve"
-                  )}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleDeny(request.id)}
-                  disabled={processingId === request.id}
-                  className="flex-1"
-                >
-                  Deny
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      ))}
+        {showActions && request.status === "pending" && (
+          <div className="flex gap-2 pt-2">
+            <Button
+              size="sm"
+              onClick={() => handleApprove(request.id, request.parent_id, request.student_id)}
+              disabled={processingId === request.id}
+              className="flex-1"
+            >
+              {processingId === request.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Approve"
+              )}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleDeny(request.id)}
+              disabled={processingId === request.id}
+              className="flex-1"
+            >
+              Deny
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <div className="space-y-8">
+      {/* Pending Requests Section */}
+      <div className="space-y-4">
+        {pendingRequests.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {pendingRequests.map((request) => renderRequestCard(request, true))}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="py-8">
+              <p className="text-center text-muted-foreground">No pending requests</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Approved Requests Section */}
+      {approvedRequests.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Approved Requests</h3>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {approvedRequests.map((request) => renderRequestCard(request, false))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
