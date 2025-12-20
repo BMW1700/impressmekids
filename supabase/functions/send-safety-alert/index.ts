@@ -23,7 +23,7 @@ serve(async (req) => {
       throw new Error("Alert ID is required");
     }
 
-    // Fetch alert details
+    // Fetch alert details including district_id for scoping
     const { data: alert, error: alertError } = await supabaseClient
       .from("safety_alerts")
       .select("*")
@@ -31,25 +31,98 @@ serve(async (req) => {
       .single();
 
     if (alertError || !alert) {
+      console.error("Alert fetch error:", alertError);
       throw new Error("Alert not found");
     }
 
-    // Fetch all parent emails
-    const { data: parents, error: parentsError } = await supabaseClient
-      .from("parent_accounts")
-      .select("email, full_name");
+    console.log("Processing alert:", alertId, "for district:", alert.district_id);
 
-    if (parentsError) {
-      throw new Error("Failed to fetch parent contacts");
+    let parents: { email: string; full_name: string; user_id: string }[] = [];
+
+    if (alert.district_id) {
+      // Fetch parents whose children are in classrooms within this district
+      // Join: parent_accounts -> parent_student_links -> profiles (students) -> classroom_students -> classrooms -> profiles (teachers with district)
+      const { data: scopedParents, error: parentsError } = await supabaseClient
+        .from("parent_accounts")
+        .select(`
+          email, 
+          full_name,
+          user_id,
+          parent_student_links!inner(
+            student_id,
+            approved
+          )
+        `)
+        .eq("parent_student_links.approved", true);
+
+      if (parentsError) {
+        console.error("Parent fetch error:", parentsError);
+        throw new Error("Failed to fetch parent contacts");
+      }
+
+      // Now filter parents whose students are in classrooms with teachers in this district
+      const parentUserIds = scopedParents?.map(p => p.user_id) || [];
+      const studentIds = scopedParents?.flatMap(p => 
+        p.parent_student_links?.map((link: any) => link.student_id) || []
+      ) || [];
+
+      if (studentIds.length > 0) {
+        // Get classrooms these students are in
+        const { data: studentClassrooms } = await supabaseClient
+          .from("classroom_students")
+          .select("student_id, classroom_id")
+          .in("student_id", studentIds);
+
+        // Get teachers of these classrooms who are in the alert's district
+        const classroomIds = [...new Set(studentClassrooms?.map(sc => sc.classroom_id) || [])];
+        
+        if (classroomIds.length > 0) {
+          const { data: classroomsInDistrict } = await supabaseClient
+            .from("classrooms")
+            .select("id, teacher_id, profiles!inner(district_id)")
+            .in("id", classroomIds)
+            .eq("profiles.district_id", alert.district_id);
+
+          const validClassroomIds = new Set(classroomsInDistrict?.map(c => c.id) || []);
+          
+          // Find students in valid classrooms
+          const validStudentIds = new Set(
+            studentClassrooms
+              ?.filter(sc => validClassroomIds.has(sc.classroom_id))
+              .map(sc => sc.student_id) || []
+          );
+
+          // Filter parents to only those with children in this district's classrooms
+          parents = (scopedParents || [])
+            .filter(p => 
+              p.parent_student_links?.some((link: any) => validStudentIds.has(link.student_id))
+            )
+            .map(p => ({ email: p.email, full_name: p.full_name, user_id: p.user_id }));
+        }
+      }
+
+      console.log(`Found ${parents.length} parents in district ${alert.district_id}`);
+    } else {
+      // No district specified - this is a system-wide alert (should be rare)
+      console.warn("No district_id on alert - sending to all parents (not recommended)");
+      const { data: allParents, error: parentsError } = await supabaseClient
+        .from("parent_accounts")
+        .select("email, full_name, user_id");
+
+      if (parentsError) {
+        throw new Error("Failed to fetch parent contacts");
+      }
+      parents = allParents || [];
     }
 
     // Send email notifications using Resend (if configured)
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     
     if (resendApiKey && parents && parents.length > 0) {
+      console.log(`Sending emails to ${parents.length} parents`);
       const emailPromises = parents.map(async (parent) => {
         const emailBody = {
-          from: "safety@impressmekids.com",
+          from: "ImpressMe Kids <onboarding@resend.dev>",
           to: parent.email,
           subject: `[${alert.severity.toUpperCase()}] ${alert.title}`,
           html: `
@@ -101,21 +174,15 @@ serve(async (req) => {
     // Log the alert distribution
     console.log(`Safety alert ${alertId} distributed to ${parents?.length || 0} parents`);
 
-    // Send push notifications to all parents
+    // Send push notifications to scoped parents
     if (parents && parents.length > 0) {
+      console.log(`Sending push notifications to ${parents.length} parents`);
       for (const parent of parents) {
-        // Get parent user_id from parent_accounts
-        const { data: parentAccount } = await supabaseClient
-          .from("parent_accounts")
-          .select("user_id")
-          .eq("email", parent.email)
-          .single();
-
-        if (parentAccount?.user_id) {
+        if (parent.user_id) {
           try {
             await supabaseClient.functions.invoke('send-push-notification', {
               body: {
-                userId: parentAccount.user_id,
+                userId: parent.user_id,
                 title: `🚨 ${alert.severity.toUpperCase()} Safety Alert`,
                 body: alert.title,
                 icon: '/android-chrome-192x192.png',

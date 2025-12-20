@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ interface CreateSafetyAlertModalProps {
 export function CreateSafetyAlertModal({ open, onOpenChange, onSuccess }: CreateSafetyAlertModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [userDistrict, setUserDistrict] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     message: "",
@@ -25,6 +26,25 @@ export function CreateSafetyAlertModal({ open, onOpenChange, onSuccess }: Create
     severity: "info" as "info" | "warning" | "critical",
     affects_attendance: false,
   });
+
+  // Fetch the user's district on mount
+  useEffect(() => {
+    const fetchUserDistrict = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("district_id")
+        .eq("id", session.user.id)
+        .single();
+
+      if (profile?.district_id) {
+        setUserDistrict(profile.district_id);
+      }
+    };
+    fetchUserDistrict();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,14 +54,16 @@ export function CreateSafetyAlertModal({ open, onOpenChange, onSuccess }: Create
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
 
+      // Include district_id to scope the alert
       const { data: alertData, error } = await supabase.from("safety_alerts").insert({
         ...formData,
-        created_by: session.user.id
+        created_by: session.user.id,
+        district_id: userDistrict
       }).select('id').single();
 
       if (error) throw error;
 
-      // Actually send emails and push notifications
+      // Send emails and push notifications to parents in this district
       const { error: sendError } = await supabase.functions.invoke('send-safety-alert', {
         body: { alertId: alertData.id }
       });
@@ -56,7 +78,7 @@ export function CreateSafetyAlertModal({ open, onOpenChange, onSuccess }: Create
       } else {
         toast({
           title: "Alert Created",
-          description: "Safety alert has been sent to all parents"
+          description: "Safety alert has been sent to parents in your district"
         });
       }
 
