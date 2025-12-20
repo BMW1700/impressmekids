@@ -448,7 +448,7 @@ const TeacherDashboard = () => {
                   {classrooms.map((classroom) => (
                     <div
                       key={classroom.id}
-                      className="hover:scale-[1.02] transition-transform duration-200"
+                      className="h-full hover:scale-[1.02] transition-transform duration-200"
                     >
                       <ClassroomCard
                         id={classroom.id}
