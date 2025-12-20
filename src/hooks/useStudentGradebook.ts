@@ -56,23 +56,20 @@ export const useStudentGradebook = (studentId: string | undefined) => {
         .eq("student_id", studentId);
 
       if (classroomsError) throw classroomsError;
+      if (!classrooms || classrooms.length === 0) return [];
 
-      const gradebookData: GradebookClassroom[] = [];
+      const classroomIds = classrooms.map(c => c.classroom_id);
 
-      for (const classroom of classrooms || []) {
-        // Fetch syllabus for grade weights
-        const { data: syllabus } = await supabase
+      // Fetch ALL data in parallel instead of sequentially per classroom
+      const [syllabusResult, assignmentsResult, attendanceResult] = await Promise.all([
+        // Fetch all syllabi for these classrooms at once
+        supabase
           .from("classroom_syllabus")
-          .select("grade_weights")
-          .eq("classroom_id", classroom.classroom_id)
-          .maybeSingle();
-
-        const weights = syllabus?.grade_weights 
-          ? (syllabus.grade_weights as any)
-          : { test: 35, quiz: 30, homework: 25, attendance: 10, behavior: 0 };
-
-        // Get assignments for this classroom
-        const { data: assignments, error: assignmentsError } = await supabase
+          .select("classroom_id, grade_weights")
+          .in("classroom_id", classroomIds),
+        
+        // Fetch all assignments for these classrooms at once
+        supabase
           .from("assignments")
           .select(`
             id,
@@ -97,11 +94,46 @@ export const useStudentGradebook = (studentId: string | undefined) => {
               )
             )
           `)
-          .eq("classroom_id", classroom.classroom_id)
+          .in("classroom_id", classroomIds)
           .eq("is_posted", true)
-          .order("due_date", { ascending: true });
+          .order("due_date", { ascending: true }),
+        
+        // Fetch all attendance records for these classrooms at once
+        supabase
+          .from("attendance_records")
+          .select("classroom_id, status")
+          .in("classroom_id", classroomIds)
+          .eq("student_id", studentId)
+      ]);
 
-        if (assignmentsError) throw assignmentsError;
+      if (assignmentsResult.error) throw assignmentsResult.error;
+
+      // Create lookup maps for fast access
+      const syllabusMap = new Map<string, any>();
+      syllabusResult.data?.forEach(s => syllabusMap.set(s.classroom_id, s.grade_weights));
+
+      const assignmentsByClassroom = new Map<string, any[]>();
+      assignmentsResult.data?.forEach(a => {
+        const list = assignmentsByClassroom.get(a.classroom_id) || [];
+        list.push(a);
+        assignmentsByClassroom.set(a.classroom_id, list);
+      });
+
+      const attendanceByClassroom = new Map<string, any[]>();
+      attendanceResult.data?.forEach(a => {
+        const list = attendanceByClassroom.get(a.classroom_id) || [];
+        list.push(a);
+        attendanceByClassroom.set(a.classroom_id, list);
+      });
+
+      // Now process each classroom using the pre-fetched data
+      const gradebookData: GradebookClassroom[] = classrooms.map((classroom) => {
+        const weights = syllabusMap.get(classroom.classroom_id) 
+          ? (syllabusMap.get(classroom.classroom_id) as any)
+          : { test: 35, quiz: 30, homework: 25, attendance: 10, behavior: 0 };
+
+        const assignments = assignmentsByClassroom.get(classroom.classroom_id) || [];
+        const attendanceRecords = attendanceByClassroom.get(classroom.classroom_id) || [];
 
         // Calculate current grade and prepare assignment data
         let totalPoints = 0;
@@ -113,11 +145,11 @@ export const useStudentGradebook = (studentId: string | undefined) => {
         const quizAssignments: any[] = [];
         const homeworkAssignments: any[] = [];
 
-        const assignmentsList = (assignments || []).map((assignment) => {
+        const assignmentsList = assignments.map((assignment) => {
           // Calculate total points for this assignment from questions
           const assignmentTotalPoints = assignment.assignment_questions?.reduce(
             (sum: number, q: any) => sum + (q.points || 0), 0
-          ) || 100; // Default to 100 if no questions
+          ) || 100;
           
           // Filter to only this student's submissions, then prioritize graded ones
           const studentSubmissions = assignment.assignment_submissions.filter(
@@ -195,19 +227,12 @@ export const useStudentGradebook = (studentId: string | undefined) => {
         const quizAvg = calculateCategoryAverage(quizAssignments);
         const homeworkAvg = calculateCategoryAverage(homeworkAssignments);
 
-        // Fetch attendance records for this classroom
-        const { data: attendanceRecords } = await supabase
-          .from("attendance_records")
-          .select("status")
-          .eq("classroom_id", classroom.classroom_id)
-          .eq("student_id", studentId);
-
         // Calculate attendance metrics
         let daysPresent = 0;
         let daysTardy = 0;
         let daysAbsent = 0;
 
-        attendanceRecords?.forEach((record) => {
+        attendanceRecords.forEach((record) => {
           if (record.status === "Present") daysPresent++;
           else if (record.status === "Tardy") daysTardy++;
           else if (record.status === "Absent") daysAbsent++;
@@ -225,31 +250,26 @@ export const useStudentGradebook = (studentId: string | undefined) => {
           let weightedSum = 0;
           let totalWeight = 0;
 
-          // Add test contribution
           if (testAssignments.length > 0) {
             weightedSum += (testAvg * weights.test) / 100;
             totalWeight += weights.test;
           }
 
-          // Add quiz contribution
           if (quizAssignments.length > 0) {
             weightedSum += (quizAvg * weights.quiz) / 100;
             totalWeight += weights.quiz;
           }
 
-          // Add homework contribution
           if (homeworkAssignments.length > 0) {
             weightedSum += (homeworkAvg * weights.homework) / 100;
             totalWeight += weights.homework;
           }
 
-          // Add attendance contribution
           if (totalDaysRecorded > 0 && weights.attendance > 0) {
             weightedSum += (attendancePercentage * weights.attendance) / 100;
             totalWeight += weights.attendance;
           }
 
-          // Calculate final grade based on actual weights used
           if (totalWeight > 0) {
             finalGrade = (weightedSum / totalWeight) * 100;
           }
@@ -266,12 +286,11 @@ export const useStudentGradebook = (studentId: string | undefined) => {
             status: a.status,
           }));
 
-        // Mock grade history (in real implementation, you'd track this over time)
         const gradeHistory = gradedCount > 0
           ? [{ date: new Date().toISOString(), grade: finalGrade || currentGrade || 0 }]
           : [];
 
-        gradebookData.push({
+        return {
           id: classroom.classroom_id,
           name: classroom.classrooms?.name || "Unknown Classroom",
           currentGrade,
@@ -291,11 +310,12 @@ export const useStudentGradebook = (studentId: string | undefined) => {
             homework: { average: homeworkAvg, weight: weights.homework, count: homeworkAssignments.length },
             attendance: { percentage: attendancePercentage, weight: weights.attendance },
           },
-        });
-      }
+        };
+      });
 
       return gradebookData;
     },
     enabled: !!studentId,
+    staleTime: 30000, // Cache for 30 seconds to avoid refetching on tab switches
   });
 };
