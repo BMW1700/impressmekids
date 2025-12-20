@@ -6,7 +6,6 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { StudentClassroomTrends } from "@/components/StudentClassroomTrends";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -265,8 +264,6 @@ const useSingleClassroomGradebook = (classroomId: string, studentId: string) => 
 export const SingleClassroomGradebook = ({ classroomId, studentId, classroomName }: SingleClassroomGradebookProps) => {
   const { data: gradeData, isLoading } = useSingleClassroomGradebook(classroomId, studentId);
   const navigate = useNavigate();
-  const [showTrends, setShowTrends] = useState(false);
-  const [showAllGrades, setShowAllGrades] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
 
   if (isLoading) {
@@ -327,14 +324,6 @@ export const SingleClassroomGradebook = ({ classroomId, studentId, classroomName
                   <span className="text-muted-foreground">No grades yet</span>
                 )}
               </div>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Button size="sm" variant="outline" onClick={() => setShowTrends(true)}>
-                View Trend
-              </Button>
-              <Button size="sm" onClick={() => setShowAllGrades(true)}>
-                View All Grades
-              </Button>
             </div>
           </div>
         </CardHeader>
@@ -404,93 +393,78 @@ export const SingleClassroomGradebook = ({ classroomId, studentId, classroomName
         )}
       </Card>
 
-      {/* Trend Dialog */}
-      <Dialog open={showTrends} onOpenChange={setShowTrends}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Performance Trends</DialogTitle>
-          </DialogHeader>
-          <StudentClassroomTrends classroomId={classroomId} studentId={studentId} />
-        </DialogContent>
-      </Dialog>
-
-      {/* All Grades Dialog */}
-      <Dialog open={showAllGrades} onOpenChange={setShowAllGrades}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>All Grades</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {/* Attendance Summary */}
-            {gradeData.attendanceAverage !== null && (
-              <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg border-2 border-blue-200 dark:border-blue-800">
-                <h4 className="text-lg font-semibold mb-3">Attendance</h4>
-                <div className="flex items-center gap-4">
-                  <div className="text-3xl font-bold text-blue-600">
-                    {gradeData.attendanceAverage.toFixed(1)}%
-                  </div>
-                  <div className="flex-1 space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">
-                        Present: {gradeData.daysPresent} days
-                      </span>
-                      <Badge className="bg-green-500 hover:bg-green-600">Present</Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">
-                        Tardy: {gradeData.daysTardy} days
-                      </span>
-                      <Badge className="bg-yellow-500 hover:bg-yellow-600">Tardy</Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">
-                        Absent: {gradeData.daysAbsent} days
-                      </span>
-                      <Badge variant="destructive">Absent</Badge>
-                    </div>
-                  </div>
-                </div>
+      {/* Attendance Summary - Inline */}
+      {gradeData.attendanceAverage !== null && (
+        <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg border-2 border-blue-200 dark:border-blue-800">
+          <h4 className="text-lg font-semibold mb-3">Attendance</h4>
+          <div className="flex items-center gap-4">
+            <div className="text-3xl font-bold text-blue-600">
+              {gradeData.attendanceAverage.toFixed(1)}%
+            </div>
+            <div className="flex-1 space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">
+                  Present: {gradeData.daysPresent} days
+                </span>
+                <Badge className="bg-green-500 hover:bg-green-600">Present</Badge>
               </div>
-            )}
-
-            {/* Assignments List */}
-            {gradeData.assignments.map((assignment) => (
-              <div
-                key={assignment.id}
-                className="flex items-center justify-between p-4 border border-border rounded-lg"
-              >
-                <div className="flex-1">
-                  <p className="font-semibold">{assignment.title}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {assignment.dueDate ? `Due: ${format(new Date(assignment.dueDate), "MMM d, yyyy")}` : "No due date"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-4">
-                  {getStatusBadge(assignment.status)}
-                  {assignment.grade !== null && (
-                    <div className="text-right">
-                      <span className="text-lg font-bold text-primary">
-                        {assignment.grade.toFixed(1)}%
-                      </span>
-                      {assignment.pointsEarned !== null && (
-                        <div className="text-xs text-muted-foreground">
-                          {assignment.pointsEarned}/{assignment.totalPoints} pts
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {assignment.status === "Graded" && (
-                    <Button size="sm" variant="outline" onClick={() => setSelectedAssignment(assignment)}>
-                      <Eye className="h-4 w-4 mr-2" />
-                      View
-                    </Button>
-                  )}
-                </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">
+                  Tardy: {gradeData.daysTardy} days
+                </span>
+                <Badge className="bg-yellow-500 hover:bg-yellow-600">Tardy</Badge>
               </div>
-            ))}
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">
+                  Absent: {gradeData.daysAbsent} days
+                </span>
+                <Badge variant="destructive">Absent</Badge>
+              </div>
+            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
+
+      {/* All Assignments - Inline */}
+      {gradeData.assignments.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold">All Assignments</h3>
+          {gradeData.assignments.map((assignment) => (
+            <div
+              key={assignment.id}
+              className="flex items-center justify-between p-4 border border-border rounded-lg bg-card"
+            >
+              <div className="flex-1">
+                <p className="font-semibold">{assignment.title}</p>
+                <p className="text-sm text-muted-foreground">
+                  {assignment.dueDate ? `Due: ${format(new Date(assignment.dueDate), "MMM d, yyyy")}` : "No due date"}
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
+                {getStatusBadge(assignment.status)}
+                {assignment.grade !== null && (
+                  <div className="text-right">
+                    <span className="text-lg font-bold text-primary">
+                      {assignment.grade.toFixed(1)}%
+                    </span>
+                    {assignment.pointsEarned !== null && (
+                      <div className="text-xs text-muted-foreground">
+                        {assignment.pointsEarned}/{assignment.totalPoints} pts
+                      </div>
+                    )}
+                  </div>
+                )}
+                {assignment.status === "Graded" && (
+                  <Button size="sm" variant="outline" onClick={() => setSelectedAssignment(assignment)}>
+                    <Eye className="h-4 w-4 mr-2" />
+                    View
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Assignment Details Dialog */}
       <Dialog open={!!selectedAssignment} onOpenChange={() => setSelectedAssignment(null)}>
