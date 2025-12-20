@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Slider } from '@/components/ui/slider';
 import { Mic, StopCircle, Loader2, AlertCircle, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -105,6 +106,13 @@ interface ReadingSessionResult {
     overallPhonemeAccuracy: number;
     interventionPriority: string[];
   };
+  // NEW: Word results with attempts for grading
+  wordResults?: Array<{
+    word: string;
+    correct: boolean;
+    attempts: number;
+    index: number;
+  }>;
 }
 
 interface WordReading {
@@ -117,6 +125,8 @@ interface WordReading {
   selfCorrected?: boolean;
   // NEW: Speech API confidence for this word
   speechConfidence?: number;
+  // NEW: Number of attempts for this word
+  attempts?: number;
 }
 
 // Fuzzy string matching using Levenshtein distance
@@ -221,6 +231,12 @@ export const WordByWordReader = ({
   const [xpAmount, setXpAmount] = useState(0);
   const [celebrationMessage, setCelebrationMessage] = useState('Amazing!');
   const [totalXpEarned, setTotalXpEarned] = useState(0);
+  
+  // NEW: Words per group slider (changeable during reading)
+  const [wordsPerGroup, setWordsPerGroup] = useState(1);
+  
+  // NEW: Track attempts per word for grading
+  const wordAttemptsRef = useRef<Map<number, number>>(new Map());
   
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -356,6 +372,7 @@ export const WordByWordReader = ({
     processedWordsRef.current = new Set();
     lastInterimRef.current = '';
     spokenIncorrectWordsRef.current = new Set(); // Reset spoken words tracker
+    wordAttemptsRef.current = new Map(); // Reset attempts tracker
     setTotalXpEarned(0);
 
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
@@ -527,6 +544,10 @@ export const WordByWordReader = ({
         for (const spokenWord of newWords) {
           let currentIdx = getFirstUnprocessedIndex();
           if (currentIdx >= words.length) break; // Done with passage
+          
+          // Track attempts for this word
+          const currentAttempts = wordAttemptsRef.current.get(currentIdx) || 0;
+          wordAttemptsRef.current.set(currentIdx, currentAttempts + 1);
           
           const expectedWord = words[currentIdx];
           
@@ -842,6 +863,7 @@ export const WordByWordReader = ({
             correct: isCorrect,
             hesitation: false,
             speechConfidence: speechConfidence,
+            attempts: wordAttemptsRef.current.get(wordIndex) || 1,
           });
           
           processedWordsRef.current.add(wordIndex);
@@ -1370,6 +1392,13 @@ export const WordByWordReader = ({
         overallPhonemeAccuracy: phonemeInferenceData.overallPhonemeAccuracy,
         interventionPriority: phonemeInferenceData.interventionPriority,
       } : undefined,
+      // NEW: Word results with attempts for grading
+      wordResults: wordReadings.map(wr => ({
+        word: wr.word,
+        correct: wr.correct,
+        attempts: wr.attempts || wordAttemptsRef.current.get(wr.index) || 1,
+        index: wr.index,
+      })),
     });
 
     // Enhanced feedback with WCPM and prosody
@@ -1566,6 +1595,29 @@ export const WordByWordReader = ({
 
       {/* Progress Bar */}
       <Progress value={progress} className="h-3" />
+
+      {/* Words Per Group Slider - Changeable during reading */}
+      <div className="bg-muted/30 rounded-lg p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium">Words at a time</span>
+          <Badge variant="secondary" className="text-sm">
+            {wordsPerGroup} word{wordsPerGroup > 1 ? 's' : ''}
+          </Badge>
+        </div>
+        <Slider
+          value={[wordsPerGroup]}
+          onValueChange={(value) => setWordsPerGroup(value[0])}
+          min={1}
+          max={10}
+          step={1}
+          className="w-full"
+        />
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>1</span>
+          <span>5</span>
+          <span>10</span>
+        </div>
+      </div>
 
       {/* Passage Display */}
       <Card className="p-6">
