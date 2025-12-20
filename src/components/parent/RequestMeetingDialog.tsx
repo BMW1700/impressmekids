@@ -34,6 +34,7 @@ interface TimeSlot {
   location: string | null;
   notes: string | null;
   isBooked: boolean;
+  isBookedByMe: boolean;
 }
 
 const DAYS_MAP: Record<string, number> = {
@@ -72,6 +73,25 @@ export const RequestMeetingDialog = ({
       return data || [];
     },
     enabled: open && !!teacherId,
+  });
+
+  // Fetch current parent account
+  const { data: currentParentAccount } = useQuery({
+    queryKey: ["current-parent-account"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const { data, error } = await supabase
+        .from("parent_accounts")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (error) return null;
+      return data;
+    },
+    enabled: open,
   });
 
   // Fetch existing bookings for this teacher
@@ -124,6 +144,7 @@ export const RequestMeetingDialog = ({
                 location: hours.location,
                 notes: hours.notes,
                 isBooked: false,
+                isBookedByMe: false,
               });
             }
           }
@@ -142,20 +163,22 @@ export const RequestMeetingDialog = ({
             location: hours.location,
             notes: hours.notes,
             isBooked: false,
+            isBookedByMe: false,
           });
         }
       }
     });
 
-    // Mark booked slots
+    // Mark booked slots and identify if booked by current parent
     slots.forEach((slot) => {
-      const isBooked = existingBookings.some(
+      const matchingBooking = existingBookings.find(
         (booking) =>
           booking.office_hours_id === slot.officeHoursId &&
           booking.booking_date === format(slot.date, "yyyy-MM-dd") &&
           booking.start_time === slot.startTime
       );
-      slot.isBooked = isBooked;
+      slot.isBooked = !!matchingBooking;
+      slot.isBookedByMe = matchingBooking?.parent_id === currentParentAccount?.id;
     });
 
     // Sort by date and time
@@ -356,10 +379,17 @@ export const RequestMeetingDialog = ({
                     </div>
                     <div>
                       {slot.isBooked ? (
-                        <Badge variant="secondary" className="flex items-center gap-1">
-                          <X className="h-3 w-3" />
-                          Unavailable
-                        </Badge>
+                        slot.isBookedByMe ? (
+                          <Badge variant="default" className="flex items-center gap-1">
+                            <Check className="h-3 w-3" />
+                            Booked
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="flex items-center gap-1">
+                            <X className="h-3 w-3" />
+                            Unavailable
+                          </Badge>
+                        )
                       ) : (
                         <Button size="sm" variant="outline">
                           Book This Time
