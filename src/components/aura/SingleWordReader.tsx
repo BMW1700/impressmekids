@@ -103,21 +103,21 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
       setCelebrationTrigger(prev => prev + 1);
     }
     
-    // Save result
+    // Save result with the original word (with punctuation for display)
     setWordResults(prev => [...prev, {
-      word: cleanWord,
+      word: words[currentIndexRef.current] || cleanWord,
       correct: true,
       attempts: attempts + 1,
       skipped: false,
     }]);
     
-    // Move to next word after brief delay
+    // Move to next word after brief delay - reduced from 600ms to 350ms
     setTimeout(() => {
       setFeedback(null);
       setAttempts(0);
       setCurrentIndex(prev => prev + 1);
       isProcessingRef.current = false;
-    }, 600);
+    }, 350);
   }, [correctStreak, cleanWord, attempts]);
 
   const handleIncorrect = useCallback((spokenWord: string) => {
@@ -141,7 +141,7 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
 
   const handleSkip = useCallback(() => {
     setWordResults(prev => [...prev, {
-      word: cleanWord,
+      word: words[currentIndexRef.current] || cleanWord,
       correct: false,
       attempts: attempts,
       skipped: true,
@@ -151,7 +151,7 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
     setFeedback(null);
     setAttempts(0);
     setCurrentIndex(prev => prev + 1);
-  }, [cleanWord, attempts]);
+  }, [words, cleanWord, attempts]);
 
   const startContinuousListening = useCallback(() => {
     unlockSpeechSynthesis();
@@ -298,8 +298,8 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
 
   const progress = (currentIndex / words.length) * 100;
 
-  // Get display for previous words (last 3)
-  const previousWords = wordResults.slice(-3);
+  // Get display for previous words (show more words for better story progress)
+  const previousWords = wordResults.slice(-8);
 
   if (isComplete) {
     return null; // Parent handles completion display
@@ -346,27 +346,28 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
       {/* Progress Bar */}
       <Progress value={progress} className="h-3" />
 
-      {/* Previous Words (small, with indicators) */}
-      <div className="flex justify-center gap-2 min-h-[32px]">
+      {/* Previous Words - Story Progress */}
+      <div className="flex flex-wrap justify-center gap-1.5 min-h-[32px] max-w-2xl mx-auto px-2">
         <AnimatePresence mode="popLayout">
           {previousWords.map((result, idx) => (
             <motion.div
-              key={`prev-${currentIndex - previousWords.length + idx}`}
-              initial={{ opacity: 0, scale: 0.8, x: 20 }}
-              animate={{ opacity: 0.6, scale: 1, x: 0 }}
-              exit={{ opacity: 0, scale: 0.8, x: -20 }}
-              className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm ${
+              key={`prev-${wordResults.length - previousWords.length + idx}`}
+              initial={{ opacity: 0, scale: 0.8, y: -10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 10 }}
+              transition={{ duration: 0.15 }}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-sm ${
                 result.correct
                   ? 'bg-green-500/20 text-green-600 dark:text-green-400'
                   : 'bg-red-500/20 text-red-600 dark:text-red-400'
               }`}
             >
               {result.correct ? (
-                <CheckCircle className="h-3 w-3" />
+                <CheckCircle className="h-3 w-3 shrink-0" />
               ) : (
-                <XCircle className="h-3 w-3" />
+                <XCircle className="h-3 w-3 shrink-0" />
               )}
-              {result.word}
+              <span className="truncate max-w-[80px]">{result.word}</span>
             </motion.div>
           ))}
         </AnimatePresence>
