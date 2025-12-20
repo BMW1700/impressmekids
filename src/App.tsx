@@ -71,8 +71,8 @@ const App = () => (
           <Toaster />
           <Sonner />
           <PushNotificationPrompt />
-          <OfflineIndicator />
       <BrowserRouter>
+        <OfflineIndicator />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
