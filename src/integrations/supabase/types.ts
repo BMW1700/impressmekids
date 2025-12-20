@@ -5930,10 +5930,6 @@ export type Database = {
         Args: { _student_id: string; _user_id: string }
         Returns: boolean
       }
-      is_same_district_secure: {
-        Args: { target_user_id: string }
-        Returns: boolean
-      }
       is_submission_teacher: {
         Args: { _submission_id: string; _user_id: string }
         Returns: boolean
