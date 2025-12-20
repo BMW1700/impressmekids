@@ -50,7 +50,7 @@ export function ParentCreateEventModal({
   const [endTime, setEndTime] = useState(editEvent?.endTime || "");
   const [location, setLocation] = useState(editEvent?.location || "");
   const [target, setTarget] = useState<string>(
-    editEvent?.studentId || "self"
+    editEvent?.studentId || children[0]?.student_id || ""
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -63,7 +63,7 @@ export function ParentCreateEventModal({
       setStartTime(editEvent.startTime || "");
       setEndTime(editEvent.endTime || "");
       setLocation(editEvent.location || "");
-      setTarget(editEvent.studentId || "self");
+      setTarget(editEvent.studentId || children[0]?.student_id || "");
     } else {
       setTitle("");
       setDescription("");
@@ -71,7 +71,7 @@ export function ParentCreateEventModal({
       setStartTime("");
       setEndTime("");
       setLocation("");
-      setTarget("self");
+      setTarget(children[0]?.student_id || "");
     }
   }, [editEvent, open]);
 
@@ -100,18 +100,10 @@ export function ParentCreateEventModal({
       };
 
       if (editEvent) {
-        // Update existing event
-        const table = editEvent.type === "parent_personal" 
-          ? "parent_personal_events" 
-          : "parent_student_events";
-        
-        const updateData = target === "self"
-          ? eventData
-          : { ...eventData, student_id: target };
-
+        // Update existing event - always use parent_student_events now
         const { error } = await supabase
-          .from(table)
-          .update(updateData)
+          .from("parent_student_events")
+          .update({ ...eventData, student_id: target })
           .eq("id", editEvent.id);
 
         if (error) throw error;
@@ -121,33 +113,20 @@ export function ParentCreateEventModal({
           description: "Your event has been updated successfully.",
         });
       } else {
-        // Create new event
-        if (target === "self") {
-          const { error } = await supabase
-            .from("parent_personal_events")
-            .insert(eventData);
-
-          if (error) throw error;
-
-          toast({
-            title: "Event Created",
-            description: "Your personal event has been added to your calendar.",
+        // Create new event for student
+        const { error } = await supabase
+          .from("parent_student_events")
+          .insert({
+            ...eventData,
+            student_id: target,
           });
-        } else {
-          const { error } = await supabase
-            .from("parent_student_events")
-            .insert({
-              ...eventData,
-              student_id: target,
-            });
 
-          if (error) throw error;
+        if (error) throw error;
 
-          toast({
-            title: "Event Created",
-            description: "The event has been added to your student's calendar.",
-          });
-        }
+        toast({
+          title: "Event Created",
+          description: "The event has been added to your student's calendar.",
+        });
       }
 
       // Reset form
@@ -157,7 +136,7 @@ export function ParentCreateEventModal({
       setStartTime("");
       setEndTime("");
       setLocation("");
-      setTarget("self");
+      setTarget(children[0]?.student_id || "");
       onOpenChange(false);
       onEventCreated();
     } catch (error: any) {
@@ -183,10 +162,9 @@ export function ParentCreateEventModal({
             <Label htmlFor="target">Event For</Label>
             <Select value={target} onValueChange={setTarget}>
               <SelectTrigger id="target">
-                <SelectValue placeholder="Select who this event is for" />
+                <SelectValue placeholder="Select student" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="self">Myself</SelectItem>
                 {children.map((child) => (
                   <SelectItem key={child.student_id} value={child.student_id}>
                     {child.student_name}

@@ -22,7 +22,7 @@ interface CalendarItem {
 interface UseParentCalendarDataProps {
   startDate: Date;
   endDate: Date;
-  parentId: string;
+  parentId: string; // This is the parent_account.id, not user_id
   childId?: string;
 }
 
@@ -129,67 +129,42 @@ export const useParentCalendarData = ({
         }
       }
 
-      // Get parent account
-      const { data: parentAccount } = await supabase
-        .from("parent_accounts")
-        .select("id")
-        .eq("user_id", parentId)
-        .single();
+      // parentId is already the parent_account.id, use it directly
+      // Fetch parent-student events (filter by childId if provided)
+      let studentEventsQuery = supabase
+        .from("parent_student_events")
+        .select(`
+          *,
+          profiles!parent_student_events_student_id_fkey (
+            full_name
+          )
+        `)
+        .eq("parent_id", parentId)
+        .gte("event_date", startDate.toISOString().split("T")[0])
+        .lte("event_date", endDate.toISOString().split("T")[0]);
 
-      if (parentAccount) {
-        // Fetch parent personal events
-        const { data: personalEvents } = await supabase
-          .from("parent_personal_events")
-          .select("*")
-          .eq("parent_id", parentAccount.id)
-          .gte("event_date", startDate.toISOString().split("T")[0])
-          .lte("event_date", endDate.toISOString().split("T")[0]);
+      // Filter by specific child if selected
+      if (childId) {
+        studentEventsQuery = studentEventsQuery.eq("student_id", childId);
+      }
 
-        if (personalEvents) {
-          for (const event of personalEvents) {
-            items.push({
-              id: event.id,
-              type: "parent_personal",
-              title: event.title,
-              description: event.description || undefined,
-              date: event.event_date,
-              startTime: event.start_time || undefined,
-              endTime: event.end_time || undefined,
-              location: event.location || undefined,
-              category: "personal",
-            });
-          }
-        }
+      const { data: studentEvents } = await studentEventsQuery;
 
-        // Fetch parent-student events
-        const { data: studentEvents } = await supabase
-          .from("parent_student_events")
-          .select(`
-            *,
-            profiles!parent_student_events_student_id_fkey (
-              full_name
-            )
-          `)
-          .eq("parent_id", parentAccount.id)
-          .gte("event_date", startDate.toISOString().split("T")[0])
-          .lte("event_date", endDate.toISOString().split("T")[0]);
-
-        if (studentEvents) {
-          for (const event of studentEvents) {
-            items.push({
-              id: event.id,
-              type: "parent_student",
-              title: event.title,
-              description: event.description || undefined,
-              date: event.event_date,
-              startTime: event.start_time || undefined,
-              endTime: event.end_time || undefined,
-              location: event.location || undefined,
-              category: "student_event",
-              studentId: event.student_id,
-              studentName: (event.profiles as any)?.full_name,
-            });
-          }
+      if (studentEvents) {
+        for (const event of studentEvents) {
+          items.push({
+            id: event.id,
+            type: "parent_student",
+            title: event.title,
+            description: event.description || undefined,
+            date: event.event_date,
+            startTime: event.start_time || undefined,
+            endTime: event.end_time || undefined,
+            location: event.location || undefined,
+            category: "student_event",
+            studentId: event.student_id,
+            studentName: (event.profiles as any)?.full_name,
+          });
         }
       }
 
