@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Slider } from '@/components/ui/slider';
 import { Mic, StopCircle, SkipForward, RotateCcw, Volume2, Sparkles, CheckCircle, XCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
@@ -54,20 +55,39 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
   const [xpPopupTrigger, setXpPopupTrigger] = useState(0);
   const [xpAmount, setXpAmount] = useState(0);
   const [celebrationMessage, setCelebrationMessage] = useState('Amazing!');
+  const [wordsPerGroup, setWordsPerGroup] = useState(1);
+  const [currentWordInGroup, setCurrentWordInGroup] = useState(0); // Which word in the current group is active
   
   const recognitionRef = useRef<any>(null);
   const startTimeRef = useRef<number>(0);
   const soundEffectsRef = useRef<SoundEffects>(new SoundEffects());
   const currentIndexRef = useRef(currentIndex);
+  const currentWordInGroupRef = useRef(currentWordInGroup);
+  const wordsPerGroupRef = useRef(wordsPerGroup);
   const isProcessingRef = useRef(false);
   const { toast } = useToast();
 
-  // Keep ref in sync with state
+  // Keep refs in sync with state
   useEffect(() => {
     currentIndexRef.current = currentIndex;
   }, [currentIndex]);
+  
+  useEffect(() => {
+    currentWordInGroupRef.current = currentWordInGroup;
+  }, [currentWordInGroup]);
+  
+  useEffect(() => {
+    wordsPerGroupRef.current = wordsPerGroup;
+  }, [wordsPerGroup]);
 
-  const currentWord = words[currentIndex] || '';
+  // Calculate current group of words to display
+  const groupStartIndex = currentIndex;
+  const groupEndIndex = Math.min(currentIndex + wordsPerGroup, words.length);
+  const currentGroupWords = words.slice(groupStartIndex, groupEndIndex);
+  
+  // The active word within the group
+  const activeWordIndex = currentIndex + currentWordInGroup;
+  const currentWord = words[activeWordIndex] || '';
   const cleanWord = currentWord.replace(/[^a-zA-Z']/g, '');
   const isComplete = currentIndex >= words.length;
 
@@ -104,31 +124,44 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
     }
     
     // Save result with the original word (with punctuation for display)
+    const wordToSave = words[currentIndexRef.current + currentWordInGroupRef.current] || cleanWord;
     setWordResults(prev => [...prev, {
-      word: words[currentIndexRef.current] || cleanWord,
+      word: wordToSave,
       correct: true,
       attempts: attempts + 1,
       skipped: false,
     }]);
     
-    // Move to next word after brief delay - reduced from 600ms to 350ms
+    // Move to next word after brief delay
     setTimeout(() => {
       setFeedback(null);
       setAttempts(0);
-      setCurrentIndex(prev => {
-        const next = prev + 1;
-        currentIndexRef.current = next; // keep ref in sync immediately
-        return next;
-      });
+      
+      // Check if there are more words in the current group
+      const nextWordInGroup = currentWordInGroupRef.current + 1;
+      if (nextWordInGroup < wordsPerGroupRef.current && (currentIndexRef.current + nextWordInGroup) < words.length) {
+        // Move to next word in current group
+        setCurrentWordInGroup(nextWordInGroup);
+        currentWordInGroupRef.current = nextWordInGroup;
+      } else {
+        // Move to next group
+        const nextGroupStart = currentIndexRef.current + wordsPerGroupRef.current;
+        setCurrentIndex(nextGroupStart);
+        currentIndexRef.current = nextGroupStart;
+        setCurrentWordInGroup(0);
+        currentWordInGroupRef.current = 0;
+      }
+      
       isProcessingRef.current = false;
     }, 350);
-  }, [correctStreak, cleanWord, attempts]);
+  }, [correctStreak, cleanWord, attempts, words]);
 
   const handleIncorrect = useCallback((_spokenWord: string) => {
     if (isProcessingRef.current) return;
 
-    // Compute expected word at execution time to avoid stale closure
-    const actualWord = (words[currentIndexRef.current] || '').replace(/[^a-zA-Z']/g, '');
+    // Compute expected word at execution time using the active word index
+    const activeIdx = currentIndexRef.current + currentWordInGroupRef.current;
+    const actualWord = (words[activeIdx] || '').replace(/[^a-zA-Z']/g, '');
 
     setFeedback('incorrect');
     soundEffectsRef.current.incorrectWord();
@@ -147,8 +180,11 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
   }, [words]);
 
   const handleSkip = useCallback(() => {
+    const activeIdx = currentIndexRef.current + currentWordInGroupRef.current;
+    const wordToSkip = words[activeIdx] || cleanWord;
+    
     setWordResults(prev => [...prev, {
-      word: words[currentIndexRef.current] || cleanWord,
+      word: wordToSkip,
       correct: false,
       attempts: attempts,
       skipped: true,
@@ -157,11 +193,21 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
     setCorrectStreak(0);
     setFeedback(null);
     setAttempts(0);
-    setCurrentIndex(prev => {
-      const next = prev + 1;
-      currentIndexRef.current = next; // keep ref in sync immediately
-      return next;
-    });
+    
+    // Check if there are more words in the current group
+    const nextWordInGroup = currentWordInGroupRef.current + 1;
+    if (nextWordInGroup < wordsPerGroupRef.current && (currentIndexRef.current + nextWordInGroup) < words.length) {
+      // Move to next word in current group
+      setCurrentWordInGroup(nextWordInGroup);
+      currentWordInGroupRef.current = nextWordInGroup;
+    } else {
+      // Move to next group
+      const nextGroupStart = currentIndexRef.current + wordsPerGroupRef.current;
+      setCurrentIndex(nextGroupStart);
+      currentIndexRef.current = nextGroupStart;
+      setCurrentWordInGroup(0);
+      currentWordInGroupRef.current = 0;
+    }
   }, [words, cleanWord, attempts]);
 
   const startContinuousListening = useCallback(() => {
@@ -199,7 +245,8 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
       const spokenWords = cleanedTranscript.split(/\s+/).filter((w: string) => w.length > 0);
       
       // Get current expected word from ref to avoid stale closure
-      const expectedWord = words[currentIndexRef.current]?.replace(/[^a-zA-Z']/g, '') || '';
+      const activeIdx = currentIndexRef.current + currentWordInGroupRef.current;
+      const expectedWord = words[activeIdx]?.replace(/[^a-zA-Z']/g, '') || '';
       
       // Check all alternatives
       let matched = false;
@@ -282,7 +329,8 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
   }, []);
 
   const hearWord = useCallback(() => {
-    const actualWord = (words[currentIndexRef.current] || '').replace(/[^a-zA-Z']/g, '');
+    const activeIdx = currentIndexRef.current + currentWordInGroupRef.current;
+    const actualWord = (words[activeIdx] || '').replace(/[^a-zA-Z']/g, '');
     playCorrectPronunciation(actualWord);
   }, [words]);
 
@@ -358,6 +406,30 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
       {/* Progress Bar */}
       <Progress value={progress} className="h-3" />
 
+      {/* Words Per Group Slider */}
+      <div className="bg-muted/30 rounded-lg p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium">Words at a time</span>
+          <Badge variant="secondary" className="text-sm">
+            {wordsPerGroup} word{wordsPerGroup > 1 ? 's' : ''}
+          </Badge>
+        </div>
+        <Slider
+          value={[wordsPerGroup]}
+          onValueChange={(value) => setWordsPerGroup(value[0])}
+          min={1}
+          max={10}
+          step={1}
+          className="w-full"
+          disabled={isListening}
+        />
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>1</span>
+          <span>5</span>
+          <span>10</span>
+        </div>
+      </div>
+
       {/* Previous Words - Story Progress */}
       <div className="flex flex-wrap justify-center gap-1.5 min-h-[32px] max-w-2xl mx-auto px-2">
         <AnimatePresence mode="popLayout">
@@ -395,25 +467,50 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
             exit={{ opacity: 0, y: -30, scale: 0.9 }}
             className="text-center space-y-6"
           >
-            {/* The Word */}
-            <motion.div
-              className={`text-6xl md:text-7xl font-bold py-8 px-4 rounded-xl transition-all ${
-                feedback === 'correct'
-                  ? 'text-green-600 dark:text-green-400 bg-green-500/10'
-                  : feedback === 'incorrect'
-                  ? 'text-red-600 dark:text-red-400 bg-red-500/10'
-                  : 'text-foreground'
-              }`}
-              animate={
-                feedback === 'correct'
-                  ? { scale: [1, 1.1, 1] }
-                  : feedback === 'incorrect'
-                  ? { x: [-5, 5, -5, 5, 0] }
-                  : {}
-              }
-            >
-              {currentWord}
-            </motion.div>
+            {/* The Words */}
+            <div className={`py-8 px-4 rounded-xl transition-all ${
+              feedback === 'correct'
+                ? 'bg-green-500/10'
+                : feedback === 'incorrect'
+                ? 'bg-red-500/10'
+                : ''
+            }`}>
+              <div className="flex flex-wrap justify-center items-center gap-3 md:gap-4">
+                {currentGroupWords.map((word, idx) => {
+                  const isActive = idx === currentWordInGroup;
+                  const isPast = idx < currentWordInGroup;
+                  
+                  return (
+                    <motion.span
+                      key={`${currentIndex}-${idx}`}
+                      className={`
+                        ${wordsPerGroup === 1 ? 'text-6xl md:text-7xl' : wordsPerGroup <= 3 ? 'text-4xl md:text-5xl' : 'text-2xl md:text-3xl'}
+                        font-bold transition-all duration-200
+                        ${isActive 
+                          ? feedback === 'correct'
+                            ? 'text-green-600 dark:text-green-400'
+                            : feedback === 'incorrect'
+                            ? 'text-red-600 dark:text-red-400'
+                            : 'text-primary underline underline-offset-8 decoration-4'
+                          : isPast
+                          ? 'text-green-600/50 dark:text-green-400/50 line-through'
+                          : 'text-muted-foreground/60'
+                        }
+                      `}
+                      animate={
+                        isActive && feedback === 'correct'
+                          ? { scale: [1, 1.1, 1] }
+                          : isActive && feedback === 'incorrect'
+                          ? { x: [-5, 5, -5, 5, 0] }
+                          : {}
+                      }
+                    >
+                      {word}
+                    </motion.span>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* Feedback Icons */}
             <AnimatePresence>
