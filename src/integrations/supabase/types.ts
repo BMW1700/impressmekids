@@ -4226,6 +4226,7 @@ export type Database = {
       safety_alerts: {
         Row: {
           acknowledged_count: number | null
+          affects_attendance: boolean | null
           alert_type: string
           authority_source: string | null
           authority_verified: boolean | null
@@ -4244,6 +4245,7 @@ export type Database = {
         }
         Insert: {
           acknowledged_count?: number | null
+          affects_attendance?: boolean | null
           alert_type: string
           authority_source?: string | null
           authority_verified?: boolean | null
@@ -4262,6 +4264,7 @@ export type Database = {
         }
         Update: {
           acknowledged_count?: number | null
+          affects_attendance?: boolean | null
           alert_type?: string
           authority_source?: string | null
           authority_verified?: boolean | null
