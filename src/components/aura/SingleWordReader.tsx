@@ -43,7 +43,17 @@ interface WordResult {
 }
 
 export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderProps) => {
-  const words = passageText.split(/\s+/).filter(w => w.length > 0);
+  // Split on whitespace, then further split hyphenated words into separate words
+  const words = passageText
+    .split(/\s+/)
+    .filter(w => w.length > 0)
+    .flatMap(word => {
+      // If word contains hyphens between text (not just leading/trailing), split it
+      if (word.includes('-') && !word.startsWith('-') && !word.endsWith('-')) {
+        return word.split('-').filter(part => part.length > 0);
+      }
+      return [word];
+    });
   const [currentIndex, setCurrentIndex] = useState(0);
   const [wordResults, setWordResults] = useState<WordResult[]>([]);
   const [isListening, setIsListening] = useState(false);
