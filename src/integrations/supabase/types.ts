@@ -5912,10 +5912,6 @@ export type Database = {
         Args: { _viewed_id: string; _viewer_id: string }
         Returns: boolean
       }
-      is_classroom_in_district: {
-        Args: { p_classroom_id: string }
-        Returns: boolean
-      }
       is_classroom_student: {
         Args: { _classroom_id: string; _user_id: string }
         Returns: boolean
