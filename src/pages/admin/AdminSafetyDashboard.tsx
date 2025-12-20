@@ -18,6 +18,7 @@ import { MultiDistrictDashboard } from "@/components/safety/MultiDistrictDashboa
 import { VisitorManagement } from "@/components/safety/VisitorManagement";
 import { SMSNotificationSettings } from "@/components/safety/SMSNotificationSettings";
 import { useToast } from "@/hooks/use-toast";
+import { liquidGlassTabClass } from "@/components/ui/liquid-glass-button";
 import {
   Select,
   SelectContent,
@@ -361,32 +362,32 @@ export default function AdminSafetyDashboard() {
         )}
 
         <Tabs defaultValue="alerts" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
-            <TabsTrigger value="alerts">
+          <TabsList className="grid w-full grid-cols-7 h-auto p-2 bg-muted/50 rounded-xl gap-2">
+            <TabsTrigger value="alerts" className={liquidGlassTabClass}>
               <AlertTriangle className="mr-2 h-4 w-4" />
               Alerts
             </TabsTrigger>
-            <TabsTrigger value="drills">
+            <TabsTrigger value="drills" className={liquidGlassTabClass}>
               <Shield className="mr-2 h-4 w-4" />
               Drills
             </TabsTrigger>
-            <TabsTrigger value="live">
+            <TabsTrigger value="live" className={liquidGlassTabClass}>
               <Activity className="mr-2 h-4 w-4" />
               Live View
             </TabsTrigger>
-            <TabsTrigger value="visitors">
+            <TabsTrigger value="visitors" className={liquidGlassTabClass}>
               <UserCheck className="mr-2 h-4 w-4" />
               Visitors
             </TabsTrigger>
-            <TabsTrigger value="districts">
+            <TabsTrigger value="districts" className={liquidGlassTabClass}>
               <Building2 className="mr-2 h-4 w-4" />
               Districts
             </TabsTrigger>
-            <TabsTrigger value="analytics">
+            <TabsTrigger value="analytics" className={liquidGlassTabClass}>
               <BarChart3 className="mr-2 h-4 w-4" />
               Analytics
             </TabsTrigger>
-            <TabsTrigger value="sms">
+            <TabsTrigger value="sms" className={liquidGlassTabClass}>
               <MessageSquare className="mr-2 h-4 w-4" />
               SMS
             </TabsTrigger>

@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Users, GraduationCap, Shield, Calendar, Settings } from "lucide-react";
 import { useAdminData } from "@/hooks/useAdminData";
+import { liquidGlassTabClass } from "@/components/ui/liquid-glass-button";
 import { TeacherListCard } from "@/components/admin/TeacherListCard";
 import { StudentListCard } from "@/components/admin/StudentListCard";
 import { AdminListCard } from "@/components/admin/AdminListCard";
@@ -187,20 +188,20 @@ export default function AdminDashboard() {
           <Tabs defaultValue="teachers" className="space-y-4">
             <div className="space-y-2">
               {/* Row 1: Teachers, Students, Admins, Teacher Requests, Parent Requests */}
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="teachers">Teachers</TabsTrigger>
-                <TabsTrigger value="students">Students</TabsTrigger>
-                <TabsTrigger value="admins">Admins</TabsTrigger>
-                <TabsTrigger value="teacher-requests">Account Requests</TabsTrigger>
-                <TabsTrigger value="parent-requests">Parent Requests</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-5 h-auto p-2 bg-muted/50 rounded-xl gap-2">
+                <TabsTrigger value="teachers" className={liquidGlassTabClass}>Teachers</TabsTrigger>
+                <TabsTrigger value="students" className={liquidGlassTabClass}>Students</TabsTrigger>
+                <TabsTrigger value="admins" className={liquidGlassTabClass}>Admins</TabsTrigger>
+                <TabsTrigger value="teacher-requests" className={liquidGlassTabClass}>Account Requests</TabsTrigger>
+                <TabsTrigger value="parent-requests" className={liquidGlassTabClass}>Parent Requests</TabsTrigger>
               </TabsList>
               {/* Row 2: Import, Clever, Calendar, Safety, Backups */}
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="import">Import</TabsTrigger>
-                <TabsTrigger value="clever">Clever</TabsTrigger>
-                <TabsTrigger value="calendar">Calendar</TabsTrigger>
-                <TabsTrigger value="safety">Safety</TabsTrigger>
-                <TabsTrigger value="backups">Backups</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-5 h-auto p-2 bg-muted/50 rounded-xl gap-2">
+                <TabsTrigger value="import" className={liquidGlassTabClass}>Import</TabsTrigger>
+                <TabsTrigger value="clever" className={liquidGlassTabClass}>Clever</TabsTrigger>
+                <TabsTrigger value="calendar" className={liquidGlassTabClass}>Calendar</TabsTrigger>
+                <TabsTrigger value="safety" className={liquidGlassTabClass}>Safety</TabsTrigger>
+                <TabsTrigger value="backups" className={liquidGlassTabClass}>Backups</TabsTrigger>
               </TabsList>
             </div>
 
