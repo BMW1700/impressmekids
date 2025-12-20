@@ -220,7 +220,7 @@ export default function AdminDashboard() {
                 <TabsTrigger value="students" className={liquidGlassTabClass}>Students</TabsTrigger>
                 <TabsTrigger value="admins" className={liquidGlassTabClass}>Admins</TabsTrigger>
                 <TabsTrigger value="teacher-requests" className={liquidGlassTabClass}>Account Requests</TabsTrigger>
-                <TabsTrigger value="parent-requests" className={liquidGlassTabClass}>Parent Requests</TabsTrigger>
+                <TabsTrigger value="parent-requests" className={liquidGlassTabClass}>Parental Linking</TabsTrigger>
               </TabsList>
               {/* Row 2: Import, Clever, Calendar, Safety, Backups */}
               <TabsList className="grid w-full grid-cols-5 h-auto p-2 bg-muted/50 rounded-xl gap-2">
@@ -328,9 +328,9 @@ export default function AdminDashboard() {
             <TabsContent value="parent-requests" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Parent Access Requests</CardTitle>
+                  <CardTitle>Parent-Student Linking</CardTitle>
                   <CardDescription>
-                    Review and approve parent requests to access student data
+                    Review and approve parent requests to link with student accounts
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
