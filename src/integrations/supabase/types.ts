@@ -2002,6 +2002,61 @@ export type Database = {
           },
         ]
       }
+      drill_visitor_attendance: {
+        Row: {
+          created_at: string
+          drill_session_id: string
+          id: string
+          location_notes: string | null
+          marked_at: string | null
+          marked_by: string | null
+          status: string
+          visitor_id: string
+        }
+        Insert: {
+          created_at?: string
+          drill_session_id: string
+          id?: string
+          location_notes?: string | null
+          marked_at?: string | null
+          marked_by?: string | null
+          status?: string
+          visitor_id: string
+        }
+        Update: {
+          created_at?: string
+          drill_session_id?: string
+          id?: string
+          location_notes?: string | null
+          marked_at?: string | null
+          marked_by?: string | null
+          status?: string
+          visitor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drill_visitor_attendance_drill_session_id_fkey"
+            columns: ["drill_session_id"]
+            isOneToOne: false
+            referencedRelation: "drill_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drill_visitor_attendance_marked_by_fkey"
+            columns: ["marked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drill_visitor_attendance_visitor_id_fkey"
+            columns: ["visitor_id"]
+            isOneToOne: false
+            referencedRelation: "visitors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       emergency_contacts: {
         Row: {
           created_at: string
@@ -4481,6 +4536,62 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_notification_logs: {
+        Row: {
+          created_at: string
+          delivered_at: string | null
+          drill_session_id: string | null
+          error_message: string | null
+          id: string
+          message_content: string
+          message_type: string
+          phone_number: string
+          recipient_id: string
+          recipient_type: string
+          sent_at: string | null
+          status: string
+          twilio_sid: string | null
+        }
+        Insert: {
+          created_at?: string
+          delivered_at?: string | null
+          drill_session_id?: string | null
+          error_message?: string | null
+          id?: string
+          message_content: string
+          message_type: string
+          phone_number: string
+          recipient_id: string
+          recipient_type: string
+          sent_at?: string | null
+          status?: string
+          twilio_sid?: string | null
+        }
+        Update: {
+          created_at?: string
+          delivered_at?: string | null
+          drill_session_id?: string | null
+          error_message?: string | null
+          id?: string
+          message_content?: string
+          message_type?: string
+          phone_number?: string
+          recipient_id?: string
+          recipient_type?: string
+          sent_at?: string | null
+          status?: string
+          twilio_sid?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_notification_logs_drill_session_id_fkey"
+            columns: ["drill_session_id"]
+            isOneToOne: false
+            referencedRelation: "drill_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       story_votes: {
         Row: {
           created_at: string | null
@@ -5661,6 +5772,84 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      visitors: {
+        Row: {
+          badge_number: string | null
+          checked_in_at: string
+          checked_out_at: string | null
+          company_organization: string | null
+          created_at: string
+          email: string | null
+          expected_checkout: string | null
+          first_name: string
+          host_id: string | null
+          host_name: string | null
+          id: string
+          is_on_campus: boolean | null
+          last_name: string
+          phone_number: string | null
+          photo_url: string | null
+          purpose: string
+          school_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          badge_number?: string | null
+          checked_in_at?: string
+          checked_out_at?: string | null
+          company_organization?: string | null
+          created_at?: string
+          email?: string | null
+          expected_checkout?: string | null
+          first_name: string
+          host_id?: string | null
+          host_name?: string | null
+          id?: string
+          is_on_campus?: boolean | null
+          last_name: string
+          phone_number?: string | null
+          photo_url?: string | null
+          purpose: string
+          school_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          badge_number?: string | null
+          checked_in_at?: string
+          checked_out_at?: string | null
+          company_organization?: string | null
+          created_at?: string
+          email?: string | null
+          expected_checkout?: string | null
+          first_name?: string
+          host_id?: string | null
+          host_name?: string | null
+          id?: string
+          is_on_campus?: boolean | null
+          last_name?: string
+          phone_number?: string | null
+          photo_url?: string | null
+          purpose?: string
+          school_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visitors_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visitors_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["district_code"]
+          },
+        ]
       }
       word_readings: {
         Row: {
