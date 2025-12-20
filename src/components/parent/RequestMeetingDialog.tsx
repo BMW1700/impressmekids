@@ -187,7 +187,7 @@ export const RequestMeetingDialog = ({
 
       const bookingDate = format(selectedSlot.date, "yyyy-MM-dd");
 
-      // Create parent event first
+      // Create parent event first (marked as parent-only so students don't see it)
       const { data: parentEvent, error: eventError } = await supabase
         .from("parent_student_events")
         .insert({
@@ -199,6 +199,7 @@ export const RequestMeetingDialog = ({
           start_time: selectedSlot.startTime,
           end_time: selectedSlot.endTime,
           location: selectedSlot.location,
+          is_parent_only: true,
         })
         .select()
         .single();

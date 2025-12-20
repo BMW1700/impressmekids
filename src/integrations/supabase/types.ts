@@ -3210,6 +3210,7 @@ export type Database = {
           end_time: string | null
           event_date: string
           id: string
+          is_parent_only: boolean
           location: string | null
           parent_id: string
           start_time: string | null
@@ -3223,6 +3224,7 @@ export type Database = {
           end_time?: string | null
           event_date: string
           id?: string
+          is_parent_only?: boolean
           location?: string | null
           parent_id: string
           start_time?: string | null
@@ -3236,6 +3238,7 @@ export type Database = {
           end_time?: string | null
           event_date?: string
           id?: string
+          is_parent_only?: boolean
           location?: string | null
           parent_id?: string
           start_time?: string | null
