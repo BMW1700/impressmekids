@@ -189,20 +189,24 @@ export const ClassroomTabsList = ({
 
   const renderClone = (provided: any, snapshot: any, rubric: any) => {
     const tabId = visibleTabs[rubric.source.index];
+
+    // IMPORTANT: the clone is rendered in a portal outside the Tabs roving-focus context.
+    // Rendering <TabsTrigger /> here will crash (RovingFocusGroupItem must be within RovingFocusGroup).
     return (
       <div
         ref={provided.innerRef}
         {...provided.draggableProps}
         {...provided.dragHandleProps}
-        className="z-50 scale-105 shadow-lg"
+        className={cn(
+          "z-50 scale-105 shadow-lg",
+          // mimic the trigger styling without using Radix Tabs primitives
+          "relative flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium",
+          triggerClass
+        )}
+        // don't allow the clone to steal clicks/focus
+        aria-hidden="true"
       >
-        <TabsTrigger
-          value={tabId}
-          className={cn("relative cursor-grabbing", triggerClass)}
-          disabled
-        >
-          {renderTabContent(tabId)}
-        </TabsTrigger>
+        {renderTabContent(tabId)}
       </div>
     );
   };
