@@ -36,6 +36,7 @@ const TeacherDashboard = () => {
   const [showStudentsDialog, setShowStudentsDialog] = useState(false);
   const [classroomsWithStudents, setClassroomsWithStudents] = useState<any[]>([]);
   const [totalStudentCount, setTotalStudentCount] = useState(0);
+  const [activeAssignmentsCount, setActiveAssignmentsCount] = useState(0);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -139,23 +140,32 @@ const TeacherDashboard = () => {
       if (error) throw error;
       setClassrooms(classroomsData || []);
 
-      // Fetch student counts for all classrooms
+      // Fetch student counts and active assignments for all classrooms
       if (classroomsData && classroomsData.length > 0) {
+        const classroomIds = classroomsData.map((c: any) => c.id);
+        
         const { data: studentCounts } = await supabase
           .from("classroom_students")
           .select("classroom_id", {
             count: "exact",
             head: false,
           })
-          .in(
-            "classroom_id",
-            classroomsData.map((c: any) => c.id)
-          );
+          .in("classroom_id", classroomIds);
 
         const totalCount = studentCounts?.length || 0;
         setTotalStudentCount(totalCount);
+
+        // Fetch active assignments count (assignments with future due dates or no due date)
+        const { count: assignmentCount } = await supabase
+          .from("assignments")
+          .select("*", { count: "exact", head: true })
+          .in("classroom_id", classroomIds)
+          .or(`due_date.gte.${new Date().toISOString()},due_date.is.null`);
+
+        setActiveAssignmentsCount(assignmentCount || 0);
       } else {
         setTotalStudentCount(0);
+        setActiveAssignmentsCount(0);
       }
     } catch (error: any) {
       toast({
@@ -361,7 +371,7 @@ const TeacherDashboard = () => {
               <CardContent>
                 <div className="flex items-baseline gap-2">
                   <span className="text-4xl font-black bg-gradient-to-b from-[#9B6DD6] to-[#D4A04A] bg-clip-text text-[#22c0c0]">
-                    {classrooms.length > 0 ? classrooms.length * 3 : 0}
+                    {activeAssignmentsCount}
                   </span>
                   <Badge className="bg-amber-400 text-amber-900 hover:bg-amber-400 border-0 text-xs">
                     {t("teacherDashboard.stats.mlPowered")}
