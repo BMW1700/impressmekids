@@ -12,99 +12,6 @@ interface ParentInfo {
   user_id: string;
 }
 
-// Base64 URL encoding utilities for Web Push
-function base64UrlEncode(data: Uint8Array): string {
-  let binary = '';
-  for (let i = 0; i < data.byteLength; i++) {
-    binary += String.fromCharCode(data[i]);
-  }
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-function base64UrlDecode(str: string): Uint8Array {
-  str = str.replace(/-/g, '+').replace(/_/g, '/');
-  while (str.length % 4) str += '=';
-  const binary = atob(str);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
-}
-
-// Send push notification using fetch (simplified - no encryption, just trigger)
-async function sendPushNotification(
-  subscription: { endpoint: string; p256dh: string; auth: string },
-  vapidPublicKey: string,
-  vapidPrivateKey: string
-): Promise<{ success: boolean; statusCode?: number; error?: string }> {
-  try {
-    const url = new URL(subscription.endpoint);
-    const audience = `${url.protocol}//${url.host}`;
-
-    // Create JWT for VAPID
-    const header = { typ: 'JWT', alg: 'ES256' };
-    const now = Math.floor(Date.now() / 1000);
-    const jwtPayload = {
-      aud: audience,
-      exp: now + 12 * 60 * 60, // 12 hours
-      sub: 'mailto:support@impressmekids.com',
-    };
-
-    const headerB64 = base64UrlEncode(new TextEncoder().encode(JSON.stringify(header)));
-    const payloadB64 = base64UrlEncode(new TextEncoder().encode(JSON.stringify(jwtPayload)));
-    const unsignedToken = `${headerB64}.${payloadB64}`;
-
-    // Import private key for signing
-    const privateKeyBytes = base64UrlDecode(vapidPrivateKey);
-    
-    // For VAPID, we need to use JWK format since the key is typically stored as base64url
-    // Try to import as raw EC key (P-256 private key is 32 bytes)
-    let privateKey: CryptoKey | null = null;
-    
-    try {
-      // VAPID private keys are typically 32-byte raw EC private key values
-      // We need to construct a proper JWK from it
-      if (privateKeyBytes.length === 32) {
-        // This is a raw 32-byte private key, need to construct JWK
-        const jwk = {
-          kty: 'EC',
-          crv: 'P-256',
-          d: base64UrlEncode(privateKeyBytes),
-          // We don't have x and y, so we can't create a valid JWK for signing
-          // This approach won't work - fallback to simple push
-        };
-        console.log("VAPID key appears to be raw format, Web Crypto requires x,y coordinates");
-      }
-    } catch (e) {
-      console.log("Could not process VAPID key:", e);
-    }
-
-    // Since Web Crypto API requires both public and private key components for EC keys,
-    // and we only have the private scalar, we'll send a simple push without VAPID auth
-    // Most push services will still accept this for testing
-    
-    const response = await fetch(subscription.endpoint, {
-      method: 'POST',
-      headers: {
-        'TTL': '86400',
-        'Content-Length': '0',
-        'Urgency': 'high',
-      },
-    });
-
-    if (response.ok || response.status === 201) {
-      return { success: true, statusCode: response.status };
-    } else {
-      const errorText = await response.text();
-      return { success: false, statusCode: response.status, error: errorText };
-    }
-  } catch (err: unknown) {
-    const error = err as Error;
-    return { success: false, error: error.message };
-  }
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -313,7 +220,7 @@ serve(async (req) => {
       const emailPromises = parents.map(async (parent) => {
         try {
           const emailBody = {
-            from: "ImpressMe Kids <onboarding@resend.dev>",
+            from: "ImpressMe Kids Safety <safety@impressmekids.com>",
             to: parent.email,
             subject: `[${alert.severity.toUpperCase()}] ${alert.title}`,
             html: `
@@ -375,64 +282,49 @@ serve(async (req) => {
       console.warn("RESEND_API_KEY not configured - skipping email notifications");
     }
 
-    // Send push notifications
+    // Send push notifications using the send-push-notification edge function
     console.log("=== SENDING PUSH NOTIFICATIONS ===");
     let pushSent = 0;
     let pushFailed = 0;
     
-    const VAPID_PUBLIC_KEY = 'BBOQmeU-GndAJbPRu4b5Dt7mmnIjOH3AxacLwY5oznBCrF4JBVzLRkeJr_w_qoDmqu2o3gRlEjjkD7gP9snuJoI';
-    const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY');
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
 
-    if (VAPID_PRIVATE_KEY) {
+    if (SUPABASE_URL && SUPABASE_ANON_KEY) {
       for (const parent of parents) {
         if (!parent.user_id) continue;
 
         try {
-          // Get subscriptions for this parent
-          const { data: subscriptions, error: subError } = await supabaseClient
-            .from('push_subscriptions')
-            .select('*')
-            .eq('user_id', parent.user_id);
-
-          if (subError) {
-            console.error(`Failed to get subscriptions for ${parent.user_id}:`, subError);
-            continue;
-          }
-
-          if (!subscriptions || subscriptions.length === 0) {
-            console.log(`No push subscriptions for parent ${parent.user_id.substring(0, 8)}...`);
-            continue;
-          }
-
-          console.log(`Found ${subscriptions.length} subscription(s) for parent ${parent.user_id.substring(0, 8)}...`);
-
-          for (const subscription of subscriptions) {
-            const result = await sendPushNotification(
-              {
-                endpoint: subscription.endpoint,
-                p256dh: subscription.p256dh,
-                auth: subscription.auth,
+          // Call the send-push-notification edge function using service role for server-to-server
+          const response = await fetch(`${SUPABASE_URL}/functions/v1/send-push-notification`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+            },
+            body: JSON.stringify({
+              userId: parent.user_id,
+              title: `${alert.severity === 'critical' ? '🚨 CRITICAL' : alert.severity === 'warning' ? '⚠️ Warning' : 'ℹ️'} Safety Alert`,
+              body: alert.title,
+              icon: '/android-chrome-192x192.png',
+              badge: '/favicon-32x32.png',
+              tag: `safety-alert-${alertId}`,
+              data: {
+                type: 'safety_alert',
+                alertId,
+                severity: alert.severity,
               },
-              VAPID_PUBLIC_KEY,
-              VAPID_PRIVATE_KEY
-            );
+            }),
+          });
 
-            if (result.success) {
-              console.log(`✓ Push sent to subscription ${subscription.id.substring(0, 8)}...`);
-              pushSent++;
-            } else {
-              console.error(`✗ Push failed for subscription ${subscription.id}: ${result.error}`);
-              
-              // Delete invalid subscriptions (gone or not found)
-              if (result.statusCode === 404 || result.statusCode === 410) {
-                await supabaseClient
-                  .from('push_subscriptions')
-                  .delete()
-                  .eq('id', subscription.id);
-                console.log(`Deleted invalid subscription ${subscription.id}`);
-              }
-              pushFailed++;
-            }
+          if (response.ok) {
+            const result = await response.json();
+            console.log(`✓ Push notification sent for parent ${parent.user_id.substring(0, 8)}... - ${result.successCount || 0} subscriptions`);
+            pushSent++;
+          } else {
+            const errorText = await response.text();
+            console.error(`✗ Push failed for parent ${parent.user_id.substring(0, 8)}...: ${response.status} - ${errorText}`);
+            pushFailed++;
           }
         } catch (parentPushErr: unknown) {
           const error = parentPushErr as Error;
@@ -443,7 +335,7 @@ serve(async (req) => {
 
       console.log(`Push results: ${pushSent} sent, ${pushFailed} failed`);
     } else {
-      console.warn("VAPID_PRIVATE_KEY not configured - skipping push notifications");
+      console.warn("SUPABASE_URL or SUPABASE_ANON_KEY not configured - skipping push notifications");
     }
 
     console.log("=== SAFETY ALERT PROCESSING COMPLETE ===");
@@ -459,22 +351,18 @@ serve(async (req) => {
           emailsFailed,
           pushSent,
           pushFailed,
-          districtId: alert.district_id,
-          schoolId: alert.school_id || null,
-        }
+        },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {
     const err = error as Error;
-    console.error("=== SAFETY ALERT ERROR ===");
-    console.error("Error:", err.message);
-    console.error("Stack:", err.stack);
+    console.error("Error in send-safety-alert:", err.message);
     return new Response(
-      JSON.stringify({ success: false, error: err.message }),
+      JSON.stringify({ error: err.message }),
       {
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
       }
     );
   }

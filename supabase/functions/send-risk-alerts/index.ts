@@ -221,7 +221,7 @@ async function sendTeacherEmail(alert: RiskAlert, resend: any) {
   
   try {
     await resend.emails.send({
-      from: "ImpressMe Kids <alerts@impressmekids.com>",
+      from: "ImpressMe Kids Alerts <alerts@impressmekids.com>",
       to: [alert.teacherEmail],
       subject: `${urgencyIcon} ${urgencyText}: ${alert.studentName} needs attention (Risk Score: ${alert.riskScore})`,
       html: `
@@ -276,7 +276,7 @@ async function sendParentEmail(
 ) {
   try {
     await resend.emails.send({
-      from: "ImpressMe Kids <alerts@impressmekids.com>",
+      from: "ImpressMe Kids Alerts <alerts@impressmekids.com>",
       to: [parentEmail],
       subject: `📚 ${alert.studentName} needs extra practice this week`,
       html: `
