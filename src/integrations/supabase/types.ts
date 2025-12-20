@@ -1108,6 +1108,41 @@ export type Database = {
           },
         ]
       }
+      classroom_features: {
+        Row: {
+          classroom_id: string
+          created_at: string | null
+          enabled_at: string | null
+          feature_id: string
+          id: string
+          is_enabled: boolean
+        }
+        Insert: {
+          classroom_id: string
+          created_at?: string | null
+          enabled_at?: string | null
+          feature_id: string
+          id?: string
+          is_enabled?: boolean
+        }
+        Update: {
+          classroom_id?: string
+          created_at?: string | null
+          enabled_at?: string | null
+          feature_id?: string
+          id?: string
+          is_enabled?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "classroom_features_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classroom_students: {
         Row: {
           classroom_id: string

@@ -44,6 +44,9 @@ import { StandardsProgressDashboard } from "@/components/classroom/StandardsProg
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { TeacherSafetyTab } from "@/components/teacher/TeacherSafetyTab";
 import { TeacherBehaviorTab } from "@/components/behavior/TeacherBehaviorTab";
+import { ToolkitSidebar } from "@/components/classroom/ToolkitSidebar";
+import { useClassroomFeatures } from "@/hooks/useClassroomFeatures";
+import { ClassroomTabsList } from "@/components/classroom/ClassroomTabsList";
 const ClassroomDetail = () => {
   const {
     id
@@ -99,6 +102,7 @@ const ClassroomDetail = () => {
     deleteAssignment,
     toggleAssignmentStatus
   } = useMultiQuestionAssignments(id);
+  const { isFeatureEnabled } = useClassroomFeatures(id);
   useEffect(() => {
     // Wait for permissions to be determined before loading data
     if (!permissionsLoading) {
@@ -544,6 +548,7 @@ const ClassroomDetail = () => {
                     <Button variant="outline" size="lg" onClick={() => setShowEditClassroom(true)} className="hover:bg-primary/5 hover:border-primary/30">
                       Edit Classroom
                     </Button>
+                    <ToolkitSidebar classroomId={id!} />
                     <Button size="lg" onClick={() => setShowClassGlance(true)} className="bg-gradient-primary hover:opacity-90 shadow-card text-base">
                       <BarChart3 className="mr-2 h-5 w-5" />
                       🧠 AI Class Insights
@@ -579,107 +584,11 @@ const ClassroomDetail = () => {
             </div>}
 
           <Tabs defaultValue={searchParams.get('tab') || (isStudent ? "assignments" : "students")} className="mb-8">
-            <TabsList className={cn("grid w-full h-auto p-2 bg-muted/50 rounded-xl", isTeacher ? "grid-cols-5 gap-2" : "grid-cols-3 gap-2")}>
-              {/* Teacher Row 1: Syllabus, Attendance, Students, Safety, Leaderboard */}
-              {isTeacher && <>
-                  <TabsTrigger value="syllabus" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <FileText className="mr-2 h-4 w-4" />
-                    Syllabus
-                  </TabsTrigger>
-                  <TabsTrigger value="attendance" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <UserCheck className="mr-2 h-4 w-4" />
-                    Attendance
-                  </TabsTrigger>
-                  <TabsTrigger value="students" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <Users className="mr-2 h-4 w-4" />
-                    Students
-                  </TabsTrigger>
-                  <TabsTrigger value="safety" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <Shield className="mr-2 h-4 w-4" />
-                    Safety
-                  </TabsTrigger>
-                  <TabsTrigger value="leaderboard" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <Trophy className="mr-2 h-4 w-4" />
-                    Leaderboard
-                  </TabsTrigger>
-                  {/* Teacher Row 2: Rubrics, Announcements, Assignments, Discussions, AI Insights */}
-                  <TabsTrigger value="rubrics" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <Grid3X3 className="mr-2 h-4 w-4" />
-                    Rubrics
-                  </TabsTrigger>
-                  <TabsTrigger value="announcements" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <Megaphone className="mr-2 h-4 w-4" />
-                    Announcements
-                  </TabsTrigger>
-                  <TabsTrigger value="assignments" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <FileText className="mr-2 h-4 w-4" />
-                    Assignments
-                  </TabsTrigger>
-                  <TabsTrigger value="discussions" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    Discussions
-                  </TabsTrigger>
-                  <TabsTrigger value="ai-insights" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <BarChart3 className="mr-2 h-4 w-4" />
-                    AI Insights
-                  </TabsTrigger>
-                  {/* Teacher Row 3: Parent Requests, Behavior, Study Materials, Study Games, Journal */}
-                  <TabsTrigger value="parent-requests" className="relative data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Parent Requests
-                    {parentRequests.filter(r => r.status === 'pending').length > 0 && <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
-                        {parentRequests.filter(r => r.status === 'pending').length}
-                      </Badge>}
-                  </TabsTrigger>
-                  <TabsTrigger value="behavior" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <Trophy className="mr-2 h-4 w-4" />
-                    Behavior
-                  </TabsTrigger>
-                  <TabsTrigger value="study" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <BookOpen className="mr-2 h-4 w-4" />
-                    Study Materials
-                  </TabsTrigger>
-                  <TabsTrigger value="tournaments" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <Play className="mr-2 h-4 w-4" />
-                    Study Games
-                  </TabsTrigger>
-                  <TabsTrigger value="journal" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <BookHeart className="mr-2 h-4 w-4" />
-                    Journal
-                  </TabsTrigger>
-                </>}
-              {/* Student Tabs: Row 1: Syllabus, Assignments, Announcements; Row 2: Study Materials, Tournaments, Trends */}
-              {!isTeacher && <>
-                  <TabsTrigger value="syllabus" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <FileText className="mr-2 h-4 w-4" />
-                    Syllabus
-                  </TabsTrigger>
-                  <TabsTrigger value="assignments" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <FileText className="mr-2 h-4 w-4" />
-                    Assignments
-                  </TabsTrigger>
-                  <TabsTrigger value="announcements" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <Megaphone className="mr-2 h-4 w-4" />
-                    Announcements
-                  </TabsTrigger>
-                  <TabsTrigger value="study" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <BookOpen className="mr-2 h-4 w-4" />
-                    Study Materials
-                  </TabsTrigger>
-                  <TabsTrigger value="tournaments" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <Trophy className="mr-2 h-4 w-4" />
-                    Study Games
-                  </TabsTrigger>
-                  <TabsTrigger value="trends" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <BarChart3 className="mr-2 h-4 w-4" />
-                    Trends
-                  </TabsTrigger>
-                  <TabsTrigger value="discussions" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white data-[state=active]:shadow-card py-1.5 px-4 rounded-lg transition-all">
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    Discussions
-                  </TabsTrigger>
-                </>}
-            </TabsList>
+            <ClassroomTabsList 
+              classroomId={id!}
+              isTeacher={isTeacher}
+              parentRequests={parentRequests}
+            />
 
             {isTeacher && <TabsContent value="students" className="mt-6">
                 <div className="mb-6">
@@ -740,7 +649,7 @@ const ClassroomDetail = () => {
                 <TeacherSafetyTab classroomId={id!} students={students} />
               </TabsContent>}
 
-            {isTeacher && <TabsContent value="behavior" className="mt-6">
+            {isTeacher && isFeatureEnabled("behavior") && <TabsContent value="behavior" className="mt-6">
                 <div className="mb-6">
                   <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Behavior Tracking</h2>
                   <p className="text-muted-foreground mt-1">Track and reward student behavior</p>
@@ -754,11 +663,11 @@ const ClassroomDetail = () => {
                 />
               </TabsContent>}
 
-            {isTeacher && <TabsContent value="ai-insights" className="mt-6">
+            {isTeacher && isFeatureEnabled("ai-insights") && <TabsContent value="ai-insights" className="mt-6">
                 <ClassroomAIInsights classroomId={id!} />
               </TabsContent>}
 
-            {isTeacher && <TabsContent value="leaderboard" className="mt-6">
+            {isTeacher && isFeatureEnabled("leaderboard") && <TabsContent value="leaderboard" className="mt-6">
                 <div className="mb-6">
                   <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Class Leaderboard</h2>
                   <p className="text-muted-foreground mt-1">Track student performance and achievements</p>
@@ -802,13 +711,13 @@ const ClassroomDetail = () => {
               <DiscussionBoard classroomId={id!} isTeacher={isTeacher} />
             </TabsContent>
 
-            {/* Rubrics Tab - Teachers Only */}
-            {isTeacher && <TabsContent value="rubrics" className="mt-6">
+            {/* Rubrics Tab - Teachers Only, Toolkit Feature */}
+            {isTeacher && isFeatureEnabled("rubrics") && <TabsContent value="rubrics" className="mt-6">
                 <RubricsList classroomId={id!} />
               </TabsContent>}
 
-            {/* Journal Tab - Teachers Only */}
-            {isTeacher && <TabsContent value="journal" className="mt-6">
+            {/* Journal Tab - Teachers Only, Toolkit Feature */}
+            {isTeacher && isFeatureEnabled("journal") && <TabsContent value="journal" className="mt-6">
                 <TeacherJournalTab classroomId={id} />
               </TabsContent>}
 
