@@ -8,7 +8,7 @@ const DEFAULT_TEACHER_TABS = [
   "attendance",
   "students",
   "safety",
-  "parent-requests",
+  "meeting-requests",
   "announcements",
   "assignments",
   "discussions",

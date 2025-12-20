@@ -48,6 +48,7 @@ import { TeacherBehaviorTab } from "@/components/behavior/TeacherBehaviorTab";
 import { ToolkitSidebar } from "@/components/classroom/ToolkitSidebar";
 import { useClassroomFeatures } from "@/hooks/useClassroomFeatures";
 import { ClassroomTabsList } from "@/components/classroom/ClassroomTabsList";
+import { MeetingRequestsTab } from "@/components/teacher/MeetingRequestsTab";
 const ClassroomDetail = () => {
   const {
     id
@@ -741,23 +742,8 @@ const ClassroomDetail = () => {
                 <StudentClassroomTrends classroomId={id!} studentId={profile.id} />
               </TabsContent>}
 
-            {isTeacher && <TabsContent value="parent-requests" className="mt-6">
-                <div className="mb-4">
-                  <h2 className="text-2xl font-bold">Parent Access Requests</h2>
-                  <p className="text-muted-foreground mt-1">
-                    Approve or deny parent requests to view their child's progress
-                  </p>
-                </div>
-
-                {parentRequests.length === 0 ? <Card className="p-12 text-center">
-                    <UserCheck className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <h3 className="text-xl font-bold mb-2">No Parent Requests</h3>
-                    <p className="text-muted-foreground">
-                      When parents request access to view their child's progress, they'll appear here
-                    </p>
-                  </Card> : <div className="grid md:grid-cols-2 gap-6">
-                    {parentRequests.map(request => <ParentAccessRequestCard key={request.id} id={request.id} parentName={request.parent_accounts?.full_name || 'Parent'} parentEmail={request.parent_accounts?.email || ''} studentName={request.profiles?.full_name || 'Student'} message={request.message} status={request.status} createdAt={request.created_at} onApprove={handleApproveParentRequest} onDeny={handleDenyParentRequest} />)}
-                  </div>}
+            {isTeacher && <TabsContent value="meeting-requests" className="mt-6">
+                <MeetingRequestsTab classroomId={id!} />
               </TabsContent>}
 
             {/* Discussions Tab */}
