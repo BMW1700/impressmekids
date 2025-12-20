@@ -2762,6 +2762,90 @@ export type Database = {
           },
         ]
       }
+      meeting_bookings: {
+        Row: {
+          booking_date: string
+          created_at: string
+          end_time: string
+          id: string
+          meeting_reason: string | null
+          office_hours_id: string
+          parent_event_id: string | null
+          parent_id: string
+          start_time: string
+          status: string
+          student_id: string
+          teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          booking_date: string
+          created_at?: string
+          end_time: string
+          id?: string
+          meeting_reason?: string | null
+          office_hours_id: string
+          parent_event_id?: string | null
+          parent_id: string
+          start_time: string
+          status?: string
+          student_id: string
+          teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          booking_date?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          meeting_reason?: string | null
+          office_hours_id?: string
+          parent_event_id?: string | null
+          parent_id?: string
+          start_time?: string
+          status?: string
+          student_id?: string
+          teacher_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_bookings_office_hours_id_fkey"
+            columns: ["office_hours_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_office_hours"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_bookings_parent_event_id_fkey"
+            columns: ["parent_event_id"]
+            isOneToOne: false
+            referencedRelation: "parent_student_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_bookings_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "parent_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_bookings_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_bookings_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_templates: {
         Row: {
           content: string
