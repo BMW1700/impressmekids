@@ -93,6 +93,8 @@ const ClassroomDetail = () => {
   const [deleteTournamentId, setDeleteTournamentId] = useState<string | null>(null);
   const [showClassGlance, setShowClassGlance] = useState(false);
   const [showEditClassroom, setShowEditClassroom] = useState(false);
+  const [studentToRemove, setStudentToRemove] = useState<any>(null);
+  const [showRemoveStudentModal, setShowRemoveStudentModal] = useState(false);
   const {
     assignments
   } = useAssignments(id);
@@ -452,6 +454,34 @@ const ClassroomDetail = () => {
       });
     }
   };
+  
+  const handleRemoveStudent = async () => {
+    if (!studentToRemove) return;
+    
+    try {
+      const { error } = await supabase
+        .from('classroom_students')
+        .delete()
+        .eq('id', studentToRemove.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Student Removed",
+        description: `${studentToRemove.profiles?.full_name || 'Student'} has been removed from the class`
+      });
+      
+      setShowRemoveStudentModal(false);
+      setStudentToRemove(null);
+      loadClassroomData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove student",
+        variant: "destructive"
+      });
+    }
+  };
   if (isLoading || permissionsLoading) {
     return <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -614,8 +644,31 @@ const ClassroomDetail = () => {
             </Card> : <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {students.map(student => <Card key={student.id} className="shadow-card hover:shadow-elegant transition-all duration-300 hover:scale-[1.02] border-2 border-primary/10 hover:border-primary/30">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-xl">{student.profiles?.full_name || 'Student'}</CardTitle>
-                    {student.profiles?.email && <p className="text-sm text-muted-foreground">{student.profiles.email}</p>}
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-xl">{student.profiles?.full_name || 'Student'}</CardTitle>
+                        {student.profiles?.email && <p className="text-sm text-muted-foreground">{student.profiles.email}</p>}
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem 
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => {
+                              setStudentToRemove(student);
+                              setShowRemoveStudentModal(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Remove from Class
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {student.student_profiles?.[0]?.grade && <Badge variant="secondary" className="text-base px-3 py-1">
@@ -1151,6 +1204,19 @@ const ClassroomDetail = () => {
       }} />
 
           <EditClassroomModal open={showEditClassroom} onOpenChange={setShowEditClassroom} onSuccess={loadClassroomData} classroom={classroom} />
+
+          <ConfirmModal 
+            open={showRemoveStudentModal} 
+            onOpenChange={(open) => {
+              setShowRemoveStudentModal(open);
+              if (!open) setStudentToRemove(null);
+            }} 
+            title="Remove Student" 
+            description={`Are you sure you want to remove ${studentToRemove?.profiles?.full_name || 'this student'} from the class? They will need to rejoin using the class code.`} 
+            confirmText="Remove" 
+            cancelText="Cancel" 
+            onConfirm={handleRemoveStudent} 
+          />
         </>}
     </div>;
 };
