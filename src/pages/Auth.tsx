@@ -625,7 +625,10 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden p-4 bg-gradient-hero">
+    <div className="min-h-screen flex flex-col items-center justify-center relative z-0 overflow-hidden p-4">
+      {/* Fixed background so gradient is identical regardless of tab/content height */}
+      <div aria-hidden className="fixed inset-0 -z-10 bg-gradient-hero pointer-events-none" />
+
       <div className="w-full max-w-md px-6 py-10 relative z-10 bg-violet-950/35 backdrop-blur-xl rounded-3xl border border-violet-500/20 shadow-2xl">
         {/* Logo */}
         <div className="flex justify-center mb-8">
