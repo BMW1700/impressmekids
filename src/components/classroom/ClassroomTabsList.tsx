@@ -3,6 +3,13 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useClassroomFeatures } from "@/hooks/useClassroomFeatures";
 import { liquidGlassTabClass } from "@/components/ui/liquid-glass-button";
+import { useTabOrder } from "@/hooks/useTabOrder";
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+} from "@hello-pangea/dnd";
 import {
   FileText,
   UserCheck,
@@ -25,155 +32,210 @@ interface ClassroomTabsListProps {
   parentRequests: any[];
 }
 
+// Tab configuration with icons and labels
+const TAB_CONFIG: Record<
+  string,
+  { icon: React.ComponentType<{ className?: string }>; label: string; isToolkit?: boolean }
+> = {
+  syllabus: { icon: FileText, label: "Syllabus" },
+  attendance: { icon: UserCheck, label: "Attendance" },
+  students: { icon: Users, label: "Students" },
+  safety: { icon: Shield, label: "Safety" },
+  "parent-requests": { icon: UserPlus, label: "Parent Requests" },
+  announcements: { icon: Megaphone, label: "Announcements" },
+  assignments: { icon: FileText, label: "Assignments" },
+  discussions: { icon: MessageSquare, label: "Discussions" },
+  study: { icon: BookOpen, label: "Study Materials" },
+  tournaments: { icon: Play, label: "Study Games" },
+  leaderboard: { icon: Trophy, label: "Leaderboard", isToolkit: true },
+  rubrics: { icon: Grid3X3, label: "Rubrics", isToolkit: true },
+  "ai-insights": { icon: BarChart3, label: "AI Insights", isToolkit: true },
+  behavior: { icon: Trophy, label: "Behavior", isToolkit: true },
+  journal: { icon: BookHeart, label: "Journal", isToolkit: true },
+};
+
+// Student tabs - fixed order
+const STUDENT_TABS = [
+  "syllabus",
+  "assignments",
+  "announcements",
+  "study",
+  "tournaments",
+  "trends",
+  "discussions",
+];
+
 export const ClassroomTabsList = ({
   classroomId,
   isTeacher,
   parentRequests,
 }: ClassroomTabsListProps) => {
   const { isFeatureEnabled } = useClassroomFeatures(classroomId);
+  const {
+    orderedTabs,
+    isOrganizing,
+    setIsOrganizing,
+    reorderTabs,
+    saveTabOrder,
+    cancelOrganizing,
+    isSaving,
+  } = useTabOrder(classroomId);
 
   const triggerClass = liquidGlassTabClass;
 
-  // Count enabled toolkit features to adjust grid columns
-  const enabledToolkitCount = ["leaderboard", "rubrics", "ai-insights", "behavior", "journal"].filter(
-    (id) => isFeatureEnabled(id)
-  ).length;
+  // Filter tabs based on enabled features (for teacher)
+  const getVisibleTeacherTabs = () => {
+    return orderedTabs.filter((tabId) => {
+      const config = TAB_CONFIG[tabId];
+      if (!config) return false;
+      if (config.isToolkit) {
+        return isFeatureEnabled(tabId);
+      }
+      return true;
+    });
+  };
 
-  // Calculate grid columns for teacher: 10 default tabs + enabled toolkit tabs
-  const teacherCols = 10 + enabledToolkitCount;
+  const visibleTabs = isTeacher ? getVisibleTeacherTabs() : STUDENT_TABS;
+  const pendingCount = parentRequests.filter((r) => r.status === "pending").length;
 
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+
+    const items = Array.from(orderedTabs);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    reorderTabs(items);
+  };
+
+  const renderTabTrigger = (
+    tabId: string,
+    index: number,
+    isDraggable: boolean
+  ) => {
+    const config = TAB_CONFIG[tabId];
+    if (!config) {
+      // Handle student-only tabs like "trends"
+      if (tabId === "trends") {
+        return (
+          <TabsTrigger key={tabId} value={tabId} className={triggerClass}>
+            <BarChart3 className="mr-2 h-4 w-4" />
+            Trends
+          </TabsTrigger>
+        );
+      }
+      return null;
+    }
+
+    const Icon = config.icon;
+    const isParentRequests = tabId === "parent-requests";
+
+    const trigger = (
+      <TabsTrigger
+        key={tabId}
+        value={tabId}
+        className={cn("relative", triggerClass, isDraggable && isOrganizing && "cursor-grab")}
+        disabled={isOrganizing}
+      >
+        <Icon className="mr-2 h-4 w-4" />
+        {config.label}
+        {isParentRequests && pendingCount > 0 && (
+          <Badge
+            variant="destructive"
+            className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-[10px]"
+          >
+            {pendingCount}
+          </Badge>
+        )}
+      </TabsTrigger>
+    );
+
+    if (isDraggable && isOrganizing) {
+      return (
+        <Draggable key={tabId} draggableId={tabId} index={index}>
+          {(provided, snapshot) => (
+            <div
+              ref={provided.innerRef}
+              {...provided.draggableProps}
+              {...provided.dragHandleProps}
+              className={cn(
+                snapshot.isDragging && "opacity-80 scale-105"
+              )}
+            >
+              {trigger}
+            </div>
+          )}
+        </Draggable>
+      );
+    }
+
+    return trigger;
+  };
+
+  if (isTeacher) {
+    return (
+      <div className="relative">
+        {/* Organize/Save button - top right, small text */}
+        <div className="absolute -top-6 right-0 z-10">
+          {isOrganizing ? (
+            <div className="flex gap-2">
+              <button
+                onClick={cancelOrganizing}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                disabled={isSaving}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveTabOrder}
+                className="text-xs text-primary hover:text-primary/80 transition-colors font-medium"
+                disabled={isSaving}
+              >
+                {isSaving ? "Saving..." : "Save"}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsOrganizing(true)}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Organize Tabs
+            </button>
+          )}
+        </div>
+
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Droppable droppableId="tabs" direction="horizontal">
+            {(provided) => (
+              <TabsList
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className={cn(
+                  "grid w-full h-auto p-2 bg-muted/50 rounded-xl gap-2",
+                  "grid-cols-5"
+                )}
+              >
+                {visibleTabs.map((tabId, index) =>
+                  renderTabTrigger(tabId, index, true)
+                )}
+                {provided.placeholder}
+              </TabsList>
+            )}
+          </Droppable>
+        </DragDropContext>
+      </div>
+    );
+  }
+
+  // Student view - no drag and drop
   return (
     <TabsList
       className={cn(
         "grid w-full h-auto p-2 bg-muted/50 rounded-xl gap-2",
-        isTeacher ? "grid-cols-5" : "grid-cols-3"
+        "grid-cols-3"
       )}
     >
-      {/* Teacher Tabs */}
-      {isTeacher && (
-        <>
-          {/* Default Features - Always visible */}
-          <TabsTrigger value="syllabus" className={triggerClass}>
-            <FileText className="mr-2 h-4 w-4" />
-            Syllabus
-          </TabsTrigger>
-          <TabsTrigger value="attendance" className={triggerClass}>
-            <UserCheck className="mr-2 h-4 w-4" />
-            Attendance
-          </TabsTrigger>
-          <TabsTrigger value="students" className={triggerClass}>
-            <Users className="mr-2 h-4 w-4" />
-            Students
-          </TabsTrigger>
-          <TabsTrigger value="safety" className={triggerClass}>
-            <Shield className="mr-2 h-4 w-4" />
-            Safety
-          </TabsTrigger>
-          <TabsTrigger
-            value="parent-requests"
-            className={cn("relative", triggerClass)}
-          >
-            <UserPlus className="mr-2 h-4 w-4" />
-            Parent Requests
-            {parentRequests.filter((r) => r.status === "pending").length > 0 && (
-              <Badge
-                variant="destructive"
-                className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-[10px]"
-              >
-                {parentRequests.filter((r) => r.status === "pending").length}
-              </Badge>
-            )}
-          </TabsTrigger>
-
-          {/* Row 2: More default features */}
-          <TabsTrigger value="announcements" className={triggerClass}>
-            <Megaphone className="mr-2 h-4 w-4" />
-            Announcements
-          </TabsTrigger>
-          <TabsTrigger value="assignments" className={triggerClass}>
-            <FileText className="mr-2 h-4 w-4" />
-            Assignments
-          </TabsTrigger>
-          <TabsTrigger value="discussions" className={triggerClass}>
-            <MessageSquare className="mr-2 h-4 w-4" />
-            Discussions
-          </TabsTrigger>
-          <TabsTrigger value="study" className={triggerClass}>
-            <BookOpen className="mr-2 h-4 w-4" />
-            Study Materials
-          </TabsTrigger>
-          <TabsTrigger value="tournaments" className={triggerClass}>
-            <Play className="mr-2 h-4 w-4" />
-            Study Games
-          </TabsTrigger>
-
-          {/* Toolkit Features - Only visible if enabled */}
-          {isFeatureEnabled("leaderboard") && (
-            <TabsTrigger value="leaderboard" className={triggerClass}>
-              <Trophy className="mr-2 h-4 w-4" />
-              Leaderboard
-            </TabsTrigger>
-          )}
-          {isFeatureEnabled("rubrics") && (
-            <TabsTrigger value="rubrics" className={triggerClass}>
-              <Grid3X3 className="mr-2 h-4 w-4" />
-              Rubrics
-            </TabsTrigger>
-          )}
-          {isFeatureEnabled("ai-insights") && (
-            <TabsTrigger value="ai-insights" className={triggerClass}>
-              <BarChart3 className="mr-2 h-4 w-4" />
-              AI Insights
-            </TabsTrigger>
-          )}
-          {isFeatureEnabled("behavior") && (
-            <TabsTrigger value="behavior" className={triggerClass}>
-              <Trophy className="mr-2 h-4 w-4" />
-              Behavior
-            </TabsTrigger>
-          )}
-          {isFeatureEnabled("journal") && (
-            <TabsTrigger value="journal" className={triggerClass}>
-              <BookHeart className="mr-2 h-4 w-4" />
-              Journal
-            </TabsTrigger>
-          )}
-        </>
-      )}
-
-      {/* Student Tabs */}
-      {!isTeacher && (
-        <>
-          <TabsTrigger value="syllabus" className={triggerClass}>
-            <FileText className="mr-2 h-4 w-4" />
-            Syllabus
-          </TabsTrigger>
-          <TabsTrigger value="assignments" className={triggerClass}>
-            <FileText className="mr-2 h-4 w-4" />
-            Assignments
-          </TabsTrigger>
-          <TabsTrigger value="announcements" className={triggerClass}>
-            <Megaphone className="mr-2 h-4 w-4" />
-            Announcements
-          </TabsTrigger>
-          <TabsTrigger value="study" className={triggerClass}>
-            <BookOpen className="mr-2 h-4 w-4" />
-            Study Materials
-          </TabsTrigger>
-          <TabsTrigger value="tournaments" className={triggerClass}>
-            <Trophy className="mr-2 h-4 w-4" />
-            Study Games
-          </TabsTrigger>
-          <TabsTrigger value="trends" className={triggerClass}>
-            <BarChart3 className="mr-2 h-4 w-4" />
-            Trends
-          </TabsTrigger>
-          <TabsTrigger value="discussions" className={triggerClass}>
-            <MessageSquare className="mr-2 h-4 w-4" />
-            Discussions
-          </TabsTrigger>
-        </>
-      )}
+      {STUDENT_TABS.map((tabId, index) => renderTabTrigger(tabId, index, false))}
     </TabsList>
   );
 };

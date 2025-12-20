@@ -1239,6 +1239,48 @@ export type Database = {
           },
         ]
       }
+      classroom_tab_orders: {
+        Row: {
+          classroom_id: string
+          created_at: string
+          id: string
+          tab_order: string[]
+          teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          classroom_id: string
+          created_at?: string
+          id?: string
+          tab_order: string[]
+          teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          classroom_id?: string
+          created_at?: string
+          id?: string
+          tab_order?: string[]
+          teacher_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "classroom_tab_orders_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "classroom_tab_orders_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classrooms: {
         Row: {
           created_at: string
