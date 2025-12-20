@@ -376,12 +376,13 @@ export const useCalendarData = ({ startDate, endDate, userId, userRole, childId 
         });
       });
 
-      // 6. Fetch parent-created events for students
+      // 6. Fetch parent-created events for students (exclude parent-only events)
       if (userRole === "student") {
         const { data: parentStudentEvents } = await supabase
           .from("parent_student_events")
           .select("*")
           .eq("student_id", effectiveUserId)
+          .eq("is_parent_only", false)
           .gte("event_date", format(startDate, "yyyy-MM-dd"))
           .lte("event_date", format(endDate, "yyyy-MM-dd") + "T23:59:59");
 
