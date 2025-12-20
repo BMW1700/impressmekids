@@ -214,34 +214,33 @@ export const isWordMatchLenient = (spoken: string, expected: string): boolean =>
   // Exact match - definitely correct
   if (normalizedSpoken === normalizedExpected) return true;
   
-  // Empty check - if no speech detected, benefit of doubt
-  if (!normalizedSpoken) return true;
+  // Empty check - no speech = not correct!
+  if (!normalizedSpoken) return false;
   if (!normalizedExpected) return false;
   
-  // SHORT WORDS (1-3 chars): Always correct (too easy to mishear)
+  // SHORT WORDS (1-3 chars): Max 1 character difference allowed
   if (normalizedExpected.length <= 3) {
+    const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
+    return distance <= 1;
+  }
+  
+  // "Starts with" only if spoken is at least 60% of expected length
+  if (normalizedExpected.startsWith(normalizedSpoken) && 
+      normalizedSpoken.length >= normalizedExpected.length * 0.6) {
     return true;
   }
   
-  // Check if spoken starts with expected or vice versa (partial matches are fine)
-  if (normalizedSpoken.startsWith(normalizedExpected) || normalizedExpected.startsWith(normalizedSpoken)) {
-    return true;
-  }
-  
-  // Check if spoken contains expected or vice versa
-  if (normalizedSpoken.includes(normalizedExpected) || normalizedExpected.includes(normalizedSpoken)) {
-    return true;
-  }
+  // REMOVED: "contains" check - was too lenient
   
   const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
   
-  // MEDIUM WORDS (4-6 chars): 70% tolerance (very lenient)
+  // MEDIUM WORDS (4-6 chars): 40% tolerance (was 70%)
   if (normalizedExpected.length <= 6) {
-    return distance <= Math.ceil(normalizedExpected.length * 0.7);
+    return distance <= Math.ceil(normalizedExpected.length * 0.4);
   }
   
-  // LONG WORDS (7+ chars): 65% tolerance (very lenient)
-  return distance <= Math.ceil(normalizedExpected.length * 0.65);
+  // LONG WORDS (7+ chars): 30% tolerance (was 65%)
+  return distance <= Math.ceil(normalizedExpected.length * 0.3);
 };
 
 /**
