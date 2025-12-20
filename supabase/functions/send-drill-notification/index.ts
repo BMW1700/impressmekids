@@ -381,7 +381,7 @@ serve(async (req) => {
       }
     }
 
-    // Send push notifications to all target users
+    // Send push notifications to all target users (using service role for server-to-server)
     const pushResults = await Promise.allSettled(
       targetUserIds.map(async (userId) => {
         try {
@@ -389,7 +389,7 @@ serve(async (req) => {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': req.headers.get('Authorization') || '',
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
             },
             body: JSON.stringify({
               userId,

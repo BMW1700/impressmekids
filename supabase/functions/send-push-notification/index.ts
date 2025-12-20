@@ -17,13 +17,20 @@ interface PushNotificationPayload {
   tag?: string;
 }
 
+interface PushSubscription {
+  id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  user_id: string;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    // Verify authorization header exists
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
       console.error('Missing authorization header');
@@ -33,39 +40,19 @@ serve(async (req) => {
       );
     }
 
-    // Create client for auth user verification
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: { headers: { Authorization: authHeader } },
-        auth: { persistSession: false }
-      }
-    );
-
-    // Verify the calling user
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    if (userError || !user) {
-      console.error('Auth error:', userError);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized - invalid token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Create admin client for role checks and sending notifications
+    const token = authHeader.replace('Bearer ', '');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    
+    // Check if this is a service-role call (server-to-server)
+    const isServiceRoleCall = token === serviceRoleKey;
+    
+    // Create admin client for database operations
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      serviceRoleKey
     );
-
-    // Check if caller has teacher, admin, or is sending to themselves
-    const { data: roleData } = await supabaseAdmin
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .in('role', ['admin', 'teacher']);
-
+    
+    // Parse payload early to get userId for authorization check
     const payload: PushNotificationPayload = await req.json();
     const { userId, title, body, icon, badge, data, tag } = payload;
 
@@ -75,20 +62,54 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    // Authorization check: must be admin, teacher, or sending to self
-    const isAdminOrTeacher = roleData && roleData.length > 0;
-    const isSendingToSelf = userId === user.id;
-
-    if (!isAdminOrTeacher && !isSendingToSelf) {
-      console.warn(`Unauthorized push notification attempt by user ${user.id} to ${userId}`);
-      return new Response(
-        JSON.stringify({ error: 'Forbidden - insufficient permissions to send notifications' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    
+    if (isServiceRoleCall) {
+      // Server-to-server call - trusted, no additional auth needed
+      console.log('Service role authentication - server-to-server call');
+    } else {
+      // User authentication - verify the token and permissions
+      const supabaseClient = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+        {
+          global: { headers: { Authorization: authHeader } },
+          auth: { persistSession: false }
+        }
       );
+
+      const { data: userData, error: userError } = await supabaseClient.auth.getUser();
+      if (userError || !userData.user) {
+        console.error('Auth error:', userError);
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized - invalid token' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const user = userData.user;
+
+      // Check if caller has teacher, admin, or is sending to themselves
+      const { data: roleData } = await supabaseAdmin
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .in('role', ['admin', 'teacher']);
+
+      const isAdminOrTeacher = roleData && roleData.length > 0;
+      const isSendingToSelf = userId === user.id;
+
+      if (!isAdminOrTeacher && !isSendingToSelf) {
+        console.warn(`Unauthorized push notification attempt by user ${user.id} to ${userId}`);
+        return new Response(
+          JSON.stringify({ error: 'Forbidden - insufficient permissions to send notifications' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log(`User ${user.id} sending notification to ${userId}`);
     }
 
-    console.log(`User ${user.id} sending notification to ${userId}`);
+    console.log(`Sending push notification to user ${userId}`);
 
     // Get VAPID keys
     const VAPID_PUBLIC_KEY = 'BBOQmeU-GndAJbPRu4b5Dt7mmnIjOH3AxacLwY5oznBCrF4JBVzLRkeJr_w_qoDmqu2o3gRlEjjkD7gP9snuJoI';
@@ -113,15 +134,17 @@ serve(async (req) => {
 
     if (subsError) throw subsError;
 
-    if (!subscriptions || subscriptions.length === 0) {
+    const subs = subscriptions as PushSubscription[] | null;
+
+    if (!subs || subs.length === 0) {
       console.log(`No push subscriptions found for user ${userId}`);
       return new Response(
-        JSON.stringify({ success: true, message: 'No subscriptions to send to' }),
+        JSON.stringify({ success: true, message: 'No subscriptions to send to', successCount: 0 }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Found ${subscriptions.length} subscriptions for user ${userId}`);
+    console.log(`Found ${subs.length} subscriptions for user ${userId}`);
 
     const pushPayload = JSON.stringify({
       title,
@@ -134,7 +157,7 @@ serve(async (req) => {
 
     // Send push notifications using web-push library
     const results = await Promise.allSettled(
-      subscriptions.map(async (subscription) => {
+      subs.map(async (subscription) => {
         try {
           // Reconstruct subscription object from database fields
           const subscriptionObject = {
@@ -166,12 +189,12 @@ serve(async (req) => {
     );
 
     const successCount = results.filter((r) => r.status === 'fulfilled' && (r.value as any).success).length;
-    console.log(`Push notifications sent: ${successCount}/${subscriptions.length}`);
+    console.log(`Push notifications sent: ${successCount}/${subs.length}`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        totalSubscriptions: subscriptions.length,
+        totalSubscriptions: subs.length,
         successCount,
         results,
       }),

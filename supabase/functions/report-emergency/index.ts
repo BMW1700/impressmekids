@@ -174,10 +174,19 @@ serve(async (req) => {
         .eq("role", "admin");
 
       if (adminProfiles && adminProfiles.length > 0) {
+        const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+        const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+        
         for (const admin of adminProfiles) {
           try {
-            await supabaseClient.functions.invoke('send-push-notification', {
-              body: {
+            // Use direct fetch with service role key for server-to-server calls
+            const response = await fetch(`${SUPABASE_URL}/functions/v1/send-push-notification`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
+              },
+              body: JSON.stringify({
                 userId: admin.id,
                 title: `🚨 EMERGENCY: ${emergencyTypeDisplay}`,
                 body: `${teacher.full_name} reported from ${roomNumber}: ${description.substring(0, 100)}${description.length > 100 ? '...' : ''}`,
@@ -189,8 +198,12 @@ serve(async (req) => {
                   classroomId,
                   teacherId,
                 },
-              },
+              }),
             });
+            
+            if (!response.ok) {
+              console.error(`Push notification failed for admin ${admin.id}: ${response.status}`);
+            }
           } catch (pushError) {
             console.error(`Failed to send push notification to admin ${admin.id}:`, pushError);
           }
