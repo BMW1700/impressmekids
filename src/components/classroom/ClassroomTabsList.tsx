@@ -25,6 +25,8 @@ import {
   BookOpen,
   Play,
   BookHeart,
+  GraduationCap,
+  Calendar,
 } from "lucide-react";
 
 interface ClassroomTabsListProps {
@@ -53,9 +55,11 @@ const TAB_CONFIG: Record<
   "ai-insights": { icon: BarChart3, label: "AI Insights", isToolkit: true },
   behavior: { icon: Trophy, label: "Behavior", isToolkit: true },
   journal: { icon: BookHeart, label: "Journal", isToolkit: true },
+  grades: { icon: GraduationCap, label: "Grades" },
+  calendar: { icon: Calendar, label: "Calendar" },
 };
 
-// Student tabs - fixed order
+// Student tabs - fixed order (9 tabs for 3x3 grid)
 const STUDENT_TABS = [
   "syllabus",
   "assignments",
@@ -64,6 +68,8 @@ const STUDENT_TABS = [
   "tournaments",
   "trends",
   "discussions",
+  "grades",
+  "calendar",
 ];
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
