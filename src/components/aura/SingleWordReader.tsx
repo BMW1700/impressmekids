@@ -124,24 +124,27 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
     }, 350);
   }, [correctStreak, cleanWord, attempts]);
 
-  const handleIncorrect = useCallback((spokenWord: string) => {
+  const handleIncorrect = useCallback((_spokenWord: string) => {
     if (isProcessingRef.current) return;
-    
+
+    // Compute expected word at execution time to avoid stale closure
+    const actualWord = (words[currentIndexRef.current] || '').replace(/[^a-zA-Z']/g, '');
+
     setFeedback('incorrect');
     soundEffectsRef.current.incorrectWord();
     setCorrectStreak(0);
     setAttempts(prev => prev + 1);
-    
-    // Play correct pronunciation
+
+    // Play correct pronunciation of the current word
     setTimeout(() => {
-      playCorrectPronunciation(cleanWord);
+      playCorrectPronunciation(actualWord);
     }, 500);
-    
+
     // Reset feedback after delay to continue listening
     setTimeout(() => {
       setFeedback(null);
     }, 1200);
-  }, [cleanWord]);
+  }, [words]);
 
   const handleSkip = useCallback(() => {
     setWordResults(prev => [...prev, {
@@ -279,8 +282,9 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
   }, []);
 
   const hearWord = useCallback(() => {
-    playCorrectPronunciation(cleanWord);
-  }, [cleanWord]);
+    const actualWord = (words[currentIndexRef.current] || '').replace(/[^a-zA-Z']/g, '');
+    playCorrectPronunciation(actualWord);
+  }, [words]);
 
   // Complete session
   useEffect(() => {
