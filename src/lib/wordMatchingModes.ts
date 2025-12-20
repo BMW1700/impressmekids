@@ -214,33 +214,24 @@ export const isWordMatchLenient = (spoken: string, expected: string): boolean =>
   // Exact match - definitely correct
   if (normalizedSpoken === normalizedExpected) return true;
   
-  // Empty check - no speech = not correct!
+  // Empty check - no speech = not correct
   if (!normalizedSpoken) return false;
   if (!normalizedExpected) return false;
   
-  // SHORT WORDS (1-3 chars): Max 1 character difference allowed
+  const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
+  
+  // SHORT WORDS (1-3 chars): Must be exact or 1 char difference max
   if (normalizedExpected.length <= 3) {
-    const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
     return distance <= 1;
   }
   
-  // "Starts with" only if spoken is at least 60% of expected length
-  if (normalizedExpected.startsWith(normalizedSpoken) && 
-      normalizedSpoken.length >= normalizedExpected.length * 0.6) {
-    return true;
-  }
-  
-  // REMOVED: "contains" check - was too lenient
-  
-  const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
-  
-  // MEDIUM WORDS (4-6 chars): 40% tolerance (was 70%)
+  // MEDIUM WORDS (4-6 chars): Max 1 char difference (for speech recognition artifacts)
   if (normalizedExpected.length <= 6) {
-    return distance <= Math.ceil(normalizedExpected.length * 0.4);
+    return distance <= 1;
   }
   
-  // LONG WORDS (7+ chars): 30% tolerance (was 65%)
-  return distance <= Math.ceil(normalizedExpected.length * 0.3);
+  // LONG WORDS (7+ chars): Max 2 char difference (for speech recognition artifacts)
+  return distance <= 2;
 };
 
 /**
