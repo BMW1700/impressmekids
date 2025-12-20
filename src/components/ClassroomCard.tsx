@@ -22,7 +22,7 @@ export const ClassroomCard = ({
   createdAt 
 }: ClassroomCardProps) => {
   return (
-    <Card variant="glass" className="hover-lift group min-w-[320px]">
+    <Card variant="glass" className="hover-lift group min-w-[320px] h-full flex flex-col">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3 mb-2">
           <CardTitle className="text-xl font-black text-gradient-purple">{name}</CardTitle>
@@ -36,7 +36,7 @@ export const ClassroomCard = ({
           <CardDescription className="text-base">👨‍🏫 {teacherName}</CardDescription>
         )}
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 flex-1 flex flex-col">
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <div className="flex items-center gap-2 px-3 py-2 rounded-xl glass-card">
             <div className="icon-circle-blue w-7 h-7 flex items-center justify-center">
@@ -50,12 +50,14 @@ export const ClassroomCard = ({
             <span className="text-muted-foreground text-xs">{new Date(createdAt).toLocaleDateString()}</span>
           </div>
         </div>
-        <Button asChild variant="gradient" className="w-full shadow-glow-purple group-hover:shadow-glow-purple-lg">
-          <Link to={`/classrooms/${id}`} className="flex items-center justify-center gap-2">
-            View Classroom
-            <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-          </Link>
-        </Button>
+        <div className="mt-auto">
+          <Button asChild variant="gradient" className="w-full shadow-glow-purple group-hover:shadow-glow-purple-lg">
+            <Link to={`/classrooms/${id}`} className="flex items-center justify-center gap-2">
+              View Classroom
+              <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
