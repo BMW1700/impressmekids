@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { AuraCharacter } from "./AuraCharacter";
 import { PredictivePractice } from "./PredictivePractice";
 import { WordByWordReader } from "./WordByWordReader";
+import { SingleWordReader } from "./SingleWordReader";
+import { ReadingModeSelector, ReadingMode } from "./ReadingModeSelector";
 import { PassageCompleteCelebration } from "./PassageCompleteCelebration";
 import { ReadingResultsCard } from "./ReadingResultsCard";
 import { CuratedStory } from "@/data/curatedStories";
@@ -27,7 +29,7 @@ interface GuidedReadingFlowProps {
   screeningGradeLevel?: number;
 }
 
-type Step = 'intro' | 'practice' | 'reading' | 'celebration';
+type Step = 'intro' | 'mode-select' | 'practice' | 'reading' | 'celebration';
 
 export const GuidedReadingFlow = ({
   story,
@@ -41,15 +43,21 @@ export const GuidedReadingFlow = ({
   screeningGradeLevel,
 }: GuidedReadingFlowProps) => {
   const [currentStep, setCurrentStep] = useState<Step>('intro');
+  const [readingMode, setReadingMode] = useState<ReadingMode>('full-passage');
   const [readingStats, setReadingStats] = useState<any>(null);
   const [showCelebration, setShowCelebration] = useState(false);
   const { toast } = useToast();
 
-  const steps: Step[] = ['intro', 'practice', 'reading'];
+  const steps: Step[] = ['intro', 'mode-select', 'practice', 'reading'];
   const currentStepIndex = steps.indexOf(currentStep);
   const progress = ((currentStepIndex + 1) / steps.length) * 100;
 
   const handleIntroComplete = () => {
+    setCurrentStep('mode-select');
+  };
+
+  const handleModeSelect = (mode: ReadingMode) => {
+    setReadingMode(mode);
     setCurrentStep('practice');
   };
 
@@ -180,7 +188,7 @@ export const GuidedReadingFlow = ({
       </div>
 
       {/* Progress Indicator */}
-      {currentStep !== 'intro' && (
+      {currentStep !== 'intro' && currentStep !== 'mode-select' && (
         <div className="space-y-2">
           <div className="flex justify-between text-sm text-muted-foreground">
             <span>
@@ -255,6 +263,14 @@ export const GuidedReadingFlow = ({
           </motion.div>
         )}
 
+        {/* Mode Selection Step */}
+        {currentStep === 'mode-select' && (
+          <ReadingModeSelector
+            onSelectMode={handleModeSelect}
+            storyTitle={story.title}
+          />
+        )}
+
         {/* Practice Step */}
         {currentStep === 'practice' && (
           <motion.div
@@ -271,10 +287,10 @@ export const GuidedReadingFlow = ({
           </motion.div>
         )}
 
-        {/* Reading Step */}
-        {currentStep === 'reading' && (
+        {/* Reading Step - Full Passage Mode */}
+        {currentStep === 'reading' && readingMode === 'full-passage' && (
           <motion.div
-            key="reading"
+            key="reading-full"
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -50 }}
@@ -288,6 +304,21 @@ export const GuidedReadingFlow = ({
               screeningPassageId={screeningPassageId}
               screeningPassageTitle={screeningPassageTitle || story.title}
               screeningGradeLevel={screeningGradeLevel}
+            />
+          </motion.div>
+        )}
+
+        {/* Reading Step - Word by Word Mode */}
+        {currentStep === 'reading' && readingMode === 'word-by-word' && (
+          <motion.div
+            key="reading-single"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+          >
+            <SingleWordReader
+              passageText={story.passage_text}
+              onComplete={handleReadingComplete}
             />
           </motion.div>
         )}
