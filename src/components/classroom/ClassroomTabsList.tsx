@@ -207,14 +207,15 @@ export const ClassroomTabsList = ({
               snapshot.isDragging && "z-50"
             )}
           >
-            {/* Match normal TabsTrigger sizing exactly; just add grab cursor and disable clicks */}
-            <TabsTrigger
-              value={tabId}
-              disabled
-              className={cn("relative cursor-grab", triggerClass)}
+            {/* Plain div styled like TabsTrigger to avoid Radix RovingFocusGroup context crash */}
+            <div
+              className={cn(
+                "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium cursor-grab select-none",
+                triggerClass
+              )}
             >
               {renderTabContent(tabId)}
-            </TabsTrigger>
+            </div>
           </div>
         )}
       </Draggable>
