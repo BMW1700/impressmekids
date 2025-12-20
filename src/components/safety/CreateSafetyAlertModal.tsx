@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Building2 } from "lucide-react";
 
 interface CreateSafetyAlertModalProps {
   open: boolean;
@@ -15,21 +15,28 @@ interface CreateSafetyAlertModalProps {
   onSuccess: () => void;
 }
 
+interface School {
+  id: string;
+  name: string;
+}
+
 export function CreateSafetyAlertModal({ open, onOpenChange, onSuccess }: CreateSafetyAlertModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [userDistrict, setUserDistrict] = useState<string | null>(null);
+  const [schools, setSchools] = useState<School[]>([]);
   const [formData, setFormData] = useState({
     title: "",
     message: "",
     alert_type: "weather" as "weather" | "closing" | "drill" | "emergency" | "early_dismissal",
     severity: "info" as "info" | "warning" | "critical",
     affects_attendance: false,
+    school_id: "" as string, // Empty string means all schools
   });
 
-  // Fetch the user's district on mount
+  // Fetch the user's district and schools on mount
   useEffect(() => {
-    const fetchUserDistrict = async () => {
+    const fetchUserDistrictAndSchools = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
@@ -41,10 +48,24 @@ export function CreateSafetyAlertModal({ open, onOpenChange, onSuccess }: Create
 
       if (profile?.district_id) {
         setUserDistrict(profile.district_id);
+
+        // Fetch schools in this district
+        const { data: schoolsData } = await supabase
+          .from("schools")
+          .select("id, name")
+          .eq("district_id", profile.district_id)
+          .order("name");
+
+        if (schoolsData) {
+          setSchools(schoolsData);
+        }
       }
     };
-    fetchUserDistrict();
-  }, []);
+    
+    if (open) {
+      fetchUserDistrictAndSchools();
+    }
+  }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,17 +75,36 @@ export function CreateSafetyAlertModal({ open, onOpenChange, onSuccess }: Create
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not authenticated");
 
-      // Include district_id to scope the alert
-      const { data: alertData, error } = await supabase.from("safety_alerts").insert({
-        ...formData,
+      if (!userDistrict) {
+        throw new Error("You must be associated with a district to create alerts");
+      }
+
+      // Include district_id and optional school_id to scope the alert
+      const alertPayload: any = {
+        title: formData.title,
+        message: formData.message,
+        alert_type: formData.alert_type,
+        severity: formData.severity,
+        affects_attendance: formData.affects_attendance,
         created_by: session.user.id,
-        district_id: userDistrict
-      }).select('id').single();
+        district_id: userDistrict,
+      };
+
+      // Only include school_id if a specific school is selected
+      if (formData.school_id && formData.school_id !== "all") {
+        alertPayload.school_id = formData.school_id;
+      }
+
+      const { data: alertData, error } = await supabase
+        .from("safety_alerts")
+        .insert(alertPayload)
+        .select('id')
+        .single();
 
       if (error) throw error;
 
-      // Send emails and push notifications to parents in this district
-      const { error: sendError } = await supabase.functions.invoke('send-safety-alert', {
+      // Send emails and push notifications to parents in this district/school
+      const { error: sendError, data: sendResult } = await supabase.functions.invoke('send-safety-alert', {
         body: { alertId: alertData.id }
       });
 
@@ -76,9 +116,14 @@ export function CreateSafetyAlertModal({ open, onOpenChange, onSuccess }: Create
           variant: "destructive"
         });
       } else {
+        const details = sendResult?.details;
+        const scopeMessage = formData.school_id && formData.school_id !== "all"
+          ? "selected school"
+          : "all schools in your district";
+        
         toast({
-          title: "Alert Created",
-          description: "Safety alert has been sent to parents in your district"
+          title: "Alert Sent Successfully",
+          description: `Notified ${details?.parentsNotified || 0} parents in ${scopeMessage} (${details?.emailsSent || 0} emails, ${details?.pushSent || 0} push notifications)`
         });
       }
 
@@ -88,6 +133,7 @@ export function CreateSafetyAlertModal({ open, onOpenChange, onSuccess }: Create
         alert_type: "weather",
         severity: "info",
         affects_attendance: false,
+        school_id: "",
       });
 
       onSuccess();
@@ -112,7 +158,47 @@ export function CreateSafetyAlertModal({ open, onOpenChange, onSuccess }: Create
           </DialogTitle>
         </DialogHeader>
 
+        {!userDistrict && (
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-4">
+            <p className="text-destructive text-sm">
+              You must be associated with a district to create safety alerts.
+              Please contact your administrator.
+            </p>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* School Scope Selection */}
+          {schools.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="school" className="flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Target School
+              </Label>
+              <Select
+                value={formData.school_id || "all"}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, school_id: value === "all" ? "" : value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select school scope" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Schools in District</SelectItem>
+                  {schools.map((school) => (
+                    <SelectItem key={school.id} value={school.id}>
+                      {school.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Choose a specific school or send to all schools in your district
+              </p>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="alert_type">Alert Type</Label>
             <Select
@@ -193,7 +279,7 @@ export function CreateSafetyAlertModal({ open, onOpenChange, onSuccess }: Create
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || !userDistrict}>
               {loading ? "Sending..." : "Send Alert"}
             </Button>
           </div>
