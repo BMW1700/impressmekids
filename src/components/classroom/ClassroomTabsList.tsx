@@ -210,10 +210,7 @@ export const ClassroomTabsList = ({
               <TabsList
                 ref={provided.innerRef}
                 {...provided.droppableProps}
-                className={cn(
-                  "grid w-full h-auto p-2 bg-muted/50 rounded-xl gap-2",
-                  "grid-cols-5"
-                )}
+                className="flex flex-wrap w-full h-auto p-2 bg-muted/50 rounded-xl gap-2"
               >
                 {visibleTabs.map((tabId, index) =>
                   renderTabTrigger(tabId, index, true)
@@ -230,10 +227,7 @@ export const ClassroomTabsList = ({
   // Student view - no drag and drop
   return (
     <TabsList
-      className={cn(
-        "grid w-full h-auto p-2 bg-muted/50 rounded-xl gap-2",
-        "grid-cols-3"
-      )}
+      className="flex flex-wrap w-full h-auto p-2 bg-muted/50 rounded-xl gap-2"
     >
       {STUDENT_TABS.map((tabId, index) => renderTabTrigger(tabId, index, false))}
     </TabsList>
