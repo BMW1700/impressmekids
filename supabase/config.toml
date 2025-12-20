@@ -85,8 +85,9 @@ verify_jwt = true
 [functions.delete-user-account]
 verify_jwt = true
 
+# Allow internal server-to-server calls without JWT
 [functions.send-push-notification]
-verify_jwt = true
+verify_jwt = false
 
 [functions.send-safety-alert]
 verify_jwt = true
