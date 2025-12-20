@@ -62,23 +62,25 @@ LiquidTab.displayName = "LiquidTab"
 // Liquid glass style for tabs - clear glass inactive, purple active
 export const liquidGlassTabClass = cn(
   // Base styles
-  "relative overflow-hidden rounded-full py-2.5 px-5 text-sm font-medium transition-all duration-300",
-  // Default state - clear liquid glass effect
-  "text-foreground/80 hover:text-foreground",
-  "bg-white/5 dark:bg-white/5",
-  "border border-white/20 dark:border-white/10",
-  "shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_1px_3px_rgba(0,0,0,0.05)]",
-  "backdrop-blur-sm",
-  "hover:bg-white/10 dark:hover:bg-white/8 hover:border-white/30",
+  "relative overflow-hidden rounded-xl py-2.5 px-5 text-sm font-medium transition-all duration-300",
+  // Default state - clear liquid glass effect (like frosted glass)
+  "text-foreground/90 hover:text-foreground",
+  "bg-white/10 dark:bg-white/[0.08]",
+  "border border-white/30 dark:border-white/15",
+  "shadow-[inset_0_1px_2px_rgba(255,255,255,0.15),0_2px_8px_rgba(0,0,0,0.08)]",
+  "backdrop-blur-md",
+  "hover:bg-white/15 dark:hover:bg-white/12 hover:border-white/40 hover:shadow-[inset_0_1px_2px_rgba(255,255,255,0.2),0_4px_12px_rgba(0,0,0,0.1)]",
+  // Glass shine effect on inactive
+  "before:absolute before:inset-0 before:rounded-xl",
+  "before:bg-gradient-to-b before:from-white/20 before:via-transparent before:to-transparent",
+  "before:pointer-events-none",
   // Active state with purple gradient
   "data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:via-primary/95 data-[state=active]:to-primary/85",
   "data-[state=active]:text-primary-foreground",
-  "data-[state=active]:border-primary/50 data-[state=active]:border-b-primary/30",
-  "data-[state=active]:shadow-[0_4px_20px_rgba(168,85,247,0.35),inset_0_1px_1px_rgba(255,255,255,0.2)]",
-  // Shine overlay effect on active
-  "data-[state=active]:before:absolute data-[state=active]:before:inset-0 data-[state=active]:before:rounded-full",
-  "data-[state=active]:before:bg-gradient-to-b data-[state=active]:before:from-white/25 data-[state=active]:before:via-transparent data-[state=active]:before:to-transparent",
-  "data-[state=active]:before:pointer-events-none",
+  "data-[state=active]:border-primary/40",
+  "data-[state=active]:shadow-[0_4px_20px_hsl(var(--primary)/0.35),inset_0_1px_1px_rgba(255,255,255,0.25)]",
+  // Enhanced shine overlay on active
+  "data-[state=active]:before:bg-gradient-to-b data-[state=active]:before:from-white/30 data-[state=active]:before:via-white/5 data-[state=active]:before:to-transparent",
   // Subtle scale effects
   "hover:scale-[1.02] data-[state=active]:scale-[1.0]",
   "active:scale-[0.98]"
