@@ -583,10 +583,9 @@ export const WordByWordReader = ({
           }
           
           if (matchResult) {
-            // SUPERCHARGED V3: Only mark as instant 'correct' if confidence >= 0.8
-            // Otherwise use pending-incorrect to allow for verification
-            if (speechConfidence >= 0.8) {
-              // High confidence - direct match at current position
+            // FASTER FEEDBACK: Lower threshold to 0.6 and reduce timer to 500ms
+            if (speechConfidence >= 0.6) {
+              // High enough confidence - direct match at current position
               if (pendingIncorrectTimersRef.current.has(currentIdx)) {
                 clearTimeout(pendingIncorrectTimersRef.current.get(currentIdx));
                 pendingIncorrectTimersRef.current.delete(currentIdx);
@@ -594,7 +593,7 @@ export const WordByWordReader = ({
               newMap.set(currentIdx, 'correct');
             } else {
               // Lower confidence match - set as pending-incorrect with shorter timer
-              // Will become 'correct' after 1.5 seconds if not contradicted
+              // Will become 'correct' after 500ms if not contradicted
               newMap.set(currentIdx, 'pending-incorrect');
               
               if (!pendingIncorrectTimersRef.current.has(currentIdx)) {
@@ -610,7 +609,7 @@ export const WordByWordReader = ({
                     return updated;
                   });
                   pendingIncorrectTimersRef.current.delete(wordIdx);
-                }, 1500); // 1.5 second grace period for low-confidence matches
+                }, 500); // FASTER: 500ms grace period for low-confidence matches
                 pendingIncorrectTimersRef.current.set(currentIdx, timer);
               }
             }
@@ -644,7 +643,7 @@ export const WordByWordReader = ({
                 if (newMap.get(i) !== 'correct') {
                   newMap.set(i, 'pending-incorrect');
                   
-                  // Set up timer to convert to definitive incorrect after 3 seconds
+                  // FASTER: Convert to incorrect after 800ms (was 3 seconds)
                   if (!pendingIncorrectTimersRef.current.has(i)) {
                     const wordIdx = i;
                     const timer = setTimeout(() => {
@@ -657,7 +656,7 @@ export const WordByWordReader = ({
                         return updated;
                       });
                       pendingIncorrectTimersRef.current.delete(wordIdx);
-                    }, 3000); // 3 second grace period
+                    }, 800); // FASTER: 800ms grace period
                     pendingIncorrectTimersRef.current.set(i, timer);
                   }
                 }
@@ -665,10 +664,10 @@ export const WordByWordReader = ({
               // Mark the matched word as correct
               newMap.set(foundAhead, 'correct');
             } else {
-              // SUPERCHARGED V2: No match - mark as pending-incorrect (not definitive yet)
+              // No match - mark as pending-incorrect (not definitive yet)
               newMap.set(currentIdx, 'pending-incorrect');
               
-              // Set up timer to convert to definitive incorrect after 3 seconds
+              // FASTER: Convert to incorrect after 800ms (was 3 seconds)
               if (!pendingIncorrectTimersRef.current.has(currentIdx)) {
                 const wordIdx = currentIdx;
                 const timer = setTimeout(() => {
@@ -681,7 +680,7 @@ export const WordByWordReader = ({
                     return updated;
                   });
                   pendingIncorrectTimersRef.current.delete(wordIdx);
-                }, 3000); // 3 second grace period
+                }, 800); // FASTER: 800ms grace period
                 pendingIncorrectTimersRef.current.set(currentIdx, timer);
               }
             }
@@ -1597,7 +1596,11 @@ export const WordByWordReader = ({
       <Progress value={progress} className="h-3" />
 
       {/* Words Per Group Slider - Changeable during reading */}
-      <div className="bg-muted/30 rounded-lg p-4 space-y-3">
+      <div 
+        className="bg-muted/30 rounded-lg p-4 space-y-3"
+        onPointerDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium">Words at a time</span>
           <Badge variant="secondary" className="text-sm">
@@ -1610,7 +1613,7 @@ export const WordByWordReader = ({
           min={1}
           max={10}
           step={1}
-          className="w-full"
+          className="w-full touch-none"
         />
         <div className="flex justify-between text-xs text-muted-foreground">
           <span>1</span>
