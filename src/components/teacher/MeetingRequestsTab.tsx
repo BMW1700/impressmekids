@@ -53,7 +53,7 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
   const [notes, setNotes] = useState("");
 
   // Fetch office hours (teacher-wide, not classroom-specific)
-  const { data: officeHours = [], isLoading } = useQuery({
+  const { data: allOfficeHours = [], isLoading } = useQuery({
     queryKey: ["office-hours"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -102,6 +102,15 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
     },
   });
 
+  // Filter out office hours that have been booked
+  const officeHours = allOfficeHours.filter((hours) => {
+    return !upcomingBookings.some(
+      (booking: any) =>
+        booking.office_hours_id === hours.id &&
+        booking.booking_date === hours.specific_date &&
+        booking.start_time === hours.start_time
+    );
+  });
   // Helper to generate time slots
   const generateTimeSlots = (start: string, end: string, durationMinutes: number) => {
     const slots: { start: string; end: string }[] = [];
