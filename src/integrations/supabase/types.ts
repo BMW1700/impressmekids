@@ -5531,11 +5531,15 @@ export type Database = {
           classroom_id: string
           created_at: string
           days_of_week: string[]
+          end_date: string | null
           end_time: string
           id: string
+          is_recurring: boolean
           location: string | null
           meeting_duration_minutes: number
           notes: string | null
+          specific_date: string | null
+          start_date: string | null
           start_time: string
           teacher_id: string
           updated_at: string
@@ -5544,11 +5548,15 @@ export type Database = {
           classroom_id: string
           created_at?: string
           days_of_week: string[]
+          end_date?: string | null
           end_time: string
           id?: string
+          is_recurring?: boolean
           location?: string | null
           meeting_duration_minutes?: number
           notes?: string | null
+          specific_date?: string | null
+          start_date?: string | null
           start_time: string
           teacher_id: string
           updated_at?: string
@@ -5557,11 +5565,15 @@ export type Database = {
           classroom_id?: string
           created_at?: string
           days_of_week?: string[]
+          end_date?: string | null
           end_time?: string
           id?: string
+          is_recurring?: boolean
           location?: string | null
           meeting_duration_minutes?: number
           notes?: string | null
+          specific_date?: string | null
+          start_date?: string | null
           start_time?: string
           teacher_id?: string
           updated_at?: string

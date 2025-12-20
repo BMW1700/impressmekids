@@ -6,11 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Clock, Plus, Trash2, Calendar, Loader2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Clock, Plus, Trash2, Calendar, Loader2, Repeat } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 
 interface MeetingRequestsTabProps {
   classroomId: string;
@@ -37,7 +39,11 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
   const [showAddHours, setShowAddHours] = useState(false);
   
   // Form state
+  const [isRecurring, setIsRecurring] = useState(true);
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [specificDate, setSpecificDate] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
   const [meetingDuration, setMeetingDuration] = useState("30");
@@ -102,7 +108,11 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
       const records = slots.map(slot => ({
         classroom_id: classroomId,
         teacher_id: user.id,
-        days_of_week: selectedDays,
+        is_recurring: isRecurring,
+        days_of_week: isRecurring ? selectedDays : [],
+        specific_date: isRecurring ? null : specificDate || null,
+        start_date: isRecurring ? startDate || null : null,
+        end_date: isRecurring ? endDate || null : null,
         start_time: slot.start,
         end_time: slot.end,
         meeting_duration_minutes: durationMinutes,
@@ -147,12 +157,21 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
   });
 
   const resetForm = () => {
+    setIsRecurring(true);
     setSelectedDays([]);
+    setSpecificDate("");
+    setStartDate("");
+    setEndDate("");
     setStartTime("09:00");
     setEndTime("10:00");
     setMeetingDuration("30");
     setLocation("");
     setNotes("");
+  };
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return "";
+    return format(new Date(dateStr), "MMM d, yyyy");
   };
 
   const handleDayToggle = (day: string) => {
@@ -204,22 +223,71 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
               <DialogTitle>Add Office Hours</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label>Days of the Week</Label>
-                <div className="flex flex-wrap gap-2">
-                  {DAYS_OF_WEEK.map(day => (
-                    <Button
-                      key={day.value}
-                      type="button"
-                      variant={selectedDays.includes(day.value) ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handleDayToggle(day.value)}
-                    >
-                      {day.label.slice(0, 3)}
-                    </Button>
-                  ))}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="recurring">Recurring</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Repeat on selected days each week
+                  </p>
                 </div>
+                <Switch
+                  id="recurring"
+                  checked={isRecurring}
+                  onCheckedChange={setIsRecurring}
+                />
               </div>
+
+              {isRecurring ? (
+                <>
+                  <div className="space-y-2">
+                    <Label>Days of the Week</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {DAYS_OF_WEEK.map(day => (
+                        <Button
+                          key={day.value}
+                          type="button"
+                          variant={selectedDays.includes(day.value) ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handleDayToggle(day.value)}
+                        >
+                          {day.label.slice(0, 3)}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="start-date">Start Date</Label>
+                      <Input
+                        id="start-date"
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="end-date">End Date</Label>
+                      <Input
+                        id="end-date"
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="specific-date">Date</Label>
+                  <Input
+                    id="specific-date"
+                    type="date"
+                    value={specificDate}
+                    onChange={(e) => setSpecificDate(e.target.value)}
+                  />
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -285,7 +353,7 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
               <Button 
                 className="w-full" 
                 onClick={() => addMutation.mutate()}
-                disabled={selectedDays.length === 0 || addMutation.isPending}
+                disabled={(isRecurring ? selectedDays.length === 0 : !specificDate) || addMutation.isPending}
               >
                 {addMutation.isPending ? "Adding..." : "Add Office Hours"}
               </Button>
@@ -317,12 +385,24 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
                 <div className="flex items-start justify-between">
                   <div>
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <Calendar className="h-5 w-5 text-primary" />
-                      {formatDays(hours.days_of_week || [])}
+                      {hours.is_recurring ? (
+                        <Repeat className="h-5 w-5 text-primary" />
+                      ) : (
+                        <Calendar className="h-5 w-5 text-primary" />
+                      )}
+                      {hours.is_recurring 
+                        ? formatDays(hours.days_of_week || [])
+                        : hours.specific_date ? formatDate(hours.specific_date) : "One-time"
+                      }
                     </CardTitle>
                     <CardDescription className="mt-1 space-y-1">
                       <div>{formatTime(hours.start_time)} - {formatTime(hours.end_time)}</div>
                       <div className="text-xs">{hours.meeting_duration_minutes}-minute meetings</div>
+                      {hours.is_recurring && hours.start_date && hours.end_date && (
+                        <div className="text-xs">
+                          {formatDate(hours.start_date)} - {formatDate(hours.end_date)}
+                        </div>
+                      )}
                     </CardDescription>
                   </div>
                   <Button
