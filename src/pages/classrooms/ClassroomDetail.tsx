@@ -36,6 +36,7 @@ import { ClassroomAIInsights } from "@/components/teacher/ClassroomAIInsights";
 import { TeacherSuccessBoard } from "@/components/teacher/TeacherSuccessBoard";
 import { EditClassroomModal } from "@/components/EditClassroomModal";
 import { StudentClassroomTrends } from "@/components/StudentClassroomTrends";
+import { SingleClassroomGradebook } from "@/components/student/SingleClassroomGradebook";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSearchParams } from "react-router-dom";
@@ -1039,10 +1040,12 @@ const ClassroomDetail = () => {
                     View your current grades and performance in this class
                   </p>
                 </div>
-                <StudentClassroomTrends 
-                  classroomId={id!} 
-                  studentId={profile?.id}
-                />
+                {profile?.id && (
+                  <SingleClassroomGradebook 
+                    classroomId={id!} 
+                    studentId={profile.id}
+                  />
+                )}
               </div>
             </TabsContent>
 
