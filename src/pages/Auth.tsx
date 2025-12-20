@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -45,9 +45,6 @@ const Auth = () => {
   const [parentEmailForConsent, setParentEmailForConsent] = useState("");
   const [isUnder13, setIsUnder13] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  
-  // Ref to prevent useEffect's checkUser from interfering during signup
-  const signupInProgress = useRef(false);
   
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -104,9 +101,6 @@ const Auth = () => {
     }
     
     const checkUser = async () => {
-      // Skip verification check during signup to prevent race condition
-      if (signupInProgress.current) return;
-      
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         // Check verification status
@@ -309,7 +303,6 @@ const Auth = () => {
     }
     
     setIsLoading(true);
-    signupInProgress.current = true;
 
     try {
       // Block district_manager signups completely (hidden role)
@@ -502,9 +495,9 @@ const Auth = () => {
 
     } catch (error: any) {
       console.error('Signup error:', error);
-      signupInProgress.current = false;
       
       let errorMessage = error.message || "Failed to create account";
+      
       if (error.message?.includes('already registered') || error.message?.includes('duplicate')) {
         errorMessage = "This email is already registered. Please sign in instead.";
       } else if (error.message?.includes('password')) {
