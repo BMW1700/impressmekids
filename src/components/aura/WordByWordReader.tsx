@@ -484,11 +484,24 @@ export const WordByWordReader = ({
     
     const spokenWords = transcript.split(/\s+/).filter(w => w.length > 0);
     
-    // Only process if we have NEW words
-    if (spokenWords.length <= prevSpokenWords.length) return;
+    // FIX: Process ALL transcript changes, not just longer ones
+    // The Web Speech API often revises transcripts (e.g., "yummy" → "honey")
+    const isNewTranscript = spokenWords.length > prevSpokenWords.length;
+    const isRevisedTranscript = transcript !== lastInterimRef.current && spokenWords.length === prevSpokenWords.length;
     
-    // Get the newly spoken words
-    const newWords = spokenWords.slice(prevSpokenWords.length);
+    // Get words to process: either new words, or last 3 words if revised
+    let wordsToProcess: string[] = [];
+    let isRevisionPass = false;
+    
+    if (isNewTranscript) {
+      wordsToProcess = spokenWords.slice(prevSpokenWords.length);
+    } else if (isRevisedTranscript) {
+      // Re-check the last 3 words for corrections
+      wordsToProcess = spokenWords.slice(-3);
+      isRevisionPass = true;
+    } else {
+      return; // No change
+    }
     
     // Track speech time for cognitive load
     lastSpeechTimeRef.current = Date.now();
@@ -511,7 +524,28 @@ export const WordByWordReader = ({
         };
         
         // Process each newly spoken word
-        for (const spokenWord of newWords) {
+        for (const spokenWord of wordsToProcess) {
+          // FIX: For revision passes, check if this word corrects a pending-incorrect
+          if (isRevisionPass) {
+            // Look through pending-incorrect words for a match
+            for (let i = 0; i < words.length; i++) {
+              if (newMap.get(i) === 'pending-incorrect') {
+                if (wordMatcher(spokenWord, words[i]) || 
+                    (!isStrictMode && matchWithPhonemes(spokenWord, words[i], 0.75).isMatch)) {
+                  // Clear timer and mark correct
+                  if (pendingIncorrectTimersRef.current.has(i)) {
+                    clearTimeout(pendingIncorrectTimersRef.current.get(i));
+                    pendingIncorrectTimersRef.current.delete(i);
+                  }
+                  newMap.set(i, 'correct');
+                  console.log('REVISION CORRECTION:', spokenWord, '→', words[i]);
+                  break;
+                }
+              }
+            }
+            continue; // Don't do normal processing for revision words
+          }
+          
           let currentIdx = getFirstUnprocessedIndex();
           if (currentIdx >= words.length) break; // Done with passage
           
@@ -556,21 +590,26 @@ export const WordByWordReader = ({
             }
             newMap.set(currentIdx, 'correct');
           } else {
-            // SUPERCHARGED V2: Look ahead up to 5 positions (expanded from 2)
+            // FIX: Limit look-ahead based on speech confidence to prevent false jumps
+            const maxLookAhead = speechConfidence >= 0.85 ? 5 : 2;
             let foundAhead = -1;
-            for (let ahead = 1; ahead <= 5; ahead++) {
+            let foundAheadMatchQuality = 0; // 0 = none, 1 = phoneme, 2 = text
+            
+            for (let ahead = 1; ahead <= maxLookAhead; ahead++) {
               const aheadIdx = currentIdx + ahead;
               if (aheadIdx < words.length) {
-                // Try text match first
+                // Try text match first (higher quality)
                 if (wordMatcher(spokenWord, words[aheadIdx])) {
                   foundAhead = aheadIdx;
+                  foundAheadMatchQuality = 2;
                   break;
                 }
-                // SUPERCHARGED V2: Try phoneme match as fallback
-                if (!isStrictMode) {
-                  const phonemeResult = matchWithPhonemes(spokenWord, words[aheadIdx], 0.70);
+                // Phoneme match as fallback (lower quality, only for near matches)
+                if (!isStrictMode && ahead <= 2) { // Only phoneme match for 1-2 ahead
+                  const phonemeResult = matchWithPhonemes(spokenWord, words[aheadIdx], 0.75); // Higher threshold
                   if (phonemeResult.isMatch) {
                     foundAhead = aheadIdx;
+                    foundAheadMatchQuality = 1;
                     console.log('PHONEME LOOKAHEAD MATCH:', spokenWord, '→', words[aheadIdx]);
                     break;
                   }
@@ -579,32 +618,57 @@ export const WordByWordReader = ({
             }
             
             if (foundAhead !== -1) {
-              // SUPERCHARGED V2: Mark skipped words as pending-incorrect (not definitive)
-              for (let i = currentIdx; i < foundAhead; i++) {
-                // Only mark as pending-incorrect if not already correct
-                if (newMap.get(i) !== 'correct') {
-                  newMap.set(i, 'pending-incorrect');
-                  
-                  // Set up timer to convert to definitive incorrect after 3 seconds
-                  if (!pendingIncorrectTimersRef.current.has(i)) {
-                    const wordIdx = i;
-                    const timer = setTimeout(() => {
-                      setRealtimeWordStatus(prevStatus => {
-                        const updated = new Map(prevStatus);
-                        if (updated.get(wordIdx) === 'pending-incorrect') {
-                          updated.set(wordIdx, 'incorrect');
-                          realtimeWordStatusRef.current = updated;
-                        }
-                        return updated;
-                      });
-                      pendingIncorrectTimersRef.current.delete(wordIdx);
-                    }, 3000); // 3 second grace period
-                    pendingIncorrectTimersRef.current.set(i, timer);
+              const jumpDistance = foundAhead - currentIdx;
+              
+              // FIX: For large jumps (3+), require high-quality match AND high confidence
+              const shouldTrustJump = jumpDistance <= 2 || 
+                (jumpDistance <= 4 && foundAheadMatchQuality === 2 && speechConfidence >= 0.85);
+              
+              if (shouldTrustJump) {
+                // Mark skipped words as pending-incorrect
+                for (let i = currentIdx; i < foundAhead; i++) {
+                  if (newMap.get(i) !== 'correct') {
+                    newMap.set(i, 'pending-incorrect');
+                    
+                    if (!pendingIncorrectTimersRef.current.has(i)) {
+                      const wordIdx = i;
+                      const timer = setTimeout(() => {
+                        setRealtimeWordStatus(prevStatus => {
+                          const updated = new Map(prevStatus);
+                          if (updated.get(wordIdx) === 'pending-incorrect') {
+                            updated.set(wordIdx, 'incorrect');
+                            realtimeWordStatusRef.current = updated;
+                          }
+                          return updated;
+                        });
+                        pendingIncorrectTimersRef.current.delete(wordIdx);
+                      }, 3000);
+                      pendingIncorrectTimersRef.current.set(i, timer);
+                    }
                   }
                 }
+                newMap.set(foundAhead, 'correct');
+              } else {
+                // FIX: Don't trust large jumps - just mark current as pending-incorrect
+                console.log('REJECTED LARGE JUMP:', spokenWord, '→', words[foundAhead], 'distance:', jumpDistance, 'confidence:', speechConfidence);
+                newMap.set(currentIdx, 'pending-incorrect');
+                
+                if (!pendingIncorrectTimersRef.current.has(currentIdx)) {
+                  const wordIdx = currentIdx;
+                  const timer = setTimeout(() => {
+                    setRealtimeWordStatus(prevStatus => {
+                      const updated = new Map(prevStatus);
+                      if (updated.get(wordIdx) === 'pending-incorrect') {
+                        updated.set(wordIdx, 'incorrect');
+                        realtimeWordStatusRef.current = updated;
+                      }
+                      return updated;
+                    });
+                    pendingIncorrectTimersRef.current.delete(wordIdx);
+                  }, 3000);
+                  pendingIncorrectTimersRef.current.set(currentIdx, timer);
+                }
               }
-              // Mark the matched word as correct
-              newMap.set(foundAhead, 'correct');
             } else {
               // SUPERCHARGED V2: No match - mark as pending-incorrect (not definitive yet)
               newMap.set(currentIdx, 'pending-incorrect');
@@ -690,7 +754,7 @@ export const WordByWordReader = ({
     
     if (wordsSinceLastSound >= 3 || processedCount <= 3) {
       // Get latest result from ref after update
-      const latestNewWord = newWords[newWords.length - 1];
+      const latestNewWord = wordsToProcess[wordsToProcess.length - 1];
       const currentPos = realtimeWordIndexRef.current > 0 ? realtimeWordIndexRef.current - 1 : 0;
       const expectedWord = words[currentPos];
       
