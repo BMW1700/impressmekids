@@ -59,24 +59,60 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
     },
   });
 
+  // Helper to generate time slots
+  const generateTimeSlots = (start: string, end: string, durationMinutes: number) => {
+    const slots: { start: string; end: string }[] = [];
+    const [startHour, startMin] = start.split(":").map(Number);
+    const [endHour, endMin] = end.split(":").map(Number);
+    
+    let currentMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+    
+    while (currentMinutes + durationMinutes <= endMinutes) {
+      const slotStartHour = Math.floor(currentMinutes / 60);
+      const slotStartMin = currentMinutes % 60;
+      const slotEndMinutes = currentMinutes + durationMinutes;
+      const slotEndHour = Math.floor(slotEndMinutes / 60);
+      const slotEndMin = slotEndMinutes % 60;
+      
+      slots.push({
+        start: `${slotStartHour.toString().padStart(2, "0")}:${slotStartMin.toString().padStart(2, "0")}`,
+        end: `${slotEndHour.toString().padStart(2, "0")}:${slotEndMin.toString().padStart(2, "0")}`,
+      });
+      
+      currentMinutes += durationMinutes;
+    }
+    
+    return slots;
+  };
+
   // Add office hours mutation
   const addMutation = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      const durationMinutes = parseInt(meetingDuration);
+      const slots = generateTimeSlots(startTime, endTime, durationMinutes);
+      
+      if (slots.length === 0) {
+        throw new Error("Time range is too short for the selected meeting duration");
+      }
+
+      const records = slots.map(slot => ({
+        classroom_id: classroomId,
+        teacher_id: user.id,
+        days_of_week: selectedDays,
+        start_time: slot.start,
+        end_time: slot.end,
+        meeting_duration_minutes: durationMinutes,
+        location: location || null,
+        notes: notes || null,
+      }));
+
       const { error } = await supabase
         .from("teacher_office_hours")
-        .insert({
-          classroom_id: classroomId,
-          teacher_id: user.id,
-          days_of_week: selectedDays,
-          start_time: startTime,
-          end_time: endTime,
-          meeting_duration_minutes: parseInt(meetingDuration),
-          location: location || null,
-          notes: notes || null,
-        });
+        .insert(records);
 
       if (error) throw error;
     },
