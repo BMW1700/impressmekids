@@ -3,10 +3,13 @@
  * Dual-mode word matching for engagement (lenient) vs assessment accuracy (strict)
  * 
  * SUPERCHARGED V2: Added window-based matching, phoneme fallback, and multi-alternative support
+ * SUPERCHARGED V3: Added homophones dictionary and transcript cleanup integration
  */
 
 import { arePhonemesSimilar, phonemeDistance } from '@/lib/phonemeDistance';
 import { getIPAPronunciation } from '@/lib/cmuDictWrapper';
+import { isHomophone, getWordVariants } from '@/lib/homophones';
+import { cleanupTranscript, extractWords } from '@/lib/transcriptCleanup';
 
 // Fuzzy string matching using Levenshtein distance
 export const levenshteinDistance = (a: string, b: string): number => {
@@ -36,6 +39,10 @@ export const levenshteinDistance = (a: string, b: string): number => {
 export const normalizeWord = (word: string): string => {
   return word.toLowerCase().replace(/[^a-z0-9]/g, '');
 };
+
+// Re-export cleanup utilities for convenience
+export { cleanupTranscript, extractWords } from '@/lib/transcriptCleanup';
+export { isHomophone, getWordVariants } from '@/lib/homophones';
 
 /**
  * SUPERCHARGED: Window-based word matching
@@ -206,6 +213,8 @@ export const findWordInFullTranscript = (
 /**
  * LENIENT word matching - for daily practice (engagement mode)
  * Prioritizes student confidence over strict accuracy
+ * 
+ * SUPERCHARGED V3: Homophones checked FIRST before fuzzy matching
  */
 export const isWordMatchLenient = (spoken: string, expected: string): boolean => {
   const normalizedSpoken = normalizeWord(spoken);
@@ -217,6 +226,13 @@ export const isWordMatchLenient = (spoken: string, expected: string): boolean =>
   // Empty check - no speech = not correct
   if (!normalizedSpoken) return false;
   if (!normalizedExpected) return false;
+  
+  // SUPERCHARGED V3: Check homophones FIRST (before fuzzy matching)
+  // This catches "the" → "da", "to" → "two", etc.
+  if (isHomophone(normalizedSpoken, normalizedExpected)) {
+    console.log('🎯 HOMOPHONE MATCH:', normalizedSpoken, '→', normalizedExpected);
+    return true;
+  }
   
   const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
   
@@ -237,6 +253,8 @@ export const isWordMatchLenient = (spoken: string, expected: string): boolean =>
 /**
  * STRICT word matching - for benchmark assessments (accuracy mode)
  * DIBELS-quality accuracy for formal assessment
+ * 
+ * SUPERCHARGED V3: Also checks homophones (true homophones are valid even in strict mode)
  */
 export const isWordMatchStrict = (spoken: string, expected: string): boolean => {
   const normalizedSpoken = normalizeWord(spoken);
@@ -248,6 +266,23 @@ export const isWordMatchStrict = (spoken: string, expected: string): boolean => 
   // Empty check - if no speech, mark as incorrect in strict mode
   if (!normalizedSpoken) return false;
   if (!normalizedExpected) return false;
+  
+  // SUPERCHARGED V3: Check TRUE homophones (to/two/too are valid even in strict mode)
+  // But NOT children's speech variants like "da" for "the"
+  if (isHomophone(normalizedSpoken, normalizedExpected)) {
+    // In strict mode, only accept true homophones (not speech pattern variants)
+    const trueHomophones = ['to', 'two', 'too', 'for', 'four', 'their', 'there', "they're", 
+                           'your', "you're", 'its', "it's", 'know', 'no', 'new', 'knew',
+                           'right', 'write', 'here', 'hear', 'see', 'sea', 'be', 'bee',
+                           'by', 'buy', 'bye', 'one', 'won', 'eight', 'ate', 'sun', 'son',
+                           'some', 'sum', 'pair', 'pear', 'peace', 'piece', 'tail', 'tale',
+                           'mail', 'male', 'sail', 'sale', 'made', 'maid', 'plain', 'plane',
+                           'role', 'roll', 'hole', 'whole', 'dear', 'deer', 'bare', 'bear',
+                           'hair', 'hare', 'fair', 'fare', 'stair', 'stare', 'knight', 'night'];
+    if (trueHomophones.includes(normalizedExpected) || trueHomophones.includes(normalizedSpoken)) {
+      return true;
+    }
+  }
   
   // SHORT WORDS (1-3 chars): Max 1 character difference allowed
   if (normalizedExpected.length <= 3) {
