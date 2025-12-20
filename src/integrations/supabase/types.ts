@@ -5534,6 +5534,7 @@ export type Database = {
           end_time: string
           id: string
           location: string | null
+          meeting_duration_minutes: number
           notes: string | null
           start_time: string
           teacher_id: string
@@ -5546,6 +5547,7 @@ export type Database = {
           end_time: string
           id?: string
           location?: string | null
+          meeting_duration_minutes?: number
           notes?: string | null
           start_time: string
           teacher_id: string
@@ -5558,6 +5560,7 @@ export type Database = {
           end_time?: string
           id?: string
           location?: string | null
+          meeting_duration_minutes?: number
           notes?: string | null
           start_time?: string
           teacher_id?: string

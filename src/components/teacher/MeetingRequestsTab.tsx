@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Clock, Plus, Trash2, Calendar, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -23,6 +24,14 @@ const DAYS_OF_WEEK = [
   { value: "friday", label: "Friday" },
 ];
 
+const MEETING_DURATIONS = [
+  { value: "15", label: "15 minutes" },
+  { value: "20", label: "20 minutes" },
+  { value: "30", label: "30 minutes" },
+  { value: "45", label: "45 minutes" },
+  { value: "60", label: "1 hour" },
+];
+
 export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => {
   const queryClient = useQueryClient();
   const [showAddHours, setShowAddHours] = useState(false);
@@ -31,6 +40,7 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
+  const [meetingDuration, setMeetingDuration] = useState("30");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -63,6 +73,7 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
           days_of_week: selectedDays,
           start_time: startTime,
           end_time: endTime,
+          meeting_duration_minutes: parseInt(meetingDuration),
           location: location || null,
           notes: notes || null,
         });
@@ -103,6 +114,7 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
     setSelectedDays([]);
     setStartTime("09:00");
     setEndTime("10:00");
+    setMeetingDuration("30");
     setLocation("");
     setNotes("");
   };
@@ -195,6 +207,25 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="meeting-duration">Meeting Duration</Label>
+                <Select value={meetingDuration} onValueChange={setMeetingDuration}>
+                  <SelectTrigger id="meeting-duration">
+                    <SelectValue placeholder="Select duration" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MEETING_DURATIONS.map(duration => (
+                      <SelectItem key={duration.value} value={duration.value}>
+                        {duration.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Your availability will be divided into {meetingDuration}-minute slots
+                </p>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="location">Location (Optional)</Label>
                 <Input
                   id="location"
@@ -253,8 +284,9 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
                       <Calendar className="h-5 w-5 text-primary" />
                       {formatDays(hours.days_of_week || [])}
                     </CardTitle>
-                    <CardDescription className="mt-1">
-                      {formatTime(hours.start_time)} - {formatTime(hours.end_time)}
+                    <CardDescription className="mt-1 space-y-1">
+                      <div>{formatTime(hours.start_time)} - {formatTime(hours.end_time)}</div>
+                      <div className="text-xs">{hours.meeting_duration_minutes}-minute meetings</div>
                     </CardDescription>
                   </div>
                   <Button
