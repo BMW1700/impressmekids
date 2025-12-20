@@ -23,6 +23,8 @@ interface School {
 export function CreateSafetyAlertModal({ open, onOpenChange, onSuccess }: CreateSafetyAlertModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [fetchingDistrict, setFetchingDistrict] = useState(false);
+  const [districtError, setDistrictError] = useState<string | null>(null);
   const [userDistrict, setUserDistrict] = useState<string | null>(null);
   const [schools, setSchools] = useState<School[]>([]);
   const [formData, setFormData] = useState({
@@ -37,28 +39,55 @@ export function CreateSafetyAlertModal({ open, onOpenChange, onSuccess }: Create
   // Fetch the user's district and schools on mount
   useEffect(() => {
     const fetchUserDistrictAndSchools = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      setFetchingDistrict(true);
+      setDistrictError(null);
+      setUserDistrict(null);
+      setSchools([]);
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("district_id")
-        .eq("id", session.user.id)
-        .single();
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          setDistrictError("You must be logged in to create alerts");
+          return;
+        }
 
-      if (profile?.district_id) {
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("district_id")
+          .eq("id", session.user.id)
+          .single();
+
+        if (profileError) {
+          console.error("Error fetching profile:", profileError);
+          setDistrictError("Failed to load your profile. Please try again.");
+          return;
+        }
+
+        if (!profile?.district_id) {
+          setDistrictError("You must be associated with a district to create safety alerts. Please contact your administrator.");
+          return;
+        }
+
         setUserDistrict(profile.district_id);
 
         // Fetch schools in this district
-        const { data: schoolsData } = await supabase
+        const { data: schoolsData, error: schoolsError } = await supabase
           .from("schools")
           .select("id, name")
           .eq("district_id", profile.district_id)
           .order("name");
 
-        if (schoolsData) {
+        if (schoolsError) {
+          console.error("Error fetching schools:", schoolsError);
+          // Non-fatal - can still create district-wide alerts
+        } else if (schoolsData) {
           setSchools(schoolsData);
         }
+      } catch (err) {
+        console.error("Error in fetchUserDistrictAndSchools:", err);
+        setDistrictError("An unexpected error occurred. Please try again.");
+      } finally {
+        setFetchingDistrict(false);
       }
     };
     
@@ -158,12 +187,16 @@ export function CreateSafetyAlertModal({ open, onOpenChange, onSuccess }: Create
           </DialogTitle>
         </DialogHeader>
 
-        {!userDistrict && (
+        {fetchingDistrict && (
+          <div className="bg-muted/50 border rounded-lg p-4 mb-4 flex items-center gap-2">
+            <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+            <p className="text-muted-foreground text-sm">Loading your district information...</p>
+          </div>
+        )}
+
+        {districtError && !fetchingDistrict && (
           <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-4">
-            <p className="text-destructive text-sm">
-              You must be associated with a district to create safety alerts.
-              Please contact your administrator.
-            </p>
+            <p className="text-destructive text-sm">{districtError}</p>
           </div>
         )}
 
@@ -279,8 +312,8 @@ export function CreateSafetyAlertModal({ open, onOpenChange, onSuccess }: Create
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || !userDistrict}>
-              {loading ? "Sending..." : "Send Alert"}
+            <Button type="submit" disabled={loading || fetchingDistrict || !userDistrict}>
+              {loading ? "Sending..." : fetchingDistrict ? "Loading..." : "Send Alert"}
             </Button>
           </div>
         </form>
