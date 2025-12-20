@@ -115,7 +115,11 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
     setTimeout(() => {
       setFeedback(null);
       setAttempts(0);
-      setCurrentIndex(prev => prev + 1);
+      setCurrentIndex(prev => {
+        const next = prev + 1;
+        currentIndexRef.current = next; // keep ref in sync immediately
+        return next;
+      });
       isProcessingRef.current = false;
     }, 350);
   }, [correctStreak, cleanWord, attempts]);
@@ -146,11 +150,15 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
       attempts: attempts,
       skipped: true,
     }]);
-    
+
     setCorrectStreak(0);
     setFeedback(null);
     setAttempts(0);
-    setCurrentIndex(prev => prev + 1);
+    setCurrentIndex(prev => {
+      const next = prev + 1;
+      currentIndexRef.current = next; // keep ref in sync immediately
+      return next;
+    });
   }, [words, cleanWord, attempts]);
 
   const startContinuousListening = useCallback(() => {
