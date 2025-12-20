@@ -864,3 +864,14 @@ All colors MUST be HSL.
 .progress-pink [data-state="complete"] {
   background: linear-gradient(90deg, hsl(330 81% 60%), hsl(340 82% 65%));
 }
+
+/* SUPERCHARGED V2: Pending-incorrect word styling (grace period before definitively wrong) */
+.word-pending-incorrect {
+  @apply text-orange-500 dark:text-orange-400;
+  animation: pending-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pending-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
