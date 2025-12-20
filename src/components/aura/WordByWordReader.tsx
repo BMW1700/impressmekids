@@ -1370,6 +1370,8 @@ export const WordByWordReader = ({
         className += 'bg-gradient-to-br from-green-400 to-green-600 text-white shadow-lg shadow-green-500/50 scale-105 hover:scale-110';
       } else if (status === 'incorrect') {
         className += 'bg-gradient-to-br from-red-400 to-red-600 text-white shadow-lg shadow-red-500/50 scale-105 hover:scale-110';
+      } else if (status === 'pending-incorrect') {
+        className += 'word-pending-incorrect bg-gradient-to-br from-orange-300 to-orange-500 text-white shadow-md shadow-orange-500/40 scale-102 hover:scale-105';
       } else if (status === 'current' || idx === realtimeWordIndex) {
         className += 'bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-400 text-white font-bold ring-4 ring-primary ring-offset-2 animate-pulse scale-110 shadow-2xl shadow-yellow-500/50 hover:scale-115';
       } else {
