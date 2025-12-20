@@ -108,20 +108,15 @@ export const ClassroomTabsList = ({
     reorderTabs(items);
   };
 
-  const renderTabTrigger = (
-    tabId: string,
-    index: number,
-    isDraggable: boolean
-  ) => {
+  const renderTabContent = (tabId: string) => {
     const config = TAB_CONFIG[tabId];
     if (!config) {
-      // Handle student-only tabs like "trends"
       if (tabId === "trends") {
         return (
-          <TabsTrigger key={tabId} value={tabId} className={triggerClass}>
+          <>
             <BarChart3 className="mr-2 h-4 w-4" />
             Trends
-          </TabsTrigger>
+          </>
         );
       }
       return null;
@@ -130,13 +125,8 @@ export const ClassroomTabsList = ({
     const Icon = config.icon;
     const isParentRequests = tabId === "parent-requests";
 
-    const trigger = (
-      <TabsTrigger
-        key={tabId}
-        value={tabId}
-        className={cn("relative", triggerClass, isDraggable && isOrganizing && "cursor-grab")}
-        disabled={isOrganizing}
-      >
+    return (
+      <>
         <Icon className="mr-2 h-4 w-4" />
         {config.label}
         {isParentRequests && pendingCount > 0 && (
@@ -147,8 +137,17 @@ export const ClassroomTabsList = ({
             {pendingCount}
           </Badge>
         )}
-      </TabsTrigger>
+      </>
     );
+  };
+
+  const renderTabTrigger = (
+    tabId: string,
+    index: number,
+    isDraggable: boolean
+  ) => {
+    const config = TAB_CONFIG[tabId];
+    if (!config && tabId !== "trends") return null;
 
     if (isDraggable && isOrganizing) {
       return (
@@ -158,18 +157,54 @@ export const ClassroomTabsList = ({
               ref={provided.innerRef}
               {...provided.draggableProps}
               {...provided.dragHandleProps}
+              style={provided.draggableProps.style}
               className={cn(
-                snapshot.isDragging && "opacity-80 scale-105"
+                "transition-transform duration-200 ease-out",
+                snapshot.isDragging && "z-50 scale-105 shadow-lg"
               )}
             >
-              {trigger}
+              <TabsTrigger
+                value={tabId}
+                className={cn("relative cursor-grab", triggerClass)}
+                disabled
+              >
+                {renderTabContent(tabId)}
+              </TabsTrigger>
             </div>
           )}
         </Draggable>
       );
     }
 
-    return trigger;
+    return (
+      <TabsTrigger
+        key={tabId}
+        value={tabId}
+        className={cn("relative", triggerClass)}
+      >
+        {renderTabContent(tabId)}
+      </TabsTrigger>
+    );
+  };
+
+  const renderClone = (provided: any, snapshot: any, rubric: any) => {
+    const tabId = visibleTabs[rubric.source.index];
+    return (
+      <div
+        ref={provided.innerRef}
+        {...provided.draggableProps}
+        {...provided.dragHandleProps}
+        className="z-50 scale-105 shadow-lg"
+      >
+        <TabsTrigger
+          value={tabId}
+          className={cn("relative cursor-grabbing", triggerClass)}
+          disabled
+        >
+          {renderTabContent(tabId)}
+        </TabsTrigger>
+      </div>
+    );
   };
 
   if (isTeacher) {
@@ -205,12 +240,16 @@ export const ClassroomTabsList = ({
         </div>
 
         <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="tabs" direction="horizontal">
+          <Droppable 
+            droppableId="tabs" 
+            direction="horizontal"
+            renderClone={renderClone}
+          >
             {(provided) => (
               <TabsList
                 ref={provided.innerRef}
                 {...provided.droppableProps}
-                className="flex flex-wrap w-full h-auto p-2 bg-muted/50 rounded-xl gap-2"
+                className="grid grid-cols-5 w-full h-auto p-2 bg-muted/50 rounded-xl gap-2"
               >
                 {visibleTabs.map((tabId, index) =>
                   renderTabTrigger(tabId, index, true)
@@ -226,9 +265,7 @@ export const ClassroomTabsList = ({
 
   // Student view - no drag and drop
   return (
-    <TabsList
-      className="flex flex-wrap w-full h-auto p-2 bg-muted/50 rounded-xl gap-2"
-    >
+    <TabsList className="grid grid-cols-3 w-full h-auto p-2 bg-muted/50 rounded-xl gap-2">
       {STUDENT_TABS.map((tabId, index) => renderTabTrigger(tabId, index, false))}
     </TabsList>
   );
