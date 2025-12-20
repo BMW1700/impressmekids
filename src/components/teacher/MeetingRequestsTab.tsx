@@ -102,12 +102,11 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
     },
   });
 
-  // Filter out office hours that have been booked
+  // Filter out office hours that have been booked (match by office_hours_id and start_time)
   const officeHours = allOfficeHours.filter((hours) => {
     return !upcomingBookings.some(
       (booking: any) =>
         booking.office_hours_id === hours.id &&
-        booking.booking_date === hours.specific_date &&
         booking.start_time === hours.start_time
     );
   });
