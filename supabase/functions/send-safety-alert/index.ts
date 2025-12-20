@@ -54,11 +54,11 @@ serve(async (req) => {
           subject: `[${alert.severity.toUpperCase()}] ${alert.title}`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background-color: ${
-                alert.severity === "critical" ? "#dc2626" : 
-                alert.severity === "high" ? "#ea580c" : 
-                alert.severity === "medium" ? "#ca8a04" : "#3b82f6"
-              }; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+               <div style="background-color: ${
+                 alert.severity === "critical" ? "#dc2626" :
+                 alert.severity === "warning" ? "#ea580c" :
+                 alert.severity === "info" ? "#3b82f6" : "#3b82f6"
+               }; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
                 <h1 style="margin: 0; font-size: 24px;">Safety Alert</h1>
                 <p style="margin: 5px 0 0 0; opacity: 0.9;">Severity: ${alert.severity.toUpperCase()}</p>
               </div>

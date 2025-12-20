@@ -21,9 +21,9 @@ export function CreateSafetyAlertModal({ open, onOpenChange, onSuccess }: Create
   const [formData, setFormData] = useState({
     title: "",
     message: "",
-    alert_type: "weather",
-    severity: "medium",
-    affects_attendance: false
+    alert_type: "weather" as "weather" | "closing" | "drill" | "emergency" | "early_dismissal",
+    severity: "info" as "info" | "warning" | "critical",
+    affects_attendance: false,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,8 +50,8 @@ export function CreateSafetyAlertModal({ open, onOpenChange, onSuccess }: Create
         title: "",
         message: "",
         alert_type: "weather",
-        severity: "medium",
-        affects_attendance: false
+        severity: "info",
+        affects_attendance: false,
       });
 
       onSuccess();
@@ -81,17 +81,19 @@ export function CreateSafetyAlertModal({ open, onOpenChange, onSuccess }: Create
             <Label htmlFor="alert_type">Alert Type</Label>
             <Select
               value={formData.alert_type}
-              onValueChange={(value) => setFormData({ ...formData, alert_type: value })}
+              onValueChange={(value) =>
+                setFormData({ ...formData, alert_type: value as typeof formData.alert_type })
+              }
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="weather">Weather</SelectItem>
-                <SelectItem value="closure">School Closure</SelectItem>
+                <SelectItem value="closing">School Closure</SelectItem>
                 <SelectItem value="drill">Drill</SelectItem>
                 <SelectItem value="emergency">Emergency</SelectItem>
-                <SelectItem value="dismissal">Early Dismissal</SelectItem>
+                <SelectItem value="early_dismissal">Early Dismissal</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -100,16 +102,17 @@ export function CreateSafetyAlertModal({ open, onOpenChange, onSuccess }: Create
             <Label htmlFor="severity">Severity Level</Label>
             <Select
               value={formData.severity}
-              onValueChange={(value) => setFormData({ ...formData, severity: value })}
+              onValueChange={(value) =>
+                setFormData({ ...formData, severity: value as typeof formData.severity })
+              }
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="low">Low - Informational</SelectItem>
-                <SelectItem value="medium">Medium - Important</SelectItem>
-                <SelectItem value="high">High - Urgent</SelectItem>
-                <SelectItem value="critical">Critical - Emergency</SelectItem>
+                <SelectItem value="info">Informational</SelectItem>
+                <SelectItem value="warning">Warning</SelectItem>
+                <SelectItem value="critical">Critical</SelectItem>
               </SelectContent>
             </Select>
           </div>
