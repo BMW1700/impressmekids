@@ -1,3 +1,4 @@
+import type React from "react";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -65,6 +66,18 @@ const STUDENT_TABS = [
   "discussions",
 ];
 
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  if (size <= 0) return [arr];
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+function parseRowId(droppableId: string): number {
+  const m = droppableId.match(/^tabs-row-(\d+)$/);
+  return m ? Number(m[1]) : 0;
+}
+
 export const ClassroomTabsList = ({
   classroomId,
   isTeacher,
@@ -84,8 +97,8 @@ export const ClassroomTabsList = ({
   const triggerClass = liquidGlassTabClass;
 
   // Filter tabs based on enabled features (for teacher)
-  const getVisibleTeacherTabs = () => {
-    return orderedTabs.filter((tabId) => {
+  const getVisibleTeacherTabs = (): string[] => {
+    return orderedTabs.filter((tabId: string) => {
       const config = TAB_CONFIG[tabId];
       if (!config) return false;
       if (config.isToolkit) {
@@ -95,17 +108,45 @@ export const ClassroomTabsList = ({
     });
   };
 
-  const visibleTabs = isTeacher ? getVisibleTeacherTabs() : STUDENT_TABS;
+  const visibleTeacherTabs = getVisibleTeacherTabs();
+  const visibleTabs = isTeacher ? visibleTeacherTabs : STUDENT_TABS;
   const pendingCount = parentRequests.filter((r) => r.status === "pending").length;
 
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
 
-    const items = Array.from(orderedTabs);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
+    // Only used for teacher organizing
+    const cols = 5;
+    const srcRow = parseRowId(result.source.droppableId);
+    const dstRow = parseRowId(result.destination.droppableId);
 
-    reorderTabs(items);
+    const sourceIndex = srcRow * cols + result.source.index;
+    const destIndex = dstRow * cols + result.destination.index;
+
+    const currentVisible = visibleTeacherTabs;
+    if (sourceIndex < 0 || sourceIndex >= currentVisible.length) return;
+
+    const nextVisible = Array.from(currentVisible);
+    const [moved] = nextVisible.splice(sourceIndex, 1);
+
+    const safeDest = Math.max(0, Math.min(destIndex, nextVisible.length));
+    nextVisible.splice(safeDest, 0, moved);
+
+    // Rebuild the full orderedTabs by only reordering the visible tabs in-place,
+    // preserving the relative positions of any hidden/disabled tabs.
+    const visibleSet = new Set(currentVisible);
+    const visiblePositions: number[] = [];
+    orderedTabs.forEach((id, idx) => {
+      if (visibleSet.has(id)) visiblePositions.push(idx);
+    });
+
+    const nextOrdered = Array.from(orderedTabs);
+    let v = 0;
+    for (const pos of visiblePositions) {
+      nextOrdered[pos] = nextVisible[v++];
+    }
+
+    reorderTabs(nextOrdered);
   };
 
   const renderTabContent = (tabId: string) => {
@@ -141,77 +182,55 @@ export const ClassroomTabsList = ({
     );
   };
 
-  const renderTabTrigger = (
-    tabId: string,
-    index: number,
-    isDraggable: boolean
-  ) => {
+  const renderTabTrigger = (tabId: string) => {
     const config = TAB_CONFIG[tabId];
     if (!config && tabId !== "trends") return null;
 
-    if (isDraggable && isOrganizing) {
-      return (
-        <Draggable key={tabId} draggableId={tabId} index={index}>
-          {(provided, snapshot) => (
-            <div
-              ref={provided.innerRef}
-              {...provided.draggableProps}
-              {...provided.dragHandleProps}
-              style={provided.draggableProps.style}
-              className={cn(
-                "transition-transform duration-200 ease-out",
-                snapshot.isDragging && "z-50 scale-105 shadow-lg"
-              )}
-            >
-              <TabsTrigger
-                value={tabId}
-                className={cn("relative cursor-grab", triggerClass)}
-                disabled
-              >
-                {renderTabContent(tabId)}
-              </TabsTrigger>
-            </div>
-          )}
-        </Draggable>
-      );
-    }
-
     return (
-      <TabsTrigger
-        key={tabId}
-        value={tabId}
-        className={cn("relative", triggerClass)}
-      >
+      <TabsTrigger key={tabId} value={tabId} className={cn("relative", triggerClass)}>
         {renderTabContent(tabId)}
       </TabsTrigger>
     );
   };
 
-  const renderClone = (provided: any, snapshot: any, rubric: any) => {
-    const tabId = visibleTabs[rubric.source.index];
-
-    // IMPORTANT: the clone is rendered in a portal outside the Tabs roving-focus context.
-    // Rendering <TabsTrigger /> here will crash (RovingFocusGroupItem must be within RovingFocusGroup).
+  const renderOrganizeTile = (tabId: string, index: number) => {
     return (
-      <div
-        ref={provided.innerRef}
-        {...provided.draggableProps}
-        {...provided.dragHandleProps}
-        className={cn(
-          "z-50 scale-105 shadow-lg",
-          // mimic the trigger styling without using Radix Tabs primitives
-          "relative flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium",
-          triggerClass
+      <Draggable key={tabId} draggableId={tabId} index={index}>
+        {(provided, snapshot) => (
+          <div
+            ref={provided.innerRef}
+            {...provided.draggableProps}
+            {...provided.dragHandleProps}
+            style={{
+              ...provided.draggableProps.style,
+              width: "100%",
+            }}
+            className={cn(
+              "min-w-0 transition-transform duration-200 ease-out",
+              snapshot.isDragging && "z-50 scale-[1.02]"
+            )}
+          >
+            {/* Use plain div to avoid Radix roving-focus issues during drag */}
+            <div
+              className={cn(
+                "relative flex h-12 w-full select-none items-center justify-center whitespace-nowrap rounded-md px-3 text-sm font-medium",
+                "cursor-grab",
+                triggerClass
+              )}
+              aria-hidden="true"
+            >
+              {renderTabContent(tabId)}
+            </div>
+          </div>
         )}
-        // don't allow the clone to steal clicks/focus
-        aria-hidden="true"
-      >
-        {renderTabContent(tabId)}
-      </div>
+      </Draggable>
     );
   };
 
   if (isTeacher) {
+    const cols = 5;
+    const rows = chunkArray(visibleTeacherTabs, cols);
+
     return (
       <div className="relative">
         {/* Organize/Save button - top right, small text */}
@@ -243,26 +262,41 @@ export const ClassroomTabsList = ({
           )}
         </div>
 
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable 
-            droppableId="tabs" 
-            direction="horizontal"
-            renderClone={renderClone}
-          >
-            {(provided) => (
-              <TabsList
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-                className="grid grid-cols-5 w-full h-auto p-2 bg-muted/50 rounded-xl gap-2"
-              >
-                {visibleTabs.map((tabId, index) =>
-                  renderTabTrigger(tabId, index, true)
-                )}
-                {provided.placeholder}
-              </TabsList>
-            )}
-          </Droppable>
-        </DragDropContext>
+        {isOrganizing ? (
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <div className="w-full rounded-xl bg-muted/50 p-2 overflow-x-hidden">
+              <div className="grid gap-2">
+                {rows.map((rowTabs, rowIndex) => (
+                  <Droppable
+                    key={rowIndex}
+                    droppableId={`tabs-row-${rowIndex}`}
+                    direction="horizontal"
+                  >
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className={cn(
+                          "grid grid-cols-5 gap-2",
+                          snapshot.isDraggingOver && "rounded-lg"
+                        )}
+                      >
+                        {rowTabs.map((tabId, colIndex) =>
+                          renderOrganizeTile(tabId, colIndex)
+                        )}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                ))}
+              </div>
+            </div>
+          </DragDropContext>
+        ) : (
+          <TabsList className="grid grid-cols-5 w-full h-auto p-2 bg-muted/50 rounded-xl gap-2">
+            {visibleTeacherTabs.map((tabId) => renderTabTrigger(tabId))}
+          </TabsList>
+        )}
       </div>
     );
   }
@@ -270,7 +304,7 @@ export const ClassroomTabsList = ({
   // Student view - no drag and drop
   return (
     <TabsList className="grid grid-cols-3 w-full h-auto p-2 bg-muted/50 rounded-xl gap-2">
-      {STUDENT_TABS.map((tabId, index) => renderTabTrigger(tabId, index, false))}
+      {STUDENT_TABS.map((tabId) => renderTabTrigger(tabId))}
     </TabsList>
   );
 };
