@@ -5528,7 +5528,6 @@ export type Database = {
       }
       teacher_office_hours: {
         Row: {
-          classroom_id: string
           created_at: string
           days_of_week: string[]
           end_date: string | null
@@ -5545,7 +5544,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          classroom_id: string
           created_at?: string
           days_of_week: string[]
           end_date?: string | null
@@ -5562,7 +5560,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          classroom_id?: string
           created_at?: string
           days_of_week?: string[]
           end_date?: string | null
@@ -5579,13 +5576,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "teacher_office_hours_classroom_id_fkey"
-            columns: ["classroom_id"]
-            isOneToOne: false
-            referencedRelation: "classrooms"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "teacher_office_hours_teacher_id_fkey"
             columns: ["teacher_id"]
