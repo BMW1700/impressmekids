@@ -98,6 +98,12 @@ export const ClassroomTabsList = ({
   const visibleTabs = isTeacher ? getVisibleTeacherTabs() : STUDENT_TABS;
   const pendingCount = parentRequests.filter((r) => r.status === "pending").length;
 
+  // Keep a strict visual grid (5 columns teacher / 3 columns student) while still using flex-wrap
+  // so the drag-and-drop placeholder can "push" items apart.
+  const tabItemStyle: React.CSSProperties = isTeacher
+    ? { flex: "0 0 calc(20% - 0.5rem)", maxWidth: "calc(20% - 0.5rem)" }
+    : { flex: "0 0 calc(33.333% - 0.5rem)", maxWidth: "calc(33.333% - 0.5rem)" };
+
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
 
@@ -157,14 +163,15 @@ export const ClassroomTabsList = ({
               ref={provided.innerRef}
               {...provided.draggableProps}
               {...provided.dragHandleProps}
-              style={provided.draggableProps.style}
-              className={cn(
-                snapshot.isDragging && "z-50 opacity-90"
-              )}
+              style={{
+                ...provided.draggableProps.style,
+                ...tabItemStyle,
+              }}
+              className={cn("shrink-0", snapshot.isDragging && "z-50 opacity-90")}
             >
               <TabsTrigger
                 value={tabId}
-                className={cn("relative cursor-grab", triggerClass)}
+                className={cn("relative w-full min-w-0 cursor-grab", triggerClass)}
                 disabled
               >
                 {renderTabContent(tabId)}
@@ -179,7 +186,8 @@ export const ClassroomTabsList = ({
       <TabsTrigger
         key={tabId}
         value={tabId}
-        className={cn("relative", triggerClass)}
+        style={tabItemStyle}
+        className={cn("relative w-full min-w-0", triggerClass)}
       >
         {renderTabContent(tabId)}
       </TabsTrigger>
@@ -196,13 +204,13 @@ export const ClassroomTabsList = ({
         ref={provided.innerRef}
         {...provided.draggableProps}
         {...provided.dragHandleProps}
+        style={tabItemStyle}
         className={cn(
-          "z-50 scale-105 shadow-lg",
+          "pointer-events-none shrink-0 z-50 scale-105 shadow-lg",
           // mimic the trigger styling without using Radix Tabs primitives
           "relative flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium",
           triggerClass
         )}
-        // don't allow the clone to steal clicks/focus
         aria-hidden="true"
       >
         {renderTabContent(tabId)}
