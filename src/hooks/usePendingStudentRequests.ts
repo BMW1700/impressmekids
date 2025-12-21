@@ -22,32 +22,13 @@ export const usePendingStudentRequests = (classroomId: string | undefined) => {
       if (!classroomId) return [];
 
       const { data, error } = await supabase
-        .from("classroom_join_requests")
-        .select("*")
-        .eq("classroom_id", classroomId)
-        .eq("status", "pending")
-        .order("requested_at", { ascending: false });
+        .rpc("get_pending_join_requests", {
+          _classroom_id: classroomId,
+        });
 
       if (error) throw error;
 
-      // Fetch student names for each request
-      const enrichedRequests = await Promise.all(
-        (data || []).map(async (request) => {
-          const { data: studentData } = await supabase
-            .from("profiles")
-            .select("full_name, email")
-            .eq("id", request.student_id)
-            .single();
-
-          return {
-            ...request,
-            student_name: studentData?.full_name || "Unknown Student",
-            student_email: studentData?.email || "",
-          };
-        })
-      );
-
-      return enrichedRequests as PendingStudentRequest[];
+      return (data || []) as PendingStudentRequest[];
     },
     enabled: !!classroomId,
   });
