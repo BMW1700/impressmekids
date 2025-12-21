@@ -1679,9 +1679,11 @@ export type Database = {
           created_at: string | null
           created_by: string
           description: string | null
+          due_date: string | null
           id: string
           is_locked: boolean | null
           is_pinned: boolean | null
+          is_posted: boolean
           title: string
           updated_at: string | null
         }
@@ -1690,9 +1692,11 @@ export type Database = {
           created_at?: string | null
           created_by: string
           description?: string | null
+          due_date?: string | null
           id?: string
           is_locked?: boolean | null
           is_pinned?: boolean | null
+          is_posted?: boolean
           title: string
           updated_at?: string | null
         }
@@ -1701,9 +1705,11 @@ export type Database = {
           created_at?: string | null
           created_by?: string
           description?: string | null
+          due_date?: string | null
           id?: string
           is_locked?: boolean | null
           is_pinned?: boolean | null
+          is_posted?: boolean
           title?: string
           updated_at?: string | null
         }
