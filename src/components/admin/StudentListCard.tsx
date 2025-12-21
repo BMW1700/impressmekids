@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { School, Users, Building, Hash } from "lucide-react";
+import { School, Users, Building, Hash, Pencil } from "lucide-react";
 
 interface StudentListCardProps {
   student: {
@@ -17,25 +17,35 @@ interface StudentListCardProps {
   onViewClassrooms: (studentId: string, studentName: string) => void;
   onViewParents: (studentId: string, studentName: string) => void;
   onConnectToSchool?: (userId: string, userName: string, currentSchoolId?: string | null) => void;
+  onEditStudentId?: (studentId: string, studentName: string, currentStudentIdNumber: string | null) => void;
 }
 
 export const StudentListCard = ({ 
   student, 
   onViewClassrooms, 
   onViewParents,
-  onConnectToSchool 
+  onConnectToSchool,
+  onEditStudentId
 }: StudentListCardProps) => {
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">{student.full_name}</CardTitle>
         <CardDescription>{student.email}</CardDescription>
-        {student.student_id && (
-          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-            <Hash className="h-3 w-3" />
-            ID: {student.student_id}
-          </div>
-        )}
+        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+          <Hash className="h-3 w-3" />
+          {student.student_id ? `ID: ${student.student_id}` : "No ID assigned"}
+          {onEditStudentId && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 ml-1"
+              onClick={() => onEditStudentId(student.id, student.full_name, student.student_id || null)}
+            >
+              <Pencil className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
         {student.school_name && (
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <Building className="h-3 w-3" />
