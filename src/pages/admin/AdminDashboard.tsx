@@ -100,6 +100,17 @@ export default function AdminDashboard() {
         return;
       }
 
+      // Get admin's school_id to set as default
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("school_id")
+        .eq("id", session.user.id)
+        .single();
+
+      if (profile?.school_id) {
+        setSelectedSchoolId(profile.school_id);
+      }
+
       setLoading(false);
     } catch (error) {
       console.error("Error checking admin access:", error);
