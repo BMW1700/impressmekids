@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar as CalendarIcon, Grid, List, Plus, Download, Filter, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar as CalendarIcon, Grid, List, Plus, Download, Filter, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 import { useCalendarData, CalendarItem } from "@/hooks/useCalendarData";
 import { Calendar } from "@/components/ui/calendar";
 import { getCalendarMonthDays, getCategoryColor, getTypeColor, formatTime, exportToICal, getItemsForDate } from "@/lib/calendarUtils";
@@ -137,11 +137,21 @@ const TeacherCalendar = () => {
       <main className="flex-1 py-8">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-4xl font-luxury font-bold mb-2 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-fade-in">
-                Teacher Calendar
-              </h1>
-              <p className="text-muted-foreground">Manage your schedule, events, and assignments</p>
+            <div className="flex items-center gap-4">
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => navigate("/teacher/dashboard")}
+                className="hover:bg-muted"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-4xl font-luxury font-bold mb-2 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-fade-in">
+                  Teacher Calendar
+                </h1>
+                <p className="text-muted-foreground">Manage your schedule, events, and assignments</p>
+              </div>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
