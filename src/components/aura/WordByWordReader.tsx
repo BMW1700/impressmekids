@@ -214,7 +214,6 @@ export const WordByWordReader = ({
   screeningGradeLevel,
 }: WordByWordReaderProps) => {
   const [isRecording, setIsRecording] = useState(false);
-  const isRecordingRef = useRef(false); // CRITICAL: Ref to avoid stale closures in callbacks
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [wordReadings, setWordReadings] = useState<WordReading[]>([]);
@@ -240,9 +239,6 @@ export const WordByWordReader = ({
   const wordAttemptsRef = useRef<Map<number, number>>(new Map());
   
   const recognitionRef = useRef<any>(null);
-  const recognitionRestartCountRef = useRef(0); // Track restart attempts to prevent infinite loops
-  const recognitionHeartbeatRef = useRef<NodeJS.Timeout | null>(null); // Heartbeat to detect stalled recognition
-  const lastRecognitionActivityRef = useRef<number>(0); // Track last recognition activity
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const startTimeRef = useRef<number>(0);
@@ -265,12 +261,7 @@ export const WordByWordReader = ({
   const correctStreakRef = useRef(0);
   
   // SUPERCHARGED V2: Track pending-incorrect words for grace period (3 seconds before marking definitively incorrect)
-  // FIX V4: Replaced individual timers with a single batch interval for performance
-  const pendingIncorrectWordsRef = useRef<Map<number, number>>(new Map()); // wordIndex -> timestamp when marked pending-incorrect
-  const pendingBatchIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // FIX V4: Force-advance tracking - if a word has been pending-incorrect for too long and user speaks new words, advance
-  const lastForceAdvanceCheckRef = useRef<number>(0);
+  const pendingIncorrectTimersRef = useRef<Map<number, NodeJS.Timeout>>(new Map());
   // SUPERCHARGED V2: Store full transcript for final result override
   const fullTranscriptRef = useRef<string>('');
   // SUPERCHARGED V3: Store cleaned transcript separately
@@ -463,156 +454,34 @@ export const WordByWordReader = ({
     };
 
     recognition.onerror = (event: any) => {
-      console.error('🎤 Speech recognition error:', event.error, 'at', new Date().toISOString());
-      
+      console.error('Speech recognition error:', event.error);
       if (event.error === 'no-speech') {
-        // FIX: Auto-restart on no-speech instead of just showing toast
-        if (isRecordingRef.current && realtimeWordIndexRef.current < words.length) {
-          recognitionRestartCountRef.current += 1;
-          
-          if (recognitionRestartCountRef.current <= 10) {
-            console.log('🔄 No speech detected, auto-restarting... (attempt', recognitionRestartCountRef.current, ')');
-            
-            // Small delay before restart to prevent rapid-fire
-            setTimeout(() => {
-              if (isRecordingRef.current && recognitionRef.current) {
-                try {
-                  recognitionRef.current.start();
-                  console.log('✅ Recognition restarted after no-speech');
-                } catch (e) {
-                  console.log('⚠️ Restart failed:', e);
-                }
-              }
-            }, 300);
-          } else {
-            console.log('⚠️ Max restart attempts reached');
-            toast({
-              title: 'Speech recognition paused',
-              description: 'Click stop and start again if needed',
-              variant: 'destructive',
-            });
-          }
-        }
-      } else if (event.error === 'aborted') {
-        // User or system aborted - don't restart
-        console.log('🛑 Recognition aborted');
-      } else {
-        // Other errors - show toast but don't crash
-        console.error('🚨 Recognition error:', event.error);
+        toast({
+          title: 'No speech detected',
+          description: 'Please start reading aloud',
+          variant: 'destructive',
+        });
       }
     };
 
-    // FIX: Use ref to avoid stale closure
+    // FIX 3: Add onend handler to restart recognition if needed
     recognition.onend = () => {
-      console.log('🎤 Speech recognition ended at', new Date().toISOString());
+      console.log('Speech recognition ended');
       
-      // Use REF (not state) to check if still recording
-      if (isRecordingRef.current && realtimeWordIndexRef.current < words.length) {
-        recognitionRestartCountRef.current += 1;
-        
-        if (recognitionRestartCountRef.current <= 15) {
-          // Add delay to prevent rapid restart loops
-          setTimeout(() => {
-            if (isRecordingRef.current && recognitionRef.current) {
-              try {
-                console.log('🔄 Restarting recognition (attempt', recognitionRestartCountRef.current, ')');
-                recognitionRef.current.start();
-                lastRecognitionActivityRef.current = Date.now();
-              } catch (e) {
-                console.log('⚠️ Recognition restart failed:', e);
-              }
-            }
-          }, 200);
-        } else {
-          console.log('⚠️ Max onend restart attempts reached');
+      // Restart recognition if still recording (continuous mode recovery)
+      if (isRecording && realtimeWordIndexRef.current < words.length) {
+        try {
+          console.log('Restarting speech recognition...');
+          recognition.start();
+        } catch (e) {
+          console.log('Recognition restart skipped:', e);
         }
       }
-    };
-
-    recognition.onstart = () => {
-      console.log('🎤 Speech recognition started at', new Date().toISOString());
-      lastRecognitionActivityRef.current = Date.now();
-      // Reset restart counter on successful start
-      recognitionRestartCountRef.current = 0;
     };
 
     recognition.start();
     recognitionRef.current = recognition;
-    isRecordingRef.current = true;
     setIsRecording(true);
-    recognitionRestartCountRef.current = 0;
-    lastRecognitionActivityRef.current = Date.now();
-
-    // HEARTBEAT: Check every 5 seconds if recognition is stalled
-    recognitionHeartbeatRef.current = setInterval(() => {
-      const timeSinceActivity = Date.now() - lastRecognitionActivityRef.current;
-      
-      if (isRecordingRef.current && timeSinceActivity > 8000) {
-        // No activity for 8+ seconds - try to restart
-        console.log('💓 Heartbeat: No activity for', Math.round(timeSinceActivity / 1000), 's - restarting recognition');
-        
-        if (recognitionRef.current) {
-          try {
-            recognitionRef.current.stop();
-          } catch (e) {
-            // Ignore stop errors
-          }
-          
-          setTimeout(() => {
-            if (isRecordingRef.current && recognitionRef.current) {
-              try {
-                recognitionRef.current.start();
-                lastRecognitionActivityRef.current = Date.now();
-                console.log('✅ Heartbeat restart successful');
-              } catch (e) {
-                console.log('⚠️ Heartbeat restart failed:', e);
-              }
-            }
-          }, 300);
-        }
-      }
-    }, 5000);
-
-    // FIX V4: Batch interval for pending-incorrect words (single interval instead of many timers)
-    // This runs every 500ms and converts pending-incorrect to incorrect after 3 seconds
-    // Also handles force-advance for stuck words
-    pendingBatchIntervalRef.current = setInterval(() => {
-      const now = Date.now();
-      const pendingWords = pendingIncorrectWordsRef.current;
-      
-      if (pendingWords.size === 0) return;
-      
-      // FIX V4: Batch all updates into a single state change for performance
-      let hasUpdates = false;
-      const wordsToConvert: number[] = [];
-      
-      pendingWords.forEach((timestamp, wordIdx) => {
-        const elapsed = now - timestamp;
-        
-        // Convert to incorrect after 3 seconds
-        if (elapsed > 3000) {
-          wordsToConvert.push(wordIdx);
-          hasUpdates = true;
-        }
-      });
-      
-      if (hasUpdates) {
-        setRealtimeWordStatus(prev => {
-          const newMap = new Map(prev);
-          
-          for (const wordIdx of wordsToConvert) {
-            const currentStatus = newMap.get(wordIdx);
-            if (currentStatus === 'pending-incorrect') {
-              newMap.set(wordIdx, 'incorrect');
-              pendingIncorrectWordsRef.current.delete(wordIdx);
-            }
-          }
-          
-          realtimeWordStatusRef.current = newMap;
-          return newMap;
-        });
-      }
-    }, 500); // Check every 500ms
 
     toast({
       title: 'Start Reading!',
@@ -625,7 +494,8 @@ export const WordByWordReader = ({
   const previousCorrectCountRef = useRef(0);
   
   // Process interim (real-time) results - ULTRA FAST with proper repeated word handling
-  // FIX V4: Limited look-ahead to 2 words, batch pending processing, removed individual timers
+  // SUPERCHARGED V2: Expanded look-ahead (5 words), pending-incorrect state, phoneme fallback
+  // SUPERCHARGED V3: Added transcript cleanup and confidence thresholds
   const processInterimResult = useCallback((transcript: string, timestamp: number, speechConfidence: number = 1) => {
     if (transcript === lastInterimRef.current) return;
     
@@ -644,34 +514,17 @@ export const WordByWordReader = ({
     // SUPERCHARGED V3: Use cleaned transcript for word extraction
     const spokenWords = cleanedTranscript.split(/\s+/).filter(w => w.length > 0);
     
-    // FIX V3: More robust new word detection - compare content, not just length
-    // This handles cases where the API sends different words even with same length
-    let newWords: string[] = [];
+    // Only process if we have NEW words
+    if (spokenWords.length <= prevSpokenWords.length) return;
     
-    if (spokenWords.length > prevSpokenWords.length) {
-      // Simple case: more words than before
-      newWords = spokenWords.slice(prevSpokenWords.length);
-    } else if (spokenWords.length === prevSpokenWords.length && spokenWords.length > 0) {
-      // Same length but check if last word changed (common with speech API)
-      const lastSpoken = spokenWords[spokenWords.length - 1];
-      const lastPrev = prevSpokenWords[prevSpokenWords.length - 1];
-      if (lastSpoken !== lastPrev) {
-        // Last word changed - re-process it
-        newWords = [lastSpoken];
-        console.log('📝 INTERIM: Last word changed from', lastPrev, 'to', lastSpoken);
-      }
-    }
-    
-    // Skip if no new words to process
-    if (newWords.length === 0) return;
+    // Get the newly spoken words (already cleaned)
+    const newWords = spokenWords.slice(prevSpokenWords.length);
     
     // Track speech time for cognitive load
     lastSpeechTimeRef.current = Date.now();
-    // Update recognition activity for heartbeat
-    lastRecognitionActivityRef.current = Date.now();
     
-    // FIX V3: Use queueMicrotask for faster processing (instead of requestAnimationFrame)
-    queueMicrotask(() => {
+    // INSTANT UPDATE: Process new words, matching to FIRST UNPROCESSED position
+    requestAnimationFrame(() => {
       setRealtimeWordStatus(prev => {
         const newMap = new Map(prev);
         
@@ -730,15 +583,41 @@ export const WordByWordReader = ({
           }
           
           if (matchResult) {
-            // FIX V4: High confidence - direct match at current position
-            // Clear from pending tracking if it was there
-            pendingIncorrectWordsRef.current.delete(currentIdx);
-            newMap.set(currentIdx, 'correct');
+            // SUPERCHARGED V3: Only mark as instant 'correct' if confidence >= 0.8
+            // Otherwise use pending-incorrect to allow for verification
+            if (speechConfidence >= 0.8) {
+              // High confidence - direct match at current position
+              if (pendingIncorrectTimersRef.current.has(currentIdx)) {
+                clearTimeout(pendingIncorrectTimersRef.current.get(currentIdx));
+                pendingIncorrectTimersRef.current.delete(currentIdx);
+              }
+              newMap.set(currentIdx, 'correct');
+            } else {
+              // Lower confidence match - set as pending-incorrect with shorter timer
+              // Will become 'correct' after 1.5 seconds if not contradicted
+              newMap.set(currentIdx, 'pending-incorrect');
+              
+              if (!pendingIncorrectTimersRef.current.has(currentIdx)) {
+                const wordIdx = currentIdx;
+                const timer = setTimeout(() => {
+                  setRealtimeWordStatus(prevStatus => {
+                    const updated = new Map(prevStatus);
+                    // If still pending-incorrect, upgrade to correct (benefit of doubt)
+                    if (updated.get(wordIdx) === 'pending-incorrect') {
+                      updated.set(wordIdx, 'correct');
+                      realtimeWordStatusRef.current = updated;
+                    }
+                    return updated;
+                  });
+                  pendingIncorrectTimersRef.current.delete(wordIdx);
+                }, 1500); // 1.5 second grace period for low-confidence matches
+                pendingIncorrectTimersRef.current.set(currentIdx, timer);
+              }
+            }
           } else {
-            // FIX V4: Look ahead up to 2 positions ONLY (reduced from 5 to prevent skipping)
+            // SUPERCHARGED V2: Look ahead up to 5 positions (expanded from 2)
             let foundAhead = -1;
-            // FIX V4: Only allow look-ahead with high phoneme confidence (>85%)
-            for (let ahead = 1; ahead <= 2; ahead++) {
+            for (let ahead = 1; ahead <= 5; ahead++) {
               const aheadIdx = currentIdx + ahead;
               if (aheadIdx < words.length) {
                 // Try text match first
@@ -746,12 +625,12 @@ export const WordByWordReader = ({
                   foundAhead = aheadIdx;
                   break;
                 }
-                // Try phoneme match with HIGHER threshold for look-ahead
+                // SUPERCHARGED V2: Try phoneme match as fallback
                 if (!isStrictMode) {
-                  const phonemeResult = matchWithPhonemes(spokenWord, words[aheadIdx], 0.85);
+                  const phonemeResult = matchWithPhonemes(spokenWord, words[aheadIdx], 0.70);
                   if (phonemeResult.isMatch) {
                     foundAhead = aheadIdx;
-                    console.log('PHONEME LOOKAHEAD MATCH (85%):', spokenWord, '→', words[aheadIdx]);
+                    console.log('PHONEME LOOKAHEAD MATCH:', spokenWord, '→', words[aheadIdx]);
                     break;
                   }
                 }
@@ -759,24 +638,51 @@ export const WordByWordReader = ({
             }
             
             if (foundAhead !== -1) {
-              // Mark skipped words as pending-incorrect (batch tracked)
+              // SUPERCHARGED V2: Mark skipped words as pending-incorrect (not definitive)
               for (let i = currentIdx; i < foundAhead; i++) {
+                // Only mark as pending-incorrect if not already correct
                 if (newMap.get(i) !== 'correct') {
                   newMap.set(i, 'pending-incorrect');
-                  // FIX V4: Track timestamp for batch processing
-                  if (!pendingIncorrectWordsRef.current.has(i)) {
-                    pendingIncorrectWordsRef.current.set(i, Date.now());
+                  
+                  // Set up timer to convert to definitive incorrect after 3 seconds
+                  if (!pendingIncorrectTimersRef.current.has(i)) {
+                    const wordIdx = i;
+                    const timer = setTimeout(() => {
+                      setRealtimeWordStatus(prevStatus => {
+                        const updated = new Map(prevStatus);
+                        if (updated.get(wordIdx) === 'pending-incorrect') {
+                          updated.set(wordIdx, 'incorrect');
+                          realtimeWordStatusRef.current = updated;
+                        }
+                        return updated;
+                      });
+                      pendingIncorrectTimersRef.current.delete(wordIdx);
+                    }, 3000); // 3 second grace period
+                    pendingIncorrectTimersRef.current.set(i, timer);
                   }
                 }
               }
               // Mark the matched word as correct
-              pendingIncorrectWordsRef.current.delete(foundAhead);
               newMap.set(foundAhead, 'correct');
             } else {
-              // No match - mark as pending-incorrect (batch tracked)
+              // SUPERCHARGED V2: No match - mark as pending-incorrect (not definitive yet)
               newMap.set(currentIdx, 'pending-incorrect');
-              if (!pendingIncorrectWordsRef.current.has(currentIdx)) {
-                pendingIncorrectWordsRef.current.set(currentIdx, Date.now());
+              
+              // Set up timer to convert to definitive incorrect after 3 seconds
+              if (!pendingIncorrectTimersRef.current.has(currentIdx)) {
+                const wordIdx = currentIdx;
+                const timer = setTimeout(() => {
+                  setRealtimeWordStatus(prevStatus => {
+                    const updated = new Map(prevStatus);
+                    if (updated.get(wordIdx) === 'pending-incorrect') {
+                      updated.set(wordIdx, 'incorrect');
+                      realtimeWordStatusRef.current = updated;
+                    }
+                    return updated;
+                  });
+                  pendingIncorrectTimersRef.current.delete(wordIdx);
+                }, 3000); // 3 second grace period
+                pendingIncorrectTimersRef.current.set(currentIdx, timer);
               }
             }
           }
@@ -865,199 +771,87 @@ export const WordByWordReader = ({
 
   // Process final results - confirm word readings AND play robot voice for errors
   // SUPERCHARGED V2: Full transcript re-scan, pending-incorrect recovery, all alternatives checked
-  // FIX V3: Now actively advances word index for new words in final transcript
   const processFinalResult = useCallback((transcript: string, timestamp: number, speechConfidence: number = 1, alternatives?: string[]) => {
-    // SUPERCHARGED V3: Clean the transcript before processing
-    const cleanedTranscript = cleanupTranscript(transcript);
-    const spokenWords = cleanedTranscript.split(/\s+/).filter(w => w.length > 0);
-
-    // FIX V4: Compute delta words for final results (prevents re-processing earlier words and skipping ahead)
-    const prevCleaned = cleanupTranscript(lastInterimRef.current);
-    const prevWords = prevCleaned.split(/\s+/).filter(w => w.length > 0);
-
-    let overlap = 0;
-    const maxOverlap = Math.min(prevWords.length, spokenWords.length);
-
-    // Find the longest overlap where prev tail == current head
-    for (let k = maxOverlap; k > 0; k--) {
-      const prevTail = prevWords.slice(prevWords.length - k);
-      const currentHead = spokenWords.slice(0, k);
-      if (prevTail.join(' ') === currentHead.join(' ')) {
-        overlap = k;
-        break;
-      }
-    }
-
-    let deltaWords = spokenWords.slice(overlap);
-
-    // If length is the same but last word changed, treat the last word as a delta
-    if (deltaWords.length === 0 && spokenWords.length === prevWords.length && spokenWords.length > 0) {
-      const lastSpoken = spokenWords[spokenWords.length - 1];
-      const lastPrev = prevWords[prevWords.length - 1];
-      if (lastSpoken !== lastPrev) {
-        deltaWords = [lastSpoken];
-        console.log('📝 FINAL DELTA: last word changed from', lastPrev, 'to', lastSpoken);
-      }
-    }
-
+    const spokenWords = transcript.split(/\s+/).filter(w => w.length > 0);
+    
     // SUPERCHARGED V2: Store full transcript for override logic
     fullTranscriptRef.current = transcript;
-    cleanedTranscriptRef.current = cleanedTranscript;
-
-    // Update recognition activity for heartbeat
-    lastRecognitionActivityRef.current = Date.now();
-
-    console.log('📝 FINAL RESULT:', {
-      transcript: cleanedTranscript,
-      wordCount: spokenWords.length,
-      overlap,
-      deltaCount: deltaWords.length,
-      currentIdx: realtimeWordIndexRef.current,
-    });
-
+    
     // Create confirmed word readings
     const newReadings: WordReading[] = [];
-
-    // FIX V3: Process new words that weren't caught by interim results
+    
+    // SUPERCHARGED V2: Full re-scan of ALL incorrect/pending-incorrect words against entire transcript
     setRealtimeWordStatus(prev => {
       const newMap = new Map(prev);
       let overrideCount = 0;
-      let newWordsProcessed = 0;
       
-      // FIX V3: Find the first unprocessed word index
-      const getFirstUnprocessedIndex = () => {
-        for (let i = 0; i < words.length; i++) {
-          const status = newMap.get(i);
-          if (status !== 'correct' && status !== 'incorrect') {
-            return i;
-          }
-        }
-        return words.length;
-      };
-      
-      // FIX V3: For each spoken word in the final transcript, try to match it
-      // starting from the current position
-      let currentIdx = getFirstUnprocessedIndex();
-      
-      for (const spokenWord of deltaWords) {
-        if (currentIdx >= words.length) break;
-        
-        const expectedWord = words[currentIdx];
-        
-        // Skip if this word is already definitively processed
-        const currentStatus = newMap.get(currentIdx);
-        if (currentStatus === 'correct' || currentStatus === 'incorrect') {
-          // Already processed, try to match the spoken word to the NEXT unprocessed word
-          currentIdx = getFirstUnprocessedIndex();
-          if (currentIdx >= words.length) break;
-        }
-        
-        // Check if spoken word matches expected word at current position
-        let matchResult = wordMatcher(spokenWord, words[currentIdx]);
-        
-        // Try phoneme matching as fallback
-        if (!matchResult && !isStrictMode) {
-          const phonemeResult = matchWithPhonemes(spokenWord, words[currentIdx], 0.70);
-          if (phonemeResult.isMatch) {
-            matchResult = true;
-          }
-        }
-        
-        if (matchResult) {
-          // Match found at current position
-          if (newMap.get(currentIdx) !== 'correct') {
-            newMap.set(currentIdx, 'correct');
-            newWordsProcessed++;
-            
-            // FIX V4: Clear from pending batch tracking
-            pendingIncorrectWordsRef.current.delete(currentIdx);
-            
-            // Store confidence
-            wordConfidencesRef.current.set(currentIdx, speechConfidence);
-            
-            // Track attempts
-            const currentAttempts = wordAttemptsRef.current.get(currentIdx) || 0;
-            wordAttemptsRef.current.set(currentIdx, currentAttempts + 1);
-          }
-          currentIdx++;
-        } else {
-          // FIX V4: Look-ahead limited to 2 words in final result too
-          let foundAhead = -1;
-          for (let ahead = 1; ahead <= 2 && currentIdx + ahead < words.length; ahead++) {
-            const aheadIdx = currentIdx + ahead;
-            if (wordMatcher(spokenWord, words[aheadIdx])) {
-              foundAhead = aheadIdx;
-              break;
-            }
-            if (!isStrictMode) {
-              const phonemeResult = matchWithPhonemes(spokenWord, words[aheadIdx], 0.85);
-              if (phonemeResult.isMatch) {
-                foundAhead = aheadIdx;
+      // Check every incorrect or pending-incorrect word
+      for (let i = 0; i < words.length; i++) {
+        const status = newMap.get(i);
+        if (status === 'incorrect' || status === 'pending-incorrect') {
+          const expectedWord = words[i];
+          
+          // SUPERCHARGED V2: Search ENTIRE transcript for this word
+          const foundInTranscript = findWordInFullTranscript(expectedWord, transcript, !isStrictMode);
+          
+          // SUPERCHARGED V2: Also check all alternatives if provided
+          let foundInAlternatives = false;
+          if (!foundInTranscript && alternatives && alternatives.length > 1) {
+            for (let alt = 1; alt < alternatives.length; alt++) {
+              if (findWordInFullTranscript(expectedWord, alternatives[alt], !isStrictMode)) {
+                foundInAlternatives = true;
                 break;
               }
             }
           }
           
-          if (foundAhead !== -1) {
-            // Mark skipped words as incorrect
-            for (let i = currentIdx; i < foundAhead; i++) {
-              if (newMap.get(i) !== 'correct' && newMap.get(i) !== 'incorrect') {
-                newMap.set(i, 'incorrect');
-                pendingIncorrectWordsRef.current.delete(i);
+          // SUPERCHARGED V2: Try phoneme matching as last resort
+          let phonemeMatch = false;
+          if (!foundInTranscript && !foundInAlternatives && !isStrictMode) {
+            for (const spokenWord of spokenWords) {
+              const result = matchWithPhonemes(spokenWord, expectedWord, 0.70);
+              if (result.isMatch) {
+                phonemeMatch = true;
+                console.log('FINAL PHONEME OVERRIDE:', spokenWord, '→', expectedWord, 'similarity:', result.similarity.toFixed(2));
+                break;
               }
             }
-            // Mark the found word as correct
-            if (newMap.get(foundAhead) !== 'correct') {
-              newMap.set(foundAhead, 'correct');
-              newWordsProcessed++;
-              pendingIncorrectWordsRef.current.delete(foundAhead);
+          }
+          
+          if (foundInTranscript || foundInAlternatives || phonemeMatch) {
+            // Override to correct!
+            newMap.set(i, 'correct');
+            overrideCount++;
+            
+            // Clear any pending timer
+            if (pendingIncorrectTimersRef.current.has(i)) {
+              clearTimeout(pendingIncorrectTimersRef.current.get(i));
+              pendingIncorrectTimersRef.current.delete(i);
             }
-            currentIdx = foundAhead + 1;
+            
+            console.log('SUPERCHARGED OVERRIDE:', words[i], 
+              foundInTranscript ? '(in transcript)' : 
+              foundInAlternatives ? '(in alternatives)' : '(phoneme match)');
           }
         }
       }
       
-      // FIX V4: REMOVED dangerous full transcript re-scan that was causing out-of-order matching
-      // Instead, we rely on positional matching and the safety net in stopReading
-      
-      // Update position tracking
-      let nextIdx = 0;
-      for (let i = 0; i < words.length; i++) {
-        const status = newMap.get(i);
-        if (status === 'correct' || status === 'incorrect' || status === 'pending-incorrect') {
-          nextIdx = i + 1;
-        }
-      }
-      
-      // Update current marker
-      for (let i = 0; i < words.length; i++) {
-        if (newMap.get(i) === 'current') {
-          newMap.set(i, 'pending');
-        }
-      }
-      if (nextIdx < words.length) {
-        newMap.set(nextIdx, 'current');
-      }
-      
-      realtimeWordIndexRef.current = nextIdx;
-      setRealtimeWordIndex(nextIdx);
-      setCurrentWordIndex(nextIdx);
-      
-      if (overrideCount > 0 || newWordsProcessed > 0) {
-        console.log(`📝 FINAL RESULT PROCESSED: ${newWordsProcessed} new words, ${overrideCount} overrides, now at index ${nextIdx}`);
+      if (overrideCount > 0) {
+        console.log(`SUPERCHARGED V2: Recovered ${overrideCount} false negatives from final result`);
       }
       
       realtimeWordStatusRef.current = newMap;
       return newMap;
     });
     
-    // Create word readings for tracking
+    // Create word readings for new words
     spokenWords.forEach((spokenWord, idx) => {
       const wordIndex = idx;
       if (wordIndex < words.length) {
         const expectedWord = words[wordIndex];
         const isCorrect = wordMatcher(spokenWord, expectedWord);
         
+        // Store confidence for this word
         wordConfidencesRef.current.set(wordIndex, speechConfidence);
         
         if (!processedWordsRef.current.has(wordIndex)) {
@@ -1084,21 +878,9 @@ export const WordByWordReader = ({
         return [...prev, ...uniqueNew];
       });
     }
-
-    // Keep interim tracker in sync with the final transcript so deltas don't misalign
-    lastInterimRef.current = transcript;
   }, [words, wordMatcher, isStrictMode]);
 
   const stopReading = useCallback(async () => {
-    // CRITICAL: Update ref FIRST to prevent restart attempts
-    isRecordingRef.current = false;
-    
-    // Clear heartbeat interval
-    if (recognitionHeartbeatRef.current) {
-      clearInterval(recognitionHeartbeatRef.current);
-      recognitionHeartbeatRef.current = null;
-    }
-    
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       recognitionRef.current = null;
@@ -1125,70 +907,6 @@ export const WordByWordReader = ({
 
     setIsRecording(false);
     setIsProcessing(true);
-
-    // FIX V4: Clear batch interval
-    if (pendingBatchIntervalRef.current) {
-      clearInterval(pendingBatchIntervalRef.current);
-      pendingBatchIntervalRef.current = null;
-    }
-    
-    // FIX V3: SAFETY NET - Final scan of full transcript against all pending/pending-incorrect words
-    // FIX V4: Only check words that were actually spoken (within our current position)
-    const finalTranscript = cleanedTranscriptRef.current || fullTranscriptRef.current;
-    if (finalTranscript) {
-      console.log('🛡️ SAFETY NET: Final transcript scan before calculating results');
-      
-      const statusMap = realtimeWordStatusRef.current;
-      const newMap = new Map(statusMap);
-      let safetyNetRecoveries = 0;
-      
-      // FIX V4: Only check up to the current word index, not the entire passage
-      const maxCheckIndex = Math.min(realtimeWordIndexRef.current + 2, words.length);
-      
-      for (let i = 0; i < maxCheckIndex; i++) {
-        const status = newMap.get(i);
-        // Check words that are still pending or pending-incorrect
-        if (status === 'pending' || status === 'pending-incorrect' || status === 'current') {
-          const expectedWord = words[i];
-          
-          // Try to find the word in the full transcript
-          const foundInTranscript = findWordInFullTranscript(expectedWord, finalTranscript, !isStrictMode);
-          
-          // Also try phoneme matching
-          let phonemeMatch = false;
-          if (!foundInTranscript && !isStrictMode) {
-            const transcriptWords = finalTranscript.split(/\s+/).filter(w => w.length > 0);
-            for (const spokenWord of transcriptWords) {
-              const result = matchWithPhonemes(spokenWord, expectedWord, 0.70);
-              if (result.isMatch) {
-                phonemeMatch = true;
-                break;
-              }
-            }
-          }
-          
-          if (foundInTranscript || phonemeMatch) {
-            newMap.set(i, 'correct');
-            safetyNetRecoveries++;
-            console.log('🛡️ SAFETY NET recovered:', expectedWord);
-            pendingIncorrectWordsRef.current.delete(i);
-          } else if (status === 'pending-incorrect') {
-            // Convert remaining pending-incorrect to incorrect
-            newMap.set(i, 'incorrect');
-            pendingIncorrectWordsRef.current.delete(i);
-          }
-        }
-      }
-      
-      if (safetyNetRecoveries > 0) {
-        console.log(`🛡️ SAFETY NET: Recovered ${safetyNetRecoveries} words from final transcript`);
-        realtimeWordStatusRef.current = newMap;
-        setRealtimeWordStatus(newMap);
-      }
-    }
-    
-    // FIX V4: Clear pending words tracking
-    pendingIncorrectWordsRef.current.clear();
 
     const totalDuration = (Date.now() - startTimeRef.current) / 1000;
     
