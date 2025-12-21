@@ -1099,7 +1099,7 @@ const ClassroomDetail = () => {
                     </p>
                   </div>
                   {!isTeacher && (
-                    <Button onClick={() => navigate("/student/dashboard?section=calendar")}>
+                    <Button onClick={() => navigate("/calendar")}>
                       <Calendar className="h-4 w-4 mr-2" />
                       View Full Calendar
                     </Button>
