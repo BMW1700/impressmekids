@@ -717,9 +717,9 @@ export const WordByWordReader = ({
               }
             }
           } else {
-            // SUPERCHARGED V2: Look ahead up to 5 positions (expanded from 2)
+            // HARD CAP: Never match more than 2 words ahead (prevents "skip a whole line")
             let foundAhead = -1;
-            for (let ahead = 1; ahead <= 5; ahead++) {
+            for (let ahead = 1; ahead <= 2; ahead++) {
               const aheadIdx = currentIdx + ahead;
               if (aheadIdx < words.length) {
                 // Try text match first
@@ -727,7 +727,7 @@ export const WordByWordReader = ({
                   foundAhead = aheadIdx;
                   break;
                 }
-                // SUPERCHARGED V2: Try phoneme match as fallback
+                // Try phoneme match as fallback (practice mode only)
                 if (!isStrictMode) {
                   const phonemeResult = matchWithPhonemes(spokenWord, words[aheadIdx], 0.70);
                   if (phonemeResult.isMatch) {
@@ -992,9 +992,9 @@ export const WordByWordReader = ({
           }
           currentIdx++;
         } else {
-          // No match at current position, try look-ahead
+          // HARD CAP: Never match more than 2 words ahead in final processing
           let foundAhead = -1;
-          for (let ahead = 1; ahead <= 5 && currentIdx + ahead < words.length; ahead++) {
+          for (let ahead = 1; ahead <= 2 && currentIdx + ahead < words.length; ahead++) {
             const aheadIdx = currentIdx + ahead;
             if (wordMatcher(spokenWord, words[aheadIdx])) {
               foundAhead = aheadIdx;
@@ -1034,12 +1034,16 @@ export const WordByWordReader = ({
         }
       }
       
-      // SUPERCHARGED V2: Full re-scan of ALL incorrect/pending-incorrect words against entire transcript
-      for (let i = 0; i < words.length; i++) {
+      // HARD CAP: Do NOT rescan/override the entire passage.
+      // Only allow overrides in the "frontier" (first unprocessed word + 2) to prevent jumping to later duplicates.
+      const frontier = getFirstUnprocessedIndex();
+      const maxOverrideIdx = Math.min(words.length - 1, frontier + 2);
+
+      for (let i = 0; i <= maxOverrideIdx; i++) {
         const status = newMap.get(i);
         if (status === 'incorrect' || status === 'pending-incorrect') {
           const expectedWord = words[i];
-          
+
           // Search ENTIRE transcript for this word
           const foundInTranscript = findWordInFullTranscript(expectedWord, cleanedTranscript, !isStrictMode);
           
@@ -1198,7 +1202,16 @@ export const WordByWordReader = ({
       const newMap = new Map(statusMap);
       let safetyNetRecoveries = 0;
       
-      for (let i = 0; i < words.length; i++) {
+      const frontier = (() => {
+        for (let i = 0; i < words.length; i++) {
+          const s = newMap.get(i);
+          if (s !== 'correct' && s !== 'incorrect') return i;
+        }
+        return words.length;
+      })();
+      const maxSafetyIdx = Math.min(words.length - 1, frontier + 2);
+
+      for (let i = 0; i <= maxSafetyIdx; i++) {
         const status = newMap.get(i);
         // Check words that are still pending or pending-incorrect
         if (status === 'pending' || status === 'pending-incorrect' || status === 'current') {
