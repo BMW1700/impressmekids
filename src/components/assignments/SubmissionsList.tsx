@@ -2,8 +2,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Eye, CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import { Eye, CheckCircle2, Clock, AlertCircle, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Submission {
   id: string;
@@ -12,6 +13,7 @@ interface Submission {
   submitted_at: string | null;
   graded_at: string | null;
   grade: number | null;
+  focus_violations?: number | null;
   profiles?: {
     full_name: string;
     email: string;
@@ -100,6 +102,22 @@ export const SubmissionsList = ({ submissions, classroomId, assignmentType = 'mu
               </div>
 
               <div className="flex items-center gap-3">
+                {submission.focus_violations && submission.focus_violations > 0 && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Badge variant="destructive" className="gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          {submission.focus_violations}
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{submission.focus_violations} focus violation{submission.focus_violations > 1 ? 's' : ''} detected</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                
                 {getStatusBadge(submission)}
                 
                 {submission.grade !== null && (
