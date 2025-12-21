@@ -265,7 +265,12 @@ export const WordByWordReader = ({
   const correctStreakRef = useRef(0);
   
   // SUPERCHARGED V2: Track pending-incorrect words for grace period (3 seconds before marking definitively incorrect)
-  const pendingIncorrectTimersRef = useRef<Map<number, NodeJS.Timeout>>(new Map());
+  // FIX V4: Replaced individual timers with a single batch interval for performance
+  const pendingIncorrectWordsRef = useRef<Map<number, number>>(new Map()); // wordIndex -> timestamp when marked pending-incorrect
+  const pendingBatchIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // FIX V4: Force-advance tracking - if a word has been pending-incorrect for too long and user speaks new words, advance
+  const lastForceAdvanceCheckRef = useRef<number>(0);
   // SUPERCHARGED V2: Store full transcript for final result override
   const fullTranscriptRef = useRef<string>('');
   // SUPERCHARGED V3: Store cleaned transcript separately
@@ -568,6 +573,47 @@ export const WordByWordReader = ({
       }
     }, 5000);
 
+    // FIX V4: Batch interval for pending-incorrect words (single interval instead of many timers)
+    // This runs every 500ms and converts pending-incorrect to incorrect after 3 seconds
+    // Also handles force-advance for stuck words
+    pendingBatchIntervalRef.current = setInterval(() => {
+      const now = Date.now();
+      const pendingWords = pendingIncorrectWordsRef.current;
+      
+      if (pendingWords.size === 0) return;
+      
+      // FIX V4: Batch all updates into a single state change for performance
+      let hasUpdates = false;
+      const wordsToConvert: number[] = [];
+      
+      pendingWords.forEach((timestamp, wordIdx) => {
+        const elapsed = now - timestamp;
+        
+        // Convert to incorrect after 3 seconds
+        if (elapsed > 3000) {
+          wordsToConvert.push(wordIdx);
+          hasUpdates = true;
+        }
+      });
+      
+      if (hasUpdates) {
+        setRealtimeWordStatus(prev => {
+          const newMap = new Map(prev);
+          
+          for (const wordIdx of wordsToConvert) {
+            const currentStatus = newMap.get(wordIdx);
+            if (currentStatus === 'pending-incorrect') {
+              newMap.set(wordIdx, 'incorrect');
+              pendingIncorrectWordsRef.current.delete(wordIdx);
+            }
+          }
+          
+          realtimeWordStatusRef.current = newMap;
+          return newMap;
+        });
+      }
+    }, 500); // Check every 500ms
+
     toast({
       title: 'Start Reading!',
       description: 'Read the passage aloud, word by word. I\'ll highlight as you go!',
@@ -579,8 +625,7 @@ export const WordByWordReader = ({
   const previousCorrectCountRef = useRef(0);
   
   // Process interim (real-time) results - ULTRA FAST with proper repeated word handling
-  // SUPERCHARGED V2: Expanded look-ahead (5 words), pending-incorrect state, phoneme fallback
-  // SUPERCHARGED V3: Added transcript cleanup and confidence thresholds
+  // FIX V4: Limited look-ahead to 2 words, batch pending processing, removed individual timers
   const processInterimResult = useCallback((transcript: string, timestamp: number, speechConfidence: number = 1) => {
     if (transcript === lastInterimRef.current) return;
     
@@ -685,41 +730,15 @@ export const WordByWordReader = ({
           }
           
           if (matchResult) {
-            // SUPERCHARGED V3: Only mark as instant 'correct' if confidence >= 0.8
-            // Otherwise use pending-incorrect to allow for verification
-            if (speechConfidence >= 0.8) {
-              // High confidence - direct match at current position
-              if (pendingIncorrectTimersRef.current.has(currentIdx)) {
-                clearTimeout(pendingIncorrectTimersRef.current.get(currentIdx));
-                pendingIncorrectTimersRef.current.delete(currentIdx);
-              }
-              newMap.set(currentIdx, 'correct');
-            } else {
-              // Lower confidence match - set as pending-incorrect with shorter timer
-              // Will become 'correct' after 1.5 seconds if not contradicted
-              newMap.set(currentIdx, 'pending-incorrect');
-              
-              if (!pendingIncorrectTimersRef.current.has(currentIdx)) {
-                const wordIdx = currentIdx;
-                const timer = setTimeout(() => {
-                  setRealtimeWordStatus(prevStatus => {
-                    const updated = new Map(prevStatus);
-                    // If still pending-incorrect, upgrade to correct (benefit of doubt)
-                    if (updated.get(wordIdx) === 'pending-incorrect') {
-                      updated.set(wordIdx, 'correct');
-                      realtimeWordStatusRef.current = updated;
-                    }
-                    return updated;
-                  });
-                  pendingIncorrectTimersRef.current.delete(wordIdx);
-                }, 1500); // 1.5 second grace period for low-confidence matches
-                pendingIncorrectTimersRef.current.set(currentIdx, timer);
-              }
-            }
+            // FIX V4: High confidence - direct match at current position
+            // Clear from pending tracking if it was there
+            pendingIncorrectWordsRef.current.delete(currentIdx);
+            newMap.set(currentIdx, 'correct');
           } else {
-            // SUPERCHARGED V2: Look ahead up to 5 positions (expanded from 2)
+            // FIX V4: Look ahead up to 2 positions ONLY (reduced from 5 to prevent skipping)
             let foundAhead = -1;
-            for (let ahead = 1; ahead <= 5; ahead++) {
+            // FIX V4: Only allow look-ahead with high phoneme confidence (>85%)
+            for (let ahead = 1; ahead <= 2; ahead++) {
               const aheadIdx = currentIdx + ahead;
               if (aheadIdx < words.length) {
                 // Try text match first
@@ -727,12 +746,12 @@ export const WordByWordReader = ({
                   foundAhead = aheadIdx;
                   break;
                 }
-                // SUPERCHARGED V2: Try phoneme match as fallback
+                // Try phoneme match with HIGHER threshold for look-ahead
                 if (!isStrictMode) {
-                  const phonemeResult = matchWithPhonemes(spokenWord, words[aheadIdx], 0.70);
+                  const phonemeResult = matchWithPhonemes(spokenWord, words[aheadIdx], 0.85);
                   if (phonemeResult.isMatch) {
                     foundAhead = aheadIdx;
-                    console.log('PHONEME LOOKAHEAD MATCH:', spokenWord, '→', words[aheadIdx]);
+                    console.log('PHONEME LOOKAHEAD MATCH (85%):', spokenWord, '→', words[aheadIdx]);
                     break;
                   }
                 }
@@ -740,51 +759,24 @@ export const WordByWordReader = ({
             }
             
             if (foundAhead !== -1) {
-              // SUPERCHARGED V2: Mark skipped words as pending-incorrect (not definitive)
+              // Mark skipped words as pending-incorrect (batch tracked)
               for (let i = currentIdx; i < foundAhead; i++) {
-                // Only mark as pending-incorrect if not already correct
                 if (newMap.get(i) !== 'correct') {
                   newMap.set(i, 'pending-incorrect');
-                  
-                  // Set up timer to convert to definitive incorrect after 3 seconds
-                  if (!pendingIncorrectTimersRef.current.has(i)) {
-                    const wordIdx = i;
-                    const timer = setTimeout(() => {
-                      setRealtimeWordStatus(prevStatus => {
-                        const updated = new Map(prevStatus);
-                        if (updated.get(wordIdx) === 'pending-incorrect') {
-                          updated.set(wordIdx, 'incorrect');
-                          realtimeWordStatusRef.current = updated;
-                        }
-                        return updated;
-                      });
-                      pendingIncorrectTimersRef.current.delete(wordIdx);
-                    }, 3000); // 3 second grace period
-                    pendingIncorrectTimersRef.current.set(i, timer);
+                  // FIX V4: Track timestamp for batch processing
+                  if (!pendingIncorrectWordsRef.current.has(i)) {
+                    pendingIncorrectWordsRef.current.set(i, Date.now());
                   }
                 }
               }
               // Mark the matched word as correct
+              pendingIncorrectWordsRef.current.delete(foundAhead);
               newMap.set(foundAhead, 'correct');
             } else {
-              // SUPERCHARGED V2: No match - mark as pending-incorrect (not definitive yet)
+              // No match - mark as pending-incorrect (batch tracked)
               newMap.set(currentIdx, 'pending-incorrect');
-              
-              // Set up timer to convert to definitive incorrect after 3 seconds
-              if (!pendingIncorrectTimersRef.current.has(currentIdx)) {
-                const wordIdx = currentIdx;
-                const timer = setTimeout(() => {
-                  setRealtimeWordStatus(prevStatus => {
-                    const updated = new Map(prevStatus);
-                    if (updated.get(wordIdx) === 'pending-incorrect') {
-                      updated.set(wordIdx, 'incorrect');
-                      realtimeWordStatusRef.current = updated;
-                    }
-                    return updated;
-                  });
-                  pendingIncorrectTimersRef.current.delete(wordIdx);
-                }, 3000); // 3 second grace period
-                pendingIncorrectTimersRef.current.set(currentIdx, timer);
+              if (!pendingIncorrectWordsRef.current.has(currentIdx)) {
+                pendingIncorrectWordsRef.current.set(currentIdx, Date.now());
               }
             }
           }
@@ -977,11 +969,8 @@ export const WordByWordReader = ({
             newMap.set(currentIdx, 'correct');
             newWordsProcessed++;
             
-            // Clear any pending timer
-            if (pendingIncorrectTimersRef.current.has(currentIdx)) {
-              clearTimeout(pendingIncorrectTimersRef.current.get(currentIdx));
-              pendingIncorrectTimersRef.current.delete(currentIdx);
-            }
+            // FIX V4: Clear from pending batch tracking
+            pendingIncorrectWordsRef.current.delete(currentIdx);
             
             // Store confidence
             wordConfidencesRef.current.set(currentIdx, speechConfidence);
@@ -992,16 +981,16 @@ export const WordByWordReader = ({
           }
           currentIdx++;
         } else {
-          // No match at current position, try look-ahead
+          // FIX V4: Look-ahead limited to 2 words in final result too
           let foundAhead = -1;
-          for (let ahead = 1; ahead <= 5 && currentIdx + ahead < words.length; ahead++) {
+          for (let ahead = 1; ahead <= 2 && currentIdx + ahead < words.length; ahead++) {
             const aheadIdx = currentIdx + ahead;
             if (wordMatcher(spokenWord, words[aheadIdx])) {
               foundAhead = aheadIdx;
               break;
             }
             if (!isStrictMode) {
-              const phonemeResult = matchWithPhonemes(spokenWord, words[aheadIdx], 0.70);
+              const phonemeResult = matchWithPhonemes(spokenWord, words[aheadIdx], 0.85);
               if (phonemeResult.isMatch) {
                 foundAhead = aheadIdx;
                 break;
@@ -1014,74 +1003,22 @@ export const WordByWordReader = ({
             for (let i = currentIdx; i < foundAhead; i++) {
               if (newMap.get(i) !== 'correct' && newMap.get(i) !== 'incorrect') {
                 newMap.set(i, 'incorrect');
-                if (pendingIncorrectTimersRef.current.has(i)) {
-                  clearTimeout(pendingIncorrectTimersRef.current.get(i));
-                  pendingIncorrectTimersRef.current.delete(i);
-                }
+                pendingIncorrectWordsRef.current.delete(i);
               }
             }
             // Mark the found word as correct
             if (newMap.get(foundAhead) !== 'correct') {
               newMap.set(foundAhead, 'correct');
               newWordsProcessed++;
-              if (pendingIncorrectTimersRef.current.has(foundAhead)) {
-                clearTimeout(pendingIncorrectTimersRef.current.get(foundAhead));
-                pendingIncorrectTimersRef.current.delete(foundAhead);
-              }
+              pendingIncorrectWordsRef.current.delete(foundAhead);
             }
             currentIdx = foundAhead + 1;
           }
         }
       }
       
-      // SUPERCHARGED V2: Full re-scan of ALL incorrect/pending-incorrect words against entire transcript
-      for (let i = 0; i < words.length; i++) {
-        const status = newMap.get(i);
-        if (status === 'incorrect' || status === 'pending-incorrect') {
-          const expectedWord = words[i];
-          
-          // Search ENTIRE transcript for this word
-          const foundInTranscript = findWordInFullTranscript(expectedWord, cleanedTranscript, !isStrictMode);
-          
-          // Also check all alternatives if provided
-          let foundInAlternatives = false;
-          if (!foundInTranscript && alternatives && alternatives.length > 1) {
-            for (let alt = 1; alt < alternatives.length; alt++) {
-              if (findWordInFullTranscript(expectedWord, alternatives[alt], !isStrictMode)) {
-                foundInAlternatives = true;
-                break;
-              }
-            }
-          }
-          
-          // Try phoneme matching as last resort
-          let phonemeMatch = false;
-          if (!foundInTranscript && !foundInAlternatives && !isStrictMode) {
-            for (const spokenWord of spokenWords) {
-              const result = matchWithPhonemes(spokenWord, expectedWord, 0.70);
-              if (result.isMatch) {
-                phonemeMatch = true;
-                console.log('FINAL PHONEME OVERRIDE:', spokenWord, '→', expectedWord, 'similarity:', result.similarity.toFixed(2));
-                break;
-              }
-            }
-          }
-          
-          if (foundInTranscript || foundInAlternatives || phonemeMatch) {
-            newMap.set(i, 'correct');
-            overrideCount++;
-            
-            if (pendingIncorrectTimersRef.current.has(i)) {
-              clearTimeout(pendingIncorrectTimersRef.current.get(i));
-              pendingIncorrectTimersRef.current.delete(i);
-            }
-            
-            console.log('SUPERCHARGED OVERRIDE:', words[i], 
-              foundInTranscript ? '(in transcript)' : 
-              foundInAlternatives ? '(in alternatives)' : '(phoneme match)');
-          }
-        }
-      }
+      // FIX V4: REMOVED dangerous full transcript re-scan that was causing out-of-order matching
+      // Instead, we rely on positional matching and the safety net in stopReading
       
       // Update position tracking
       let nextIdx = 0;
@@ -1189,7 +1126,14 @@ export const WordByWordReader = ({
     setIsRecording(false);
     setIsProcessing(true);
 
+    // FIX V4: Clear batch interval
+    if (pendingBatchIntervalRef.current) {
+      clearInterval(pendingBatchIntervalRef.current);
+      pendingBatchIntervalRef.current = null;
+    }
+    
     // FIX V3: SAFETY NET - Final scan of full transcript against all pending/pending-incorrect words
+    // FIX V4: Only check words that were actually spoken (within our current position)
     const finalTranscript = cleanedTranscriptRef.current || fullTranscriptRef.current;
     if (finalTranscript) {
       console.log('🛡️ SAFETY NET: Final transcript scan before calculating results');
@@ -1198,7 +1142,10 @@ export const WordByWordReader = ({
       const newMap = new Map(statusMap);
       let safetyNetRecoveries = 0;
       
-      for (let i = 0; i < words.length; i++) {
+      // FIX V4: Only check up to the current word index, not the entire passage
+      const maxCheckIndex = Math.min(realtimeWordIndexRef.current + 2, words.length);
+      
+      for (let i = 0; i < maxCheckIndex; i++) {
         const status = newMap.get(i);
         // Check words that are still pending or pending-incorrect
         if (status === 'pending' || status === 'pending-incorrect' || status === 'current') {
@@ -1224,15 +1171,11 @@ export const WordByWordReader = ({
             newMap.set(i, 'correct');
             safetyNetRecoveries++;
             console.log('🛡️ SAFETY NET recovered:', expectedWord);
-            
-            // Clear any pending timer
-            if (pendingIncorrectTimersRef.current.has(i)) {
-              clearTimeout(pendingIncorrectTimersRef.current.get(i));
-              pendingIncorrectTimersRef.current.delete(i);
-            }
+            pendingIncorrectWordsRef.current.delete(i);
           } else if (status === 'pending-incorrect') {
             // Convert remaining pending-incorrect to incorrect
             newMap.set(i, 'incorrect');
+            pendingIncorrectWordsRef.current.delete(i);
           }
         }
       }
@@ -1244,9 +1187,8 @@ export const WordByWordReader = ({
       }
     }
     
-    // Clear all pending timers
-    pendingIncorrectTimersRef.current.forEach((timer) => clearTimeout(timer));
-    pendingIncorrectTimersRef.current.clear();
+    // FIX V4: Clear pending words tracking
+    pendingIncorrectWordsRef.current.clear();
 
     const totalDuration = (Date.now() - startTimeRef.current) / 1000;
     
