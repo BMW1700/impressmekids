@@ -214,6 +214,7 @@ export const WordByWordReader = ({
   screeningGradeLevel,
 }: WordByWordReaderProps) => {
   const [isRecording, setIsRecording] = useState(false);
+  const isRecordingRef = useRef(false); // CRITICAL: Ref to avoid stale closures in callbacks
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [wordReadings, setWordReadings] = useState<WordReading[]>([]);
@@ -239,6 +240,9 @@ export const WordByWordReader = ({
   const wordAttemptsRef = useRef<Map<number, number>>(new Map());
   
   const recognitionRef = useRef<any>(null);
+  const recognitionRestartCountRef = useRef(0); // Track restart attempts to prevent infinite loops
+  const recognitionHeartbeatRef = useRef<NodeJS.Timeout | null>(null); // Heartbeat to detect stalled recognition
+  const lastRecognitionActivityRef = useRef<number>(0); // Track last recognition activity
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const startTimeRef = useRef<number>(0);
@@ -454,34 +458,115 @@ export const WordByWordReader = ({
     };
 
     recognition.onerror = (event: any) => {
-      console.error('Speech recognition error:', event.error);
+      console.error('🎤 Speech recognition error:', event.error, 'at', new Date().toISOString());
+      
       if (event.error === 'no-speech') {
-        toast({
-          title: 'No speech detected',
-          description: 'Please start reading aloud',
-          variant: 'destructive',
-        });
+        // FIX: Auto-restart on no-speech instead of just showing toast
+        if (isRecordingRef.current && realtimeWordIndexRef.current < words.length) {
+          recognitionRestartCountRef.current += 1;
+          
+          if (recognitionRestartCountRef.current <= 10) {
+            console.log('🔄 No speech detected, auto-restarting... (attempt', recognitionRestartCountRef.current, ')');
+            
+            // Small delay before restart to prevent rapid-fire
+            setTimeout(() => {
+              if (isRecordingRef.current && recognitionRef.current) {
+                try {
+                  recognitionRef.current.start();
+                  console.log('✅ Recognition restarted after no-speech');
+                } catch (e) {
+                  console.log('⚠️ Restart failed:', e);
+                }
+              }
+            }, 300);
+          } else {
+            console.log('⚠️ Max restart attempts reached');
+            toast({
+              title: 'Speech recognition paused',
+              description: 'Click stop and start again if needed',
+              variant: 'destructive',
+            });
+          }
+        }
+      } else if (event.error === 'aborted') {
+        // User or system aborted - don't restart
+        console.log('🛑 Recognition aborted');
+      } else {
+        // Other errors - show toast but don't crash
+        console.error('🚨 Recognition error:', event.error);
       }
     };
 
-    // FIX 3: Add onend handler to restart recognition if needed
+    // FIX: Use ref to avoid stale closure
     recognition.onend = () => {
-      console.log('Speech recognition ended');
+      console.log('🎤 Speech recognition ended at', new Date().toISOString());
       
-      // Restart recognition if still recording (continuous mode recovery)
-      if (isRecording && realtimeWordIndexRef.current < words.length) {
-        try {
-          console.log('Restarting speech recognition...');
-          recognition.start();
-        } catch (e) {
-          console.log('Recognition restart skipped:', e);
+      // Use REF (not state) to check if still recording
+      if (isRecordingRef.current && realtimeWordIndexRef.current < words.length) {
+        recognitionRestartCountRef.current += 1;
+        
+        if (recognitionRestartCountRef.current <= 15) {
+          // Add delay to prevent rapid restart loops
+          setTimeout(() => {
+            if (isRecordingRef.current && recognitionRef.current) {
+              try {
+                console.log('🔄 Restarting recognition (attempt', recognitionRestartCountRef.current, ')');
+                recognitionRef.current.start();
+                lastRecognitionActivityRef.current = Date.now();
+              } catch (e) {
+                console.log('⚠️ Recognition restart failed:', e);
+              }
+            }
+          }, 200);
+        } else {
+          console.log('⚠️ Max onend restart attempts reached');
         }
       }
     };
 
+    recognition.onstart = () => {
+      console.log('🎤 Speech recognition started at', new Date().toISOString());
+      lastRecognitionActivityRef.current = Date.now();
+      // Reset restart counter on successful start
+      recognitionRestartCountRef.current = 0;
+    };
+
     recognition.start();
     recognitionRef.current = recognition;
+    isRecordingRef.current = true;
     setIsRecording(true);
+    recognitionRestartCountRef.current = 0;
+    lastRecognitionActivityRef.current = Date.now();
+
+    // HEARTBEAT: Check every 5 seconds if recognition is stalled
+    recognitionHeartbeatRef.current = setInterval(() => {
+      const timeSinceActivity = Date.now() - lastRecognitionActivityRef.current;
+      
+      if (isRecordingRef.current && timeSinceActivity > 8000) {
+        // No activity for 8+ seconds - try to restart
+        console.log('💓 Heartbeat: No activity for', Math.round(timeSinceActivity / 1000), 's - restarting recognition');
+        
+        if (recognitionRef.current) {
+          try {
+            recognitionRef.current.stop();
+          } catch (e) {
+            // Ignore stop errors
+          }
+          
+          setTimeout(() => {
+            if (isRecordingRef.current && recognitionRef.current) {
+              try {
+                recognitionRef.current.start();
+                lastRecognitionActivityRef.current = Date.now();
+                console.log('✅ Heartbeat restart successful');
+              } catch (e) {
+                console.log('⚠️ Heartbeat restart failed:', e);
+              }
+            }
+          }, 300);
+        }
+      }
+    }, 5000);
 
     toast({
       title: 'Start Reading!',
@@ -522,6 +607,8 @@ export const WordByWordReader = ({
     
     // Track speech time for cognitive load
     lastSpeechTimeRef.current = Date.now();
+    // Update recognition activity for heartbeat
+    lastRecognitionActivityRef.current = Date.now();
     
     // INSTANT UPDATE: Process new words, matching to FIRST UNPROCESSED position
     requestAnimationFrame(() => {
@@ -881,6 +968,15 @@ export const WordByWordReader = ({
   }, [words, wordMatcher, isStrictMode]);
 
   const stopReading = useCallback(async () => {
+    // CRITICAL: Update ref FIRST to prevent restart attempts
+    isRecordingRef.current = false;
+    
+    // Clear heartbeat interval
+    if (recognitionHeartbeatRef.current) {
+      clearInterval(recognitionHeartbeatRef.current);
+      recognitionHeartbeatRef.current = null;
+    }
+    
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       recognitionRef.current = null;
