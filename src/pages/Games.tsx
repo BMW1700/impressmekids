@@ -1,14 +1,45 @@
+import { useEffect, useState } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { GameTile } from "@/components/GameTile";
 import { Button } from "@/components/ui/button";
-import { Zap, Trophy, BookOpen, Brain, Calculator, Globe, Hash, PawPrint, Map, ArrowLeft } from "lucide-react";
+import { Zap, Trophy, BookOpen, Brain, Calculator, Globe, Hash, PawPrint, Map, Home } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const Games = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const [dashboardPath, setDashboardPath] = useState("/");
+
+  useEffect(() => {
+    const getDashboardPath = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setDashboardPath("/");
+        return;
+      }
+
+      const { data: profileResult } = await supabase.rpc('get_user_profile', { 
+        _user_id: session.user.id 
+      });
+
+      if (profileResult && profileResult.length > 0) {
+        const role = profileResult[0].role;
+        switch (role) {
+          case 'teacher': setDashboardPath('/teacher/dashboard'); break;
+          case 'student': setDashboardPath('/student/dashboard'); break;
+          case 'admin': setDashboardPath('/admin/dashboard'); break;
+          case 'parent': setDashboardPath('/parent/dashboard'); break;
+          case 'district_manager': setDashboardPath('/district-manager/dashboard'); break;
+          default: setDashboardPath('/');
+        }
+      }
+    };
+
+    getDashboardPath();
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -18,11 +49,11 @@ const Games = () => {
         <div className="container mx-auto px-4">
           <Button
             variant="ghost"
-            onClick={() => navigate(-1)}
+            onClick={() => navigate(dashboardPath)}
             className="mb-4"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+            <Home className="h-4 w-4 mr-2" />
+            Home
           </Button>
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
