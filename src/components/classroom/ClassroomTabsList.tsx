@@ -64,12 +64,12 @@ const STUDENT_TABS = [
   "syllabus",
   "assignments",
   "announcements",
+  "discussions",
   "study",
   "tournaments",
-  "trends",
-  "discussions",
-  "grades",
   "calendar",
+  "grades",
+  "trends",
 ];
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
