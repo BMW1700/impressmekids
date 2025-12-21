@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, Printer, Search, Filter } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, Printer, Search, Filter, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, addMonths, subMonths, addDays, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, parse } from "date-fns";
 import { useCalendarData } from "@/hooks/useCalendarData";
@@ -352,7 +352,16 @@ export default function Calendar() {
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
         <div className="space-y-8">
-          <div className="text-center">
+          <div className="text-center relative">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(-1)}
+              className="absolute left-0 top-1/2 -translate-y-1/2 gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
             <h1 className="text-5xl font-luxury font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-fade-in">
               My Calendar
             </h1>
