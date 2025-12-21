@@ -470,9 +470,51 @@ export const WordByWordReader = ({
       }
     };
 
+    // SILENCE DETECTION: Detect when speech starts
+    recognition.onspeechstart = () => {
+      console.log('🎤 Speech started');
+      speechDetectedRef.current = true;
+      lastSpeechEventTimeRef.current = Date.now();
+      
+      // Clear any pending silence flush timer
+      if (silenceFlushTimerRef.current) {
+        clearTimeout(silenceFlushTimerRef.current);
+        silenceFlushTimerRef.current = null;
+      }
+    };
+    
+    // SILENCE DETECTION: Detect when speech ends - flush pending words after brief delay
+    recognition.onspeechend = () => {
+      console.log('🔇 Speech ended - starting silence flush timer');
+      lastSpeechEventTimeRef.current = Date.now();
+      
+      // Clear any existing timer
+      if (silenceFlushTimerRef.current) {
+        clearTimeout(silenceFlushTimerRef.current);
+      }
+      
+      // Wait 600ms after speech ends, then force-flush any pending transcript
+      silenceFlushTimerRef.current = setTimeout(() => {
+        const currentTranscript = lastInterimRef.current;
+        if (currentTranscript) {
+          console.log('🔄 Silence flush: forcing process of transcript:', currentTranscript);
+          const flushTimestamp = Date.now() - startTimeRef.current;
+          processInterimResult(currentTranscript, flushTimestamp, lastSpeechConfidenceRef.current, { force: true });
+        }
+        silenceFlushTimerRef.current = null;
+      }, 600);
+    };
+
     // FIX 3: Add onend handler to restart recognition if needed
     recognition.onend = () => {
       console.log('Speech recognition ended');
+      
+      // CRITICAL: Flush any pending transcript before potentially restarting
+      if (lastInterimRef.current) {
+        console.log('🔄 Recognition end flush:', lastInterimRef.current);
+        const flushTimestamp = Date.now() - startTimeRef.current;
+        processInterimResult(lastInterimRef.current, flushTimestamp, lastSpeechConfidenceRef.current, { force: true });
+      }
       
       // Restart recognition if still recording (continuous mode recovery)
       if (isRecording && realtimeWordIndexRef.current < words.length) {
@@ -487,6 +529,13 @@ export const WordByWordReader = ({
 
     recognition.start();
     recognitionRef.current = recognition;
+    
+    // Reset silence detection state
+    speechDetectedRef.current = false;
+    if (silenceFlushTimerRef.current) {
+      clearTimeout(silenceFlushTimerRef.current);
+      silenceFlushTimerRef.current = null;
+    }
     setIsRecording(true);
 
     toast({
@@ -498,6 +547,11 @@ export const WordByWordReader = ({
   // Track sound throttling - only play every 3rd word at high speed
   const lastSoundPlayedAtRef = useRef(0);
   const previousCorrectCountRef = useRef(0);
+  
+  // SILENCE DETECTION: Refs for detecting when user stops speaking
+  const speechDetectedRef = useRef(false);
+  const silenceFlushTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSpeechEventTimeRef = useRef<number>(0);
   
   // Process interim (real-time) results - ULTRA FAST with proper repeated word handling
   // SUPERCHARGED V2: Expanded look-ahead (5 words), pending-incorrect state, phoneme fallback
@@ -916,6 +970,12 @@ export const WordByWordReader = ({
   }, [words, wordMatcher, isStrictMode]);
 
   const stopReading = useCallback(async () => {
+    // Clear any pending silence flush timer
+    if (silenceFlushTimerRef.current) {
+      clearTimeout(silenceFlushTimerRef.current);
+      silenceFlushTimerRef.current = null;
+    }
+    
     if (recognitionRef.current) {
       // Flush any last transcript changes before stopping (common source of "missing last word")
       const flushTimestamp = Date.now() - startTimeRef.current;
