@@ -448,7 +448,7 @@ export const WordByWordReader = ({
           // and many browsers revise the last 1–2 words at sentence end. Route final
           // transcripts through the same incremental pipeline so the last word(s)
           // still get consumed and registered.
-          processInterimResult(transcript, timestamp, speechConfidence);
+          processInterimResult(transcript, timestamp, speechConfidence, { force: true });
 
           // SUPERCHARGED V2: Pass all alternatives for better override logic
           const alternatives = Array.from({ length: result.length }, (_, idx) =>
@@ -502,47 +502,60 @@ export const WordByWordReader = ({
   // Process interim (real-time) results - ULTRA FAST with proper repeated word handling
   // SUPERCHARGED V2: Expanded look-ahead (5 words), pending-incorrect state, phoneme fallback
   // SUPERCHARGED V3: Added transcript cleanup and confidence thresholds
-  const processInterimResult = useCallback((transcript: string, timestamp: number, speechConfidence: number = 1) => {
-    if (transcript === lastInterimRef.current) return;
-    
-    // SUPERCHARGED V3: Clean the transcript BEFORE processing
-    const cleanedTranscript = cleanupTranscript(transcript);
-    
-    // SUPERCHARGED V2: Store full transcript for final result override
-    fullTranscriptRef.current = transcript;
-    cleanedTranscriptRef.current = cleanedTranscript;
-    
-    // Get previous words BEFORE updating ref (using cleaned transcripts)
-    const prevCleanedTranscript = cleanupTranscript(lastInterimRef.current);
-    const prevSpokenWords = prevCleanedTranscript.split(/\s+/).filter(w => w.length > 0);
-    lastInterimRef.current = transcript;
+  const processInterimResult = useCallback(
+    (
+      transcript: string,
+      timestamp: number,
+      speechConfidence: number = 1,
+      options?: { force?: boolean }
+    ) => {
+      // Some browsers emit identical interim/final transcripts; allow forced re-processing
+      // (used for FINAL results and stop-flush) so the last word(s) don't get dropped.
+      if (!options?.force && transcript === lastInterimRef.current) return;
 
-    // SUPERCHARGED V3: Use cleaned transcript for word extraction
-    const spokenWords = cleanedTranscript.split(/\s+/).filter(w => w.length > 0);
+      // SUPERCHARGED V3: Clean the transcript BEFORE processing
+      const cleanedTranscript = cleanupTranscript(transcript);
 
-    // IMPORTANT: Speech recognition often *revises* the last 1-2 words without increasing
-    // the word count (e.g., partial -> final). If we only process when length grows,
-    // the last words in a sentence can get missed.
-    let newWords: string[] = [];
+      // SUPERCHARGED V2: Store full transcript for final result override
+      fullTranscriptRef.current = transcript;
+      cleanedTranscriptRef.current = cleanedTranscript;
 
-    if (spokenWords.length > prevSpokenWords.length) {
-      // Normal case: new words appended
-      newWords = spokenWords.slice(prevSpokenWords.length);
-    } else {
-      // Revision case: last word(s) changed but length stayed the same (or shrank)
-      const maxBacktrack = 2;
-      for (let back = 1; back <= maxBacktrack; back++) {
-        const prevIdx = prevSpokenWords.length - back;
-        const currIdx = spokenWords.length - back;
-        if (prevIdx >= 0 && currIdx >= 0 && prevSpokenWords[prevIdx] !== spokenWords[currIdx]) {
-          newWords = spokenWords.slice(currIdx);
-          break;
+      // Get previous words BEFORE updating ref (using cleaned transcripts)
+      const prevCleanedTranscript = cleanupTranscript(lastInterimRef.current);
+      const prevSpokenWords = prevCleanedTranscript.split(/\s+/).filter(w => w.length > 0);
+      lastInterimRef.current = transcript;
+
+      // SUPERCHARGED V3: Use cleaned transcript for word extraction
+      const spokenWords = cleanedTranscript.split(/\s+/).filter(w => w.length > 0);
+
+      // IMPORTANT:
+      // - Web Speech can revise the last 1–2 words without increasing word count
+      // - In continuous mode, it can also emit per-segment transcripts (e.g., just "the")
+      //   which makes the length shrink compared to the previous transcript.
+      // We handle all of these so single remaining words register reliably.
+      let newWords: string[] = [];
+
+      if (spokenWords.length > prevSpokenWords.length) {
+        // Normal case: new words appended
+        newWords = spokenWords.slice(prevSpokenWords.length);
+      } else if (spokenWords.length < prevSpokenWords.length) {
+        // Segment reset case: treat the whole segment as new input
+        newWords = spokenWords;
+      } else {
+        // Revision case: last word(s) changed but length stayed the same
+        const maxBacktrack = 2;
+        for (let back = 1; back <= maxBacktrack; back++) {
+          const prevIdx = prevSpokenWords.length - back;
+          const currIdx = spokenWords.length - back;
+          if (prevIdx >= 0 && currIdx >= 0 && prevSpokenWords[prevIdx] !== spokenWords[currIdx]) {
+            newWords = spokenWords.slice(currIdx);
+            break;
+          }
         }
       }
-    }
 
-    // Only process if we have something new/changed to consume
-    if (newWords.length === 0) return;
+      // Only process if we have something new/changed to consume
+      if (newWords.length === 0) return;
     
     // Track speech time for cognitive load
     lastSpeechTimeRef.current = Date.now();
@@ -906,7 +919,7 @@ export const WordByWordReader = ({
     if (recognitionRef.current) {
       // Flush any last transcript changes before stopping (common source of "missing last word")
       const flushTimestamp = Date.now() - startTimeRef.current;
-      processInterimResult(lastInterimRef.current, flushTimestamp, lastSpeechConfidenceRef.current);
+      processInterimResult(lastInterimRef.current, flushTimestamp, lastSpeechConfidenceRef.current, { force: true });
 
       recognitionRef.current.stop();
       recognitionRef.current = null;
