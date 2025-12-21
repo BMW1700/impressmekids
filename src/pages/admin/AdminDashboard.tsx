@@ -23,6 +23,7 @@ import { AccountVerificationRequests } from "@/components/admin/AccountVerificat
 import { CleverSyncPanel } from "@/components/admin/CleverSyncPanel";
 import { SchoolsManagementModal } from "@/components/admin/SchoolsManagementModal";
 import { ConnectToSchoolDialog } from "@/components/admin/ConnectToSchoolDialog";
+import { EditStudentIdDialog } from "@/components/admin/EditStudentIdDialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -59,6 +60,12 @@ export default function AdminDashboard() {
   const [connectSchoolUserId, setConnectSchoolUserId] = useState<string>("");
   const [connectSchoolUserName, setConnectSchoolUserName] = useState<string>("");
   const [connectSchoolCurrentId, setConnectSchoolCurrentId] = useState<string | null>(null);
+
+  // Edit student ID dialog state
+  const [editStudentIdOpen, setEditStudentIdOpen] = useState(false);
+  const [editStudentIdUserId, setEditStudentIdUserId] = useState<string>("");
+  const [editStudentIdUserName, setEditStudentIdUserName] = useState<string>("");
+  const [editStudentIdCurrentNumber, setEditStudentIdCurrentNumber] = useState<string | null>(null);
 
   useEffect(() => {
     checkAdminAccess();
@@ -126,6 +133,13 @@ export default function AdminDashboard() {
     setConnectSchoolUserName(userName);
     setConnectSchoolCurrentId(currentSchoolId || null);
     setConnectSchoolOpen(true);
+  };
+
+  const handleEditStudentId = (studentId: string, studentName: string, currentStudentIdNumber: string | null) => {
+    setEditStudentIdUserId(studentId);
+    setEditStudentIdUserName(studentName);
+    setEditStudentIdCurrentNumber(currentStudentIdNumber);
+    setEditStudentIdOpen(true);
   };
 
   if (loading || isLoading) {
@@ -283,6 +297,7 @@ export default function AdminDashboard() {
                           onViewClassrooms={handleViewStudentClassrooms}
                           onViewParents={handleViewStudentParents}
                           onConnectToSchool={handleConnectToSchool}
+                          onEditStudentId={handleEditStudentId}
                         />
                       ))}
                     </div>
@@ -423,6 +438,14 @@ export default function AdminDashboard() {
         userId={connectSchoolUserId}
         userName={connectSchoolUserName}
         currentSchoolId={connectSchoolCurrentId}
+      />
+
+      <EditStudentIdDialog
+        open={editStudentIdOpen}
+        onOpenChange={setEditStudentIdOpen}
+        studentId={editStudentIdUserId}
+        studentName={editStudentIdUserName}
+        currentStudentIdNumber={editStudentIdCurrentNumber}
       />
     </div>
   );
