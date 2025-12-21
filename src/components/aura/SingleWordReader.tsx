@@ -12,6 +12,7 @@ import { CelebrationEffect } from './CelebrationEffect';
 import { XPPopup } from './XPPopup';
 import { playCorrectPronunciation, SoundEffects, unlockSpeechSynthesis } from '@/lib/pronunciationPlayer';
 import { isWordMatchLenient } from '@/lib/wordMatchingModes';
+import { getPhoneticGuide, getWordSegments } from '@/lib/phoneticGuide';
 import { cleanupTranscript } from '@/lib/transcriptCleanup';
 
 interface SingleWordReaderProps {
@@ -489,24 +490,12 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
                 {currentGroupWords.map((word, idx) => {
                   const isActive = idx === currentWordInGroup;
                   const isPast = idx < currentWordInGroup;
+                  const segments = getWordSegments(word);
                   
                   return (
-                    <motion.span
+                    <motion.div
                       key={`${currentIndex}-${idx}`}
-                      className={`
-                        ${wordsPerGroup === 1 ? 'text-6xl md:text-7xl' : wordsPerGroup <= 3 ? 'text-4xl md:text-5xl' : 'text-2xl md:text-3xl'}
-                        font-bold transition-all duration-200
-                        ${isActive 
-                          ? feedback === 'correct'
-                            ? 'text-green-600 dark:text-green-400'
-                            : feedback === 'incorrect'
-                            ? 'text-red-600 dark:text-red-400'
-                            : 'text-primary underline underline-offset-8 decoration-4'
-                          : isPast
-                          ? 'text-green-600/50 dark:text-green-400/50 line-through'
-                          : 'text-muted-foreground/60'
-                        }
-                      `}
+                      className="flex flex-col items-center"
                       animate={
                         isActive && feedback === 'correct'
                           ? { scale: [1, 1.1, 1] }
@@ -515,8 +504,49 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
                           : {}
                       }
                     >
-                      {word}
-                    </motion.span>
+                      {/* Main word display */}
+                      <span
+                        className={`
+                          ${wordsPerGroup === 1 ? 'text-6xl md:text-7xl' : wordsPerGroup <= 3 ? 'text-4xl md:text-5xl' : 'text-2xl md:text-3xl'}
+                          font-bold transition-all duration-200
+                          ${isActive 
+                            ? feedback === 'correct'
+                              ? 'text-green-600 dark:text-green-400'
+                              : feedback === 'incorrect'
+                              ? 'text-red-600 dark:text-red-400'
+                              : 'text-primary underline underline-offset-8 decoration-4'
+                            : isPast
+                            ? 'text-green-600/50 dark:text-green-400/50 line-through'
+                            : 'text-muted-foreground/60'
+                          }
+                        `}
+                      >
+                        {word}
+                      </span>
+                      
+                      {/* Phonetic sound-out display */}
+                      {isActive && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mt-3 flex items-center justify-center gap-1"
+                        >
+                          {segments.map((seg, segIdx) => (
+                            <span key={segIdx} className="flex flex-col items-center">
+                              <span className={`
+                                ${wordsPerGroup === 1 ? 'text-lg md:text-xl' : wordsPerGroup <= 3 ? 'text-base md:text-lg' : 'text-sm md:text-base'}
+                                font-medium text-muted-foreground/80 italic
+                              `}>
+                                {seg.phonetic}
+                              </span>
+                              {segIdx < segments.length - 1 && (
+                                <span className="text-muted-foreground/40 mx-0.5">•</span>
+                              )}
+                            </span>
+                          ))}
+                        </motion.div>
+                      )}
+                    </motion.div>
                   );
                 })}
               </div>
