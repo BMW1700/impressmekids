@@ -436,7 +436,7 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
               {t("student.account.studentId")}
             </Label>
             <div className="p-3 border border-border rounded-lg bg-muted/50 font-mono">
-              <p className="text-foreground">{userProfile?.id || t("student.common.na")}</p>
+              <p className="text-foreground">{userProfile?.student_id || t("student.account.notSet")}</p>
             </div>
           </div>
 
