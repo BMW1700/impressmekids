@@ -593,6 +593,8 @@ const ClassroomDetail = () => {
   }
   // Check if user has access (teacher, student, or substitute)
   const isSubstitute = substituteAccess !== null && substituteAccess.classroomId === id;
+  // Substitutes should see teacher UI, not student UI
+  const canViewAsTeacher = isTeacher || isSubstitute;
   const hasAccess = isTeacher || isStudent || isSubstitute;
   
   if (!hasAccess) {
@@ -792,14 +794,14 @@ const ClassroomDetail = () => {
               </div>
             </div>}
 
-          <Tabs defaultValue={searchParams.get('tab') || (isStudent ? "assignments" : "students")} className="mb-8">
+          <Tabs defaultValue={searchParams.get('tab') || (isStudent && !isSubstitute ? "assignments" : "students")} className="mb-8">
             <ClassroomTabsList 
               classroomId={id!}
-              isTeacher={isTeacher}
+              isTeacher={canViewAsTeacher}
               parentRequests={parentRequests}
             />
 
-            {isTeacher && <TabsContent value="students" className="mt-6">
+            {canViewAsTeacher && <TabsContent value="students" className="mt-6">
                 <div className="mb-6">
                   <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Student Roster</h2>
                   <p className="text-muted-foreground mt-1">Manage and view your classroom students</p>
@@ -864,7 +866,7 @@ const ClassroomDetail = () => {
                 </div>}
               </TabsContent>}
 
-            {isTeacher && <TabsContent value="attendance" className="mt-6">
+            {canViewAsTeacher && substituteAccess?.permissions?.take_attendance !== false && <TabsContent value="attendance" className="mt-6">
                 <div className="mb-6">
                   <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Attendance</h2>
                   <p className="text-muted-foreground mt-1">Track and manage student attendance</p>
@@ -876,7 +878,7 @@ const ClassroomDetail = () => {
             }))} />
               </TabsContent>}
 
-            {isTeacher && <TabsContent value="safety" className="mt-6">
+            {canViewAsTeacher && <TabsContent value="safety" className="mt-6">
                 <div className="mb-6">
                   <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Safety & Drills</h2>
                   <p className="text-muted-foreground mt-1">Manage emergency drills and student safety</p>
@@ -884,7 +886,7 @@ const ClassroomDetail = () => {
                 <TeacherSafetyTab classroomId={id!} students={students} />
               </TabsContent>}
 
-            {isTeacher && isFeatureEnabled("behavior") && <TabsContent value="behavior" className="mt-6">
+            {canViewAsTeacher && isFeatureEnabled("behavior") && <TabsContent value="behavior" className="mt-6">
                 <div className="mb-6">
                   <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Behavior Tracking</h2>
                   <p className="text-muted-foreground mt-1">Track and reward student behavior</p>
@@ -898,11 +900,11 @@ const ClassroomDetail = () => {
                 />
               </TabsContent>}
 
-            {isTeacher && isFeatureEnabled("ai-insights") && <TabsContent value="ai-insights" className="mt-6">
+            {canViewAsTeacher && isFeatureEnabled("ai-insights") && <TabsContent value="ai-insights" className="mt-6">
                 <ClassroomAIInsights classroomId={id!} />
               </TabsContent>}
 
-            {isTeacher && isFeatureEnabled("leaderboard") && <TabsContent value="leaderboard" className="mt-6">
+            {canViewAsTeacher && isFeatureEnabled("leaderboard") && <TabsContent value="leaderboard" className="mt-6">
                 <div className="mb-6">
                   <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Class Leaderboard</h2>
                   <p className="text-muted-foreground mt-1">Track student performance and achievements</p>
@@ -922,27 +924,27 @@ const ClassroomDetail = () => {
                 <StudentClassroomTrends classroomId={id!} studentId={profile.id} />
               </TabsContent>}
 
-            {isTeacher && <TabsContent value="meeting-requests" className="mt-6">
+            {canViewAsTeacher && <TabsContent value="meeting-requests" className="mt-6">
                 <MeetingRequestsTab classroomId={id!} />
               </TabsContent>}
 
             {/* Discussions Tab */}
             <TabsContent value="discussions" className="mt-6">
-              <DiscussionBoard classroomId={id!} isTeacher={isTeacher} />
+              <DiscussionBoard classroomId={id!} isTeacher={canViewAsTeacher} />
             </TabsContent>
 
             {/* Rubrics Tab - Teachers Only, Toolkit Feature */}
-            {isTeacher && isFeatureEnabled("rubrics") && <TabsContent value="rubrics" className="mt-6">
+            {canViewAsTeacher && isFeatureEnabled("rubrics") && <TabsContent value="rubrics" className="mt-6">
                 <RubricsList classroomId={id!} />
               </TabsContent>}
 
             {/* Journal Tab - Teachers Only, Toolkit Feature */}
-            {isTeacher && isFeatureEnabled("journal") && <TabsContent value="journal" className="mt-6">
+            {canViewAsTeacher && isFeatureEnabled("journal") && <TabsContent value="journal" className="mt-6">
                 <TeacherJournalTab classroomId={id} />
               </TabsContent>}
 
             <TabsContent value="assignments" className="mt-6">
-              {isTeacher && <StandardsProgressDashboard classroomId={id!} />}
+              {canViewAsTeacher && <StandardsProgressDashboard classroomId={id!} />}
               
               <div className="mb-4 flex items-center justify-between mt-6">
                 <h2 className="text-2xl font-bold">Assignments</h2>
@@ -956,7 +958,7 @@ const ClassroomDetail = () => {
                   <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="text-xl font-bold mb-2">No Assignments Yet</h3>
                   <p className="text-muted-foreground mb-4">
-                    {isTeacher ? 'Create multi-question assignments with various question types' : 'Your teacher hasn\'t posted any assignments yet'}
+                    {canViewAsTeacher ? 'Create multi-question assignments with various question types' : 'Your teacher hasn\'t posted any assignments yet'}
                   </p>
                   {isTeacher && <Button className="bg-gradient-primary hover:opacity-90" onClick={() => navigate(`/teacher/assignment/create/${id}`)}>
                       <FileText className="mr-2 h-4 w-4" />
@@ -965,7 +967,7 @@ const ClassroomDetail = () => {
                 </Card> : <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {assignments.map((assignment: any) => {
                 // Teachers: show all assignments with full controls
-                if (isTeacher) {
+                if (canViewAsTeacher) {
                   return <Card key={assignment.id} className="shadow-card hover:shadow-purple transition-shadow">
                           <CardHeader>
                             <div className="flex items-center justify-between">
@@ -1076,7 +1078,7 @@ const ClassroomDetail = () => {
                   <Megaphone className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="text-xl font-bold mb-2">No Announcements Yet</h3>
                   <p className="text-muted-foreground mb-4">
-                    {isTeacher ? 'Send messages and assignments to all students in this classroom' : 'Your teacher hasn\'t posted any announcements yet'}
+                    {canViewAsTeacher ? 'Send messages and assignments to all students in this classroom' : 'Your teacher hasn\'t posted any announcements yet'}
                   </p>
                   {isTeacher && <Button className="bg-gradient-primary hover:opacity-90" onClick={() => setShowCreateAnnouncement(true)}>
                       <Megaphone className="mr-2 h-4 w-4" />
@@ -1100,7 +1102,7 @@ const ClassroomDetail = () => {
                   <Trophy className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="text-xl font-bold mb-2">No Tournaments Yet</h3>
                   <p className="text-muted-foreground mb-4">
-                    {isTeacher ? 'Create your first TriviaTastic tournament for this classroom' : 'Your teacher hasn\'t created any tournaments yet'}
+                    {canViewAsTeacher ? 'Create your first TriviaTastic tournament for this classroom' : 'Your teacher hasn\'t created any tournaments yet'}
                   </p>
                   {isTeacher && <Button className="bg-gradient-primary hover:opacity-90" onClick={() => setShowSelectGame(true)}>
                       <Trophy className="mr-2 h-4 w-4" />
@@ -1140,14 +1142,14 @@ const ClassroomDetail = () => {
                             Created {new Date(tournament.created_at).toLocaleDateString()}
                           </p>
                           <Button variant="outline" className="w-full mt-4" onClick={() => {
-                      if (isTeacher) {
+                      if (canViewAsTeacher) {
                         navigate(`/teacher/tournament/control?tournament=${tournament.id}`);
                       } else {
                         navigate(`/games/jeopardy-1v1?tournament=${tournament.id}`);
                       }
                     }}>
                             <Play className="mr-2 h-4 w-4" />
-                            {isTeacher ? 'Control Tournament' : 'Join Game'}
+                            {canViewAsTeacher ? 'Control Tournament' : 'Join Game'}
                           </Button>
                         </div>
                       </CardContent>
@@ -1160,7 +1162,7 @@ const ClassroomDetail = () => {
                 <div>
                   <h2 className="text-2xl font-bold">Study Materials</h2>
                   <p className="text-muted-foreground">
-                    {isTeacher ? "Manage flashcard sets for your students" : "Review flashcard sets from your teacher"}
+                    {canViewAsTeacher ? "Manage flashcard sets for your students" : "Review flashcard sets from your teacher"}
                   </p>
                 </div>
                 {isTeacher && <Button onClick={() => navigate(`/teacher/questions/${id}`)} className="bg-gradient-primary">
@@ -1178,7 +1180,7 @@ const ClassroomDetail = () => {
                   <GraduationCap className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="text-xl font-bold mb-2">No Study Materials Yet</h3>
                   <p className="text-muted-foreground mb-4">
-                    {isTeacher ? "Generate flashcard sets from your question groups" : "Your teacher hasn't created any flashcard sets yet"}
+                    {canViewAsTeacher ? "Generate flashcard sets from your question groups" : "Your teacher hasn't created any flashcard sets yet"}
                   </p>
                   {isTeacher && <Button onClick={() => navigate(`/teacher/questions/${id}`)} className="bg-gradient-primary">
                       <Plus className="mr-2 h-4 w-4" />
@@ -1189,7 +1191,7 @@ const ClassroomDetail = () => {
                       <CardHeader>
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-lg">{set.title}</CardTitle>
-                          {isTeacher && <Badge variant={set.is_posted ? "default" : "secondary"}>
+                          {canViewAsTeacher && <Badge variant={set.is_posted ? "default" : "secondary"}>
                               {set.is_posted ? "Posted" : "Draft"}
                             </Badge>}
                         </div>
@@ -1247,7 +1249,7 @@ const ClassroomDetail = () => {
             </TabsContent>
 
             <TabsContent value="syllabus" className="mt-6">
-              <SyllabusTab classroomId={id!} isTeacher={isTeacher} />
+              <SyllabusTab classroomId={id!} isTeacher={canViewAsTeacher} />
             </TabsContent>
 
             {/* Student Grades Tab */}
@@ -1278,7 +1280,7 @@ const ClassroomDetail = () => {
                       View upcoming assignments and events for this class
                     </p>
                   </div>
-                  {!isTeacher && (
+                  {!canViewAsTeacher && (
                     <Button onClick={() => navigate("/calendar")}>
                       <Calendar className="h-4 w-4 mr-2" />
                       View Full Calendar
