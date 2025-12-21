@@ -20,7 +20,7 @@ const getSections = (t: (key: string) => string) => [
   { id: "calendar", label: t('sidebar.calendar'), icon: Calendar, color: "from-amber-500 to-orange-500" },
   { id: "announcements", label: t('sidebar.announcements'), icon: Bell, color: "from-red-500 to-pink-500" },
   { id: "study-games", label: t('sidebar.studyGames'), icon: Gamepad2, color: "from-indigo-500 to-violet-500" },
-  { id: "aura-reading", label: t('sidebar.auraReading'), icon: BookOpenCheck, isExternal: true, color: "from-amber-500 to-yellow-500" },
+  { id: "aura-reading", label: t('sidebar.auraReading'), icon: BookOpenCheck, color: "from-amber-500 to-yellow-500" },
   { id: "gradebook", label: t('sidebar.gradebook'), icon: GraduationCap, color: "from-cyan-500 to-blue-500" },
   { id: "directory", label: t('sidebar.directory'), icon: FolderOpen, color: "from-slate-500 to-gray-600" },
   { id: "safety", label: t('sidebar.safety'), icon: Shield, color: "from-green-500 to-emerald-500" },
@@ -91,11 +91,7 @@ export const StudentDashboardSidebar = ({
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.03, duration: 0.3 }}
                 onClick={() => {
-                  if (section.id === 'aura-reading') {
-                    handleNavigation(section.id, true, onNavigateToAuraReading);
-                  } else {
-                    handleNavigation(section.id, false);
-                  }
+                  handleNavigation(section.id, false);
                 }}
                 className={cn(
                   "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 relative group",
