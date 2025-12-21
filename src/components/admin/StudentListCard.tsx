@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { School, Users, Building } from "lucide-react";
+import { School, Users, Building, Hash } from "lucide-react";
 
 interface StudentListCardProps {
   student: {
@@ -12,6 +12,7 @@ interface StudentListCardProps {
     parent_count: number;
     school_id?: string | null;
     school_name?: string | null;
+    student_id?: string | null;
   };
   onViewClassrooms: (studentId: string, studentName: string) => void;
   onViewParents: (studentId: string, studentName: string) => void;
@@ -29,6 +30,12 @@ export const StudentListCard = ({
       <CardHeader>
         <CardTitle className="text-lg">{student.full_name}</CardTitle>
         <CardDescription>{student.email}</CardDescription>
+        {student.student_id && (
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+            <Hash className="h-3 w-3" />
+            ID: {student.student_id}
+          </div>
+        )}
         {student.school_name && (
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <Building className="h-3 w-3" />

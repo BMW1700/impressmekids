@@ -6194,6 +6194,7 @@ export type Database = {
           parent_count: number
           school_id: string
           school_name: string
+          student_id: string
         }[]
       }
       get_all_teachers: {
