@@ -878,23 +878,54 @@ export const WordByWordReader = ({
     // SUPERCHARGED V3: Clean the transcript before processing
     const cleanedTranscript = cleanupTranscript(transcript);
     const spokenWords = cleanedTranscript.split(/\s+/).filter(w => w.length > 0);
-    
+
+    // FIX V4: Compute delta words for final results (prevents re-processing earlier words and skipping ahead)
+    const prevCleaned = cleanupTranscript(lastInterimRef.current);
+    const prevWords = prevCleaned.split(/\s+/).filter(w => w.length > 0);
+
+    let overlap = 0;
+    const maxOverlap = Math.min(prevWords.length, spokenWords.length);
+
+    // Find the longest overlap where prev tail == current head
+    for (let k = maxOverlap; k > 0; k--) {
+      const prevTail = prevWords.slice(prevWords.length - k);
+      const currentHead = spokenWords.slice(0, k);
+      if (prevTail.join(' ') === currentHead.join(' ')) {
+        overlap = k;
+        break;
+      }
+    }
+
+    let deltaWords = spokenWords.slice(overlap);
+
+    // If length is the same but last word changed, treat the last word as a delta
+    if (deltaWords.length === 0 && spokenWords.length === prevWords.length && spokenWords.length > 0) {
+      const lastSpoken = spokenWords[spokenWords.length - 1];
+      const lastPrev = prevWords[prevWords.length - 1];
+      if (lastSpoken !== lastPrev) {
+        deltaWords = [lastSpoken];
+        console.log('📝 FINAL DELTA: last word changed from', lastPrev, 'to', lastSpoken);
+      }
+    }
+
     // SUPERCHARGED V2: Store full transcript for override logic
     fullTranscriptRef.current = transcript;
     cleanedTranscriptRef.current = cleanedTranscript;
-    
+
     // Update recognition activity for heartbeat
     lastRecognitionActivityRef.current = Date.now();
-    
-    console.log('📝 FINAL RESULT:', { 
-      transcript: cleanedTranscript, 
+
+    console.log('📝 FINAL RESULT:', {
+      transcript: cleanedTranscript,
       wordCount: spokenWords.length,
-      currentIdx: realtimeWordIndexRef.current 
+      overlap,
+      deltaCount: deltaWords.length,
+      currentIdx: realtimeWordIndexRef.current,
     });
-    
+
     // Create confirmed word readings
     const newReadings: WordReading[] = [];
-    
+
     // FIX V3: Process new words that weren't caught by interim results
     setRealtimeWordStatus(prev => {
       const newMap = new Map(prev);
@@ -916,7 +947,7 @@ export const WordByWordReader = ({
       // starting from the current position
       let currentIdx = getFirstUnprocessedIndex();
       
-      for (const spokenWord of spokenWords) {
+      for (const spokenWord of deltaWords) {
         if (currentIdx >= words.length) break;
         
         const expectedWord = words[currentIdx];
@@ -1116,6 +1147,9 @@ export const WordByWordReader = ({
         return [...prev, ...uniqueNew];
       });
     }
+
+    // Keep interim tracker in sync with the final transcript so deltas don't misalign
+    lastInterimRef.current = transcript;
   }, [words, wordMatcher, isStrictMode]);
 
   const stopReading = useCallback(async () => {
