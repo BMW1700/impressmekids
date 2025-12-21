@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -48,16 +49,19 @@ export const MedicationModal = ({
   const [medicationName, setMedicationName] = useState("");
   const [dose, setDose] = useState("");
   const [timeOfDay, setTimeOfDay] = useState("");
+  const [description, setDescription] = useState("");
 
   useEffect(() => {
     if (medication) {
       setMedicationName(medication.medication_name || "");
       setDose(medication.dose || "");
       setTimeOfDay(medication.time_of_day || "");
+      setDescription(medication.description || "");
     } else {
       setMedicationName("");
       setDose("");
       setTimeOfDay("");
+      setDescription("");
     }
   }, [medication, open]);
 
@@ -86,6 +90,7 @@ export const MedicationModal = ({
             medication_name: medicationName.trim(),
             dose: dose.trim(),
             time_of_day: timeOfDay,
+            description: description.trim() || null,
           })
           .eq("id", medication.id);
 
@@ -102,6 +107,7 @@ export const MedicationModal = ({
           medication_name: medicationName.trim(),
           dose: dose.trim(),
           time_of_day: timeOfDay,
+          description: description.trim() || null,
         });
 
         if (error) throw error;
@@ -172,6 +178,17 @@ export const MedicationModal = ({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Description (optional)</Label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Add any additional details about this medication..."
+              rows={3}
+            />
           </div>
 
           <div className="flex gap-3 justify-end pt-4">

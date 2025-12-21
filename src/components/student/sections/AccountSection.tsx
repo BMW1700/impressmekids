@@ -734,6 +734,9 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
                         {getTimeOfDayLabel(med.time_of_day)}
                       </span>
                     </div>
+                    {med.description && (
+                      <p className="text-sm text-muted-foreground">{med.description}</p>
+                    )}
                   </div>
                 </div>
               ))}
