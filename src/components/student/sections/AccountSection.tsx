@@ -15,6 +15,8 @@ import {
   Camera,
   Check,
   X,
+  Pill,
+  Clock,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +35,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { EmergencyContactModal } from "../EmergencyContactModal";
+import { MedicationModal } from "../MedicationModal";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -54,6 +57,13 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<string | null>(null);
 
+  // Medications state
+  const [medications, setMedications] = useState<any[]>([]);
+  const [showMedicationModal, setShowMedicationModal] = useState(false);
+  const [selectedMedication, setSelectedMedication] = useState<any>(null);
+  const [showMedicationDeleteConfirm, setShowMedicationDeleteConfirm] = useState(false);
+  const [medicationToDelete, setMedicationToDelete] = useState<string | null>(null);
+
   const [isEditingPreferredName, setIsEditingPreferredName] = useState(false);
   const [preferredName, setPreferredName] = useState("");
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -72,6 +82,7 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
 
   useEffect(() => {
     fetchEmergencyContacts();
+    fetchMedications();
     initializeUserData();
   }, [studentProfile, userProfile]);
 
@@ -111,6 +122,66 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
     } catch (error: any) {
       console.error("Error fetching emergency contacts:", error);
     }
+  };
+
+  const fetchMedications = async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("student_medications")
+        .select("*")
+        .eq("student_id", user.id)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+      setMedications(data || []);
+    } catch (error: any) {
+      console.error("Error fetching medications:", error);
+    }
+  };
+
+  const handleDeleteMedication = async () => {
+    if (!medicationToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("student_medications")
+        .delete()
+        .eq("id", medicationToDelete);
+
+      if (error) throw error;
+
+      toast({
+        title: t("common.success"),
+        description: "Medication deleted successfully",
+      });
+
+      fetchMedications();
+      setShowMedicationDeleteConfirm(false);
+      setMedicationToDelete(null);
+    } catch (error: any) {
+      toast({
+        title: t("common.error"),
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getTimeOfDayLabel = (value: string) => {
+    const labels: Record<string, string> = {
+      morning: "Morning",
+      afternoon: "Afternoon",
+      evening: "Evening",
+      night: "Night (Before Bed)",
+      with_meals: "With Meals",
+      as_needed: "As Needed",
+    };
+    return labels[value] || value;
   };
 
   const handleDeleteContact = async () => {
@@ -535,6 +606,84 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
         </CardContent>
       </Card>
 
+      {/* Medications Section */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Pill className="h-5 w-5" />
+            Medications
+          </CardTitle>
+          <Button
+            size="sm"
+            onClick={() => {
+              setSelectedMedication(null);
+              setShowMedicationModal(true);
+            }}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Medication
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {medications.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">
+              No medications added yet
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {medications.map((med) => (
+                <div
+                  key={med.id}
+                  className="p-4 border border-border rounded-lg bg-muted/30 relative"
+                >
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="absolute top-2 right-2">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setSelectedMedication(med);
+                          setShowMedicationModal(true);
+                        }}
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        {t("student.account.edit")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => {
+                          setMedicationToDelete(med.id);
+                          setShowMedicationDeleteConfirm(true);
+                        }}
+                      >
+                        {t("student.account.delete")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <div className="space-y-2 pr-8">
+                    <div className="flex items-center gap-2">
+                      <Pill className="h-4 w-4 text-muted-foreground" />
+                      <p className="font-medium text-foreground">{med.medication_name}</p>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <span className="font-medium">{med.dose}</span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {getTimeOfDayLabel(med.time_of_day)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>{t("student.account.security")}</CardTitle>
@@ -609,6 +758,21 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
         onConfirm={handleDeleteContact}
         title={t("student.account.deleteEmergencyContactTitle")}
         description={t("student.account.deleteEmergencyContactDesc")}
+      />
+
+      <MedicationModal
+        open={showMedicationModal}
+        onOpenChange={setShowMedicationModal}
+        medication={selectedMedication}
+        onSave={fetchMedications}
+      />
+
+      <ConfirmModal
+        open={showMedicationDeleteConfirm}
+        onOpenChange={setShowMedicationDeleteConfirm}
+        onConfirm={handleDeleteMedication}
+        title="Delete Medication"
+        description="Are you sure you want to delete this medication? This action cannot be undone."
       />
     </div>
   );
