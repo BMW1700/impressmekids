@@ -12,7 +12,7 @@ import { CelebrationEffect } from './CelebrationEffect';
 import { XPPopup } from './XPPopup';
 import { playCorrectPronunciation, SoundEffects, unlockSpeechSynthesis } from '@/lib/pronunciationPlayer';
 import { isWordMatchLenient } from '@/lib/wordMatchingModes';
-import { getPhoneticGuide, getWordSegments } from '@/lib/phoneticGuide';
+import { getPhoneticGuide } from '@/lib/phoneticGuide';
 import { cleanupTranscript } from '@/lib/transcriptCleanup';
 
 interface SingleWordReaderProps {
@@ -490,7 +490,6 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
                 {currentGroupWords.map((word, idx) => {
                   const isActive = idx === currentWordInGroup;
                   const isPast = idx < currentWordInGroup;
-                  const segments = getWordSegments(word);
                   
                   return (
                     <motion.div
@@ -529,21 +528,14 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
                         <motion.div
                           initial={{ opacity: 0, y: -5 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="mt-3 flex items-center justify-center gap-1"
+                          className="mt-3"
                         >
-                          {segments.map((seg, segIdx) => (
-                            <span key={segIdx} className="flex flex-col items-center">
-                              <span className={`
-                                ${wordsPerGroup === 1 ? 'text-lg md:text-xl' : wordsPerGroup <= 3 ? 'text-base md:text-lg' : 'text-sm md:text-base'}
-                                font-medium text-muted-foreground/80 italic
-                              `}>
-                                {seg.phonetic}
-                              </span>
-                              {segIdx < segments.length - 1 && (
-                                <span className="text-muted-foreground/40 mx-0.5">•</span>
-                              )}
-                            </span>
-                          ))}
+                          <span className={`
+                            ${wordsPerGroup === 1 ? 'text-lg md:text-xl' : wordsPerGroup <= 3 ? 'text-base md:text-lg' : 'text-sm md:text-base'}
+                            font-medium text-muted-foreground/80 italic
+                          `}>
+                            {getPhoneticGuide(word)}
+                          </span>
                         </motion.div>
                       )}
                     </motion.div>
