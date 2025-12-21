@@ -7,6 +7,7 @@ import { ClassroomCard } from "@/components/ClassroomCard";
 import { CreateClassroomModal } from "@/components/CreateClassroomModal";
 import { MLModelTraining } from "@/components/teacher/MLModelTraining";
 import { AllStudentsDialog } from "@/components/teacher/AllStudentsDialog";
+import { CalendarWidget } from "@/components/calendar/CalendarWidget";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -392,7 +393,7 @@ const TeacherDashboard = () => {
                 <Trophy className="h-4 w-4 mr-2" />
                 {t("teacherDashboard.tabs.leaderboard")}
               </TabsTrigger>
-              <TabsTrigger value="calendar" className={liquidGlassTabClass} onClick={() => navigate("/teacher/calendar")}>
+              <TabsTrigger value="calendar" className={liquidGlassTabClass}>
                 <CalendarIcon className="h-4 w-4 mr-2" />
                 {t("teacherDashboard.tabs.calendar")}
               </TabsTrigger>
@@ -490,6 +491,25 @@ const TeacherDashboard = () => {
                   </div>
                 ))
               )}
+            </TabsContent>
+
+            <TabsContent value="calendar" className="mt-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-2xl font-bold">{t("teacherDashboard.tabs.calendar")}</CardTitle>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => navigate("/teacher/calendar")}
+                  >
+                    View Full Calendar →
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {profile?.id && (
+                    <CalendarWidget userId={profile.id} userRole="teacher" />
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="directory" className="mt-6">
