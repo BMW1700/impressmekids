@@ -6691,6 +6691,10 @@ export type Database = {
             Args: { p_district_id: string; p_user_id: string }
             Returns: undefined
           }
+      validate_substitute_access: {
+        Args: { p_access_code: string; p_email: string }
+        Returns: Json
+      }
     }
     Enums: {
       answer_status: "not_attempted" | "in_progress" | "completed"
