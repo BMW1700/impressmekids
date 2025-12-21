@@ -1695,29 +1695,6 @@ export const WordByWordReader = ({
       {/* Progress Bar */}
       <Progress value={progress} className="h-3" />
 
-      {/* Words Per Group Slider - Changeable during reading */}
-      <div className="bg-muted/30 rounded-lg p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium">Words at a time</span>
-          <Badge variant="secondary" className="text-sm">
-            {wordsPerGroup} word{wordsPerGroup > 1 ? 's' : ''}
-          </Badge>
-        </div>
-        <Slider
-          value={[wordsPerGroup]}
-          onValueChange={(value) => setWordsPerGroup(value[0])}
-          min={1}
-          max={10}
-          step={1}
-          className="w-full"
-        />
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>1</span>
-          <span>5</span>
-          <span>10</span>
-        </div>
-      </div>
-
       {/* Passage Display */}
       <Card className="p-6">
         <div className="leading-relaxed">
