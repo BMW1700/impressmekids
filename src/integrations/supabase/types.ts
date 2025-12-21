@@ -3545,6 +3545,7 @@ export type Database = {
           school_id: string | null
           signup_domain: string | null
           student_id: string | null
+          virtual_meeting_link: string | null
         }
         Insert: {
           created_at?: string
@@ -3558,6 +3559,7 @@ export type Database = {
           school_id?: string | null
           signup_domain?: string | null
           student_id?: string | null
+          virtual_meeting_link?: string | null
         }
         Update: {
           created_at?: string
@@ -3571,6 +3573,7 @@ export type Database = {
           school_id?: string | null
           signup_domain?: string | null
           student_id?: string | null
+          virtual_meeting_link?: string | null
         }
         Relationships: [
           {
@@ -5849,6 +5852,7 @@ export type Database = {
           is_recurring: boolean
           location: string | null
           meeting_duration_minutes: number
+          meeting_type: string
           notes: string | null
           specific_date: string | null
           start_date: string | null
@@ -5865,6 +5869,7 @@ export type Database = {
           is_recurring?: boolean
           location?: string | null
           meeting_duration_minutes?: number
+          meeting_type?: string
           notes?: string | null
           specific_date?: string | null
           start_date?: string | null
@@ -5881,6 +5886,7 @@ export type Database = {
           is_recurring?: boolean
           location?: string | null
           meeting_duration_minutes?: number
+          meeting_type?: string
           notes?: string | null
           specific_date?: string | null
           start_date?: string | null
