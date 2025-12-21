@@ -118,33 +118,75 @@ const ClassroomDetail = () => {
     toggleAssignmentStatus
   } = useMultiQuestionAssignments(id);
   const { isFeatureEnabled } = useClassroomFeatures(id);
-  // Check for substitute access on mount
-  useEffect(() => {
-    const storedAccess = sessionStorage.getItem('substituteAccess');
-    if (storedAccess) {
-      try {
-        const accessData = JSON.parse(storedAccess);
-        // Validate this is for the current classroom and hasn't expired
-        if (accessData.classroomId === id) {
-          const accessEnd = new Date(accessData.accessEnd);
-          if (accessEnd > new Date()) {
-            setSubstituteAccess(accessData);
-          } else {
-            // Access expired, clear it
-            sessionStorage.removeItem('substituteAccess');
-            toast({
-              title: "Access Expired",
-              description: "Your substitute access has expired.",
-              variant: "destructive",
-            });
-          }
-        }
-      } catch (e) {
-        console.error('Failed to parse substitute access:', e);
+
+  // Load classroom data for substitute teachers (no auth required)
+  const loadClassroomDataForSubstitute = async (accessData: typeof substituteAccess) => {
+    if (!accessData || !id) return;
+    
+    console.log('🔍 Loading classroom data for substitute teacher...');
+    try {
+      // Fetch classroom using substitute-specific RPC
+      const { data: classroomResult, error: classroomError } = await supabase.rpc('get_classroom_for_substitute', {
+        p_classroom_id: id,
+        p_link_id: accessData.linkId
+      });
+
+      if (classroomError || !classroomResult || classroomResult.length === 0) {
+        console.error('Failed to load classroom for substitute:', classroomError);
         sessionStorage.removeItem('substituteAccess');
+        toast({
+          title: "Access Error",
+          description: "Unable to access classroom. Your link may have expired.",
+          variant: "destructive",
+        });
+        navigate('/auth');
+        return;
       }
+
+      const classroomData = classroomResult[0];
+      setClassroom(classroomData);
+      console.log('✅ Classroom loaded for substitute:', classroomData.name);
+
+      // Fetch students if permitted
+      if (accessData.permissions.view_students) {
+        const { data: studentsResult, error: studentsError } = await supabase.rpc('get_students_for_substitute', {
+          p_classroom_id: id,
+          p_link_id: accessData.linkId
+        });
+
+        if (!studentsError && studentsResult) {
+          const studentsData = studentsResult.map((student: any) => ({
+            student_id: student.student_id,
+            joined_at: student.joined_at,
+            profiles: {
+              id: student.student_id,
+              full_name: student.full_name,
+              email: student.email,
+              student_profiles: student.grade ? [{
+                grade: student.grade,
+                avatar_url: student.avatar_url
+              }] : []
+            }
+          }));
+          setStudents(studentsData);
+          console.log('✅ Students loaded for substitute:', studentsData.length);
+        }
+      }
+
+      // Load announcements (public data)
+      const { data: announcementsData } = await supabase
+        .from('classroom_announcements')
+        .select('*')
+        .eq('classroom_id', id)
+        .order('created_at', { ascending: false });
+      setAnnouncements(announcementsData || []);
+
+      setIsLoading(false);
+    } catch (err) {
+      console.error('Error loading substitute data:', err);
+      setIsLoading(false);
     }
-  }, [id]);
+  };
 
   useEffect(() => {
     // Wait for permissions to be determined before loading data
@@ -152,11 +194,33 @@ const ClassroomDetail = () => {
       loadClassroomData();
     }
   }, [id, permissionsLoading]);
+
   const loadClassroomData = async () => {
     console.log('🔍 ============================================');
     console.log('🔍 loadClassroomData: STARTING');
     console.log('🔍 Classroom ID:', id);
     console.log('🔍 ============================================');
+
+    // First check for substitute access - they don't need auth session
+    const storedAccess = sessionStorage.getItem('substituteAccess');
+    if (storedAccess) {
+      try {
+        const accessData = JSON.parse(storedAccess);
+        if (accessData.classroomId === id) {
+          const accessEnd = new Date(accessData.accessEnd);
+          if (accessEnd > new Date()) {
+            console.log('✅ Valid substitute access found, loading data without auth');
+            setSubstituteAccess(accessData);
+            await loadClassroomDataForSubstitute(accessData);
+            return;
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse substitute access:', e);
+        sessionStorage.removeItem('substituteAccess');
+      }
+    }
+
     let classroomData: any = null;
     try {
       // Get session with detailed logging
