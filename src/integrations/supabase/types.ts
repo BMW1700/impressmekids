@@ -5128,6 +5128,39 @@ export type Database = {
           },
         ]
       }
+      student_medications: {
+        Row: {
+          created_at: string
+          dose: string
+          id: string
+          medication_name: string
+          notes: string | null
+          student_id: string
+          time_of_day: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dose: string
+          id?: string
+          medication_name: string
+          notes?: string | null
+          student_id: string
+          time_of_day: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dose?: string
+          id?: string
+          medication_name?: string
+          notes?: string | null
+          student_id?: string
+          time_of_day?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       student_pickups: {
         Row: {
           created_at: string | null
