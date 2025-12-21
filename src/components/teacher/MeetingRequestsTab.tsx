@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,13 +7,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Clock, Plus, Trash2, Calendar, Loader2, Repeat, Users, MapPin } from "lucide-react";
+import { Clock, Plus, Trash2, Calendar, Loader2, Repeat, Users, MapPin, Video, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, startOfToday, isBefore } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Office hours are teacher-wide, not classroom-specific
 interface MeetingRequestsTabProps {
@@ -49,8 +50,36 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
   const [meetingDuration, setMeetingDuration] = useState("30");
+  const [meetingType, setMeetingType] = useState<"in_person" | "virtual">("in_person");
   const [location, setLocation] = useState("");
+  const [virtualLink, setVirtualLink] = useState("");
+  const [saveVirtualLink, setSaveVirtualLink] = useState(false);
   const [notes, setNotes] = useState("");
+
+  // Fetch saved virtual meeting link from profile
+  const { data: savedVirtualLink } = useQuery({
+    queryKey: ["teacher-virtual-link"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("virtual_meeting_link")
+        .eq("id", user.id)
+        .single();
+      
+      if (error) throw error;
+      return data?.virtual_meeting_link || null;
+    },
+  });
+
+  // Set virtual link from saved value when it loads
+  useEffect(() => {
+    if (savedVirtualLink && !virtualLink) {
+      setVirtualLink(savedVirtualLink);
+    }
+  }, [savedVirtualLink]);
 
   // Fetch office hours (teacher-wide, not classroom-specific)
   const { data: allOfficeHours = [], isLoading } = useQuery({
@@ -143,12 +172,33 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // Validate virtual link if virtual meeting
+      if (meetingType === "virtual" && !virtualLink.trim()) {
+        throw new Error("Please enter a virtual meeting link");
+      }
+
       const durationMinutes = parseInt(meetingDuration);
       const slots = generateTimeSlots(startTime, endTime, durationMinutes);
       
       if (slots.length === 0) {
         throw new Error("Time range is too short for the selected meeting duration");
       }
+
+      // Save virtual link to profile if checkbox is checked
+      if (meetingType === "virtual" && saveVirtualLink && virtualLink.trim()) {
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update({ virtual_meeting_link: virtualLink.trim() })
+          .eq("id", user.id);
+        
+        if (profileError) {
+          console.error("Failed to save virtual link:", profileError);
+        } else {
+          queryClient.invalidateQueries({ queryKey: ["teacher-virtual-link"] });
+        }
+      }
+
+      const locationValue = meetingType === "virtual" ? virtualLink.trim() : (location || null);
 
       const records = slots.map(slot => ({
         teacher_id: user.id,
@@ -160,7 +210,8 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
         start_time: slot.start,
         end_time: slot.end,
         meeting_duration_minutes: durationMinutes,
-        location: location || null,
+        meeting_type: meetingType,
+        location: locationValue,
         notes: notes || null,
       }));
 
@@ -209,7 +260,10 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
     setStartTime("09:00");
     setEndTime("10:00");
     setMeetingDuration("30");
+    setMeetingType("in_person");
     setLocation("");
+    setVirtualLink(savedVirtualLink || "");
+    setSaveVirtualLink(false);
     setNotes("");
   };
 
@@ -374,14 +428,64 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="location">Location (Optional)</Label>
-                <Input
-                  id="location"
-                  placeholder="e.g., Room 204, Virtual Meeting Link"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                />
+                <Label>Meeting Type</Label>
+                <Select value={meetingType} onValueChange={(val) => setMeetingType(val as "in_person" | "virtual")}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select meeting type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="in_person">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        In-Person
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="virtual">
+                      <div className="flex items-center gap-2">
+                        <Video className="h-4 w-4" />
+                        Virtual
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+
+              {meetingType === "in_person" ? (
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location (Optional)</Label>
+                  <Input
+                    id="location"
+                    placeholder="e.g., Room 204"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="virtual-link">Virtual Meeting Link</Label>
+                    <Input
+                      id="virtual-link"
+                      placeholder="e.g., https://zoom.us/j/..."
+                      value={virtualLink}
+                      onChange={(e) => setVirtualLink(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="save-link"
+                      checked={saveVirtualLink}
+                      onCheckedChange={(checked) => setSaveVirtualLink(checked === true)}
+                    />
+                    <label
+                      htmlFor="save-link"
+                      className="text-sm text-muted-foreground cursor-pointer"
+                    >
+                      Save this link for future office hours
+                    </label>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="notes">Notes (Optional)</Label>
@@ -540,10 +644,36 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      {hours.meeting_type === "virtual" ? (
+                        <>
+                          <Video className="h-4 w-4 text-blue-500" />
+                          <span className="font-medium">Virtual Meeting</span>
+                        </>
+                      ) : (
+                        <>
+                          <Building2 className="h-4 w-4 text-green-500" />
+                          <span className="font-medium">In-Person</span>
+                        </>
+                      )}
+                    </div>
                     {hours.location && (
                       <div className="text-sm flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{hours.location}</span>
+                        {hours.meeting_type === "virtual" ? (
+                          <a 
+                            href={hours.location} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline truncate max-w-[250px]"
+                          >
+                            {hours.location}
+                          </a>
+                        ) : (
+                          <>
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                            <span>{hours.location}</span>
+                          </>
+                        )}
                       </div>
                     )}
                     {hours.notes && (
