@@ -12,6 +12,7 @@ import {
   ChevronRight,
   GraduationCap,
   Sparkles,
+  Link,
 } from "lucide-react";
 import { ParentNotificationBell } from "@/components/parent/ParentNotificationBell";
 import { StudentLookupModal } from "@/components/parent/StudentLookupModal";
@@ -22,6 +23,7 @@ import { ParentUpcomingAssignments } from "@/components/parent/ParentUpcomingAss
 import { ParentAnnouncementsFeed } from "@/components/parent/ParentAnnouncementsFeed";
 import { ParentQuickInsights } from "@/components/parent/ParentQuickInsights";
 import { ParentGradebookSection } from "@/components/parent/ParentGradebookSection";
+import { ParentLinksResourcesModal } from "@/components/parent/ParentLinksResourcesModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CalendarWidget } from "@/components/calendar/CalendarWidget";
@@ -34,6 +36,7 @@ const ParentDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [parentId, setParentId] = useState<string | null>(null);
   const [lookupModalOpen, setLookupModalOpen] = useState(false);
+  const [linksResourcesModalOpen, setLinksResourcesModalOpen] = useState(false);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -66,6 +69,23 @@ const ParentDashboard = () => {
       return data || [];
     },
     enabled: !!session?.user?.id,
+  });
+
+  // Fetch school IDs for all children
+  const { data: childrenSchoolIds } = useQuery({
+    queryKey: ["parent-children-school-ids", approvedChildren],
+    queryFn: async () => {
+      if (!approvedChildren || approvedChildren.length === 0) return [];
+      
+      const studentIds = approvedChildren.map((c: any) => c.student_id);
+      const { data } = await supabase
+        .from("profiles")
+        .select("school_id")
+        .in("id", studentIds);
+      
+      return (data || []).map((p: any) => p.school_id).filter(Boolean) as string[];
+    },
+    enabled: !!approvedChildren && approvedChildren.length > 0,
   });
 
   useEffect(() => {
@@ -168,6 +188,13 @@ const ParentDashboard = () => {
                   className="gap-2 glass-card border-0 hover:bg-primary/5"
                 >
                   <Shield className="h-4 w-4" /> {t("parentDashboard.actions.safety")}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setLinksResourcesModalOpen(true)}
+                  className="gap-2 glass-card border-0 hover:bg-primary/5"
+                >
+                  <Link className="h-4 w-4" /> Links & Resources
                 </Button>
               </>
             )}
@@ -310,6 +337,12 @@ const ParentDashboard = () => {
           onSuccess={handleLookupSuccess}
         />
       )}
+
+      <ParentLinksResourcesModal
+        open={linksResourcesModalOpen}
+        onClose={() => setLinksResourcesModalOpen(false)}
+        childrenSchoolIds={childrenSchoolIds || []}
+      />
     </div>
   );
 };

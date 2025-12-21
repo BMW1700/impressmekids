@@ -8,6 +8,7 @@ import { CreateClassroomModal } from "@/components/CreateClassroomModal";
 import { MLModelTraining } from "@/components/teacher/MLModelTraining";
 import { AllStudentsDialog } from "@/components/teacher/AllStudentsDialog";
 import { CalendarWidget } from "@/components/calendar/CalendarWidget";
+import { TeacherLinksResourcesTab } from "@/components/teacher/TeacherLinksResourcesTab";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,13 +22,12 @@ import {
   Loader2,
   PlusCircle,
   Sparkles,
-  Trophy,
   Users,
+  Link,
 } from "lucide-react";
 import { liquidGlassTabClass } from "@/components/ui/liquid-glass-button";
 import { Badge } from "@/components/ui/badge";
 import { Directory } from "@/components/Directory";
-import { ClassroomLeaderboard } from "@/components/ClassroomLeaderboard";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const TeacherDashboard = () => {
@@ -389,9 +389,9 @@ const TeacherDashboard = () => {
                 <Users className="h-4 w-4 mr-2" />
                 {t("teacherDashboard.tabs.classrooms")}
               </TabsTrigger>
-              <TabsTrigger value="leaderboard" className={liquidGlassTabClass}>
-                <Trophy className="h-4 w-4 mr-2" />
-                {t("teacherDashboard.tabs.leaderboard")}
+              <TabsTrigger value="links-resources" className={liquidGlassTabClass}>
+                <Link className="h-4 w-4 mr-2" />
+                Links & Resources
               </TabsTrigger>
               <TabsTrigger value="calendar" className={liquidGlassTabClass}>
                 <CalendarIcon className="h-4 w-4 mr-2" />
@@ -464,33 +464,8 @@ const TeacherDashboard = () => {
               )}
             </TabsContent>
 
-            <TabsContent value="leaderboard" className="mt-6 space-y-6">
-              {classrooms.length === 0 ? (
-                <Card className="p-12 text-center">
-                  <Trophy className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">
-                    {t("teacherDashboard.leaderboard.empty")}
-                  </p>
-                </Card>
-              ) : (
-                classrooms.map((classroom) => (
-                  <div key={classroom.id}>
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-xl font-bold">{classroom.name}</h3>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          navigate(`/classrooms/${classroom.id}?tab=leaderboard`)
-                        }
-                      >
-                        {t("teacherDashboard.leaderboard.viewFull")}
-                      </Button>
-                    </div>
-                    <ClassroomLeaderboard classroomId={classroom.id} limit={3} />
-                  </div>
-                ))
-              )}
+            <TabsContent value="links-resources" className="mt-6">
+              <TeacherLinksResourcesTab />
             </TabsContent>
 
             <TabsContent value="calendar" className="mt-6">
@@ -525,7 +500,7 @@ const TeacherDashboard = () => {
                   <CardHeader>
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 rounded-lg bg-gradient-primary">
-                        <Trophy className="h-5 w-5 text-white" />
+                        <Sparkles className="h-5 w-5 text-white" />
                       </div>
                       <CardTitle className="text-lg">
                         {t("teacherDashboard.quickActions.browseGames.title")}

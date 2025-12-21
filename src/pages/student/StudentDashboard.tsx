@@ -20,6 +20,7 @@ import { AuraReadingSection } from "@/components/student/sections/AuraReadingSec
 import { DirectorySection } from "@/components/student/sections/DirectorySection";
 import { AccountSection } from "@/components/student/sections/AccountSection";
 import { SafetySection } from "@/components/student/sections/SafetySection";
+import { LinksResourcesSection } from "@/components/student/sections/LinksResourcesSection";
 import { SafetyAlertBanner } from "@/components/safety/SafetyAlertBanner";
 import { DrillAlertOverlay } from "@/components/student/DrillAlertOverlay";
 
@@ -119,6 +120,7 @@ const StudentDashboard = () => {
       case "study-games": return <GamesSection />;
       case "aura-reading": return <AuraReadingSection />;
       case "safety": return <SafetySection />;
+      case "links-resources": return <LinksResourcesSection />;
       case "gradebook": return <GradebookSection studentId={profile.id} />;
       case "directory": return <DirectorySection />;
       case "account": return <AccountSection userProfile={profile} studentProfile={studentProfile} />;
