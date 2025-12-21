@@ -161,12 +161,9 @@ const ClassroomDetail = () => {
             profiles: {
               id: student.student_id,
               full_name: student.full_name,
-              email: student.email,
-              student_profiles: student.grade ? [{
-                grade: student.grade,
-                avatar_url: student.avatar_url
-              }] : []
-            }
+              email: student.email
+            },
+            student_profiles: []
           }));
           setStudents(studentsData);
           console.log('✅ Students loaded for substitute:', studentsData.length);
