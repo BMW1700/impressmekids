@@ -6436,6 +6436,7 @@ export type Database = {
           full_name: string
           id: string
           role: string
+          student_id: string
         }[]
       }
       get_user_role: {
