@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic, Eye, EyeOff, UserCheck, BarChart3, Calendar, Plus, Shield, MessageSquare, Grid3X3, BookHeart, UserPlus } from "lucide-react";
+import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic, Eye, EyeOff, UserCheck, BarChart3, Calendar, Plus, Shield, MessageSquare, Grid3X3, BookHeart, UserPlus, Clock, AlertCircle } from "lucide-react";
 import { SubstituteAccessModal } from "@/components/teacher/SubstituteAccessModal";
 import { TeacherJournalTab } from "@/components/teacher/TeacherJournalTab";
 import { DiscussionBoard } from "@/components/discussions/DiscussionBoard";
@@ -71,6 +71,16 @@ const ClassroomDetail = () => {
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [parentRequests, setParentRequests] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Substitute teacher access
+  const [substituteAccess, setSubstituteAccess] = useState<{
+    classroomId: string;
+    permissions: Record<string, boolean>;
+    accessEnd: string;
+    substituteName: string;
+    email: string;
+    linkId: string;
+  } | null>(null);
   const [showCreateTournament, setShowCreateTournament] = useState(false);
   const [showSelectGame, setShowSelectGame] = useState(false);
   const [selectedGameType, setSelectedGameType] = useState<string>('jeopardy_duel');
@@ -108,6 +118,34 @@ const ClassroomDetail = () => {
     toggleAssignmentStatus
   } = useMultiQuestionAssignments(id);
   const { isFeatureEnabled } = useClassroomFeatures(id);
+  // Check for substitute access on mount
+  useEffect(() => {
+    const storedAccess = sessionStorage.getItem('substituteAccess');
+    if (storedAccess) {
+      try {
+        const accessData = JSON.parse(storedAccess);
+        // Validate this is for the current classroom and hasn't expired
+        if (accessData.classroomId === id) {
+          const accessEnd = new Date(accessData.accessEnd);
+          if (accessEnd > new Date()) {
+            setSubstituteAccess(accessData);
+          } else {
+            // Access expired, clear it
+            sessionStorage.removeItem('substituteAccess');
+            toast({
+              title: "Access Expired",
+              description: "Your substitute access has expired.",
+              variant: "destructive",
+            });
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse substitute access:', e);
+        sessionStorage.removeItem('substituteAccess');
+      }
+    }
+  }, [id]);
+
   useEffect(() => {
     // Wait for permissions to be determined before loading data
     if (!permissionsLoading) {
@@ -489,7 +527,11 @@ const ClassroomDetail = () => {
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>;
   }
-  if (!isTeacher && !isStudent) {
+  // Check if user has access (teacher, student, or substitute)
+  const isSubstitute = substituteAccess !== null && substituteAccess.classroomId === id;
+  const hasAccess = isTeacher || isStudent || isSubstitute;
+  
+  if (!hasAccess) {
     return <div className="min-h-screen flex flex-col">
         <Header showAuthButtons={false} />
         <main className="flex-1 py-8">
@@ -518,8 +560,78 @@ const ClassroomDetail = () => {
         <Footer />
       </div>;
   }
+  // Calculate time remaining for substitute access
+  const getTimeRemaining = () => {
+    if (!substituteAccess) return null;
+    const end = new Date(substituteAccess.accessEnd);
+    const now = new Date();
+    const diff = end.getTime() - now.getTime();
+    if (diff <= 0) return "Expired";
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    if (hours > 24) {
+      const days = Math.floor(hours / 24);
+      return `${days} day${days > 1 ? 's' : ''} remaining`;
+    }
+    if (hours > 0) {
+      return `${hours}h ${minutes}m remaining`;
+    }
+    return `${minutes} minutes remaining`;
+  };
+
+  const handleEndSubstituteSession = () => {
+    sessionStorage.removeItem('substituteAccess');
+    toast({
+      title: "Session Ended",
+      description: "You have been logged out of substitute access.",
+    });
+    navigate('/auth');
+  };
+
   return <div className="min-h-screen flex flex-col">
       <Header showAuthButtons={false} />
+      
+      {/* Substitute Teacher Banner */}
+      {isSubstitute && (
+        <div className="bg-amber-500/20 border-b border-amber-500/30">
+          <div className="container mx-auto px-4 py-3">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-500/30 rounded-lg">
+                  <UserCheck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div>
+                  <p className="font-medium text-amber-800 dark:text-amber-200">
+                    Substitute Teacher Mode
+                  </p>
+                  <p className="text-sm text-amber-700 dark:text-amber-300">
+                    Welcome, {substituteAccess?.substituteName || 'Substitute'}! 
+                    <span className="ml-2 inline-flex items-center gap-1">
+                      <Clock className="h-3.5 w-3.5" />
+                      {getTimeRemaining()}
+                    </span>
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="border-amber-500/50 text-amber-700 dark:text-amber-300 bg-amber-500/10">
+                  {substituteAccess?.permissions.view_students && "View Students"}
+                  {substituteAccess?.permissions.take_attendance && " • Attendance"}
+                  {substituteAccess?.permissions.view_assignments && " • Assignments"}
+                </Badge>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleEndSubstituteSession}
+                  className="border-amber-500/50 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20"
+                >
+                  End Session
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       
       <main className="flex-1 py-8">
         <div className="container mx-auto px-4">

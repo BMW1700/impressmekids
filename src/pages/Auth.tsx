@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Chrome, Building2, BookOpen, Eye, EyeOff } from "lucide-react";
+import { Loader2, Chrome, Building2, BookOpen, Eye, EyeOff, UserCheck, ArrowLeft } from "lucide-react";
 import { detectUserTypeFromEmail } from "@/lib/districtDetection";
 import { RoleSelectionModal } from "@/components/auth/RoleSelectionModal";
 import { DistrictCombobox } from "@/components/auth/DistrictCombobox";
@@ -45,6 +45,10 @@ const Auth = () => {
   const [parentEmailForConsent, setParentEmailForConsent] = useState("");
   const [isUnder13, setIsUnder13] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  
+  // Substitute teacher mode
+  const [isSubstituteMode, setIsSubstituteMode] = useState(false);
+  const [substituteCode, setSubstituteCode] = useState("");
   
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -624,6 +628,74 @@ const Auth = () => {
     }
   };
 
+  const handleSubstituteAccess = async () => {
+    if (!email.trim() || !substituteCode.trim()) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter both your email and the access code.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('validate_substitute_access', {
+        p_email: email.toLowerCase().trim(),
+        p_access_code: substituteCode.trim().toUpperCase()
+      });
+      
+      if (error) throw error;
+      
+      // Cast to expected type
+      const result = data as {
+        success: boolean;
+        error?: string;
+        classroom_id?: string;
+        permissions?: Record<string, boolean>;
+        access_end?: string;
+        substitute_name?: string;
+        link_id?: string;
+      };
+      
+      if (!result.success) {
+        toast({
+          title: "Access Denied",
+          description: result.error || "Invalid credentials",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Store substitute session in sessionStorage
+      sessionStorage.setItem('substituteAccess', JSON.stringify({
+        classroomId: result.classroom_id,
+        permissions: result.permissions,
+        accessEnd: result.access_end,
+        substituteName: result.substitute_name,
+        email: email.toLowerCase().trim(),
+        linkId: result.link_id
+      }));
+      
+      toast({
+        title: "Access Granted!",
+        description: `Welcome, ${result.substitute_name || 'Substitute Teacher'}!`,
+      });
+      
+      // Navigate directly to the classroom
+      navigate(`/classrooms/${result.classroom_id}`);
+    } catch (error: any) {
+      console.error('Substitute access error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to validate access code",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center relative z-0 overflow-hidden p-4">
       {/* Fixed background so gradient is identical regardless of tab/content height */}
@@ -702,6 +774,25 @@ const Auth = () => {
               Continue with Clever
             </Button>
 
+            {/* Substitute Teacher Button */}
+            <Button
+              type="button"
+              variant="outline"
+              className={`w-full h-14 rounded-xl font-medium text-base backdrop-blur transition-all ${
+                isSubstituteMode 
+                  ? 'bg-amber-500/30 hover:bg-amber-500/40 text-amber-200 border-amber-500/50' 
+                  : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/30'
+              }`}
+              onClick={() => {
+                setIsSubstituteMode(!isSubstituteMode);
+                setSubstituteCode("");
+              }}
+              disabled={isLoading}
+            >
+              <UserCheck className="mr-3 h-5 w-5" />
+              I am a Substitute Teacher
+            </Button>
+
             {/* Divider */}
             <div className="relative py-4">
               <div className="absolute inset-0 flex items-center">
@@ -712,66 +803,126 @@ const Auth = () => {
               </div>
             </div>
 
-            {/* Email Form */}
-            <form onSubmit={handleSignIn} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="signin-email" className="text-white text-sm font-medium">Email</Label>
-                <Input
-                  id="signin-email"
-                  type="email"
-                  placeholder="you@school.edu"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="signin-password" className="text-white text-sm font-medium">Password</Label>
-                  <button
-                    type="button"
-                    className="text-sm text-purple-400 hover:text-purple-300"
-                    onClick={handleResetPassword}
-                    disabled={isLoading}
-                  >
-                    Forgot password?
-                  </button>
+            {/* Substitute Login Form */}
+            {isSubstituteMode ? (
+              <div className="space-y-4">
+                <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+                  <p className="text-amber-300 text-sm">
+                    Enter the email and access code provided by the teacher to access their classroom.
+                  </p>
                 </div>
-                <div className="relative">
+                <div className="space-y-2">
+                  <Label htmlFor="sub-email" className="text-white text-sm font-medium">Your Email</Label>
                   <Input
-                    id="signin-password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur pr-12"
+                    id="sub-email"
+                    type="email"
+                    placeholder="you@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-amber-500 focus:ring-amber-500/20 backdrop-blur"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sub-code" className="text-white text-sm font-medium">Access Code</Label>
+                  <Input
+                    id="sub-code"
+                    type="text"
+                    placeholder="XXXXXXXX"
+                    maxLength={8}
+                    value={substituteCode}
+                    onChange={(e) => setSubstituteCode(e.target.value.toUpperCase())}
+                    className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-amber-500 focus:ring-amber-500/20 backdrop-blur font-mono tracking-widest text-center"
+                  />
+                </div>
+                <Button 
+                  type="button"
+                  onClick={handleSubstituteAccess}
+                  className="w-full h-14 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white rounded-xl font-medium text-base shadow-lg shadow-amber-500/25"
+                  disabled={isLoading || !email.trim() || substituteCode.length !== 8}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Verifying...
+                    </>
+                  ) : (
+                    "Access Classroom"
+                  )}
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSubstituteMode(false);
+                    setSubstituteCode("");
+                  }}
+                  className="w-full text-sm text-white/60 hover:text-white/80 transition-colors flex items-center justify-center gap-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to regular sign in
+                </button>
+              </div>
+            ) : (
+              /* Regular Email Form */
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signin-email" className="text-white text-sm font-medium">Email</Label>
+                  <Input
+                    id="signin-email"
+                    type="email"
+                    placeholder="you@school.edu"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur"
                     required
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
                 </div>
-              </div>
-              <Button 
-                type="submit" 
-                className="w-full h-14 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white rounded-xl font-medium text-base shadow-lg shadow-purple-500/25"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Signing in...
-                  </>
-                ) : (
-                  "Sign In"
-                )}
-              </Button>
-            </form>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="signin-password" className="text-white text-sm font-medium">Password</Label>
+                    <button
+                      type="button"
+                      className="text-sm text-purple-400 hover:text-purple-300"
+                      onClick={handleResetPassword}
+                      disabled={isLoading}
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      id="signin-password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur pr-12"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                </div>
+                <Button 
+                  type="submit" 
+                  className="w-full h-14 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white rounded-xl font-medium text-base shadow-lg shadow-purple-500/25"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Signing in...
+                    </>
+                  ) : (
+                    "Sign In"
+                  )}
+                </Button>
+              </form>
+            )}
           </TabsContent>
 
           <TabsContent value="signup" className="space-y-4">
