@@ -1091,11 +1091,19 @@ const ClassroomDetail = () => {
             {/* Student Calendar Tab */}
             <TabsContent value="calendar" className="mt-6">
               <div className="space-y-6">
-                <div>
-                  <h2 className="text-2xl font-bold">Class Calendar</h2>
-                  <p className="text-muted-foreground">
-                    View upcoming assignments and events for this class
-                  </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold">Class Calendar</h2>
+                    <p className="text-muted-foreground">
+                      View upcoming assignments and events for this class
+                    </p>
+                  </div>
+                  {!isTeacher && (
+                    <Button onClick={() => navigate("/student/dashboard?section=calendar")}>
+                      <Calendar className="h-4 w-4 mr-2" />
+                      View Full Calendar
+                    </Button>
+                  )}
                 </div>
                 <Card className="p-6">
                   <div className="space-y-4">
