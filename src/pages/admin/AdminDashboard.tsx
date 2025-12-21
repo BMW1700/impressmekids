@@ -5,7 +5,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Users, GraduationCap, Shield, Calendar, Settings, School } from "lucide-react";
+import { Loader2, Users, GraduationCap, Shield, Calendar, Settings, School, Link } from "lucide-react";
 import { useAdminData } from "@/hooks/useAdminData";
 import { liquidGlassTabClass } from "@/components/ui/liquid-glass-button";
 import { TeacherListCard } from "@/components/admin/TeacherListCard";
@@ -22,17 +22,20 @@ import { BulkStudentImport } from "@/components/admin/BulkStudentImport";
 import { AccountVerificationRequests } from "@/components/admin/AccountVerificationRequests";
 import { CleverSyncPanel } from "@/components/admin/CleverSyncPanel";
 import { SchoolsManagementModal } from "@/components/admin/SchoolsManagementModal";
+import { SchoolResourcesModal } from "@/components/admin/SchoolResourcesModal";
 import { ConnectToSchoolDialog } from "@/components/admin/ConnectToSchoolDialog";
 import { EditStudentIdDialog } from "@/components/admin/EditStudentIdDialog";
 import { AdminSchoolSelector } from "@/components/admin/AdminSchoolSelector";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useSchools } from "@/hooks/useSchools";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null);
   const { teachers, students, admins, isLoading } = useAdminData(selectedSchoolId);
+  const { schools } = useSchools();
 
   // Teacher classrooms modal state
   const [teacherClassroomsOpen, setTeacherClassroomsOpen] = useState(false);
@@ -56,6 +59,9 @@ export default function AdminDashboard() {
 
   // Schools management modal state
   const [schoolsModalOpen, setSchoolsModalOpen] = useState(false);
+
+  // School resources modal state
+  const [schoolResourcesModalOpen, setSchoolResourcesModalOpen] = useState(false);
 
   // Connect to school dialog state
   const [connectSchoolOpen, setConnectSchoolOpen] = useState(false);
@@ -170,14 +176,25 @@ export default function AdminDashboard() {
                 value={selectedSchoolId} 
                 onChange={setSelectedSchoolId} 
               />
-              <Button 
-                variant="outline" 
-                onClick={() => setSchoolsModalOpen(true)}
-                className="flex items-center gap-2"
-              >
-                <School className="h-4 w-4" />
-                Schools
-              </Button>
+              {selectedSchoolId ? (
+                <Button 
+                  variant="outline" 
+                  onClick={() => setSchoolResourcesModalOpen(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Link className="h-4 w-4" />
+                  School Resources
+                </Button>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  onClick={() => setSchoolsModalOpen(true)}
+                  className="flex items-center gap-2"
+                >
+                  <School className="h-4 w-4" />
+                  Schools
+                </Button>
+              )}
               <Button 
                 variant="outline" 
                 onClick={() => navigate("/admin/settings")}
@@ -472,6 +489,15 @@ export default function AdminDashboard() {
         open={schoolsModalOpen}
         onClose={() => setSchoolsModalOpen(false)}
       />
+
+      {selectedSchoolId && (
+        <SchoolResourcesModal
+          open={schoolResourcesModalOpen}
+          onClose={() => setSchoolResourcesModalOpen(false)}
+          schoolId={selectedSchoolId}
+          schoolName={schools?.find(s => s.id === selectedSchoolId)?.name}
+        />
+      )}
 
       <ConnectToSchoolDialog
         open={connectSchoolOpen}

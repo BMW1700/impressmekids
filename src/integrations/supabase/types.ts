@@ -4678,6 +4678,44 @@ export type Database = {
         }
         Relationships: []
       }
+      school_resources: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          school_id: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          school_id: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          school_id?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_resources_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       school_settings: {
         Row: {
           created_at: string
