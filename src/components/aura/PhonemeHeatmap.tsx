@@ -1,13 +1,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, TrendingUp, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Sparkles, TrendingUp, Loader2, Send } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { SendPhonemeReportDialog } from "./SendPhonemeReportDialog";
 
 interface PhonemeHeatmapProps {
   students: any[];
   skillVectors: any[];
+  classroomId: string;
+  classroomName: string;
 }
 
 // Use RAW IPA symbols (matches database) with teacher-friendly labels
@@ -29,8 +33,9 @@ const COMMON_PHONEMES = [
   { symbol: "ɪ", label: "IH Sound", example: "sit" },
 ];
 
-const PhonemeHeatmap = ({ students, skillVectors }: PhonemeHeatmapProps) => {
+const PhonemeHeatmap = ({ students, skillVectors, classroomId, classroomName }: PhonemeHeatmapProps) => {
   const [selectedCell, setSelectedCell] = useState<{ studentId: string; phoneme: string } | null>(null);
+  const [reportDialogData, setReportDialogData] = useState<{ studentId: string; studentName: string } | null>(null);
 
   // Fetch reading sessions with phoneme_accuracy for students
   const studentIds = students.map(s => s.student_id);
@@ -174,9 +179,23 @@ const PhonemeHeatmap = ({ students, skillVectors }: PhonemeHeatmapProps) => {
                   style={{ animationDelay: `${studentIdx * 100}ms` }}
                 >
                   <td className="p-4 border-2 border-primary/10 font-semibold text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                      {student.profiles?.full_name || "Unknown"}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                        {student.profiles?.full_name || "Unknown"}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        onClick={() => setReportDialogData({
+                          studentId: student.student_id,
+                          studentName: student.profiles?.full_name || "Unknown"
+                        })}
+                        title="Send report to parent"
+                      >
+                        <Send className="h-3.5 w-3.5 text-primary" />
+                      </Button>
                     </div>
                   </td>
                   {COMMON_PHONEMES.map((p) => {
