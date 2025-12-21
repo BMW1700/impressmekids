@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Save, User, Calendar, CheckCircle2, Volume2 } from "lucide-react";
+import { Loader2, ArrowLeft, Save, User, Calendar, CheckCircle2, Volume2, AlertTriangle } from "lucide-react";
 import { useAssignmentSubmissions } from "@/hooks/useAssignmentSubmissions";
 import { Separator } from "@/components/ui/separator";
 import { useAssignmentRubric } from "@/hooks/useRubrics";
@@ -490,6 +490,23 @@ export default function ReviewMultiQuestionSubmission() {
                     </span>
                   )}
                 </div>
+                
+                {/* Focus Violations Warning */}
+                {submission.focus_violations > 0 && (
+                  <Card className="mt-4 border-destructive bg-destructive/10">
+                    <CardContent className="p-3 flex items-center gap-3">
+                      <AlertTriangle className="h-5 w-5 text-destructive" />
+                      <div>
+                        <p className="font-semibold text-destructive">
+                          {submission.focus_violations} Focus Violation{submission.focus_violations > 1 ? 's' : ''} Detected
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          This student switched tabs or lost focus during the assignment
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
               
               {/* TOP RIGHT SECTION - Dropdown + Badge */}
