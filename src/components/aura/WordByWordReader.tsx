@@ -510,15 +510,33 @@ export const WordByWordReader = ({
     const prevCleanedTranscript = cleanupTranscript(lastInterimRef.current);
     const prevSpokenWords = prevCleanedTranscript.split(/\s+/).filter(w => w.length > 0);
     lastInterimRef.current = transcript;
-    
+
     // SUPERCHARGED V3: Use cleaned transcript for word extraction
     const spokenWords = cleanedTranscript.split(/\s+/).filter(w => w.length > 0);
-    
-    // Only process if we have NEW words
-    if (spokenWords.length <= prevSpokenWords.length) return;
-    
-    // Get the newly spoken words (already cleaned)
-    const newWords = spokenWords.slice(prevSpokenWords.length);
+
+    // IMPORTANT: Speech recognition often *revises* the last 1-2 words without increasing
+    // the word count (e.g., partial -> final). If we only process when length grows,
+    // the last words in a sentence can get missed.
+    let newWords: string[] = [];
+
+    if (spokenWords.length > prevSpokenWords.length) {
+      // Normal case: new words appended
+      newWords = spokenWords.slice(prevSpokenWords.length);
+    } else {
+      // Revision case: last word(s) changed but length stayed the same (or shrank)
+      const maxBacktrack = 2;
+      for (let back = 1; back <= maxBacktrack; back++) {
+        const prevIdx = prevSpokenWords.length - back;
+        const currIdx = spokenWords.length - back;
+        if (prevIdx >= 0 && currIdx >= 0 && prevSpokenWords[prevIdx] !== spokenWords[currIdx]) {
+          newWords = spokenWords.slice(currIdx);
+          break;
+        }
+      }
+    }
+
+    // Only process if we have something new/changed to consume
+    if (newWords.length === 0) return;
     
     // Track speech time for cognitive load
     lastSpeechTimeRef.current = Date.now();
