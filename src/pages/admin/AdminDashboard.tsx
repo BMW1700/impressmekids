@@ -24,13 +24,15 @@ import { CleverSyncPanel } from "@/components/admin/CleverSyncPanel";
 import { SchoolsManagementModal } from "@/components/admin/SchoolsManagementModal";
 import { ConnectToSchoolDialog } from "@/components/admin/ConnectToSchoolDialog";
 import { EditStudentIdDialog } from "@/components/admin/EditStudentIdDialog";
+import { AdminSchoolSelector } from "@/components/admin/AdminSchoolSelector";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const { teachers, students, admins, isLoading } = useAdminData();
+  const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null);
+  const { teachers, students, admins, isLoading } = useAdminData(selectedSchoolId);
 
   // Teacher classrooms modal state
   const [teacherClassroomsOpen, setTeacherClassroomsOpen] = useState(false);
@@ -156,14 +158,18 @@ export default function AdminDashboard() {
       
       <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl animate-fade-in">
         <div className="space-y-6">
-          <div className="flex items-start justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h1 className="text-4xl font-black text-gradient-purple">Admin Dashboard</h1>
               <p className="text-muted-foreground mt-1 text-lg">
-                Platform-wide user management and oversight
+                {selectedSchoolId ? "School-specific management" : "Platform-wide user management and oversight"}
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2 items-center">
+              <AdminSchoolSelector 
+                value={selectedSchoolId} 
+                onChange={setSelectedSchoolId} 
+              />
               <Button 
                 variant="outline" 
                 onClick={() => setSchoolsModalOpen(true)}
@@ -194,7 +200,9 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-4xl font-black">{teachers?.length || 0}</div>
-                <p className="text-xs text-muted-foreground">Teachers in your district</p>
+                <p className="text-xs text-muted-foreground">
+                  Teachers in {selectedSchoolId ? "this school" : "your district"}
+                </p>
               </CardContent>
             </Card>
 
@@ -207,7 +215,9 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-4xl font-black">{students?.length || 0}</div>
-                <p className="text-xs text-muted-foreground">Students in your district</p>
+                <p className="text-xs text-muted-foreground">
+                  Students in {selectedSchoolId ? "this school" : "your district"}
+                </p>
               </CardContent>
             </Card>
 
@@ -220,7 +230,9 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-4xl font-black">{admins?.length || 0}</div>
-                <p className="text-xs text-muted-foreground">Admins in your district</p>
+                <p className="text-xs text-muted-foreground">
+                  Admins in {selectedSchoolId ? "this school" : "your district"}
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -228,34 +240,56 @@ export default function AdminDashboard() {
           {/* Main Content Tabs */}
           <Tabs defaultValue="teachers" className="space-y-4">
             <div className="space-y-2">
-              {/* Row 1: Teachers, Students, Admins, Teacher Requests, Parent Requests */}
-              <TabsList className="grid w-full grid-cols-5 h-auto p-2 bg-muted/50 rounded-xl gap-2">
-                <TabsTrigger value="teachers" className={liquidGlassTabClass}>Teachers</TabsTrigger>
-                <TabsTrigger value="students" className={liquidGlassTabClass}>Students</TabsTrigger>
-                <TabsTrigger value="admins" className={liquidGlassTabClass}>Admins</TabsTrigger>
-                <TabsTrigger value="teacher-requests" className={liquidGlassTabClass}>Account Requests</TabsTrigger>
-                <TabsTrigger value="parent-requests" className={liquidGlassTabClass}>Parental Linking</TabsTrigger>
-              </TabsList>
-              {/* Row 2: Import, Clever, Calendar, Safety, Backups */}
-              <TabsList className="grid w-full grid-cols-5 h-auto p-2 bg-muted/50 rounded-xl gap-2">
-                <TabsTrigger value="import" className={liquidGlassTabClass}>Import</TabsTrigger>
-                <TabsTrigger value="clever" className={liquidGlassTabClass}>Clever</TabsTrigger>
-                <TabsTrigger value="calendar" className={liquidGlassTabClass}>Calendar</TabsTrigger>
-                <TabsTrigger value="safety" className={liquidGlassTabClass}>Safety</TabsTrigger>
-                <TabsTrigger value="backups" className={liquidGlassTabClass}>Backups</TabsTrigger>
-              </TabsList>
+              {selectedSchoolId ? (
+                <>
+                  {/* School-specific view: Row 1 - Teachers, Students, Admins */}
+                  <TabsList className="grid w-full grid-cols-3 h-auto p-2 bg-muted/50 rounded-xl gap-2">
+                    <TabsTrigger value="teachers" className={liquidGlassTabClass}>Teachers</TabsTrigger>
+                    <TabsTrigger value="students" className={liquidGlassTabClass}>Students</TabsTrigger>
+                    <TabsTrigger value="admins" className={liquidGlassTabClass}>Admins</TabsTrigger>
+                  </TabsList>
+                  {/* School-specific view: Row 2 - Parental Linking, Calendar, Safety */}
+                  <TabsList className="grid w-full grid-cols-3 h-auto p-2 bg-muted/50 rounded-xl gap-2">
+                    <TabsTrigger value="parent-requests" className={liquidGlassTabClass}>Parental Linking</TabsTrigger>
+                    <TabsTrigger value="calendar" className={liquidGlassTabClass}>Calendar</TabsTrigger>
+                    <TabsTrigger value="safety" className={liquidGlassTabClass}>Safety</TabsTrigger>
+                  </TabsList>
+                </>
+              ) : (
+                <>
+                  {/* All Schools view: Row 1 - Teachers, Students, Admins, Account Requests, Parental Linking */}
+                  <TabsList className="grid w-full grid-cols-5 h-auto p-2 bg-muted/50 rounded-xl gap-2">
+                    <TabsTrigger value="teachers" className={liquidGlassTabClass}>Teachers</TabsTrigger>
+                    <TabsTrigger value="students" className={liquidGlassTabClass}>Students</TabsTrigger>
+                    <TabsTrigger value="admins" className={liquidGlassTabClass}>Admins</TabsTrigger>
+                    <TabsTrigger value="teacher-requests" className={liquidGlassTabClass}>Account Requests</TabsTrigger>
+                    <TabsTrigger value="parent-requests" className={liquidGlassTabClass}>Parental Linking</TabsTrigger>
+                  </TabsList>
+                  {/* All Schools view: Row 2 - Import, Clever, Calendar, Safety, Backups */}
+                  <TabsList className="grid w-full grid-cols-5 h-auto p-2 bg-muted/50 rounded-xl gap-2">
+                    <TabsTrigger value="import" className={liquidGlassTabClass}>Import</TabsTrigger>
+                    <TabsTrigger value="clever" className={liquidGlassTabClass}>Clever</TabsTrigger>
+                    <TabsTrigger value="calendar" className={liquidGlassTabClass}>Calendar</TabsTrigger>
+                    <TabsTrigger value="safety" className={liquidGlassTabClass}>Safety</TabsTrigger>
+                    <TabsTrigger value="backups" className={liquidGlassTabClass}>Backups</TabsTrigger>
+                  </TabsList>
+                </>
+              )}
             </div>
 
-            <TabsContent value="teacher-requests" className="space-y-4">
-              <AccountVerificationRequests />
-            </TabsContent>
+
+            {!selectedSchoolId && (
+              <TabsContent value="teacher-requests" className="space-y-4">
+                <AccountVerificationRequests />
+              </TabsContent>
+            )}
 
             <TabsContent value="teachers" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>All Teachers</CardTitle>
+                  <CardTitle>{selectedSchoolId ? "School Teachers" : "All Teachers"}</CardTitle>
                   <CardDescription>
-                    Manage and view all teachers on the platform
+                    Manage and view {selectedSchoolId ? "teachers at this school" : "all teachers on the platform"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -280,9 +314,9 @@ export default function AdminDashboard() {
             <TabsContent value="students" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>All Students</CardTitle>
+                  <CardTitle>{selectedSchoolId ? "School Students" : "All Students"}</CardTitle>
                   <CardDescription>
-                    Manage and view all students on the platform
+                    Manage and view {selectedSchoolId ? "students at this school" : "all students on the platform"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -309,9 +343,9 @@ export default function AdminDashboard() {
             <TabsContent value="admins" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>All Admins</CardTitle>
+                  <CardTitle>{selectedSchoolId ? "School Admins" : "All Admins"}</CardTitle>
                   <CardDescription>
-                    View all platform administrators
+                    View {selectedSchoolId ? "administrators at this school" : "all platform administrators"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -332,13 +366,17 @@ export default function AdminDashboard() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="import" className="space-y-4">
-              <BulkStudentImport />
-            </TabsContent>
+            {!selectedSchoolId && (
+              <TabsContent value="import" className="space-y-4">
+                <BulkStudentImport />
+              </TabsContent>
+            )}
 
-            <TabsContent value="clever" className="space-y-4">
-              <CleverSyncPanel />
-            </TabsContent>
+            {!selectedSchoolId && (
+              <TabsContent value="clever" className="space-y-4">
+                <CleverSyncPanel />
+              </TabsContent>
+            )}
 
             <TabsContent value="parent-requests" className="space-y-4">
               <Card>
@@ -346,10 +384,11 @@ export default function AdminDashboard() {
                   <CardTitle>Parent-Student Linking</CardTitle>
                   <CardDescription>
                     Review and approve parent requests to link with student accounts
+                    {selectedSchoolId && " for this school"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ParentAccessRequestsList />
+                  <ParentAccessRequestsList schoolId={selectedSchoolId} />
                 </CardContent>
               </Card>
             </TabsContent>
@@ -370,9 +409,11 @@ export default function AdminDashboard() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="backups" className="space-y-4">
-              <BackupManagement />
-            </TabsContent>
+            {!selectedSchoolId && (
+              <TabsContent value="backups" className="space-y-4">
+                <BackupManagement />
+              </TabsContent>
+            )}
 
             <TabsContent value="calendar" className="space-y-4">
               <Card>

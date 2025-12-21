@@ -1,30 +1,42 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export const useAdminData = () => {
+export const useAdminData = (schoolId?: string | null) => {
   const { data: teachers, isLoading: teachersLoading } = useQuery({
-    queryKey: ["admin-teachers"],
+    queryKey: ["admin-teachers", schoolId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_all_teachers");
       if (error) throw error;
+      // Filter by school if schoolId is provided
+      if (schoolId && data) {
+        return data.filter((teacher: any) => teacher.school_id === schoolId);
+      }
       return data;
     },
   });
 
   const { data: students, isLoading: studentsLoading } = useQuery({
-    queryKey: ["admin-students"],
+    queryKey: ["admin-students", schoolId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_all_students");
       if (error) throw error;
+      // Filter by school if schoolId is provided
+      if (schoolId && data) {
+        return data.filter((student: any) => student.school_id === schoolId);
+      }
       return data;
     },
   });
 
   const { data: admins, isLoading: adminsLoading } = useQuery({
-    queryKey: ["admin-admins"],
+    queryKey: ["admin-admins", schoolId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_all_admins");
       if (error) throw error;
+      // Filter by school if schoolId is provided
+      if (schoolId && data) {
+        return data.filter((admin: any) => admin.school_id === schoolId);
+      }
       return data;
     },
   });

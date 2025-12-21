@@ -23,12 +23,16 @@ interface ParentAccessRequest {
   };
 }
 
-export const ParentAccessRequestsList = () => {
+interface ParentAccessRequestsListProps {
+  schoolId?: string | null;
+}
+
+export const ParentAccessRequestsList = ({ schoolId }: ParentAccessRequestsListProps) => {
   const queryClient = useQueryClient();
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   const { data: requests, isLoading, error } = useQuery({
-    queryKey: ["admin-parent-access-requests"],
+    queryKey: ["admin-parent-access-requests", schoolId],
     queryFn: async () => {
       console.log("🔍 [ADMIN REQUESTS] Starting fetch...");
       
@@ -84,7 +88,7 @@ export const ParentAccessRequestsList = () => {
       // Fetch student profiles with district info to filter by district
       const { data: studentsWithDistrict, error: districtStudentsError } = await supabase
         .from("profiles")
-        .select("id, full_name, district_id")
+        .select("id, full_name, district_id, school_id")
         .in("id", studentIdsFromRequests);
 
       if (districtStudentsError) {
@@ -92,10 +96,18 @@ export const ParentAccessRequestsList = () => {
         throw districtStudentsError;
       }
 
-      // Filter to only students in the admin's district
-      const studentsInDistrict = studentsWithDistrict?.filter(
+      // Filter to only students in the admin's district (and optionally school)
+      let studentsInDistrict = studentsWithDistrict?.filter(
         s => adminDistrictId ? s.district_id === adminDistrictId : true
       ) || [];
+
+      // If a specific school is selected, further filter by school_id
+      if (schoolId) {
+        studentsInDistrict = studentsInDistrict.filter(
+          (s: any) => s.school_id === schoolId
+        );
+      }
+
       const studentIdsInDistrict = new Set(studentsInDistrict.map(s => s.id));
 
       // Filter requests to only those for students in the admin's district
