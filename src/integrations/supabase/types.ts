@@ -6345,6 +6345,22 @@ export type Database = {
           school_name: string
         }[]
       }
+      get_assignments_for_substitute: {
+        Args: { p_classroom_id: string; p_link_id: string }
+        Returns: {
+          assignment_type: string
+          category: string
+          created_at: string
+          description: string
+          due_date: string
+          id: string
+          is_posted: boolean
+          question_count: number
+          status: string
+          timer_minutes: number
+          title: string
+        }[]
+      }
       get_classroom_detail: {
         Args: { _classroom_id: string; _user_id: string }
         Returns: {
