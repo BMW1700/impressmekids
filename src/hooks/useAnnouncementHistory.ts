@@ -23,6 +23,11 @@ export const useAnnouncementHistory = (studentId: string | undefined) => {
 
       const classroomIds = classroomData.map((c) => c.classroom_id);
 
+      // Early return if student has no classrooms
+      if (classroomIds.length === 0) {
+        return { today: [], lastFourteenDays: [] };
+      }
+
       const now = new Date();
       const todayStart = startOfDay(now);
       const fourteenDaysAgo = startOfDay(subDays(now, 14));
