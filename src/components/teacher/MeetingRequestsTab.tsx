@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Clock, Plus, Trash2, Calendar, Loader2, Repeat, Users, MapPin, Video, Building2 } from "lucide-react";
+import { Clock, Plus, Trash2, Calendar, Loader2, Repeat, Users, MapPin, Video, Building2, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -692,87 +693,101 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
           ) : (
             <div className="grid md:grid-cols-2 gap-6">
               {officeHours.map((hours) => (
-                <Card key={hours.id} className="shadow-card hover:shadow-elegant transition-all duration-300">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          {hours.is_recurring ? (
-                            <Repeat className="h-5 w-5 text-primary" />
-                          ) : (
-                            <Calendar className="h-5 w-5 text-primary" />
-                          )}
-                          {hours.is_recurring 
-                            ? formatDays(hours.days_of_week || [])
-                            : hours.specific_date ? formatDate(hours.specific_date) : "One-time"
-                          }
-                        </CardTitle>
-                        <CardDescription className="mt-1 space-y-1">
-                          <div>{formatTime(hours.start_time)} - {formatTime(hours.end_time)}</div>
-                          <div className="text-xs">{hours.meeting_duration_minutes}-minute meetings</div>
-                          {hours.is_recurring && hours.start_date && hours.end_date && (
-                            <div className="text-xs">
-                              {formatDate(hours.start_date)} - {formatDate(hours.end_date)}
+                <Collapsible key={hours.id}>
+                  <Card className="shadow-card hover:shadow-elegant transition-all duration-300">
+                    <CollapsibleTrigger asChild>
+                      <CardHeader className="pb-3 cursor-pointer">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                            <div>
+                              <CardTitle className="text-lg flex items-center gap-2">
+                                {hours.is_recurring ? (
+                                  <Repeat className="h-5 w-5 text-primary" />
+                                ) : (
+                                  <Calendar className="h-5 w-5 text-primary" />
+                                )}
+                                {hours.is_recurring 
+                                  ? formatDays(hours.days_of_week || [])
+                                  : hours.specific_date ? formatDate(hours.specific_date) : "One-time"
+                                }
+                              </CardTitle>
+                              <CardDescription className="mt-1">
+                                {formatTime(hours.start_time)} - {formatTime(hours.end_time)}
+                              </CardDescription>
                             </div>
-                          )}
-                        </CardDescription>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => deleteMutation.mutate(hours.id)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      {hours.meeting_type === "virtual" ? (
-                        <>
-                          <Video className="h-4 w-4 text-blue-500" />
-                          <span className="font-medium">Virtual Meeting</span>
-                        </>
-                      ) : (
-                        <>
-                          <Building2 className="h-4 w-4 text-green-500" />
-                          <span className="font-medium">In-Person</span>
-                        </>
-                      )}
-                    </div>
-                    {hours.location && (
-                      <div className="text-sm flex items-center gap-2">
-                        {hours.meeting_type === "virtual" ? (
-                          <a 
-                            href={hours.location} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-primary hover:underline truncate max-w-[250px]"
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteMutation.mutate(hours.id);
+                            }}
+                            disabled={deleteMutation.isPending}
                           >
-                            {hours.location}
-                          </a>
-                        ) : (
-                          <>
-                            <MapPin className="h-4 w-4 text-muted-foreground" />
-                            <span>{hours.location}</span>
-                          </>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </CardHeader>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <CardContent className="space-y-2 pt-0">
+                        <div className="text-xs text-muted-foreground mb-2">
+                          {hours.meeting_duration_minutes}-minute meetings
+                        </div>
+                        {hours.is_recurring && hours.start_date && hours.end_date && (
+                          <div className="text-xs text-muted-foreground">
+                            {formatDate(hours.start_date)} - {formatDate(hours.end_date)}
+                          </div>
                         )}
-                      </div>
-                    )}
-                    {hours.notes && (
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Notes:</span>{" "}
-                        <span>{hours.notes}</span>
-                      </div>
-                    )}
-                    <Badge variant="secondary" className="mt-2">
-                      <Clock className="h-3 w-3 mr-1" />
-                      Active
-                    </Badge>
-                  </CardContent>
-                </Card>
+                        <div className="flex items-center gap-2 text-sm">
+                          {hours.meeting_type === "virtual" ? (
+                            <>
+                              <Video className="h-4 w-4 text-blue-500" />
+                              <span className="font-medium">Virtual Meeting</span>
+                            </>
+                          ) : (
+                            <>
+                              <Building2 className="h-4 w-4 text-green-500" />
+                              <span className="font-medium">In-Person</span>
+                            </>
+                          )}
+                        </div>
+                        {hours.location && (
+                          <div className="text-sm flex items-center gap-2">
+                            {hours.meeting_type === "virtual" ? (
+                              <a 
+                                href={hours.location} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline truncate max-w-[250px]"
+                              >
+                                {hours.location}
+                              </a>
+                            ) : (
+                              <>
+                                <MapPin className="h-4 w-4 text-muted-foreground" />
+                                <span>{hours.location}</span>
+                              </>
+                            )}
+                          </div>
+                        )}
+                        {hours.notes && (
+                          <div className="text-sm">
+                            <span className="text-muted-foreground">Notes:</span>{" "}
+                            <span>{hours.notes}</span>
+                          </div>
+                        )}
+                        <Badge variant="secondary" className="mt-2">
+                          <Clock className="h-3 w-3 mr-1" />
+                          Active
+                        </Badge>
+                      </CardContent>
+                    </CollapsibleContent>
+                  </Card>
+                </Collapsible>
               ))}
             </div>
           )}
