@@ -17,6 +17,7 @@ import {
   X,
   Pill,
   Clock,
+  AlertTriangle,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EmergencyContactModal } from "../EmergencyContactModal";
 import { MedicationModal } from "../MedicationModal";
+import { AllergyModal } from "../AllergyModal";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -64,6 +66,13 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
   const [showMedicationDeleteConfirm, setShowMedicationDeleteConfirm] = useState(false);
   const [medicationToDelete, setMedicationToDelete] = useState<string | null>(null);
 
+  // Allergies state
+  const [allergies, setAllergies] = useState<any[]>([]);
+  const [showAllergyModal, setShowAllergyModal] = useState(false);
+  const [selectedAllergy, setSelectedAllergy] = useState<any>(null);
+  const [showAllergyDeleteConfirm, setShowAllergyDeleteConfirm] = useState(false);
+  const [allergyToDelete, setAllergyToDelete] = useState<string | null>(null);
+
   const [isEditingPreferredName, setIsEditingPreferredName] = useState(false);
   const [preferredName, setPreferredName] = useState("");
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -83,6 +92,7 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
   useEffect(() => {
     fetchEmergencyContacts();
     fetchMedications();
+    fetchAllergies();
     initializeUserData();
   }, [studentProfile, userProfile]);
 
@@ -163,6 +173,54 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
       fetchMedications();
       setShowMedicationDeleteConfirm(false);
       setMedicationToDelete(null);
+    } catch (error: any) {
+      toast({
+        title: t("common.error"),
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchAllergies = async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("student_allergies")
+        .select("*")
+        .eq("student_id", user.id)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+      setAllergies(data || []);
+    } catch (error: any) {
+      console.error("Error fetching allergies:", error);
+    }
+  };
+
+  const handleDeleteAllergy = async () => {
+    if (!allergyToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("student_allergies")
+        .delete()
+        .eq("id", allergyToDelete);
+
+      if (error) throw error;
+
+      toast({
+        title: t("common.success"),
+        description: "Allergy deleted successfully",
+      });
+
+      fetchAllergies();
+      setShowAllergyDeleteConfirm(false);
+      setAllergyToDelete(null);
     } catch (error: any) {
       toast({
         title: t("common.error"),
@@ -684,6 +742,80 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
         </CardContent>
       </Card>
 
+      {/* Allergies Section */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5" />
+            Allergies
+          </CardTitle>
+          <Button
+            size="sm"
+            onClick={() => {
+              setSelectedAllergy(null);
+              setShowAllergyModal(true);
+            }}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Allergy
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {allergies.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">
+              No allergies added yet
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {allergies.map((allergy) => (
+                <div
+                  key={allergy.id}
+                  className="p-4 border border-border rounded-lg bg-muted/30 relative"
+                >
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="absolute top-2 right-2">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setSelectedAllergy(allergy);
+                          setShowAllergyModal(true);
+                        }}
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        {t("student.account.edit")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => {
+                          setAllergyToDelete(allergy.id);
+                          setShowAllergyDeleteConfirm(true);
+                        }}
+                      >
+                        {t("student.account.delete")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <div className="space-y-2 pr-8">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                      <p className="font-medium text-foreground">{allergy.allergy_name}</p>
+                    </div>
+                    {allergy.description && (
+                      <p className="text-sm text-muted-foreground">{allergy.description}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>{t("student.account.security")}</CardTitle>
@@ -773,6 +905,21 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
         onConfirm={handleDeleteMedication}
         title="Delete Medication"
         description="Are you sure you want to delete this medication? This action cannot be undone."
+      />
+
+      <AllergyModal
+        isOpen={showAllergyModal}
+        onClose={() => setShowAllergyModal(false)}
+        allergy={selectedAllergy}
+        onSuccess={fetchAllergies}
+      />
+
+      <ConfirmModal
+        open={showAllergyDeleteConfirm}
+        onOpenChange={setShowAllergyDeleteConfirm}
+        onConfirm={handleDeleteAllergy}
+        title="Delete Allergy"
+        description="Are you sure you want to delete this allergy? This action cannot be undone."
       />
     </div>
   );
