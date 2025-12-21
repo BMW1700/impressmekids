@@ -444,8 +444,14 @@ export const WordByWordReader = ({
         if (!isFinal) {
           processInterimResult(transcript, timestamp, speechConfidence);
         } else {
+          // IMPORTANT: Some browsers only deliver FINAL results (no interim events),
+          // and many browsers revise the last 1–2 words at sentence end. Route final
+          // transcripts through the same incremental pipeline so the last word(s)
+          // still get consumed and registered.
+          processInterimResult(transcript, timestamp, speechConfidence);
+
           // SUPERCHARGED V2: Pass all alternatives for better override logic
-          const alternatives = Array.from({ length: result.length }, (_, idx) => 
+          const alternatives = Array.from({ length: result.length }, (_, idx) =>
             result[idx]?.transcript?.trim().toLowerCase() || ''
           ).filter(Boolean);
           processFinalResult(transcript, timestamp, speechConfidence, alternatives);
@@ -898,6 +904,10 @@ export const WordByWordReader = ({
 
   const stopReading = useCallback(async () => {
     if (recognitionRef.current) {
+      // Flush any last transcript changes before stopping (common source of "missing last word")
+      const flushTimestamp = Date.now() - startTimeRef.current;
+      processInterimResult(lastInterimRef.current, flushTimestamp, lastSpeechConfidenceRef.current);
+
       recognitionRef.current.stop();
       recognitionRef.current = null;
     }
