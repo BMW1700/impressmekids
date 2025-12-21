@@ -47,6 +47,8 @@ const DAYS_MAP: Record<string, number> = {
   saturday: 6,
 };
 
+const parseLocalDate = (dateStr: string) => new Date(dateStr + "T12:00:00");
+
 export const RequestMeetingDialog = ({
   open,
   onOpenChange,
@@ -128,8 +130,8 @@ export const RequestMeetingDialog = ({
           
           if (daysOfWeek.includes(dayName)) {
             // Check if within date range (if specified)
-            const startDate = hours.start_date ? new Date(hours.start_date) : null;
-            const endDate = hours.end_date ? new Date(hours.end_date) : null;
+            const startDate = hours.start_date ? parseLocalDate(hours.start_date) : null;
+            const endDate = hours.end_date ? parseLocalDate(hours.end_date) : null;
             
             const withinRange = 
               (!startDate || !isBefore(currentDate, startDate)) &&
@@ -152,7 +154,7 @@ export const RequestMeetingDialog = ({
         }
       } else if (hours.specific_date) {
         // Handle specific date office hours
-        const specificDate = new Date(hours.specific_date);
+        const specificDate = parseLocalDate(hours.specific_date);
         
         if (!isBefore(specificDate, today) && !isAfter(specificDate, twoWeeksLater)) {
           slots.push({
