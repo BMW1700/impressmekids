@@ -6357,6 +6357,27 @@ export type Database = {
           teacher_name: string
         }[]
       }
+      get_classroom_for_substitute: {
+        Args: { p_classroom_id: string; p_link_id: string }
+        Returns: {
+          access_end: string
+          created_at: string
+          end_time: string
+          grade: number
+          id: string
+          join_code: string
+          location: string
+          meeting_days: string[]
+          name: string
+          permissions: Json
+          schedule_end_date: string
+          schedule_start_date: string
+          start_time: string
+          subject: string
+          substitute_name: string
+          teacher_id: string
+        }[]
+      }
       get_classroom_leaderboard: {
         Args: { _classroom_id: string }
         Returns: Database["public"]["CompositeTypes"]["classroom_leaderboard_entry"][]
@@ -6552,6 +6573,17 @@ export type Database = {
           parent_email: string
           parent_id: string
           parent_name: string
+        }[]
+      }
+      get_students_for_substitute: {
+        Args: { p_classroom_id: string; p_link_id: string }
+        Returns: {
+          avatar_url: string
+          email: string
+          full_name: string
+          grade: number
+          joined_at: string
+          student_id: string
         }[]
       }
       get_teacher_classrooms: {
