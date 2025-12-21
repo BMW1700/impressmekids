@@ -12,15 +12,61 @@ serve(async (req) => {
   }
 
   try {
+    // Get the authorization header to verify the caller
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Missing authorization header" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+      );
+    }
+
+    // Create a client with the user's JWT to get their identity
+    const supabaseAuth = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    // Get the authenticated user
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      console.error("Authentication failed:", authError);
+      return new Response(
+        JSON.stringify({ success: false, error: "Authentication failed" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+      );
+    }
+
+    // Create service role client for database operations
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { emergencyType, title, description, classroomId, teacherId } = await req.json();
+    const { emergencyType, title, description, classroomId } = await req.json();
 
-    if (!emergencyType || !description || !classroomId || !teacherId) {
-      throw new Error("Missing required fields: emergencyType, description, classroomId, teacherId");
+    // Use the authenticated user's ID as the teacherId - don't trust client-provided teacherId
+    const teacherId = user.id;
+
+    if (!emergencyType || !description || !classroomId) {
+      throw new Error("Missing required fields: emergencyType, description, classroomId");
+    }
+
+    // Verify the caller is the teacher of this classroom and get classroom details
+    const { data: classroomData, error: classroomCheckError } = await supabaseClient
+      .from("classrooms")
+      .select("id, teacher_id, name, location")
+      .eq("id", classroomId)
+      .eq("teacher_id", teacherId)
+      .single();
+
+    if (classroomCheckError || !classroomData) {
+      console.error("Authorization failed: User is not the teacher of this classroom");
+      return new Response(
+        JSON.stringify({ success: false, error: "You are not authorized to report emergencies for this classroom" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 }
+      );
     }
 
     console.log(`Emergency report received: ${emergencyType} from teacher ${teacherId} in classroom ${classroomId}`);
@@ -37,19 +83,7 @@ serve(async (req) => {
       throw new Error("Failed to fetch teacher information");
     }
 
-    // Get classroom info (location/room)
-    const { data: classroom, error: classroomError } = await supabaseClient
-      .from("classrooms")
-      .select("name, location")
-      .eq("id", classroomId)
-      .single();
-
-    if (classroomError || !classroom) {
-      console.error("Failed to fetch classroom info:", classroomError);
-      throw new Error("Failed to fetch classroom information");
-    }
-
-    const roomNumber = classroom.location || classroom.name || "Unknown Location";
+    const roomNumber = classroomData.location || classroomData.name || "Unknown Location";
 
     // Get district admins for this teacher's district
     let adminEmails: string[] = [];
