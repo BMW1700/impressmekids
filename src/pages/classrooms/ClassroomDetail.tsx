@@ -70,6 +70,7 @@ const ClassroomDetail = () => {
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [parentRequests, setParentRequests] = useState<any[]>([]);
+  const [substituteAssignments, setSubstituteAssignments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   // Substitute teacher access
@@ -167,6 +168,19 @@ const ClassroomDetail = () => {
           }));
           setStudents(studentsData);
           console.log('✅ Students loaded for substitute:', studentsData.length);
+        }
+      }
+
+      // Fetch assignments if permitted
+      if (accessData.permissions.view_assignments) {
+        const { data: assignmentsResult, error: assignmentsError } = await supabase.rpc('get_assignments_for_substitute', {
+          p_classroom_id: id,
+          p_link_id: accessData.linkId
+        });
+
+        if (!assignmentsError && assignmentsResult) {
+          setSubstituteAssignments(assignmentsResult);
+          console.log('✅ Assignments loaded for substitute:', assignmentsResult.length);
         }
       }
 
@@ -594,6 +608,9 @@ const ClassroomDetail = () => {
   const canViewAsTeacher = isTeacher || isSubstitute;
   const hasAccess = isTeacher || isStudent || isSubstitute;
   
+  // Use substitute-loaded assignments when in substitute mode, otherwise use hook assignments
+  const effectiveAssignments = isSubstitute ? substituteAssignments : (assignments || []);
+  
   if (!hasAccess) {
     return <div className="min-h-screen flex flex-col">
         <Header showAuthButtons={false} />
@@ -951,7 +968,7 @@ const ClassroomDetail = () => {
                   </Button>}
               </div>
 
-              {!assignments || assignments.length === 0 ? <Card className="p-12 text-center">
+              {!effectiveAssignments || effectiveAssignments.length === 0 ? <Card className="p-12 text-center">
                   <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="text-xl font-bold mb-2">No Assignments Yet</h3>
                   <p className="text-muted-foreground mb-4">
@@ -962,7 +979,7 @@ const ClassroomDetail = () => {
                       Create First Assignment
                     </Button>}
                 </Card> : <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {assignments.map((assignment: any) => {
+                  {effectiveAssignments.map((assignment: any) => {
                 // Teachers: show all assignments with full controls
                 if (canViewAsTeacher) {
                   return <Card key={assignment.id} className="shadow-card hover:shadow-purple transition-shadow">
@@ -995,7 +1012,7 @@ const ClassroomDetail = () => {
                                 {assignment.category && <Badge variant="outline" className={getCategoryColor(assignment.category)}>
                                     {assignment.category}
                                   </Badge>}
-                                <DropdownMenu>
+                                {isTeacher && <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-8 w-8">
                                       <MoreVertical className="h-4 w-4" />
@@ -1016,7 +1033,7 @@ const ClassroomDetail = () => {
                                       Delete
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
-                                </DropdownMenu>
+                                </DropdownMenu>}
                               </div>
                             </div>
                           </CardHeader>
@@ -1042,7 +1059,7 @@ const ClassroomDetail = () => {
                               
                               <AssignmentStatsCard assignmentId={assignment.id} />
                               
-                              {assignment.status === 'draft' && <Button variant="outline" className="w-full mt-2" onClick={() => navigate(`/teacher/assignment/create/${id}?edit=${assignment.id}`)}>
+                              {isTeacher && assignment.status === 'draft' && <Button variant="outline" className="w-full mt-2" onClick={() => navigate(`/teacher/assignment/create/${id}?edit=${assignment.id}`)}>
                                   Edit Draft
                                 </Button>}
                               
@@ -1290,11 +1307,11 @@ const ClassroomDetail = () => {
                       <Calendar className="h-5 w-5 text-primary" />
                       Upcoming Deadlines
                     </h3>
-                    {assignments.filter((a: any) => a.status === 'published' && a.due_date).length === 0 ? (
+                    {effectiveAssignments.filter((a: any) => a.status === 'published' && a.due_date).length === 0 ? (
                       <p className="text-muted-foreground text-sm">No upcoming deadlines</p>
                     ) : (
                       <div className="space-y-3">
-                        {assignments
+                        {effectiveAssignments
                           .filter((a: any) => a.status === 'published' && a.due_date)
                           .sort((a: any, b: any) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
                           .slice(0, 10)
