@@ -57,12 +57,16 @@ export const useSubstituteAccess = (classroomId: string) => {
       accessStart,
       accessEnd,
       permissions,
+      classroomName,
+      teacherName,
     }: {
-      substituteName?: string;
-      substituteEmail?: string;
+      substituteName: string;
+      substituteEmail: string;
       accessStart: Date;
       accessEnd: Date;
       permissions?: Partial<SubstituteAccessLink['permissions']>;
+      classroomName?: string;
+      teacherName?: string;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
@@ -73,8 +77,8 @@ export const useSubstituteAccess = (classroomId: string) => {
           classroom_id: classroomId,
           teacher_id: user.id,
           access_code: generateAccessCode(),
-          substitute_name: substituteName || null,
-          substitute_email: substituteEmail || null,
+          substitute_name: substituteName,
+          substitute_email: substituteEmail,
           access_start: accessStart.toISOString(),
           access_end: accessEnd.toISOString(),
           permissions: {
@@ -89,13 +93,38 @@ export const useSubstituteAccess = (classroomId: string) => {
         .single();
 
       if (error) throw error;
-      return data as SubstituteAccessLink;
+      
+      const link = data as SubstituteAccessLink;
+      
+      // Send email notification to substitute
+      try {
+        const { error: emailError } = await supabase.functions.invoke('send-substitute-access-email', {
+          body: {
+            substituteName,
+            substituteEmail,
+            accessCode: link.access_code,
+            classroomName: classroomName || 'Classroom',
+            teacherName: teacherName || 'Your colleague',
+            accessEnd: accessEnd.toISOString(),
+          },
+        });
+        
+        if (emailError) {
+          console.error('Failed to send email notification:', emailError);
+          // Don't throw - the link was created successfully
+        }
+      } catch (emailErr) {
+        console.error('Email notification error:', emailErr);
+        // Don't throw - the link was created successfully
+      }
+      
+      return link;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['substitute-access-links', classroomId] });
       toast({
         title: "Access Link Created",
-        description: "Share the code with your substitute teacher.",
+        description: "An email has been sent to the substitute teacher with their access code.",
       });
     },
     onError: (error: Error) => {
