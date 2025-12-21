@@ -5166,6 +5166,7 @@ export type Database = {
       student_medications: {
         Row: {
           created_at: string
+          description: string | null
           dose: string
           id: string
           medication_name: string
@@ -5176,6 +5177,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          description?: string | null
           dose: string
           id?: string
           medication_name: string
@@ -5186,6 +5188,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          description?: string | null
           dose?: string
           id?: string
           medication_name?: string
