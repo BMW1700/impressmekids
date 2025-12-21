@@ -237,10 +237,7 @@ export const WordByWordReader = ({
   
   // NEW: Track attempts per word for grading
   const wordAttemptsRef = useRef<Map<number, number>>(new Map());
-
-  // CRITICAL: Avoid stale closures in SpeechRecognition callbacks
-  const isRecordingRef = useRef(false);
-
+  
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -510,8 +507,7 @@ export const WordByWordReader = ({
       }
       
       // Restart recognition if still recording (continuous mode recovery)
-      // CRITICAL: use ref (state is stale inside this callback)
-      if (isRecordingRef.current && realtimeWordIndexRef.current < words.length) {
+      if (isRecording && realtimeWordIndexRef.current < words.length) {
         try {
           console.log('Restarting speech recognition...');
           recognition.start();
@@ -523,7 +519,6 @@ export const WordByWordReader = ({
 
     recognition.start();
     recognitionRef.current = recognition;
-    isRecordingRef.current = true;
     setIsRecording(true);
 
     toast({
@@ -545,13 +540,9 @@ export const WordByWordReader = ({
     // SUPERCHARGED V3: Clean the transcript BEFORE processing
     const cleanedTranscript = cleanupTranscript(transcript);
     
-    // SUPERCHARGED V2/V3: Store the LONGEST transcript we've seen so far (prevents missing last words)
-    if (transcript.length > fullTranscriptRef.current.length) {
-      fullTranscriptRef.current = transcript;
-    }
-    if (cleanedTranscript.length > cleanedTranscriptRef.current.length) {
-      cleanedTranscriptRef.current = cleanedTranscript;
-    }
+    // SUPERCHARGED V2: Store full transcript for final result override
+    fullTranscriptRef.current = transcript;
+    cleanedTranscriptRef.current = cleanedTranscript;
     
     // Get previous words BEFORE updating ref (using cleaned transcripts)
     const prevCleanedTranscript = cleanupTranscript(lastInterimRef.current);
@@ -847,10 +838,8 @@ export const WordByWordReader = ({
   const processFinalResult = useCallback((transcript: string, timestamp: number, speechConfidence: number = 1, alternatives?: string[]) => {
     const spokenWords = transcript.split(/\s+/).filter(w => w.length > 0);
     
-    // SUPERCHARGED V2/V3: Store the LONGEST transcript we've seen so far (prevents missing last words)
-    if (transcript.length > fullTranscriptRef.current.length) {
-      fullTranscriptRef.current = transcript;
-    }
+    // SUPERCHARGED V2: Store full transcript for override logic
+    fullTranscriptRef.current = transcript;
     
     // Create confirmed word readings
     const newReadings: WordReading[] = [];
@@ -956,9 +945,6 @@ export const WordByWordReader = ({
   }, [words, wordMatcher, isStrictMode]);
 
   const stopReading = useCallback(async () => {
-    // Stop recognition first (prevents onend auto-restart)
-    isRecordingRef.current = false;
-
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       recognitionRef.current = null;
