@@ -1153,6 +1153,44 @@ export type Database = {
           },
         ]
       }
+      classroom_join_requests: {
+        Row: {
+          classroom_id: string
+          id: string
+          requested_at: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          student_id: string
+        }
+        Insert: {
+          classroom_id: string
+          id?: string
+          requested_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          student_id: string
+        }
+        Update: {
+          classroom_id?: string
+          id?: string
+          requested_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "classroom_join_requests_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classroom_students: {
         Row: {
           classroom_id: string
@@ -6136,6 +6174,10 @@ export type Database = {
       }
     }
     Functions: {
+      approve_student_join_request: {
+        Args: { p_request_id: string }
+        Returns: Json
+      }
       attempt_buzz: {
         Args: {
           p_match_id: string
@@ -6166,6 +6208,10 @@ export type Database = {
       check_email_exists_secure: { Args: { p_email: string }; Returns: boolean }
       cleanup_expired_safety_alerts: { Args: never; Returns: undefined }
       compute_levenshtein: { Args: { a: string; b: string }; Returns: number }
+      deny_student_join_request: {
+        Args: { p_request_id: string }
+        Returns: Json
+      }
       find_student_by_email_secure: {
         Args: { p_email: string }
         Returns: string
