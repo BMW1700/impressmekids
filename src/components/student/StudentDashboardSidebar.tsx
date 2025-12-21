@@ -1,4 +1,4 @@
-import { Home, Calendar, BookOpen, Users, Bell, GraduationCap, FolderOpen, User, Gamepad2, Shield, Sparkles, BookOpenCheck } from "lucide-react";
+import { Home, Calendar, BookOpen, Users, Bell, GraduationCap, FolderOpen, User, Gamepad2, Shield, Sparkles, BookOpenCheck, Link } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -24,6 +24,7 @@ const getSections = (t: (key: string) => string) => [
   { id: "gradebook", label: t('sidebar.gradebook'), icon: GraduationCap, color: "from-cyan-500 to-blue-500" },
   { id: "directory", label: t('sidebar.directory'), icon: FolderOpen, color: "from-slate-500 to-gray-600" },
   { id: "safety", label: t('sidebar.safety'), icon: Shield, color: "from-green-500 to-emerald-500" },
+  { id: "links-resources", label: "Links & Resources", icon: Link, color: "from-blue-500 to-indigo-500" },
   { id: "account", label: t('sidebar.account'), icon: User, color: "from-purple-500 to-indigo-500" },
 ];
 
