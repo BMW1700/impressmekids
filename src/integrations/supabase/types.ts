@@ -3478,6 +3478,7 @@ export type Database = {
           role: Database["public"]["Enums"]["user_role"]
           school_id: string | null
           signup_domain: string | null
+          student_id: string | null
         }
         Insert: {
           created_at?: string
@@ -3490,6 +3491,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"]
           school_id?: string | null
           signup_domain?: string | null
+          student_id?: string | null
         }
         Update: {
           created_at?: string
@@ -3502,6 +3504,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"]
           school_id?: string | null
           signup_domain?: string | null
+          student_id?: string | null
         }
         Relationships: [
           {
