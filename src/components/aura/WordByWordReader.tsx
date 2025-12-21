@@ -743,7 +743,8 @@ export const WordByWordReader = ({
       });
     });
     
-    // THROTTLED SOUND: Play sound for latest word (every 3rd at high speed)
+    // CONTINUOUS FLOW: Only play sounds for correct words, never interrupt for incorrect
+    // This keeps the reading experience smooth - incorrect words are tracked silently
     const processedCount = spokenWords.length;
     const wordsSinceLastSound = processedCount - lastSoundPlayedAtRef.current;
     
@@ -758,12 +759,9 @@ export const WordByWordReader = ({
         if (isCorrect) {
           soundEffectsRef.current.correctWord();
           auraCharacter.reactToCorrect();
-        } else {
-          soundEffectsRef.current.incorrectWord();
-          auraCharacter.reactToIncorrect();
-          setCorrectStreak(0);
-          correctStreakRef.current = 0;
         }
+        // NO SOUND/INTERRUPT FOR INCORRECT - just track silently and keep reading flowing
+        // The word status is updated in the map above, grading happens at session end
         lastSoundPlayedAtRef.current = processedCount;
       }
     }
