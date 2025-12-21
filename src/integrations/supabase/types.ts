@@ -4889,6 +4889,41 @@ export type Database = {
           },
         ]
       }
+      student_allergies: {
+        Row: {
+          allergy_name: string
+          created_at: string
+          description: string | null
+          id: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          allergy_name: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          allergy_name?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_allergies_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_behavior_stats: {
         Row: {
           best_streak: number
