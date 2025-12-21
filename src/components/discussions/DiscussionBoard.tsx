@@ -76,13 +76,14 @@ export const DiscussionBoard = ({ classroomId, isTeacher = false }: DiscussionBo
           <MessageSquare className="w-5 h-5 text-primary" />
           <h2 className="text-lg font-semibold">Discussion Board</h2>
         </div>
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-2">
-              <Plus className="w-4 h-4" />
-              New Topic
-            </Button>
-          </DialogTrigger>
+        {isTeacher && (
+          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gap-2">
+                <Plus className="w-4 h-4" />
+                New Topic
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Create New Discussion Topic</DialogTitle>
@@ -151,7 +152,8 @@ export const DiscussionBoard = ({ classroomId, isTeacher = false }: DiscussionBo
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        )}
       </div>
 
       {isLoading ? (
@@ -162,11 +164,13 @@ export const DiscussionBoard = ({ classroomId, isTeacher = false }: DiscussionBo
             <MessageSquare className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
             <h3 className="font-medium mb-2">No discussions yet</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Start a new discussion topic to engage with your class
+              {isTeacher ? "Start a new discussion topic to engage with your class" : "No discussion topics have been posted yet"}
             </p>
-            <Button onClick={() => setShowCreateDialog(true)} variant="outline" size="sm">
-              Create First Topic
-            </Button>
+            {isTeacher && (
+              <Button onClick={() => setShowCreateDialog(true)} variant="outline" size="sm">
+                Create First Topic
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
