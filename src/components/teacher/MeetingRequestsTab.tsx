@@ -269,7 +269,8 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "";
-    return format(new Date(dateStr), "MMM d, yyyy");
+    // Parse as local date to avoid timezone offset issues
+    return format(new Date(dateStr + "T12:00:00"), "MMM d, yyyy");
   };
 
   const handleDayToggle = (day: string) => {
