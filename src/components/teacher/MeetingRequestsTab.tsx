@@ -99,14 +99,12 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
     },
   });
 
-  // Fetch upcoming meeting bookings
-  const { data: upcomingBookings = [], isLoading: loadingBookings } = useQuery({
+  // Fetch all meeting bookings (upcoming and past)
+  const { data: allBookings = [], isLoading: loadingBookings } = useQuery({
     queryKey: ["teacher-meeting-bookings"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
-      
-      const today = format(startOfToday(), "yyyy-MM-dd");
       
       const { data, error } = await supabase
         .from("meeting_bookings")
@@ -122,7 +120,6 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
         `)
         .eq("teacher_id", user.id)
         .eq("status", "booked")
-        .gte("booking_date", today)
         .order("booking_date", { ascending: true })
         .order("start_time", { ascending: true });
       
@@ -131,13 +128,28 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
     },
   });
 
-  // Filter out office hours that have been booked (match by office_hours_id and start_time)
+  // Split bookings into upcoming and past
+  const today = format(startOfToday(), "yyyy-MM-dd");
+  const upcomingBookings = allBookings.filter((booking: any) => booking.booking_date >= today);
+  const pastBookings = allBookings.filter((booking: any) => booking.booking_date < today);
+
+  // Filter office hours: exclude booked ones AND past unbooked ones
   const officeHours = allOfficeHours.filter((hours) => {
-    return !upcomingBookings.some(
+    // Check if this slot was booked
+    const isBooked = allBookings.some(
       (booking: any) =>
         booking.office_hours_id === hours.id &&
         booking.start_time === hours.start_time
     );
+    
+    // If booked, don't show in office hours list (it appears in bookings)
+    if (isBooked) return false;
+    
+    // If not booked, check if it's in the past - if so, hide it
+    const slotDate = hours.specific_date || hours.start_date;
+    if (slotDate && slotDate < today) return false;
+    
+    return true;
   });
   // Helper to generate time slots
   const generateTimeSlots = (start: string, end: string, durationMinutes: number) => {
@@ -515,7 +527,7 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
         <TabsList>
           <TabsTrigger value="bookings">
             <Users className="h-4 w-4 mr-2" />
-            Upcoming Bookings ({upcomingBookings.length})
+            Bookings ({allBookings.length})
           </TabsTrigger>
           <TabsTrigger value="hours">
             <Clock className="h-4 w-4 mr-2" />
@@ -523,69 +535,141 @@ export const MeetingRequestsTab = ({ classroomId }: MeetingRequestsTabProps) => 
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="bookings" className="mt-6">
+        <TabsContent value="bookings" className="mt-6 space-y-8">
           {loadingBookings ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ) : upcomingBookings.length === 0 ? (
+          ) : allBookings.length === 0 ? (
             <Card className="p-12 text-center">
               <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-xl font-bold mb-2">No Upcoming Meetings</h3>
+              <h3 className="text-xl font-bold mb-2">No Meetings</h3>
               <p className="text-muted-foreground">
                 You don't have any scheduled meetings yet. Parents can book meetings during your office hours.
               </p>
             </Card>
           ) : (
-            <div className="space-y-4">
-              {upcomingBookings.map((booking: any) => (
-                <Card key={booking.id} className="shadow-card">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <Calendar className="h-5 w-5 text-primary" />
-                          {format(new Date(booking.booking_date + 'T00:00:00'), "EEEE, MMMM d, yyyy")}
-                        </CardTitle>
-                        <CardDescription className="mt-1">
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4" />
-                            {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+            <>
+              {/* Upcoming Bookings Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  Upcoming Bookings ({upcomingBookings.length})
+                </h3>
+                {upcomingBookings.length === 0 ? (
+                  <Card className="p-6 text-center">
+                    <p className="text-muted-foreground">No upcoming meetings scheduled.</p>
+                  </Card>
+                ) : (
+                  <div className="space-y-4">
+                    {upcomingBookings.map((booking: any) => (
+                      <Card key={booking.id} className="shadow-card">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <CardTitle className="text-lg flex items-center gap-2">
+                                <Calendar className="h-5 w-5 text-primary" />
+                                {format(new Date(booking.booking_date + 'T00:00:00'), "EEEE, MMMM d, yyyy")}
+                              </CardTitle>
+                              <CardDescription className="mt-1">
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-4 w-4" />
+                                  {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+                                </div>
+                              </CardDescription>
+                            </div>
+                            <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+                              Booked
+                            </Badge>
                           </div>
-                        </CardDescription>
-                      </div>
-                      <Badge variant="default" className="bg-green-500 hover:bg-green-600">
-                        Booked
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="p-3 bg-muted/50 rounded-lg space-y-2">
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Booked by:</span>{" "}
-                        <span className="font-medium">{booking.parent_accounts?.full_name || "Unknown Parent"}</span>
-                      </div>
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Student:</span>{" "}
-                        <span className="font-medium">{booking.profiles?.full_name || "Unknown Student"}</span>
-                      </div>
-                      {booking.parent_accounts?.email && (
-                        <div className="text-sm">
-                          <span className="text-muted-foreground">Email:</span>{" "}
-                          <span>{booking.parent_accounts.email}</span>
-                        </div>
-                      )}
-                    </div>
-                    {booking.meeting_reason && (
-                      <div className="p-3 border rounded-lg">
-                        <div className="text-xs text-muted-foreground mb-1">Meeting Purpose:</div>
-                        <p className="text-sm">{booking.meeting_reason}</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div className="p-3 bg-muted/50 rounded-lg space-y-2">
+                            <div className="text-sm">
+                              <span className="text-muted-foreground">Booked by:</span>{" "}
+                              <span className="font-medium">{booking.parent_accounts?.full_name || "Unknown Parent"}</span>
+                            </div>
+                            <div className="text-sm">
+                              <span className="text-muted-foreground">Student:</span>{" "}
+                              <span className="font-medium">{booking.profiles?.full_name || "Unknown Student"}</span>
+                            </div>
+                            {booking.parent_accounts?.email && (
+                              <div className="text-sm">
+                                <span className="text-muted-foreground">Email:</span>{" "}
+                                <span>{booking.parent_accounts.email}</span>
+                              </div>
+                            )}
+                          </div>
+                          {booking.meeting_reason && (
+                            <div className="p-3 border rounded-lg">
+                              <div className="text-xs text-muted-foreground mb-1">Meeting Purpose:</div>
+                              <p className="text-sm">{booking.meeting_reason}</p>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Past Bookings Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2 text-muted-foreground">
+                  <Clock className="h-5 w-5" />
+                  Past Bookings ({pastBookings.length})
+                </h3>
+                {pastBookings.length === 0 ? (
+                  <Card className="p-6 text-center">
+                    <p className="text-muted-foreground">No past meetings.</p>
+                  </Card>
+                ) : (
+                  <div className="space-y-4">
+                    {pastBookings.map((booking: any) => (
+                      <Card key={booking.id} className="shadow-card opacity-75">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <CardTitle className="text-lg flex items-center gap-2 text-muted-foreground">
+                                <Calendar className="h-5 w-5" />
+                                {format(new Date(booking.booking_date + 'T00:00:00'), "EEEE, MMMM d, yyyy")}
+                              </CardTitle>
+                              <CardDescription className="mt-1">
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-4 w-4" />
+                                  {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+                                </div>
+                              </CardDescription>
+                            </div>
+                            <Badge variant="secondary">
+                              Completed
+                            </Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div className="p-3 bg-muted/50 rounded-lg space-y-2">
+                            <div className="text-sm">
+                              <span className="text-muted-foreground">Booked by:</span>{" "}
+                              <span className="font-medium">{booking.parent_accounts?.full_name || "Unknown Parent"}</span>
+                            </div>
+                            <div className="text-sm">
+                              <span className="text-muted-foreground">Student:</span>{" "}
+                              <span className="font-medium">{booking.profiles?.full_name || "Unknown Student"}</span>
+                            </div>
+                          </div>
+                          {booking.meeting_reason && (
+                            <div className="p-3 border rounded-lg">
+                              <div className="text-xs text-muted-foreground mb-1">Meeting Purpose:</div>
+                              <p className="text-sm">{booking.meeting_reason}</p>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </TabsContent>
 
