@@ -6399,6 +6399,18 @@ export type Database = {
           student_name: string
         }[]
       }
+      get_pending_join_requests: {
+        Args: { _classroom_id: string }
+        Returns: {
+          classroom_id: string
+          id: string
+          requested_at: string
+          status: string
+          student_email: string
+          student_id: string
+          student_name: string
+        }[]
+      }
       get_signed_audio_url: {
         Args: {
           p_audio_path: string
