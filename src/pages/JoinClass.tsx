@@ -44,7 +44,14 @@ const JoinClass = () => {
 
       if (error) throw error;
 
-      const result = data as { success: boolean; error?: string; already_joined?: boolean; classroom_name?: string };
+      const result = data as { 
+        success: boolean; 
+        error?: string; 
+        already_joined?: boolean; 
+        pending?: boolean;
+        resubmitted?: boolean;
+        classroom_name?: string 
+      };
 
       if (!result.success) {
         toast({
@@ -61,10 +68,12 @@ const JoinClass = () => {
           title: "Already Joined",
           description: `You're already in ${result.classroom_name}`,
         });
-      } else {
+      } else if (result.pending) {
         toast({
-          title: "Success!",
-          description: `You've joined ${result.classroom_name}`,
+          title: "Request Submitted",
+          description: result.resubmitted 
+            ? `Your request to join ${result.classroom_name} has been resubmitted. Waiting for teacher approval.`
+            : `Your request to join ${result.classroom_name} has been submitted. Waiting for teacher approval.`,
         });
       }
 

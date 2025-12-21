@@ -49,6 +49,7 @@ import { ToolkitSidebar } from "@/components/classroom/ToolkitSidebar";
 import { useClassroomFeatures } from "@/hooks/useClassroomFeatures";
 import { ClassroomTabsList } from "@/components/classroom/ClassroomTabsList";
 import { MeetingRequestsTab } from "@/components/teacher/MeetingRequestsTab";
+import { PendingStudentRequests } from "@/components/classroom/PendingStudentRequests";
 const ClassroomDetail = () => {
   const {
     id
@@ -627,6 +628,9 @@ const ClassroomDetail = () => {
                   <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Student Roster</h2>
                   <p className="text-muted-foreground mt-1">Manage and view your classroom students</p>
                 </div>
+                
+                {/* Pending Student Join Requests */}
+                <PendingStudentRequests classroomId={id!} onApproved={loadClassroomData} />
 
               {students.length === 0 ? <Card className="p-16 text-center shadow-elegant border-2 border-primary/10 bg-gradient-to-br from-background to-muted/20">
               <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-primary/10 flex items-center justify-center">
