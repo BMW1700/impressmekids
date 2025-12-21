@@ -10,6 +10,8 @@ interface DiscussionTopic {
   description: string | null;
   is_pinned: boolean;
   is_locked: boolean;
+  is_posted: boolean;
+  due_date: string | null;
   created_at: string;
   updated_at: string;
   author?: { full_name: string };
@@ -78,7 +80,7 @@ export const useDiscussionTopics = (classroomId?: string) => {
   });
 
   const createTopic = useMutation({
-    mutationFn: async ({ title, description }: { title: string; description?: string }) => {
+    mutationFn: async ({ title, description, due_date, is_posted }: { title: string; description?: string; due_date?: string; is_posted?: boolean }) => {
       if (!classroomId) throw new Error('Missing classroom ID');
 
       const { data: { user } } = await supabase.auth.getUser();
@@ -91,6 +93,8 @@ export const useDiscussionTopics = (classroomId?: string) => {
           created_by: user.id,
           title,
           description,
+          due_date: due_date || null,
+          is_posted: is_posted ?? false,
         })
         .select()
         .single();
@@ -98,9 +102,12 @@ export const useDiscussionTopics = (classroomId?: string) => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['discussion-topics', classroomId] });
-      toast({ title: "Topic Created", description: "Discussion topic created successfully." });
+      toast({ 
+        title: variables.is_posted ? "Topic Posted" : "Topic Saved", 
+        description: variables.is_posted ? "Discussion topic posted to classroom." : "Discussion topic saved as draft." 
+      });
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
