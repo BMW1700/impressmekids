@@ -6578,10 +6578,8 @@ export type Database = {
       get_students_for_substitute: {
         Args: { p_classroom_id: string; p_link_id: string }
         Returns: {
-          avatar_url: string
           email: string
           full_name: string
-          grade: number
           joined_at: string
           student_id: string
         }[]
