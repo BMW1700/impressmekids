@@ -3282,6 +3282,74 @@ export type Database = {
           },
         ]
       }
+      parent_phoneme_reports: {
+        Row: {
+          classroom_id: string
+          created_at: string
+          id: string
+          message: string | null
+          parent_id: string
+          phoneme_data: Json
+          read_at: string | null
+          sent_at: string
+          student_id: string
+          teacher_id: string
+        }
+        Insert: {
+          classroom_id: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          parent_id: string
+          phoneme_data: Json
+          read_at?: string | null
+          sent_at?: string
+          student_id: string
+          teacher_id: string
+        }
+        Update: {
+          classroom_id?: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          parent_id?: string
+          phoneme_data?: Json
+          read_at?: string | null
+          sent_at?: string
+          student_id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_phoneme_reports_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parent_phoneme_reports_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "parent_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parent_phoneme_reports_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parent_phoneme_reports_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parent_student_events: {
         Row: {
           created_at: string | null

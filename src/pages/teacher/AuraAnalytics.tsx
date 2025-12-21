@@ -332,6 +332,8 @@ const AuraAnalytics = () => {
                   <PhonemeHeatmap 
                     students={students || []}
                     skillVectors={skillVectors}
+                    classroomId={classroomId!}
+                    classroomName={classrooms?.find(c => c.id === classroomId)?.name || "Classroom"}
                   />
                 </TabsContent>
 

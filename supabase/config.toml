@@ -109,3 +109,6 @@ verify_jwt = true
 
 [functions.send-substitute-access-email]
 verify_jwt = true
+
+[functions.send-phoneme-report]
+verify_jwt = true
