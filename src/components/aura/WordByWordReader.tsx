@@ -464,47 +464,9 @@ export const WordByWordReader = ({
       }
     };
 
-    // FIX: Enhanced onend handler - process any pending transcript before restarting
+    // FIX 3: Add onend handler to restart recognition if needed
     recognition.onend = () => {
-      console.log('Speech recognition ended, processing final state...');
-      
-      // FIX: Force process any remaining buffered transcript
-      if (fullTranscriptRef.current) {
-        const cleanedTranscript = cleanupTranscript(fullTranscriptRef.current);
-        const spokenWords = cleanedTranscript.split(/\s+/).filter(w => w.length > 0);
-        
-        // Process remaining words if any were missed
-        if (spokenWords.length > 0) {
-          setRealtimeWordStatus(prev => {
-            const newMap = new Map(prev);
-            let processed = 0;
-            
-            // Find words that are still pending and try to match them
-            for (let i = 0; i < words.length; i++) {
-              const status = newMap.get(i);
-              if (status === 'pending' || status === 'current') {
-                const expectedWord = words[i];
-                
-                // Check if this word appears anywhere in the transcript
-                const foundInTranscript = findWordInFullTranscript(expectedWord, fullTranscriptRef.current, !isStrictMode);
-                
-                if (foundInTranscript) {
-                  newMap.set(i, 'correct');
-                  processed++;
-                  console.log('ONEND RECOVERY: Found', expectedWord, 'in transcript');
-                }
-              }
-            }
-            
-            if (processed > 0) {
-              console.log(`ONEND: Recovered ${processed} words from buffered transcript`);
-            }
-            
-            realtimeWordStatusRef.current = newMap;
-            return newMap;
-          });
-        }
-      }
+      console.log('Speech recognition ended');
       
       // Restart recognition if still recording (continuous mode recovery)
       if (isRecording && realtimeWordIndexRef.current < words.length) {
@@ -552,65 +514,37 @@ export const WordByWordReader = ({
     // SUPERCHARGED V3: Use cleaned transcript for word extraction
     const spokenWords = cleanedTranscript.split(/\s+/).filter(w => w.length > 0);
     
-    // FIX: Process ALL words in the transcript, not just "new" ones
-    // This ensures that even if speech recognition re-sends words, we catch them
-    const newWords = spokenWords;
+    // Only process if we have NEW words
+    if (spokenWords.length <= prevSpokenWords.length) return;
+    
+    // Get the newly spoken words (already cleaned)
+    const newWords = spokenWords.slice(prevSpokenWords.length);
     
     // Track speech time for cognitive load
     lastSpeechTimeRef.current = Date.now();
     
-    // FIX: Also do a full transcript scan to catch any missed words
-    // This runs on EVERY interim result to ensure nothing is missed
-    setRealtimeWordStatus(prevStatus => {
-      const scanMap = new Map(prevStatus);
-      
-      for (let i = 0; i < words.length; i++) {
-        const status = scanMap.get(i);
-        // If pending or current, check if word appears in full transcript
-        if (status === 'pending' || status === 'current') {
-          const expectedWord = words[i];
-          if (findWordInFullTranscript(expectedWord, transcript, !isStrictMode)) {
-            scanMap.set(i, 'correct');
-            console.log('TRANSCRIPT SCAN HIT:', expectedWord, 'at index', i);
-          }
-        }
-      }
-      
-      realtimeWordStatusRef.current = scanMap;
-      return scanMap;
-    });
-    
-    // INSTANT UPDATE: Process new words immediately - NEVER BLOCK
-    // FIX: Use tracking index that ALWAYS advances, never gets stuck
+    // INSTANT UPDATE: Process new words, matching to FIRST UNPROCESSED position
     requestAnimationFrame(() => {
       setRealtimeWordStatus(prev => {
         const newMap = new Map(prev);
         
-        // FIX: Track the furthest position we've reached (always advances)
-        // This prevents getting stuck on pending-incorrect words
-        const getFurthestProcessedIndex = () => {
-          let furthest = 0;
+        // SUPERCHARGED V2: Helper finds first unprocessed index (ignores pending-incorrect)
+        const getFirstUnprocessedIndex = () => {
           for (let i = 0; i < words.length; i++) {
             const status = newMap.get(i);
-            // Any status other than 'pending' means we've attempted this word
-            if (status !== 'pending' && status !== 'current') {
-              furthest = i + 1;
+            // pending-incorrect is still considered "unprocessed" for matching purposes
+            if (status !== 'correct' && status !== 'incorrect') {
+              return i;
             }
           }
-          return Math.min(furthest, words.length);
+          return words.length; // All processed
         };
         
-        // FIX: Always start from the next word after furthest processed
-        let currentProcessingIdx = getFurthestProcessedIndex();
-        
-        // Process each newly spoken word - ALWAYS ADVANCE, NEVER GET STUCK
+        // Process each newly spoken word
         for (const spokenWord of newWords) {
-          // FIX: Use the tracking index that keeps advancing
-          let currentIdx = currentProcessingIdx;
+          let currentIdx = getFirstUnprocessedIndex();
           if (currentIdx >= words.length) break; // Done with passage
           
-          // Advance the tracking index for next word
-          currentProcessingIdx++;
           // Track attempts for this word
           const currentAttempts = wordAttemptsRef.current.get(currentIdx) || 0;
           wordAttemptsRef.current.set(currentIdx, currentAttempts + 1);
