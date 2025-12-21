@@ -15,6 +15,7 @@ import { ClubsSection } from "@/components/student/sections/ClubsSection";
 import { CalendarSection } from "@/components/student/sections/CalendarSection";
 import { AnnouncementsSection } from "@/components/student/sections/AnnouncementsSection";
 import { GradebookSection } from "@/components/student/sections/GradebookSection";
+import { GamesSection } from "@/components/student/sections/GamesSection";
 import { DirectorySection } from "@/components/student/sections/DirectorySection";
 import { AccountSection } from "@/components/student/sections/AccountSection";
 import { SafetySection } from "@/components/student/sections/SafetySection";
@@ -114,6 +115,7 @@ const StudentDashboard = () => {
       case "clubs": return <ClubsSection studentId={profile.id} />;
       case "calendar": return <CalendarSection studentId={profile.id} />;
       case "announcements": return <AnnouncementsSection studentId={profile.id} />;
+      case "study-games": return <GamesSection />;
       case "safety": return <SafetySection />;
       case "gradebook": return <GradebookSection studentId={profile.id} />;
       case "directory": return <DirectorySection />;
