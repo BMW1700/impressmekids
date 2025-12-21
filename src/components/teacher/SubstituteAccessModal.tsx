@@ -76,11 +76,12 @@ export function SubstituteAccessModal({ classroomId, classroomName }: Substitute
     }
 
     createLink({
-      substituteName: substituteName || undefined,
-      substituteEmail: substituteEmail || undefined,
+      substituteName: substituteName.trim(),
+      substituteEmail: substituteEmail.trim(),
       accessStart: now,
       accessEnd: endDate,
       permissions,
+      classroomName,
     }, {
       onSuccess: (data) => {
         setNewLinkCode((data as SubstituteAccessLink).access_code);
@@ -256,24 +257,33 @@ export function SubstituteAccessModal({ classroomId, classroomName }: Substitute
           <div className="space-y-4">
             <div className="space-y-4">
               <div className="grid gap-2">
-                <Label htmlFor="sub-name">Substitute Name (optional)</Label>
+                <Label htmlFor="sub-name">
+                  Substitute Name <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="sub-name"
                   placeholder="e.g., Mrs. Johnson"
                   value={substituteName}
                   onChange={(e) => setSubstituteName(e.target.value)}
+                  required
                 />
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="sub-email">Substitute Email (optional)</Label>
+                <Label htmlFor="sub-email">
+                  Substitute Email <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="sub-email"
                   type="email"
                   placeholder="substitute@school.edu"
                   value={substituteEmail}
                   onChange={(e) => setSubstituteEmail(e.target.value)}
+                  required
                 />
+                <p className="text-xs text-muted-foreground">
+                  An email will be sent to this address with the access code.
+                </p>
               </div>
 
               <Separator />
@@ -380,7 +390,7 @@ export function SubstituteAccessModal({ classroomId, classroomName }: Substitute
               </Button>
               <Button 
                 onClick={handleCreate} 
-                disabled={isCreating || (accessDuration === 'custom' && !customEndDate)}
+                disabled={isCreating || !substituteName.trim() || !substituteEmail.trim() || (accessDuration === 'custom' && !customEndDate)}
                 className="flex-1 bg-gradient-primary"
               >
                 {isCreating ? 'Creating...' : 'Create Link'}
