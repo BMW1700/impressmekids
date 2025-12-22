@@ -44,53 +44,82 @@ export const useMLIntegration = () => {
    * This feeds the train-ml-models edge function
    */
   const saveToAuraRecords = useCallback(async (data: ReadingSessionData) => {
+    console.log('[ML Integration] saveToAuraRecords called with:', {
+      studentId: data.studentId,
+      sessionId: data.sessionId,
+      wpm: data.wpm,
+      accuracy: data.accuracy,
+      wordsRead: data.wordsRead,
+    });
+
     try {
+      // First verify the user is authenticated
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError || !authData.user) {
+        console.error('[ML Integration] Not authenticated:', authError);
+        return null;
+      }
+
+      console.log('[ML Integration] Auth verified, user:', authData.user.id);
+
+      // Build the feedback array from phoneme scores
+      const feedbackArray = Object.entries(data.phonemeScores).map(([phoneme, score]) => ({
+        phoneme,
+        score,
+        timestamp: new Date().toISOString(),
+      }));
+
+      const insertData = {
+        profile_id: data.studentId,
+        request_id: `session-${data.sessionId}-${Date.now()}`,
+        audio_url: data.audioUrl || '',
+        transcript: data.transcript || '',
+        language: 'en-US',
+        words: data.wordsRead,
+        wpm: data.wpm,
+        duration_s: data.durationSeconds,
+        pause_count: data.pauseCount,
+        avg_silence_ms: data.pauseCount > 0 ? Math.round((data.durationSeconds * 1000) / data.pauseCount / 10) : 0,
+        asr_confidence: data.accuracy / 100,
+        pace: Math.min(100, Math.round((data.wpm / 150) * 100)),
+        confidence: Math.round(data.accuracy),
+        clarity: data.prosodyMetrics?.overallScore || 70,
+        grade: data.accuracy,
+        feedback: feedbackArray,
+        reading_assignment_id: data.assignmentId || null,
+        reading_type: 'word_by_word',
+        comprehension_score: data.accuracy,
+        annotation_quality_score: Math.round(data.accuracy * 0.9),
+        highlight_count: Math.max(1, Math.floor(data.wordsRead / 20)),
+        performance_metrics: {
+          wcpm: data.wcpm,
+          fluencyLevel: data.miscueAnalysis?.fluencyLevel || 'instructional',
+          totalMiscues: data.miscueAnalysis?.totalMiscues || 0,
+          prosodyScore: data.prosodyMetrics?.overallScore || 70,
+          sessionType: 'word_by_word_reading',
+          mlIntegrated: true,
+        },
+      };
+
+      console.log('[ML Integration] Inserting to aura_records:', JSON.stringify(insertData).substring(0, 500));
+
       const { data: result, error } = await supabase
         .from('aura_records')
-        .insert({
-          profile_id: data.studentId,
-          request_id: `session-${data.sessionId}-${Date.now()}`,
-          audio_url: data.audioUrl || '',
-          transcript: data.transcript || '',
-          language: 'en-US',
-          words: data.wordsRead,
-          wpm: data.wpm,
-          duration_s: data.durationSeconds,
-          pause_count: data.pauseCount,
-          avg_silence_ms: data.pauseCount > 0 ? (data.durationSeconds * 1000) / data.pauseCount / 10 : 0,
-          asr_confidence: data.accuracy / 100,
-          pace: Math.min(100, Math.round((data.wpm / 150) * 100)), // Normalize to 0-100
-          confidence: Math.round(data.accuracy),
-          clarity: data.prosodyMetrics?.overallScore || 70,
-          grade: data.accuracy,
-          feedback: Object.entries(data.phonemeScores).map(([phoneme, score]) => ({
-            phoneme,
-            score,
-            timestamp: new Date().toISOString(),
-          })),
-          reading_assignment_id: data.assignmentId || null,
-          reading_type: 'word_by_word',
-          comprehension_score: data.accuracy,
-          annotation_quality_score: Math.round(data.accuracy * 0.9),
-          highlight_count: Math.max(1, Math.floor(data.wordsRead / 20)),
-          performance_metrics: {
-            wcpm: data.wcpm,
-            fluencyLevel: data.miscueAnalysis?.fluencyLevel || 'instructional',
-            totalMiscues: data.miscueAnalysis?.totalMiscues || 0,
-            prosodyScore: data.prosodyMetrics?.overallScore || 70,
-            sessionType: 'word_by_word_reading',
-            mlIntegrated: true,
-          },
-        })
+        .insert(insertData)
         .select()
         .single();
 
       if (error) {
-        console.error('[ML Integration] Failed to save to aura_records:', error);
+        console.error('[ML Integration] Failed to save to aura_records:', {
+          error: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+        });
         return null;
       }
 
-      console.log('[ML Integration] ✅ Saved to aura_records for ML training:', result.id);
+      console.log('[ML Integration] ✅ Successfully saved to aura_records:', result.id);
       return result;
     } catch (err) {
       console.error('[ML Integration] Exception saving to aura_records:', err);
@@ -109,6 +138,14 @@ export const useMLIntegration = () => {
     strugglingPhonemes: string[],
     difficultyLevel: number
   ) => {
+    console.log('[ML Integration] triggerQLearningUpdate called:', {
+      studentId,
+      phonemePerformanceCount: phonemePerformance.length,
+      masteredCount: masteredPhonemes.length,
+      strugglingCount: strugglingPhonemes.length,
+      difficultyLevel,
+    });
+
     try {
       // Group performance by phoneme
       const phonemeResults: Record<string, { correct: number; total: number }> = {};
@@ -135,6 +172,8 @@ export const useMLIntegration = () => {
         return null;
       }
 
+      console.log('[ML Integration] Calling update-q-learning with experiences:', experiences.length);
+
       const { data, error } = await supabase.functions.invoke('update-q-learning', {
         body: {
           studentId,
@@ -149,11 +188,14 @@ export const useMLIntegration = () => {
       });
 
       if (error) {
-        console.error('[ML Integration] Q-learning update failed:', error);
+        console.error('[ML Integration] Q-learning update failed:', {
+          error: error.message,
+          context: error.context,
+        });
         return null;
       }
 
-      console.log('[ML Integration] ✅ Q-learning updated:', data);
+      console.log('[ML Integration] ✅ Q-learning updated successfully:', data);
       return data;
     } catch (err) {
       console.error('[ML Integration] Exception in Q-learning update:', err);
