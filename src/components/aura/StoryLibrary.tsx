@@ -151,37 +151,41 @@ export const StoryLibrary = ({ onSelectStory }: StoryLibraryProps) => {
           />
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <Filter className="h-4 w-4 text-muted-foreground" />
+        <div className="space-y-3 md:space-y-0 md:flex md:items-center md:gap-2 md:flex-wrap">
+          <Filter className="h-4 w-4 text-muted-foreground hidden md:block" />
           
           {/* Grade Filters */}
-          <div className="flex gap-2">
-            {grades.map(grade => (
-              <Badge
-                key={grade}
-                variant={selectedGrade === grade ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() => setSelectedGrade(grade)}
-              >
-                {grade === 'all' ? 'All Grades' : `Grade ${grade}`}
-              </Badge>
-            ))}
+          <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+            <div className="flex gap-2 min-w-max pb-2 md:pb-0">
+              {grades.map(grade => (
+                <Badge
+                  key={grade}
+                  variant={selectedGrade === grade ? "default" : "outline"}
+                  className="cursor-pointer whitespace-nowrap text-xs md:text-sm shrink-0"
+                  onClick={() => setSelectedGrade(grade)}
+                >
+                  {grade === 'all' ? 'All Grades' : `Grade ${grade}`}
+                </Badge>
+              ))}
+            </div>
           </div>
 
-          <div className="w-px h-6 bg-border" />
+          <div className="hidden md:block w-px h-6 bg-border" />
 
           {/* Category Filters */}
-          <div className="flex gap-2 flex-wrap">
-            {categories.map(category => (
-              <Badge
-                key={category}
-                variant={selectedCategory === category ? "default" : "outline"}
-                className="cursor-pointer capitalize"
-                onClick={() => setSelectedCategory(category)}
-              >
-                {category.replace('_', ' ')}
-              </Badge>
-            ))}
+          <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+            <div className="flex gap-2 min-w-max md:flex-wrap">
+              {categories.map(category => (
+                <Badge
+                  key={category}
+                  variant={selectedCategory === category ? "default" : "outline"}
+                  className="cursor-pointer capitalize whitespace-nowrap text-xs md:text-sm shrink-0"
+                  onClick={() => setSelectedCategory(category)}
+                >
+                  {category.replace('_', ' ')}
+                </Badge>
+              ))}
+            </div>
           </div>
         </div>
       </div>
