@@ -263,51 +263,57 @@ serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    
-    if (!supabaseUrl || !supabaseKey) {
-      console.error('[ML Training] Missing environment variables:', { 
-        hasUrl: !!supabaseUrl, 
-        hasKey: !!supabaseKey 
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
+      console.error('[ML Training] Missing environment variables:', {
+        hasUrl: !!supabaseUrl,
+        hasAnonKey: !!supabaseAnonKey,
+        hasServiceKey: !!supabaseServiceKey,
       });
       throw new Error('Missing Supabase configuration');
     }
-    
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      global: { headers: { Authorization: authHeader } }
+
+    // Use ANON key + user JWT to validate the caller
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const {
+      data: { user },
+      error: authError,
+    } = await supabaseAuth.auth.getUser();
 
-    // SECURITY: Rate limiting
-    const rateLimitResult = await checkRateLimit(user.id, 'train-ml-models', RATE_LIMITS.ML_TRAINING);
-    if (!rateLimitResult.allowed) {
-      return new Response(JSON.stringify({ 
-        error: 'Rate limit exceeded. ML training is limited to 10 requests per minute.',
-        resetAt: rateLimitResult.resetAt,
-      }), {
-        status: 429,
-        headers: { 
-          ...corsHeaders, 
-          ...getRateLimitHeaders(rateLimitResult, RATE_LIMITS.ML_TRAINING),
-          'Content-Type': 'application/json',
-        },
+    if (authError || !user) {
+      console.error('[ML Training] Unauthorized:', {
+        authError: authError?.message,
+        hasUser: !!user,
       });
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized', details: authError?.message ?? null }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     // Verify user has admin or teacher role
-    const { data: roles } = await supabase
+    const { data: roles, error: roleError } = await supabaseAuth
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .in('role', ['admin', 'teacher'])
-      .single();
+      .maybeSingle();
+
+    if (roleError) {
+      console.error('[ML Training] Role check failed:', roleError);
+      return new Response(JSON.stringify({ error: 'Role check failed' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     if (!roles) {
       return new Response(JSON.stringify({ error: 'Access denied - admin or teacher required' }), {
@@ -315,6 +321,10 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Admin client for DB writes/reads during training
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
 
     const requestData = await req.json();
     const validation = validateInput(trainMLSchema, requestData);
@@ -327,9 +337,7 @@ serve(async (req) => {
 
     console.log('[ML Training] Starting real ML model training pipeline...');
 
-    // Create training job record - reuse already validated env vars
-    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
-
+    // Create training job record
     const { data: trainingJob, error: jobError } = await supabaseAdmin
       .from('ml_training_jobs')
       .insert({
