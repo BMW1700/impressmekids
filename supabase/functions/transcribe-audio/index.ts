@@ -1,7 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { transcribeAudioSchema, validateInput } from '../_shared/validation.ts';
-import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from '../_shared/rateLimiter.ts';
 
 // Google Cloud Speech-to-Text API configuration
 const GOOGLE_SPEECH_API = 'https://speech.googleapis.com/v1/speech:recognize';
@@ -63,33 +62,14 @@ async function createJWT(serviceAccount: any): Promise<string> {
   return `${signatureInput}.${encodedSignature}`;
 }
 
-function processBase64Chunks(base64String: string, chunkSize = 32768) {
-  const chunks: Uint8Array[] = [];
-  let position = 0;
-  
-  while (position < base64String.length) {
-    const chunk = base64String.slice(position, position + chunkSize);
-    const binaryChunk = atob(chunk);
-    const bytes = new Uint8Array(binaryChunk.length);
-    
-    for (let i = 0; i < binaryChunk.length; i++) {
-      bytes[i] = binaryChunk.charCodeAt(i);
-    }
-    
-    chunks.push(bytes);
-    position += chunkSize;
-  }
-
-  const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-  const result = new Uint8Array(totalLength);
-  let offset = 0;
-
-  for (const chunk of chunks) {
-    result.set(chunk, offset);
-    offset += chunk.length;
-  }
-
-  return result;
+// Estimate audio duration from base64 size (rough estimate for webm)
+function estimateAudioDuration(base64Audio: string): number {
+  // Base64 to bytes: multiply by 0.75
+  // WebM Opus is typically ~16-24 kbps for speech
+  // Using 20 kbps = 2500 bytes per second
+  const bytesPerSecond = 2500;
+  const audioBytes = base64Audio.length * 0.75;
+  return audioBytes / bytesPerSecond;
 }
 
 serve(async (req) => {
@@ -122,23 +102,6 @@ serve(async (req) => {
     
     console.log('[transcribe-audio] User:', userId);
 
-    // SECURITY: Rate limiting (100 requests per minute per user)
-    const rateLimitResult = await checkRateLimit(userId, 'transcribe-audio');
-    if (!rateLimitResult.allowed) {
-      console.warn('[RATE_LIMIT] Rate limit exceeded:', userId);
-      return new Response(JSON.stringify({ 
-        error: 'Rate limit exceeded. Please try again later.',
-        resetAt: rateLimitResult.resetAt,
-      }), {
-        status: 429,
-        headers: { 
-          ...corsHeaders, 
-          ...getRateLimitHeaders(rateLimitResult, RATE_LIMITS.AI_FUNCTION),
-          'Content-Type': 'application/json',
-        },
-      });
-    }
-
     const requestData = await req.json();
     
     // Validate input with Zod
@@ -151,6 +114,23 @@ serve(async (req) => {
     }
 
     const { audio } = validation.data;
+
+    // Check audio duration before sending to API
+    const estimatedDuration = estimateAudioDuration(audio);
+    console.log('[transcribe-audio] Estimated duration:', estimatedDuration.toFixed(1), 'seconds');
+    
+    if (estimatedDuration > 55) {
+      // Google Speech API sync limit is 60 seconds, give 5s buffer
+      console.warn('[transcribe-audio] Audio too long for sync API:', estimatedDuration.toFixed(1), 's');
+      return new Response(JSON.stringify({ 
+        error: 'Audio too long. Please keep recordings under 1 minute.',
+        code: 'AUDIO_TOO_LONG',
+        estimatedDuration: Math.round(estimatedDuration),
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Get Google Cloud credentials
     const googleCredentials = Deno.env.get('GOOGLE_VERTEX_AI_KEY');
@@ -177,11 +157,6 @@ serve(async (req) => {
 
     const { access_token } = await tokenResponse.json();
 
-// Prepare audio content for Google Speech-to-Text
-    // The input is already base64, so we can use it directly
-    // No need to decode and re-encode which causes stack overflow
-    const base64Audio = audio;
-
     // Call Google Cloud Speech-to-Text API
     const response = await fetch(GOOGLE_SPEECH_API, {
       method: 'POST',
@@ -197,13 +172,27 @@ serve(async (req) => {
           enableAutomaticPunctuation: true,
         },
         audio: {
-          content: base64Audio,
+          content: audio,
         },
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`Google Speech API error: ${await response.text()}`);
+      const errorText = await response.text();
+      console.error('[transcribe-audio] Google API error:', errorText);
+      
+      // Check for specific error about audio length
+      if (errorText.includes('Sync input too long')) {
+        return new Response(JSON.stringify({ 
+          error: 'Audio too long. Please keep recordings under 1 minute.',
+          code: 'AUDIO_TOO_LONG',
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      throw new Error(`Google Speech API error: ${errorText}`);
     }
 
     const result = await response.json();
@@ -213,16 +202,19 @@ serve(async (req) => {
       ?.map((r: any) => r.alternatives?.[0]?.transcript)
       .join(' ') || '';
 
+    console.log('[transcribe-audio] Success, transcript length:', transcription.length);
+
     return new Response(
       JSON.stringify({ text: transcription }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('Transcription error:', error);
+    console.error('[transcribe-audio] Error:', error);
     return new Response(
       JSON.stringify({ 
-        error: 'Failed to transcribe audio. Please try again.' 
+        error: 'Failed to transcribe audio. Please try again.',
+        details: error instanceof Error ? error.message : String(error),
       }),
       {
         status: 500,
