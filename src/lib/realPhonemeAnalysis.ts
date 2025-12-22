@@ -1,16 +1,27 @@
 /**
  * Real Phoneme Analysis using Whisper ASR
- * Analyzes actual audio to detect spoken phonemes and compare with expected
- * This provides REAL phoneme-level accuracy instead of text-based simulation
+ * 
+ * ENHANCED: Now uses word-level comparison for TRUE phoneme substitution detection!
+ * 
+ * How it works:
+ * 1. Whisper transcribes the audio → detected words (e.g., "wabbit")
+ * 2. Compare detected words with expected words (e.g., "rabbit")
+ * 3. Use phoneme alignment to find substitutions (e.g., /ɹ/→/w/)
+ * 4. This gives REAL data on pronunciation struggles!
  */
 
-import { initPhonemeRecognizer, detectPhonemes, PhonemeResult } from './phonemeDetection';
+import { initPhonemeRecognizer, detectWords, DetectedWord } from './phonemeDetection';
 import { getIPAPronunciation } from './cmuDictWrapper';
-import { phonemeDistance, arePhonemesSimilar } from './phonemeDistance';
+import { 
+  compareWordsForPhonemes, 
+  aggregatePhonemeAccuracy,
+  WordSubstitutionResult,
+  PhonemeSubstitution,
+} from './phonemeSubstitutionAnalysis';
 
 export interface RealPhonemeAnalysisResult {
-  /** Detected phonemes from the audio */
-  detectedPhonemes: PhonemeResult[];
+  /** Detected words from the audio (what Whisper heard) */
+  detectedWords: DetectedWord[];
   /** Per-phoneme accuracy scores based on real detection */
   phonemeScores: Record<string, number>;
   /** Specific substitutions detected (e.g., /ɹ/ → /w/) */
@@ -21,22 +32,18 @@ export interface RealPhonemeAnalysisResult {
     wordIndex: number;
     confidence: number;
   }>;
+  /** Substitution counts for patterns (e.g., "ɹ→w": 3) */
+  substitutionCounts: Record<string, number>;
   /** Phonemes with <70% accuracy */
   problematicPhonemes: string[];
+  /** Top substitution patterns sorted by frequency */
+  topSubstitutions: Array<{ from: string; to: string; count: number }>;
   /** Overall phoneme accuracy percentage */
   overallAccuracy: number;
   /** Whether the model successfully analyzed the audio */
   analysisSuccessful: boolean;
   /** Error message if analysis failed */
   errorMessage?: string;
-}
-
-interface WordWithExpectedPhonemes {
-  word: string;
-  index: number;
-  expectedPhonemes: string[];
-  startMs: number;
-  endMs: number;
 }
 
 // Track model initialization state
@@ -88,68 +95,98 @@ export const getModelState = (): { initialized: boolean; initializing: boolean; 
 });
 
 /**
- * Analyze audio blob to detect real phonemes and compare with expected words
+ * Analyze audio blob to detect real phoneme substitutions
+ * 
+ * NEW APPROACH (Option 1 - Enhanced Mismatch Detection):
+ * 1. Use Whisper to transcribe audio → get detected words
+ * 2. Align detected words with expected words by timing
+ * 3. Compare mismatched words at the phoneme level
+ * 4. Aggregate into per-phoneme accuracy scores
  * 
  * @param audioBlob - The recorded audio blob
  * @param words - Array of expected words in the passage
- * @param wordReadings - Array of word readings with timing info
- * @returns Real phoneme analysis result
+ * @param wordReadings - Array of word readings with timing info and correct/incorrect status
+ * @returns Real phoneme analysis result with substitutions
  */
 export const analyzeRealPhonemes = async (
   audioBlob: Blob,
   words: string[],
   wordReadings: Array<{ word: string; index: number; startMs: number; endMs: number; correct: boolean }>
 ): Promise<RealPhonemeAnalysisResult> => {
-  // Build expected phonemes for each word
-  const wordsWithPhonemes: WordWithExpectedPhonemes[] = wordReadings.map(wr => {
-    const expectedWord = words[wr.index] || wr.word;
-    const expectedPhonemes = getIPAPronunciation(expectedWord)[0] || [];
-    return {
-      word: expectedWord,
-      index: wr.index,
-      expectedPhonemes,
-      startMs: wr.startMs,
-      endMs: wr.endMs,
-    };
-  });
-
   try {
     // Ensure model is initialized
     if (!modelInitialized) {
       const initResult = await preloadPhonemeModel();
       if (!initResult.success) {
-        console.warn('[RealPhonemeAnalysis] Model not available, falling back to simulated');
-        return createFallbackResult(wordsWithPhonemes, wordReadings);
+        console.warn('[RealPhonemeAnalysis] Model not available, falling back to text-based');
+        return createFallbackResult(words, wordReadings);
       }
     }
 
-    // Detect phonemes from actual audio
-    console.log('[RealPhonemeAnalysis] Analyzing audio blob:', audioBlob.size, 'bytes');
-    const detectedPhonemes = await detectPhonemes(audioBlob);
-    console.log('[RealPhonemeAnalysis] Detected', detectedPhonemes.length, 'phonemes from audio');
+    // Step 1: Detect words from actual audio using Whisper
+    console.log('[RealPhonemeAnalysis] 🎤 Analyzing audio blob:', audioBlob.size, 'bytes');
+    const detectedWords = await detectWords(audioBlob);
+    console.log('[RealPhonemeAnalysis] 📝 Whisper detected', detectedWords.length, 'words');
 
-    if (detectedPhonemes.length === 0) {
-      console.warn('[RealPhonemeAnalysis] No phonemes detected, using fallback');
-      return createFallbackResult(wordsWithPhonemes, wordReadings);
+    if (detectedWords.length === 0) {
+      console.warn('[RealPhonemeAnalysis] No words detected, using fallback');
+      return createFallbackResult(words, wordReadings);
     }
 
-    // Compare detected phonemes with expected phonemes
-    const { phonemeScores, substitutions, problematicPhonemes, overallAccuracy } = 
-      compareDetectedWithExpected(detectedPhonemes, wordsWithPhonemes, wordReadings);
+    // Step 2: Align detected words with expected words by timing
+    const alignedPairs = alignDetectedToExpected(detectedWords, wordReadings, words);
+    console.log('[RealPhonemeAnalysis] 🔗 Aligned', alignedPairs.length, 'word pairs');
+
+    // Step 3: Compare mismatched pairs at phoneme level
+    const wordResults: WordSubstitutionResult[] = [];
+    const allSubstitutions: RealPhonemeAnalysisResult['substitutions'] = [];
+
+    alignedPairs.forEach(pair => {
+      const result = compareWordsForPhonemes(
+        pair.detected,
+        pair.expected,
+        pair.expectedIndex,
+        pair.confidence
+      );
+      wordResults.push(result);
+
+      // Collect substitutions
+      result.substitutions.forEach(sub => {
+        allSubstitutions.push({
+          expected: sub.expected,
+          detected: sub.detected,
+          word: sub.expectedWord,
+          wordIndex: sub.wordIndex,
+          confidence: sub.confidence,
+        });
+      });
+    });
+
+    // Step 4: Aggregate into per-phoneme accuracy
+    const aggregated = aggregatePhonemeAccuracy(wordResults, words);
+
+    console.log('[RealPhonemeAnalysis] ✅ REAL phoneme analysis complete:', {
+      wordsAnalyzed: alignedPairs.length,
+      substitutionsFound: allSubstitutions.length,
+      problematicPhonemes: aggregated.problematicPhonemes,
+      overallAccuracy: aggregated.overallAccuracy,
+    });
 
     return {
-      detectedPhonemes,
-      phonemeScores,
-      substitutions,
-      problematicPhonemes,
-      overallAccuracy,
+      detectedWords,
+      phonemeScores: aggregated.phonemeScores,
+      substitutions: allSubstitutions,
+      substitutionCounts: aggregated.substitutionCounts,
+      problematicPhonemes: aggregated.problematicPhonemes,
+      topSubstitutions: aggregated.topSubstitutions,
+      overallAccuracy: aggregated.overallAccuracy,
       analysisSuccessful: true,
     };
 
   } catch (error) {
     console.error('[RealPhonemeAnalysis] Analysis failed:', error);
     return {
-      ...createFallbackResult(wordsWithPhonemes, wordReadings),
+      ...createFallbackResult(words, wordReadings),
       analysisSuccessful: false,
       errorMessage: error instanceof Error ? error.message : 'Unknown error',
     };
@@ -157,140 +194,64 @@ export const analyzeRealPhonemes = async (
 };
 
 /**
- * Compare detected phonemes from audio with expected phonemes
+ * Align detected words from Whisper with expected words from the passage
+ * Uses timing information to match detected words to expected words
  */
-function compareDetectedWithExpected(
-  detectedPhonemes: PhonemeResult[],
-  wordsWithPhonemes: WordWithExpectedPhonemes[],
-  wordReadings: Array<{ word: string; index: number; startMs: number; endMs: number; correct: boolean }>
-): {
-  phonemeScores: Record<string, number>;
-  substitutions: RealPhonemeAnalysisResult['substitutions'];
-  problematicPhonemes: string[];
-  overallAccuracy: number;
-} {
-  const phonemeStats: Record<string, { correct: number; total: number }> = {};
-  const substitutions: RealPhonemeAnalysisResult['substitutions'] = [];
-
-  // Group detected phonemes by timestamp ranges matching word timings
-  wordsWithPhonemes.forEach((wordInfo, idx) => {
-    const wordReading = wordReadings[idx];
-    if (!wordReading) return;
-
-    // Find detected phonemes that fall within this word's time range
-    // Convert timestamps: detectPhonemes returns seconds, wordReadings uses milliseconds
-    const startSec = wordInfo.startMs / 1000;
-    const endSec = wordInfo.endMs / 1000;
-    
-    const phonemesInWord = detectedPhonemes.filter(p => 
-      p.timestamp >= startSec - 0.1 && p.timestamp <= endSec + 0.1
-    );
-
-    // Track expected phonemes
-    wordInfo.expectedPhonemes.forEach(expectedPhoneme => {
-      if (!phonemeStats[expectedPhoneme]) {
-        phonemeStats[expectedPhoneme] = { correct: 0, total: 0 };
-      }
-      phonemeStats[expectedPhoneme].total++;
-    });
-
-    // Compare detected vs expected
-    if (phonemesInWord.length > 0 && wordInfo.expectedPhonemes.length > 0) {
-      // Align detected to expected using simple matching
-      const alignedPairs = alignPhonemes(wordInfo.expectedPhonemes, phonemesInWord);
-      
-      alignedPairs.forEach(({ expected, detected, confidence }) => {
-        if (expected === detected) {
-          // Perfect match
-          phonemeStats[expected].correct++;
-        } else if (detected && arePhonemesSimilar(expected, detected, 0.3)) {
-          // Close enough - count as correct but note the variation
-          phonemeStats[expected].correct++;
-        } else if (detected) {
-          // Substitution detected
-          substitutions.push({
-            expected,
-            detected,
-            word: wordInfo.word,
-            wordIndex: wordInfo.index,
-            confidence,
-          });
-        }
-        // If no detected phoneme matched, it's an omission (already counted as miss in total)
-      });
-    } else if (wordReading.correct) {
-      // Word was marked correct but no phoneme data - assume all phonemes correct
-      wordInfo.expectedPhonemes.forEach(phoneme => {
-        phonemeStats[phoneme].correct++;
-      });
-    }
-    // If word was incorrect and no phoneme data, phonemes remain as misses
+function alignDetectedToExpected(
+  detectedWords: DetectedWord[],
+  wordReadings: Array<{ word: string; index: number; startMs: number; endMs: number; correct: boolean }>,
+  expectedWords: string[]
+): Array<{ detected: string; expected: string; expectedIndex: number; confidence: number }> {
+  const aligned: Array<{ detected: string; expected: string; expectedIndex: number; confidence: number }> = [];
+  
+  // Create a map of detected words by approximate time
+  const detectedByTime: Map<number, DetectedWord> = new Map();
+  detectedWords.forEach(dw => {
+    // Round to nearest 100ms for matching
+    const timeKey = Math.round(dw.startTime * 10);
+    detectedByTime.set(timeKey, dw);
   });
 
-  // Calculate per-phoneme accuracy scores
-  const phonemeScores: Record<string, number> = {};
-  Object.entries(phonemeStats).forEach(([phoneme, stats]) => {
-    phonemeScores[phoneme] = stats.total > 0 
-      ? Math.round((stats.correct / stats.total) * 100) 
-      : 0;
-  });
+  // For each word reading, find the best matching detected word
+  wordReadings.forEach(wr => {
+    const expectedWord = expectedWords[wr.index] || wr.word;
+    const startSec = wr.startMs / 1000;
+    const endSec = wr.endMs / 1000;
 
-  // Identify problematic phonemes (<70% accuracy with 2+ occurrences)
-  const problematicPhonemes = Object.entries(phonemeStats)
-    .filter(([_, stats]) => stats.total >= 2 && (stats.correct / stats.total) < 0.7)
-    .map(([phoneme]) => phoneme);
+    // Find detected word that overlaps with this time range
+    let bestMatch: DetectedWord | null = null;
+    let bestOverlap = 0;
 
-  // Calculate overall accuracy
-  const totalCorrect = Object.values(phonemeStats).reduce((sum, s) => sum + s.correct, 0);
-  const totalPhonemes = Object.values(phonemeStats).reduce((sum, s) => sum + s.total, 0);
-  const overallAccuracy = totalPhonemes > 0 
-    ? Math.round((totalCorrect / totalPhonemes) * 100) 
-    : 0;
+    detectedWords.forEach(dw => {
+      const overlapStart = Math.max(startSec, dw.startTime);
+      const overlapEnd = Math.min(endSec, dw.endTime);
+      const overlap = Math.max(0, overlapEnd - overlapStart);
 
-  return { phonemeScores, substitutions, problematicPhonemes, overallAccuracy };
-}
-
-/**
- * Align detected phonemes with expected phonemes for comparison
- */
-function alignPhonemes(
-  expected: string[],
-  detected: PhonemeResult[]
-): Array<{ expected: string; detected: string | null; confidence: number }> {
-  const aligned: Array<{ expected: string; detected: string | null; confidence: number }> = [];
-  
-  // Simple greedy alignment - match each expected phoneme to closest detected
-  const usedDetected = new Set<number>();
-  
-  expected.forEach(expectedPhoneme => {
-    let bestMatch: { idx: number; phoneme: string; confidence: number; distance: number } | null = null;
-    
-    detected.forEach((det, idx) => {
-      if (usedDetected.has(idx)) return;
-      
-      const distance = phonemeDistance(expectedPhoneme, det.phoneme);
-      if (!bestMatch || distance < bestMatch.distance) {
-        bestMatch = { idx, phoneme: det.phoneme, confidence: det.confidence, distance };
+      if (overlap > bestOverlap) {
+        bestOverlap = overlap;
+        bestMatch = dw;
       }
     });
-    
-    if (bestMatch && bestMatch.distance < 0.8) {
-      usedDetected.add(bestMatch.idx);
+
+    if (bestMatch) {
       aligned.push({
-        expected: expectedPhoneme,
-        detected: bestMatch.phoneme,
+        detected: bestMatch.text,
+        expected: expectedWord,
+        expectedIndex: wr.index,
         confidence: bestMatch.confidence,
       });
     } else {
-      // No good match found - phoneme was omitted
+      // No detected word found - use the word from wordReadings as "detected"
+      // (This happens when Whisper missed a word)
       aligned.push({
-        expected: expectedPhoneme,
-        detected: null,
-        confidence: 0,
+        detected: wr.word.toLowerCase(),
+        expected: expectedWord,
+        expectedIndex: wr.index,
+        confidence: 0.5,
       });
     }
   });
-  
+
   return aligned;
 }
 
@@ -299,21 +260,29 @@ function alignPhonemes(
  * Used when audio analysis fails or model is unavailable
  */
 function createFallbackResult(
-  wordsWithPhonemes: WordWithExpectedPhonemes[],
+  words: string[],
   wordReadings: Array<{ word: string; index: number; startMs: number; endMs: number; correct: boolean }>
 ): RealPhonemeAnalysisResult {
   const phonemeStats: Record<string, { correct: number; total: number }> = {};
   
-  wordReadings.forEach((wr, idx) => {
-    const wordInfo = wordsWithPhonemes[idx];
-    if (!wordInfo) return;
-    
-    wordInfo.expectedPhonemes.forEach(phoneme => {
+  // Count all expected phonemes from passage words
+  words.forEach(word => {
+    const phonemes = getIPAPronunciation(word.toLowerCase().replace(/[^a-z]/g, ''))[0] || [];
+    phonemes.forEach(phoneme => {
       if (!phonemeStats[phoneme]) {
         phonemeStats[phoneme] = { correct: 0, total: 0 };
       }
       phonemeStats[phoneme].total++;
-      if (wr.correct) {
+    });
+  });
+  
+  // Mark phonemes as correct/incorrect based on word-level correctness
+  wordReadings.forEach(wr => {
+    const expectedWord = words[wr.index] || wr.word;
+    const phonemes = getIPAPronunciation(expectedWord.toLowerCase().replace(/[^a-z]/g, ''))[0] || [];
+    
+    phonemes.forEach(phoneme => {
+      if (phonemeStats[phoneme] && wr.correct) {
         phonemeStats[phoneme].correct++;
       }
     });
@@ -329,13 +298,17 @@ function createFallbackResult(
   const totalCorrect = Object.values(phonemeStats).reduce((sum, s) => sum + s.correct, 0);
   const totalPhonemes = Object.values(phonemeStats).reduce((sum, s) => sum + s.total, 0);
   
+  const problematicPhonemes = Object.entries(phonemeStats)
+    .filter(([_, stats]) => stats.total >= 2 && (stats.correct / stats.total) < 0.7)
+    .map(([phoneme]) => phoneme);
+  
   return {
-    detectedPhonemes: [],
+    detectedWords: [],
     phonemeScores,
     substitutions: [],
-    problematicPhonemes: Object.entries(phonemeStats)
-      .filter(([_, stats]) => stats.total >= 2 && (stats.correct / stats.total) < 0.7)
-      .map(([phoneme]) => phoneme),
+    substitutionCounts: {},
+    problematicPhonemes,
+    topSubstitutions: [],
     overallAccuracy: totalPhonemes > 0 ? Math.round((totalCorrect / totalPhonemes) * 100) : 0,
     analysisSuccessful: false,
     errorMessage: 'Using text-based fallback (simulated)',
