@@ -29,6 +29,8 @@ serve(async (req) => {
       highlights,
       passageText,
       assignmentId,
+      // NEW: Free mode - skip Vertex AI, just save metrics
+      freeMode,
     } = await req.json();
 
     // Validate based on mode
@@ -172,8 +174,74 @@ AUDIO FEATURES (Real-time analysis):
 `;
     }
 
-    // Call Vertex AI for deep analysis with enhanced data
-    const aiPrompt = `You are an expert speech coach with expertise in phonetics, prosody, and public speaking. Analyze this student's speech performance using advanced acoustic and linguistic data.
+    // ============================================================
+    // FREE MODE: Skip Vertex AI, calculate basic metrics only
+    // ============================================================
+    let aiAnalysis: any;
+    let grade: number;
+    let pronunciation: number;
+    let clarity: number;
+    let confidence: number;
+    
+    if (freeMode) {
+      console.log('🆓 FREE MODE: Skipping Vertex AI, using basic metrics only');
+      
+      // Calculate scores from basic metrics (no AI cost)
+      // Phoneme accuracy drives pronunciation score
+      pronunciation = Math.min(5, Math.max(1, Math.round(phonemeAccuracy / 20)));
+      
+      // Pace drives clarity score
+      const optimalWpm = 130;
+      const wpmDiff = Math.abs(wpm - optimalWpm);
+      clarity = Math.min(5, Math.max(1, 5 - Math.floor(wpmDiff / 30)));
+      
+      // Energy variance drives confidence (if available)
+      confidence = audioFeatures?.energyVariance 
+        ? Math.min(5, Math.max(1, Math.round(3 + (audioFeatures.prosodyScore || 0) * 2)))
+        : 3;
+      
+      const paceClamped = Math.max(1, Math.min(5, pace));
+      
+      grade = Math.max(0, Math.min(100, Math.round(
+        (pronunciation * 0.3 +
+         clarity * 0.3 +
+         confidence * 0.2 +
+         paceClamped * 0.2) * 20
+      )));
+      
+      aiAnalysis = {
+        pronunciation,
+        clarity,
+        confidence,
+        pronunciationFlags: problematicPhonemes.map(p => `${p}: needs practice`),
+        strengths: [
+          wpm >= 100 && wpm <= 160 ? 'Good speaking pace' : null,
+          phonemeAccuracy >= 80 ? 'Strong pronunciation' : null,
+          pauseCount >= 2 ? 'Uses appropriate pauses' : null,
+        ].filter(Boolean),
+        feedback: [
+          `You spoke at ${wpm.toFixed(0)} words per minute`,
+          `Phoneme accuracy: ${phonemeAccuracy.toFixed(0)}%`,
+          problematicPhonemes.length > 0 
+            ? `Practice these sounds: ${problematicPhonemes.slice(0, 3).join(', ')}`
+            : 'Great job with pronunciation!',
+        ],
+        suggestedExercises: problematicPhonemes.slice(0, 3).map(p => ({
+          title: `Practice "${p}" sound`,
+          description: `Repeat words containing the ${p} phoneme`,
+          difficulty: 'easy',
+        })),
+        evidence: {
+          pace_analysis: `WPM: ${wpm.toFixed(1)}`,
+          clarity_analysis: `Phoneme accuracy: ${phonemeAccuracy.toFixed(1)}%`,
+          confidence_analysis: 'Basic metrics mode',
+        },
+      };
+      
+      console.log(`📊 FREE MODE Grade: pronunciation=${pronunciation}, clarity=${clarity}, confidence=${confidence}, grade=${grade}`);
+    } else {
+      // PREMIUM MODE: Call Vertex AI for deep analysis with enhanced data
+      const aiPrompt = `You are an expert speech coach with expertise in phonetics, prosody, and public speaking. Analyze this student's speech performance using advanced acoustic and linguistic data.
 
 TRANSCRIPT: "${transcript}"
 ${contextText ? `\nCONTEXT/QUESTION: "${contextText}"` : ''}
@@ -213,38 +281,39 @@ Format as JSON:
   }
 }`;
 
-    // Import Vertex AI helper
-    const { callVertexAI } = await import('../_shared/vertexAuth.ts');
+      // Import Vertex AI helper
+      const { callVertexAI } = await import('../_shared/vertexAuth.ts');
 
-    const systemInstruction = 'You are an expert speech analysis AI. Always respond with valid JSON.';
-    
-    const aiContent = await callVertexAI(aiPrompt, systemInstruction, {
-      model: 'gemini-2.5-flash',
-      temperature: 0.7,
-    });
-    
-    // Strip markdown code blocks if present (AI sometimes wraps JSON in ```json ... ```)
-    let cleanedContent = aiContent.trim();
-    if (cleanedContent.startsWith('```')) {
-      cleanedContent = cleanedContent.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+      const systemInstruction = 'You are an expert speech analysis AI. Always respond with valid JSON.';
+      
+      const aiContent = await callVertexAI(aiPrompt, systemInstruction, {
+        model: 'gemini-2.5-flash',
+        temperature: 0.7,
+      });
+      
+      // Strip markdown code blocks if present (AI sometimes wraps JSON in ```json ... ```)
+      let cleanedContent = aiContent.trim();
+      if (cleanedContent.startsWith('```')) {
+        cleanedContent = cleanedContent.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+      }
+      aiAnalysis = JSON.parse(cleanedContent);
+
+      // Calculate overall grade (weighted average)
+      // Clamp individual scores to 1-5 range to prevent invalid grades
+      pronunciation = Math.max(1, Math.min(5, aiAnalysis.pronunciation));
+      clarity = Math.max(1, Math.min(5, aiAnalysis.clarity));
+      confidence = Math.max(1, Math.min(5, aiAnalysis.confidence));
+      const paceClamped = Math.max(1, Math.min(5, pace));
+      
+      grade = Math.max(0, Math.min(100, Math.round(
+        (pronunciation * 0.3 +
+         clarity * 0.3 +
+         confidence * 0.2 +
+         paceClamped * 0.2) * 20
+      )));
+      
+      console.log(`📊 PREMIUM Grade: pronunciation=${pronunciation}, clarity=${clarity}, confidence=${confidence}, pace=${paceClamped}, grade=${grade}`);
     }
-    const aiAnalysis = JSON.parse(cleanedContent);
-
-    // Calculate overall grade (weighted average)
-    // Clamp individual scores to 1-5 range to prevent invalid grades
-    const pronunciation = Math.max(1, Math.min(5, aiAnalysis.pronunciation));
-    const clarity = Math.max(1, Math.min(5, aiAnalysis.clarity));
-    const confidence = Math.max(1, Math.min(5, aiAnalysis.confidence));
-    const paceClamped = Math.max(1, Math.min(5, pace));
-    
-    const grade = Math.max(0, Math.min(100, Math.round(
-      (pronunciation * 0.3 +
-       clarity * 0.3 +
-       confidence * 0.2 +
-       paceClamped * 0.2) * 20
-    )));
-    
-    console.log(`📊 Grade calculation: pronunciation=${pronunciation}, clarity=${clarity}, confidence=${confidence}, pace=${paceClamped}, final grade=${grade}`);
 
     // COPPA COMPLIANCE: Log AURA record creation for audit trail
     const auditLogResult = await supabase.rpc('log_aura_access', {
@@ -286,7 +355,7 @@ Format as JSON:
         context_text: contextText,
         question_id: questionId,
         request_id: crypto.randomUUID(),
-        reading_type: 'speaking', // NEW: Mark as speaking analysis
+        reading_type: freeMode ? 'speaking_free' : 'speaking', // Mark as free or premium speaking
       })
       .select()
       .single();

@@ -422,9 +422,15 @@ serve(async (req) => {
           
           // Predicted speaking features (target) - 6 features
           // Use actual AURA data if available, or derive from reading metrics
+          // IMPROVED: Also check for reading_speaking paired records
           const matchingAura = auraRecords?.find(ar => 
             ar.profile_id === studentId &&
-            Math.abs(new Date(ar.created_at).getTime() - new Date(session.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000
+            (
+              // Match within 7 days
+              Math.abs(new Date(ar.created_at).getTime() - new Date(session.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000 ||
+              // OR is a paired reading_speaking record (word-by-word read-aloud)
+              ar.reading_type === 'reading_speaking'
+            )
           );
           
           let target: number[];
