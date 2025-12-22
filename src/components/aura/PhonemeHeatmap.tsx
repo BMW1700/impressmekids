@@ -271,6 +271,24 @@ const PhonemeHeatmap = ({ students, skillVectors, classroomId, classroomName }: 
             </div>
           </div>
         )}
+
+        {/* Send Phoneme Report Dialog */}
+        {reportDialogData && (
+          <SendPhonemeReportDialog
+            open={!!reportDialogData}
+            onOpenChange={(open) => {
+              if (!open) setReportDialogData(null);
+            }}
+            studentId={reportDialogData.studentId}
+            studentName={reportDialogData.studentName}
+            classroomId={classroomId}
+            classroomName={classroomName}
+            phonemes={COMMON_PHONEMES.map((p) => ({
+              ...p,
+              score: getPhonemeScore(reportDialogData.studentId, p.symbol),
+            }))}
+          />
+        )}
       </CardContent>
     </Card>
   );
