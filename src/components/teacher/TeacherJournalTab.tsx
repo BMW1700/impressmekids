@@ -19,7 +19,7 @@ import {
   Loader2,
   Save
 } from "lucide-react";
-import { format, addDays, subDays, isToday, isSameDay } from "date-fns";
+import { format, addDays, subDays, startOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 
 interface ChecklistItem {
@@ -43,15 +43,29 @@ interface TeacherJournalTabProps {
   classroomId?: string;
 }
 
+// Get local date string in YYYY-MM-DD format using the user's timezone
+const getLocalDateString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// Get today's date at start of day in user's local timezone
+const getLocalToday = (): Date => {
+  return startOfDay(new Date());
+};
+
 export function TeacherJournalTab({ classroomId }: TeacherJournalTabProps) {
   const queryClient = useQueryClient();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(getLocalToday());
   const [note, setNote] = useState("");
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
   const [newItemText, setNewItemText] = useState("");
   const [calendarOpen, setCalendarOpen] = useState(false);
 
-  const dateKey = format(selectedDate, "yyyy-MM-dd");
+  // Use local timezone for the date key
+  const dateKey = getLocalDateString(selectedDate);
 
   // Fetch entry for selected date
   const { data: entry, isLoading } = useQuery({
@@ -177,9 +191,12 @@ export function TeacherJournalTab({ classroomId }: TeacherJournalTabProps) {
     return debouncedSave();
   }, [note, checklistItems, debouncedSave, entry]);
 
-  const goToPreviousDay = () => setSelectedDate(subDays(selectedDate, 1));
-  const goToNextDay = () => setSelectedDate(addDays(selectedDate, 1));
-  const goToToday = () => setSelectedDate(new Date());
+  const goToPreviousDay = () => setSelectedDate(startOfDay(subDays(selectedDate, 1)));
+  const goToNextDay = () => setSelectedDate(startOfDay(addDays(selectedDate, 1)));
+  const goToToday = () => setSelectedDate(getLocalToday());
+
+  // Check if selected date is today using local timezone
+  const isSelectedToday = getLocalDateString(selectedDate) === getLocalDateString(new Date());
 
   const addChecklistItem = () => {
     if (!newItemText.trim()) return;
@@ -247,12 +264,12 @@ export function TeacherJournalTab({ classroomId }: TeacherJournalTabProps) {
                     selected={selectedDate}
                     onSelect={(date) => {
                       if (date) {
-                        setSelectedDate(date);
+                        setSelectedDate(startOfDay(date));
                         setCalendarOpen(false);
                       }
                     }}
                     modifiers={{
-                      hasEntry: entryDates.map(d => new Date(d + "T00:00:00")),
+                      hasEntry: entryDates.map(d => new Date(d + "T12:00:00")),
                     }}
                     modifiersStyles={{
                       hasEntry: {
@@ -261,11 +278,12 @@ export function TeacherJournalTab({ classroomId }: TeacherJournalTabProps) {
                       },
                     }}
                     initialFocus
+                    className="pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>
 
-              {!isToday(selectedDate) && (
+              {!isSelectedToday && (
                 <Button variant="secondary" size="sm" onClick={goToToday}>
                   Today
                 </Button>
