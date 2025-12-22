@@ -725,7 +725,7 @@ const Auth = () => {
             </span>
           </h1>
           <p className="text-white/50 text-base">
-            The literacy platform trusted by schools
+            A unified hub for school communication, learning, and progress.
           </p>
         </div>
 
