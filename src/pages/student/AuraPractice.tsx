@@ -439,6 +439,20 @@ const AuraPractice = () => {
                       targetDuration={selectedPrompt?.duration || 60}
                       isAnalyzing={isAnalyzing}
                       onRecordingComplete={async (data) => {
+                        console.log('🎤 Presentation recording complete, starting analysis...');
+                        console.log('👤 Current user:', user?.id || 'NOT LOGGED IN');
+                        
+                        // Check if user is logged in
+                        if (!user?.id) {
+                          console.error('❌ Cannot save presentation: User not logged in');
+                          toast({
+                            title: "Not Logged In",
+                            description: "Please log in to save your presentation recordings.",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        
                         setIsAnalyzing(true);
                         try {
                           const metrics = analyzePresentation(
@@ -453,68 +467,76 @@ const AuraPractice = () => {
                           setPresentationTranscript(data.transcript);
                           
                           // Save presentation data to database
-                          if (user?.id) {
-                            const wordCount = data.transcript.split(/\s+/).length;
-                            const insertData = {
-                              profile_id: user.id,
-                              request_id: crypto.randomUUID(),
-                              transcript: data.transcript,
-                              duration_s: data.durationSeconds,
-                              words: wordCount,
-                              wpm: metrics.wordsPerMinute,
-                              asr_confidence: 0.95,
-                              clarity: metrics.clarityScore,
-                              confidence: metrics.confidenceScore,
-                              pace: metrics.wordsPerMinute,
-                              pause_count: data.audioFeatures?.pauseCount || 0,
-                              avg_silence_ms: data.audioFeatures?.avgSilenceDuration || 500,
-                              language: 'en-US',
-                              audio_url: '',
-                              feedback: {} as any,
-                              presentation_type: selectedPrompt?.id || 'custom',
-                              presentation_topic: selectedPrompt?.title || customTopic || 'Custom Topic',
-                              presentation_confidence_score: metrics.confidenceScore,
-                              pacing_score: metrics.pacingScore,
-                              structure_score: metrics.structureScore,
-                              filler_word_count: metrics.fillerWordCount,
-                              filler_words: metrics.fillerWords as any,
-                              presentation_duration_target: selectedPrompt?.duration || 60,
-                              presentation_metrics: metrics as any,
-                              grade: metrics.overallScore,
-                            };
-                            const { error: saveError } = await supabase
-                              .from('aura_records')
-                              .insert(insertData);
-                            
-                            if (saveError) {
-                              console.error('Failed to save presentation:', saveError);
-                            } else {
-                              console.log('✅ Presentation saved to database');
-                              
-                              // Run cross-modal prediction for insights
-                              try {
-                                const presentationFeatures: PresentationFeatures = {
-                                  confidenceScore: metrics.confidenceScore,
-                                  pacingScore: metrics.pacingScore,
-                                  structureScore: metrics.structureScore,
-                                  clarityScore: metrics.clarityScore,
-                                  fillerWordCount: metrics.fillerWordCount,
-                                  wordsPerMinute: metrics.wordsPerMinute,
-                                };
-                                const prediction = await crossModalNetwork.predictReadingFromPresentation(presentationFeatures);
-                                console.log('📊 Cross-Modal Prediction (Presentation → Reading):', prediction);
-                              } catch (predError) {
-                                console.warn('Cross-modal prediction failed:', predError);
-                              }
-                              
-                              refetch(); // Refresh records
-                            }
-                          }
+                          console.log('💾 Attempting to save presentation for user:', user.id);
+                          const wordCount = data.transcript.split(/\s+/).length;
+                          const insertData = {
+                            profile_id: user.id,
+                            request_id: crypto.randomUUID(),
+                            transcript: data.transcript,
+                            duration_s: data.durationSeconds,
+                            words: wordCount,
+                            wpm: metrics.wordsPerMinute,
+                            asr_confidence: 0.95,
+                            clarity: metrics.clarityScore,
+                            confidence: metrics.confidenceScore,
+                            pace: metrics.wordsPerMinute,
+                            pause_count: data.audioFeatures?.pauseCount || 0,
+                            avg_silence_ms: data.audioFeatures?.avgSilenceDuration || 500,
+                            language: 'en-US',
+                            audio_url: '',
+                            feedback: {} as any,
+                            presentation_type: selectedPrompt?.id || 'custom',
+                            presentation_topic: selectedPrompt?.title || customTopic || 'Custom Topic',
+                            presentation_confidence_score: metrics.confidenceScore,
+                            pacing_score: metrics.pacingScore,
+                            structure_score: metrics.structureScore,
+                            filler_word_count: metrics.fillerWordCount,
+                            filler_words: metrics.fillerWords as any,
+                            presentation_duration_target: selectedPrompt?.duration || 60,
+                            presentation_metrics: metrics as any,
+                            grade: metrics.overallScore,
+                          };
                           
-                          toast({
-                            title: "✨ Presentation Analyzed!",
-                            description: `Your score: ${metrics.overallScore}/100 (Grade ${metrics.grade})`,
-                          });
+                          console.log('📝 Insert data:', JSON.stringify(insertData, null, 2));
+                          
+                          const { data: savedData, error: saveError } = await supabase
+                            .from('aura_records')
+                            .insert(insertData)
+                            .select();
+                          
+                          if (saveError) {
+                            console.error('❌ Failed to save presentation:', saveError);
+                            toast({
+                              title: "Save Failed",
+                              description: `Could not save presentation: ${saveError.message}`,
+                              variant: "destructive",
+                            });
+                          } else {
+                            console.log('✅ Presentation saved to database:', savedData);
+                            
+                            // Run cross-modal prediction for insights
+                            try {
+                              const presentationFeatures: PresentationFeatures = {
+                                confidenceScore: metrics.confidenceScore,
+                                pacingScore: metrics.pacingScore,
+                                structureScore: metrics.structureScore,
+                                clarityScore: metrics.clarityScore,
+                                fillerWordCount: metrics.fillerWordCount,
+                                wordsPerMinute: metrics.wordsPerMinute,
+                              };
+                              const prediction = await crossModalNetwork.predictReadingFromPresentation(presentationFeatures);
+                              console.log('📊 Cross-Modal Prediction (Presentation → Reading):', prediction);
+                            } catch (predError) {
+                              console.warn('Cross-modal prediction failed:', predError);
+                            }
+                            
+                            refetch(); // Refresh records
+                            
+                            toast({
+                              title: "✨ Presentation Saved!",
+                              description: `Your score: ${metrics.overallScore}/100 (Grade ${metrics.grade})`,
+                            });
+                          }
                         } catch (error) {
                           console.error('Analysis error:', error);
                           toast({
