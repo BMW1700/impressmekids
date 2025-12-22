@@ -417,6 +417,7 @@ const AuraPractice = () => {
                   <VoiceRecorder 
                     onTranscriptionComplete={handleTranscriptionComplete}
                     isAnalyzing={isAnalyzing}
+                    freeMode={practiceMode === 'free'}
                   />
                 </CardContent>
               </Card>

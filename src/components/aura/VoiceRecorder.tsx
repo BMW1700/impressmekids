@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Mic, StopCircle, Loader2, Sparkles, Zap } from "lucide-react";
+import { Mic, StopCircle, Loader2, Sparkles, Zap, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { extractAudioFeatures, analyzePauses, calculateProsodyScore, type AudioFeatures } from "@/lib/audioAnalysis";
@@ -20,9 +20,13 @@ interface VoiceRecorderProps {
     phonemes?: PhonemeResult[]
   ) => void;
   isAnalyzing?: boolean;
+  freeMode?: boolean; // If true, use only browser APIs (no cloud calls)
 }
 
-export const VoiceRecorder = ({ onTranscriptionComplete, isAnalyzing = false }: VoiceRecorderProps) => {
+// Max recording duration in seconds (55s to stay under Google's 60s limit)
+const MAX_RECORDING_DURATION = 55;
+
+export const VoiceRecorder = ({ onTranscriptionComplete, isAnalyzing = false, freeMode = false }: VoiceRecorderProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isModelLoading, setIsModelLoading] = useState(false);
@@ -32,6 +36,7 @@ export const VoiceRecorder = ({ onTranscriptionComplete, isAnalyzing = false }: 
   const [currentStream, setCurrentStream] = useState<MediaStream | null>(null);
   const [cognitiveLoad, setCognitiveLoad] = useState<CognitiveLoadResult | null>(null);
   const [useBrowserAPI, setUseBrowserAPI] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -41,6 +46,7 @@ export const VoiceRecorder = ({ onTranscriptionComplete, isAnalyzing = false }: 
   const transcriptRef = useRef<string>("");
   const confidenceRef = useRef<number[]>([]);
   const volumeHistoryRef = useRef<number[]>([]);
+  const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
   // Check browser SpeechRecognition API support and preload models
@@ -92,6 +98,22 @@ export const VoiceRecorder = ({ onTranscriptionComplete, isAnalyzing = false }: 
       confidenceRef.current = [];
       volumeHistoryRef.current = [];
       cognitiveLoadEstimator.reset();
+      setRecordingDuration(0);
+
+      // Start duration timer with auto-stop at max duration
+      durationIntervalRef.current = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        setRecordingDuration(elapsed);
+        
+        // Auto-stop if reaching max duration
+        if (elapsed >= MAX_RECORDING_DURATION) {
+          toast({
+            title: "Max Duration Reached",
+            description: "Recording stopped at 55 seconds (API limit).",
+          });
+          stopRecording();
+        }
+      }, 1000);
 
       // Start browser SpeechRecognition if available
       if (useBrowserAPI) {
@@ -225,6 +247,11 @@ export const VoiceRecorder = ({ onTranscriptionComplete, isAnalyzing = false }: 
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
+      // Clear duration timer
+      if (durationIntervalRef.current) {
+        clearInterval(durationIntervalRef.current);
+        durationIntervalRef.current = null;
+      }
       mediaRecorderRef.current.stop();
       setIsRecording(false);
     }
@@ -235,7 +262,7 @@ export const VoiceRecorder = ({ onTranscriptionComplete, isAnalyzing = false }: 
     try {
       console.log('🎤 Processing audio with AURA AI...');
       
-      // Use browser transcript if available, otherwise fall back to Whisper
+      // Use browser transcript if available
       let finalTranscript = transcriptRef.current.trim();
       const usedBrowserAPI = useBrowserAPI && finalTranscript.length > 0;
       
@@ -261,7 +288,6 @@ export const VoiceRecorder = ({ onTranscriptionComplete, isAnalyzing = false }: 
         console.log('✅ Audio features extracted:', audioFeatures);
       } catch (featureError) {
         console.error('⚠️ Audio feature extraction failed (non-fatal):', featureError);
-        // Continue without audio features - they're optional
         audioFeatures = undefined;
       }
       
@@ -278,52 +304,86 @@ export const VoiceRecorder = ({ onTranscriptionComplete, isAnalyzing = false }: 
         console.log('✅ Phonemes detected:', phonemes.length);
       } catch (phonemeError) {
         console.error('⚠️ Phoneme detection failed (non-fatal):', phonemeError);
-        // Continue without phonemes - they're optional
         phonemes = undefined;
       }
       
-      // Step 3: Transcribe (use browser transcript or Whisper fallback)
+      // Step 3: Transcribe
       console.log('📝 Step 3: Transcription...');
-      if (!usedBrowserAPI || finalTranscript.length === 0) {
-        console.log('🔄 Using Whisper fallback...');
-        toast({
-          title: "Transcribing Speech (Whisper Fallback)",
-          description: "Converting speech to text...",
-        });
-        
-        try {
-          const reader = new FileReader();
-          reader.readAsDataURL(audioBlob);
-          
-          await new Promise<void>((resolve, reject) => {
-            reader.onloadend = async () => {
-              try {
-                const base64Audio = (reader.result as string).split(',')[1];
-
-                const { data, error } = await supabase.functions.invoke('transcribe-audio', {
-                  body: { audio: base64Audio },
-                });
-
-                if (error) throw error;
-
-                if (data?.text) {
-                  finalTranscript = data.text;
-                  console.log('✅ Whisper transcription complete:', data.text);
-                  resolve();
-                } else {
-                  reject(new Error('No transcript returned'));
-                }
-              } catch (err) {
-                reject(err);
-              }
-            };
+      
+      // In FREE mode: only use browser API, no cloud fallback
+      if (freeMode) {
+        if (!usedBrowserAPI || finalTranscript.length === 0) {
+          // Free mode but browser didn't capture - show helpful message
+          console.warn('⚠️ Free mode: Browser API failed to capture speech');
+          toast({
+            title: "Could not capture speech",
+            description: "Try speaking louder or closer to your microphone. Free mode uses browser transcription only.",
+            variant: "destructive",
           });
-        } catch (transcriptError) {
-          console.error('❌ Transcription failed:', transcriptError);
-          throw new Error(`Transcription failed: ${transcriptError}`);
+          throw new Error('Browser transcription failed - please try again speaking clearly');
         }
+        console.log('✅ Free mode transcription complete:', finalTranscript);
       } else {
-        console.log('✅ Browser API transcription complete (saved $60/10K students):', finalTranscript);
+        // Premium mode: use cloud fallback if browser failed
+        if (!usedBrowserAPI || finalTranscript.length === 0) {
+          console.log('🔄 Using cloud transcription fallback...');
+          toast({
+            title: "Transcribing Speech",
+            description: "Converting speech to text...",
+          });
+          
+          try {
+            const reader = new FileReader();
+            reader.readAsDataURL(audioBlob);
+            
+            await new Promise<void>((resolve, reject) => {
+              reader.onloadend = async () => {
+                try {
+                  const base64Audio = (reader.result as string).split(',')[1];
+
+                  const { data, error } = await supabase.functions.invoke('transcribe-audio', {
+                    body: { audio: base64Audio },
+                  });
+
+                  if (error) {
+                    // Check for specific error codes
+                    if (error.message?.includes('AUDIO_TOO_LONG')) {
+                      throw new Error('Recording too long. Please keep recordings under 1 minute.');
+                    }
+                    throw error;
+                  }
+
+                  if (data?.error) {
+                    if (data.code === 'AUDIO_TOO_LONG') {
+                      throw new Error('Recording too long. Please keep recordings under 1 minute.');
+                    }
+                    throw new Error(data.error);
+                  }
+
+                  if (data?.text) {
+                    finalTranscript = data.text;
+                    console.log('✅ Cloud transcription complete:', data.text);
+                    resolve();
+                  } else {
+                    reject(new Error('No transcript returned'));
+                  }
+                } catch (err) {
+                  reject(err);
+                }
+              };
+            });
+          } catch (transcriptError: any) {
+            console.error('❌ Transcription failed:', transcriptError);
+            toast({
+              title: "Transcription Failed",
+              description: transcriptError.message || "Please try again with a shorter recording.",
+              variant: "destructive",
+            });
+            throw transcriptError;
+          }
+        } else {
+          console.log('✅ Browser API transcription complete:', finalTranscript);
+        }
       }
       
       if (!finalTranscript || finalTranscript.length === 0) {
@@ -334,7 +394,7 @@ export const VoiceRecorder = ({ onTranscriptionComplete, isAnalyzing = false }: 
       
       toast({
         title: "Analysis Complete",
-        description: `Processed with ${usedBrowserAPI ? 'Browser API (FREE)' : 'Whisper fallback'}`,
+        description: `Processed with ${usedBrowserAPI ? 'Browser API (FREE)' : 'Cloud transcription'}`,
       });
       
       console.log('💰 Cost saved:', usedBrowserAPI ? '$0.006' : '$0');
@@ -419,9 +479,20 @@ export const VoiceRecorder = ({ onTranscriptionComplete, isAnalyzing = false }: 
         </Button>
         
         {isRecording && (
-          <p className="text-sm text-muted-foreground animate-pulse">
-            🎤 Recording... Speak clearly and naturally
-          </p>
+          <div className="flex flex-col items-center gap-1">
+            <div className="flex items-center gap-2 text-sm">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span className={`font-mono ${recordingDuration >= MAX_RECORDING_DURATION - 10 ? 'text-orange-500' : 'text-muted-foreground'}`}>
+                {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')} / 0:55
+              </span>
+            </div>
+            <p className="text-sm text-muted-foreground animate-pulse">
+              🎤 Recording... Speak clearly and naturally
+            </p>
+            {recordingDuration >= MAX_RECORDING_DURATION - 10 && (
+              <p className="text-xs text-orange-500">Recording will stop in {MAX_RECORDING_DURATION - recordingDuration}s</p>
+            )}
+          </div>
         )}
         
         {isProcessing && (
