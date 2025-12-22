@@ -90,12 +90,13 @@ interface MLStatusProviderProps {
 
 export const MLStatusProvider = ({ children, enabled = true }: MLStatusProviderProps) => {
   // Auto-training hook - runs background training when sufficient data exists
-  const { isTraining } = useAutoMLTraining(enabled);
+  const { isTraining: isAutoTraining } = useAutoMLTraining(enabled);
   
   // Trained models hook - loads and uses ML models for predictions
   const {
     modelStatus,
     isLoading,
+    isTraining: isManualTraining,
     predictSpeakingFromReading,
     getPhonemeQValue,
     selectBestPhoneme,
@@ -109,7 +110,7 @@ export const MLStatusProvider = ({ children, enabled = true }: MLStatusProviderP
     getPhonemeQValue,
     selectBestPhoneme,
     triggerTraining,
-    isTraining,
+    isTraining: isAutoTraining || isManualTraining,
   };
 
   return (

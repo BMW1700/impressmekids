@@ -71,69 +71,71 @@ export const useTrainedMLModels = () => {
     qLearningTable: { loaded: false, version: null, totalStates: 0, totalActions: 0 },
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [isTraining, setIsTraining] = useState(false);
+
+  // Reusable loadModels function
+  const loadModels = useCallback(async () => {
+    setIsLoading(true);
+
+    try {
+      // Load Cross-Modal Network weights
+      const { data: crossModalData } = await supabase
+        .from('ml_model_weights')
+        .select('*')
+        .eq('model_type', 'cross_modal_network')
+        .eq('is_active', true)
+        .single();
+
+      if (crossModalData?.weights) {
+        const weights = crossModalData.weights as unknown as CrossModalWeights;
+        setCrossModalWeights(weights);
+        const metadata = crossModalData.metadata as unknown as Record<string, any> || {};
+        setModelStatus(prev => ({
+          ...prev,
+          crossModalNetwork: {
+            loaded: true,
+            version: crossModalData.model_version,
+            accuracy: metadata.accuracy || null,
+            trainingExamples: crossModalData.training_examples_count,
+          },
+        }));
+        console.log('[ML] Loaded Cross-Modal Network v' + crossModalData.model_version);
+      }
+
+      // Load Q-Learning table
+      const { data: qLearningData } = await supabase
+        .from('ml_model_weights')
+        .select('*')
+        .eq('model_type', 'q_learning_table')
+        .eq('is_active', true)
+        .single();
+
+      if (qLearningData?.weights) {
+        const table = qLearningData.weights as Record<string, Record<string, number>>;
+        setQLearningTable(table);
+        const metadata = qLearningData.metadata as Record<string, any> || {};
+        setModelStatus(prev => ({
+          ...prev,
+          qLearningTable: {
+            loaded: true,
+            version: qLearningData.model_version,
+            totalStates: metadata.totalStates || Object.keys(table).length,
+            totalActions: metadata.totalActions || 0,
+          },
+        }));
+        console.log('[ML] Loaded Q-Learning Table v' + qLearningData.model_version);
+      }
+    } catch (error) {
+      console.error('[ML] Failed to load models:', error);
+    }
+
+    setIsLoading(false);
+  }, []);
 
   // Load trained models on mount
   useEffect(() => {
-    const loadModels = async () => {
-      setIsLoading(true);
-
-      try {
-        // Load Cross-Modal Network weights
-        const { data: crossModalData } = await supabase
-          .from('ml_model_weights')
-          .select('*')
-          .eq('model_type', 'cross_modal_network')
-          .eq('is_active', true)
-          .single();
-
-        if (crossModalData?.weights) {
-          const weights = crossModalData.weights as unknown as CrossModalWeights;
-          setCrossModalWeights(weights);
-          const metadata = crossModalData.metadata as unknown as Record<string, any> || {};
-          setModelStatus(prev => ({
-            ...prev,
-            crossModalNetwork: {
-              loaded: true,
-              version: crossModalData.model_version,
-              accuracy: metadata.accuracy || null,
-              trainingExamples: crossModalData.training_examples_count,
-            },
-          }));
-          console.log('[ML] Loaded Cross-Modal Network v' + crossModalData.model_version);
-        }
-
-        // Load Q-Learning table
-        const { data: qLearningData } = await supabase
-          .from('ml_model_weights')
-          .select('*')
-          .eq('model_type', 'q_learning_table')
-          .eq('is_active', true)
-          .single();
-
-        if (qLearningData?.weights) {
-          const table = qLearningData.weights as Record<string, Record<string, number>>;
-          setQLearningTable(table);
-          const metadata = qLearningData.metadata as Record<string, any> || {};
-          setModelStatus(prev => ({
-            ...prev,
-            qLearningTable: {
-              loaded: true,
-              version: qLearningData.model_version,
-              totalStates: metadata.totalStates || Object.keys(table).length,
-              totalActions: metadata.totalActions || 0,
-            },
-          }));
-          console.log('[ML] Loaded Q-Learning Table v' + qLearningData.model_version);
-        }
-      } catch (error) {
-        console.error('[ML] Failed to load models:', error);
-      }
-
-      setIsLoading(false);
-    };
-
     loadModels();
-  }, []);
+  }, [loadModels]);
 
   // Predict speaking performance from reading features
   const predictSpeakingFromReading = useCallback((readingFeatures: {
@@ -229,7 +231,7 @@ export const useTrainedMLModels = () => {
     let bestQ = -Infinity;
 
     for (const phoneme of candidatePhonemes) {
-      const { qValue, isMLPowered } = getPhonemeQValue(masteredPhonemes, strugglingPhonemes, level, phoneme);
+      const { qValue } = getPhonemeQValue(masteredPhonemes, strugglingPhonemes, level, phoneme);
       if (qValue > bestQ) {
         bestQ = qValue;
         bestPhoneme = phoneme;
@@ -250,14 +252,18 @@ export const useTrainedMLModels = () => {
     };
   }, [qLearningTable, getPhonemeQValue, modelStatus.qLearningTable.totalStates]);
 
-  // Trigger training if sufficient data exists
+  // Trigger training and refetch models after success
   const triggerTraining = useCallback(async (): Promise<{ success: boolean; message: string }> => {
+    setIsTraining(true);
     try {
       const { data, error } = await supabase.functions.invoke('train-ml-models', {
         body: {},
       });
 
       if (error) throw error;
+
+      // Refetch models after successful training
+      await loadModels();
 
       return {
         success: true,
@@ -269,15 +275,19 @@ export const useTrainedMLModels = () => {
         success: false,
         message: error instanceof Error ? error.message : 'Training failed',
       };
+    } finally {
+      setIsTraining(false);
     }
-  }, []);
+  }, [loadModels]);
 
   return {
     modelStatus,
     isLoading,
+    isTraining,
     predictSpeakingFromReading,
     getPhonemeQValue,
     selectBestPhoneme,
     triggerTraining,
+    refetchModels: loadModels,
   };
 };
