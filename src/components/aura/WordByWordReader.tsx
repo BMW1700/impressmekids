@@ -5,7 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Slider } from '@/components/ui/slider';
-import { Mic, StopCircle, Loader2, AlertCircle, Sparkles } from 'lucide-react';
+import { Mic, StopCircle, Loader2, AlertCircle, Sparkles, Brain } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { getIPAPronunciation } from '@/lib/cmuDictWrapper';
@@ -24,6 +24,8 @@ import { adaptiveDifficultyEngine } from '@/lib/difficultyScalingV2';
 import { analyzeMiscues, getMiscueInterventions, type MiscueAnalysis } from '@/lib/miscueAnalysis';
 import { calculateProsodyScore, type ProsodyMetrics } from '@/lib/prosodyAnalysis';
 import { RealtimeAudioAnalyzer, type LiveMetrics } from '@/lib/realtimeAudioAnalysis';
+// ML INTEGRATION: Import ML hook for training data pipeline and predictions
+import { useMLIntegration } from '@/hooks/useMLIntegration';
 // DUAL-MODE MATCHING: Import strict/lenient matchers for benchmark vs practice
 // SUPERCHARGED V2: Added window matching, phoneme fallback, and multi-alternative support
 // SUPERCHARGED V3: Added homophones dictionary and transcript cleanup integration
@@ -246,6 +248,19 @@ export const WordByWordReader = ({
   const auraCharacter = useAuraCharacterState();
   const words = passageText.split(/\s+/).filter(w => w.length > 0);
   const { toast } = useToast();
+  
+  // ML INTEGRATION: Hook for saving to aura_records and Q-learning updates
+  const { saveToAuraRecords, triggerQLearningUpdate, getModelStatus, mlContext } = useMLIntegration();
+  const [mlStatus, setMlStatus] = useState<{ crossModalLoaded: boolean; qLearningLoaded: boolean; isLoading: boolean }>({ 
+    crossModalLoaded: false, 
+    qLearningLoaded: false, 
+    isLoading: false 
+  });
+  
+  // Update ML status on mount and when context changes
+  useEffect(() => {
+    setMlStatus(getModelStatus());
+  }, [getModelStatus, mlContext]);
   
   // Track processed words to avoid duplicates
   const processedWordsRef = useRef<Set<number>>(new Set());
@@ -1236,6 +1251,69 @@ export const WordByWordReader = ({
       audioChunksRef.current = [];
     }
 
+    // ========== ML INTEGRATION: SAVE TO AURA_RECORDS FOR ML TRAINING ==========
+    // This feeds the train-ml-models edge function with reading session data
+    try {
+      await saveToAuraRecords({
+        studentId: user.id,
+        sessionId: session.id,
+        wpm,
+        wcpm,
+        accuracy,
+        wordsRead,
+        durationSeconds: totalDuration,
+        pauseCount: speechPausesRef.current.length,
+        phonemeScores,
+        miscueAnalysis: {
+          fluencyLevel: miscueAnalysis.fluencyLevel,
+          totalMiscues: miscueAnalysis.totalMiscues,
+        },
+        prosodyMetrics: {
+          overallScore: prosodyMetrics.overallScore,
+        },
+        assignmentId,
+        transcript: fullTranscriptRef.current,
+        audioUrl,
+      });
+      console.log('[ML Integration] ✅ Reading session saved to aura_records for ML training');
+    } catch (mlErr) {
+      console.error('[ML Integration] Failed to save to aura_records:', mlErr);
+    }
+
+    // ========== ML INTEGRATION: TRIGGER Q-LEARNING UPDATE ==========
+    // Update Q-table based on phoneme performance in this session
+    try {
+      // Build phoneme performance from word readings
+      const phonemePerformance = wordReadings.flatMap((wr) => {
+        const expectedWord = words[wr.index] || wr.word;
+        const expectedPhonemes = getIPAPronunciation(expectedWord)[0] || [];
+        return expectedPhonemes.map(phoneme => ({
+          phoneme,
+          correct: wr.correct,
+          word: expectedWord,
+        }));
+      });
+
+      // Determine mastered and struggling phonemes from this session
+      const masteredPhonemes = Object.entries(phonemeScores)
+        .filter(([_, score]) => score >= 80)
+        .map(([phoneme]) => phoneme);
+      const strugglingPhonemes = Object.entries(phonemeScores)
+        .filter(([_, score]) => score < 60)
+        .map(([phoneme]) => phoneme);
+
+      await triggerQLearningUpdate(
+        user.id,
+        phonemePerformance,
+        masteredPhonemes,
+        strugglingPhonemes,
+        1 // Default difficulty level
+      );
+      console.log('[ML Integration] ✅ Q-learning updated with phoneme performance');
+    } catch (qlErr) {
+      console.error('[ML Integration] Failed to update Q-learning:', qlErr);
+    }
+
     // Update student stats with XP
     await updateStudentStats(user.id, wordsRead, accuracy, totalXpEarned);
     await generateDailyMissions(user.id);
@@ -1676,7 +1754,7 @@ export const WordByWordReader = ({
         />
       </div>
 
-      {/* Stats Bar */}
+      {/* Stats Bar with ML Status */}
       <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
         <div className="flex items-center gap-4 text-sm">
           <Badge variant="outline" className="flex items-center gap-1">
@@ -1686,6 +1764,13 @@ export const WordByWordReader = ({
           <span className="text-muted-foreground">
             🔥 Streak: {correctStreak}
           </span>
+          {/* ML Status Badge */}
+          {(mlStatus.crossModalLoaded || mlStatus.qLearningLoaded) && (
+            <Badge variant="secondary" className="flex items-center gap-1 bg-primary/10 text-primary">
+              <Brain className="h-3 w-3" />
+              ML-Powered
+            </Badge>
+          )}
         </div>
         <div className="text-sm text-muted-foreground">
           {realtimeWordIndex} / {words.length} words
