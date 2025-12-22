@@ -43,15 +43,32 @@ const CrossModalScatterPlot = ({ students, skillVectors, auraRecords, classroomI
     enabled: studentIds.length > 0,
   });
 
+  // Debug: Log the incoming data
+  console.log('[CrossModal] Students:', students.length, 'Aura Records:', auraRecords?.length || 0, 'Reading Sessions:', readingSessions?.length || 0);
+
   // Prepare data points combining aura_records (speaking) AND reading_sessions (read-along)
   const dataPoints: StudentPoint[] = students.map(student => {
     const vector = skillVectors.find(v => v.student_id === student.student_id);
     const studentAuraRecords = auraRecords?.filter(r => r.profile_id === student.student_id) || [];
     
-    // Speaking data from aura_records (practice sessions)
-    const speakingRecords = studentAuraRecords.filter(r => r.reading_type === 'speaking' || !r.reading_type);
+    // Speaking data from aura_records (practice sessions AND presentations)
+    // Include records with reading_type='speaking' OR presentation_type is set
+    const speakingRecords = studentAuraRecords.filter(r => 
+      r.reading_type === 'speaking' || 
+      r.presentation_type || 
+      !r.reading_type // legacy records without reading_type
+    );
+    
+    // Calculate speaking score from grade field OR presentation_metrics.overallScore
     const avgSpeakingScore = speakingRecords.length > 0
-      ? Math.round(speakingRecords.reduce((sum, r) => sum + (r.grade || 0), 0) / speakingRecords.length)
+      ? Math.round(speakingRecords.reduce((sum, r) => {
+          // Prefer grade if available, otherwise use presentation_metrics.overallScore
+          const score = r.grade || 
+            (r.presentation_metrics && typeof r.presentation_metrics === 'object' 
+              ? (r.presentation_metrics as any).overallScore 
+              : 0) || 0;
+          return sum + score;
+        }, 0) / speakingRecords.length)
       : 0;
     
     // CRITICAL: Reading data from reading_sessions table (read-along sessions)
@@ -67,6 +84,11 @@ const CrossModalScatterPlot = ({ students, skillVectors, auraRecords, classroomI
     if (avgSpeakingScore >= 70 && avgReadingScore >= 70) quadrant = "Excelling";
     else if (avgSpeakingScore >= 70 && avgReadingScore < 70) quadrant = "Strong Speaker";
     else if (avgSpeakingScore < 70 && avgReadingScore >= 70) quadrant = "Strong Reader";
+
+    // Debug: Log per-student calculation
+    if (speakingRecords.length > 0 || studentReadingSessions.length > 0) {
+      console.log(`[CrossModal] ${student.profiles?.full_name}: Speaking=${avgSpeakingScore} (${speakingRecords.length} records), Reading=${avgReadingScore} (${studentReadingSessions.length} sessions)`);
+    }
 
     return {
       id: student.student_id,
