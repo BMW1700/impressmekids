@@ -698,7 +698,10 @@ export type Database = {
           difficulty_score: number | null
           duration_s: number
           evidence: Json | null
+          eye_contact_score: number | null
           feedback: Json
+          filler_word_count: number | null
+          filler_words: Json | null
           grade: number | null
           highlight_count: number | null
           highlight_patterns: Json | null
@@ -706,8 +709,14 @@ export type Database = {
           language: string
           literacy_transfer_matrix: Json | null
           pace: number
+          pacing_score: number | null
           pause_count: number
           performance_metrics: Json | null
+          presentation_confidence_score: number | null
+          presentation_duration_target: number | null
+          presentation_metrics: Json | null
+          presentation_topic: string | null
+          presentation_type: string | null
           profile_id: string
           pronunciation_flags: Json | null
           prosody_comprehension_correlation: Json | null
@@ -718,6 +727,7 @@ export type Database = {
           request_id: string
           semantic_clusters: Json | null
           speaker_segments: Json | null
+          structure_score: number | null
           suggested_exercises: Json | null
           transcript: string
           words: number
@@ -739,7 +749,10 @@ export type Database = {
           difficulty_score?: number | null
           duration_s: number
           evidence?: Json | null
+          eye_contact_score?: number | null
           feedback?: Json
+          filler_word_count?: number | null
+          filler_words?: Json | null
           grade?: number | null
           highlight_count?: number | null
           highlight_patterns?: Json | null
@@ -747,8 +760,14 @@ export type Database = {
           language: string
           literacy_transfer_matrix?: Json | null
           pace: number
+          pacing_score?: number | null
           pause_count: number
           performance_metrics?: Json | null
+          presentation_confidence_score?: number | null
+          presentation_duration_target?: number | null
+          presentation_metrics?: Json | null
+          presentation_topic?: string | null
+          presentation_type?: string | null
           profile_id: string
           pronunciation_flags?: Json | null
           prosody_comprehension_correlation?: Json | null
@@ -759,6 +778,7 @@ export type Database = {
           request_id: string
           semantic_clusters?: Json | null
           speaker_segments?: Json | null
+          structure_score?: number | null
           suggested_exercises?: Json | null
           transcript: string
           words: number
@@ -780,7 +800,10 @@ export type Database = {
           difficulty_score?: number | null
           duration_s?: number
           evidence?: Json | null
+          eye_contact_score?: number | null
           feedback?: Json
+          filler_word_count?: number | null
+          filler_words?: Json | null
           grade?: number | null
           highlight_count?: number | null
           highlight_patterns?: Json | null
@@ -788,8 +811,14 @@ export type Database = {
           language?: string
           literacy_transfer_matrix?: Json | null
           pace?: number
+          pacing_score?: number | null
           pause_count?: number
           performance_metrics?: Json | null
+          presentation_confidence_score?: number | null
+          presentation_duration_target?: number | null
+          presentation_metrics?: Json | null
+          presentation_topic?: string | null
+          presentation_type?: string | null
           profile_id?: string
           pronunciation_flags?: Json | null
           prosody_comprehension_correlation?: Json | null
@@ -800,6 +829,7 @@ export type Database = {
           request_id?: string
           semantic_clusters?: Json | null
           speaker_segments?: Json | null
+          structure_score?: number | null
           suggested_exercises?: Json | null
           transcript?: string
           words?: number

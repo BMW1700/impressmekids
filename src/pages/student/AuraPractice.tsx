@@ -12,7 +12,7 @@ import SpeakerDiarizationView from "@/components/aura/SpeakerDiarizationView";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Mic, TrendingUp, BookOpen, Library, Sparkles, Trophy, AlertTriangle, ArrowLeft } from "lucide-react";
+import { Mic, TrendingUp, BookOpen, Library, Sparkles, Trophy, AlertTriangle, ArrowLeft, Presentation } from "lucide-react";
 import GeneratedExercises from "@/components/aura/GeneratedExercises";
 import PhonemeMasteryPathway from "@/components/aura/PhonemeMasteryPathway";
 import DifficultyProgressCard from "@/components/aura/DifficultyProgressCard";
@@ -26,7 +26,11 @@ import { GamificationHeader } from "@/components/aura/GamificationHeader";
 import { ActiveMissionsPanel } from "@/components/aura/ActiveMissionsPanel";
 import { ClassChallengeCard } from "@/components/aura/ClassChallengeCard";
 import { LeaderboardCard } from "@/components/aura/LeaderboardCard";
-import { PracticeModeSelector, type PracticeMode } from "@/components/aura/PracticeModeSelector";
+import { PracticeModeSelector as OldPracticeModeSelector, type PracticeMode } from "@/components/aura/PracticeModeSelector";
+import { PresentationModeSelector } from "@/components/aura/PresentationModeSelector";
+import { PresentationRecorder } from "@/components/aura/PresentationRecorder";
+import { PresentationFeedbackCard } from "@/components/aura/PresentationFeedbackCard";
+import { analyzePresentation, type PresentationPrompt, type PresentationMetrics } from "@/lib/presentationAnalysis";
 import { useActiveScreeningPassage, type ActiveScreening } from "@/hooks/useActiveScreeningPassage";
 import type { CuratedStory as Story } from "@/data/curatedStories";
 
@@ -69,6 +73,10 @@ const AuraPractice = () => {
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [isReadingStory, setIsReadingStory] = useState(false);
   const [practiceMode, setPracticeMode] = useState<PracticeMode>('free');
+  const [selectedPrompt, setSelectedPrompt] = useState<PresentationPrompt | null>(null);
+  const [customTopic, setCustomTopic] = useState<string | undefined>();
+  const [presentationMetrics, setPresentationMetrics] = useState<PresentationMetrics | null>(null);
+  const [presentationTranscript, setPresentationTranscript] = useState<string>('');
 
   // Setup global voice error handler for toast notifications
   useEffect(() => {
@@ -359,8 +367,8 @@ const AuraPractice = () => {
                 Bookshelf
               </TabsTrigger>
               <TabsTrigger value="practice" className="hover:scale-105 transition-transform">
-                <Mic className="h-4 w-4 mr-2" />
-                Practice
+                <Presentation className="h-4 w-4 mr-2" />
+                Present
               </TabsTrigger>
               <TabsTrigger value="challenges" className="hover:scale-105 transition-transform">
                 <Trophy className="h-4 w-4 mr-2" />
@@ -385,52 +393,97 @@ const AuraPractice = () => {
             </TabsContent>
 
             <TabsContent value="practice" className="space-y-6 mt-6">
-              {/* Practice Mode Selector */}
-              <PracticeModeSelector
-                selectedMode={practiceMode}
-                onModeSelect={setPracticeMode}
-                isPremiumUnlocked={true} // TODO: Connect to subscription status
-              />
-              
-              <Card className="hover:scale-[1.01] transition-transform duration-200">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    Record Your Practice
-                    {practiceMode === 'premium' && (
-                      <span className="text-xs bg-gradient-to-r from-purple-500 to-blue-500 text-white px-2 py-0.5 rounded-full">
-                        AI Coaching
-                      </span>
-                    )}
-                    {practiceMode === 'free' && (
-                      <span className="text-xs bg-green-500/20 text-green-600 px-2 py-0.5 rounded-full">
-                        Free
-                      </span>
-                    )}
-                  </CardTitle>
-                  <CardDescription>
-                    {practiceMode === 'premium' 
-                      ? 'Get detailed AI feedback on pronunciation, clarity, and confidence.'
-                      : 'Practice speaking with basic WPM and phoneme tracking. No AI cost.'}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <VoiceRecorder 
-                    onTranscriptionComplete={handleTranscriptionComplete}
-                    isAnalyzing={isAnalyzing}
-                    freeMode={practiceMode === 'free'}
-                  />
-                </CardContent>
-              </Card>
-
-              {latestAnalysis && (
+              {!selectedPrompt && !customTopic ? (
                 <>
-                  <AuraFeedbackCard analysis={latestAnalysis} />
-                  
-                  {latestAnalysis.speakerSegments && latestAnalysis.speakerSegments.length > 0 && (
-                    <SpeakerDiarizationView
-                      segments={latestAnalysis.speakerSegments}
-                      diarizationConfidence={latestAnalysis.diarizationConfidence}
+                  <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+                    <CardContent className="py-4">
+                      <div className="flex items-center gap-3">
+                        <Presentation className="h-6 w-6 text-primary" />
+                        <div>
+                          <h3 className="font-semibold">Presentation Practice</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Practice speaking confidently with AI coaching on pacing, filler words, and structure
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <PresentationModeSelector 
+                    onSelectPrompt={(prompt, topic) => {
+                      setSelectedPrompt(prompt);
+                      setCustomTopic(topic);
+                      setPresentationMetrics(null);
+                    }}
+                  />
+                </>
+              ) : (
+                <>
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => {
+                      setSelectedPrompt(null);
+                      setCustomTopic(undefined);
+                      setPresentationMetrics(null);
+                    }}
+                    className="mb-2"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Choose Different Topic
+                  </Button>
+
+                  {!presentationMetrics ? (
+                    <PresentationRecorder
+                      topic={selectedPrompt?.title || customTopic}
+                      targetDuration={selectedPrompt?.duration || 60}
+                      isAnalyzing={isAnalyzing}
+                      onRecordingComplete={async (data) => {
+                        setIsAnalyzing(true);
+                        try {
+                          const metrics = analyzePresentation(
+                            data.transcript,
+                            data.durationSeconds,
+                            (data.transcript.split(/\s+/).length / data.durationSeconds) * 60,
+                            data.audioFeatures?.pauseCount || 0,
+                            data.audioFeatures?.avgSilenceDuration || 500,
+                            data.audioFeatures
+                          );
+                          setPresentationMetrics(metrics);
+                          setPresentationTranscript(data.transcript);
+                          
+                          toast({
+                            title: "✨ Presentation Analyzed!",
+                            description: `Your score: ${metrics.overallScore}/100 (Grade ${metrics.grade})`,
+                          });
+                        } catch (error) {
+                          console.error('Analysis error:', error);
+                          toast({
+                            title: "Analysis Failed",
+                            description: "Could not analyze your presentation.",
+                            variant: "destructive",
+                          });
+                        } finally {
+                          setIsAnalyzing(false);
+                        }
+                      }}
                     />
+                  ) : (
+                    <>
+                      <PresentationFeedbackCard
+                        metrics={presentationMetrics}
+                        transcript={presentationTranscript}
+                        durationSeconds={presentationMetrics.wordsPerMinute > 0 
+                          ? (presentationTranscript.split(/\s+/).length / presentationMetrics.wordsPerMinute) * 60 
+                          : 60}
+                        targetDuration={selectedPrompt?.duration || 60}
+                      />
+                      <Button 
+                        onClick={() => setPresentationMetrics(null)}
+                        className="w-full"
+                      >
+                        <Mic className="h-4 w-4 mr-2" />
+                        Try Again
+                      </Button>
+                    </>
                   )}
                 </>
               )}
