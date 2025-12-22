@@ -30,7 +30,9 @@ import { PracticeModeSelector as OldPracticeModeSelector, type PracticeMode } fr
 import { PresentationModeSelector } from "@/components/aura/PresentationModeSelector";
 import { PresentationRecorder } from "@/components/aura/PresentationRecorder";
 import { PresentationFeedbackCard } from "@/components/aura/PresentationFeedbackCard";
+import { PresentationHistory } from "@/components/aura/PresentationHistory";
 import { analyzePresentation, type PresentationPrompt, type PresentationMetrics } from "@/lib/presentationAnalysis";
+import { crossModalNetwork, type PresentationFeatures } from "@/lib/ml/crossModalTransferNetwork";
 import { useActiveScreeningPassage, type ActiveScreening } from "@/hooks/useActiveScreeningPassage";
 import type { CuratedStory as Story } from "@/data/curatedStories";
 
@@ -450,6 +452,65 @@ const AuraPractice = () => {
                           setPresentationMetrics(metrics);
                           setPresentationTranscript(data.transcript);
                           
+                          // Save presentation data to database
+                          if (user?.id) {
+                            const wordCount = data.transcript.split(/\s+/).length;
+                            const insertData = {
+                              profile_id: user.id,
+                              request_id: crypto.randomUUID(),
+                              transcript: data.transcript,
+                              duration_s: data.durationSeconds,
+                              words: wordCount,
+                              wpm: metrics.wordsPerMinute,
+                              asr_confidence: 0.95,
+                              clarity: metrics.clarityScore,
+                              confidence: metrics.confidenceScore,
+                              pace: metrics.wordsPerMinute,
+                              pause_count: data.audioFeatures?.pauseCount || 0,
+                              avg_silence_ms: data.audioFeatures?.avgSilenceDuration || 500,
+                              language: 'en-US',
+                              audio_url: '',
+                              feedback: {} as any,
+                              presentation_type: selectedPrompt?.id || 'custom',
+                              presentation_topic: selectedPrompt?.title || customTopic || 'Custom Topic',
+                              presentation_confidence_score: metrics.confidenceScore,
+                              pacing_score: metrics.pacingScore,
+                              structure_score: metrics.structureScore,
+                              filler_word_count: metrics.fillerWordCount,
+                              filler_words: metrics.fillerWords as any,
+                              presentation_duration_target: selectedPrompt?.duration || 60,
+                              presentation_metrics: metrics as any,
+                              grade: metrics.overallScore,
+                            };
+                            const { error: saveError } = await supabase
+                              .from('aura_records')
+                              .insert(insertData);
+                            
+                            if (saveError) {
+                              console.error('Failed to save presentation:', saveError);
+                            } else {
+                              console.log('✅ Presentation saved to database');
+                              
+                              // Run cross-modal prediction for insights
+                              try {
+                                const presentationFeatures: PresentationFeatures = {
+                                  confidenceScore: metrics.confidenceScore,
+                                  pacingScore: metrics.pacingScore,
+                                  structureScore: metrics.structureScore,
+                                  clarityScore: metrics.clarityScore,
+                                  fillerWordCount: metrics.fillerWordCount,
+                                  wordsPerMinute: metrics.wordsPerMinute,
+                                };
+                                const prediction = await crossModalNetwork.predictReadingFromPresentation(presentationFeatures);
+                                console.log('📊 Cross-Modal Prediction (Presentation → Reading):', prediction);
+                              } catch (predError) {
+                                console.warn('Cross-modal prediction failed:', predError);
+                              }
+                              
+                              refetch(); // Refresh records
+                            }
+                          }
+                          
                           toast({
                             title: "✨ Presentation Analyzed!",
                             description: `Your score: ${metrics.overallScore}/100 (Grade ${metrics.grade})`,
@@ -484,6 +545,13 @@ const AuraPractice = () => {
                         Try Again
                       </Button>
                     </>
+                  )}
+                  
+                  {/* Presentation History */}
+                  {user?.id && (
+                    <div className="mt-8">
+                      <PresentationHistory studentId={user.id} />
+                    </div>
                   )}
                 </>
               )}
