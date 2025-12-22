@@ -275,20 +275,21 @@ serve(async (req) => {
       throw new Error('Missing Supabase configuration');
     }
 
-    // Use ANON key + user JWT to validate the caller
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    // Use ANON key + explicit bearer token to validate the caller
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey);
+
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
 
     const {
       data: { user },
       error: authError,
-    } = await supabaseAuth.auth.getUser();
+    } = await supabaseAuth.auth.getUser(token);
 
     if (authError || !user) {
       console.error('[ML Training] Unauthorized:', {
         authError: authError?.message,
         hasUser: !!user,
+        authHeaderPrefix: authHeader.slice(0, 16),
       });
       return new Response(
         JSON.stringify({ error: 'Unauthorized', details: authError?.message ?? null }),
