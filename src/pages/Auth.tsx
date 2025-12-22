@@ -1078,7 +1078,7 @@ const Auth = () => {
                         <TooltipTrigger asChild>
                           <Info className="h-4 w-4 text-white/50 hover:text-white/80 cursor-help transition-colors" />
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs">
+                        <TooltipContent side="right" sideOffset={8} className="max-w-xs z-50">
                           <p>Your district code is a 12-digit number provided by your school administrator. Contact your school's IT department if you don't have it.</p>
                         </TooltipContent>
                       </Tooltip>
