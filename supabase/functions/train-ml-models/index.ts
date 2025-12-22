@@ -358,7 +358,26 @@ serve(async (req) => {
     }
 
     try {
-      // Collect training data
+      // ===== COLLECT ALL TRAINING DATA =====
+      
+      // 1. Reading Sessions (PRIMARY data source - 193+ records)
+      const { data: readingSessions, error: readingError } = await supabaseAdmin
+        .from('reading_sessions')
+        .select('*')
+        .order('created_at', { ascending: true })
+        .limit(1000);
+
+      if (readingError) throw readingError;
+
+      // 2. Student Skill Vectors (for phoneme scores)
+      const { data: skillVectors, error: skillError } = await supabaseAdmin
+        .from('student_skill_vectors')
+        .select('*')
+        .limit(500);
+
+      if (skillError) throw skillError;
+
+      // 3. AURA records (supplementary speaking data)
       const { data: auraRecords, error: auraError } = await supabaseAdmin
         .from('aura_records')
         .select('*')
@@ -366,52 +385,77 @@ serve(async (req) => {
 
       if (auraError) throw auraError;
 
-      const { data: submissions, error: submissionError } = await supabaseAdmin
-        .from('assignment_submissions')
-        .select(`*, text_highlights:text_highlights(*)`)
-        .eq('status', 'graded')
-        .limit(1000);
-
-      if (submissionError) throw submissionError;
-
-      console.log(`[ML Training] Collected ${auraRecords?.length || 0} AURA records and ${submissions?.length || 0} submissions`);
+      console.log(`[ML Training] Collected ${readingSessions?.length || 0} reading sessions, ${skillVectors?.length || 0} skill vectors, ${auraRecords?.length || 0} AURA records`);
 
       // ===== CROSS-MODAL NETWORK TRAINING =====
+      // Use reading_sessions data to train reading → speaking predictions
       const trainingInputs: number[][] = [];
       const trainingTargets: number[][] = [];
 
-      for (const aura of auraRecords || []) {
-        const matchingSubmission = submissions?.find(s => 
-          s.student_id === aura.profile_id && 
-          Math.abs(new Date(s.created_at).getTime() - new Date(aura.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000
-        );
+      // Group reading sessions by student to create training pairs
+      const studentSessions: Record<string, any[]> = {};
+      for (const session of readingSessions || []) {
+        if (!studentSessions[session.student_id]) {
+          studentSessions[session.student_id] = [];
+        }
+        studentSessions[session.student_id].push(session);
+      }
 
-        if (matchingSubmission) {
-          const highlights = matchingSubmission.text_highlights || [];
+      // Create training examples from reading sessions
+      for (const [studentId, sessions] of Object.entries(studentSessions)) {
+        // Sort by date
+        sessions.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        
+        // Find skill vector for this student
+        const skillVector = skillVectors?.find(sv => sv.student_id === studentId);
+        
+        for (const session of sessions) {
+          // Reading features (input) - 6 features
+          const input = [
+            Math.min((session.wpm || 100), 200) / 200,  // Normalized WPM
+            (session.accuracy || 85) / 100,              // Word accuracy
+            (session.fluency_score || 70) / 100,         // Fluency
+            Math.min((session.total_words || 50), 500) / 500, // Reading volume
+            session.self_corrections ? Math.min(session.self_corrections / 10, 1) : 0.1, // Self-correction rate
+            (session.expression_score || 70) / 100,      // Expression/prosody
+          ];
           
-          // Reading features (input)
-          trainingInputs.push([
-            (matchingSubmission.grade || 50) / 100,
-            (aura.annotation_quality_score || 50) / 100,
-            Math.min(highlights.filter((h: any) => h.annotation).length * 10, 100) / 100,
-            Math.min(aura.highlight_count || highlights.length, 20) / 20,
-            Math.min(highlights.reduce((sum: number, h: any) => sum + (h.annotation?.length || 0), 0) / Math.max(highlights.length, 1), 200) / 200,
-            (aura.comprehension_score || 50) / 100,
-          ]);
-
-          // Speaking features (target)
-          trainingTargets.push([
-            (aura.grade || 70) / 100 * 100,
-            (aura.pace || 70) / 100 * 100,
-            (aura.confidence || 70) / 100 * 100,
-            Math.min(aura.wpm || 100, 200) / 2,
-            Math.max(0, 100 - (aura.pause_count || 5) * 5),
-            (aura.clarity || 70) / 100 * 100,
-          ]);
+          // Predicted speaking features (target) - 6 features
+          // Use actual AURA data if available, or derive from reading metrics
+          const matchingAura = auraRecords?.find(ar => 
+            ar.profile_id === studentId &&
+            Math.abs(new Date(ar.created_at).getTime() - new Date(session.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000
+          );
+          
+          let target: number[];
+          if (matchingAura) {
+            // Use actual speaking data
+            target = [
+              (matchingAura.grade || 70),
+              (matchingAura.pace || 70),
+              (matchingAura.confidence || 70),
+              Math.min(matchingAura.wpm || 100, 200) / 2,
+              Math.max(0, 100 - (matchingAura.pause_count || 5) * 5),
+              (matchingAura.clarity || 70),
+            ];
+          } else {
+            // Derive speaking predictions from reading metrics (transfer learning target)
+            target = [
+              (session.accuracy || 85) * 0.9,  // Speaking fluency ~ accuracy
+              (session.fluency_score || 70),   // Pace ~ fluency
+              Math.min((session.wpm || 100) / 1.5, 100), // Confidence ~ WPM
+              Math.min((session.wpm || 100), 200) / 2,   // Speaking WPM
+              session.fluency_score || 70,               // Pause control ~ fluency
+              (session.expression_score || 70),          // Clarity ~ expression
+            ];
+          }
+          
+          trainingInputs.push(input);
+          trainingTargets.push(target);
         }
       }
 
-      console.log(`[ML Training] Prepared ${trainingInputs.length} cross-modal training examples`);
+      console.log(`[ML Training] Prepared ${trainingInputs.length} cross-modal training examples from reading sessions`);
 
       let crossModalResult = { loss: 0, accuracy: 0, trained: false, message: '' };
       let crossModalWeights = null;
@@ -443,7 +487,7 @@ serve(async (req) => {
           loss: result.loss,
           accuracy: result.accuracy,
           trained: true,
-          message: `Trained on ${trainingInputs.length} examples with ${Math.round(result.accuracy * 100)}% accuracy`
+          message: `Trained on ${trainingInputs.length} reading sessions with ${Math.round(result.accuracy * 100)}% accuracy`
         };
 
         // Deactivate old weights
@@ -465,6 +509,7 @@ serve(async (req) => {
               loss: result.loss,
               accuracy: result.accuracy,
               trainingExamples: trainingInputs.length,
+              dataSource: 'reading_sessions',
               trainedAt: new Date().toISOString(),
             },
             is_active: true,
@@ -477,6 +522,7 @@ serve(async (req) => {
       }
 
       // ===== Q-LEARNING TRAINING =====
+      // Use student_skill_vectors phoneme_scores for Q-learning
       const qLearningUpdates: Array<{
         state: { mastered: string[]; struggling: string[]; level: number };
         action: string;
@@ -484,48 +530,75 @@ serve(async (req) => {
         nextState: { mastered: string[]; struggling: string[]; level: number };
       }> = [];
 
-      // Process AURA records for Q-learning updates
-      const studentPhonemeHistory: Record<string, Array<{ phoneme: string; score: number; timestamp: string }>> = {};
-      
-      for (const aura of auraRecords || []) {
-        if (!studentPhonemeHistory[aura.profile_id]) {
-          studentPhonemeHistory[aura.profile_id] = [];
-        }
-
-        if (aura.feedback && Array.isArray(aura.feedback)) {
-          for (const fb of aura.feedback as Array<{ phoneme?: string; score?: number }>) {
-            if (fb.phoneme && typeof fb.score === 'number') {
-              studentPhonemeHistory[aura.profile_id].push({
-                phoneme: fb.phoneme,
-                score: fb.score,
-                timestamp: aura.created_at,
-              });
-            }
+      // Process skill vectors for Q-learning (phoneme-level data)
+      for (const skillVector of skillVectors || []) {
+        const phonemeScores = skillVector.phoneme_scores as Record<string, number> | null;
+        
+        if (phonemeScores && typeof phonemeScores === 'object') {
+          const phonemes = Object.entries(phonemeScores);
+          
+          // Categorize phonemes
+          const mastered = phonemes.filter(([_, score]) => score > 80).map(([phoneme]) => phoneme);
+          const struggling = phonemes.filter(([_, score]) => score < 60).map(([phoneme]) => phoneme);
+          const inProgress = phonemes.filter(([_, score]) => score >= 60 && score <= 80).map(([phoneme]) => phoneme);
+          
+          // Create transitions for each phoneme practice
+          for (const [phoneme, score] of phonemes) {
+            // Calculate reward based on score
+            const reward = score > 80 ? 1.0 : 
+                          score > 60 ? 0.5 : 
+                          score > 40 ? 0 : -0.5;
+            
+            // Create state transition
+            const state = {
+              mastered: mastered.filter(p => p !== phoneme),
+              struggling: struggling.filter(p => p !== phoneme),
+              level: skillVector.current_level || 1,
+            };
+            
+            // Next state assumes improvement if practiced
+            const nextMastered = score > 80 ? [...mastered] : mastered;
+            const nextStruggling = score < 60 ? struggling : struggling.filter(p => p !== phoneme);
+            
+            const nextState = {
+              mastered: [...new Set(nextMastered)],
+              struggling: [...new Set(nextStruggling)],
+              level: skillVector.current_level || 1,
+            };
+            
+            qLearningUpdates.push({
+              state,
+              action: phoneme,
+              reward,
+              nextState,
+            });
           }
         }
       }
 
-      // Generate Q-learning transitions from phoneme history
-      for (const [studentId, history] of Object.entries(studentPhonemeHistory)) {
-        const sortedHistory = history.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      // Also add transitions from reading_sessions phoneme_accuracy
+      for (const session of readingSessions || []) {
+        const phonemeAccuracy = session.phoneme_accuracy as Record<string, number> | null;
         
-        for (let i = 0; i < sortedHistory.length - 1; i++) {
-          const currentMastered = sortedHistory.slice(0, i + 1).filter(h => h.score > 80).map(h => h.phoneme);
-          const currentStruggling = sortedHistory.slice(0, i + 1).filter(h => h.score < 60).map(h => h.phoneme);
+        if (phonemeAccuracy && typeof phonemeAccuracy === 'object') {
+          const phonemes = Object.entries(phonemeAccuracy);
           
-          const nextMastered = sortedHistory.slice(0, i + 2).filter(h => h.score > 80).map(h => h.phoneme);
-          const nextStruggling = sortedHistory.slice(0, i + 2).filter(h => h.score < 60).map(h => h.phoneme);
-
-          const reward = sortedHistory[i].score > 80 ? 1.0 : 
-                        sortedHistory[i].score > 60 ? 0.5 : 
-                        sortedHistory[i].score > 40 ? 0 : -0.5;
-
-          qLearningUpdates.push({
-            state: { mastered: [...new Set(currentMastered)], struggling: [...new Set(currentStruggling)], level: 1 },
-            action: sortedHistory[i].phoneme,
-            reward,
-            nextState: { mastered: [...new Set(nextMastered)], struggling: [...new Set(nextStruggling)], level: 1 },
-          });
+          for (const [phoneme, accuracy] of phonemes) {
+            const reward = accuracy > 0.8 ? 1.0 : 
+                          accuracy > 0.6 ? 0.5 : 
+                          accuracy > 0.4 ? 0 : -0.5;
+            
+            qLearningUpdates.push({
+              state: { mastered: [], struggling: [], level: session.difficulty_level || 1 },
+              action: phoneme,
+              reward,
+              nextState: { 
+                mastered: accuracy > 0.8 ? [phoneme] : [], 
+                struggling: accuracy < 0.6 ? [phoneme] : [], 
+                level: session.difficulty_level || 1 
+              },
+            });
+          }
         }
       }
 
@@ -601,8 +674,9 @@ serve(async (req) => {
         crossModalNetwork: crossModalResult,
         qLearningAgent: qLearningResult,
         dataCollected: {
+          readingSessions: readingSessions?.length || 0,
+          skillVectors: skillVectors?.length || 0,
           auraRecords: auraRecords?.length || 0,
-          submissions: submissions?.length || 0,
         },
       };
 
