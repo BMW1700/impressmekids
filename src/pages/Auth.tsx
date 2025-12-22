@@ -1073,6 +1073,16 @@ const Auth = () => {
                   <Label htmlFor="district-code" className="text-white text-sm font-medium flex items-center gap-2">
                     <Building2 className="h-4 w-4" />
                     District Code
+                    <TooltipProvider delayDuration={300}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-4 w-4 text-white/50 hover:text-white/80 cursor-help transition-colors" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <p>Your district code is a 12-digit number provided by your school administrator. Contact your school's IT department if you don't have it.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </Label>
                   <Input
                     id="district-code"
