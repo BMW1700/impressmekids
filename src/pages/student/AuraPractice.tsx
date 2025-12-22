@@ -468,21 +468,31 @@ const AuraPractice = () => {
                           
                           // Save presentation data to database
                           console.log('💾 Attempting to save presentation for user:', user.id);
-                          const wordCount = data.transcript.split(/\s+/).length;
+                          const wordCount = data.transcript.split(/\s+/).filter(Boolean).length;
+
+                          const toLikert5 = (score0to100: number) => {
+                            const safe = Number.isFinite(score0to100) ? score0to100 : 0;
+                            const clamped = Math.max(0, Math.min(100, safe));
+                            // Map 0..100 -> 1..5
+                            return Math.max(1, Math.min(5, Math.round(1 + (clamped / 100) * 4)));
+                          };
+
                           const insertData = {
                             profile_id: user.id,
                             request_id: crypto.randomUUID(),
                             transcript: data.transcript,
-                            duration_s: Math.round(data.durationSeconds),
+                            duration_s: Math.max(1, Math.round(data.durationSeconds)),
                             words: wordCount,
                             wpm: Math.round(metrics.wordsPerMinute),
                             asr_confidence: 0.95,
-                            clarity: Math.round(metrics.clarityScore),
-                            confidence: Math.round(metrics.confidenceScore),
-                            pace: Math.round(metrics.wordsPerMinute),
+                            // DB constraints: clarity/confidence/pace must be 1..5
+                            clarity: toLikert5(metrics.clarityScore),
+                            confidence: toLikert5(metrics.confidenceScore),
+                            pace: toLikert5(metrics.pacingScore),
                             pause_count: data.audioFeatures?.pauseCount || 0,
                             avg_silence_ms: Math.round(data.audioFeatures?.avgSilenceDuration || 500),
-                            language: 'en-US',
+                            // DB constraint expects 'en' or 'es'
+                            language: 'en',
                             audio_url: '',
                             feedback: {} as any,
                             presentation_type: selectedPrompt?.id || 'custom',
