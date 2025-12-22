@@ -29,8 +29,18 @@ export interface SpeakingFeatures {
   phonemeAccuracy: number;         // 0-100
 }
 
+// Presentation features for cross-modal transfer
+export interface PresentationFeatures {
+  confidenceScore: number;         // 0-100
+  pacingScore: number;             // 0-100
+  structureScore: number;          // 0-100
+  clarityScore: number;            // 0-100
+  fillerWordCount: number;         // Raw count
+  wordsPerMinute: number;          // WPM
+}
+
 export interface TransferPrediction {
-  predictedMetrics: SpeakingFeatures | Partial<ReadingFeatures>;
+  predictedMetrics: SpeakingFeatures | Partial<ReadingFeatures> | PresentationFeatures;
   confidence: number;              // 0-1
   uncertaintyBounds: {             // 95% confidence intervals
     lower: number[];
@@ -328,6 +338,105 @@ export class CrossModalTransferNetwork {
       uncertaintyBounds: {
         lower: [comprehension * 0.8, annotation * 0.8, speaking.prosody * 0.8, 5, 50, speaking.phonemeAccuracy * 0.8],
         upper: [comprehension * 1.2, annotation * 1.2, speaking.prosody * 1.2, 12, 120, speaking.phonemeAccuracy * 1.2]
+      }
+    };
+  }
+  
+  /**
+   * Predict reading performance from presentation metrics
+   * Maps presentation skills to expected reading comprehension
+   */
+  async predictReadingFromPresentation(presentation: PresentationFeatures): Promise<TransferPrediction> {
+    // Presentation skills map to reading skills:
+    // - High confidence → better reading comprehension
+    // - Good structure → better annotation quality
+    // - Clear pacing → better fluency when reading
+    
+    const comprehension = Math.round(
+      (presentation.confidenceScore * 0.4) + 
+      (presentation.structureScore * 0.3) + 
+      (presentation.clarityScore * 0.3)
+    );
+    
+    const annotation = Math.round(
+      (presentation.structureScore * 0.5) + 
+      (presentation.clarityScore * 0.3) +
+      (100 - Math.min(100, presentation.fillerWordCount * 5)) * 0.2
+    );
+    
+    const criticalThinking = Math.round(
+      (presentation.structureScore * 0.4) +
+      (presentation.confidenceScore * 0.3) +
+      (presentation.pacingScore * 0.3)
+    );
+    
+    return {
+      predictedMetrics: {
+        comprehensionScore: comprehension,
+        annotationQuality: annotation,
+        criticalThinkingScore: criticalThinking,
+        highlightCount: Math.round(8 + (presentation.structureScore / 20)),
+        avgAnnotationLength: Math.round(60 + (presentation.clarityScore / 2)),
+        vocabularyComplexity: Math.round(presentation.clarityScore * 0.8)
+      },
+      confidence: 0.70, // Cross-modal prediction
+      uncertaintyBounds: {
+        lower: [comprehension * 0.85, annotation * 0.85, criticalThinking * 0.85, 5, 50, presentation.clarityScore * 0.6],
+        upper: [comprehension * 1.15, annotation * 1.15, criticalThinking * 1.15, 12, 100, presentation.clarityScore * 1.0]
+      }
+    };
+  }
+  
+  /**
+   * Predict presentation skills from reading performance
+   * Maps reading comprehension to expected presentation abilities
+   */
+  async predictPresentationFromReading(reading: ReadingFeatures): Promise<TransferPrediction> {
+    // Reading skills map to presentation skills:
+    // - High comprehension → better confidence
+    // - Good annotations → better structure
+    // - Critical thinking → better clarity
+    
+    const confidence = Math.round(
+      (reading.comprehensionScore * 0.5) +
+      (reading.annotationQuality * 0.3) +
+      (reading.criticalThinkingScore * 0.2)
+    );
+    
+    const pacing = Math.round(
+      (reading.annotationQuality * 0.4) +
+      (reading.vocabularyComplexity * 0.3) +
+      70 * 0.3 // Base pacing score
+    );
+    
+    const structure = Math.round(
+      (reading.criticalThinkingScore * 0.5) +
+      (reading.annotationQuality * 0.3) +
+      (reading.comprehensionScore * 0.2)
+    );
+    
+    const clarity = Math.round(
+      (reading.vocabularyComplexity * 0.4) +
+      (reading.comprehensionScore * 0.4) +
+      (reading.annotationQuality * 0.2)
+    );
+    
+    // Estimate filler words (inverse of clarity/vocabulary)
+    const estimatedFillers = Math.max(0, Math.round(15 - (clarity / 10)));
+    
+    return {
+      predictedMetrics: {
+        confidenceScore: confidence,
+        pacingScore: pacing,
+        structureScore: structure,
+        clarityScore: clarity,
+        fillerWordCount: estimatedFillers,
+        wordsPerMinute: 120 + Math.round((reading.vocabularyComplexity / 5))
+      } as PresentationFeatures,
+      confidence: 0.70,
+      uncertaintyBounds: {
+        lower: [confidence * 0.85, pacing * 0.85, structure * 0.85, clarity * 0.85, Math.max(0, estimatedFillers - 3), 100],
+        upper: [confidence * 1.15, pacing * 1.15, structure * 1.15, clarity * 1.15, estimatedFillers + 5, 160]
       }
     };
   }
