@@ -757,18 +757,26 @@ const ClassroomDetail = () => {
                 </div>
                 {isTeacher && <div className="flex flex-col items-center gap-1">
                   <span className="text-sm text-muted-foreground font-medium">Join Code</span>
-                  <Badge variant="outline" className="font-mono text-xl px-6 py-3 border-2 border-primary/30 bg-background/80 backdrop-blur-sm">
-                    {classroom.join_code}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={copyJoinCode}
+                      className="p-1.5 rounded-md hover:bg-primary/10 transition-colors"
+                      title="Copy join code"
+                    >
+                      <Copy className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                    </button>
+                    <Badge variant="outline" className="font-mono text-xl px-6 py-3 border-2 border-primary/30 bg-background/80 backdrop-blur-sm">
+                      {classroom.join_code}
+                    </Badge>
+                  </div>
                 </div>}
               </div>
             </CardHeader>
             <CardContent className="pt-6 relative z-10">
               <div className="flex items-center gap-3 flex-wrap">
                 {isTeacher && <>
-                    <Button variant="outline" size="lg" onClick={copyJoinCode} className="hover:bg-primary/5 hover:border-primary/30">
-                      <Copy className="mr-2 h-5 w-5" />
-                      Copy Join Code
+                    <Button variant="outline" size="lg" onClick={() => setShowEditClassroom(true)} className="hover:bg-primary/5 hover:border-primary/30">
+                      Edit Classroom
                     </Button>
                     <Button variant="outline" size="lg" onClick={() => setShowEditClassroom(true)} className="hover:bg-primary/5 hover:border-primary/30">
                       Edit Classroom
