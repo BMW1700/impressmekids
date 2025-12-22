@@ -359,32 +359,34 @@ const AuraPractice = () => {
           )}
 
           <Tabs defaultValue="stories" className="w-full">
-            <TabsList className="grid w-full grid-cols-6">
-              <TabsTrigger value="stories" className="hover:scale-105 transition-transform">
-                <Library className="h-4 w-4 mr-2" />
-                Stories
-              </TabsTrigger>
-              <TabsTrigger value="bookshelf" className="hover:scale-105 transition-transform">
-                <BookOpen className="h-4 w-4 mr-2" />
-                Bookshelf
-              </TabsTrigger>
-              <TabsTrigger value="practice" className="hover:scale-105 transition-transform">
-                <Presentation className="h-4 w-4 mr-2" />
-                Present
-              </TabsTrigger>
-              <TabsTrigger value="challenges" className="hover:scale-105 transition-transform">
-                <Trophy className="h-4 w-4 mr-2" />
-                Challenges
-              </TabsTrigger>
-              <TabsTrigger value="progress" className="hover:scale-105 transition-transform">
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Progress
-              </TabsTrigger>
-              <TabsTrigger value="exercises" className="hover:scale-105 transition-transform">
-                <Sparkles className="h-4 w-4 mr-2" />
-                Exercises
-              </TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+              <TabsList className="inline-flex w-max md:grid md:w-full md:grid-cols-6 min-w-max">
+                <TabsTrigger value="stories" className="hover:scale-105 transition-transform whitespace-nowrap px-3 md:px-4">
+                  <Library className="h-4 w-4 mr-1 md:mr-2 shrink-0" />
+                  <span className="text-xs md:text-sm">Stories</span>
+                </TabsTrigger>
+                <TabsTrigger value="bookshelf" className="hover:scale-105 transition-transform whitespace-nowrap px-3 md:px-4">
+                  <BookOpen className="h-4 w-4 mr-1 md:mr-2 shrink-0" />
+                  <span className="text-xs md:text-sm">Bookshelf</span>
+                </TabsTrigger>
+                <TabsTrigger value="practice" className="hover:scale-105 transition-transform whitespace-nowrap px-3 md:px-4">
+                  <Presentation className="h-4 w-4 mr-1 md:mr-2 shrink-0" />
+                  <span className="text-xs md:text-sm">Present</span>
+                </TabsTrigger>
+                <TabsTrigger value="challenges" className="hover:scale-105 transition-transform whitespace-nowrap px-3 md:px-4">
+                  <Trophy className="h-4 w-4 mr-1 md:mr-2 shrink-0" />
+                  <span className="text-xs md:text-sm">Challenges</span>
+                </TabsTrigger>
+                <TabsTrigger value="progress" className="hover:scale-105 transition-transform whitespace-nowrap px-3 md:px-4">
+                  <TrendingUp className="h-4 w-4 mr-1 md:mr-2 shrink-0" />
+                  <span className="text-xs md:text-sm">Progress</span>
+                </TabsTrigger>
+                <TabsTrigger value="exercises" className="hover:scale-105 transition-transform whitespace-nowrap px-3 md:px-4">
+                  <Sparkles className="h-4 w-4 mr-1 md:mr-2 shrink-0" />
+                  <span className="text-xs md:text-sm">Exercises</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="stories" className="mt-6">
               <StoryLibrary onSelectStory={handleStorySelect} />
