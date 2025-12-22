@@ -6000,6 +6000,7 @@ export type Database = {
       }
       teacher_journal_entries: {
         Row: {
+          checklist_items: Json | null
           classroom_id: string | null
           created_at: string
           energy_level: number | null
@@ -6013,6 +6014,7 @@ export type Database = {
           win_of_the_day: string | null
         }
         Insert: {
+          checklist_items?: Json | null
           classroom_id?: string | null
           created_at?: string
           energy_level?: number | null
@@ -6026,6 +6028,7 @@ export type Database = {
           win_of_the_day?: string | null
         }
         Update: {
+          checklist_items?: Json | null
           classroom_id?: string | null
           created_at?: string
           energy_level?: number | null
