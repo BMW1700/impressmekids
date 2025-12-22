@@ -327,11 +327,8 @@ serve(async (req) => {
 
     console.log('[ML Training] Starting real ML model training pipeline...');
 
-    // Create training job record
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    // Create training job record - reuse already validated env vars
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
     const { data: trainingJob, error: jobError } = await supabaseAdmin
       .from('ml_training_jobs')
