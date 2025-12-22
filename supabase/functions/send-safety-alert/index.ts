@@ -6,10 +6,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface ParentInfo {
+interface UserInfo {
   email: string;
   full_name: string;
   user_id: string;
+  role?: string;
 }
 
 serve(async (req) => {
@@ -49,179 +50,144 @@ serve(async (req) => {
       title: alert.title,
       severity: alert.severity,
       district_id: alert.district_id,
-      school_id: alert.school_id || "ALL SCHOOLS",
+      school_id: alert.school_id || "ALL SCHOOLS IN DISTRICT",
     });
-
-    let parents: ParentInfo[] = [];
 
     if (!alert.district_id) {
       console.error("CRITICAL: Alert has no district_id - cannot scope notifications!");
       throw new Error("Alert must have a district_id to send notifications");
     }
 
-    // Step 1: Get all approved parent-student links with parent info
-    console.log("Step 1: Fetching all approved parent-student links...");
-    const { data: parentLinks, error: linksError } = await supabaseClient
-      .from("parent_student_links")
-      .select(`
-        parent_id,
-        student_id,
-        parent_accounts!inner(id, email, full_name, user_id)
-      `)
-      .eq("approved", true);
+    const usersToNotify: UserInfo[] = [];
+    const userMap = new Map<string, UserInfo>();
 
-    if (linksError) {
-      console.error("Parent links fetch error:", linksError);
-      throw new Error("Failed to fetch parent-student links");
-    }
-
-    console.log(`Found ${parentLinks?.length || 0} approved parent-student links`);
-
-    if (!parentLinks || parentLinks.length === 0) {
-      console.log("No approved parent-student links found");
-      return new Response(
-        JSON.stringify({ success: true, message: "No parents to notify" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Step 2: Get unique student IDs
-    const studentIds = [...new Set(parentLinks.map(link => link.student_id))];
-    console.log(`Step 2: Found ${studentIds.length} unique students with linked parents`);
-
-    // Step 3: Find students enrolled in classrooms taught by teachers in the target district
-    console.log("Step 3: Finding classrooms in district:", alert.district_id);
+    // ============================================
+    // STEP 1: Get all staff/students from profiles table in the district/school
+    // ============================================
+    console.log("Step 1: Fetching all users (teachers, admins, students) in district...");
     
-    // Get students from classroom_students
-    const { data: classroomStudents, error: csError } = await supabaseClient
-      .from("classroom_students")
-      .select("student_id, classroom_id")
-      .in("student_id", studentIds);
-
-    if (csError) {
-      console.error("Classroom students fetch error:", csError);
-      throw new Error("Failed to fetch classroom students");
-    }
-
-    console.log(`Found ${classroomStudents?.length || 0} classroom enrollments for linked students`);
-
-    if (!classroomStudents || classroomStudents.length === 0) {
-      console.log("No students enrolled in classrooms");
-      return new Response(
-        JSON.stringify({ success: true, message: "No students in classrooms to notify" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Step 4: Get classrooms and their teachers
-    const classroomIds = [...new Set(classroomStudents.map(cs => cs.classroom_id))];
-    console.log(`Step 4: Checking ${classroomIds.length} classrooms for district match...`);
-
-    const { data: classrooms, error: classroomError } = await supabaseClient
-      .from("classrooms")
-      .select("id, teacher_id")
-      .in("id", classroomIds);
-
-    if (classroomError) {
-      console.error("Classrooms fetch error:", classroomError);
-      throw new Error("Failed to fetch classrooms");
-    }
-
-    // Step 5: Get teachers and check their district (and optionally school)
-    const teacherIds = [...new Set(classrooms?.map(c => c.teacher_id) || [])];
-    console.log(`Step 5: Checking ${teacherIds.length} teachers for district match...`);
-
-    let teacherQuery = supabaseClient
+    let profilesQuery = supabaseClient
       .from("profiles")
-      .select("id, district_id, school_id")
-      .in("id", teacherIds)
+      .select("id, email, full_name, role, district_id, school_id")
       .eq("district_id", alert.district_id);
 
-    // If alert has school_id, also filter by school
+    // If a specific school is selected, filter by school_id
     if (alert.school_id) {
-      teacherQuery = teacherQuery.eq("school_id", alert.school_id);
-      console.log(`Filtering by school_id: ${alert.school_id}`);
+      profilesQuery = profilesQuery.eq("school_id", alert.school_id);
+      console.log(`Filtering by specific school: ${alert.school_id}`);
     }
 
-    const { data: teachersInDistrict, error: teacherError } = await teacherQuery;
+    const { data: profiles, error: profilesError } = await profilesQuery;
 
-    if (teacherError) {
-      console.error("Teachers fetch error:", teacherError);
-      throw new Error("Failed to fetch teachers");
+    if (profilesError) {
+      console.error("Profiles fetch error:", profilesError);
+      throw new Error("Failed to fetch profiles");
     }
 
-    console.log(`Found ${teachersInDistrict?.length || 0} teachers in target district/school`);
+    console.log(`Found ${profiles?.length || 0} users in district/school`);
 
-    if (!teachersInDistrict || teachersInDistrict.length === 0) {
-      console.log("No teachers found in target district/school");
-      return new Response(
-        JSON.stringify({ success: true, message: "No teachers in district to notify parents" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Step 6: Build set of valid classroom IDs (those with teachers in district)
-    const validTeacherIds = new Set(teachersInDistrict.map(t => t.id));
-    const validClassroomIds = new Set(
-      classrooms?.filter(c => validTeacherIds.has(c.teacher_id)).map(c => c.id) || []
-    );
-    console.log(`Step 6: ${validClassroomIds.size} classrooms have teachers in district`);
-
-    // Step 7: Find students in valid classrooms
-    const validStudentIds = new Set(
-      classroomStudents
-        .filter(cs => validClassroomIds.has(cs.classroom_id))
-        .map(cs => cs.student_id)
-    );
-    console.log(`Step 7: ${validStudentIds.size} students in district classrooms`);
-
-    // Step 8: Get parents of valid students
-    const parentMap = new Map<string, ParentInfo>();
-    
-    for (const link of parentLinks) {
-      if (validStudentIds.has(link.student_id)) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const parentAccount = (link.parent_accounts as any);
-        // Use parent's user_id as key to dedupe
-        if (parentAccount && parentAccount.user_id && !parentMap.has(parentAccount.user_id)) {
-          parentMap.set(parentAccount.user_id, {
-            email: parentAccount.email,
-            full_name: parentAccount.full_name,
-            user_id: parentAccount.user_id,
-          });
-        }
+    // Add all users from profiles to the notification list
+    for (const profile of profiles || []) {
+      if (profile.id && profile.email && !userMap.has(profile.id)) {
+        userMap.set(profile.id, {
+          email: profile.email,
+          full_name: profile.full_name || profile.email,
+          user_id: profile.id,
+          role: profile.role,
+        });
       }
     }
 
-    parents = Array.from(parentMap.values());
-    console.log(`Step 8: Found ${parents.length} unique parents to notify`);
+    console.log(`Added ${userMap.size} staff/students to notification list`);
 
-    if (parents.length === 0) {
-      console.log("No parents found for students in this district/school");
+    // ============================================
+    // STEP 2: Get all parents with students in the district/school
+    // ============================================
+    console.log("Step 2: Fetching parents with students in district...");
+
+    // Get all student IDs from the profiles we just fetched (students only)
+    const studentIds = (profiles || [])
+      .filter(p => p.role === 'student')
+      .map(p => p.id);
+
+    console.log(`Found ${studentIds.length} students in district/school`);
+
+    if (studentIds.length > 0) {
+      // Get parent-student links for these students
+      const { data: parentLinks, error: linksError } = await supabaseClient
+        .from("parent_student_links")
+        .select(`
+          parent_id,
+          student_id,
+          parent_accounts!inner(id, email, full_name, user_id)
+        `)
+        .eq("approved", true)
+        .in("student_id", studentIds);
+
+      if (linksError) {
+        console.error("Parent links fetch error:", linksError);
+        // Continue without parents rather than failing completely
+      } else {
+        console.log(`Found ${parentLinks?.length || 0} approved parent-student links`);
+
+        // Add parents to the notification list
+        for (const link of parentLinks || []) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const parentAccount = (link.parent_accounts as any);
+          if (parentAccount && parentAccount.user_id && !userMap.has(parentAccount.user_id)) {
+            userMap.set(parentAccount.user_id, {
+              email: parentAccount.email,
+              full_name: parentAccount.full_name,
+              user_id: parentAccount.user_id,
+              role: 'parent',
+            });
+          }
+        }
+
+        console.log(`Total users after adding parents: ${userMap.size}`);
+      }
+    }
+
+    // Convert map to array
+    const allUsers = Array.from(userMap.values());
+
+    if (allUsers.length === 0) {
+      console.log("No users found in this district/school to notify");
       return new Response(
-        JSON.stringify({ success: true, message: "No parents to notify in this district" }),
+        JSON.stringify({ success: true, message: "No users to notify in this district/school" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Log parent emails (masked for privacy)
-    console.log("Parents to notify:", parents.map(p => ({
-      email: p.email.replace(/^(.{2}).*(@.*)$/, "$1***$2"),
-      user_id: p.user_id.substring(0, 8) + "..."
+    // Log summary by role
+    const roleBreakdown = allUsers.reduce((acc, user) => {
+      const role = user.role || 'unknown';
+      acc[role] = (acc[role] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    console.log("Users to notify by role:", roleBreakdown);
+
+    // Log user emails (masked for privacy)
+    console.log("Sample users to notify:", allUsers.slice(0, 5).map(u => ({
+      email: u.email.replace(/^(.{2}).*(@.*)$/, "$1***$2"),
+      role: u.role,
+      user_id: u.user_id.substring(0, 8) + "..."
     })));
 
-    // Send email notifications using Resend
+    // ============================================
+    // STEP 3: Send email notifications using Resend
+    // ============================================
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     let emailsSent = 0;
     let emailsFailed = 0;
     
     if (resendApiKey) {
       console.log("=== SENDING EMAILS ===");
-      const emailPromises = parents.map(async (parent) => {
+      const emailPromises = allUsers.map(async (user) => {
         try {
           const emailBody = {
             from: "ImpressMe Kids Safety <safety@impressmekids.com>",
-            to: parent.email,
+            to: user.email,
             subject: `[${alert.severity.toUpperCase()}] ${alert.title}`,
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -260,39 +226,40 @@ serve(async (req) => {
 
           if (response.ok) {
             const result = await response.json();
-            console.log(`✓ Email sent to ${parent.email.replace(/^(.{2}).*(@.*)$/, "$1***$2")} - ID: ${result.id}`);
-            return { success: true, email: parent.email };
+            console.log(`✓ Email sent to ${user.email.replace(/^(.{2}).*(@.*)$/, "$1***$2")} (${user.role}) - ID: ${result.id}`);
+            return { success: true, email: user.email };
           } else {
             const errorText = await response.text();
-            console.error(`✗ Email failed to ${parent.email}: ${response.status} - ${errorText}`);
-            return { success: false, email: parent.email, error: errorText };
+            console.error(`✗ Email failed to ${user.email}: ${response.status} - ${errorText}`);
+            return { success: false, email: user.email, error: errorText };
           }
         } catch (err: unknown) {
           const error = err as Error;
-          console.error(`✗ Email exception for ${parent.email}:`, error.message);
-          return { success: false, email: parent.email, error: error.message };
+          console.error(`✗ Email exception for ${user.email}:`, error.message);
+          return { success: false, email: user.email, error: error.message };
         }
       });
 
       const emailResults = await Promise.allSettled(emailPromises);
       emailsSent = emailResults.filter(r => r.status === 'fulfilled' && (r.value as { success: boolean }).success).length;
-      emailsFailed = parents.length - emailsSent;
+      emailsFailed = allUsers.length - emailsSent;
       console.log(`Email results: ${emailsSent} sent, ${emailsFailed} failed`);
     } else {
       console.warn("RESEND_API_KEY not configured - skipping email notifications");
     }
 
-    // Send push notifications using the send-push-notification edge function
+    // ============================================
+    // STEP 4: Send push notifications
+    // ============================================
     console.log("=== SENDING PUSH NOTIFICATIONS ===");
     let pushSent = 0;
     let pushFailed = 0;
     
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
-    const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
 
-    if (SUPABASE_URL && SUPABASE_ANON_KEY) {
-      for (const parent of parents) {
-        if (!parent.user_id) continue;
+    if (SUPABASE_URL) {
+      for (const user of allUsers) {
+        if (!user.user_id) continue;
 
         try {
           // Call the send-push-notification edge function using service role for server-to-server
@@ -303,7 +270,7 @@ serve(async (req) => {
               'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
             },
             body: JSON.stringify({
-              userId: parent.user_id,
+              userId: user.user_id,
               title: `${alert.severity === 'critical' ? '🚨 CRITICAL' : alert.severity === 'warning' ? '⚠️ Warning' : 'ℹ️'} Safety Alert`,
               body: alert.title,
               icon: '/android-chrome-192x192.png',
@@ -319,38 +286,40 @@ serve(async (req) => {
 
           if (response.ok) {
             const result = await response.json();
-            console.log(`✓ Push notification sent for parent ${parent.user_id.substring(0, 8)}... - ${result.successCount || 0} subscriptions`);
+            console.log(`✓ Push notification sent for ${user.role} ${user.user_id.substring(0, 8)}... - ${result.successCount || 0} subscriptions`);
             pushSent++;
           } else {
             const errorText = await response.text();
-            console.error(`✗ Push failed for parent ${parent.user_id.substring(0, 8)}...: ${response.status} - ${errorText}`);
+            console.error(`✗ Push failed for ${user.role} ${user.user_id.substring(0, 8)}...: ${response.status} - ${errorText}`);
             pushFailed++;
           }
-        } catch (parentPushErr: unknown) {
-          const error = parentPushErr as Error;
-          console.error(`Push notification error for parent ${parent.user_id}:`, error.message);
+        } catch (pushErr: unknown) {
+          const error = pushErr as Error;
+          console.error(`Push notification error for ${user.user_id}:`, error.message);
           pushFailed++;
         }
       }
 
       console.log(`Push results: ${pushSent} sent, ${pushFailed} failed`);
     } else {
-      console.warn("SUPABASE_URL or SUPABASE_ANON_KEY not configured - skipping push notifications");
+      console.warn("SUPABASE_URL not configured - skipping push notifications");
     }
 
     console.log("=== SAFETY ALERT PROCESSING COMPLETE ===");
-    console.log(`Summary: ${parents.length} parents, ${emailsSent} emails, ${pushSent} push notifications`);
+    console.log(`Summary: ${allUsers.length} users (${JSON.stringify(roleBreakdown)}), ${emailsSent} emails, ${pushSent} push notifications`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Alert sent to ${parents.length} parents`,
+        message: `Alert sent to ${allUsers.length} users`,
         details: {
-          parentsNotified: parents.length,
+          usersNotified: allUsers.length,
+          breakdown: roleBreakdown,
           emailsSent,
           emailsFailed,
           pushSent,
           pushFailed,
+          schoolScope: alert.school_id ? 'specific school' : 'all schools in district',
         },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
