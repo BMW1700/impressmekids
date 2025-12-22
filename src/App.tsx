@@ -7,6 +7,7 @@ import { ThemeProvider } from "next-themes";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { PushNotificationPrompt } from "@/components/notifications/PushNotificationPrompt";
 import { OfflineIndicator } from "@/components/safety/OfflineIndicator";
+import { MLStatusProvider } from "@/components/ml/MLStatusProvider";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import PendingVerification from "./pages/PendingVerification";
@@ -67,11 +68,12 @@ const App = () => (
   <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
     <LanguageProvider>
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <PushNotificationPrompt />
-      <BrowserRouter>
+        <MLStatusProvider enabled={true}>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <PushNotificationPrompt />
+        <BrowserRouter>
         <OfflineIndicator />
         <Routes>
           <Route path="/" element={<Index />} />
@@ -129,8 +131,9 @@ const App = () => (
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+          </BrowserRouter>
+        </TooltipProvider>
+      </MLStatusProvider>
     </QueryClientProvider>
   </LanguageProvider>
   </ThemeProvider>

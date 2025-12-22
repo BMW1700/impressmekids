@@ -16,6 +16,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { BarChart3, ArrowLeft, Sparkles, TrendingUp, Brain, Users, Activity, BookOpen, Timer, Target, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MLStatusBadge } from "@/components/ml/MLStatusBadge";
+import { MLTrainingPanel } from "@/components/ml/MLTrainingPanel";
 
 const AuraAnalytics = () => {
   const { classroomId } = useParams();
@@ -157,10 +159,7 @@ const AuraAnalytics = () => {
               <div>
                 <h1 className="text-3xl font-bold flex items-center gap-2">
                   AURA Analytics
-                  <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 animate-pulse">
-                    <Brain className="h-4 w-4 text-primary" />
-                    <span className="text-xs font-semibold text-primary">AI Powered</span>
-                  </div>
+                  <MLStatusBadge variant="detailed" showIfFallback />
                 </h1>
                 <p className="text-muted-foreground">Track student speaking progress with ML insights</p>
               </div>
@@ -284,25 +283,29 @@ const AuraAnalytics = () => {
               <ClassroomAuraOverview records={auraRecords} students={students || []} />
 
               <Tabs defaultValue="overview" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-7">
+                <TabsList className="grid w-full grid-cols-8">
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="screening" className="gap-1">
                     <ClipboardCheck className="w-4 h-4" />
-                    Benchmark Screening
+                    Benchmark
                   </TabsTrigger>
                   <TabsTrigger value="phonemes" className="gap-1">
                     <Sparkles className="w-4 h-4" />
-                    Phoneme Analysis
+                    Phonemes
                   </TabsTrigger>
-                  <TabsTrigger value="alerts">At-Risk Alerts</TabsTrigger>
-                  <TabsTrigger value="prosody">Reading Fluency</TabsTrigger>
+                  <TabsTrigger value="alerts">At-Risk</TabsTrigger>
+                  <TabsTrigger value="prosody">Fluency</TabsTrigger>
                   <TabsTrigger value="cross-modal" className="gap-1">
                     <Sparkles className="w-4 h-4" />
-                    Reading vs Speaking
+                    Cross-Modal
                   </TabsTrigger>
                   <TabsTrigger value="transfer" className="gap-1">
                     <Sparkles className="w-4 h-4" />
-                    Skill Progress
+                    Progress
+                  </TabsTrigger>
+                  <TabsTrigger value="ml-training" className="gap-1">
+                    <Brain className="w-4 h-4" />
+                    ML Training
                   </TabsTrigger>
                 </TabsList>
 
@@ -601,6 +604,10 @@ const AuraAnalytics = () => {
                       )}
                     </CardContent>
                   </Card>
+                </TabsContent>
+
+                <TabsContent value="ml-training" className="space-y-6">
+                  <MLTrainingPanel />
                 </TabsContent>
               </Tabs>
             </>
