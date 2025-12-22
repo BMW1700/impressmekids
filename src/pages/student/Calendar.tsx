@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download, Printer, Search, Filter, ArrowLeft } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { format, addMonths, subMonths, addDays, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, parse } from "date-fns";
 import { useCalendarData } from "@/hooks/useCalendarData";
@@ -37,7 +38,9 @@ export default function Calendar() {
     schoolEvents: true,
   });
   const [focusedDateIndex, setFocusedDateIndex] = useState<number | null>(null);
+  const [mobileSelectedDate, setMobileSelectedDate] = useState<Date | null>(null);
   const calendarGridRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
 
   const { data: session } = useQuery({
     queryKey: ["session"],
@@ -175,6 +178,161 @@ export default function Calendar() {
       return () => window.removeEventListener("keydown", handleKeyDown);
     }
   }, [focusedDateIndex, view, currentDate, filteredItems]);
+
+  // Mobile single-day view with navigation
+  const renderMobileDayView = () => {
+    const selectedDate = mobileSelectedDate || new Date();
+    const dayItems = getItemsForDate(filteredItems, selectedDate);
+    const today = new Date();
+    const isToday = format(selectedDate, "yyyy-MM-dd") === format(today, "yyyy-MM-dd");
+
+    return (
+      <div className="space-y-4">
+        {/* Day navigation header */}
+        <div className="flex items-center justify-between py-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileSelectedDate(subDays(selectedDate, 1))}
+            className="rounded-full hover:bg-white/20 backdrop-blur-sm border border-white/20"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <div className="text-center">
+            <div className={cn(
+              "text-xl font-bold",
+              isToday && "text-primary"
+            )}>
+              {format(selectedDate, "EEEE")}
+            </div>
+            <div className="text-lg text-muted-foreground">
+              {format(selectedDate, "MMMM d, yyyy")}
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileSelectedDate(addDays(selectedDate, 1))}
+            className="rounded-full hover:bg-white/20 backdrop-blur-sm border border-white/20"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </Button>
+        </div>
+
+        {/* Back to month view button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setMobileSelectedDate(null)}
+          className="w-full"
+        >
+          Back to Month View
+        </Button>
+
+        {/* Day items */}
+        {dayItems.length > 0 ? (
+          <div className="space-y-3">
+            {dayItems.map((item) => {
+              const typeColor = getTypeColor(item.type);
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => setSelectedItem(item)}
+                  className={`p-4 rounded-xl cursor-pointer border-2 ${typeColor.border} ${typeColor.bg} hover:shadow-md transition-all`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-lg">{getCategoryIcon(item.category)}</span>
+                        <h4 className="font-semibold">{item.title}</h4>
+                      </div>
+                      {item.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {item.description}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap gap-2 mt-2 text-xs text-muted-foreground">
+                        {item.startTime && <span>⏰ {formatTime(item.startTime)}</span>}
+                        {item.location && <span>📍 {item.location}</span>}
+                        {item.classroomName && <span>📚 {item.classroomName}</span>}
+                      </div>
+                    </div>
+                    <Badge className={typeColor.bg}>{item.type}</Badge>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="py-8 text-center text-muted-foreground">
+              No items for this day
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  };
+
+  // Mobile month view with dots
+  const renderMobileMonthView = () => {
+    const days = getCalendarMonthDays(currentDate);
+    const today = new Date();
+
+    return (
+      <div className="grid grid-cols-7 gap-1">
+        {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => (
+          <div key={i} className="text-center font-medium text-xs text-muted-foreground py-2">
+            {day}
+          </div>
+        ))}
+        {days.map((day, i) => {
+          const dayItems = getItemsForDate(filteredItems, day);
+          const isToday = format(day, "yyyy-MM-dd") === format(today, "yyyy-MM-dd");
+          const isCurrentMonth = format(day, "M") === format(currentDate, "M");
+          
+          // Check for different item types
+          const hasAssignments = dayItems.some(item => item.type === "assignment");
+          const hasClasses = dayItems.some(item => item.type === "class");
+          const hasEvents = dayItems.some(item => item.type === "event");
+          const hasSchoolEvents = dayItems.some(item => item.type === "school_event");
+
+          return (
+            <div
+              key={i}
+              onClick={() => {
+                setMobileSelectedDate(day);
+                setCurrentDate(day);
+              }}
+              className={cn(
+                "aspect-square flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all p-1",
+                !isCurrentMonth && "opacity-30",
+                isCurrentMonth && "bg-card/50",
+                isToday && "bg-primary/20 ring-2 ring-primary",
+                "hover:bg-card/70 active:scale-95"
+              )}
+            >
+              <span className={cn(
+                "text-sm font-medium",
+                isToday && "text-primary font-bold"
+              )}>
+                {format(day, "d")}
+              </span>
+              {/* Dot indicators */}
+              {dayItems.length > 0 && (
+                <div className="flex gap-0.5 mt-1">
+                  {hasClasses && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
+                  {hasAssignments && <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />}
+                  {hasEvents && <div className="w-1.5 h-1.5 rounded-full bg-green-500" />}
+                  {hasSchoolEvents && <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   const renderMonthView = () => {
     const days = getCalendarMonthDays(currentDate);
@@ -445,6 +603,8 @@ export default function Calendar() {
                 </div>
               ) : view === "list" ? (
                 renderListView()
+              ) : isMobile ? (
+                mobileSelectedDate ? renderMobileDayView() : renderMobileMonthView()
               ) : (
                 renderMonthView()
               )}
