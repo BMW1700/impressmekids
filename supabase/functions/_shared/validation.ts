@@ -100,7 +100,8 @@ export const generateQuestionSchema = z.object({
   count: z.number().int().min(1).max(10).optional(),
 });
 
-export const updateQLearningSchema = z.object({
+// Original exercise-based Q-learning schema
+export const updateQLearningExerciseSchema = z.object({
   exerciseId: uuidSchema,
   studentId: uuidSchema,
   performance: z.object({
@@ -108,6 +109,28 @@ export const updateQLearningSchema = z.object({
     completed_phonemes: z.array(z.string().min(1).max(10)).min(0).max(50),
   }),
 });
+
+// New reading session-based Q-learning schema
+export const updateQLearningReadingSchema = z.object({
+  studentId: uuidSchema,
+  experiences: z.array(z.object({
+    phoneme: z.string().min(1).max(10),
+    accuracy: z.number().min(0).max(1),
+    attempts: z.number().int().min(1).max(1000),
+  })).min(1).max(100),
+  currentState: z.object({
+    masteredPhonemes: z.array(z.string().min(1).max(10)).max(50),
+    strugglingPhonemes: z.array(z.string().min(1).max(10)).max(50),
+    level: z.number().min(1).max(20),
+  }),
+  exerciseType: z.string().min(1).max(50).optional(),
+});
+
+// Union schema that accepts either format
+export const updateQLearningSchema = z.union([
+  updateQLearningExerciseSchema,
+  updateQLearningReadingSchema,
+]);
 
 // Validation helper
 export function validateInput<T>(schema: z.ZodSchema<T>, data: unknown): { success: true; data: T } | { success: false; error: string } {
