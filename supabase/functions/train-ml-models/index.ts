@@ -300,8 +300,11 @@ serve(async (req) => {
       );
     }
 
-    // Verify user has admin or teacher role
-    const { data: roles, error: roleError } = await supabaseAuth
+    // Admin client for DB writes/reads during training
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify user has admin or teacher role (use admin client to bypass RLS)
+    const { data: roles, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
@@ -317,14 +320,13 @@ serve(async (req) => {
     }
 
     if (!roles) {
+      console.error('[ML Training] No valid role found for user:', user.id);
       return new Response(JSON.stringify({ error: 'Access denied - admin or teacher required' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Admin client for DB writes/reads during training
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 
     const requestData = await req.json();
