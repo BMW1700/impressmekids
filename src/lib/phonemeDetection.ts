@@ -18,6 +18,18 @@ export interface PhonemeResult {
   confidence: number;
 }
 
+/** NEW: Word-level detection result from Whisper */
+export interface DetectedWord {
+  /** The word Whisper detected (transcribed) */
+  text: string;
+  /** Start time in seconds */
+  startTime: number;
+  /** End time in seconds */
+  endTime: number;
+  /** ASR confidence (0-1) */
+  confidence: number;
+}
+
 export interface PhonemeAnalysis {
   phonemes: PhonemeResult[];
   overallAccuracy: number;
@@ -100,6 +112,59 @@ export const detectPhonemes = async (audioBlob: Blob): Promise<PhonemeResult[]> 
   } catch (error) {
     console.error('Error detecting phonemes:', error);
     // Return empty array on error rather than failing
+    return [];
+  }
+};
+
+/**
+ * NEW: Detect WORDS from audio blob (for substitution analysis)
+ * Returns the actual transcribed words from Whisper for comparison with expected words
+ */
+export const detectWords = async (audioBlob: Blob): Promise<DetectedWord[]> => {
+  try {
+    if (!phonemeRecognizer) {
+      await initPhonemeRecognizer();
+    }
+    
+    // Convert blob to audio buffer
+    const arrayBuffer = await audioBlob.arrayBuffer();
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    
+    // Get audio data
+    const audioData = audioBuffer.getChannelData(0);
+    const sampleRate = audioBuffer.sampleRate;
+    
+    // Resample to 16kHz if needed (whisper expects 16kHz)
+    const targetSampleRate = 16000;
+    let processedAudio = audioData;
+    
+    if (sampleRate !== targetSampleRate) {
+      processedAudio = resampleAudio(audioData, sampleRate, targetSampleRate);
+    }
+    
+    // Run ASR to get word-level timestamps
+    const result = await phonemeRecognizer(processedAudio, {
+      chunk_length_s: 30,
+      stride_length_s: 5,
+      return_timestamps: 'word'
+    });
+    
+    // Extract word-level results
+    const detectedWords: DetectedWord[] = (result.chunks || []).map((chunk: any) => ({
+      text: chunk.text.toLowerCase().trim(),
+      startTime: chunk.timestamp[0] || 0,
+      endTime: chunk.timestamp[1] || (chunk.timestamp[0] + 0.5),
+      confidence: 0.85, // Whisper doesn't give per-word confidence, use baseline
+    }));
+    
+    console.log('[detectWords] Whisper detected', detectedWords.length, 'words:', 
+      detectedWords.map(w => w.text).join(' '));
+    
+    return detectedWords;
+    
+  } catch (error) {
+    console.error('Error detecting words:', error);
     return [];
   }
 };

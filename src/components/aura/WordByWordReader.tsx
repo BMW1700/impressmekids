@@ -1146,8 +1146,9 @@ export const WordByWordReader = ({
             phonemeScores = realPhonemeResult.phonemeScores;
             
             console.log('[REAL PHONEME] ✅ REAL phoneme analysis complete:', {
-              detectedPhonemes: realPhonemeResult.detectedPhonemes.length,
+              detectedWords: realPhonemeResult.detectedWords.length,
               substitutions: realPhonemeResult.substitutions.length,
+              topSubstitutions: realPhonemeResult.topSubstitutions,
               problematicPhonemes: realPhonemeResult.problematicPhonemes,
               overallAccuracy: realPhonemeResult.overallAccuracy,
             });
