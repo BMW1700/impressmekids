@@ -28,6 +28,8 @@ interface ReadingSessionData {
   assignmentId?: string | null;
   transcript?: string;
   audioUrl?: string | null;
+  // NEW: Flag to also save as speaking data for Cross-Modal training
+  includeSpeakingData?: boolean;
 }
 
 interface PhonemePerformance {
@@ -87,7 +89,9 @@ export const useMLIntegration = () => {
         grade: data.accuracy,
         feedback: feedbackArray,
         reading_assignment_id: data.assignmentId || null,
-        reading_type: 'word_by_word',
+        // CRITICAL FOR CROSS-MODAL: Mark as paired reading+speaking data
+        // Word-by-word reading IS speaking - the student speaks each word aloud
+        reading_type: data.includeSpeakingData !== false ? 'reading_speaking' : 'word_by_word',
         comprehension_score: data.accuracy,
         annotation_quality_score: Math.round(data.accuracy * 0.9),
         highlight_count: Math.max(1, Math.floor(data.wordsRead / 20)),
@@ -98,6 +102,10 @@ export const useMLIntegration = () => {
           prosodyScore: data.prosodyMetrics?.overallScore || 70,
           sessionType: 'word_by_word_reading',
           mlIntegrated: true,
+          // NEW: Speaking metrics for Cross-Modal training
+          hasSpeakingData: true,
+          pronunciationAccuracy: data.accuracy,
+          phonemeScores: data.phonemeScores,
         },
       };
 

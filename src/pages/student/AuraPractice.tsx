@@ -26,6 +26,7 @@ import { GamificationHeader } from "@/components/aura/GamificationHeader";
 import { ActiveMissionsPanel } from "@/components/aura/ActiveMissionsPanel";
 import { ClassChallengeCard } from "@/components/aura/ClassChallengeCard";
 import { LeaderboardCard } from "@/components/aura/LeaderboardCard";
+import { PracticeModeSelector, type PracticeMode } from "@/components/aura/PracticeModeSelector";
 import { useActiveScreeningPassage, type ActiveScreening } from "@/hooks/useActiveScreeningPassage";
 import type { CuratedStory as Story } from "@/data/curatedStories";
 
@@ -67,6 +68,7 @@ const AuraPractice = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [isReadingStory, setIsReadingStory] = useState(false);
+  const [practiceMode, setPracticeMode] = useState<PracticeMode>('free');
 
   // Setup global voice error handler for toast notifications
   useEffect(() => {
@@ -164,7 +166,8 @@ const AuraPractice = () => {
   ) => {
     setIsAnalyzing(true);
     try {
-      console.log('🚀 Sending to AURA AI backend...');
+      const isFreeMode = practiceMode === 'free';
+      console.log(`🚀 Sending to AURA AI backend (${isFreeMode ? 'FREE' : 'PREMIUM'} mode)...`);
       console.log('Phonemes detected:', phonemes?.length || 0);
       console.log('Audio features:', !!audioFeatures);
       
@@ -175,6 +178,7 @@ const AuraPractice = () => {
           audioUrl,
           audioFeatures,
           phonemes,
+          freeMode: isFreeMode, // Pass free mode flag
         },
       });
 
@@ -381,11 +385,32 @@ const AuraPractice = () => {
             </TabsContent>
 
             <TabsContent value="practice" className="space-y-6 mt-6">
+              {/* Practice Mode Selector */}
+              <PracticeModeSelector
+                selectedMode={practiceMode}
+                onModeSelect={setPracticeMode}
+                isPremiumUnlocked={true} // TODO: Connect to subscription status
+              />
+              
               <Card className="hover:scale-[1.01] transition-transform duration-200">
                 <CardHeader>
-                  <CardTitle>Record Your Practice</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    Record Your Practice
+                    {practiceMode === 'premium' && (
+                      <span className="text-xs bg-gradient-to-r from-purple-500 to-blue-500 text-white px-2 py-0.5 rounded-full">
+                        AI Coaching
+                      </span>
+                    )}
+                    {practiceMode === 'free' && (
+                      <span className="text-xs bg-green-500/20 text-green-600 px-2 py-0.5 rounded-full">
+                        Free
+                      </span>
+                    )}
+                  </CardTitle>
                   <CardDescription>
-                    Read a passage, answer a question, or practice pronunciation. Our AI will analyze your speech.
+                    {practiceMode === 'premium' 
+                      ? 'Get detailed AI feedback on pronunciation, clarity, and confidence.'
+                      : 'Practice speaking with basic WPM and phoneme tracking. No AI cost.'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
