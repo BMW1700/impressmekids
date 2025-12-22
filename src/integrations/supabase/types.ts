@@ -2963,6 +2963,81 @@ export type Database = {
           },
         ]
       }
+      ml_model_weights: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          metadata: Json | null
+          model_type: string
+          model_version: number
+          training_examples_count: number
+          updated_at: string
+          weights: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          model_type: string
+          model_version?: number
+          training_examples_count?: number
+          updated_at?: string
+          weights: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          model_type?: string
+          model_version?: number
+          training_examples_count?: number
+          updated_at?: string
+          weights?: Json
+        }
+        Relationships: []
+      }
+      ml_training_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          job_type: string
+          model_version_created: number | null
+          started_at: string | null
+          status: string
+          training_data_count: number | null
+          triggered_by: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          job_type: string
+          model_version_created?: number | null
+          started_at?: string | null
+          status?: string
+          training_data_count?: number | null
+          triggered_by?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          model_version_created?: number | null
+          started_at?: string | null
+          status?: string
+          training_data_count?: number | null
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
       parent_access_requests: {
         Row: {
           admin_id: string | null
@@ -5407,6 +5482,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      student_q_tables: {
+        Row: {
+          created_at: string
+          id: string
+          last_action: string | null
+          last_reward: number | null
+          q_table: Json
+          student_id: string
+          total_updates: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_action?: string | null
+          last_reward?: number | null
+          q_table?: Json
+          student_id: string
+          total_updates?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_action?: string | null
+          last_reward?: number | null
+          q_table?: Json
+          student_id?: string
+          total_updates?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       student_reading_progress: {
         Row: {
