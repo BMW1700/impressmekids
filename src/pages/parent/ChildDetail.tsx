@@ -8,10 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, ArrowLeft, Mic, FileText, TrendingUp, Trophy } from "lucide-react";
+import { Loader2, ArrowLeft, Mic, FileText, TrendingUp, Trophy, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { StudentBehaviorHistory } from "@/components/behavior/StudentBehaviorHistory";
+import { ParentWeeklyReport } from "@/components/parent/ParentWeeklyReport";
 
 interface ChildData {
   full_name: string;
@@ -228,13 +229,39 @@ const ChildDetail = () => {
           <p className="text-muted-foreground">{child?.email}</p>
         </div>
 
-        <Tabs defaultValue="consents" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="consents">Privacy Consents</TabsTrigger>
+        <Tabs defaultValue="reading" className="space-y-6">
+          <TabsList className="flex-wrap h-auto gap-1">
+            <TabsTrigger value="reading" className="flex items-center gap-1">
+              <BookOpen className="h-4 w-4" />
+              Reading Progress
+            </TabsTrigger>
             <TabsTrigger value="behavior">Behavior</TabsTrigger>
-            <TabsTrigger value="aura">AURA Progress</TabsTrigger>
+            <TabsTrigger value="aura">AURA Details</TabsTrigger>
             <TabsTrigger value="assignments">Assignments</TabsTrigger>
+            <TabsTrigger value="consents">Consents</TabsTrigger>
           </TabsList>
+
+          {/* NEW: Reading Progress Tab - Simple Overview First */}
+          <TabsContent value="reading">
+            {!auraConsent ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground text-center mb-4">
+                    Enable AURA Recording Consent to view reading progress
+                  </p>
+                  <Button onClick={() => updateConsent("aura", true)}>
+                    Enable Reading Data
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <ParentWeeklyReport 
+                studentId={studentId!} 
+                studentName={child?.full_name || "Your child"} 
+              />
+            )}
+          </TabsContent>
 
           <TabsContent value="consents">
             <Card>
