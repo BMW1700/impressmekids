@@ -528,27 +528,30 @@ export default function Calendar() {
 
           <div className="relative p-8 rounded-3xl backdrop-blur-xl bg-gradient-mesh-light border-2 border-white/30 shadow-glass-lg">
             <div className="flex flex-col gap-6">
-              <div className="flex items-center justify-between">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => navigateDate('prev')}
-                  className="rounded-full hover:bg-white/20 hover:scale-110 transition-all backdrop-blur-sm border border-white/20"
-                >
-                  <ChevronLeft className="h-6 w-6" />
-                </Button>
-                <h2 className="text-4xl font-luxury font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                  {format(currentDate, 'MMMM yyyy')}
-                </h2>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => navigateDate('next')}
-                  className="rounded-full hover:bg-white/20 hover:scale-110 transition-all backdrop-blur-sm border border-white/20"
-                >
-                  <ChevronRight className="h-6 w-6" />
-                </Button>
-              </div>
+              {/* Hide month navigation arrows when in mobile day view */}
+              {!(isMobile && mobileSelectedDate) && (
+                <div className="flex items-center justify-between">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => navigateDate('prev')}
+                    className="rounded-full hover:bg-white/20 hover:scale-110 transition-all backdrop-blur-sm border border-white/20"
+                  >
+                    <ChevronLeft className="h-6 w-6" />
+                  </Button>
+                  <h2 className="text-4xl font-luxury font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                    {format(currentDate, 'MMMM yyyy')}
+                  </h2>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => navigateDate('next')}
+                    className="rounded-full hover:bg-white/20 hover:scale-110 transition-all backdrop-blur-sm border border-white/20"
+                  >
+                    <ChevronRight className="h-6 w-6" />
+                  </Button>
+                </div>
+              )}
 
               <div className="flex flex-wrap gap-3 items-center justify-center">
                 <button
