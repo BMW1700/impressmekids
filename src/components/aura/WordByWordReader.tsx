@@ -5,7 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Slider } from '@/components/ui/slider';
-import { Mic, StopCircle, Loader2, AlertCircle, Sparkles, Brain } from 'lucide-react';
+import { Mic, StopCircle, Loader2, AlertCircle, Sparkles, Brain, Wand2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { getIPAPronunciation } from '@/lib/cmuDictWrapper';
@@ -46,6 +46,8 @@ import { cleanupTranscript, extractWords, isFillerWord } from '@/lib/transcriptC
 // ENHANCED PHONEME INFERENCE: $0/month phoneme pattern analysis
 import { usePhonemePatterns } from '@/hooks/usePhonemePatterns';
 import { compareWordPhonemes, analyzePhonemePatterns, getPhonemeDisplayName } from '@/lib/phonemeInference';
+// REAL PHONEME ANALYSIS: Whisper-based audio phoneme detection
+import { preloadPhonemeModel, analyzeRealPhonemes, getModelState, type RealPhonemeAnalysisResult } from '@/lib/realPhonemeAnalysis';
 
 // Browser compatibility check
 const checkBrowserSupport = () => {
@@ -319,6 +321,14 @@ export const WordByWordReader = ({
   // ENHANCED PHONEME INFERENCE: Track phoneme patterns across sessions ($0/month)
   const [phonemeMessages, setPhonemeMessages] = useState<string[]>([]);
   const phonemePatternsInitialized = useRef(false);
+  
+  // REAL PHONEME ANALYSIS: Whisper model loading state
+  const [phonemeModelState, setPhonemeModelState] = useState<{
+    initialized: boolean;
+    initializing: boolean;
+    error: string | null;
+  }>({ initialized: false, initializing: false, error: null });
+  const realPhonemeAnalysisRef = useRef<RealPhonemeAnalysisResult | null>(null);
 
   // Initialize word status
   useEffect(() => {
@@ -329,6 +339,34 @@ export const WordByWordReader = ({
     realtimeWordIndexRef.current = 0;
     correctStreakRef.current = 0;
   }, [words.length]);
+  
+  // REAL PHONEME ANALYSIS: Pre-load Whisper model on mount for faster analysis
+  useEffect(() => {
+    const initPhonemeModel = async () => {
+      setPhonemeModelState(prev => ({ ...prev, initializing: true }));
+      try {
+        const result = await preloadPhonemeModel();
+        setPhonemeModelState({
+          initialized: result.success,
+          initializing: false,
+          error: result.error || null,
+        });
+        if (result.success) {
+          console.log('[WordByWordReader] ✅ Phoneme recognition model ready');
+        }
+      } catch (error) {
+        console.error('[WordByWordReader] Phoneme model init error:', error);
+        setPhonemeModelState({
+          initialized: false,
+          initializing: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    };
+    
+    // Start loading the model immediately
+    initPhonemeModel();
+  }, []);
   
   // WIRE UP: Cognitive load estimation during recording
   useEffect(() => {
@@ -1085,70 +1123,125 @@ export const WordByWordReader = ({
       return;
     }
 
-    // Calculate phoneme accuracy from word readings for analytics
-    const phonemeAccuracy: Record<string, { correct: number; total: number }> = {};
-    wordReadings.forEach((wr) => {
-      const expectedWord = words[wr.index] || wr.word;
-      const phonemes = getIPAPronunciation(expectedWord)[0] || [];
-      phonemes.forEach((p: string) => {
-        if (!phonemeAccuracy[p]) phonemeAccuracy[p] = { correct: 0, total: 0 };
-        phonemeAccuracy[p].total += 1;
-        if (wr.correct) phonemeAccuracy[p].correct += 1;
-      });
-    });
-
-    // Convert to percentage scores
-    const phonemeScores: Record<string, number> = {};
-    Object.entries(phonemeAccuracy).forEach(([phoneme, stats]) => {
-      phonemeScores[phoneme] = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
-    });
-
-    // ========== ENHANCED PHONEME INFERENCE: Detect specific substitutions ($0/month) ==========
-    const incorrectReadings = wordReadings.filter(wr => !wr.correct);
+    // ========== REAL PHONEME ANALYSIS: Detect actual spoken phonemes from audio ==========
+    let phonemeScores: Record<string, number> = {};
     let phonemeInferenceData: any = null;
+    let realPhonemeResult: RealPhonemeAnalysisResult | null = null;
     
-    if (incorrectReadings.length > 0) {
-      try {
-        // Compare phonemes for each incorrect word
-        const comparisons = incorrectReadings.map(wr => {
-          const expectedWord = words[wr.index] || '';
-          return compareWordPhonemes(wr.word, expectedWord, wr.index);
-        });
-        
-        // Analyze patterns across all comparisons
-        phonemeInferenceData = analyzePhonemePatterns(comparisons);
-        
-        console.log('🎯 PHONEME INFERENCE:', {
-          substitutions: phonemeInferenceData.substitutions.length,
-          problematicPhonemes: phonemeInferenceData.problematicPhonemes,
-          overallAccuracy: phonemeInferenceData.overallPhonemeAccuracy,
-          interventionPriority: phonemeInferenceData.interventionPriority,
-        });
-        
-        // Show improvement/awareness messages for problematic phonemes
-        if (phonemeInferenceData.problematicPhonemes.length > 0) {
-          const topPhoneme = phonemeInferenceData.interventionPriority[0];
-          if (topPhoneme) {
-            const displayName = getPhonemeDisplayName(topPhoneme);
-            setPhonemeMessages([`Keep practicing the ${displayName}! You're getting better! 💪`]);
+    // Build audio blob for analysis
+    const audioChunkCount = audioChunksRef.current.length;
+    console.log('[REAL PHONEME] 🎤 Audio chunks for analysis:', audioChunkCount);
+    
+    if (audioChunkCount > 0) {
+      const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+      
+      if (audioBlob.size > 1000 && phonemeModelState.initialized) {
+        try {
+          console.log('[REAL PHONEME] 🔬 Analyzing audio with Whisper model...');
+          realPhonemeResult = await analyzeRealPhonemes(audioBlob, words, wordReadings);
+          realPhonemeAnalysisRef.current = realPhonemeResult;
+          
+          if (realPhonemeResult.analysisSuccessful) {
+            // Use REAL phoneme scores from audio detection
+            phonemeScores = realPhonemeResult.phonemeScores;
+            
+            console.log('[REAL PHONEME] ✅ REAL phoneme analysis complete:', {
+              detectedPhonemes: realPhonemeResult.detectedPhonemes.length,
+              substitutions: realPhonemeResult.substitutions.length,
+              problematicPhonemes: realPhonemeResult.problematicPhonemes,
+              overallAccuracy: realPhonemeResult.overallAccuracy,
+            });
+            
+            // Build inference data from real analysis
+            phonemeInferenceData = {
+              substitutions: realPhonemeResult.substitutions.map(s => ({
+                expected: s.expected,
+                spoken: s.detected,
+                word: s.word,
+                position: 'unknown',
+              })),
+              problematicPhonemes: realPhonemeResult.problematicPhonemes,
+              phonemeAccuracyBySound: realPhonemeResult.phonemeScores,
+              overallPhonemeAccuracy: realPhonemeResult.overallAccuracy,
+              interventionPriority: realPhonemeResult.problematicPhonemes.slice(0, 5),
+            };
+            
+            // Show improvement messages for problematic phonemes
+            if (realPhonemeResult.problematicPhonemes.length > 0) {
+              const topPhoneme = realPhonemeResult.problematicPhonemes[0];
+              const displayName = getPhonemeDisplayName(topPhoneme);
+              setPhonemeMessages([`Keep practicing the ${displayName}! You're getting better! 💪`]);
+            }
+          } else {
+            console.warn('[REAL PHONEME] ⚠️ Analysis fell back to simulated:', realPhonemeResult.errorMessage);
+            // Still use the fallback scores
+            phonemeScores = realPhonemeResult.phonemeScores;
           }
+        } catch (err) {
+          console.error('[REAL PHONEME] ❌ Analysis failed:', err);
         }
-      } catch (err) {
-        console.error('Phoneme inference error:', err);
+      } else if (!phonemeModelState.initialized) {
+        console.warn('[REAL PHONEME] ⚠️ Model not ready, using text-based fallback');
       }
     }
+    
+    // Fallback: Calculate phoneme accuracy from word readings if real analysis failed
+    if (Object.keys(phonemeScores).length === 0) {
+      console.log('[REAL PHONEME] 📝 Using text-based phoneme calculation (fallback)');
+      const phonemeAccuracy: Record<string, { correct: number; total: number }> = {};
+      wordReadings.forEach((wr) => {
+        const expectedWord = words[wr.index] || wr.word;
+        const phonemes = getIPAPronunciation(expectedWord)[0] || [];
+        phonemes.forEach((p: string) => {
+          if (!phonemeAccuracy[p]) phonemeAccuracy[p] = { correct: 0, total: 0 };
+          phonemeAccuracy[p].total += 1;
+          if (wr.correct) phonemeAccuracy[p].correct += 1;
+        });
+      });
+      
+      Object.entries(phonemeAccuracy).forEach(([phoneme, stats]) => {
+        phonemeScores[phoneme] = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
+      });
+      
+      // Text-based inference for incorrect words (original approach)
+      const incorrectReadings = wordReadings.filter(wr => !wr.correct);
+      if (incorrectReadings.length > 0 && !phonemeInferenceData) {
+        try {
+          const comparisons = incorrectReadings.map(wr => {
+            const expectedWord = words[wr.index] || '';
+            return compareWordPhonemes(wr.word, expectedWord, wr.index);
+          });
+          phonemeInferenceData = analyzePhonemePatterns(comparisons);
+          
+          if (phonemeInferenceData.problematicPhonemes.length > 0) {
+            const topPhoneme = phonemeInferenceData.interventionPriority[0];
+            if (topPhoneme) {
+              const displayName = getPhonemeDisplayName(topPhoneme);
+              setPhonemeMessages([`Keep practicing the ${displayName}! You're getting better! 💪`]);
+            }
+          }
+        } catch (err) {
+          console.error('Phoneme inference error:', err);
+        }
+      }
+    }
+    
+    console.log('🎯 FINAL PHONEME SCORES:', {
+      source: realPhonemeResult?.analysisSuccessful ? 'REAL AUDIO' : 'TEXT FALLBACK',
+      phonemeCount: Object.keys(phonemeScores).length,
+      problematicCount: phonemeInferenceData?.problematicPhonemes?.length || 0,
+    });
 
     // Upload audio to storage for teacher playback
     let audioUrl: string | null = null;
-    const audioChunkCount = audioChunksRef.current.length;
-    console.log('🎤 AUDIO DEBUG: Chunks collected:', audioChunkCount);
+    // Reuse audioChunkCount from phoneme analysis above
     
-    if (audioChunkCount > 0) {
+    if (audioChunksRef.current.length > 0) {
       try {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        console.log('🎤 AUDIO DEBUG: Blob size:', audioBlob.size, 'bytes');
+        const uploadAudioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        console.log('🎤 AUDIO DEBUG: Blob size:', uploadAudioBlob.size, 'bytes');
         
-        if (audioBlob.size < 1000) {
+        if (uploadAudioBlob.size < 1000) {
           console.warn('⚠️ AUDIO WARNING: Blob too small, likely empty recording');
         }
         
@@ -1159,7 +1252,7 @@ export const WordByWordReader = ({
         
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('aura-audio')
-          .upload(audioPath, audioBlob, {
+          .upload(audioPath, uploadAudioBlob, {
             contentType: 'audio/webm',
             upsert: false,
           });
