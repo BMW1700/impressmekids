@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQLearningUpdate } from "@/hooks/useQLearningUpdate";
+import { useMLContextSafe } from "@/components/ml/MLStatusProvider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Sparkles, CheckCircle2, BookOpen, Mic } from "lucide-react";
+import { Loader2, Sparkles, CheckCircle2, BookOpen, Mic, Brain } from "lucide-react";
 
 interface GeneratedExercisesProps {
   problematicPhonemes: string[];
@@ -17,7 +18,27 @@ const GeneratedExercises = ({ problematicPhonemes, studentGrade = 5 }: Generated
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { updateQLearning } = useQLearningUpdate();
+  const mlContext = useMLContextSafe();
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Get ML-powered phoneme recommendation
+  const mlRecommendation = useMemo(() => {
+    if (!mlContext || problematicPhonemes.length === 0) return null;
+    
+    const { selectBestPhoneme, modelStatus } = mlContext;
+    
+    // Only provide recommendation if Q-learning is loaded
+    if (!modelStatus.qLearningTable.loaded) return null;
+    
+    const result = selectBestPhoneme(
+      [], // mastered (would come from student skill vector)
+      problematicPhonemes, // struggling
+      studentGrade,
+      problematicPhonemes
+    );
+    
+    return result;
+  }, [mlContext, problematicPhonemes, studentGrade]);
 
   const { data: user } = useQuery({
     queryKey: ['user'],
@@ -154,6 +175,32 @@ const GeneratedExercises = ({ problematicPhonemes, studentGrade = 5 }: Generated
 
   return (
     <div className="space-y-4">
+      {/* ML Recommendation Card */}
+      {mlRecommendation && mlRecommendation.isMLPowered && (
+        <Card className="border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <Brain className="w-5 h-5 text-primary" />
+              <CardTitle className="text-base">ML-Powered Recommendation</CardTitle>
+              <Badge variant="default" className="text-xs">Q-Learning</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm mb-2">
+              <span className="font-medium">Focus on:</span>{' '}
+              <Badge variant="outline" className="text-sm font-mono">/{mlRecommendation.phoneme}/</Badge>
+            </p>
+            <p className="text-xs text-muted-foreground">{mlRecommendation.reasoning}</p>
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Expected success:</span>
+              <Badge variant={mlRecommendation.expectedReward > 0.7 ? "default" : "secondary"}>
+                {Math.round(mlRecommendation.expectedReward * 100)}%
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">AI-Generated Practice Exercises</h3>
