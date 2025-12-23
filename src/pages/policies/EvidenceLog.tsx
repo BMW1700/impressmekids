@@ -14,14 +14,12 @@ export default function EvidenceLog() {
         "Access Control Policy",
         "Incident Response Policy",
         "Data Classification Policy",
-        "Vendor Management Policy",
-        "Security Awareness Training Policy",
-        "Acceptable Use Policy"
+        "Vendor Management Policy"
       ],
       status: "collected",
       location: "Policy Repository (/policies)",
-      lastUpdated: new Date().toISOString().split('T')[0],
-      notes: "All policies documented and accessible including new security training and acceptable use policies"
+      lastUpdated: "2025-01-19",
+      notes: "All policies documented and accessible"
     },
     {
       controlId: "CC2.1",

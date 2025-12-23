@@ -1,12 +1,10 @@
-import type { ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { LanguageProvider } from "@/contexts/LanguageContext";
-import { RequireAuth } from "@/components/auth/RequireAuth";
 import { PushNotificationPrompt } from "@/components/notifications/PushNotificationPrompt";
 import { OfflineIndicator } from "@/components/safety/OfflineIndicator";
 import { MLStatusProvider } from "@/components/ml/MLStatusProvider";
@@ -67,106 +65,79 @@ import SecurityPortal from "./pages/SecurityPortal";
 
 const queryClient = new QueryClient();
 
-function RouteAwareProviders({ children }: { children: ReactNode }) {
-  const location = useLocation();
-  const path = location.pathname;
-
-  // Only enable ML on routes that actually need it (prevents huge startup work)
-  const enableML =
-    /aura|reading|calibration/i.test(path) ||
-    path.startsWith("/student/aura") ||
-    path.startsWith("/teacher/aura");
-
-  return <MLStatusProvider enabled={enableML}>{children}</MLStatusProvider>;
-}
-
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
     <LanguageProvider>
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <PushNotificationPrompt />
-          <SentryUserTracker />
-          <BrowserRouter>
-            <RouteAwareProviders>
-              <OfflineIndicator />
-              <Routes>
-                {/* Public routes */}
-
-                <Route path="/" element={<Index />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                <Route path="/terms-of-service" element={<TermsOfService />} />
-                <Route path="/consent/:token" element={<ConsentVerification />} />
-                <Route path="/policies" element={<PolicyViewer />} />
-
-                {/* Protected routes */}
-                <Route element={<RequireAuth />}>
-                  <Route path="/pending-verification" element={<PendingVerification />} />
-
-                  <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
-                  <Route path="/teacher/calendar" element={<TeacherCalendar />} />
-                  <Route path="/teacher/questions/:classroomId" element={<QuestionsLibrary />} />
-                  <Route path="/teacher/questions/:classroomId/:groupId" element={<QuestionGroupDetail />} />
-                  <Route path="/teacher/assignment/create/:classroomId" element={<CreateMultiQuestionAssignment />} />
-                  <Route path="/teacher/tournament/control" element={<TournamentControl />} />
-                  <Route path="/teacher/aura-analytics/:classroomId?" element={<AuraAnalytics />} />
-                  <Route path="/teacher/student/:studentId" element={<StudentProfile />} />
-                  <Route path="/teacher/reading-calibration" element={<ReadingAnalyticsCalibration />} />
-                  <Route path="/teacher/story-library" element={<StoryManagement />} />
-                  <Route path="/teacher/review-submission/:submissionId" element={<ReviewSubmission />} />
-                  <Route path="/teacher/assignment/review/:submissionId" element={<ReviewMultiQuestionSubmission />} />
-
-                  <Route path="/student/dashboard" element={<StudentDashboard />} />
-                  <Route path="/student/aura-practice" element={<AuraPractice />} />
-                  <Route path="/student/assignment/:assignmentId" element={<CompleteAssignment />} />
-                  <Route path="/student/review-submission/:submissionId" element={<ReviewMySubmission />} />
-                  <Route path="/student/review-annotations/:submissionId" element={<ReviewMyAnnotations />} />
-
-                  <Route path="/calendar" element={<Calendar />} />
-                  <Route path="/classrooms/:id" element={<ClassroomDetail />} />
-                  <Route path="/join-class" element={<JoinClass />} />
-
-                  <Route path="/games" element={<Games />} />
-                  <Route path="/games/jeopardy-1v1" element={<JeopardyGame />} />
-                  <Route path="/games/number-maker" element={<NumberMaker />} />
-                  <Route path="/games/name-that-animal" element={<NameThatAnimalGame />} />
-                  <Route path="/games/us-states-quiz" element={<USStatesMapQuiz />} />
-
-                  <Route path="/parent/dashboard" element={<ParentDashboard />} />
-                  <Route path="/parent/calendar" element={<ParentCalendar />} />
-                  <Route path="/parent/request-access" element={<RequestAccess />} />
-                  <Route path="/parent/notification-settings" element={<NotificationSettings />} />
-                  <Route path="/parent/child/:studentId" element={<ChildDetail />} />
-                  <Route path="/parent/safety" element={<ParentSafety />} />
-                  <Route path="/parent/review-submission/:submissionId" element={<ParentReviewSubmission />} />
-                  <Route path="/parent/review-annotations/:submissionId" element={<ParentReviewAnnotations />} />
-                  <Route path="/parent/install-app" element={<PWAInstallGuide />} />
-
-                  <Route path="/admin" element={<AdminDashboard />} />
-                  <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                  <Route path="/admin/calendar" element={<AdminCalendar />} />
-                  <Route path="/admin/settings" element={<SchoolSettings />} />
-                  <Route path="/admin/safety" element={<AdminSafetyDashboard />} />
-                  <Route path="/admin/safety/drill/:drillId" element={<AdminDrillMonitor />} />
-                  <Route path="/admin/security" element={<AdminSecurityDashboard />} />
-
-                  <Route path="/security" element={<SecurityPortal />} />
-                  <Route path="/district/dashboard" element={<DistrictDashboard />} />
-                  <Route path="/district-manager/dashboard" element={<DistrictManagerDashboard />} />
-                  <Route path="/district/register" element={<RegisterDistrict />} />
-                </Route>
-
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </RouteAwareProviders>
+        <MLStatusProvider enabled={true}>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <PushNotificationPrompt />
+            <SentryUserTracker />
+        <BrowserRouter>
+        <OfflineIndicator />
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/pending-verification" element={<PendingVerification />} />
+          <Route path="/consent/:token" element={<ConsentVerification />} />
+          <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
+          <Route path="/teacher/calendar" element={<TeacherCalendar />} />
+          <Route path="/student/dashboard" element={<StudentDashboard />} />
+          <Route path="/student/aura-practice" element={<AuraPractice />} />
+          <Route path="/calendar" element={<Calendar />} />
+          <Route path="/classrooms/:id" element={<ClassroomDetail />} />
+          <Route path="/teacher/questions/:classroomId" element={<QuestionsLibrary />} />
+          <Route path="/teacher/questions/:classroomId/:groupId" element={<QuestionGroupDetail />} />
+          <Route path="/teacher/assignment/create/:classroomId" element={<CreateMultiQuestionAssignment />} />
+          <Route path="/teacher/tournament/control" element={<TournamentControl />} />
+          <Route path="/teacher/aura-analytics/:classroomId?" element={<AuraAnalytics />} />
+          <Route path="/teacher/student/:studentId" element={<StudentProfile />} />
+          <Route path="/teacher/reading-calibration" element={<ReadingAnalyticsCalibration />} />
+          <Route path="/teacher/story-library" element={<StoryManagement />} />
+          <Route path="/student/assignment/:assignmentId" element={<CompleteAssignment />} />
+          <Route path="/student/review-submission/:submissionId" element={<ReviewMySubmission />} />
+          <Route path="/student/review-annotations/:submissionId" element={<ReviewMyAnnotations />} />
+          <Route path="/teacher/review-submission/:submissionId" element={<ReviewSubmission />} />
+          <Route path="/teacher/assignment/review/:submissionId" element={<ReviewMultiQuestionSubmission />} />
+          <Route path="/join-class" element={<JoinClass />} />
+          <Route path="/games" element={<Games />} />
+          <Route path="/games/jeopardy-1v1" element={<JeopardyGame />} />
+          <Route path="/games/number-maker" element={<NumberMaker />} />
+          <Route path="/games/name-that-animal" element={<NameThatAnimalGame />} />
+          <Route path="/games/us-states-quiz" element={<USStatesMapQuiz />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
+          <Route path="/parent/dashboard" element={<ParentDashboard />} />
+          <Route path="/parent/calendar" element={<ParentCalendar />} />
+          <Route path="/parent/request-access" element={<RequestAccess />} />
+          <Route path="/parent/notification-settings" element={<NotificationSettings />} />
+          <Route path="/parent/child/:studentId" element={<ChildDetail />} />
+          <Route path="/parent/safety" element={<ParentSafety />} />
+          <Route path="/parent/review-submission/:submissionId" element={<ParentReviewSubmission />} />
+          <Route path="/parent/review-annotations/:submissionId" element={<ParentReviewAnnotations />} />
+          <Route path="/parent/install-app" element={<PWAInstallGuide />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/calendar" element={<AdminCalendar />} />
+          <Route path="/admin/settings" element={<SchoolSettings />} />
+          <Route path="/admin/safety" element={<AdminSafetyDashboard />} />
+          <Route path="/admin/safety/drill/:drillId" element={<AdminDrillMonitor />} />
+          <Route path="/admin/security" element={<AdminSecurityDashboard />} />
+          <Route path="/security" element={<SecurityPortal />} />
+          <Route path="/district/dashboard" element={<DistrictDashboard />} />
+          <Route path="/district-manager/dashboard" element={<DistrictManagerDashboard />} />
+          <Route path="/district/register" element={<RegisterDistrict />} />
+          <Route path="/policies" element={<PolicyViewer />} />
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
           </BrowserRouter>
         </TooltipProvider>
-      </QueryClientProvider>
-    </LanguageProvider>
+      </MLStatusProvider>
+    </QueryClientProvider>
+  </LanguageProvider>
   </ThemeProvider>
 );
 

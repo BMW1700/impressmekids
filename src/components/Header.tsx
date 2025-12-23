@@ -26,32 +26,29 @@ export const Header = ({ showAuthButtons = true, onSignOut, children, studentId 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setIsAuthenticated(!!session);
       if (session?.user) {
+        // Fetch user role
         supabase
-          .rpc("get_user_profile", { _user_id: session.user.id })
-          .then(({ data, error }) => {
-            if (!error && data && data.length > 0) {
-              setUserRole(data[0]?.role || null);
-            } else {
-              setUserRole(null);
-            }
+          .from("profiles")
+          .select("role")
+          .eq("id", session.user.id)
+          .single()
+          .then(({ data }) => {
+            setUserRole(data?.role || null);
           });
       }
     });
 
     // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setIsAuthenticated(!!session);
       if (session?.user) {
         supabase
-          .rpc("get_user_profile", { _user_id: session.user.id })
-          .then(({ data, error }) => {
-            if (!error && data && data.length > 0) {
-              setUserRole(data[0]?.role || null);
-            } else {
-              setUserRole(null);
-            }
+          .from("profiles")
+          .select("role")
+          .eq("id", session.user.id)
+          .single()
+          .then(({ data }) => {
+            setUserRole(data?.role || null);
           });
       } else {
         setUserRole(null);
@@ -91,8 +88,7 @@ export const Header = ({ showAuthButtons = true, onSignOut, children, studentId 
   };
 
   // Determine what to show based on auth state
-  // Show auth buttons immediately while loading (null) or when definitively not authenticated
-  const shouldShowAuthButtons = showAuthButtons && (isAuthenticated === null || isAuthenticated === false);
+  const shouldShowAuthButtons = showAuthButtons && !isAuthenticated && isAuthenticated !== null;
   const shouldShowSignOut = isAuthenticated === true;
 
   return (
