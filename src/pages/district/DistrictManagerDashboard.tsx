@@ -7,9 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Building2, Plus, Pencil, Trash2, Eye, EyeOff } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, Building2, Plus, Pencil, Trash2, Eye, EyeOff, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import { MultiDistrictDashboard } from "@/components/safety/MultiDistrictDashboard";
+import { liquidGlassTabClass } from "@/components/ui/liquid-glass-button";
 
 interface District {
   id: string;
@@ -260,131 +263,150 @@ const DistrictManagerDashboard = () => {
           <p className="text-muted-foreground">System-wide district management</p>
         </div>
 
-        {/* Create New District Card */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Create New District</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <Label htmlFor="district-name">District Name</Label>
-                <Input
-                  id="district-name"
-                  placeholder="Enter district name"
-                  value={newDistrictName}
-                  onChange={(e) => setNewDistrictName(e.target.value)}
-                  disabled={isCreating}
-                />
-              </div>
-              <div className="flex items-end">
-                <Button 
-                  onClick={handleCreateDistrict}
-                  disabled={isCreating}
-                >
-                  {isCreating ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create District
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-            <p className="text-sm text-muted-foreground mt-2">
-              A unique 12-digit district code will be automatically generated
-            </p>
-          </CardContent>
-        </Card>
+        <Tabs defaultValue="districts" className="space-y-6">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="districts" className={liquidGlassTabClass}>
+              <Building2 className="mr-2 h-4 w-4" />
+              Districts
+            </TabsTrigger>
+            <TabsTrigger value="safety" className={liquidGlassTabClass}>
+              <Shield className="mr-2 h-4 w-4" />
+              Safety Overview
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Districts List */}
-        <Card>
-          <CardHeader>
-            <CardTitle>All Districts ({districts.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {districts.map((district) => (
-                <div 
-                  key={district.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
-                >
+          <TabsContent value="districts" className="space-y-6">
+            {/* Create New District Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Create New District</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-4">
                   <div className="flex-1">
-                    {editingId === district.id ? (
-                      <div className="flex gap-2 items-center">
-                        <Input
-                          value={editingName}
-                          onChange={(e) => setEditingName(e.target.value)}
-                          className="max-w-md"
-                          autoFocus
-                        />
-                        <Button size="sm" onClick={() => handleSaveEdit(district.id)}>
-                          Save
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
-                          Cancel
-                        </Button>
-                      </div>
-                    ) : (
-                      <>
-                        <h3 className="font-semibold text-lg">{district.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Created: {new Date(district.created_at).toLocaleDateString()}
-                        </p>
-                      </>
-                    )}
+                    <Label htmlFor="district-name">District Name</Label>
+                    <Input
+                      id="district-name"
+                      placeholder="Enter district name"
+                      value={newDistrictName}
+                      onChange={(e) => setNewDistrictName(e.target.value)}
+                      disabled={isCreating}
+                    />
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground mb-1">District Code</p>
-                      <p className="text-xl font-mono font-bold">{district.district_code}</p>
+                  <div className="flex items-end">
+                    <Button 
+                      onClick={handleCreateDistrict}
+                      disabled={isCreating}
+                    >
+                      {isCreating ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Create District
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  A unique 12-digit district code will be automatically generated
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Districts List */}
+            <Card>
+              <CardHeader>
+                <CardTitle>All Districts ({districts.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {districts.map((district) => (
+                    <div 
+                      key={district.id}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                    >
+                      <div className="flex-1">
+                        {editingId === district.id ? (
+                          <div className="flex gap-2 items-center">
+                            <Input
+                              value={editingName}
+                              onChange={(e) => setEditingName(e.target.value)}
+                              className="max-w-md"
+                              autoFocus
+                            />
+                            <Button size="sm" onClick={() => handleSaveEdit(district.id)}>
+                              Save
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
+                              Cancel
+                            </Button>
+                          </div>
+                        ) : (
+                          <>
+                            <h3 className="font-semibold text-lg">{district.name}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Created: {new Date(district.created_at).toLocaleDateString()}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground mb-1">District Code</p>
+                          <p className="text-xl font-mono font-bold">{district.district_code}</p>
+                        </div>
+                        {editingId !== district.id && (
+                          <div className="flex gap-2">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleToggleVisibility(district)}
+                              title={district.is_visible ? "Hide from signup" : "Show in signup"}
+                            >
+                              {district.is_visible ? (
+                                <Eye className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <EyeOff className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleStartEdit(district)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleDeleteClick(district)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    {editingId !== district.id && (
-                      <div className="flex gap-2">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleToggleVisibility(district)}
-                          title={district.is_visible ? "Hide from signup" : "Show in signup"}
-                        >
-                          {district.is_visible ? (
-                            <Eye className="h-4 w-4 text-green-600" />
-                          ) : (
-                            <EyeOff className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleStartEdit(district)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleDeleteClick(district)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+                  ))}
+                  {districts.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No districts created yet. Create your first district above.
+                    </div>
+                  )}
                 </div>
-              ))}
-              {districts.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  No districts created yet. Create your first district above.
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="safety">
+            <MultiDistrictDashboard />
+          </TabsContent>
+        </Tabs>
       </main>
       <Footer />
 

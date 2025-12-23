@@ -1,348 +1,422 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useState, useEffect, useCallback } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Slider } from "@/components/ui/slider";
-import { useTeacherJournal, useTeacherGameScores, MoodType } from "@/hooks/useTeacherJournal";
-import { Smile, Meh, Frown, Zap, Heart, Trophy, Star, Sparkles, Target, RefreshCw, Coffee, Quote } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  CalendarIcon, 
+  BookOpen, 
+  Plus, 
+  Trash2,
+  Loader2,
+  Save
+} from "lucide-react";
+import { format, addDays, subDays, startOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 
-const MOODS: { value: MoodType; icon: React.ReactNode; label: string; color: string }[] = [
-  { value: 'amazing', icon: <Sparkles className="h-6 w-6" />, label: 'Amazing', color: 'bg-emerald-500 hover:bg-emerald-600' },
-  { value: 'good', icon: <Smile className="h-6 w-6" />, label: 'Good', color: 'bg-green-500 hover:bg-green-600' },
-  { value: 'okay', icon: <Meh className="h-6 w-6" />, label: 'Okay', color: 'bg-yellow-500 hover:bg-yellow-600' },
-  { value: 'stressed', icon: <Coffee className="h-6 w-6" />, label: 'Stressed', color: 'bg-orange-500 hover:bg-orange-600' },
-  { value: 'tough', icon: <Frown className="h-6 w-6" />, label: 'Tough', color: 'bg-red-500 hover:bg-red-600' },
-];
+interface ChecklistItem {
+  id: string;
+  text: string;
+  completed: boolean;
+}
 
-const MOTIVATIONAL_QUOTES = [
-  { quote: "Every child you teach is an opportunity to change the world.", author: "Unknown" },
-  { quote: "Teaching is the one profession that creates all other professions.", author: "Unknown" },
-  { quote: "A good teacher can inspire hope, ignite the imagination, and instill a love of learning.", author: "Brad Henry" },
-  { quote: "The art of teaching is the art of assisting discovery.", author: "Mark Van Doren" },
-  { quote: "Teachers affect eternity; no one can tell where their influence stops.", author: "Henry Adams" },
-  { quote: "Education is not the filling of a pail, but the lighting of a fire.", author: "W.B. Yeats" },
-  { quote: "The best teachers teach from the heart, not from the book.", author: "Unknown" },
-  { quote: "What a teacher writes on the blackboard of life can never be erased.", author: "Unknown" },
-  { quote: "Teaching is the greatest act of optimism.", author: "Colleen Wilcox" },
-  { quote: "To teach is to touch a life forever.", author: "Unknown" },
-];
+interface JournalEntry {
+  id: string;
+  teacher_id: string;
+  classroom_id: string | null;
+  entry_date: string;
+  note: string | null;
+  checklist_items: ChecklistItem[];
+  created_at: string;
+  updated_at: string;
+}
 
 interface TeacherJournalTabProps {
   classroomId?: string;
 }
 
+// Get local date string in YYYY-MM-DD format using the user's timezone
+const getLocalDateString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// Get today's date at start of day in user's local timezone
+const getLocalToday = (): Date => {
+  return startOfDay(new Date());
+};
+
 export function TeacherJournalTab({ classroomId }: TeacherJournalTabProps) {
-  const { entries, todayEntry, moodStats, saveEntry, isSaving } = useTeacherJournal(classroomId);
-  const { scores, personalBest, saveScore } = useTeacherGameScores();
+  const queryClient = useQueryClient();
+  const [selectedDate, setSelectedDate] = useState<Date>(getLocalToday());
+  const [note, setNote] = useState("");
+  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
+  const [newItemText, setNewItemText] = useState("");
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
-  const [selectedMood, setSelectedMood] = useState<MoodType | null>(todayEntry?.mood || null);
-  const [energyLevel, setEnergyLevel] = useState<number>(todayEntry?.energy_level || 3);
-  const [note, setNote] = useState(todayEntry?.note || '');
-  const [gratitude, setGratitude] = useState(todayEntry?.gratitude || '');
-  const [winOfTheDay, setWinOfTheDay] = useState(todayEntry?.win_of_the_day || '');
+  // Use local timezone for the date key
+  const dateKey = getLocalDateString(selectedDate);
 
-  // Sync form with today's entry
+  // Fetch entry for selected date
+  const { data: entry, isLoading } = useQuery({
+    queryKey: ["journal-entry", dateKey, classroomId],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const query = supabase
+        .from("teacher_journal_entries")
+        .select("*")
+        .eq("teacher_id", user.id)
+        .eq("entry_date", dateKey);
+
+      if (classroomId) {
+        query.eq("classroom_id", classroomId);
+      }
+
+      const { data, error } = await query.maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      
+      // Parse checklist_items from JSON
+      return {
+        ...data,
+        checklist_items: Array.isArray(data.checklist_items) 
+          ? (data.checklist_items as unknown as ChecklistItem[])
+          : [],
+      } as JournalEntry;
+    },
+  });
+
+  // Fetch all entry dates for calendar highlighting
+  const { data: entryDates = [] } = useQuery({
+    queryKey: ["journal-entry-dates", classroomId],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const query = supabase
+        .from("teacher_journal_entries")
+        .select("entry_date")
+        .eq("teacher_id", user.id);
+
+      if (classroomId) {
+        query.eq("classroom_id", classroomId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data?.map(d => d.entry_date) || [];
+    },
+  });
+
+  // Sync form with fetched entry
   useEffect(() => {
-    if (todayEntry) {
-      setSelectedMood(todayEntry.mood);
-      setEnergyLevel(todayEntry.energy_level || 3);
-      setNote(todayEntry.note || '');
-      setGratitude(todayEntry.gratitude || '');
-      setWinOfTheDay(todayEntry.win_of_the_day || '');
+    if (entry) {
+      setNote(entry.note || "");
+      const items = Array.isArray(entry.checklist_items) ? entry.checklist_items : [];
+      setChecklistItems(items);
+    } else {
+      setNote("");
+      setChecklistItems([]);
     }
-  }, [todayEntry]);
+  }, [entry]);
 
-  const handleSave = () => {
-    if (!selectedMood) return;
-    saveEntry({
-      mood: selectedMood,
-      energy_level: energyLevel,
-      note: note || undefined,
-      gratitude: gratitude || undefined,
-      win_of_the_day: winOfTheDay || undefined,
-    });
-  };
+  // Save mutation
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
 
-  // Mini-game state
-  const [gameActive, setGameActive] = useState(false);
-  const [gameScore, setGameScore] = useState(0);
-  const [gameTimeLeft, setGameTimeLeft] = useState(30);
-  const [targetPosition, setTargetPosition] = useState({ x: 50, y: 50 });
-  const [gameHighScore, setGameHighScore] = useState(personalBest?.score || 0);
+      // Cast checklist items to JSON-compatible format
+      const checklistJson = JSON.parse(JSON.stringify(checklistItems));
 
-  const moveTarget = useCallback(() => {
-    setTargetPosition({
-      x: Math.random() * 80 + 10,
-      y: Math.random() * 80 + 10,
-    });
-  }, []);
+      if (entry) {
+        const { error } = await supabase
+          .from("teacher_journal_entries")
+          .update({
+            note: note || null,
+            checklist_items: checklistJson,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", entry.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("teacher_journal_entries")
+          .insert({
+            teacher_id: user.id,
+            classroom_id: classroomId || null,
+            entry_date: dateKey,
+            note: note || null,
+            checklist_items: checklistJson,
+            mood: "okay", // Required field, set default
+          });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success("Journal saved");
+      queryClient.invalidateQueries({ queryKey: ["journal-entry", dateKey] });
+      queryClient.invalidateQueries({ queryKey: ["journal-entry-dates"] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
 
-  const handleTargetClick = () => {
-    if (!gameActive) return;
-    setGameScore((s) => s + 1);
-    moveTarget();
-  };
-
-  const startGame = () => {
-    setGameActive(true);
-    setGameScore(0);
-    setGameTimeLeft(30);
-    moveTarget();
-  };
+  // Auto-save with debounce
+  const debouncedSave = useCallback(() => {
+    const timeout = setTimeout(() => {
+      if (note || checklistItems.length > 0) {
+        saveMutation.mutate();
+      }
+    }, 1500);
+    return () => clearTimeout(timeout);
+  }, [note, checklistItems]);
 
   useEffect(() => {
-    if (!gameActive) return;
+    // Don't auto-save on initial load
+    if (entry === undefined) return;
+    return debouncedSave();
+  }, [note, checklistItems, debouncedSave, entry]);
 
-    const timer = setInterval(() => {
-      setGameTimeLeft((t) => {
-        if (t <= 1) {
-          setGameActive(false);
-          if (gameScore > gameHighScore) {
-            setGameHighScore(gameScore);
-          }
-          saveScore({ gameType: 'focus_tap', score: gameScore });
-          return 0;
-        }
-        return t - 1;
-      });
-    }, 1000);
+  const goToPreviousDay = () => setSelectedDate(startOfDay(subDays(selectedDate, 1)));
+  const goToNextDay = () => setSelectedDate(startOfDay(addDays(selectedDate, 1)));
+  const goToToday = () => setSelectedDate(getLocalToday());
 
-    return () => clearInterval(timer);
-  }, [gameActive, gameScore, gameHighScore, saveScore]);
+  // Check if selected date is today using local timezone
+  const isSelectedToday = getLocalDateString(selectedDate) === getLocalDateString(new Date());
 
-  // Random quote selection
-  const dailyQuote = useMemo(() => {
-    const today = new Date().toDateString();
-    const hash = today.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return MOTIVATIONAL_QUOTES[hash % MOTIVATIONAL_QUOTES.length];
-  }, []);
+  const addChecklistItem = () => {
+    if (!newItemText.trim()) return;
+    const newItem: ChecklistItem = {
+      id: crypto.randomUUID(),
+      text: newItemText.trim(),
+      completed: false,
+    };
+    setChecklistItems([...checklistItems, newItem]);
+    setNewItemText("");
+  };
+
+  const toggleChecklistItem = (id: string) => {
+    setChecklistItems(items =>
+      items.map(item =>
+        item.id === id ? { ...item, completed: !item.completed } : item
+      )
+    );
+  };
+
+  const removeChecklistItem = (id: string) => {
+    setChecklistItems(items => items.filter(item => item.id !== id));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addChecklistItem();
+    }
+  };
+
+  const completedCount = checklistItems.filter(i => i.completed).length;
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Teacher Journal</h2>
-        <p className="text-muted-foreground mt-1">Track your mood, celebrate wins, and take a mental break</p>
+        <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+          Teacher Journal
+        </h2>
+        <p className="text-muted-foreground mt-1">
+          Daily notes and to-do list for your classroom
+        </p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Mood & Journal Card */}
-        <Card className="shadow-card border-2 border-primary/10">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Heart className="h-5 w-5 text-primary" />
-              How are you feeling today?
-            </CardTitle>
-            <CardDescription>Quick check-in to track your well-being</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Mood Selector */}
-            <div className="flex justify-center gap-2">
-              {MOODS.map((mood) => (
-                <button
-                  key={mood.value}
-                  onClick={() => setSelectedMood(mood.value)}
-                  className={cn(
-                    "flex flex-col items-center gap-1 p-3 rounded-xl transition-all",
-                    selectedMood === mood.value
-                      ? `${mood.color} text-white scale-110 shadow-lg`
-                      : "bg-muted hover:bg-muted/80"
-                  )}
-                >
-                  {mood.icon}
-                  <span className="text-xs font-medium">{mood.label}</span>
-                </button>
-              ))}
+      {/* Date Navigation */}
+      <Card className="shadow-card border-2 border-primary/10">
+        <CardContent className="py-4">
+          <div className="flex items-center justify-between">
+            <Button variant="ghost" size="icon" onClick={goToPreviousDay}>
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+
+            <div className="flex items-center gap-3">
+              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    <CalendarIcon className="h-4 w-4" />
+                    {format(selectedDate, "EEEE, MMMM d, yyyy")}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="center">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => {
+                      if (date) {
+                        setSelectedDate(startOfDay(date));
+                        setCalendarOpen(false);
+                      }
+                    }}
+                    modifiers={{
+                      hasEntry: entryDates.map(d => new Date(d + "T12:00:00")),
+                    }}
+                    modifiersStyles={{
+                      hasEntry: {
+                        backgroundColor: "hsl(var(--primary) / 0.2)",
+                        borderRadius: "50%",
+                      },
+                    }}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+
+              {!isSelectedToday && (
+                <Button variant="secondary" size="sm" onClick={goToToday}>
+                  Today
+                </Button>
+              )}
             </div>
 
-            {/* Energy Level */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-yellow-500" />
-                  Energy Level
-                </span>
-                <Badge variant="outline">{energyLevel}/5</Badge>
-              </div>
-              <Slider
-                value={[energyLevel]}
-                onValueChange={(v) => setEnergyLevel(v[0])}
-                min={1}
-                max={5}
-                step={1}
-                className="py-2"
-              />
-            </div>
+            <Button variant="ghost" size="icon" onClick={goToNextDay}>
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-            {/* Win of the Day */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Trophy className="h-4 w-4 text-amber-500" />
-                Win of the Day
-              </label>
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Notes Section */}
+          <Card className="shadow-card border-2 border-primary/10">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-primary" />
+                Notes for the Day
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
               <Textarea
-                placeholder="What went well today? Celebrate your wins, big or small!"
-                value={winOfTheDay}
-                onChange={(e) => setWinOfTheDay(e.target.value)}
-                className="min-h-[60px] resize-none"
-              />
-            </div>
-
-            {/* Gratitude */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Star className="h-4 w-4 text-purple-500" />
-                Gratitude
-              </label>
-              <Textarea
-                placeholder="What are you grateful for today?"
-                value={gratitude}
-                onChange={(e) => setGratitude(e.target.value)}
-                className="min-h-[60px] resize-none"
-              />
-            </div>
-
-            {/* Notes */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Notes</label>
-              <Textarea
-                placeholder="Any other thoughts or reflections..."
+                placeholder="Write your notes for today..."
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                className="min-h-[60px] resize-none"
+                className="min-h-[300px] resize-none"
               />
-            </div>
-
-            <Button
-              onClick={handleSave}
-              disabled={!selectedMood || isSaving}
-              className="w-full bg-gradient-primary"
-            >
-              {isSaving ? 'Saving...' : todayEntry ? 'Update Entry' : 'Save Entry'}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Mini-Game & Stats */}
-        <div className="space-y-6">
-          {/* Focus Tap Mini-Game */}
-          <Card className="shadow-card border-2 border-primary/10">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-primary" />
-                Focus Break: Tap Game
-              </CardTitle>
-              <CardDescription>Take a quick mental break! Tap the targets as fast as you can.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex gap-4">
-                  <Badge variant="secondary" className="text-lg px-3 py-1">
-                    Score: {gameActive ? gameScore : (gameTimeLeft === 0 ? gameScore : '-')}
-                  </Badge>
-                  <Badge variant="outline" className="text-lg px-3 py-1">
-                    Best: {Math.max(gameHighScore, personalBest?.score || 0)}
-                  </Badge>
-                </div>
-                {gameActive && (
-                  <Badge variant="destructive" className="text-lg px-3 py-1">
-                    {gameTimeLeft}s
-                  </Badge>
-                )}
-              </div>
-
-              <div
-                className={cn(
-                  "relative w-full h-48 rounded-xl border-2 transition-colors",
-                  gameActive ? "bg-primary/5 border-primary/20" : "bg-muted/50 border-muted"
-                )}
-              >
-                {gameActive ? (
-                  <button
-                    onClick={handleTargetClick}
-                    className="absolute w-12 h-12 rounded-full bg-gradient-primary shadow-lg flex items-center justify-center transform -translate-x-1/2 -translate-y-1/2 transition-all hover:scale-110 active:scale-95"
-                    style={{
-                      left: `${targetPosition.x}%`,
-                      top: `${targetPosition.y}%`,
-                    }}
-                  >
-                    <Target className="h-6 w-6 text-white" />
-                  </button>
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    {gameTimeLeft === 0 ? (
-                      <div className="text-center space-y-2">
-                        <p className="text-2xl font-bold">Game Over!</p>
-                        <p className="text-muted-foreground">You scored {gameScore} points</p>
-                        <Button onClick={startGame} size="sm" className="mt-2">
-                          <RefreshCw className="mr-2 h-4 w-4" />
-                          Play Again
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button onClick={startGame} size="lg" className="bg-gradient-primary">
-                        <Target className="mr-2 h-5 w-5" />
-                        Start Game
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Weekly Mood Overview */}
-          <Card className="shadow-card border-2 border-primary/10">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Smile className="h-5 w-5 text-primary" />
-                This Week's Moods
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {entries.length === 0 ? (
-                <p className="text-center text-muted-foreground py-4">
-                  No entries yet. Start tracking your mood!
+              <div className="flex items-center justify-between mt-4">
+                <p className="text-xs text-muted-foreground">
+                  {saveMutation.isPending ? (
+                    <span className="flex items-center gap-1">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Saving...
+                    </span>
+                  ) : entry ? (
+                    "Auto-saved"
+                  ) : (
+                    "Start typing to save"
+                  )}
                 </p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {entries.slice(0, 7).map((entry) => {
-                    const moodConfig = MOODS.find((m) => m.value === entry.mood);
-                    return (
-                      <div
-                        key={entry.id}
-                        className={cn(
-                          "flex flex-col items-center gap-1 p-2 rounded-lg text-white",
-                          moodConfig?.color || "bg-muted"
-                        )}
-                        title={new Date(entry.entry_date).toLocaleDateString()}
-                      >
-                        {moodConfig?.icon}
-                        <span className="text-[10px]">
-                          {new Date(entry.entry_date).toLocaleDateString('en-US', { weekday: 'short' })}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                <Button
+                  size="sm"
+                  onClick={() => saveMutation.mutate()}
+                  disabled={saveMutation.isPending}
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Save
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Motivation Quote */}
-          <Card className="shadow-card border-2 border-primary/10 bg-gradient-to-br from-primary/5 to-secondary/5">
-            <CardContent className="py-6 text-center">
-              <Quote className="h-8 w-8 mx-auto mb-3 text-primary" />
-              <p className="text-lg italic text-muted-foreground">
-                "{dailyQuote.quote}"
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">— {dailyQuote.author}</p>
+          {/* Checklist Section */}
+          <Card className="shadow-card border-2 border-primary/10">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Checkbox checked disabled className="opacity-50" />
+                  To-Do List
+                </span>
+                {checklistItems.length > 0 && (
+                  <span className="text-sm font-normal text-muted-foreground">
+                    {completedCount}/{checklistItems.length} done
+                  </span>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Add new item */}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Add a new task..."
+                  value={newItemText}
+                  onChange={(e) => setNewItemText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                />
+                <Button size="icon" onClick={addChecklistItem} disabled={!newItemText.trim()}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Checklist items */}
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {checklistItems.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">
+                    No tasks yet. Add your first to-do item above.
+                  </p>
+                ) : (
+                  checklistItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-lg border transition-all",
+                        item.completed
+                          ? "bg-muted/50 border-muted"
+                          : "bg-background border-border hover:border-primary/30"
+                      )}
+                    >
+                      <Checkbox
+                        checked={item.completed}
+                        onCheckedChange={() => toggleChecklistItem(item.id)}
+                      />
+                      <span
+                        className={cn(
+                          "flex-1 text-sm",
+                          item.completed && "line-through text-muted-foreground"
+                        )}
+                      >
+                        {item.text}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeChecklistItem(item.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
-      </div>
+      )}
     </div>
   );
 }

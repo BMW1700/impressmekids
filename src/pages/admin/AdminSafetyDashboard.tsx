@@ -7,14 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Plus, AlertTriangle, Shield, Activity, BarChart3, Users, Calendar as CalendarIcon, Building2, UserCheck, MessageSquare } from "lucide-react";
+import { Plus, AlertTriangle, Shield, Activity, BarChart3, Users, Calendar as CalendarIcon, UserCheck, MessageSquare } from "lucide-react";
 import { CreateSafetyAlertModal } from "@/components/safety/CreateSafetyAlertModal";
 import { ScheduleDrillModal } from "@/components/admin/ScheduleDrillModal";
 import { DrillSessionCard } from "@/components/safety/DrillSessionCard";
 import { AdminLiveView } from "@/components/admin/AdminLiveView";
 import { SafetyAnalytics } from "@/components/admin/SafetyAnalytics";
 import { MissingStudentsQueue } from "@/components/admin/MissingStudentsQueue";
-import { MultiDistrictDashboard } from "@/components/safety/MultiDistrictDashboard";
+
 import { VisitorManagement } from "@/components/safety/VisitorManagement";
 import { SMSNotificationSettings } from "@/components/safety/SMSNotificationSettings";
 import { useToast } from "@/hooks/use-toast";
@@ -379,10 +379,6 @@ export default function AdminSafetyDashboard() {
               <UserCheck className="mr-2 h-4 w-4" />
               Visitors
             </TabsTrigger>
-            <TabsTrigger value="districts" className={liquidGlassTabClass}>
-              <Building2 className="mr-2 h-4 w-4" />
-              Districts
-            </TabsTrigger>
             <TabsTrigger value="analytics" className={liquidGlassTabClass}>
               <BarChart3 className="mr-2 h-4 w-4" />
               Analytics
@@ -479,10 +475,6 @@ export default function AdminSafetyDashboard() {
 
           <TabsContent value="visitors">
             <VisitorManagement />
-          </TabsContent>
-
-          <TabsContent value="districts">
-            <MultiDistrictDashboard />
           </TabsContent>
 
           <TabsContent value="analytics">
