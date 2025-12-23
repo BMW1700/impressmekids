@@ -19,6 +19,8 @@ import { ParentalConsentForm } from "@/components/auth/ParentalConsentForm";
 import { ConsentPending } from "@/components/auth/ConsentPending";
 import { useQuery } from "@tanstack/react-query";
 import logo from "@/assets/logo.png";
+import { AuthResetButton } from "@/components/auth/AuthResetButton";
+import { AuthDiagnostics } from "@/components/auth/AuthDiagnostics";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -711,6 +713,9 @@ const Auth = () => {
     <div className="min-h-screen flex flex-col items-center justify-center relative z-0 overflow-hidden p-4">
       {/* Fixed background so gradient is identical regardless of tab/content height */}
       <div aria-hidden className="fixed inset-0 -z-10 bg-gradient-hero pointer-events-none" />
+      
+      {/* Auth diagnostics panel (visible with ?debug=1) */}
+      <AuthDiagnostics />
 
       <div className="w-full max-w-md px-6 py-10 relative z-10 bg-violet-950/35 backdrop-blur-xl rounded-3xl border border-violet-500/20 shadow-2xl">
         {/* Logo */}
@@ -1262,6 +1267,10 @@ const Auth = () => {
           });
         }}
       />
+      {/* Reset button for stuck auth states */}
+      <div className="mt-4 flex justify-center">
+        <AuthResetButton />
+      </div>
     </div>
   );
 };
