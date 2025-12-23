@@ -174,13 +174,23 @@ export const useWeeklyProgress = (studentId: string | undefined, weeksToFetch = 
         .slice(0, 5)
         .map((p) => p.phoneme);
 
-      // Get phoneme substitution patterns from word_readings
-      const { data: wordReadings } = await supabase
-        .from("word_readings")
-        .select("word_text, phonemes_expected, phonemes_detected, was_correct, mispronunciation_type")
-        .eq("was_correct", false)
-        .order("created_at", { ascending: false })
-        .limit(100);
+      // Get phoneme substitution patterns from word_readings - scoped to this student's sessions
+      const { data: studentSessions } = await supabase
+        .from("reading_sessions")
+        .select("id")
+        .eq("student_id", studentId);
+
+      const sessionIds = studentSessions?.map((s) => s.id) || [];
+
+      const { data: wordReadings } = sessionIds.length > 0
+        ? await supabase
+            .from("word_readings")
+            .select("word_text, phonemes_expected, phonemes_detected, was_correct, mispronunciation_type")
+            .in("session_id", sessionIds)
+            .eq("was_correct", false)
+            .order("created_at", { ascending: false })
+            .limit(100)
+        : { data: [] };
 
       const substitutionMap: Record<string, { count: number; examples: string[] }> = {};
       wordReadings?.forEach((wr) => {
