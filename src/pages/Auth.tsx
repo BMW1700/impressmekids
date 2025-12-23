@@ -32,14 +32,7 @@ const Auth = () => {
   const [pendingDistrictId, setPendingDistrictId] = useState<string | null>(null);
   const [availableRoles, setAvailableRoles] = useState<('teacher' | 'student' | 'parent')[]>(['student', 'parent']);
 
-  const withTimeout = async <T,>(promise: PromiseLike<T>, ms: number, label: string): Promise<T> => {
-    return await Promise.race([
-      Promise.resolve(promise),
-      new Promise<T>((_resolve, reject) =>
-        setTimeout(() => reject(new Error(`timeout:${label}`)), ms)
-      ),
-    ]);
-  };
+  // Removed withTimeout - was causing login issues
 
   // District code for teacher/admin signup
   const [districtCode, setDistrictCode] = useState("");
@@ -119,25 +112,16 @@ const Auth = () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
 
-        // Verification status (non-blocking if backend denies access)
-        try {
-          const { data: profile, error: profileError } = await Promise.race([
-            supabase
-              .from('profiles')
-              .select('is_verified')
-              .eq('id', session.user.id)
-              .maybeSingle(),
-            new Promise<{ data: any; error: any }>((_resolve, reject) =>
-              setTimeout(() => reject(new Error('profile_timeout')), 6000)
-            ),
-          ]);
+        // Check verification status
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_verified')
+          .eq('id', session.user.id)
+          .maybeSingle();
 
-          if (!profileError && profile && profile.is_verified === false) {
-            navigate('/pending-verification');
-            return;
-          }
-        } catch {
-          // If this read fails/times out, don't block sign-in—role-based routing is handled below.
+        if (profile && profile.is_verified === false) {
+          navigate('/pending-verification');
+          return;
         }
 
         // Check if this is an OAuth callback that needs role selection
@@ -147,7 +131,6 @@ const Auth = () => {
         if (isOAuthCallback && session.user.email) {
           const district = await detectUserTypeFromEmail(session.user.email);
 
-          // ALWAYS require district and role selection for OAuth users
           if (!district.districtCode) {
             setShowDistrictModal(true);
             setAvailableRoles(district.availableRoles);
@@ -163,38 +146,19 @@ const Auth = () => {
           }
         }
 
-        const { data: profileData, error: rpcError } = await Promise.race([
-          supabase.rpc('get_user_profile', { _user_id: session.user.id }),
-          new Promise<{ data: any; error: any }>((_resolve, reject) =>
-            setTimeout(() => reject(new Error('profile_rpc_timeout')), 8000)
-          ),
-        ]);
+        // Get user profile with role
+        const { data: profileData, error: rpcError } = await supabase.rpc('get_user_profile', { _user_id: session.user.id });
 
         if (rpcError) {
-          toast({
-            title: "Signed in, but couldn't load your account",
-            description: "Please try again in a moment.",
-            variant: "destructive",
-          });
+          console.error('Profile fetch error:', rpcError);
           return;
         }
 
         if (profileData && profileData.length > 0 && profileData[0]?.role) {
           redirectToDashboard(profileData[0].role);
-          return;
         }
-
-        toast({
-          title: "Account setup incomplete",
-          description: "Your account doesn't have a role assigned yet.",
-          variant: "destructive",
-        });
-      } catch {
-        toast({
-          title: "Error",
-          description: "Couldn't finish signing you in. Please try again.",
-          variant: "destructive",
-        });
+      } catch (err) {
+        console.error('checkUser error:', err);
       }
     };
 
@@ -596,63 +560,34 @@ const Auth = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Minimal trace to pinpoint hangs (no sensitive data)
-    console.log("[auth] signIn:start");
-
     try {
-      const { data, error } = await withTimeout(
-        supabase.auth.signInWithPassword({ email, password }),
-        12000,
-        "signInWithPassword"
-      );
-
-      console.log("[auth] signIn:password_done", { ok: !error, hasUser: !!data?.user });
+      // Simple sign in - no timeouts, no wrappers
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
       if (error) throw error;
       if (!data.user) throw new Error("Sign in failed");
 
-      // Verification status (non-blocking if backend denies access)
-      try {
-        const { data: profile, error: profileError } = await withTimeout(
-          supabase
-            .from('profiles')
-            .select('is_verified')
-            .eq('id', data.user.id)
-            .maybeSingle()
-            .then((r) => r),
-          6000,
-          "profiles.is_verified"
-        );
+      // Check verification status
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_verified')
+        .eq('id', data.user.id)
+        .maybeSingle();
 
-        console.log("[auth] signIn:verified_check", { ok: !profileError, hasProfile: !!profile });
-
-        if (!profileError && profile && profile.is_verified === false) {
-          setIsLoading(false);
-          navigate('/pending-verification');
-          return;
-        }
-      } catch (err) {
-        console.warn("[auth] signIn:verified_check_failed", err);
+      if (profile && profile.is_verified === false) {
+        navigate('/pending-verification');
+        return;
       }
 
-      // Fetch role/profile via security-definer RPC (hard timeout so we never hang)
-      const { data: pd, error: profileError } = await withTimeout(
-        supabase.rpc('get_user_profile', { _user_id: data.user.id }).then((r) => r),
-        8000,
-        "get_user_profile"
-      );
+      // Get user role
+      const { data: profileData, error: profileError } = await supabase.rpc('get_user_profile', { _user_id: data.user.id });
 
-      console.log("[auth] signIn:rpc_done", { ok: !profileError, rows: pd?.length ?? 0 });
+      if (profileError) throw profileError;
 
-      if (profileError) {
-        throw new Error("Signed in, but couldn't load your account. Please try again.");
-      }
-
-      const profileData = pd?.[0];
-      const userRole = profileData?.role;
+      const userRole = profileData?.[0]?.role;
 
       if (!userRole) {
-        throw new Error("Account setup incomplete (missing role). Please contact support.");
+        throw new Error("Account setup incomplete. Please contact support.");
       }
 
       toast({
@@ -662,7 +597,7 @@ const Auth = () => {
 
       redirectToDashboard(userRole);
     } catch (error: any) {
-      console.error('[auth] Signin error:', error);
+      console.error('Signin error:', error);
 
       let errorMessage = error?.message || "Failed to sign in";
 
@@ -670,8 +605,6 @@ const Auth = () => {
         errorMessage = "Invalid email or password. Please check your credentials and try again.";
       } else if (errorMessage?.includes('Email not confirmed')) {
         errorMessage = "Please confirm your email address before signing in.";
-      } else if (errorMessage?.startsWith('timeout:')) {
-        errorMessage = "Login is taking too long. Please try again.";
       }
 
       toast({
@@ -680,7 +613,6 @@ const Auth = () => {
         variant: "destructive",
       });
     } finally {
-      console.log("[auth] signIn:finally");
       setIsLoading(false);
     }
   };
