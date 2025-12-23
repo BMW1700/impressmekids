@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useStudentClassroomIds } from "@/hooks/useStudentClassroomIds";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -27,22 +28,17 @@ interface ActivityItem {
 }
 
 export const ParentRecentActivity = ({ studentId }: ParentRecentActivityProps) => {
-  const { data: activities, isLoading } = useQuery({
-    queryKey: ["parent-student-activity", studentId],
+  // Use shared hook for classroom IDs (cached across components)
+  const { data: classroomIds = [], isLoading: classroomsLoading } = useStudentClassroomIds(studentId);
+
+  const { data: activities, isLoading: activitiesLoading } = useQuery({
+    queryKey: ["parent-student-activity", studentId, classroomIds],
     queryFn: async () => {
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       const sevenDaysAgoISO = sevenDaysAgo.toISOString();
 
-      // First fetch classroom IDs (needed for announcements)
-      const { data: classroomData } = await supabase
-        .from("classroom_students")
-        .select("classroom_id")
-        .eq("student_id", studentId);
-
-      const classroomIds = classroomData?.map((c) => c.classroom_id) || [];
-
-      // Fetch ALL data in PARALLEL
+      // Fetch ALL data in PARALLEL (classroomIds already available from shared hook)
       const [submissionsResult, readingsResult, behaviorsResult, announcementsResult] = await Promise.all([
         supabase
           .from("assignment_submissions")
@@ -156,8 +152,10 @@ export const ParentRecentActivity = ({ studentId }: ParentRecentActivityProps) =
       return activities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
     },
     enabled: !!studentId,
-    staleTime: 30000, // 30 seconds cache
+    staleTime: 30000,
   });
+
+  const isLoading = classroomsLoading || activitiesLoading;
 
   const getActivityIconClass = (type: string, metadata?: any) => {
     switch (type) {

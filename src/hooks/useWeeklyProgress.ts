@@ -45,10 +45,11 @@ export const useWeeklyProgress = (studentId: string | undefined, weeksToFetch = 
       const newestWeekEnd = endOfWeek(now, { weekStartsOn: 1 });
 
       // Fetch ALL data in parallel with single queries per table
-      const [sessionsResult, auraResult, studentSessionsResult] = await Promise.all([
+      // NOTE: Session IDs for word_readings are now derived from the date-bounded sessions query
+      const [sessionsResult, auraResult] = await Promise.all([
         supabase
           .from("reading_sessions")
-          .select("wpm, accuracy_percent, fluency_score, words_read, phoneme_accuracy, created_at")
+          .select("id, wpm, accuracy_percent, fluency_score, words_read, phoneme_accuracy, created_at")
           .eq("student_id", studentId)
           .gte("created_at", oldestWeekStart.toISOString())
           .lte("created_at", newestWeekEnd.toISOString()),
@@ -58,15 +59,14 @@ export const useWeeklyProgress = (studentId: string | undefined, weeksToFetch = 
           .eq("profile_id", studentId)
           .gte("created_at", oldestWeekStart.toISOString())
           .lte("created_at", newestWeekEnd.toISOString()),
-        supabase
-          .from("reading_sessions")
-          .select("id")
-          .eq("student_id", studentId)
       ]);
 
       const allSessions = sessionsResult.data || [];
       const allAuraRecords = auraResult.data || [];
-      const sessionIds = studentSessionsResult.data?.map((s) => s.id) || [];
+      
+      // Get session IDs from the ALREADY date-bounded sessions (not a separate unbounded query)
+      // Cap at 50 sessions for word_readings to prevent huge IN clauses
+      const sessionIds = allSessions.slice(0, 50).map((s) => s.id);
 
       // Fetch word readings for substitution analysis (only if we have sessions)
       const wordReadingsResult = sessionIds.length > 0

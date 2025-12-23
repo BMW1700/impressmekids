@@ -146,7 +146,8 @@ const ParentDashboard = () => {
     }
   };
 
-  if (authLoading || loading || childrenLoading) {
+  // Only block on auth loading - render shell immediately for data loading
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5">
         <div className="flex flex-col items-center gap-4">
@@ -158,6 +159,9 @@ const ParentDashboard = () => {
       </div>
     );
   }
+
+  // Show loading state for children as inline skeleton, not full-page block
+  const isChildrenReady = !loading && !childrenLoading;
 
   const firstChild = approvedChildren?.[0];
   const hasChildren = approvedChildren && approvedChildren.length > 0;
@@ -228,8 +232,23 @@ const ParentDashboard = () => {
           </div>
         </div>
 
+        {/* Loading skeleton for children */}
+        {!isChildrenReady && (
+          <div className="space-y-6">
+            <div className="skeleton-shimmer h-12 w-48 rounded-lg" />
+            <div className="grid lg:grid-cols-2 gap-6">
+              <div className="skeleton-shimmer h-64 rounded-xl" />
+              <div className="skeleton-shimmer h-64 rounded-xl" />
+            </div>
+            <div className="grid lg:grid-cols-2 gap-6">
+              <div className="skeleton-shimmer h-80 rounded-xl" />
+              <div className="skeleton-shimmer h-80 rounded-xl" />
+            </div>
+          </div>
+        )}
+
         {/* No Children Linked - Premium Empty State */}
-        {!hasChildren && (
+        {isChildrenReady && !hasChildren && (
           <Card variant="glass" className="mb-8 border-2 border-dashed border-primary/20">
             <CardContent className="pt-6">
               <div className="text-center space-y-8 py-12">
@@ -251,7 +270,7 @@ const ParentDashboard = () => {
         )}
 
         {/* Main Dashboard Content */}
-        {hasChildren && activeChildId && (
+        {isChildrenReady && hasChildren && activeChildId && (
           <div className="space-y-6">
             {/* Student Tabs - Only show if multiple children */}
             {hasMultipleChildren && (

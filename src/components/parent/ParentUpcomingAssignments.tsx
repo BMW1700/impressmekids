@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useStudentClassroomIds } from "@/hooks/useStudentClassroomIds";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -18,15 +19,12 @@ interface ParentUpcomingAssignmentsProps {
 }
 
 export const ParentUpcomingAssignments = ({ studentId }: ParentUpcomingAssignmentsProps) => {
-  const { data: assignments, isLoading } = useQuery({
-    queryKey: ["parent-upcoming-assignments", studentId],
-    queryFn: async () => {
-      const { data: classroomData } = await supabase
-        .from("classroom_students")
-        .select("classroom_id")
-        .eq("student_id", studentId);
+  // Use shared hook to get classroom IDs (cached across components)
+  const { data: classroomIds = [], isLoading: classroomsLoading } = useStudentClassroomIds(studentId);
 
-      const classroomIds = classroomData?.map((c) => c.classroom_id) || [];
+  const { data: assignments, isLoading: assignmentsLoading } = useQuery({
+    queryKey: ["parent-upcoming-assignments", studentId, classroomIds],
+    queryFn: async () => {
       if (classroomIds.length === 0) return [];
 
       const { data, error } = await supabase
@@ -48,8 +46,11 @@ export const ParentUpcomingAssignments = ({ studentId }: ParentUpcomingAssignmen
         submission: a.assignment_submissions?.find((s: any) => s) || null,
       }));
     },
-    enabled: !!studentId,
+    enabled: classroomIds.length > 0,
+    staleTime: 30000,
   });
+
+  const isLoading = classroomsLoading || assignmentsLoading;
 
   const getAssignmentIcon = (type: string) => {
     switch (type) {
