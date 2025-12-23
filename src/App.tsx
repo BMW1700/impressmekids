@@ -84,6 +84,19 @@ function RouteAwareProviders({ children }: { children: ReactNode }) {
   const location = useLocation();
   const path = location.pathname;
 
+  // Minimal navigation diagnostics to catch redirect loops
+  if (!import.meta.env.PROD) {
+    (window as any).__navDiag = (window as any).__navDiag || { count: 0, last: '' };
+    const diag = (window as any).__navDiag;
+    const current = `${location.pathname}${location.search}`;
+    if (diag.last !== current) {
+      diag.count += 1;
+      diag.last = current;
+      // eslint-disable-next-line no-console
+      console.log('[nav]', diag.count, current, window.history.state);
+    }
+  }
+
   // Only enable ML on routes that actually need it (prevents huge startup work)
   const enableML =
     /aura|reading|calibration/i.test(path) ||

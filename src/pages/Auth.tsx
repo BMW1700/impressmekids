@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,6 +56,7 @@ const Auth = () => {
   const [substituteCode, setSubstituteCode] = useState("");
 
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
 
   // Fetch all districts for dropdown
@@ -94,36 +95,35 @@ const Auth = () => {
     setHasCheckedUser(true); // Set immediately to prevent re-runs
     
     // Handle Clever login success/error from URL params
-    const urlParams = new URLSearchParams(window.location.search);
-    const cleverLogin = urlParams.get('clever_login');
-    const cleverError = urlParams.get('error');
-    
-    // Clear URL params without navigation to prevent loop
-    const clearUrlParams = () => {
-      if (urlParams.has('clever_login') || urlParams.has('error')) {
-        window.history.replaceState({}, '', window.location.pathname);
+    const cleverLogin = searchParams.get('clever_login');
+    const cleverError = searchParams.get('error');
+
+    const clearCleverParams = () => {
+      if (searchParams.has('clever_login') || searchParams.has('error')) {
+        // Clear params via router so history state stays consistent
+        setSearchParams({}, { replace: true });
       }
     };
-    
+
     if (cleverError) {
       toast({
         title: "Clever login failed",
         description: cleverError,
         variant: "destructive",
       });
-      clearUrlParams();
+      clearCleverParams();
       return;
     }
-    
+
     if (cleverLogin === 'success') {
       toast({
         title: "Success!",
         description: "Successfully signed in with Clever",
       });
-      clearUrlParams();
+      clearCleverParams();
       return;
     }
-    
+
     const checkUser = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -144,7 +144,7 @@ const Auth = () => {
         }
 
         // Check if this is an OAuth callback that needs role selection
-        const isOAuthCallback = urlParams.get('code') || urlParams.get('access_token');
+        const isOAuthCallback = searchParams.get('code') || searchParams.get('access_token');
 
         if (isOAuthCallback && session.user.email) {
           const district = await detectUserTypeFromEmail(session.user.email);
