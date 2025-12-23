@@ -27,7 +27,10 @@ export const ParentUpcomingAssignments = ({ studentId }: ParentUpcomingAssignmen
     queryFn: async () => {
       if (classroomIds.length === 0) return [];
 
-      // Step 1: Fetch assignments WITHOUT nested submissions (avoids fetching all students' submissions)
+      // Step 1: Fetch ALL posted assignments (no time window for past-due)
+      // Include past due (no lower limit) + upcoming (limit to 30 days ahead)
+      const thirtyDaysAhead = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from("assignments")
         .select(`
@@ -36,9 +39,10 @@ export const ParentUpcomingAssignments = ({ studentId }: ParentUpcomingAssignmen
         `)
         .in("classroom_id", classroomIds)
         .eq("is_posted", true)
-        .gte("due_date", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+        .not("due_date", "is", null) // Only assignments with due dates
+        .lte("due_date", thirtyDaysAhead) // Up to 30 days in future
         .order("due_date", { ascending: true })
-        .limit(20);
+        .limit(50); // Increased limit to capture past due
 
       if (assignmentsError) throw assignmentsError;
       if (!assignmentsData || assignmentsData.length === 0) return [];
@@ -77,7 +81,12 @@ export const ParentUpcomingAssignments = ({ studentId }: ParentUpcomingAssignmen
   };
 
   const getStatusBadge = (assignment: any) => {
+    // Safe date handling
+    if (!assignment.due_date) return <Badge variant="secondary">No due date</Badge>;
+    
     const dueDate = new Date(assignment.due_date);
+    if (isNaN(dueDate.getTime())) return <Badge variant="secondary">No due date</Badge>;
+    
     const submission = assignment.submission;
     
     if (submission?.submitted_at) return <Badge variant="green">Submitted</Badge>;
@@ -90,7 +99,12 @@ export const ParentUpcomingAssignments = ({ studentId }: ParentUpcomingAssignmen
   };
 
   const getUrgencyClass = (assignment: any) => {
+    // Safe date handling
+    if (!assignment.due_date) return "";
+    
     const dueDate = new Date(assignment.due_date);
+    if (isNaN(dueDate.getTime())) return "";
+    
     const submission = assignment.submission;
     
     if (submission?.submitted_at) return "";
@@ -123,9 +137,28 @@ export const ParentUpcomingAssignments = ({ studentId }: ParentUpcomingAssignmen
     );
   }
 
-  const pastDue = assignments?.filter((a: any) => isPast(new Date(a.due_date)) && !isToday(new Date(a.due_date)) && !a.submission?.submitted_at) || [];
-  const dueToday = assignments?.filter((a: any) => isToday(new Date(a.due_date)) && !a.submission?.submitted_at) || [];
-  const upcoming = assignments?.filter((a: any) => !isPast(new Date(a.due_date)) && !isToday(new Date(a.due_date)) && !a.submission?.submitted_at) || [];
+  // Safe filtering with date validation
+  const pastDue = assignments?.filter((a: any) => {
+    if (!a.due_date) return false;
+    const dueDate = new Date(a.due_date);
+    if (isNaN(dueDate.getTime())) return false;
+    return isPast(dueDate) && !isToday(dueDate) && !a.submission?.submitted_at;
+  }) || [];
+  
+  const dueToday = assignments?.filter((a: any) => {
+    if (!a.due_date) return false;
+    const dueDate = new Date(a.due_date);
+    if (isNaN(dueDate.getTime())) return false;
+    return isToday(dueDate) && !a.submission?.submitted_at;
+  }) || [];
+  
+  const upcoming = assignments?.filter((a: any) => {
+    if (!a.due_date) return false;
+    const dueDate = new Date(a.due_date);
+    if (isNaN(dueDate.getTime())) return false;
+    return !isPast(dueDate) && !isToday(dueDate) && !a.submission?.submitted_at;
+  }) || [];
+  
   const submitted = assignments?.filter((a: any) => a.submission?.submitted_at) || [];
 
   return (
@@ -199,7 +232,10 @@ export const ParentUpcomingAssignments = ({ studentId }: ParentUpcomingAssignmen
 };
 
 const AssignmentItem = ({ assignment, getAssignmentIcon, getStatusBadge, getUrgencyClass }: any) => {
-  const dueDate = new Date(assignment.due_date);
+  // Safe date parsing - handle null/invalid dates
+  const dueDate = assignment.due_date ? new Date(assignment.due_date) : null;
+  const isValidDate = dueDate && !isNaN(dueDate.getTime());
+  
   return (
     <div className={`flex gap-3 p-4 rounded-xl bg-gradient-to-r from-muted/30 to-muted/10 hover:from-muted/50 hover:to-muted/20 transition-all duration-300 hover:scale-[1.01] ${getUrgencyClass(assignment)}`}>
       <div className="icon-circle icon-circle-sm icon-circle-blue">
@@ -215,7 +251,7 @@ const AssignmentItem = ({ assignment, getAssignmentIcon, getStatusBadge, getUrge
         </div>
         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
           <Clock className="h-3 w-3" />
-          {format(dueDate, "MMM d, h:mm a")}
+          {isValidDate ? format(dueDate, "MMM d, h:mm a") : "No due date"}
           <Badge variant="outline" className="text-xs py-0 h-5">{assignment.category}</Badge>
         </div>
       </div>
