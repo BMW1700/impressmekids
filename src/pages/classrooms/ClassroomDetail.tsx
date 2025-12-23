@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -60,7 +59,6 @@ const ClassroomDetail = () => {
   const {
     toast
   } = useToast();
-  const { session, user } = useAuth(); // Use AuthContext instead of getSession()
   const {
     isTeacher,
     isStudent,
@@ -202,17 +200,17 @@ const ClassroomDetail = () => {
   };
 
   useEffect(() => {
-    // Wait for permissions and session to be determined before loading data
-    if (!permissionsLoading && session) {
+    // Wait for permissions to be determined before loading data
+    if (!permissionsLoading) {
       loadClassroomData();
-    } else if (!permissionsLoading && !session) {
-      // No session and not loading = redirect to auth
-      navigate('/auth', { replace: true });
     }
-  }, [id, permissionsLoading, session]);
+  }, [id, permissionsLoading]);
 
   const loadClassroomData = async () => {
-    if (!user || !id) return;
+    console.log('🔍 ============================================');
+    console.log('🔍 loadClassroomData: STARTING');
+    console.log('🔍 Classroom ID:', id);
+    console.log('🔍 ============================================');
 
     // First check for substitute access - they don't need auth session
     const storedAccess = sessionStorage.getItem('substituteAccess');
@@ -222,104 +220,266 @@ const ClassroomDetail = () => {
         if (accessData.classroomId === id) {
           const accessEnd = new Date(accessData.accessEnd);
           if (accessEnd > new Date()) {
+            console.log('✅ Valid substitute access found, loading data without auth');
             setSubstituteAccess(accessData);
             await loadClassroomDataForSubstitute(accessData);
             return;
           }
         }
       } catch (e) {
+        console.error('Failed to parse substitute access:', e);
         sessionStorage.removeItem('substituteAccess');
       }
     }
 
+    let classroomData: any = null;
     try {
-      // Run critical queries in PARALLEL for faster loading
-      const [classroomResult, studentsResult, tournamentsResult, announcementsResult, profileResult] = await Promise.all([
-        // Query 1: Classroom
-        supabase.rpc('get_classroom_detail', { _user_id: user.id, _classroom_id: id }),
-        // Query 2: Students
-        supabase.rpc('get_classroom_students', { _user_id: user.id, _classroom_id: id }),
-        // Query 3: Tournaments
-        supabase.from('tournaments').select('*').eq('classroom_id', id).order('created_at', { ascending: false }),
-        // Query 4: Announcements
-        supabase.from('classroom_announcements').select('*').eq('classroom_id', id).order('created_at', { ascending: false }),
-        // Query 5: User profile
-        supabase.rpc('get_user_profile', { _user_id: user.id })
-      ]);
-
-      // Handle classroom result
-      if (classroomResult.error) throw classroomResult.error;
-      if (!classroomResult.data || classroomResult.data.length === 0) {
-        setIsLoading(false);
+      // Get session with detailed logging
+      console.log('🔐 Step 1: Getting session...');
+      const {
+        data: {
+          session
+        },
+        error: sessionError
+      } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.error('❌ Session error:', JSON.stringify(sessionError, null, 2));
+        throw sessionError;
+      }
+      if (!session) {
+        console.error('❌ No session found, redirecting to auth');
+        navigate('/auth');
         return;
       }
-      const classroomData = classroomResult.data[0];
-      setClassroom(classroomData);
+      console.log('✅ Session found. User ID:', session.user.id);
+      console.log('📧 User email:', session.user.email);
 
-      // Handle students result
-      if (!studentsResult.error && studentsResult.data) {
-        const studentsData = studentsResult.data.map((student: any) => ({
+      // Store user profile
+      const {
+        data: userProfile
+      } = await supabase.rpc('get_user_profile', {
+        _user_id: session.user.id
+      });
+      if (userProfile && userProfile.length > 0) {
+        setProfile(userProfile[0]);
+      }
+
+      // Query 1: Load classroom using security definer function
+      console.log('\n📚 Step 2: Loading classroom...');
+      console.log('Query: get_classroom_detail RPC, classroom_id =', id);
+      try {
+        const {
+          data: classroomResult,
+          error: classroomError
+        } = await supabase.rpc('get_classroom_detail', {
+          _user_id: session.user.id,
+          _classroom_id: id
+        });
+        if (classroomError) {
+          console.error('❌ CLASSROOM QUERY FAILED');
+          console.error('Error code:', classroomError.code);
+          console.error('Error message:', classroomError.message);
+          console.error('Full error object:', JSON.stringify(classroomError, null, 2));
+          throw classroomError;
+        }
+        if (!classroomResult || classroomResult.length === 0) {
+          console.error('❌ Classroom not found or access denied');
+          setIsLoading(false);
+          return;
+        }
+        classroomData = classroomResult[0];
+        console.log('✅ Classroom loaded:', classroomData.name);
+        console.log('   Teacher ID:', classroomData.teacher_id);
+        console.log('   Join code:', classroomData.join_code);
+        setClassroom(classroomData);
+      } catch (err: any) {
+        console.error('❌ FATAL: Classroom query exception:', err);
+        throw err;
+      }
+
+      // Query 2: Load students using security definer function
+      console.log('\n👥 Step 3: Loading students...');
+      console.log('Query: get_classroom_students RPC, classroom_id =', id);
+      try {
+        const {
+          data: studentsResult,
+          error: studentsError
+        } = await supabase.rpc('get_classroom_students', {
+          _user_id: session.user.id,
+          _classroom_id: id
+        });
+        if (studentsError) {
+          console.error('❌ STUDENTS QUERY FAILED');
+          console.error('Error code:', studentsError.code);
+          console.error('Error message:', studentsError.message);
+          console.error('Full error object:', JSON.stringify(studentsError, null, 2));
+          throw studentsError;
+        }
+
+        // Transform data to match the expected format
+        const studentsData = studentsResult?.map((student: any) => ({
           student_id: student.student_id,
           joined_at: student.joined_at,
           profiles: {
             id: student.student_id,
             full_name: student.full_name,
             email: student.email,
-            student_profiles: student.grade ? [{ grade: student.grade, avatar_url: student.avatar_url }] : []
+            student_profiles: student.grade ? [{
+              grade: student.grade,
+              avatar_url: student.avatar_url
+            }] : []
           }
-        }));
+        })) || [];
+        console.log('✅ Students loaded:', studentsData.length, 'students');
         setStudents(studentsData);
+      } catch (err: any) {
+        console.error('❌ FATAL: Students query exception:', err);
+        throw err;
       }
 
-      // Handle tournaments result
-      if (!tournamentsResult.error) {
-        setTournaments(tournamentsResult.data || []);
-      }
-
-      // Handle announcements result
-      if (!announcementsResult.error) {
-        setAnnouncements(announcementsResult.data || []);
-      }
-
-      // Handle profile result
-      if (!profileResult.error && profileResult.data?.length > 0) {
-        setProfile(profileResult.data[0]);
-      }
-
-      // Secondary queries (less critical - can load after initial render)
-      const isUserTeacher = classroomData.teacher_id === user.id;
-      
-      // Load flashcards
-      let flashcardsQuery = supabase.from('flashcard_sets')
-        .select('*, question_groups!question_group_id (title, subject, grade)')
-        .eq('classroom_id', id);
-      if (!isUserTeacher) {
-        flashcardsQuery = flashcardsQuery.eq('is_posted', true);
-      }
-      const { data: flashcardsData } = await flashcardsQuery.order('created_at', { ascending: false });
-      setFlashcardSets(flashcardsData || []);
-
-      // Load parent requests (teachers only)
-      if (isUserTeacher) {
-        const { data: requestsData } = await supabase
-          .from('parent_access_requests')
-          .select('*, parent_accounts!parent_id (full_name, email)')
-          .eq('classroom_id', id)
-          .order('created_at', { ascending: false });
-
-        if (requestsData) {
-          const enrichedRequests = await Promise.all(requestsData.map(async (request: any) => {
-            const { data: studentData } = await supabase
-              .from('profiles')
-              .select('full_name')
-              .eq('id', request.student_id)
-              .single();
-            return { ...request, profiles: studentData };
-          }));
-          setParentRequests(enrichedRequests);
+      // Query 3: Load tournaments
+      console.log('\n🏆 Step 4: Loading tournaments...');
+      console.log('Query: tournaments, classroom_id =', id);
+      try {
+        const {
+          data: tournamentsData,
+          error: tournamentsError
+        } = await supabase.from('tournaments').select('*').eq('classroom_id', id).order('created_at', {
+          ascending: false
+        });
+        if (tournamentsError) {
+          console.error('❌ TOURNAMENTS QUERY FAILED');
+          console.error('Error code:', tournamentsError.code);
+          console.error('Error message:', tournamentsError.message);
+          console.error('Error details:', tournamentsError.details);
+          console.error('Error hint:', tournamentsError.hint);
+          console.error('Full error object:', JSON.stringify(tournamentsError, null, 2));
+          throw tournamentsError;
         }
+        console.log('✅ Tournaments loaded:', tournamentsData?.length || 0, 'tournaments');
+        setTournaments(tournamentsData || []);
+      } catch (err: any) {
+        console.error('❌ FATAL: Tournaments query exception:', err);
+        throw err;
       }
+
+      // Query 4: Load announcements
+      console.log('\n📢 Step 5: Loading announcements...');
+      console.log('Query: classroom_announcements, classroom_id =', id);
+      try {
+        const {
+          data: announcementsData,
+          error: announcementsError
+        } = await supabase.from('classroom_announcements').select('*').eq('classroom_id', id).order('created_at', {
+          ascending: false
+        });
+        if (announcementsError) {
+          console.error('❌ ANNOUNCEMENTS QUERY FAILED');
+          console.error('Error code:', announcementsError.code);
+          console.error('Error message:', announcementsError.message);
+          console.error('Error details:', announcementsError.details);
+          console.error('Error hint:', announcementsError.hint);
+          console.error('Full error object:', JSON.stringify(announcementsError, null, 2));
+          throw announcementsError;
+        }
+        console.log('✅ Announcements loaded:', announcementsData?.length || 0, 'announcements');
+        setAnnouncements(announcementsData || []);
+      } catch (err: any) {
+        console.error('❌ FATAL: Announcements query exception:', err);
+        throw err;
+      }
+
+      // Query 5: Load flashcard sets
+      console.log('\n🎴 Step 6: Loading flashcard sets...');
+      console.log('Query: flashcard_sets, classroom_id =', id);
+      try {
+        let flashcardsQuery = supabase.from('flashcard_sets').select(`
+            *,
+            question_groups!question_group_id (title, subject, grade)
+          `).eq('classroom_id', id);
+
+        // Students only see posted flashcard sets
+        if (classroomData?.teacher_id !== session.user.id) {
+          flashcardsQuery = flashcardsQuery.eq('is_posted', true);
+        }
+        const {
+          data: flashcardsData,
+          error: flashcardsError
+        } = await flashcardsQuery.order('created_at', {
+          ascending: false
+        });
+        if (flashcardsError) {
+          console.error('❌ FLASHCARDS QUERY FAILED');
+          console.error('Error code:', flashcardsError.code);
+          console.error('Error message:', flashcardsError.message);
+          console.error('Error details:', flashcardsError.details);
+          console.error('Error hint:', flashcardsError.hint);
+          console.error('Full error object:', JSON.stringify(flashcardsError, null, 2));
+          throw flashcardsError;
+        }
+        console.log('✅ Flashcard sets loaded:', flashcardsData?.length || 0, 'sets');
+        setFlashcardSets(flashcardsData || []);
+      } catch (err: any) {
+        console.error('❌ FATAL: Flashcards query exception:', err);
+        throw err;
+      }
+
+      // Query 6: Load parent access requests (teachers only)
+      // Check using the just-loaded classroom data, not the state
+      if (classroomData?.teacher_id === session.user.id) {
+        console.log('\n👨‍👩‍👧 Step 7: Loading parent access requests...');
+        console.log('Query: parent_access_requests, classroom_id =', id);
+        try {
+          const {
+            data: requestsData,
+            error: requestsError
+          } = await supabase.from('parent_access_requests').select(`
+              *,
+              parent_accounts!parent_id (full_name, email)
+            `).eq('classroom_id', id).order('created_at', {
+            ascending: false
+          });
+          if (requestsError) {
+            console.error('❌ PARENT REQUESTS QUERY FAILED');
+            console.error('Error code:', requestsError.code);
+            console.error('Error message:', requestsError.message);
+            console.error('Error details:', requestsError.details);
+            console.error('Error hint:', requestsError.hint);
+            console.error('Full error object:', JSON.stringify(requestsError, null, 2));
+            throw requestsError;
+          }
+
+          // Manually fetch student names for each request
+          const enrichedRequests = await Promise.all((requestsData || []).map(async (request: any) => {
+            const {
+              data: studentData
+            } = await supabase.from('profiles').select('full_name').eq('id', request.student_id).single();
+            return {
+              ...request,
+              profiles: studentData
+            };
+          }));
+          console.log('✅ Parent requests loaded:', enrichedRequests.length, 'requests');
+          setParentRequests(enrichedRequests);
+        } catch (err: any) {
+          console.error('❌ FATAL: Parent requests query exception:', err);
+          throw err;
+        }
+      } else {
+        console.log('\n⏭️ Step 7: Skipping parent requests (not teacher or no classroom)');
+      }
+      console.log('\n🎉 ============================================');
+      console.log('🎉 ALL DATA LOADED SUCCESSFULLY!');
+      console.log('🎉 ============================================');
     } catch (error: any) {
+      console.error('\n💥 ============================================');
+      console.error('💥 FATAL ERROR IN loadClassroomData');
+      console.error('💥 ============================================');
+      console.error('Error name:', error?.name);
+      console.error('Error message:', error?.message);
+      console.error('Error stack:', error?.stack);
+      console.error('Full error:', error);
+      console.error('💥 ============================================');
       toast({
         title: "Error",
         description: `Failed to load classroom data: ${error?.message || 'Unknown error'}`,
@@ -327,6 +487,7 @@ const ClassroomDetail = () => {
       });
     } finally {
       setIsLoading(false);
+      console.log('🏁 loadClassroomData: FINISHED (loading=false)');
     }
   };
   const copyJoinCode = () => {

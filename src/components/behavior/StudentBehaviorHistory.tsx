@@ -16,8 +16,8 @@ export const StudentBehaviorHistory = ({ studentId, classroomId }: StudentBehavi
       const { data, error } = await supabase
         .from('behavior_records')
         .select(`
-          id, created_at, points, notes,
-          category:behavior_categories(id, name, icon, color)
+          *,
+          category:behavior_categories(*)
         `)
         .eq('student_id', studentId)
         .eq('classroom_id', classroomId)
@@ -27,7 +27,6 @@ export const StudentBehaviorHistory = ({ studentId, classroomId }: StudentBehavi
       if (error) throw error;
       return data as BehaviorRecord[];
     },
-    staleTime: 5 * 60 * 1000, // 5 minute cache
   });
 
   if (isLoading) {

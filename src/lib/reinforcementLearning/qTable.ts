@@ -46,7 +46,7 @@ export class PhonemeQAgent {
    * Initialize Q-table with pre-computed values based on phoneme distance
    */
   initializeQTable() {
-    // Removed console.log for production performance
+    console.log('🧠 Initializing Q-table with phoneme transfer heuristics...');
     
     const allPhonemes = Object.keys(phonemeFeatures);
     let pairCount = 0;
@@ -74,7 +74,7 @@ export class PhonemeQAgent {
       }
     }
     
-    // Q-table initialized with ${pairCount} state-action pairs
+    console.log(`✅ Q-table initialized with ${pairCount} state-action pairs`);
   }
   
   /**
@@ -179,6 +179,8 @@ export class PhonemeQAgent {
     const newQ = currentQ + this.learningRate * tdError;
     
     this.setQValue(stateKey, action, newQ);
+    
+    console.log(`📈 Q-update: ${action} | old=${currentQ.toFixed(3)} | new=${newQ.toFixed(3)} | reward=${reward}`);
   }
   
   /**
@@ -318,6 +320,8 @@ export class PhonemeQAgent {
     for (const entry of entries) {
       this.setQValue(entry.state, entry.action, entry.value);
     }
+    
+    console.log(`✅ Imported Q-table with ${entries.length} entries`);
   }
   
   /**
@@ -345,14 +349,8 @@ export class PhonemeQAgent {
   }
 }
 
-// Global Q-agent instance (lazy initialization - do NOT call initializeQTable at import)
+// Global Q-agent instance
 export const phonemeQAgent = new PhonemeQAgent();
 
-// Lazy initializer - call this explicitly when ML features are needed
-let qTableInitialized = false;
-export const ensureQTableInitialized = () => {
-  if (!qTableInitialized) {
-    qTableInitialized = true;
-    phonemeQAgent.initializeQTable();
-  }
-};
+// Initialize with heuristics on load
+phonemeQAgent.initializeQTable();

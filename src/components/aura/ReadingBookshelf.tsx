@@ -4,7 +4,6 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, Trophy, TrendingUp, Clock } from "lucide-react";
 import { motion } from "framer-motion";
-import { useAuth } from "@/contexts/AuthContext";
 
 const categoryLabels: Record<string, string> = {
   animals: "Animals 🐾",
@@ -16,49 +15,27 @@ const categoryLabels: Record<string, string> = {
   history: "History 📜"
 };
 
-interface ReadingBookshelfProps {
-  studentId?: string;
-}
-
-export const ReadingBookshelf = ({ studentId }: ReadingBookshelfProps = {}) => {
-  const { user } = useAuth();
-  const effectiveStudentId = studentId || user?.id;
-
-  // Fetch student's reading progress with proper scoping
+export const ReadingBookshelf = () => {
+  // Fetch student's reading progress
   const { data: progressData, isLoading } = useQuery({
-    queryKey: ['reading-bookshelf', effectiveStudentId],
+    queryKey: ['reading-bookshelf'],
     queryFn: async () => {
-      if (!effectiveStudentId) return null;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
 
       const { data, error } = await supabase
         .from('student_reading_progress')
-        .select(`
-          id,
-          times_read,
-          best_wpm,
-          completed_at,
-          reading_library (
-            id,
-            title,
-            category,
-            word_count,
-            reading_time_minutes,
-            cover_gradient
-          )
-        `)
-        .eq('student_id', effectiveStudentId)
+        .select('*, reading_library(*)')
+        .eq('student_id', user.id)
         .eq('completed', true)
-        .order('completed_at', { ascending: false })
-        .limit(100); // Cap at 100 books for performance
+        .order('completed_at', { ascending: false });
 
       if (error) throw error;
       return data;
-    },
-    enabled: !!effectiveStudentId,
-    staleTime: 10 * 60 * 1000, // 10 min cache - bookshelf rarely changes
+    }
   });
 
-  // Calculate stats from fetched data only
+  // Calculate stats
   const totalBooksRead = progressData?.length || 0;
   const totalWordsRead = progressData?.reduce((sum, p) => sum + (p.reading_library?.word_count || 0), 0) || 0;
   const averageWpm = progressData?.length 

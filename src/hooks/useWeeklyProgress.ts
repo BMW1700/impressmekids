@@ -34,76 +34,38 @@ interface WeeklyProgressData {
   isImproving: boolean;
 }
 
-export const useWeeklyProgress = (studentId: string | undefined, weeksToFetch = 4) => {
+export const useWeeklyProgress = (studentId: string | undefined, weeksToFetch = 8) => {
   return useQuery({
     queryKey: ["weekly-progress", studentId, weeksToFetch],
     queryFn: async (): Promise<WeeklyProgressData> => {
       if (!studentId) throw new Error("No student ID");
 
       const now = new Date();
-      // Only fetch 4 weeks by default for faster load
-      const oldestWeekStart = startOfWeek(subWeeks(now, weeksToFetch - 1), { weekStartsOn: 1 });
-      const newestWeekEnd = endOfWeek(now, { weekStartsOn: 1 });
-
-      // Fetch ALL data in parallel with single queries per table
-      // NOTE: Session IDs for word_readings are now derived from the date-bounded sessions query
-      const [sessionsResult, auraResult] = await Promise.all([
-        supabase
-          .from("reading_sessions")
-          .select("id, wpm, accuracy_percent, fluency_score, words_read, phoneme_accuracy, created_at")
-          .eq("student_id", studentId)
-          .gte("created_at", oldestWeekStart.toISOString())
-          .lte("created_at", newestWeekEnd.toISOString())
-          .limit(100), // Cap to prevent huge fetches
-        supabase
-          .from("aura_records")
-          .select("clarity, confidence, wpm, created_at")
-          .eq("profile_id", studentId)
-          .gte("created_at", oldestWeekStart.toISOString())
-          .lte("created_at", newestWeekEnd.toISOString())
-          .limit(100), // Cap to prevent huge fetches
-      ]);
-
-      const allSessions = sessionsResult.data || [];
-      const allAuraRecords = auraResult.data || [];
-      
-      // Get session IDs from the ALREADY date-bounded sessions (not a separate unbounded query)
-      // Cap at 30 sessions for word_readings to prevent huge IN clauses
-      const sessionIds = allSessions.slice(0, 30).map((s) => s.id);
-
-      // Fetch word readings for substitution analysis (only if we have sessions)
-      const wordReadingsResult = sessionIds.length > 0
-        ? await supabase
-            .from("word_readings")
-            .select("word_text, phonemes_expected, phonemes_detected, was_correct")
-            .in("session_id", sessionIds)
-            .eq("was_correct", false)
-            .limit(100)
-        : { data: [] };
-
-      const wordReadings = wordReadingsResult.data || [];
-
-      // Group data by week in JavaScript (instead of N database calls)
       const weeks: WeeklyStats[] = [];
-      
+
+      // Fetch data for each week
       for (let i = 0; i < weeksToFetch; i++) {
         const weekStart = startOfWeek(subWeeks(now, i), { weekStartsOn: 1 });
         const weekEnd = endOfWeek(subWeeks(now, i), { weekStartsOn: 1 });
 
-        // Filter sessions for this week
-        const weekSessions = allSessions.filter(s => {
-          const d = new Date(s.created_at);
-          return d >= weekStart && d <= weekEnd;
-        });
+        // Fetch reading sessions for this week
+        const { data: sessions } = await supabase
+          .from("reading_sessions")
+          .select("wpm, accuracy_percent, fluency_score, words_read, phoneme_accuracy")
+          .eq("student_id", studentId)
+          .gte("created_at", weekStart.toISOString())
+          .lte("created_at", weekEnd.toISOString());
 
-        // Filter AURA records for this week
-        const weekAura = allAuraRecords.filter(a => {
-          const d = new Date(a.created_at);
-          return d >= weekStart && d <= weekEnd;
-        });
+        // Fetch AURA records for this week
+        const { data: auraRecords } = await supabase
+          .from("aura_records")
+          .select("clarity, confidence, wpm")
+          .eq("profile_id", studentId)
+          .gte("created_at", weekStart.toISOString())
+          .lte("created_at", weekEnd.toISOString());
 
-        const sessionsCount = weekSessions.length + weekAura.length;
-
+        const sessionsCount = (sessions?.length || 0) + (auraRecords?.length || 0);
+        
         if (sessionsCount === 0) {
           weeks.push({
             weekStart: format(weekStart, "yyyy-MM-dd"),
@@ -120,42 +82,43 @@ export const useWeeklyProgress = (studentId: string | undefined, weeksToFetch = 
           continue;
         }
 
-        // Calculate averages
-        const avgWcpm = weekSessions.length
-          ? weekSessions.reduce((sum, s) => sum + (s.wpm || 0), 0) / weekSessions.length
-          : (weekAura.length ? weekAura.reduce((sum, a) => sum + (a.wpm || 0), 0) / weekAura.length : 0);
-
-        const avgAccuracy = weekSessions.length
-          ? weekSessions.reduce((sum, s) => sum + (s.accuracy_percent || 0), 0) / weekSessions.length
+        // Calculate reading session averages
+        const avgWcpm = sessions?.length 
+          ? sessions.reduce((sum, s) => sum + (s.wpm || 0), 0) / sessions.length 
+          : (auraRecords?.length ? auraRecords.reduce((sum, a) => sum + (a.wpm || 0), 0) / auraRecords.length : 0);
+        
+        const avgAccuracy = sessions?.length 
+          ? sessions.reduce((sum, s) => sum + (s.accuracy_percent || 0), 0) / sessions.length 
           : 0;
-
-        const avgFluency = weekSessions.length
-          ? weekSessions.reduce((sum, s) => sum + (s.fluency_score || 0), 0) / weekSessions.length
+        
+        const avgFluency = sessions?.length 
+          ? sessions.reduce((sum, s) => sum + (s.fluency_score || 0), 0) / sessions.length 
           : 0;
+        
+        const totalWordsRead = sessions?.reduce((sum, s) => sum + (s.words_read || 0), 0) || 0;
 
-        const totalWordsRead = weekSessions.reduce((sum, s) => sum + (s.words_read || 0), 0);
-
-        const avgClarity = weekAura.length
-          ? weekAura.reduce((sum, a) => sum + (a.clarity || 0), 0) / weekAura.length
+        // Calculate AURA averages
+        const avgClarity = auraRecords?.length 
+          ? auraRecords.reduce((sum, a) => sum + (a.clarity || 0), 0) / auraRecords.length 
           : 0;
-
-        const avgConfidence = weekAura.length
-          ? weekAura.reduce((sum, a) => sum + (a.confidence || 0), 0) / weekAura.length
+        
+        const avgConfidence = auraRecords?.length 
+          ? auraRecords.reduce((sum, a) => sum + (a.confidence || 0), 0) / auraRecords.length 
           : 0;
 
         // Aggregate phoneme accuracy
-        const phonemeAccuracyAgg: Record<string, number[]> = {};
-        weekSessions.forEach((s) => {
+        const phonemeAccuracy: Record<string, number[]> = {};
+        sessions?.forEach((s) => {
           if (s.phoneme_accuracy && typeof s.phoneme_accuracy === "object") {
             Object.entries(s.phoneme_accuracy as Record<string, number>).forEach(([phoneme, score]) => {
-              if (!phonemeAccuracyAgg[phoneme]) phonemeAccuracyAgg[phoneme] = [];
-              phonemeAccuracyAgg[phoneme].push(score);
+              if (!phonemeAccuracy[phoneme]) phonemeAccuracy[phoneme] = [];
+              phonemeAccuracy[phoneme].push(score);
             });
           }
         });
 
         const avgPhonemeAccuracy: Record<string, number> = {};
-        Object.entries(phonemeAccuracyAgg).forEach(([phoneme, scores]) => {
+        Object.entries(phonemeAccuracy).forEach(([phoneme, scores]) => {
           avgPhonemeAccuracy[phoneme] = scores.reduce((a, b) => a + b, 0) / scores.length;
         });
 
@@ -177,15 +140,15 @@ export const useWeeklyProgress = (studentId: string | undefined, weeksToFetch = 
       const previousWeek = weeks[1]?.sessionsCount > 0 ? weeks[1] : null;
 
       // Calculate changes
-      const wcpmChange = currentWeek && previousWeek
-        ? currentWeek.avgWcpm - previousWeek.avgWcpm
+      const wcpmChange = currentWeek && previousWeek 
+        ? currentWeek.avgWcpm - previousWeek.avgWcpm 
+        : 0;
+      
+      const accuracyChange = currentWeek && previousWeek 
+        ? currentWeek.avgAccuracy - previousWeek.avgAccuracy 
         : 0;
 
-      const accuracyChange = currentWeek && previousWeek
-        ? currentWeek.avgAccuracy - previousWeek.avgAccuracy
-        : 0;
-
-      // Identify strengths and areas for practice
+      // Identify strengths and areas for practice from phoneme data
       const allPhonemes: Record<string, number[]> = {};
       weeks.forEach((week) => {
         Object.entries(week.phonemeAccuracy).forEach(([phoneme, score]) => {
@@ -211,13 +174,22 @@ export const useWeeklyProgress = (studentId: string | undefined, weeksToFetch = 
         .slice(0, 5)
         .map((p) => p.phoneme);
 
-      // Process substitution patterns
+      // Get phoneme substitution patterns from word_readings
+      const { data: wordReadings } = await supabase
+        .from("word_readings")
+        .select("word_text, phonemes_expected, phonemes_detected, was_correct, mispronunciation_type")
+        .eq("was_correct", false)
+        .order("created_at", { ascending: false })
+        .limit(100);
+
       const substitutionMap: Record<string, { count: number; examples: string[] }> = {};
-      wordReadings.forEach((wr) => {
+      wordReadings?.forEach((wr) => {
+        // Compare expected vs detected phonemes
         const expected = wr.phonemes_expected as string[] | null;
         const detected = wr.phonemes_detected as string[] | null;
-
+        
         if (expected && detected && Array.isArray(expected) && Array.isArray(detected)) {
+          // Find mismatches between expected and detected phonemes
           const minLen = Math.min(expected.length, detected.length);
           for (let i = 0; i < minLen; i++) {
             if (expected[i] !== detected[i]) {
@@ -257,6 +229,6 @@ export const useWeeklyProgress = (studentId: string | undefined, weeksToFetch = 
       };
     },
     enabled: !!studentId,
-    staleTime: 5 * 60 * 1000, // 5 minute cache
+    staleTime: 5 * 60 * 1000,
   });
 };

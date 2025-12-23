@@ -1,9 +1,14 @@
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   GraduationCap, 
+  BookOpen, 
+  Trophy, 
+  TrendingUp, 
   Clock, 
   CheckCircle2,
   AlertTriangle,
@@ -11,8 +16,8 @@ import {
   Star
 } from "lucide-react";
 import { format } from "date-fns";
-import { useStudentOverviewData } from "@/hooks/useStudentOverviewData";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useStudentGradebook } from "@/hooks/useStudentGradebook";
+import { useDueToday } from "@/hooks/useDueToday";
 
 interface ParentStudentOverviewProps {
   studentId: string;
@@ -20,7 +25,107 @@ interface ParentStudentOverviewProps {
 }
 
 export const ParentStudentOverview = ({ studentId, studentName }: ParentStudentOverviewProps) => {
-  const { data: overview, isLoading } = useStudentOverviewData(studentId);
+  const { data: gradebook, isLoading: gradebookLoading } = useStudentGradebook(studentId);
+  const { data: dueTodayData, isLoading: dueLoading } = useDueToday(studentId);
+
+  // Get student's classroom info
+  const { data: studentClassrooms } = useQuery({
+    queryKey: ["parent-student-classrooms", studentId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("classroom_students")
+        .select(`
+          classroom_id,
+          classrooms (
+            id,
+            name,
+            subject,
+            profiles:teacher_id (
+              full_name
+            )
+          )
+        `)
+        .eq("student_id", studentId);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!studentId,
+  });
+
+  // Get AURA reading stats
+  const { data: auraStats } = useQuery({
+    queryKey: ["parent-aura-stats", studentId],
+    queryFn: async () => {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const { data, error } = await supabase
+        .from("aura_records")
+        .select("wpm, clarity, confidence, created_at")
+        .eq("profile_id", studentId)
+        .gte("created_at", thirtyDaysAgo.toISOString())
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) return null;
+
+      const avgWpm = data.reduce((sum, r) => sum + r.wpm, 0) / data.length;
+      const avgClarity = data.reduce((sum, r) => sum + r.clarity, 0) / data.length;
+      const avgConfidence = data.reduce((sum, r) => sum + r.confidence, 0) / data.length;
+      const latestWpm = data[0].wpm;
+      const oldestWpm = data[data.length - 1].wpm;
+      const wpmImprovement = latestWpm - oldestWpm;
+
+      return {
+        sessionsCount: data.length,
+        avgWpm: Math.round(avgWpm),
+        avgClarity: Math.round(avgClarity),
+        avgConfidence: Math.round(avgConfidence),
+        wpmImprovement: Math.round(wpmImprovement),
+        latestSession: data[0].created_at,
+      };
+    },
+    enabled: !!studentId,
+  });
+
+  // Get behavior points
+  const { data: behaviorStats } = useQuery({
+    queryKey: ["parent-behavior-stats", studentId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("student_behavior_stats")
+        .select("*")
+        .eq("student_id", studentId);
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) return { totalPoints: 0, weeklyPoints: 0, streak: 0 };
+
+      const totalPoints = data.reduce((sum, s) => sum + (s.total_points || 0), 0);
+      const weeklyPoints = data.reduce((sum, s) => sum + (s.weekly_points || 0), 0);
+      const bestStreak = Math.max(...data.map((s) => s.current_streak || 0));
+
+      return { totalPoints, weeklyPoints, streak: bestStreak };
+    },
+    enabled: !!studentId,
+  });
+
+  // Calculate overall stats
+  const overallGrade = gradebook && gradebook.length > 0
+    ? gradebook.reduce((sum, c) => sum + (c.finalGrade || c.currentGrade || 0), 0) / gradebook.length
+    : null;
+
+  const totalUpcoming = dueTodayData?.dueToday?.length || 0;
+  const totalPastDue = dueTodayData?.pastDue?.length || 0;
+  const totalAssignmentsCompleted = gradebook?.reduce((sum, c) => 
+    sum + c.assignments.filter(a => 
+      a.status === "Graded" || 
+      a.status === "Submitted" || 
+      a.status === "Submitted Late"
+    ).length, 0
+  ) || 0;
 
   const getGradeColor = (grade: number | null) => {
     if (!grade) return "text-muted-foreground";
@@ -43,23 +148,6 @@ export const ParentStudentOverview = ({ studentId, studentName }: ParentStudentO
     .map((n) => n[0])
     .join("")
     .toUpperCase();
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-32 w-full rounded-xl" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Skeleton className="h-20 rounded-xl" />
-          <Skeleton className="h-20 rounded-xl" />
-          <Skeleton className="h-20 rounded-xl" />
-          <Skeleton className="h-20 rounded-xl" />
-        </div>
-      </div>
-    );
-  }
-
-  const behaviorStats = overview?.behaviorStats;
-  const auraStats = overview?.auraStats;
 
   return (
     <div className="space-y-6">
@@ -87,9 +175,9 @@ export const ParentStudentOverview = ({ studentId, studentName }: ParentStudentO
             <div className="flex-1 min-w-[200px]">
               <h2 className="text-2xl font-bold text-foreground">{studentName}</h2>
               <div className="flex flex-wrap gap-2 mt-2">
-                {overview?.classrooms.map((classroom) => (
-                  <Badge key={classroom.id} variant="secondary" className="font-normal">
-                    {classroom.name} • {classroom.teacherName}
+                {studentClassrooms?.map((sc: any) => (
+                  <Badge key={sc.classroom_id} variant="secondary" className="font-normal">
+                    {sc.classrooms?.name} • {sc.classrooms?.profiles?.full_name || "Teacher"}
                   </Badge>
                 ))}
               </div>
@@ -97,10 +185,10 @@ export const ParentStudentOverview = ({ studentId, studentName }: ParentStudentO
 
             {/* Quick Stats */}
             <div className="flex gap-4 flex-wrap">
-              {overview?.overallGrade !== null && (
-                <div className={`text-center px-4 py-2 rounded-xl ${getGradeBg(overview?.overallGrade ?? null)} backdrop-blur-sm`}>
-                  <p className={`text-3xl font-bold ${getGradeColor(overview?.overallGrade ?? null)}`}>
-                    {Math.round(overview?.overallGrade ?? 0)}%
+              {overallGrade !== null && (
+                <div className={`text-center px-4 py-2 rounded-xl ${getGradeBg(overallGrade)} backdrop-blur-sm`}>
+                  <p className={`text-3xl font-bold ${getGradeColor(overallGrade)}`}>
+                    {Math.round(overallGrade)}%
                   </p>
                   <p className="text-xs text-muted-foreground">Overall Grade</p>
                 </div>
@@ -126,7 +214,7 @@ export const ParentStudentOverview = ({ studentId, studentName }: ParentStudentO
                 <Clock className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{overview?.dueTodayCount || 0}</p>
+                <p className="text-2xl font-bold">{totalUpcoming}</p>
                 <p className="text-xs text-muted-foreground">Due Today</p>
               </div>
             </div>
@@ -134,15 +222,15 @@ export const ParentStudentOverview = ({ studentId, studentName }: ParentStudentO
         </Card>
 
         {/* Past Due */}
-        <Card className={`border-0 backdrop-blur-sm shadow-[var(--shadow-glass-sm)] hover:shadow-[var(--shadow-glass-md)] transition-all hover:scale-[1.02] ${(overview?.pastDueCount || 0) > 0 ? "bg-gradient-to-br from-red-500/[0.08] to-red-500/[0.02] ring-2 ring-destructive/20" : "bg-gradient-to-br from-muted/50 to-muted/20"}`}>
+        <Card className={`border-0 backdrop-blur-sm shadow-[var(--shadow-glass-sm)] hover:shadow-[var(--shadow-glass-md)] transition-all hover:scale-[1.02] ${totalPastDue > 0 ? "bg-gradient-to-br from-red-500/[0.08] to-red-500/[0.02] ring-2 ring-destructive/20" : "bg-gradient-to-br from-muted/50 to-muted/20"}`}>
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className={`p-2.5 rounded-xl shadow-sm ${(overview?.pastDueCount || 0) > 0 ? "bg-red-500/15" : "bg-muted"}`}>
-                <AlertTriangle className={`h-5 w-5 ${(overview?.pastDueCount || 0) > 0 ? "text-red-600" : "text-muted-foreground"}`} />
+              <div className={`p-2.5 rounded-xl shadow-sm ${totalPastDue > 0 ? "bg-red-500/15" : "bg-muted"}`}>
+                <AlertTriangle className={`h-5 w-5 ${totalPastDue > 0 ? "text-red-600" : "text-muted-foreground"}`} />
               </div>
               <div>
-                <p className={`text-2xl font-bold ${(overview?.pastDueCount || 0) > 0 ? "text-destructive" : ""}`}>
-                  {overview?.pastDueCount || 0}
+                <p className={`text-2xl font-bold ${totalPastDue > 0 ? "text-destructive" : ""}`}>
+                  {totalPastDue}
                 </p>
                 <p className="text-xs text-muted-foreground">Past Due</p>
               </div>
@@ -158,7 +246,7 @@ export const ParentStudentOverview = ({ studentId, studentName }: ParentStudentO
                 <CheckCircle2 className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{overview?.completedCount || 0}</p>
+                <p className="text-2xl font-bold">{totalAssignmentsCompleted}</p>
                 <p className="text-xs text-muted-foreground">Completed</p>
               </div>
             </div>
@@ -173,7 +261,7 @@ export const ParentStudentOverview = ({ studentId, studentName }: ParentStudentO
                 <Mic className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{overview?.auraSessionCount || 0}</p>
+                <p className="text-2xl font-bold">{auraStats?.sessionsCount || 0}</p>
                 <p className="text-xs text-muted-foreground">Reading Sessions</p>
               </div>
             </div>
@@ -219,7 +307,7 @@ export const ParentStudentOverview = ({ studentId, studentName }: ParentStudentO
                 <Progress value={auraStats.avgConfidence} className="h-2" />
               </div>
               <div className="space-y-1 text-center">
-                <p className="text-3xl font-bold text-purple-600">{overview?.auraSessionCount || 0}</p>
+                <p className="text-3xl font-bold text-purple-600">{auraStats.sessionsCount}</p>
                 <p className="text-xs text-muted-foreground">Sessions this month</p>
                 {auraStats.latestSession && (
                   <p className="text-xs text-muted-foreground">
@@ -232,39 +320,98 @@ export const ParentStudentOverview = ({ studentId, studentName }: ParentStudentO
         </Card>
       )}
 
-      {/* Classrooms Grid - Simplified */}
-      {overview?.classrooms && overview.classrooms.length > 0 && (
+      {/* Classrooms Grid */}
+      {gradebook && gradebook.length > 0 && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <GraduationCap className="h-5 w-5" />
             Classes & Grades
           </h3>
           <div className="grid md:grid-cols-2 gap-4">
-            {overview.classrooms.map((classroom) => (
-              <Card 
-                key={classroom.id}
-                className="border-0 bg-card/80 backdrop-blur-sm shadow-[var(--shadow-glass-sm)] hover:shadow-[var(--shadow-glass-md)] transition-all hover:scale-[1.01]"
-              >
-                <CardContent className="pt-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h4 className="font-semibold">{classroom.name}</h4>
-                      <p className="text-sm text-muted-foreground">{classroom.teacherName}</p>
+            {gradebook.map((classroom) => {
+              const teacherName = studentClassrooms?.find(
+                (sc: any) => sc.classroom_id === classroom.id
+              )?.classrooms?.profiles?.full_name || "Teacher";
+
+              return (
+                <Card 
+                  key={classroom.id}
+                  className="border-0 bg-card/80 backdrop-blur-sm shadow-[var(--shadow-glass-sm)] hover:shadow-[var(--shadow-glass-md)] transition-all hover:scale-[1.01]"
+                >
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-base">{classroom.name}</CardTitle>
+                        <p className="text-sm text-muted-foreground">{teacherName}</p>
+                      </div>
+                      <div className={`px-3 py-1 rounded-lg ${getGradeBg(classroom.finalGrade || classroom.currentGrade)}`}>
+                        <span className={`text-xl font-bold ${getGradeColor(classroom.finalGrade || classroom.currentGrade)}`}>
+                          {classroom.finalGrade ? Math.round(classroom.finalGrade) : classroom.currentGrade ? Math.round(classroom.currentGrade) : "--"}%
+                        </span>
+                      </div>
                     </div>
-                    <div className={`px-3 py-1 rounded-lg ${getGradeBg(classroom.finalGrade)}`}>
-                      <span className={`text-xl font-bold ${getGradeColor(classroom.finalGrade)}`}>
-                        {classroom.finalGrade ? Math.round(classroom.finalGrade) : "--"}%
-                      </span>
-                    </div>
-                  </div>
-                  {classroom.upcomingCount > 0 && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {classroom.upcomingCount} upcoming assignment{classroom.upcomingCount > 1 ? "s" : ""}
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {/* Category Breakdown */}
+                    {classroom.categoryBreakdown && (
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div className="text-center p-2 rounded-lg bg-muted/50">
+                          <p className="font-semibold">{Math.round(classroom.categoryBreakdown.test.average)}%</p>
+                          <p className="text-muted-foreground">Tests</p>
+                        </div>
+                        <div className="text-center p-2 rounded-lg bg-muted/50">
+                          <p className="font-semibold">{Math.round(classroom.categoryBreakdown.quiz.average)}%</p>
+                          <p className="text-muted-foreground">Quizzes</p>
+                        </div>
+                        <div className="text-center p-2 rounded-lg bg-muted/50">
+                          <p className="font-semibold">{Math.round(classroom.categoryBreakdown.homework.average)}%</p>
+                          <p className="text-muted-foreground">Homework</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Attendance */}
+                    {classroom.totalDaysRecorded > 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Attendance</span>
+                        <div className="flex gap-2">
+                          <Badge variant="outline" className="bg-green-500/10 text-green-700 border-0">
+                            {classroom.daysPresent} Present
+                          </Badge>
+                          {classroom.daysTardy > 0 && (
+                            <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700 border-0">
+                              {classroom.daysTardy} Tardy
+                            </Badge>
+                          )}
+                          {classroom.daysAbsent > 0 && (
+                            <Badge variant="outline" className="bg-red-500/10 text-red-700 border-0">
+                              {classroom.daysAbsent} Absent
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Upcoming */}
+                    {classroom.upcomingAssignments.length > 0 && (
+                      <div className="text-sm">
+                        <p className="text-muted-foreground mb-1">Upcoming:</p>
+                        <div className="space-y-1">
+                          {classroom.upcomingAssignments.slice(0, 2).map((a) => (
+                            <div key={a.id} className="flex justify-between items-center text-xs bg-muted/30 rounded px-2 py-1">
+                              <span className="truncate">{a.title}</span>
+                              <span className="text-muted-foreground whitespace-nowrap ml-2">
+                                {format(new Date(a.dueDate), "MMM d")}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       )}
