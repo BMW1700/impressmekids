@@ -1,10 +1,10 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Home } from "lucide-react";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode } from "react";
 import { StudentNotificationBell } from "@/components/student/StudentNotificationBell";
 import { SettingsMenu } from "@/components/SettingsMenu";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import logo from "@/assets/logo.png";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -16,64 +16,21 @@ interface HeaderProps {
 }
 
 export const Header = ({ showAuthButtons = true, onSignOut, children, studentId }: HeaderProps) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const { session, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const { t } = useLanguage();
-
-  useEffect(() => {
-    // Check initial auth state
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsAuthenticated(!!session);
-      if (session?.user) {
-        // Fetch user role
-        supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", session.user.id)
-          .single()
-          .then(({ data }) => {
-            setUserRole(data?.role || null);
-          });
-      }
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setIsAuthenticated(!!session);
-      if (session?.user) {
-        supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", session.user.id)
-          .single()
-          .then(({ data }) => {
-            setUserRole(data?.role || null);
-          });
-      } else {
-        setUserRole(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   const handleSignOut = async () => {
     if (onSignOut) {
       onSignOut();
     } else {
-      try {
-        await supabase.auth.signOut();
-        navigate("/auth", { replace: true });
-      } catch (error) {
-        console.error("Sign out error:", error);
-        navigate("/auth", { replace: true });
-      }
+      await signOut();
+      navigate("/auth", { replace: true });
     }
   };
 
   const getDashboardPath = () => {
-    switch (userRole) {
+    switch (profile?.role) {
       case "teacher":
         return "/teacher/dashboard";
       case "parent":
@@ -87,9 +44,9 @@ export const Header = ({ showAuthButtons = true, onSignOut, children, studentId 
     }
   };
 
-  // Determine what to show based on auth state
-  const shouldShowAuthButtons = showAuthButtons && !isAuthenticated && isAuthenticated !== null;
-  const shouldShowSignOut = isAuthenticated === true;
+  const isAuthenticated = !!session;
+  const shouldShowAuthButtons = showAuthButtons && !isAuthenticated;
+  const shouldShowSignOut = isAuthenticated;
 
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
