@@ -316,6 +316,24 @@ const ParentDashboard = () => {
                     variant="outline"
                     size="lg"
                     onClick={() => navigate(`/parent/child/${activeChildId}`)}
+                    onMouseEnter={() => {
+                      // Prefetch child detail data on hover
+                      if (activeChildId && user?.id) {
+                        queryClient.prefetchQuery({
+                          queryKey: ["parent-child-info", user.id, activeChildId],
+                          queryFn: async () => {
+                            const { data } = await supabase.rpc("get_parent_child_info", {
+                              _parent_user_id: user.id,
+                              _student_id: activeChildId,
+                            });
+                            return data?.[0] ? { full_name: data[0].full_name, email: data[0].email } : null;
+                          },
+                          staleTime: 5 * 60 * 1000,
+                        });
+                        // Also prefetch the route chunk
+                        import("./ChildDetail");
+                      }
+                    }}
                     className="gap-2 glass-card border-0 hover:bg-primary/5 transition-all hover:-translate-y-1"
                   >
                     {t("parentDashboard.actions.viewFullProfile")} <ChevronRight className="h-4 w-4" />

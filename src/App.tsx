@@ -71,7 +71,16 @@ const ConsentVerification = lazy(() => import("./pages/ConsentVerification"));
 const StoryManagement = lazy(() => import("./pages/teacher/StoryManagement"));
 const SecurityPortal = lazy(() => import("./pages/SecurityPortal"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 2 * 60 * 1000, // 2 minutes - reduces refetching on navigation
+      refetchOnWindowFocus: false, // Don't refetch when user returns to tab
+      refetchOnMount: "always", // Refetch if stale when component mounts
+      retry: 1, // Only retry once on failure
+    },
+  },
+});
 
 // Minimal loading fallback
 const PageLoader = () => (
