@@ -945,12 +945,14 @@ const Auth = () => {
               </div>
             ) : (
               /* Regular Email Form */
-              <form onSubmit={handleSignIn} className="space-y-4">
+              <form onSubmit={handleSignIn} className="space-y-4" autoComplete="on">
                 <div className="space-y-2">
                   <Label htmlFor="signin-email" className="text-white text-sm font-medium">Email</Label>
                   <Input
                     id="signin-email"
+                    name="email"
                     type="email"
+                    autoComplete="username"
                     placeholder="you@school.edu"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -973,7 +975,9 @@ const Auth = () => {
                   <div className="relative">
                     <Input
                       id="signin-password"
+                      name="password"
                       type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -1065,12 +1069,14 @@ const Auth = () => {
             </div>
 
             {/* Email Form */}
-            <form id="signup-form" onSubmit={handleSignUp} className="space-y-4">
+            <form id="signup-form" onSubmit={handleSignUp} className="space-y-4" autoComplete="on">
               <div className="space-y-2">
                 <Label htmlFor="signup-name" className="text-white text-sm font-medium">Full Name</Label>
                 <Input
                   id="signup-name"
+                  name="name"
                   type="text"
+                  autoComplete="name"
                   placeholder="Your full name"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
@@ -1082,7 +1088,9 @@ const Auth = () => {
                 <Label htmlFor="signup-email" className="text-white text-sm font-medium">Email</Label>
                 <Input
                   id="signup-email"
+                  name="email"
                   type="email"
+                  autoComplete="email"
                   placeholder="you@school.edu"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -1095,7 +1103,9 @@ const Auth = () => {
                 <div className="relative">
                   <Input
                     id="signup-password"
+                    name="new-password"
                     type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}

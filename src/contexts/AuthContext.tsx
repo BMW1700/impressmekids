@@ -14,7 +14,8 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   profile: UserProfile | null;
-  isLoading: boolean;
+  isLoading: boolean; // True only while session is being determined
+  isProfileLoading: boolean; // True while profile is being fetched (UI can render)
   signOut: () => Promise<void>;
 }
 
@@ -24,11 +25,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // Session loading only
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     // Set up auth state listener FIRST (critical for proper initialization)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return;
+      
       // Synchronous state updates only - prevents deadlocks
       setSession(session);
       setUser(session?.user ?? null);
@@ -36,10 +42,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === 'SIGNED_OUT') {
         setProfile(null);
         setIsLoading(false);
+        setIsProfileLoading(false);
       } else if (session?.user) {
-        // Defer profile fetch to prevent deadlock
+        // Session is resolved - UI can render immediately
+        setIsLoading(false);
+        // Defer profile fetch to prevent deadlock (profile loading is separate)
+        setIsProfileLoading(true);
         setTimeout(() => {
-          fetchProfile(session.user.id);
+          if (isMounted) fetchProfile(session.user.id);
         }, 0);
       } else {
         setIsLoading(false);
@@ -48,17 +58,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return;
+      
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
+        // Session resolved - stop blocking UI
+        setIsLoading(false);
+        setIsProfileLoading(true);
         fetchProfile(session.user.id);
       } else {
         setIsLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const fetchProfile = async (userId: string) => {
@@ -89,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Error fetching profile:', error);
       setProfile(null);
     } finally {
-      setIsLoading(false);
+      setIsProfileLoading(false);
     }
   };
 
@@ -106,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, isLoading, signOut }}>
+    <AuthContext.Provider value={{ session, user, profile, isLoading, isProfileLoading, signOut }}>
       {children}
     </AuthContext.Provider>
   );
