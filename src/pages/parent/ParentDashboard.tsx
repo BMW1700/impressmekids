@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
@@ -42,6 +42,7 @@ const ParentDashboard = () => {
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const hasRedirected = useRef(false);
 
   const handleLookupSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ["parent-student-links"] });
@@ -83,15 +84,28 @@ const ParentDashboard = () => {
   });
 
   useEffect(() => {
+    // Wait for auth to fully resolve before making any decisions
     if (authLoading) return;
     
-    if (!user || !profile) {
+    // Prevent multiple redirects
+    if (hasRedirected.current) return;
+    
+    // Only redirect if we're SURE there's no user after auth resolved
+    if (!user) {
+      hasRedirected.current = true;
       navigate("/auth");
+      return;
+    }
+    
+    // Wait for profile to load - don't redirect while profile is null but user exists
+    if (!profile) {
+      // Profile is still loading, just wait
       return;
     }
 
     // Role redirects
     if (profile.role !== 'parent') {
+      hasRedirected.current = true;
       if (profile.role === 'teacher') navigate('/teacher/dashboard');
       else if (profile.role === 'district_admin') navigate('/district/dashboard');
       else navigate('/student/dashboard');
@@ -100,6 +114,7 @@ const ParentDashboard = () => {
 
     // Verification check
     if (!profile.is_verified) {
+      hasRedirected.current = true;
       navigate('/pending-verification');
       return;
     }

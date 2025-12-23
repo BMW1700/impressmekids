@@ -98,13 +98,20 @@ const Auth = () => {
     const cleverLogin = urlParams.get('clever_login');
     const cleverError = urlParams.get('error');
     
+    // Clear URL params without navigation to prevent loop
+    const clearUrlParams = () => {
+      if (urlParams.has('clever_login') || urlParams.has('error')) {
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    };
+    
     if (cleverError) {
       toast({
         title: "Clever login failed",
         description: cleverError,
         variant: "destructive",
       });
-      navigate('/auth', { replace: true });
+      clearUrlParams();
       return;
     }
     
@@ -113,7 +120,7 @@ const Auth = () => {
         title: "Success!",
         description: "Successfully signed in with Clever",
       });
-      navigate('/auth', { replace: true });
+      clearUrlParams();
       return;
     }
     
