@@ -12,6 +12,16 @@ initSentry();
 // Set up global error handlers for uncaught errors
 setupGlobalErrorHandler();
 
+// Listen for Service Worker updates and reload gracefully
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data?.type === 'SW_UPDATED') {
+      // New service worker activated - reload once to get fresh content
+      window.location.reload();
+    }
+  });
+}
+
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <ErrorBoundary>

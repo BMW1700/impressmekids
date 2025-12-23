@@ -255,16 +255,25 @@ const Auth = () => {
         return;
       }
 
-      // Update profile with selected role and district
-      const { error: roleError } = await supabase
+      // Update profile with district info (role stored in user_roles table for security)
+      const { error: profileError } = await supabase
         .from('profiles')
         .update({ 
-          role: selectedRole,
           district_id: pendingDistrictId,
           district_name: pendingDistrictName,
           is_verified: false
         })
         .eq('id', user.id);
+
+      if (profileError) throw profileError;
+
+      // Insert role into user_roles table (secure role storage)
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .upsert({ 
+          user_id: user.id,
+          role: selectedRole
+        }, { onConflict: 'user_id,role' });
 
       if (roleError) throw roleError;
 
@@ -456,6 +465,19 @@ const Auth = () => {
       if (profileError) throw profileError;
       if (!updatedProfile || updatedProfile.length === 0) {
         throw new Error('Failed to update profile. Please try again.');
+      }
+
+      // Insert role into user_roles table (secure role storage)
+      const { error: roleInsertError } = await supabase
+        .from('user_roles')
+        .upsert({ 
+          user_id: data.user.id,
+          role: role
+        }, { onConflict: 'user_id,role' });
+
+      if (roleInsertError) {
+        console.error('Failed to insert role:', roleInsertError);
+        // Don't fail signup - the profile trigger may have already created the role
       }
 
       // Create verification request for all non-admin roles

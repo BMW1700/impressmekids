@@ -5,12 +5,22 @@
  */
 
 import { CrossModalTransferNetwork } from './ml/crossModalTransferNetwork';
-import { PhonemeQAgent } from './reinforcementLearning/qTable';
+import { PhonemeQAgent, ensureQTableInitialized } from './reinforcementLearning/qTable';
 import { articulatoryFatigueTracker } from './reinforcementLearning/articulatoryModel';
 import { adaptiveDifficultyEngine } from './difficultyScalingV2';
 
-const crossModalNetwork = new CrossModalTransferNetwork();
-const qAgent = new PhonemeQAgent();
+// Lazy-initialized instances (don't do expensive work at import time)
+let crossModalNetwork: CrossModalTransferNetwork | null = null;
+let qAgent: PhonemeQAgent | null = null;
+
+const getModels = () => {
+  if (!crossModalNetwork) crossModalNetwork = new CrossModalTransferNetwork();
+  if (!qAgent) {
+    qAgent = new PhonemeQAgent();
+    ensureQTableInitialized();
+  }
+  return { crossModalNetwork, qAgent };
+};
 
 export interface NextBestAction {
   actionType: 'phoneme_practice' | 'reading_exercise' | 'speaking_drill' | 'comprehensive_review';
