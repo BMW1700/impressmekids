@@ -86,7 +86,12 @@ const Auth = () => {
     }
   };
 
+  const [hasCheckedUser, setHasCheckedUser] = useState(false);
+
   useEffect(() => {
+    // Prevent multiple runs
+    if (hasCheckedUser) return;
+    
     // Handle Clever login success/error from URL params
     const urlParams = new URLSearchParams(window.location.search);
     const cleverLogin = urlParams.get('clever_login');
@@ -98,7 +103,10 @@ const Auth = () => {
         description: cleverError,
         variant: "destructive",
       });
-      window.history.replaceState({}, '', '/auth');
+      // Use navigate with replace instead of history.replaceState
+      navigate('/auth', { replace: true });
+      setHasCheckedUser(true);
+      return;
     }
     
     if (cleverLogin === 'success') {
@@ -106,13 +114,18 @@ const Auth = () => {
         title: "Success!",
         description: "Successfully signed in with Clever",
       });
-      window.history.replaceState({}, '', '/auth');
+      navigate('/auth', { replace: true });
+      setHasCheckedUser(true);
+      return;
     }
     
     const checkUser = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
+        if (!session) {
+          setHasCheckedUser(true);
+          return;
+        }
 
         // Check verification status
         const { data: profile } = await supabase
@@ -122,12 +135,11 @@ const Auth = () => {
           .maybeSingle();
 
         if (profile && profile.is_verified === false) {
-          navigate('/pending-verification');
+          navigate('/pending-verification', { replace: true });
           return;
         }
 
         // Check if this is an OAuth callback that needs role selection
-        const urlParams = new URLSearchParams(window.location.search);
         const isOAuthCallback = urlParams.get('code') || urlParams.get('access_token');
 
         if (isOAuthCallback && session.user.email) {
@@ -136,6 +148,7 @@ const Auth = () => {
           if (!district.districtCode) {
             setShowDistrictModal(true);
             setAvailableRoles(district.availableRoles);
+            setHasCheckedUser(true);
             return;
           }
 
@@ -144,6 +157,7 @@ const Auth = () => {
             setPendingDistrictId(district.districtCode);
             setAvailableRoles(district.availableRoles);
             setShowRoleModal(true);
+            setHasCheckedUser(true);
             return;
           }
         }
@@ -153,19 +167,23 @@ const Auth = () => {
 
         if (rpcError) {
           console.error('Profile fetch error:', rpcError);
+          setHasCheckedUser(true);
           return;
         }
 
         if (profileData && profileData.length > 0 && profileData[0]?.role) {
           redirectToDashboard(profileData[0].role);
+        } else {
+          setHasCheckedUser(true);
         }
       } catch (err) {
         console.error('checkUser error:', err);
+        setHasCheckedUser(true);
       }
     };
 
     checkUser();
-  }, []);
+  }, [hasCheckedUser, navigate, toast]);
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
