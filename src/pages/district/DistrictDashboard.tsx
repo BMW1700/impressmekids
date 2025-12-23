@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Users, GraduationCap, BookOpen, TrendingUp, Download, Shield, FileText, BarChart3, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from "recharts";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface DistrictStats {
   totalClassrooms: number;
@@ -37,6 +38,7 @@ interface DrillData {
 }
 
 const DistrictDashboard = () => {
+  const { user, isLoading: authLoading, signOut } = useAuth();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DistrictStats>({
     totalClassrooms: 0,
@@ -52,21 +54,23 @@ const DistrictDashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    if (authLoading) return;
     
-    if (!session) {
+    if (!user) {
       navigate("/auth");
       return;
     }
 
+    checkAuth();
+  }, [authLoading, user]);
+
+  const checkAuth = async () => {
+    if (!user) return;
+    
     const { data: districtAdmin } = await supabase
       .from("district_admins")
       .select("*")
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .maybeSingle();
 
     if (!districtAdmin) {
@@ -75,61 +79,40 @@ const DistrictDashboard = () => {
       return;
     }
 
-    loadStats();
-    loadSchoolComparison();
-    loadDrillAnalytics();
+    // Load all data in parallel
+    await Promise.all([
+      loadStats(),
+      loadSchoolComparison(),
+      loadDrillAnalytics(),
+    ]);
   };
 
   const loadStats = async () => {
-    const { count: classroomCount } = await supabase
-      .from("classrooms")
-      .select("*", { count: "exact", head: true });
+    const [classroomResult, teachersResult, studentResult, auraResult, activeResult, assignmentResult, attendanceResult] = await Promise.all([
+      supabase.from("classrooms").select("*", { count: "exact", head: true }),
+      supabase.from("classrooms").select("teacher_id"),
+      supabase.from("classroom_students").select("*", { count: "exact", head: true }),
+      supabase.from("aura_records").select("grade"),
+      supabase.from("aura_records").select("*", { count: "exact", head: true }).gte("created_at", new Date().toISOString().split('T')[0]),
+      supabase.from("assignments").select("*", { count: "exact", head: true }),
+      supabase.from("attendance_records").select("status").gte("date", new Date().toISOString().split('T')[0]),
+    ]);
 
-    const { data: teachers } = await supabase
-      .from("classrooms")
-      .select("teacher_id");
-    const uniqueTeachers = new Set(teachers?.map(t => t.teacher_id)).size;
-
-    const { count: studentCount } = await supabase
-      .from("classroom_students")
-      .select("*", { count: "exact", head: true });
-
-    const { data: auraRecords } = await supabase
-      .from("aura_records")
-      .select("grade");
-    
-    const avgAura = auraRecords && auraRecords.length > 0
-      ? Math.round(auraRecords.reduce((sum, r) => sum + (r.grade || 0), 0) / auraRecords.length)
+    const uniqueTeachers = new Set(teachersResult.data?.map(t => t.teacher_id)).size;
+    const avgAura = auraResult.data && auraResult.data.length > 0
+      ? Math.round(auraResult.data.reduce((sum, r) => sum + (r.grade || 0), 0) / auraResult.data.length)
       : 0;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const { count: activeCount } = await supabase
-      .from("aura_records")
-      .select("*", { count: "exact", head: true })
-      .gte("created_at", today.toISOString());
-
-    const { count: assignmentCount } = await supabase
-      .from("assignments")
-      .select("*", { count: "exact", head: true });
-
-    const { data: attendanceRecords } = await supabase
-      .from("attendance_records")
-      .select("status")
-      .gte("date", today.toISOString().split('T')[0]);
-    
-    const avgAttendance = attendanceRecords && attendanceRecords.length > 0
-      ? Math.round((attendanceRecords.filter(r => r.status === 'present').length / attendanceRecords.length) * 100)
+    const avgAttendance = attendanceResult.data && attendanceResult.data.length > 0
+      ? Math.round((attendanceResult.data.filter(r => r.status === 'present').length / attendanceResult.data.length) * 100)
       : 0;
 
     setStats({
-      totalClassrooms: classroomCount || 0,
+      totalClassrooms: classroomResult.count || 0,
       totalTeachers: uniqueTeachers,
-      totalStudents: studentCount || 0,
+      totalStudents: studentResult.count || 0,
       avgAuraScore: avgAura,
-      activeUsersToday: activeCount || 0,
-      totalAssignments: assignmentCount || 0,
+      activeUsersToday: activeResult.count || 0,
+      totalAssignments: assignmentResult.count || 0,
       avgAttendance: avgAttendance
     });
 
@@ -228,7 +211,7 @@ const DistrictDashboard = () => {
     toast.success("District report exported");
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -444,11 +427,11 @@ const DistrictDashboard = () => {
                   <div className="text-xs text-muted-foreground">View real-time safety alerts</div>
                 </div>
               </Button>
-              <Button variant="outline" onClick={() => navigate("/admin/safety/drill")} className="h-auto py-4">
+              <Button variant="outline" onClick={() => navigate("/admin/security")} className="h-auto py-4">
                 <Shield className="mr-2 h-5 w-5" />
                 <div className="text-left">
-                  <div className="font-semibold">Schedule Drill</div>
-                  <div className="text-xs text-muted-foreground">Coordinate district-wide drills</div>
+                  <div className="font-semibold">Security Settings</div>
+                  <div className="text-xs text-muted-foreground">Configure security protocols</div>
                 </div>
               </Button>
             </div>
@@ -457,23 +440,24 @@ const DistrictDashboard = () => {
           <TabsContent value="engagement" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Student Engagement Trends (Last 30 Days)</CardTitle>
+                <CardTitle>Weekly Student Engagement Trends</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={[
-                    { day: "Week 1", active: 1240, avg_score: 82 },
-                    { day: "Week 2", active: 1350, avg_score: 84 },
-                    { day: "Week 3", active: 1420, avg_score: 86 },
-                    { day: "Week 4", active: 1580, avg_score: 88 }
+                    { day: "Mon", active: 1200, submissions: 450 },
+                    { day: "Tue", active: 1350, submissions: 520 },
+                    { day: "Wed", active: 1100, submissions: 380 },
+                    { day: "Thu", active: 1400, submissions: 600 },
+                    { day: "Fri", active: 900, submissions: 300 },
                   ]}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="day" />
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="active" stroke="hsl(var(--primary))" name="Active Users" strokeWidth={2} />
-                    <Line type="monotone" dataKey="avg_score" stroke="hsl(var(--chart-2))" name="Avg Score" strokeWidth={2} />
+                    <Line type="monotone" dataKey="active" stroke="hsl(var(--primary))" name="Active Users" />
+                    <Line type="monotone" dataKey="submissions" stroke="hsl(var(--chart-2))" name="Submissions" />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -483,37 +467,26 @@ const DistrictDashboard = () => {
           <TabsContent value="reports" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Generate District Reports</CardTitle>
+                <CardTitle>Available Reports</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <Button onClick={exportRoster} variant="outline" className="w-full justify-start">
-                  <Download className="mr-2 h-4 w-4" />
-                  Export Full District Roster (CSV)
-                </Button>
-                <Button onClick={exportDistrictReport} variant="outline" className="w-full justify-start">
-                  <FileText className="mr-2 h-4 w-4" />
-                  Export Performance Report (JSON)
-                </Button>
-                <Button variant="outline" className="w-full justify-start" onClick={() => window.print()}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Print Summary Report (PDF)
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-4 md:grid-cols-2">
-                <Button variant="outline" onClick={() => navigate("/admin/calendar")}>
-                  <BookOpen className="mr-2 h-4 w-4" />
-                  View District Calendar
-                </Button>
-                <Button variant="outline" onClick={() => navigate("/admin/settings")}>
-                  <GraduationCap className="mr-2 h-4 w-4" />
-                  District Settings
-                </Button>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  <Button variant="outline" onClick={exportRoster} className="h-auto py-4 flex-col items-start">
+                    <Download className="h-5 w-5 mb-2" />
+                    <div className="font-semibold">Student Roster</div>
+                    <div className="text-xs text-muted-foreground">Export complete student list</div>
+                  </Button>
+                  <Button variant="outline" onClick={exportDistrictReport} className="h-auto py-4 flex-col items-start">
+                    <FileText className="h-5 w-5 mb-2" />
+                    <div className="font-semibold">District Report</div>
+                    <div className="text-xs text-muted-foreground">Complete analytics summary</div>
+                  </Button>
+                  <Button variant="outline" className="h-auto py-4 flex-col items-start" disabled>
+                    <BarChart3 className="h-5 w-5 mb-2" />
+                    <div className="font-semibold">Performance Report</div>
+                    <div className="text-xs text-muted-foreground">Coming soon</div>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

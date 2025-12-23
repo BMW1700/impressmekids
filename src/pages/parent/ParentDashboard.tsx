@@ -30,9 +30,11 @@ import { CalendarWidget } from "@/components/calendar/CalendarWidget";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 const ParentDashboard = () => {
   const { t } = useLanguage();
+  const { user, profile, isLoading: authLoading, signOut } = useAuth();
   const [loading, setLoading] = useState(true);
   const [parentId, setParentId] = useState<string | null>(null);
   const [lookupModalOpen, setLookupModalOpen] = useState(false);
@@ -47,20 +49,12 @@ const ParentDashboard = () => {
     queryClient.invalidateQueries({ queryKey: ["parent-children", parentId] });
   };
 
-  const { data: session } = useQuery({
-    queryKey: ["session"],
-    queryFn: async () => {
-      const { data } = await supabase.auth.getSession();
-      return data.session;
-    },
-  });
-
   const { data: approvedChildren, isLoading: childrenLoading } = useQuery({
-    queryKey: ["parent-children", session?.user?.id],
+    queryKey: ["parent-children", user?.id],
     queryFn: async () => {
-      if (!session?.user?.id) return [];
+      if (!user?.id) return [];
       const { data, error } = await supabase.rpc("get_parent_children", { 
-        _parent_user_id: session.user.id 
+        _parent_user_id: user.id 
       });
       if (error) {
         console.error("Error fetching children:", error);
@@ -68,7 +62,7 @@ const ParentDashboard = () => {
       }
       return data || [];
     },
-    enabled: !!session?.user?.id,
+    enabled: !!user?.id,
   });
 
   // Fetch school IDs for all children
@@ -89,47 +83,55 @@ const ParentDashboard = () => {
   });
 
   useEffect(() => {
-    checkAuth();
-  }, []);
+    if (authLoading) return;
+    
+    if (!user || !profile) {
+      navigate("/auth");
+      return;
+    }
 
-  const checkAuth = async () => {
+    // Role redirects
+    if (profile.role !== 'parent') {
+      if (profile.role === 'teacher') navigate('/teacher/dashboard');
+      else if (profile.role === 'district_admin') navigate('/district/dashboard');
+      else navigate('/student/dashboard');
+      return;
+    }
+
+    // Verification check
+    if (!profile.is_verified) {
+      navigate('/pending-verification');
+      return;
+    }
+
+    // Load parent account
+    loadParentAccount();
+  }, [authLoading, user, profile]);
+
+  const loadParentAccount = async () => {
+    if (!user) return;
+    
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { navigate("/auth"); return; }
-
-      const { data: profileData } = await supabase.rpc('get_user_profile', { _user_id: session.user.id });
-      if (!profileData || profileData.length === 0) { navigate("/auth"); return; }
-
-      const userRole = profileData[0].role;
-      if (userRole !== 'parent') {
-        if (userRole === 'teacher') navigate('/teacher/dashboard');
-        else if (userRole === 'district_admin') navigate('/district/dashboard');
-        else navigate('/student/dashboard');
-        return;
-      }
-
-      const { data: profileDetails } = await supabase
-        .from('profiles').select('is_verified').eq('id', session.user.id).single();
-      if (!profileDetails?.is_verified) { navigate('/pending-verification'); return; }
-
-      const { data: parentAccount } = await supabase.rpc("get_parent_account", { _user_id: session.user.id });
+      const { data: parentAccount } = await supabase.rpc("get_parent_account", { _user_id: user.id });
+      
       if (!parentAccount || parentAccount.length === 0) {
         const { data: newParent } = await supabase
           .from("parent_accounts")
-          .insert({ user_id: session.user.id, email: session.user.email || "", full_name: session.user.user_metadata?.full_name || "Parent" })
-          .select().single();
+          .insert({ user_id: user.id, email: user.email || "", full_name: user.user_metadata?.full_name || "Parent" })
+          .select()
+          .single();
         if (newParent) setParentId(newParent.id);
       } else {
         setParentId(parentAccount[0].id);
       }
-      setLoading(false);
     } catch (error) {
-      console.error("Error in checkAuth:", error);
+      console.error("Error loading parent account:", error);
+    } finally {
       setLoading(false);
     }
   };
 
-  if (loading || childrenLoading) {
+  if (authLoading || loading || childrenLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5">
         <div className="flex flex-col items-center gap-4">
@@ -289,8 +291,8 @@ const ParentDashboard = () => {
                 </div>
 
                 {/* Calendar Widget */}
-                {session?.user?.id && (
-                  <CalendarWidget userId={session.user.id} userRole="parent" childId={activeChildId} />
+                {user?.id && (
+                  <CalendarWidget userId={user.id} userRole="parent" childId={activeChildId} />
                 )}
 
                 {/* View Child Details Button */}

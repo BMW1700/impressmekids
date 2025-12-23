@@ -1,36 +1,17 @@
-import { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { LongLoadNotice } from "@/components/system/LongLoadNotice";
+import { useAuth } from "@/contexts/AuthContext";
 
 /**
  * Blocks protected routes until auth is resolved.
- * Prevents pages from getting stuck on local `loading=true` when the user is signed out.
+ * Uses centralized AuthContext to avoid duplicate getSession() calls.
  */
 export function RequireAuth() {
   const location = useLocation();
-  const [session, setSession] = useState<Session | null>(null);
-  const [checking, setChecking] = useState(true);
+  const { session, isLoading } = useAuth();
 
-  useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setChecking(false);
-    });
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setChecking(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  if (checking) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

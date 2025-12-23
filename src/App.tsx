@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { PushNotificationPrompt } from "@/components/notifications/PushNotificationPrompt";
 import { OfflineIndicator } from "@/components/safety/OfflineIndicator";
@@ -96,11 +97,12 @@ const App = () => (
   <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
     <LanguageProvider>
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <PushNotificationPrompt />
-          <SentryUserTracker />
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <PushNotificationPrompt />
+            <SentryUserTracker />
           <BrowserRouter>
             <RouteAwareProviders>
               <OfflineIndicator />
@@ -175,9 +177,10 @@ const App = () => (
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>
-            </RouteAwareProviders>
-          </BrowserRouter>
-        </TooltipProvider>
+              </RouteAwareProviders>
+            </BrowserRouter>
+          </TooltipProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </LanguageProvider>
   </ThemeProvider>
