@@ -184,7 +184,7 @@ export const ParentQuickInsights = ({ studentId, studentName }: ParentQuickInsig
       return insights.slice(0, 4);
     },
     enabled: !!studentId,
-    staleTime: 30000, // 30 seconds cache
+    staleTime: 5 * 60 * 1000, // 5 minute cache
   });
 
   const getInsightIcon = (type: string) => {
