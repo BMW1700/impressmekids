@@ -88,7 +88,8 @@ export const Header = ({ showAuthButtons = true, onSignOut, children, studentId 
   };
 
   // Determine what to show based on auth state
-  const shouldShowAuthButtons = showAuthButtons && !isAuthenticated && isAuthenticated !== null;
+  // Show auth buttons immediately while loading (null) or when definitively not authenticated
+  const shouldShowAuthButtons = showAuthButtons && (isAuthenticated === null || isAuthenticated === false);
   const shouldShowSignOut = isAuthenticated === true;
 
   return (

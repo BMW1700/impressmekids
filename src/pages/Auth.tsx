@@ -573,6 +573,7 @@ const Auth = () => {
           .single();
 
         if (!profile?.is_verified) {
+          setIsLoading(false);
           navigate('/pending-verification');
           return;
         }
