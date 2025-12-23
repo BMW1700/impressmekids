@@ -152,7 +152,8 @@ export const ParentRecentActivity = ({ studentId }: ParentRecentActivityProps) =
       return activities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
     },
     enabled: !!studentId,
-    staleTime: 30000,
+    staleTime: 2 * 60 * 1000, // 2 minutes for activity
+    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
   });
 
   const isLoading = classroomsLoading || activitiesLoading;

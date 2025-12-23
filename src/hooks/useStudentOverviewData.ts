@@ -226,5 +226,6 @@ export const useStudentOverviewData = (studentId: string | undefined) => {
     },
     enabled: !!studentId,
     staleTime: 5 * 60 * 1000, // 5 minutes cache
+    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
   });
 };
