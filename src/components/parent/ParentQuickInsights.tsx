@@ -43,21 +43,19 @@ export const ParentQuickInsights = ({ studentId, studentName }: ParentQuickInsig
           .order("created_at", { ascending: true }),
         supabase
           .from("student_behavior_stats")
-          .select("*")
+          .select("total_points, weekly_points, current_streak")
           .eq("student_id", studentId),
         supabase
           .from("student_standard_scores")
           .select(`
             mastery_percentage,
-            assignments_completed,
             learning_standards (
-              code,
-              description,
               subject
             )
           `)
           .eq("student_id", studentId)
           .order("mastery_percentage", { ascending: false })
+          .limit(30)
       ]);
 
       const auraRecords = auraResult.data;
