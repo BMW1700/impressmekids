@@ -53,142 +53,93 @@ const ChildDetail = () => {
   }, [studentId]);
 
   const loadChildData = async () => {
-    try {
-      if (!studentId) {
-        toast.error("No student ID provided");
-        navigate("/parent/dashboard");
-        return;
+    if (!studentId) return;
+
+    // Get parent user ID
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    // Get child profile using secure function
+    const { data: childInfo } = await supabase.rpc(
+      'get_parent_child_info',
+      { 
+        _parent_user_id: session.user.id,
+        _student_id: studentId 
       }
+    );
 
-      // Get parent user ID
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session) {
-        toast.error("Please sign in to continue");
-        navigate("/auth");
-        return;
-      }
+    if (childInfo && childInfo.length > 0) {
+      setChild({
+        full_name: childInfo[0].full_name,
+        email: childInfo[0].email
+      });
+    }
 
-      // Get child profile using secure function
-      const { data: childInfo, error: childError } = await supabase.rpc(
-        'get_parent_child_info',
-        { 
-          _parent_user_id: session.user.id,
-          _student_id: studentId 
-        }
-      );
+    // Get child's classroom
+    const { data: classrooms } = await supabase
+      .from("classroom_students")
+      .select("classroom_id")
+      .eq("student_id", studentId)
+      .limit(1)
+      .single();
+    
+    if (classrooms) {
+      setClassroomId(classrooms.classroom_id);
+    }
 
-      if (childError) {
-        console.error("Error loading child info:", childError);
-        toast.error("Failed to load child information");
-        navigate("/parent/dashboard");
-        return;
-      }
+    const { data: parentAccount } = await supabase
+      .from("parent_accounts")
+      .select("id")
+      .eq("user_id", session.user.id)
+      .single();
 
-      if (childInfo && childInfo.length > 0) {
-        setChild({
-          full_name: childInfo[0].full_name,
-          email: childInfo[0].email
-        });
-      } else {
-        toast.error("Child not found or access denied");
-        navigate("/parent/dashboard");
-        return;
-      }
+    if (!parentAccount) return;
 
-      // Get child's classroom
-      const { data: classrooms } = await supabase
-        .from("classroom_students")
-        .select("classroom_id")
-        .eq("student_id", studentId)
-        .limit(1)
-        .maybeSingle();
-      
-      if (classrooms) {
-        setClassroomId(classrooms.classroom_id);
-      }
+    // Check consents
+    const { data: consents } = await supabase
+      .from("parent_consents")
+      .select("*")
+      .eq("parent_id", parentAccount.id)
+      .eq("student_id", studentId)
+      .maybeSingle();
 
-      // Get or create parent account
-      let { data: parentAccount, error: parentError } = await supabase
-        .from("parent_accounts")
-        .select("id")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
+    if (consents) {
+      setAuraConsent(consents.aura_recording_consent);
+      setAssignmentConsent(consents.assignment_data_consent);
+    }
 
-      if (parentError) {
-        console.error("Error loading parent account:", parentError);
-        toast.error("Failed to load parent account");
-        return;
-      }
-
-      // If parent account doesn't exist, create it
-      if (!parentAccount) {
-        const { data: newAccount, error: createError } = await supabase
-          .from("parent_accounts")
-          .insert({ 
-            user_id: session.user.id,
-            email: session.user.email || '',
-            full_name: session.user.user_metadata?.full_name || session.user.email || 'Parent'
-          })
-          .select("id")
-          .single();
-        
-        if (createError) {
-          console.error("Error creating parent account:", createError);
-          toast.error("Failed to set up parent account");
-          return;
-        }
-        parentAccount = newAccount;
-      }
-
-      // Check consents
-      const { data: consents } = await supabase
-        .from("parent_consents")
-        .select("*")
-        .eq("parent_id", parentAccount.id)
-        .eq("student_id", studentId)
-        .maybeSingle();
-
-      if (consents) {
-        setAuraConsent(consents.aura_recording_consent);
-        setAssignmentConsent(consents.assignment_data_consent);
-      }
-
-      // Load AURA records if consent given
-      if (consents?.aura_recording_consent) {
-        const { data: aura } = await supabase
-          .from("aura_records")
-          .select("id, created_at, grade, pronunciation, clarity, confidence, pace")
-          .eq("profile_id", studentId)
-          .order("created_at", { ascending: false })
-          .limit(10);
-
-        if (aura) setAuraRecords(aura as any);
-      }
-
-      // Load assignments
-      const { data: subs } = await supabase
-        .from("assignment_submissions")
-        .select("id, submitted_at, grade, teacher_feedback, assignments(title)")
-        .eq("student_id", studentId)
-        .not("submitted_at", "is", null)
-        .order("submitted_at", { ascending: false })
+    // Load AURA records if consent given
+    if (consents?.aura_recording_consent) {
+      const { data: aura } = await supabase
+        .from("aura_records")
+        .select("id, created_at, grade, pronunciation, clarity, confidence, pace")
+        .eq("profile_id", studentId)
+        .order("created_at", { ascending: false })
         .limit(10);
 
-      if (subs) {
-        setAssignments(subs.map((s: any) => ({
-          id: s.id,
-          title: s.assignments?.title || "Untitled",
-          submitted_at: s.submitted_at,
-          grade: s.grade,
-          teacher_feedback: s.teacher_feedback
-        })));
-      }
-    } catch (error) {
-      console.error("Error loading child data:", error);
-      toast.error("An unexpected error occurred");
-    } finally {
-      setLoading(false);
+      if (aura) setAuraRecords(aura as any);
     }
+
+    // Load assignments
+    const { data: subs } = await supabase
+      .from("assignment_submissions")
+      .select("id, submitted_at, grade, teacher_feedback, assignments(title)")
+      .eq("student_id", studentId)
+      .not("submitted_at", "is", null)
+      .order("submitted_at", { ascending: false })
+      .limit(10);
+
+    if (subs) {
+      setAssignments(subs.map((s: any) => ({
+        id: s.id,
+        title: s.assignments?.title || "Untitled",
+        submitted_at: s.submitted_at,
+        grade: s.grade,
+        teacher_feedback: s.teacher_feedback
+      })));
+    }
+
+    setLoading(false);
   };
 
   const updateConsent = async (type: "aura" | "assignment", value: boolean) => {

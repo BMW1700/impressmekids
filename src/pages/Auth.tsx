@@ -31,16 +31,14 @@ const Auth = () => {
   const [pendingDistrictName, setPendingDistrictName] = useState("");
   const [pendingDistrictId, setPendingDistrictId] = useState<string | null>(null);
   const [availableRoles, setAvailableRoles] = useState<('teacher' | 'student' | 'parent')[]>(['student', 'parent']);
-
-  // Removed withTimeout - was causing login issues
-
+  
   // District code for teacher/admin signup
   const [districtCode, setDistrictCode] = useState("");
   const [districtInfo, setDistrictInfo] = useState<{district_code: string, name: string} | null>(null);
-
+  
   // District selection for student/parent signup
   const [selectedDistrictId, setSelectedDistrictId] = useState<string>("");
-
+  
   // COPPA consent flow state
   const [showAgeVerification, setShowAgeVerification] = useState(false);
   const [showParentalConsentForm, setShowParentalConsentForm] = useState(false);
@@ -48,11 +46,11 @@ const Auth = () => {
   const [parentEmailForConsent, setParentEmailForConsent] = useState("");
   const [isUnder13, setIsUnder13] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
+  
   // Substitute teacher mode
   const [isSubstituteMode, setIsSubstituteMode] = useState(false);
   const [substituteCode, setSubstituteCode] = useState("");
-
+  
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -108,18 +106,16 @@ const Auth = () => {
     }
     
     const checkUser = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
         // Check verification status
         const { data: profile } = await supabase
           .from('profiles')
-          .select('is_verified')
+          .select('is_verified, role')
           .eq('id', session.user.id)
-          .maybeSingle();
-
-        if (profile && profile.is_verified === false) {
+          .single();
+        
+        if (!profile?.is_verified) {
           navigate('/pending-verification');
           return;
         }
@@ -127,16 +123,19 @@ const Auth = () => {
         // Check if this is an OAuth callback that needs role selection
         const urlParams = new URLSearchParams(window.location.search);
         const isOAuthCallback = urlParams.get('code') || urlParams.get('access_token');
-
+        
         if (isOAuthCallback && session.user.email) {
           const district = await detectUserTypeFromEmail(session.user.email);
-
+          
+          // ALWAYS require district and role selection for OAuth users
+          // If no district match, show district selection first
           if (!district.districtCode) {
             setShowDistrictModal(true);
             setAvailableRoles(district.availableRoles);
             return;
           }
-
+          
+          // If district matched, proceed to role selection
           if (district.requiresRoleSelection) {
             setPendingDistrictName(district.districtName || "");
             setPendingDistrictId(district.districtCode);
@@ -146,19 +145,16 @@ const Auth = () => {
           }
         }
 
-        // Get user profile with role
-        const { data: profileData, error: rpcError } = await supabase.rpc('get_user_profile', { _user_id: session.user.id });
+        const { data: profileData, error: profileError } = await supabase
+          .rpc('get_user_profile', { _user_id: session.user.id });
 
-        if (rpcError) {
-          console.error('Profile fetch error:', rpcError);
-          return;
-        }
-
-        if (profileData && profileData.length > 0 && profileData[0]?.role) {
+        if (profileError) {
+          console.error('Profile fetch error:', profileError);
+        } else if (profileData && profileData.length > 0) {
           redirectToDashboard(profileData[0].role);
+        } else {
+          console.warn('Profile not found for user:', session.user.id);
         }
-      } catch (err) {
-        console.error('checkUser error:', err);
       }
     };
 
@@ -561,52 +557,68 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      // Simple sign in - no timeouts, no wrappers
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
-      if (error) throw error;
-      if (!data.user) throw new Error("Sign in failed");
-
-      // Check verification status
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_verified')
-        .eq('id', data.user.id)
-        .maybeSingle();
-
-      if (profile && profile.is_verified === false) {
-        navigate('/pending-verification');
-        return;
-      }
-
-      // Get user role
-      const { data: profileData, error: profileError } = await supabase.rpc('get_user_profile', { _user_id: data.user.id });
-
-      if (profileError) throw profileError;
-
-      const userRole = profileData?.[0]?.role;
-
-      if (!userRole) {
-        throw new Error("Account setup incomplete. Please contact support.");
-      }
-
-      toast({
-        title: "Welcome back!",
-        description: `Successfully signed in as ${userRole}!`,
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      redirectToDashboard(userRole);
+      if (error) throw error;
+
+      if (data.user) {
+        // Check verification status
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_verified, role')
+          .eq('id', data.user.id)
+          .single();
+
+        if (!profile?.is_verified) {
+          navigate('/pending-verification');
+          return;
+        }
+
+        // Fetch full profile with retry
+        let profileData = null;
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (attempts < maxAttempts && !profileData) {
+          attempts++;
+          
+          const { data: pd, error: profileError } = await supabase
+            .rpc('get_user_profile', { _user_id: data.user.id });
+
+          if (profileError) {
+            console.error('Profile fetch error:', profileError);
+          } else if (pd && pd.length > 0) {
+            profileData = pd[0];
+          } else if (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
+
+        if (!profileData) {
+          throw new Error('Profile not found. Please try again.');
+        }
+
+        toast({
+          title: "Welcome back!",
+          description: `Successfully signed in as ${profileData.role}!`,
+        });
+
+        redirectToDashboard(profileData.role);
+      }
     } catch (error: any) {
       console.error('Signin error:', error);
-
-      let errorMessage = error?.message || "Failed to sign in";
-
-      if (errorMessage?.includes('Invalid login credentials')) {
+      
+      let errorMessage = error.message || "Failed to sign in";
+      
+      if (error.message?.includes('Invalid login credentials')) {
         errorMessage = "Invalid email or password. Please check your credentials and try again.";
-      } else if (errorMessage?.includes('Email not confirmed')) {
+      } else if (error.message?.includes('Email not confirmed')) {
         errorMessage = "Please confirm your email address before signing in.";
       }
-
+      
       toast({
         title: "Error",
         description: errorMessage,
