@@ -38,7 +38,7 @@ export default function ParentReviewSubmission() {
       // Verify parent has access to this student
       if (studentId) {
         const { data: parentCheck } = await supabase.rpc("get_parent_children", {
-          _parent_user_id: session.user.id
+          _user_id: session.user.id
         });
         
         const hasAccess = parentCheck?.some((child: any) => child.student_id === studentId);
