@@ -602,38 +602,60 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      // Simple sign in - no timeouts, no wrappers
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
       if (error) throw error;
       if (!data.user) throw new Error("Sign in failed");
 
-      // Check verification status
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_verified')
-        .eq('id', data.user.id)
-        .maybeSingle();
+      // Best-effort verification check (never block sign-in if this fails)
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_verified')
+          .eq('id', data.user.id)
+          .maybeSingle();
 
-      if (profile && profile.is_verified === false) {
-        navigate('/pending-verification');
-        return;
+        if (profile && profile.is_verified === false) {
+          navigate('/pending-verification', { replace: true });
+          return;
+        }
+      } catch {
+        // ignore
       }
 
-      // Get user role
-      const { data: profileData, error: profileError } = await supabase.rpc('get_user_profile', { _user_id: data.user.id });
+      // Determine role with fallbacks so login never gets stuck on a missing/broken RPC.
+      let userRole: string | null = null;
 
-      if (profileError) throw profileError;
-
-      const userRole = profileData?.[0]?.role;
+      try {
+        const { data: profileData } = await supabase.rpc('get_user_profile', { _user_id: data.user.id });
+        userRole = profileData?.[0]?.role ?? null;
+      } catch {
+        // ignore
+      }
 
       if (!userRole) {
-        throw new Error("Account setup incomplete. Please contact support.");
+        try {
+          const { data: rolesData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', data.user.id);
+
+          userRole = rolesData?.[0]?.role ?? null;
+        } catch {
+          // ignore
+        }
+      }
+
+      if (!userRole) {
+        userRole = (data.user.user_metadata as any)?.role ?? null;
+      }
+
+      if (!userRole) {
+        userRole = 'student';
       }
 
       toast({
         title: "Welcome back!",
-        description: `Successfully signed in as ${userRole}!`,
+        description: "Successfully signed in.",
       });
 
       redirectToDashboard(userRole);

@@ -133,6 +133,7 @@ const App = () => (
                   {/* Public routes */}
                   <Route path="/" element={<Index />} />
                   <Route path="/auth" element={<Auth />} />
+                  <Route path="/pending-verification" element={<PendingVerification />} />
                   <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                   <Route path="/terms-of-service" element={<TermsOfService />} />
                   <Route path="/consent/:token" element={<ConsentVerification />} />
@@ -140,7 +141,6 @@ const App = () => (
 
                   {/* Protected routes */}
                   <Route element={<RequireAuth />}>
-                    <Route path="/pending-verification" element={<PendingVerification />} />
 
                     <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
                     <Route path="/teacher/calendar" element={<TeacherCalendar />} />
