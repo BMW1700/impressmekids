@@ -50,11 +50,7 @@ export const SendPhonemeReportDialog = ({
 
   // Fetch parent accounts linked to this student
   const fetchParents = async (): Promise<{ id: string; full_name: string; email: string }[]> => {
-    const linksRes = await supabase
-      .from("parent_student_links")
-      .select("parent_id")
-      .eq("student_id", studentId)
-      .eq("approved", true);
+    const linksRes = await supabase.from("parent_student_links").select("parent_id").match({ student_id: studentId, status: "active" });
     if (linksRes.error) throw linksRes.error;
     if (!linksRes.data?.length) return [];
     const ids = linksRes.data.map((l: { parent_id: string }) => l.parent_id);

@@ -112,7 +112,7 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     // Store the report in the database
-    const { data: reportData, error: insertError } = await supabase
+    const { error: insertError } = await supabase
       .from("parent_phoneme_reports")
       .insert({
         teacher_id: user.id,
@@ -121,34 +121,11 @@ const handler = async (req: Request): Promise<Response> => {
         classroom_id: classroomId,
         phoneme_data: phonemeData,
         message: message || null,
-      })
-      .select('id')
-      .single();
+      });
 
     if (insertError) {
       console.error("Insert error:", insertError);
       throw new Error("Failed to save report");
-    }
-
-    // Create a notification for the parent dashboard
-    const { error: notifyError } = await supabase
-      .from("parent_notifications")
-      .insert({
-        parent_id: parentId,
-        child_id: studentId,
-        item_type: "phoneme_report",
-        item_id: reportData.id,
-        item_title: `Sound Accuracy Report from ${teacher.full_name}`,
-        item_description: message || `New phoneme report for ${student.full_name} covering ${phonemeData.length} sounds`,
-        classroom_name: classroom.name,
-        read: false,
-      });
-
-    if (notifyError) {
-      console.error("Notification insert error:", notifyError);
-      // Don't throw - email is more important, notification is secondary
-    } else {
-      console.log("Parent notification created successfully");
     }
 
     // Build phoneme table HTML
