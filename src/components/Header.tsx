@@ -25,7 +25,7 @@ export const Header = ({ showAuthButtons = true, onSignOut, children, studentId 
       onSignOut();
     } else {
       await signOut();
-      navigate("/auth", { replace: true });
+      navigate("/auth");
     }
   };
 
