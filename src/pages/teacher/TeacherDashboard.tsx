@@ -29,9 +29,10 @@ import { liquidGlassTabClass } from "@/components/ui/liquid-glass-button";
 import { Badge } from "@/components/ui/badge";
 import { Directory } from "@/components/Directory";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 const TeacherDashboard = () => {
-  const [profile, setProfile] = useState<any>(null);
+  const { user, profile, isLoading: authLoading, signOut } = useAuth();
   const [classrooms, setClassrooms] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -44,127 +45,66 @@ const TeacherDashboard = () => {
   const { t } = useLanguage();
 
   useEffect(() => {
-    checkAuth();
+    if (authLoading) return;
+    
+    // Auth is handled by RequireAuth + AuthContext
+    if (!user || !profile) {
+      navigate("/auth");
+      return;
+    }
+
+    // Role check
+    if (profile.role !== "teacher") {
+      navigate("/student/dashboard");
+      return;
+    }
+
+    // Verification check
+    if (!profile.is_verified) {
+      navigate("/pending-verification");
+      return;
+    }
+
+    // Load data in parallel
     loadDashboardData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authLoading, user, profile]);
 
   const formatWelcome = (name?: string) => {
     const template = t("teacherDashboard.welcome");
     return template.replace("{name}", name || "");
   };
 
-  const checkAuth = async () => {
-    try {
-      console.log("🔍 TeacherDashboard: Checking authentication...");
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session) {
-        console.log("❌ No session found, redirecting to auth");
-        navigate("/auth");
-        return;
-      }
-
-      console.log("✅ Session found:", session.user.id);
-
-      // Fetch user profile using security definer function
-      const { data: profileResult, error: profileError } = await supabase.rpc(
-        "get_user_profile",
-        {
-          _user_id: session.user.id,
-        }
-      );
-
-      if (profileError) {
-        console.error("❌ Failed to fetch profile:", profileError);
-        navigate("/auth");
-        return;
-      }
-
-      if (!profileResult || profileResult.length === 0) {
-        console.log("❌ No profile found");
-        navigate("/auth");
-        return;
-      }
-
-      const profileData = profileResult[0];
-
-      console.log("✅ Profile found:", {
-        id: profileData.id,
-        role: profileData.role,
-      });
-
-      if (profileData.role !== "teacher") {
-        console.log(
-          `⚠️ User role is ${profileData.role}, not teacher. Redirecting to student dashboard`
-        );
-        navigate("/student/dashboard");
-        return;
-      }
-
-      // Check verification status (teachers must be verified to access dashboard)
-      const { data: profileDetails } = await supabase
-        .from("profiles")
-        .select("is_verified")
-        .eq("id", session.user.id)
-        .single();
-
-      if (!profileDetails?.is_verified) {
-        console.log("⚠️ Teacher not verified, redirecting to pending verification");
-        navigate("/pending-verification");
-        return;
-      }
-
-      console.log("✅ Teacher access confirmed");
-      setProfile(profileData);
-    } catch (error) {
-      console.error("❌ Auth check error:", error);
-      navigate("/auth");
-    }
-  };
-
   const loadDashboardData = async () => {
+    if (!user) return;
+    
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) return;
+      // Fetch all data in parallel for speed
+      const [classroomsResult, studentCountResult, assignmentCountResult] = await Promise.all([
+        supabase.rpc("get_teacher_classrooms", { p_teacher_id: user.id }),
+        null, // Will fetch after we have classroom IDs
+        null, // Will fetch after we have classroom IDs
+      ]);
 
-      const { data: classroomsData, error } = await supabase.rpc(
-        "get_teacher_classrooms",
-        {
-          p_teacher_id: session.user.id,
-        }
-      );
-
-      if (error) throw error;
-      setClassrooms(classroomsData || []);
+      if (classroomsResult.error) throw classroomsResult.error;
+      const classroomsData = classroomsResult.data || [];
+      setClassrooms(classroomsData);
 
       // Fetch student counts and active assignments for all classrooms
-      if (classroomsData && classroomsData.length > 0) {
+      if (classroomsData.length > 0) {
         const classroomIds = classroomsData.map((c: any) => c.id);
         
-        const { data: studentCounts } = await supabase
-          .from("classroom_students")
-          .select("classroom_id", {
-            count: "exact",
-            head: false,
-          })
-          .in("classroom_id", classroomIds);
+        const [studentResult, assignmentResult] = await Promise.all([
+          supabase.from("classroom_students")
+            .select("classroom_id", { count: "exact", head: false })
+            .in("classroom_id", classroomIds),
+          supabase.from("assignments")
+            .select("*", { count: "exact", head: true })
+            .in("classroom_id", classroomIds)
+            .or(`due_date.gte.${new Date().toISOString()},due_date.is.null`),
+        ]);
 
-        const totalCount = studentCounts?.length || 0;
-        setTotalStudentCount(totalCount);
-
-        // Fetch active assignments count (assignments with future due dates or no due date)
-        const { count: assignmentCount } = await supabase
-          .from("assignments")
-          .select("*", { count: "exact", head: true })
-          .in("classroom_id", classroomIds)
-          .or(`due_date.gte.${new Date().toISOString()},due_date.is.null`);
-
-        setActiveAssignmentsCount(assignmentCount || 0);
+        setTotalStudentCount(studentResult.data?.length || 0);
+        setActiveAssignmentsCount(assignmentResult.count || 0);
       } else {
         setTotalStudentCount(0);
         setActiveAssignmentsCount(0);
@@ -181,19 +121,15 @@ const TeacherDashboard = () => {
   };
 
   const loadAllStudents = async () => {
+    if (!user) return;
+    
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) return;
-
       // Fetch all classrooms with their students
       const classroomsWithStudentsData = await Promise.all(
         classrooms.map(async (classroom) => {
           const { data: students } = await supabase
             .from("classroom_students")
-            .select(
-              `
+            .select(`
               student_id,
               joined_at,
               profiles:student_id (
@@ -201,12 +137,9 @@ const TeacherDashboard = () => {
                 full_name,
                 email
               )
-            `
-            )
+            `)
             .eq("classroom_id", classroom.id)
-            .order("joined_at", {
-              ascending: true,
-            });
+            .order("joined_at", { ascending: true });
 
           return {
             id: classroom.id,
@@ -236,11 +169,11 @@ const TeacherDashboard = () => {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     navigate("/");
   };
 
-  if (isLoading) {
+  if (authLoading || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20">
         <div className="text-center">
@@ -259,7 +192,7 @@ const TeacherDashboard = () => {
         <div className="container mx-auto px-4">
           <div className="mb-8">
             <h1 className="text-4xl md:text-5xl font-black mb-2 bg-gradient-to-r from-[#9B6DD6] to-[#D4A04A] bg-clip-text text-transparent">
-              {formatWelcome(profile?.full_name)} <span className="text-[#9B6DD6]">👋</span>
+              {formatWelcome(profile?.full_name ?? undefined)} <span className="text-[#9B6DD6]">👋</span>
             </h1>
             <p className="text-muted-foreground text-lg">
               {t("teacherDashboard.subtitle")}
@@ -449,15 +382,10 @@ const TeacherDashboard = () => {
                   {classrooms.map((classroom) => (
                     <div
                       key={classroom.id}
-                      className="h-full hover:scale-[1.02] transition-transform duration-200"
+                      onClick={() => navigate(`/classrooms/${classroom.id}`)}
+                      className="cursor-pointer h-full"
                     >
-                      <ClassroomCard
-                        id={classroom.id}
-                        name={classroom.name}
-                        joinCode={classroom.join_code}
-                        studentCount={Number(classroom.student_count) || 0}
-                        createdAt={classroom.created_at}
-                      />
+                      <ClassroomCard classroom={classroom} isTeacher={true} />
                     </div>
                   ))}
                 </div>
@@ -468,139 +396,48 @@ const TeacherDashboard = () => {
               <TeacherLinksResourcesTab />
             </TabsContent>
 
-            <TabsContent value="calendar" className="mt-6">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-2xl font-bold">{t("teacherDashboard.tabs.calendar")}</CardTitle>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => navigate("/teacher/calendar")}
-                  >
-                    View Full Calendar →
-                  </Button>
-                </CardHeader>
-                <CardContent>
-                  {profile?.id && (
-                    <CalendarWidget userId={profile.id} userRole="teacher" />
-                  )}
-                </CardContent>
-              </Card>
+            <TabsContent value="calendar" className="mt-6 space-y-4">
+              {user && <CalendarWidget userId={user.id} userRole="teacher" />}
             </TabsContent>
 
             <TabsContent value="directory" className="mt-6">
               <Directory />
             </TabsContent>
 
-            <TabsContent value="actions" className="mt-6">
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card
-                  className="hover:scale-[1.02] hover:shadow-purple transition-all duration-300 cursor-pointer border-primary/20 bg-gradient-to-br from-primary/5 to-background"
-                  onClick={() => navigate("/games")}
-                >
-                  <CardHeader>
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 rounded-lg bg-gradient-primary">
-                        <Sparkles className="h-5 w-5 text-white" />
-                      </div>
-                      <CardTitle className="text-lg">
-                        {t("teacherDashboard.quickActions.browseGames.title")}
-                      </CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground text-sm mb-4">
-                      {t("teacherDashboard.quickActions.browseGames.description")}
-                    </p>
-                    <Button variant="outline" className="w-full group" size="sm">
-                      {t("teacherDashboard.quickActions.browseGames.cta")}
-                      <span className="ml-2 group-hover:translate-x-1 transition-transform">
-                        →
-                      </span>
-                    </Button>
-                  </CardContent>
+            <TabsContent value="actions" className="mt-6 space-y-4">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <Card className="p-6 cursor-pointer hover:bg-muted/50 transition-colors">
+                  <h3 className="font-bold mb-2">{t("teacherDashboard.quickActions.createAssignment.title")}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {t("teacherDashboard.quickActions.createAssignment.description")}
+                  </p>
                 </Card>
-
                 <Card
-                  className="hover:scale-[1.02] hover:shadow-purple transition-all duration-300 cursor-pointer border-primary/20 bg-gradient-to-br from-secondary/5 to-background"
-                  onClick={() => navigate("/teacher/aura-analytics")}
-                >
-                  <CardHeader>
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 rounded-lg bg-gradient-hero">
-                        <BarChart3 className="h-5 w-5 text-white" />
-                      </div>
-                      <CardTitle className="text-lg">
-                        {t("teacherDashboard.quickActions.auraAnalytics.title")}
-                      </CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground text-sm mb-4">
-                      {t("teacherDashboard.quickActions.auraAnalytics.description")}
-                    </p>
-                    <Button variant="outline" className="w-full group" size="sm">
-                      {t("teacherDashboard.quickActions.auraAnalytics.cta")}
-                      <span className="ml-2 group-hover:translate-x-1 transition-transform">
-                        →
-                      </span>
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                <Card
-                  className="hover:scale-[1.02] hover:shadow-purple transition-all duration-300 cursor-pointer border-amber-500/20 bg-gradient-to-br from-amber-500/5 to-background"
+                  className="p-6 cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => navigate("/teacher/story-library")}
                 >
-                  <CardHeader>
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500">
-                        <BookOpen className="h-5 w-5 text-white" />
-                      </div>
-                      <CardTitle className="text-lg">
-                        {t("teacherDashboard.quickActions.storyLibrary.title")}
-                      </CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground text-sm mb-4">
-                      {t("teacherDashboard.quickActions.storyLibrary.description")}
-                    </p>
-                    <Button variant="outline" className="w-full group" size="sm">
-                      {t("teacherDashboard.quickActions.storyLibrary.cta")}
-                      <span className="ml-2 group-hover:translate-x-1 transition-transform">
-                        →
-                      </span>
-                    </Button>
-                  </CardContent>
+                  <h3 className="font-bold mb-2">{t("teacherDashboard.quickActions.storyLibrary.title")}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {t("teacherDashboard.quickActions.storyLibrary.description")}
+                  </p>
                 </Card>
-
-                <Card className="hover:scale-[1.02] hover:shadow-card transition-all duration-300 border-muted">
-                  <CardHeader>
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 rounded-lg bg-muted">
-                        <Sparkles className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <CardTitle className="text-lg">
-                        {t("teacherDashboard.quickActions.resources.title")}
-                      </CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground text-sm mb-4">
-                      {t("teacherDashboard.quickActions.resources.description")}
-                    </p>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-between"
-                      size="sm"
-                      disabled
-                    >
-                      {t("teacherDashboard.quickActions.resources.cta")}
-                      <Badge variant="secondary" className="ml-2 text-xs">
-                        {t("teacherDashboard.quickActions.resources.soon")}
-                      </Badge>
-                    </Button>
-                  </CardContent>
+                <Card
+                  className="p-6 cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => navigate("/games")}
+                >
+                  <h3 className="font-bold mb-2">{t("teacherDashboard.quickActions.studyGames.title")}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {t("teacherDashboard.quickActions.studyGames.description")}
+                  </p>
+                </Card>
+                <Card
+                  className="p-6 cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => navigate("/teacher/reading-calibration")}
+                >
+                  <h3 className="font-bold mb-2">{t("teacherDashboard.quickActions.calibration.title")}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {t("teacherDashboard.quickActions.calibration.description")}
+                  </p>
                 </Card>
               </div>
             </TabsContent>
@@ -623,8 +460,7 @@ const TeacherDashboard = () => {
       <AllStudentsDialog
         open={showStudentsDialog}
         onOpenChange={setShowStudentsDialog}
-        classrooms={classroomsWithStudents}
-        totalStudents={totalStudentCount}
+        classroomsWithStudents={classroomsWithStudents}
       />
     </div>
   );
