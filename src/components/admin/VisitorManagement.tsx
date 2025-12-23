@@ -147,9 +147,24 @@ export function VisitorManagement() {
     }
   };
 
+  // HTML escape function to prevent XSS attacks
+  const escapeHtml = (text: string): string => {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  };
+
   const printBadge = (visitor: Visitor) => {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
+
+    // Sanitize all user-provided data before inserting into HTML
+    const safeName = `${escapeHtml(visitor.first_name)} ${escapeHtml(visitor.last_name)}`;
+    const safeCompany = escapeHtml(visitor.company_organization || "");
+    const safeHost = escapeHtml(visitor.host_name || "N/A");
+    const safePurpose = escapeHtml(visitor.purpose);
+    const safeBadge = escapeHtml(visitor.badge_number || "");
+    const safeDate = format(new Date(visitor.checked_in_at), "MMM dd, yyyy h:mm a");
 
     printWindow.document.write(`
       <html>
@@ -168,12 +183,12 @@ export function VisitorManagement() {
         <body>
           <div class="badge">
             <div class="header">VISITOR</div>
-            <div class="name">${visitor.first_name} ${visitor.last_name}</div>
-            <div class="details">${visitor.company_organization || ""}</div>
-            <div class="details">Host: ${visitor.host_name || "N/A"}</div>
-            <div class="details">Purpose: ${visitor.purpose}</div>
-            <div class="badge-number">${visitor.badge_number}</div>
-            <div class="date">${format(new Date(visitor.checked_in_at), "MMM dd, yyyy h:mm a")}</div>
+            <div class="name">${safeName}</div>
+            <div class="details">${safeCompany}</div>
+            <div class="details">Host: ${safeHost}</div>
+            <div class="details">Purpose: ${safePurpose}</div>
+            <div class="badge-number">${safeBadge}</div>
+            <div class="date">${safeDate}</div>
           </div>
           <script>window.print(); window.close();</script>
         </body>
