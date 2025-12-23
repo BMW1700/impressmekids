@@ -31,14 +31,23 @@ const Auth = () => {
   const [pendingDistrictName, setPendingDistrictName] = useState("");
   const [pendingDistrictId, setPendingDistrictId] = useState<string | null>(null);
   const [availableRoles, setAvailableRoles] = useState<('teacher' | 'student' | 'parent')[]>(['student', 'parent']);
-  
+
+  const withTimeout = async <T,>(promise: PromiseLike<T>, ms: number, label: string): Promise<T> => {
+    return await Promise.race([
+      Promise.resolve(promise),
+      new Promise<T>((_resolve, reject) =>
+        setTimeout(() => reject(new Error(`timeout:${label}`)), ms)
+      ),
+    ]);
+  };
+
   // District code for teacher/admin signup
   const [districtCode, setDistrictCode] = useState("");
   const [districtInfo, setDistrictInfo] = useState<{district_code: string, name: string} | null>(null);
-  
+
   // District selection for student/parent signup
   const [selectedDistrictId, setSelectedDistrictId] = useState<string>("");
-  
+
   // COPPA consent flow state
   const [showAgeVerification, setShowAgeVerification] = useState(false);
   const [showParentalConsentForm, setShowParentalConsentForm] = useState(false);
@@ -46,11 +55,11 @@ const Auth = () => {
   const [parentEmailForConsent, setParentEmailForConsent] = useState("");
   const [isUnder13, setIsUnder13] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  
+
   // Substitute teacher mode
   const [isSubstituteMode, setIsSubstituteMode] = useState(false);
   const [substituteCode, setSubstituteCode] = useState("");
-  
+
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -587,44 +596,53 @@ const Auth = () => {
     e.preventDefault();
     setIsLoading(true);
 
+    // Minimal trace to pinpoint hangs (no sensitive data)
+    console.log("[auth] signIn:start");
+
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { data, error } = await withTimeout(
+        supabase.auth.signInWithPassword({ email, password }),
+        12000,
+        "signInWithPassword"
+      );
+
+      console.log("[auth] signIn:password_done", { ok: !error, hasUser: !!data?.user });
 
       if (error) throw error;
       if (!data.user) throw new Error("Sign in failed");
 
       // Verification status (non-blocking if backend denies access)
       try {
-        const { data: profile, error: profileError } = await Promise.race([
+        const { data: profile, error: profileError } = await withTimeout(
           supabase
             .from('profiles')
             .select('is_verified')
             .eq('id', data.user.id)
-            .maybeSingle(),
-          new Promise<{ data: any; error: any }>((_resolve, reject) =>
-            setTimeout(() => reject(new Error('profile_timeout')), 6000)
-          ),
-        ]);
+            .maybeSingle()
+            .then((r) => r),
+          6000,
+          "profiles.is_verified"
+        );
+
+        console.log("[auth] signIn:verified_check", { ok: !profileError, hasProfile: !!profile });
 
         if (!profileError && profile && profile.is_verified === false) {
           setIsLoading(false);
           navigate('/pending-verification');
           return;
         }
-      } catch {
-        // If this read fails/times out, do not block login; role routing below still works.
+      } catch (err) {
+        console.warn("[auth] signIn:verified_check_failed", err);
       }
 
-      // Fetch role/profile via security-definer RPC (with a hard timeout so we never hang)
-      const { data: pd, error: profileError } = await Promise.race([
-        supabase.rpc('get_user_profile', { _user_id: data.user.id }),
-        new Promise<{ data: any; error: any }>((_resolve, reject) =>
-          setTimeout(() => reject(new Error('profile_rpc_timeout')), 8000)
-        ),
-      ]);
+      // Fetch role/profile via security-definer RPC (hard timeout so we never hang)
+      const { data: pd, error: profileError } = await withTimeout(
+        supabase.rpc('get_user_profile', { _user_id: data.user.id }).then((r) => r),
+        8000,
+        "get_user_profile"
+      );
+
+      console.log("[auth] signIn:rpc_done", { ok: !profileError, rows: pd?.length ?? 0 });
 
       if (profileError) {
         throw new Error("Signed in, but couldn't load your account. Please try again.");
@@ -644,14 +662,16 @@ const Auth = () => {
 
       redirectToDashboard(userRole);
     } catch (error: any) {
-      console.error('Signin error:', error);
+      console.error('[auth] Signin error:', error);
 
-      let errorMessage = error.message || "Failed to sign in";
+      let errorMessage = error?.message || "Failed to sign in";
 
-      if (error.message?.includes('Invalid login credentials')) {
+      if (errorMessage?.includes('Invalid login credentials')) {
         errorMessage = "Invalid email or password. Please check your credentials and try again.";
-      } else if (error.message?.includes('Email not confirmed')) {
+      } else if (errorMessage?.includes('Email not confirmed')) {
         errorMessage = "Please confirm your email address before signing in.";
+      } else if (errorMessage?.startsWith('timeout:')) {
+        errorMessage = "Login is taking too long. Please try again.";
       }
 
       toast({
@@ -660,6 +680,7 @@ const Auth = () => {
         variant: "destructive",
       });
     } finally {
+      console.log("[auth] signIn:finally");
       setIsLoading(false);
     }
   };
