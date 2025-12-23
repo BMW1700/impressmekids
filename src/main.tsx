@@ -12,25 +12,47 @@ initSentry();
 // Set up global error handlers for uncaught errors
 setupGlobalErrorHandler();
 
-// Listen for Service Worker updates and reload gracefully
+// Guard against runaway history.replaceState loops (prevents blank-screen crash)
+// Some browsers throw a SecurityError if replaceState is called >100 times / 10s.
+(() => {
+  const original = window.history.replaceState;
+  const windowMs = 10_000;
+  const maxCalls = 90; // stay under browser threshold
+  let timestamps: number[] = [];
+
+  window.history.replaceState = function (...args: any[]) {
+    const now = Date.now();
+    timestamps = timestamps.filter((t) => now - t < windowMs);
+    timestamps.push(now);
+
+    if (timestamps.length > maxCalls) {
+      if (!import.meta.env.PROD) {
+        // eslint-disable-next-line no-console
+        console.warn('[nav] replaceState throttled to prevent crash');
+      }
+      // No-op to avoid triggering the browser SecurityError.
+      return;
+    }
+
+    return (original as any).apply(this, args);
+  } as any;
+})();
+
+// Listen for Service Worker updates.
+// IMPORTANT: do NOT force reload here; repeated SW_UPDATED messages can remount the app and
+// trigger the browser's replaceState safety limit.
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.addEventListener("message", (event) => {
     if (event.data?.type === "SW_UPDATED") {
-      // Prevent reload loops: only reload once per session (and not more than once per minute)
       try {
-        const key = "sw_updated_reload_at";
-        const last = Number(sessionStorage.getItem(key) || "0");
-        const now = Date.now();
-        if (now - last < 60_000) return;
-        sessionStorage.setItem(key, String(now));
+        sessionStorage.setItem("sw_updated_available", "1");
       } catch {
-        // If sessionStorage is blocked, fall back to a single in-memory guard
-        (window as any).__swReloaded = (window as any).__swReloaded ?? false;
-        if ((window as any).__swReloaded) return;
-        (window as any).__swReloaded = true;
+        // ignore
       }
-
-      window.location.reload();
+      if (!import.meta.env.PROD) {
+        // eslint-disable-next-line no-console
+        console.log('[sw] update available');
+      }
     }
   });
 }
