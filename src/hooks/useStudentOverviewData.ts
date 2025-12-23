@@ -83,16 +83,35 @@ export const useStudentOverviewData = (studentId: string | undefined) => {
               .eq("is_posted", true)
           : Promise.resolve({ count: 0, error: null }),
 
-        // Past due count (last 14 days only, HEAD request)
-        classroomIds.length > 0
-          ? supabase
-              .from("assignments")
-              .select("id", { count: 'exact', head: true })
-              .in("classroom_id", classroomIds)
-              .lt("due_date", startDate)
-              .gte("due_date", new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString())
-              .eq("is_posted", true)
-          : Promise.resolve({ count: 0, error: null }),
+        // Past due count - STUDENT-AWARE: only assignments without a submission from this student
+        // No time window limit - show ALL past due assignments
+        (async () => {
+          if (classroomIds.length === 0) return { count: 0, error: null };
+          
+          // Get all past due posted assignments
+          const { data: pastDueAssignments, error: assignErr } = await supabase
+            .from("assignments")
+            .select("id")
+            .in("classroom_id", classroomIds)
+            .lt("due_date", startDate)
+            .eq("is_posted", true);
+          
+          if (assignErr || !pastDueAssignments?.length) return { count: 0, error: null };
+          
+          // Get student's submissions for these assignments
+          const assignmentIds = pastDueAssignments.map(a => a.id);
+          const { data: studentSubmissions } = await supabase
+            .from("assignment_submissions")
+            .select("assignment_id")
+            .eq("student_id", studentId)
+            .in("assignment_id", assignmentIds)
+            .in("status", ["submitted", "graded"]);
+          
+          const submittedIds = new Set((studentSubmissions || []).map(s => s.assignment_id));
+          const notSubmittedCount = assignmentIds.filter(id => !submittedIds.has(id)).length;
+          
+          return { count: notSubmittedCount, error: null };
+        })(),
 
         // Completed submissions count (HEAD request)
         supabase
