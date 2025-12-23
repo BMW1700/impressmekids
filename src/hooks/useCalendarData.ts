@@ -312,15 +312,20 @@ export const useCalendarData = ({ startDate, endDate, userId, userRole, childId 
 
       if ((userRole === "student" || (userRole === "parent" && childId)) && assignments) {
         const assignmentIds = assignments.map(a => a.id);
-        const { data: submissions } = await supabase
-          .from("assignment_submissions")
-          .select("assignment_id, status")
-          .eq("student_id", effectiveUserId)
-          .in("assignment_id", assignmentIds);
+        
+        // Guard against empty array queries - skip if no assignments
+        let submissionMap = new Map<string, boolean>();
+        if (assignmentIds.length > 0) {
+          const { data: submissions } = await supabase
+            .from("assignment_submissions")
+            .select("assignment_id, status")
+            .eq("student_id", effectiveUserId)
+            .in("assignment_id", assignmentIds);
 
-        const submissionMap = new Map(
-          submissions?.map(s => [s.assignment_id, s.status === "completed" || s.status === "graded"]) || []
-        );
+          submissionMap = new Map(
+            submissions?.map(s => [s.assignment_id, s.status === "completed" || s.status === "graded"]) || []
+          );
+        }
 
         assignments.forEach((assignment: any) => {
           const recentlyPosted = assignment.created_at && new Date(assignment.created_at) > twoDaysAgo;
