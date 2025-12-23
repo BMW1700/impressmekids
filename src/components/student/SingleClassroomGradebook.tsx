@@ -257,7 +257,7 @@ const useSingleClassroomGradebook = (classroomId: string, studentId: string) => 
       };
     },
     enabled: !!classroomId && !!studentId,
-    staleTime: 60000, // 1 minute cache
+    staleTime: 30000,
   });
 };
 
@@ -382,9 +382,7 @@ export const SingleClassroomGradebook = ({ classroomId, studentId, classroomName
                   <div>
                     <p className="font-medium">{assignment.title}</p>
                     <p className="text-sm text-muted-foreground">
-                      Due {assignment.dueDate && !isNaN(new Date(assignment.dueDate).getTime()) 
-                        ? format(new Date(assignment.dueDate), "MMM d, yyyy")
-                        : "No due date"}
+                      Due {format(new Date(assignment.dueDate), "MMM d, yyyy")}
                     </p>
                   </div>
                   {getStatusBadge(assignment.status)}
@@ -439,9 +437,7 @@ export const SingleClassroomGradebook = ({ classroomId, studentId, classroomName
               <div className="flex-1">
                 <p className="font-semibold">{assignment.title}</p>
                 <p className="text-sm text-muted-foreground">
-                  {assignment.dueDate && !isNaN(new Date(assignment.dueDate).getTime()) 
-                    ? `Due: ${format(new Date(assignment.dueDate), "MMM d, yyyy")}` 
-                    : "No due date"}
+                  {assignment.dueDate ? `Due: ${format(new Date(assignment.dueDate), "MMM d, yyyy")}` : "No due date"}
                 </p>
               </div>
               <div className="flex items-center gap-4">
@@ -481,11 +477,10 @@ export const SingleClassroomGradebook = ({ classroomId, studentId, classroomName
               <div>
                 <h3 className="font-semibold text-lg">{selectedAssignment.title}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {selectedAssignment.dueDate && !isNaN(new Date(selectedAssignment.dueDate).getTime()) 
-                    ? `Due: ${format(new Date(selectedAssignment.dueDate), "MMMM d, yyyy")}` 
-                    : "No due date"}
+                  {selectedAssignment.dueDate ? `Due: ${format(new Date(selectedAssignment.dueDate), "MMMM d, yyyy")}` : "No due date"}
                 </p>
               </div>
+
               <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
                 {getStatusBadge(selectedAssignment.status)}
                 {selectedAssignment.grade !== null && (

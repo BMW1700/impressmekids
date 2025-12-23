@@ -5,18 +5,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import {
-  ClipboardList,
-  Trophy,
-  Users2,
-  BookOpen,
-  ArrowRight,
-  CheckCircle,
-  GraduationCap,
-  MessageSquare,
-  LayoutDashboard,
-  Loader2,
-} from "lucide-react";
+import { ClipboardList, Trophy, Users2, BookOpen, ArrowRight, CheckCircle, GraduationCap, MessageSquare, LayoutDashboard, Loader2 } from "lucide-react";
 import { StatsSection } from "@/components/landing/StatsSection";
 import { TestimonialSection } from "@/components/landing/TestimonialSection";
 import { TrustSection } from "@/components/landing/TrustSection";
@@ -55,60 +44,43 @@ const Index = () => {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   useEffect(() => {
-    let cancelled = false;
-
-    // Never block the landing page forever
-    const hardTimeout = window.setTimeout(() => {
-      if (!cancelled) setIsCheckingAuth(false);
-    }, 1500);
-
     const checkAuthAndRedirect = async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!session || cancelled) return;
-
-        // User is authenticated, redirect to their dashboard
-        const { data: profileData } = await supabase.rpc('get_user_profile', {
-          _user_id: session.user.id,
-        });
-
-        if (!profileData || profileData.length === 0 || cancelled) return;
-
-        const userRole = profileData[0].role;
-        if (userRole === 'teacher') {
-          navigate('/teacher/dashboard');
-        } else if (userRole === 'parent') {
-          navigate('/parent/dashboard');
-        } else if (userRole === 'district_admin') {
-          navigate('/district/dashboard');
-        } else if (userRole === 'admin') {
-          navigate('/admin/dashboard');
-        } else {
-          navigate('/student/dashboard');
+      const {
+        data: {
+          session
         }
-      } catch {
-        // Intentionally swallow here so / never bricks behind a spinner
-      } finally {
-        if (!cancelled) setIsCheckingAuth(false);
+      } = await supabase.auth.getSession();
+      if (session) {
+        // User is authenticated, redirect to their dashboard
+        const {
+          data: profileData
+        } = await supabase.rpc('get_user_profile', {
+          _user_id: session.user.id
+        });
+        if (profileData && profileData.length > 0) {
+          const userRole = profileData[0].role;
+          if (userRole === 'teacher') {
+            navigate('/teacher/dashboard');
+          } else if (userRole === 'parent') {
+            navigate('/parent/dashboard');
+          } else if (userRole === 'district_admin') {
+            navigate('/district/dashboard');
+          } else if (userRole === 'admin') {
+            navigate('/admin/dashboard');
+          } else {
+            navigate('/student/dashboard');
+          }
+        }
       }
+      setIsCheckingAuth(false);
     };
-
     checkAuthAndRedirect();
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(hardTimeout);
-    };
   }, [navigate]);
 
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <div className="mt-4 text-sm text-muted-foreground">Loading…</div>
       </div>
     );
   }

@@ -6826,12 +6826,15 @@ export type Database = {
         }[]
       }
       get_parent_children: {
-        Args: { _user_id: string }
+        Args: { _parent_user_id: string }
         Returns: {
+          approved: boolean
+          approved_at: string
           avatar_url: string
           email: string
           full_name: string
           grade: number
+          link_id: string
           student_id: string
         }[]
       }

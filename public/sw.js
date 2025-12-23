@@ -1,99 +1,62 @@
 // Service Worker for ImpressMe Kids
 // Handles push notifications and offline capabilities
-// v2 - Network-first for navigations to prevent stale index.html
 
-const CACHE_NAME = 'impressme-kids-v2';
-const STATIC_ASSETS = [
+const CACHE_NAME = 'impressme-kids-v1';
+const urlsToCache = [
+  '/',
+  '/index.html',
   '/favicon-32x32.png',
   '/android-chrome-192x192.png',
   '/android-chrome-512x512.png',
 ];
 
-// Install event - cache only static assets (NOT index.html)
+// Install event - cache static assets
 self.addEventListener('install', (event) => {
+  console.log('[Service Worker] Installing...');
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
+      console.log('[Service Worker] Caching app shell');
+      return cache.addAll(urlsToCache);
     })
   );
   self.skipWaiting();
 });
 
-// Activate event - clean up old caches and claim clients
+// Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
+  console.log('[Service Worker] Activating...');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
+            console.log('[Service Worker] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
-    }).then(() => {
-      // Notify all clients that a new SW is active
-      return self.clients.matchAll().then((clients) => {
-        clients.forEach((client) => {
-          client.postMessage({ type: 'SW_UPDATED' });
-        });
-      });
     })
   );
   self.clients.claim();
 });
 
-// Fetch event - Network-first for navigations, cache-first for static assets
+// Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
-
-  // Network-first for navigation requests (HTML pages)
-  // This ensures users always get the latest index.html
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Don't cache navigation responses
-          return response;
-        })
-        .catch(() => {
-          // Only fall back to cache if network fails completely
-          return caches.match('/index.html');
-        })
-    );
-    return;
-  }
-
-  // Network-first for API requests
-  if (url.pathname.startsWith('/api') || url.hostname.includes('supabase')) {
-    event.respondWith(fetch(request));
-    return;
-  }
-
-  // Cache-first for static assets only
-  if (STATIC_ASSETS.some(asset => url.pathname.endsWith(asset))) {
-    event.respondWith(
-      caches.match(request).then((cached) => {
-        return cached || fetch(request).then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, clone);
-          });
-          return response;
-        });
-      })
-    );
-    return;
-  }
-
-  // Default: network-first for everything else
   event.respondWith(
-    fetch(request).catch(() => caches.match(request))
+    caches.match(event.request).then((response) => {
+      // Cache hit - return response
+      if (response) {
+        return response;
+      }
+      return fetch(event.request);
+    })
   );
 });
 
 // Push event - handle incoming push notifications
 self.addEventListener('push', (event) => {
+  console.log('[Service Worker] Push received:', event);
+  
   let notificationData = {
     title: 'ImpressMe Kids',
     body: 'You have a new notification',
@@ -114,7 +77,7 @@ self.addEventListener('push', (event) => {
         tag: data.notification?.tag || data.tag,
       };
     } catch (e) {
-      // Silent fail for push parsing
+      console.error('[Service Worker] Error parsing push data:', e);
     }
   }
 
@@ -133,15 +96,19 @@ self.addEventListener('push', (event) => {
 
 // Notification click event - handle user clicking on notification
 self.addEventListener('notificationclick', (event) => {
+  console.log('[Service Worker] Notification clicked:', event);
   event.notification.close();
 
+  // Navigate to the app or specific page
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // If app is already open, focus it
       for (let client of clientList) {
         if (client.url === '/' && 'focus' in client) {
           return client.focus();
         }
       }
+      // Otherwise open a new window
       if (clients.openWindow) {
         return clients.openWindow('/');
       }

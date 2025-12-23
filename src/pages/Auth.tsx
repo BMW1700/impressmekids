@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,8 +19,6 @@ import { ParentalConsentForm } from "@/components/auth/ParentalConsentForm";
 import { ConsentPending } from "@/components/auth/ConsentPending";
 import { useQuery } from "@tanstack/react-query";
 import logo from "@/assets/logo.png";
-import { AuthResetButton } from "@/components/auth/AuthResetButton";
-import { AuthDiagnostics } from "@/components/auth/AuthDiagnostics";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -33,16 +31,14 @@ const Auth = () => {
   const [pendingDistrictName, setPendingDistrictName] = useState("");
   const [pendingDistrictId, setPendingDistrictId] = useState<string | null>(null);
   const [availableRoles, setAvailableRoles] = useState<('teacher' | 'student' | 'parent')[]>(['student', 'parent']);
-
-  // Removed withTimeout - was causing login issues
-
+  
   // District code for teacher/admin signup
   const [districtCode, setDistrictCode] = useState("");
   const [districtInfo, setDistrictInfo] = useState<{district_code: string, name: string} | null>(null);
-
+  
   // District selection for student/parent signup
   const [selectedDistrictId, setSelectedDistrictId] = useState<string>("");
-
+  
   // COPPA consent flow state
   const [showAgeVerification, setShowAgeVerification] = useState(false);
   const [showParentalConsentForm, setShowParentalConsentForm] = useState(false);
@@ -50,13 +46,12 @@ const Auth = () => {
   const [parentEmailForConsent, setParentEmailForConsent] = useState("");
   const [isUnder13, setIsUnder13] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
+  
   // Substitute teacher mode
   const [isSubstituteMode, setIsSubstituteMode] = useState(false);
   const [substituteCode, setSubstituteCode] = useState("");
-
+  
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
 
   // Fetch all districts for dropdown
@@ -87,74 +82,60 @@ const Auth = () => {
     }
   };
 
-  const [hasCheckedUser, setHasCheckedUser] = useState(false);
-
   useEffect(() => {
-    // Prevent multiple runs - use ref pattern to avoid dependency issues
-    if (hasCheckedUser) return;
-    setHasCheckedUser(true); // Set immediately to prevent re-runs
-    
     // Handle Clever login success/error from URL params
-    const cleverLogin = searchParams.get('clever_login');
-    const cleverError = searchParams.get('error');
-
-    const clearCleverParams = () => {
-      if (searchParams.has('clever_login') || searchParams.has('error')) {
-        // Clear params via router so history state stays consistent
-        setSearchParams({}, { replace: true });
-      }
-    };
-
+    const urlParams = new URLSearchParams(window.location.search);
+    const cleverLogin = urlParams.get('clever_login');
+    const cleverError = urlParams.get('error');
+    
     if (cleverError) {
       toast({
         title: "Clever login failed",
         description: cleverError,
         variant: "destructive",
       });
-      clearCleverParams();
-      return;
+      window.history.replaceState({}, '', '/auth');
     }
-
+    
     if (cleverLogin === 'success') {
       toast({
         title: "Success!",
         description: "Successfully signed in with Clever",
       });
-      clearCleverParams();
-      return;
+      window.history.replaceState({}, '', '/auth');
     }
-
+    
     const checkUser = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          return;
-        }
-
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
         // Check verification status
         const { data: profile } = await supabase
           .from('profiles')
-          .select('is_verified')
+          .select('is_verified, role')
           .eq('id', session.user.id)
-          .maybeSingle();
-
-        if (profile && profile.is_verified === false) {
-          navigate('/pending-verification', { replace: true });
+          .single();
+        
+        if (!profile?.is_verified) {
+          navigate('/pending-verification');
           return;
         }
 
         // Check if this is an OAuth callback that needs role selection
-        const isOAuthCallback = searchParams.get('code') || searchParams.get('access_token');
-
+        const urlParams = new URLSearchParams(window.location.search);
+        const isOAuthCallback = urlParams.get('code') || urlParams.get('access_token');
+        
         if (isOAuthCallback && session.user.email) {
           const district = await detectUserTypeFromEmail(session.user.email);
-
+          
+          // ALWAYS require district and role selection for OAuth users
+          // If no district match, show district selection first
           if (!district.districtCode) {
             setShowDistrictModal(true);
             setAvailableRoles(district.availableRoles);
             return;
           }
-
+          
+          // If district matched, proceed to role selection
           if (district.requiresRoleSelection) {
             setPendingDistrictName(district.districtName || "");
             setPendingDistrictId(district.districtCode);
@@ -164,24 +145,20 @@ const Auth = () => {
           }
         }
 
-        // Get user profile with role
-        const { data: profileData, error: rpcError } = await supabase.rpc('get_user_profile', { _user_id: session.user.id });
+        const { data: profileData, error: profileError } = await supabase
+          .rpc('get_user_profile', { _user_id: session.user.id });
 
-        if (rpcError) {
-          console.error('Profile fetch error:', rpcError);
-          return;
-        }
-
-        if (profileData && profileData.length > 0 && profileData[0]?.role) {
+        if (profileError) {
+          console.error('Profile fetch error:', profileError);
+        } else if (profileData && profileData.length > 0) {
           redirectToDashboard(profileData[0].role);
+        } else {
+          console.warn('Profile not found for user:', session.user.id);
         }
-      } catch (err) {
-        console.error('checkUser error:', err);
       }
     };
 
     checkUser();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleGoogleSignIn = async () => {
@@ -274,25 +251,16 @@ const Auth = () => {
         return;
       }
 
-      // Update profile with district info (role stored in user_roles table for security)
-      const { error: profileError } = await supabase
+      // Update profile with selected role and district
+      const { error: roleError } = await supabase
         .from('profiles')
         .update({ 
+          role: selectedRole,
           district_id: pendingDistrictId,
           district_name: pendingDistrictName,
           is_verified: false
         })
         .eq('id', user.id);
-
-      if (profileError) throw profileError;
-
-      // Insert role into user_roles table (secure role storage)
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .upsert({ 
-          user_id: user.id,
-          role: selectedRole
-        }, { onConflict: 'user_id,role' });
 
       if (roleError) throw roleError;
 
@@ -486,19 +454,6 @@ const Auth = () => {
         throw new Error('Failed to update profile. Please try again.');
       }
 
-      // Insert role into user_roles table (secure role storage)
-      const { error: roleInsertError } = await supabase
-        .from('user_roles')
-        .upsert({ 
-          user_id: data.user.id,
-          role: role
-        }, { onConflict: 'user_id,role' });
-
-      if (roleInsertError) {
-        console.error('Failed to insert role:', roleInsertError);
-        // Don't fail signup - the profile trigger may have already created the role
-      }
-
       // Create verification request for all non-admin roles
       if (role === 'teacher' || role === 'student' || role === 'parent') {
         // Validate district_id before creating verification request
@@ -602,74 +557,68 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      if (!data.user) throw new Error("Sign in failed");
-
-      // Best-effort verification check (never block sign-in if this fails)
-      try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_verified')
-          .eq('id', data.user.id)
-          .maybeSingle();
-
-        if (profile && profile.is_verified === false) {
-          navigate('/pending-verification', { replace: true });
-          return;
-        }
-      } catch {
-        // ignore
-      }
-
-      // Determine role with fallbacks so login never gets stuck on a missing/broken RPC.
-      let userRole: string | null = null;
-
-      try {
-        const { data: profileData } = await supabase.rpc('get_user_profile', { _user_id: data.user.id });
-        userRole = profileData?.[0]?.role ?? null;
-      } catch {
-        // ignore
-      }
-
-      if (!userRole) {
-        try {
-          const { data: rolesData } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', data.user.id);
-
-          userRole = rolesData?.[0]?.role ?? null;
-        } catch {
-          // ignore
-        }
-      }
-
-      if (!userRole) {
-        userRole = (data.user.user_metadata as any)?.role ?? null;
-      }
-
-      if (!userRole) {
-        userRole = 'student';
-      }
-
-      toast({
-        title: "Welcome back!",
-        description: "Successfully signed in.",
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      redirectToDashboard(userRole);
+      if (error) throw error;
+
+      if (data.user) {
+        // Check verification status
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_verified, role')
+          .eq('id', data.user.id)
+          .single();
+
+        if (!profile?.is_verified) {
+          navigate('/pending-verification');
+          return;
+        }
+
+        // Fetch full profile with retry
+        let profileData = null;
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (attempts < maxAttempts && !profileData) {
+          attempts++;
+          
+          const { data: pd, error: profileError } = await supabase
+            .rpc('get_user_profile', { _user_id: data.user.id });
+
+          if (profileError) {
+            console.error('Profile fetch error:', profileError);
+          } else if (pd && pd.length > 0) {
+            profileData = pd[0];
+          } else if (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
+
+        if (!profileData) {
+          throw new Error('Profile not found. Please try again.');
+        }
+
+        toast({
+          title: "Welcome back!",
+          description: `Successfully signed in as ${profileData.role}!`,
+        });
+
+        redirectToDashboard(profileData.role);
+      }
     } catch (error: any) {
       console.error('Signin error:', error);
-
-      let errorMessage = error?.message || "Failed to sign in";
-
-      if (errorMessage?.includes('Invalid login credentials')) {
+      
+      let errorMessage = error.message || "Failed to sign in";
+      
+      if (error.message?.includes('Invalid login credentials')) {
         errorMessage = "Invalid email or password. Please check your credentials and try again.";
-      } else if (errorMessage?.includes('Email not confirmed')) {
+      } else if (error.message?.includes('Email not confirmed')) {
         errorMessage = "Please confirm your email address before signing in.";
       }
-
+      
       toast({
         title: "Error",
         description: errorMessage,
@@ -752,9 +701,6 @@ const Auth = () => {
     <div className="min-h-screen flex flex-col items-center justify-center relative z-0 overflow-hidden p-4">
       {/* Fixed background so gradient is identical regardless of tab/content height */}
       <div aria-hidden className="fixed inset-0 -z-10 bg-gradient-hero pointer-events-none" />
-      
-      {/* Auth diagnostics panel (visible with ?debug=1) */}
-      <AuthDiagnostics />
 
       <div className="w-full max-w-md px-6 py-10 relative z-10 bg-violet-950/35 backdrop-blur-xl rounded-3xl border border-violet-500/20 shadow-2xl">
         {/* Logo */}
@@ -945,14 +891,12 @@ const Auth = () => {
               </div>
             ) : (
               /* Regular Email Form */
-              <form onSubmit={handleSignIn} className="space-y-4" autoComplete="on">
+              <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signin-email" className="text-white text-sm font-medium">Email</Label>
                   <Input
                     id="signin-email"
-                    name="email"
                     type="email"
-                    autoComplete="username"
                     placeholder="you@school.edu"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -975,9 +919,7 @@ const Auth = () => {
                   <div className="relative">
                     <Input
                       id="signin-password"
-                      name="password"
                       type={showPassword ? "text" : "password"}
-                      autoComplete="current-password"
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -1069,14 +1011,12 @@ const Auth = () => {
             </div>
 
             {/* Email Form */}
-            <form id="signup-form" onSubmit={handleSignUp} className="space-y-4" autoComplete="on">
+            <form id="signup-form" onSubmit={handleSignUp} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="signup-name" className="text-white text-sm font-medium">Full Name</Label>
                 <Input
                   id="signup-name"
-                  name="name"
                   type="text"
-                  autoComplete="name"
                   placeholder="Your full name"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
@@ -1088,9 +1028,7 @@ const Auth = () => {
                 <Label htmlFor="signup-email" className="text-white text-sm font-medium">Email</Label>
                 <Input
                   id="signup-email"
-                  name="email"
                   type="email"
-                  autoComplete="email"
                   placeholder="you@school.edu"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -1103,9 +1041,7 @@ const Auth = () => {
                 <div className="relative">
                   <Input
                     id="signup-password"
-                    name="new-password"
                     type={showPassword ? "text" : "password"}
-                    autoComplete="new-password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -1316,10 +1252,6 @@ const Auth = () => {
           });
         }}
       />
-      {/* Reset button for stuck auth states */}
-      <div className="mt-4 flex justify-center">
-        <AuthResetButton />
-      </div>
     </div>
   );
 };

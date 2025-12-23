@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useStudentClassroomIds } from "@/hooks/useStudentClassroomIds";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -19,58 +18,38 @@ interface ParentUpcomingAssignmentsProps {
 }
 
 export const ParentUpcomingAssignments = ({ studentId }: ParentUpcomingAssignmentsProps) => {
-  // Use shared hook to get classroom IDs (cached across components)
-  const { data: classroomIds = [], isLoading: classroomsLoading } = useStudentClassroomIds(studentId);
-
-  const { data: assignments, isLoading: assignmentsLoading } = useQuery({
-    queryKey: ["parent-upcoming-assignments", studentId, classroomIds],
+  const { data: assignments, isLoading } = useQuery({
+    queryKey: ["parent-upcoming-assignments", studentId],
     queryFn: async () => {
+      const { data: classroomData } = await supabase
+        .from("classroom_students")
+        .select("classroom_id")
+        .eq("student_id", studentId);
+
+      const classroomIds = classroomData?.map((c) => c.classroom_id) || [];
       if (classroomIds.length === 0) return [];
 
-      // Step 1: Fetch ALL posted assignments (no time window for past-due)
-      // Include past due (no lower limit) + upcoming (limit to 30 days ahead)
-      const thirtyDaysAhead = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-      
-      const { data: assignmentsData, error: assignmentsError } = await supabase
+      const { data, error } = await supabase
         .from("assignments")
         .select(`
           id, title, description, due_date, assignment_type, category,
-          classrooms ( name )
+          classrooms ( name ),
+          assignment_submissions ( id, status, submitted_at )
         `)
         .in("classroom_id", classroomIds)
         .eq("is_posted", true)
-        .not("due_date", "is", null) // Only assignments with due dates
-        .lte("due_date", thirtyDaysAhead) // Up to 30 days in future
+        .gte("due_date", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
         .order("due_date", { ascending: true })
-        .limit(50); // Increased limit to capture past due
+        .limit(20);
 
-      if (assignmentsError) throw assignmentsError;
-      if (!assignmentsData || assignmentsData.length === 0) return [];
-
-      // Step 2: Fetch ONLY this student's submissions for these assignments
-      const assignmentIds = assignmentsData.map(a => a.id);
-      const { data: submissionsData } = await supabase
-        .from("assignment_submissions")
-        .select("id, status, submitted_at, assignment_id")
-        .eq("student_id", studentId)
-        .in("assignment_id", assignmentIds);
-
-      // Create lookup map for fast merging
-      const submissionsByAssignment = new Map(
-        (submissionsData || []).map(s => [s.assignment_id, s])
-      );
-
-      return assignmentsData.map((a: any) => ({
+      if (error) throw error;
+      return data?.map((a: any) => ({
         ...a,
-        submission: submissionsByAssignment.get(a.id) || null,
+        submission: a.assignment_submissions?.find((s: any) => s) || null,
       }));
     },
-    enabled: classroomIds.length > 0,
-    staleTime: 5 * 60 * 1000, // 5 minutes - assignments don't change frequently
-    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
+    enabled: !!studentId,
   });
-
-  const isLoading = classroomsLoading || assignmentsLoading;
 
   const getAssignmentIcon = (type: string) => {
     switch (type) {
@@ -81,12 +60,7 @@ export const ParentUpcomingAssignments = ({ studentId }: ParentUpcomingAssignmen
   };
 
   const getStatusBadge = (assignment: any) => {
-    // Safe date handling
-    if (!assignment.due_date) return <Badge variant="secondary">No due date</Badge>;
-    
     const dueDate = new Date(assignment.due_date);
-    if (isNaN(dueDate.getTime())) return <Badge variant="secondary">No due date</Badge>;
-    
     const submission = assignment.submission;
     
     if (submission?.submitted_at) return <Badge variant="green">Submitted</Badge>;
@@ -99,12 +73,7 @@ export const ParentUpcomingAssignments = ({ studentId }: ParentUpcomingAssignmen
   };
 
   const getUrgencyClass = (assignment: any) => {
-    // Safe date handling
-    if (!assignment.due_date) return "";
-    
     const dueDate = new Date(assignment.due_date);
-    if (isNaN(dueDate.getTime())) return "";
-    
     const submission = assignment.submission;
     
     if (submission?.submitted_at) return "";
@@ -137,28 +106,9 @@ export const ParentUpcomingAssignments = ({ studentId }: ParentUpcomingAssignmen
     );
   }
 
-  // Safe filtering with date validation
-  const pastDue = assignments?.filter((a: any) => {
-    if (!a.due_date) return false;
-    const dueDate = new Date(a.due_date);
-    if (isNaN(dueDate.getTime())) return false;
-    return isPast(dueDate) && !isToday(dueDate) && !a.submission?.submitted_at;
-  }) || [];
-  
-  const dueToday = assignments?.filter((a: any) => {
-    if (!a.due_date) return false;
-    const dueDate = new Date(a.due_date);
-    if (isNaN(dueDate.getTime())) return false;
-    return isToday(dueDate) && !a.submission?.submitted_at;
-  }) || [];
-  
-  const upcoming = assignments?.filter((a: any) => {
-    if (!a.due_date) return false;
-    const dueDate = new Date(a.due_date);
-    if (isNaN(dueDate.getTime())) return false;
-    return !isPast(dueDate) && !isToday(dueDate) && !a.submission?.submitted_at;
-  }) || [];
-  
+  const pastDue = assignments?.filter((a: any) => isPast(new Date(a.due_date)) && !isToday(new Date(a.due_date)) && !a.submission?.submitted_at) || [];
+  const dueToday = assignments?.filter((a: any) => isToday(new Date(a.due_date)) && !a.submission?.submitted_at) || [];
+  const upcoming = assignments?.filter((a: any) => !isPast(new Date(a.due_date)) && !isToday(new Date(a.due_date)) && !a.submission?.submitted_at) || [];
   const submitted = assignments?.filter((a: any) => a.submission?.submitted_at) || [];
 
   return (
@@ -232,10 +182,7 @@ export const ParentUpcomingAssignments = ({ studentId }: ParentUpcomingAssignmen
 };
 
 const AssignmentItem = ({ assignment, getAssignmentIcon, getStatusBadge, getUrgencyClass }: any) => {
-  // Safe date parsing - handle null/invalid dates
-  const dueDate = assignment.due_date ? new Date(assignment.due_date) : null;
-  const isValidDate = dueDate && !isNaN(dueDate.getTime());
-  
+  const dueDate = new Date(assignment.due_date);
   return (
     <div className={`flex gap-3 p-4 rounded-xl bg-gradient-to-r from-muted/30 to-muted/10 hover:from-muted/50 hover:to-muted/20 transition-all duration-300 hover:scale-[1.01] ${getUrgencyClass(assignment)}`}>
       <div className="icon-circle icon-circle-sm icon-circle-blue">
@@ -251,7 +198,7 @@ const AssignmentItem = ({ assignment, getAssignmentIcon, getStatusBadge, getUrge
         </div>
         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
           <Clock className="h-3 w-3" />
-          {isValidDate ? format(dueDate, "MMM d, h:mm a") : "No due date"}
+          {format(dueDate, "MMM d, h:mm a")}
           <Badge variant="outline" className="text-xs py-0 h-5">{assignment.category}</Badge>
         </div>
       </div>

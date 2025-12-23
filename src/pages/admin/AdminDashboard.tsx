@@ -29,11 +29,9 @@ import { AdminSchoolSelector } from "@/components/admin/AdminSchoolSelector";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useSchools } from "@/hooks/useSchools";
-import { useAuth } from "@/contexts/AuthContext";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const { user, profile, isLoading: authLoading, signOut } = useAuth();
   const [loading, setLoading] = useState(true);
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null);
   const { teachers, students, admins, isLoading } = useAdminData(selectedSchoolId);
@@ -78,24 +76,22 @@ export default function AdminDashboard() {
   const [editStudentIdCurrentNumber, setEditStudentIdCurrentNumber] = useState<string | null>(null);
 
   useEffect(() => {
-    if (authLoading) return;
-    
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
-
     checkAdminAccess();
-  }, [authLoading, user]);
+  }, []);
 
   const checkAdminAccess = async () => {
-    if (!user) return;
-    
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        navigate("/auth");
+        return;
+      }
+
       const { data: userRole } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", user.id)
+        .eq("user_id", session.user.id)
         .single();
 
       if (userRole?.role !== "admin") {
@@ -104,7 +100,13 @@ export default function AdminDashboard() {
         return;
       }
 
-      // Set default school from profile
+      // Get admin's school_id to set as default
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("school_id")
+        .eq("id", session.user.id)
+        .single();
+
       if (profile?.school_id) {
         setSelectedSchoolId(profile.school_id);
       }
@@ -117,7 +119,7 @@ export default function AdminDashboard() {
   };
 
   const handleSignOut = async () => {
-    await signOut();
+    await supabase.auth.signOut();
     navigate("/");
   };
 
@@ -159,7 +161,7 @@ export default function AdminDashboard() {
     setEditStudentIdOpen(true);
   };
 
-  if (authLoading || loading || isLoading) {
+  if (loading || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -382,7 +384,7 @@ export default function AdminDashboard() {
                       {admins.map((admin) => (
                         <AdminListCard 
                           key={admin.id} 
-                          admin={admin}
+                          admin={admin} 
                           onConnectToSchool={handleConnectToSchool}
                         />
                       ))}
@@ -392,28 +394,31 @@ export default function AdminDashboard() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="parent-requests" className="space-y-4">
-              <ParentAccessRequestsList schoolId={selectedSchoolId} />
-            </TabsContent>
-
             {!selectedSchoolId && (
-              <>
-                <TabsContent value="import" className="space-y-4">
-                  <BulkStudentImport />
-                </TabsContent>
-
-                <TabsContent value="clever" className="space-y-4">
-                  <CleverSyncPanel />
-                </TabsContent>
-
-                <TabsContent value="backups" className="space-y-4">
-                  <BackupManagement />
-                </TabsContent>
-              </>
+              <TabsContent value="import" className="space-y-4">
+                <BulkStudentImport />
+              </TabsContent>
             )}
 
-            <TabsContent value="calendar" className="space-y-4">
-              <SchoolEventManager />
+            {!selectedSchoolId && (
+              <TabsContent value="clever" className="space-y-4">
+                <CleverSyncPanel />
+              </TabsContent>
+            )}
+
+            <TabsContent value="parent-requests" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Parent-Student Linking</CardTitle>
+                  <CardDescription>
+                    Review and approve parent requests to link with student accounts
+                    {selectedSchoolId && " for this school"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ParentAccessRequestsList schoolId={selectedSchoolId} />
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="safety" className="space-y-4">
@@ -421,22 +426,40 @@ export default function AdminDashboard() {
                 <CardHeader>
                   <CardTitle>Safety Dashboard</CardTitle>
                   <CardDescription>
-                    Monitor safety drills and emergency protocols
+                    Navigate to the full safety dashboard to manage alerts and drills
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex gap-4">
-                    <Button onClick={() => navigate("/admin/safety")}>
-                      <Shield className="mr-2 h-4 w-4" />
-                      Open Safety Dashboard
-                    </Button>
-                    <Button variant="outline" onClick={() => navigate("/admin/security")}>
-                      View Security Settings
-                    </Button>
-                  </div>
+                  <Button onClick={() => navigate("/admin/safety")} className="w-full">
+                    Open Safety Dashboard
+                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {!selectedSchoolId && (
+              <TabsContent value="backups" className="space-y-4">
+                <BackupManagement />
+              </TabsContent>
+            )}
+
+            <TabsContent value="calendar" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    School Calendar Management
+                  </CardTitle>
+                  <CardDescription>
+                    Manage school-wide events, holidays, and calendar settings
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <SchoolEventManager />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
           </Tabs>
         </div>
       </main>
@@ -483,6 +506,7 @@ export default function AdminDashboard() {
           open={schoolResourcesModalOpen}
           onClose={() => setSchoolResourcesModalOpen(false)}
           schoolId={selectedSchoolId}
+          schoolName={schools?.find(s => s.id === selectedSchoolId)?.name}
         />
       )}
 

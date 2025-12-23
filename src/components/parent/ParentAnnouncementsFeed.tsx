@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useStudentClassroomIds } from "@/hooks/useStudentClassroomIds";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,12 +11,16 @@ interface ParentAnnouncementsFeedProps {
 }
 
 export const ParentAnnouncementsFeed = ({ studentId }: ParentAnnouncementsFeedProps) => {
-  // Use shared hook for classroom IDs (cached across components)
-  const { data: classroomIds = [], isLoading: classroomsLoading } = useStudentClassroomIds(studentId);
-
-  const { data: announcements, isLoading: announcementsLoading } = useQuery({
-    queryKey: ["parent-announcements", studentId, classroomIds],
+  const { data: announcements, isLoading } = useQuery({
+    queryKey: ["parent-announcements", studentId],
     queryFn: async () => {
+      // Get student's classrooms
+      const { data: classroomData } = await supabase
+        .from("classroom_students")
+        .select("classroom_id")
+        .eq("student_id", studentId);
+
+      const classroomIds = classroomData?.map((c) => c.classroom_id) || [];
       if (classroomIds.length === 0) return [];
 
       const fourteenDaysAgo = new Date();
@@ -46,11 +49,8 @@ export const ParentAnnouncementsFeed = ({ studentId }: ParentAnnouncementsFeedPr
       if (error) throw error;
       return data;
     },
-    enabled: classroomIds.length > 0,
-    staleTime: 30000,
+    enabled: !!studentId,
   });
-
-  const isLoading = classroomsLoading || announcementsLoading;
 
   const getAnnouncementIcon = (type: string) => {
     switch (type) {

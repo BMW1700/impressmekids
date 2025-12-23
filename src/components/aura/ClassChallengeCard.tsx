@@ -14,7 +14,7 @@ export const ClassChallengeCard = ({ studentId }: ClassChallengeCardProps) => {
   const { data: challengeData, isLoading } = useQuery({
     queryKey: ['class-challenge', studentId],
     queryFn: async () => {
-      // Step 1: Get student's first classroom
+      // Get student's classrooms
       const { data: enrollments } = await supabase
         .from('classroom_students')
         .select('classroom_id, classrooms(name)')
@@ -26,68 +26,39 @@ export const ClassChallengeCard = ({ studentId }: ClassChallengeCardProps) => {
       const classroomId = enrollments[0].classroom_id;
       const classroomName = (enrollments[0].classrooms as any)?.name || 'Class';
 
-      // Step 2: Get student count (lightweight)
-      const { count: studentCount } = await supabase
-        .from('classroom_students')
-        .select('student_id', { count: 'exact', head: true })
-        .eq('classroom_id', classroomId);
-
-      // Step 3: Get student IDs in this classroom
+      // Get all students in this classroom
       const { data: classStudents } = await supabase
         .from('classroom_students')
         .select('student_id')
         .eq('classroom_id', classroomId);
 
       const studentIds = classStudents?.map(s => s.student_id) || [];
-      if (studentIds.length === 0) {
-        return {
-          classroomName,
-          totalWordsThisWeek: 0,
-          weeklyGoal: 10000,
-          activeReaders: 0,
-          studentCount: 0,
-          progress: 0,
-          isComplete: false,
-        };
-      }
 
-      // Step 4: Get this week's reading sessions
+      // Get this week's reading sessions for the class
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
 
       const { data: sessions } = await supabase
         .from('reading_sessions')
-        .select('student_id, words_read')
+        .select('words_read')
         .in('student_id', studentIds)
-        .gte('created_at', weekAgo.toISOString())
-        .limit(500);
+        .gte('created_at', weekAgo.toISOString());
 
-      // Aggregate locally
       const totalWordsThisWeek = sessions?.reduce((sum, s) => sum + (s.words_read || 0), 0) || 0;
-      
-      // FIX: Count unique student_ids who read > 0 words (not the broken Set logic)
-      const activeReaderSet = new Set<string>();
-      sessions?.forEach(s => {
-        if (s.words_read > 0 && s.student_id) {
-          activeReaderSet.add(s.student_id);
-        }
-      });
-      const activeReaders = activeReaderSet.size;
-
       const weeklyGoal = 10000; // 10,000 words per week class goal
+      const activeReaders = new Set(sessions?.map(s => s.words_read > 0)).size;
 
       return {
         classroomName,
         totalWordsThisWeek,
         weeklyGoal,
         activeReaders,
-        studentCount: studentCount || 0,
+        studentCount: studentIds.length,
         progress: Math.min(100, (totalWordsThisWeek / weeklyGoal) * 100),
         isComplete: totalWordsThisWeek >= weeklyGoal,
       };
     },
     enabled: !!studentId,
-    staleTime: 5 * 60 * 1000, // 5 min cache
   });
 
   if (isLoading || !challengeData) {

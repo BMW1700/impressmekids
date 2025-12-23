@@ -17,10 +17,8 @@ import EvidenceLog from "./EvidenceLog";
 import VendorRiskAssessment from "./VendorRiskAssessment";
 import IncidentResponseTabletop from "./IncidentResponseTabletop";
 import VPATCompliance from "./VPATCompliance";
-import SecurityAwarenessTrainingPolicy from "./SecurityAwarenessTrainingPolicy";
-import AcceptableUsePolicy from "./AcceptableUsePolicy";
 
-type PolicyType = "password" | "access" | "incident" | "change" | "vertex" | "system" | "control-matrix" | "vendor" | "dataclass" | "backup" | "risk-register" | "evidence-log" | "vendor-assessment" | "ir-tabletop" | "vpat" | "security-training" | "acceptable-use" | "all";
+type PolicyType = "password" | "access" | "incident" | "change" | "vertex" | "system" | "control-matrix" | "vendor" | "dataclass" | "backup" | "risk-register" | "evidence-log" | "vendor-assessment" | "ir-tabletop" | "vpat" | "all";
 
 export default function PolicyViewer() {
   const [selectedPolicy, setSelectedPolicy] = useState<PolicyType>("password");
@@ -90,14 +88,6 @@ export default function PolicyViewer() {
       name: "VPAT® 2.5 Accessibility Compliance (WCAG 2.1 AA)",
       component: <VPATCompliance />
     },
-    "security-training": {
-      name: "Security Awareness Training Policy",
-      component: <SecurityAwarenessTrainingPolicy />
-    },
-    "acceptable-use": {
-      name: "Acceptable Use Policy",
-      component: <AcceptableUsePolicy />
-    },
     all: {
       name: "All Policies (Combined)",
       component: (
@@ -131,10 +121,6 @@ export default function PolicyViewer() {
           <BackupDisasterRecoveryPolicy />
           <div className="page-break" />
           <VPATCompliance />
-          <div className="page-break" />
-          <SecurityAwarenessTrainingPolicy />
-          <div className="page-break" />
-          <AcceptableUsePolicy />
         </>
       )
     }
@@ -238,8 +224,6 @@ export default function PolicyViewer() {
                 <SelectItem value="dataclass">Data Classification &amp; Handling Policy</SelectItem>
                 <SelectItem value="backup">Backup &amp; Disaster Recovery Policy</SelectItem>
                 <SelectItem value="vpat">VPAT® 2.5 Accessibility Compliance (WCAG 2.1 AA)</SelectItem>
-                <SelectItem value="security-training">Security Awareness Training Policy</SelectItem>
-                <SelectItem value="acceptable-use">Acceptable Use Policy</SelectItem>
                 <SelectItem value="all">All Policies (Combined)</SelectItem>
               </SelectContent>
             </Select>
