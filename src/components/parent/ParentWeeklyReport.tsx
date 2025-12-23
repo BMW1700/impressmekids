@@ -26,51 +26,125 @@ interface ParentWeeklyReportProps {
   studentName: string;
 }
 
-// Phoneme to friendly name mapping
-const phonemeNames: Record<string, string> = {
-  "AA": "ah (as in 'father')",
-  "AE": "a (as in 'cat')",
-  "AH": "uh (as in 'but')",
-  "AO": "aw (as in 'dog')",
-  "AW": "ow (as in 'cow')",
-  "AY": "eye (as in 'my')",
-  "B": "b sound",
-  "CH": "ch (as in 'chair')",
-  "D": "d sound",
-  "DH": "th (as in 'the')",
-  "EH": "e (as in 'bed')",
-  "ER": "er (as in 'bird')",
-  "EY": "ay (as in 'say')",
-  "F": "f sound",
-  "G": "g sound",
-  "HH": "h sound",
-  "IH": "i (as in 'sit')",
-  "IY": "ee (as in 'see')",
-  "JH": "j sound",
-  "K": "k sound",
-  "L": "l sound",
-  "M": "m sound",
-  "N": "n sound",
-  "NG": "ng (as in 'sing')",
-  "OW": "oh (as in 'go')",
-  "OY": "oy (as in 'boy')",
-  "P": "p sound",
-  "R": "r sound",
-  "S": "s sound",
-  "SH": "sh (as in 'ship')",
-  "T": "t sound",
-  "TH": "th (as in 'think')",
-  "UH": "oo (as in 'book')",
-  "UW": "oo (as in 'boot')",
-  "V": "v sound",
-  "W": "w sound",
-  "Y": "y sound",
-  "Z": "z sound",
-  "ZH": "zh (as in 'measure')",
+// Phoneme display + friendly label mappings
+// (UI-only formatting: keeps the underlying data unchanged)
+const arpabetLabels: Record<string, string> = {
+  AA: "ah (as in 'father')",
+  AE: "a (as in 'cat')",
+  AH: "uh (as in 'but')",
+  AO: "aw (as in 'dog')",
+  AW: "ow (as in 'cow')",
+  AY: "eye (as in 'my')",
+  B: "b sound",
+  CH: "ch (as in 'chair')",
+  D: "d sound",
+  DH: "th (as in 'the')",
+  EH: "e (as in 'bed')",
+  ER: "er (as in 'bird')",
+  EY: "ay (as in 'say')",
+  F: "f sound",
+  G: "g sound",
+  HH: "h sound",
+  IH: "i (as in 'sit')",
+  IY: "ee (as in 'see')",
+  JH: "j sound",
+  K: "k sound",
+  L: "l sound",
+  M: "m sound",
+  N: "n sound",
+  NG: "ng (as in 'sing')",
+  OW: "oh (as in 'go')",
+  OY: "oy (as in 'boy')",
+  P: "p sound",
+  R: "r sound",
+  S: "s sound",
+  SH: "sh (as in 'ship')",
+  T: "t sound",
+  TH: "th (as in 'think')",
+  UH: "oo (as in 'book')",
+  UW: "oo (as in 'boot')",
+  V: "v sound",
+  W: "w sound",
+  Y: "y sound",
+  Z: "z sound",
+  ZH: "zh (as in 'measure')",
+};
+
+// Short, "English letters" style chips (what you asked for)
+const phonemeDisplay: Record<string, string> = {
+  // Common IPA -> simple English-ish letters
+  "ɛ": "e",
+  "æ": "a",
+  "ʌ": "u",
+  "ə": "uh",
+  "ɪ": "i",
+  "i": "ee",
+  "ɔ": "aw",
+  "ɑ": "ah",
+  "ʊ": "oo",
+  "ʃ": "sh",
+  "ʒ": "zh",
+  "θ": "th",
+  "ð": "th",
+  "ŋ": "ng",
+  "ɹ": "r",
+  "ɡ": "g",
+  "∅": "silent",
+
+  // Sometimes we get odd tokens from the detector
+  "1": "i",
+
+  // ARPABET -> short display
+  AA: "ah",
+  AE: "a",
+  AH: "uh",
+  AO: "aw",
+  AW: "ow",
+  AY: "i",
+  CH: "ch",
+  DH: "th",
+  EH: "e",
+  ER: "er",
+  EY: "ay",
+  IH: "i",
+  IY: "ee",
+  JH: "j",
+  NG: "ng",
+  OW: "oh",
+  OY: "oy",
+  SH: "sh",
+  TH: "th",
+  UH: "oo",
+  UW: "oo",
+};
+
+const normalizePhoneme = (phoneme: string) => phoneme.trim().replace(/[0-9]/g, "");
+
+const getPhonemeDisplay = (phoneme: string) => {
+  const raw = normalizePhoneme(phoneme);
+  if (!raw) return phoneme;
+
+  // First: exact IPA/odd-token matches
+  if (phonemeDisplay[raw]) return phonemeDisplay[raw];
+
+  // Second: ARPABET / other uppercase codes
+  const upper = raw.toUpperCase();
+  return phonemeDisplay[upper] || raw;
 };
 
 const getPhonemeLabel = (phoneme: string) => {
-  return phonemeNames[phoneme.toUpperCase()] || phoneme;
+  const raw = normalizePhoneme(phoneme);
+  if (!raw) return phoneme;
+
+  if (raw === "1") return "I sound";
+  if (raw === "ɛ") return "e (as in 'bed')";
+  if (raw === "æ") return "a (as in 'cat')";
+  if (raw === "ɪ") return "i (as in 'sit')";
+  if (raw === "ʌ") return "uh (as in 'but')";
+  if (raw === "ə") return "uh (as in 'sofa')";
+
+  const upper = raw.toUpperCase();
+  return arpabetLabels[upper] || raw;
 };
 
 export const ParentWeeklyReport = ({ studentId, studentName }: ParentWeeklyReportProps) => {
@@ -190,7 +264,7 @@ export const ParentWeeklyReport = ({ studentId, studentName }: ParentWeeklyRepor
                     {topStrengths.slice(0, 3).map((phoneme, i) => (
                       <li key={i} className="flex items-center gap-2 text-sm">
                         <Star className="h-4 w-4 text-yellow-500" />
-                        <span>Great at the <strong>{getPhonemeLabel(phoneme)}</strong></span>
+                        <span>Great at the <strong>{getPhonemeDisplay(phoneme)}</strong></span>
                       </li>
                     ))}
                   </ul>
@@ -224,7 +298,7 @@ export const ParentWeeklyReport = ({ studentId, studentName }: ParentWeeklyRepor
                       {areasForPractice.slice(0, 3).map((phoneme, i) => (
                         <li key={i} className="flex items-center gap-2 text-sm">
                           <Lightbulb className="h-4 w-4 text-amber-500" />
-                          <span>Practice the <strong>{getPhonemeLabel(phoneme)}</strong></span>
+                           <span>Practice the <strong>{getPhonemeDisplay(phoneme)}</strong></span>
                         </li>
                       ))}
                     </ul>
@@ -280,11 +354,11 @@ export const ParentWeeklyReport = ({ studentId, studentName }: ParentWeeklyRepor
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" className="font-mono">
-                              {sub.expected}
+                              {getPhonemeDisplay(sub.expected)}
                             </Badge>
                             <span className="text-muted-foreground">→</span>
                             <Badge variant="secondary" className="font-mono">
-                              {sub.actual}
+                              {getPhonemeDisplay(sub.actual)}
                             </Badge>
                           </div>
                           <span className="text-sm text-muted-foreground">
@@ -292,7 +366,7 @@ export const ParentWeeklyReport = ({ studentId, studentName }: ParentWeeklyRepor
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          Says "{getPhonemeLabel(sub.actual)}" instead of "{getPhonemeLabel(sub.expected)}"
+                          Says "{getPhonemeDisplay(sub.actual)}" instead of "{getPhonemeDisplay(sub.expected)}"
                         </p>
                         {sub.examples.length > 0 && (
                           <p className="text-xs text-muted-foreground mt-1">
@@ -315,7 +389,7 @@ export const ParentWeeklyReport = ({ studentId, studentName }: ParentWeeklyRepor
                       .map(([phoneme, score]) => (
                         <div key={phoneme} className="p-2 rounded-lg bg-muted/30">
                           <div className="flex justify-between items-center mb-1">
-                            <span className="font-mono text-sm">{phoneme}</span>
+                            <span className="font-mono text-sm">{getPhonemeDisplay(phoneme)}</span>
                             <span className={`text-sm font-bold ${
                               score >= 80 ? "text-green-600" : 
                               score >= 60 ? "text-yellow-600" : "text-red-600"
