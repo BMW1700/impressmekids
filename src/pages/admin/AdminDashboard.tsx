@@ -413,7 +413,7 @@ export default function AdminDashboard() {
             )}
 
             <TabsContent value="calendar" className="space-y-4">
-              <SchoolEventManager schoolId={selectedSchoolId} />
+              <SchoolEventManager />
             </TabsContent>
 
             <TabsContent value="safety" className="space-y-4">
@@ -446,7 +446,7 @@ export default function AdminDashboard() {
       {/* Modals */}
       <TeacherClassroomsList
         open={teacherClassroomsOpen}
-        onOpenChange={setTeacherClassroomsOpen}
+        onClose={() => setTeacherClassroomsOpen(false)}
         teacherId={selectedTeacherId}
         teacherName={selectedTeacherName}
         onViewStudents={handleViewClassroomStudents}
@@ -454,41 +454,41 @@ export default function AdminDashboard() {
 
       <ClassroomStudentsList
         open={classroomStudentsOpen}
-        onOpenChange={setClassroomStudentsOpen}
+        onClose={() => setClassroomStudentsOpen(false)}
         classroomId={selectedClassroomId}
         classroomName={selectedClassroomName}
       />
 
       <StudentClassroomsList
         open={studentClassroomsOpen}
-        onOpenChange={setStudentClassroomsOpen}
+        onClose={() => setStudentClassroomsOpen(false)}
         studentId={selectedStudentId}
         studentName={selectedStudentName}
       />
 
       <StudentParentsList
         open={studentParentsOpen}
-        onOpenChange={setStudentParentsOpen}
+        onClose={() => setStudentParentsOpen(false)}
         studentId={selectedStudentIdForParents}
         studentName={selectedStudentNameForParents}
       />
 
       <SchoolsManagementModal
         open={schoolsModalOpen}
-        onOpenChange={setSchoolsModalOpen}
+        onClose={() => setSchoolsModalOpen(false)}
       />
 
       {selectedSchoolId && (
         <SchoolResourcesModal
           open={schoolResourcesModalOpen}
-          onOpenChange={setSchoolResourcesModalOpen}
+          onClose={() => setSchoolResourcesModalOpen(false)}
           schoolId={selectedSchoolId}
         />
       )}
 
       <ConnectToSchoolDialog
         open={connectSchoolOpen}
-        onOpenChange={setConnectSchoolOpen}
+        onClose={() => setConnectSchoolOpen(false)}
         userId={connectSchoolUserId}
         userName={connectSchoolUserName}
         currentSchoolId={connectSchoolCurrentId}
