@@ -95,7 +95,7 @@ const StudentDashboard = () => {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/auth', { replace: true });
+    navigate('/auth');
   };
 
   const renderSection = () => {

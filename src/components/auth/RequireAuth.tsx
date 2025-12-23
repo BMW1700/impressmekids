@@ -22,7 +22,7 @@ export function RequireAuth() {
   }
 
   if (!session) {
-    return <Navigate to="/auth" replace state={{ from: location.pathname }} />;
+    return <Navigate to="/auth" state={{ from: location.pathname }} />;
   }
 
   return <Outlet />;
