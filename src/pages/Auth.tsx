@@ -89,8 +89,9 @@ const Auth = () => {
   const [hasCheckedUser, setHasCheckedUser] = useState(false);
 
   useEffect(() => {
-    // Prevent multiple runs
+    // Prevent multiple runs - use ref pattern to avoid dependency issues
     if (hasCheckedUser) return;
+    setHasCheckedUser(true); // Set immediately to prevent re-runs
     
     // Handle Clever login success/error from URL params
     const urlParams = new URLSearchParams(window.location.search);
@@ -103,9 +104,7 @@ const Auth = () => {
         description: cleverError,
         variant: "destructive",
       });
-      // Use navigate with replace instead of history.replaceState
       navigate('/auth', { replace: true });
-      setHasCheckedUser(true);
       return;
     }
     
@@ -115,7 +114,6 @@ const Auth = () => {
         description: "Successfully signed in with Clever",
       });
       navigate('/auth', { replace: true });
-      setHasCheckedUser(true);
       return;
     }
     
@@ -123,7 +121,6 @@ const Auth = () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
-          setHasCheckedUser(true);
           return;
         }
 
@@ -148,7 +145,6 @@ const Auth = () => {
           if (!district.districtCode) {
             setShowDistrictModal(true);
             setAvailableRoles(district.availableRoles);
-            setHasCheckedUser(true);
             return;
           }
 
@@ -157,7 +153,6 @@ const Auth = () => {
             setPendingDistrictId(district.districtCode);
             setAvailableRoles(district.availableRoles);
             setShowRoleModal(true);
-            setHasCheckedUser(true);
             return;
           }
         }
@@ -167,23 +162,20 @@ const Auth = () => {
 
         if (rpcError) {
           console.error('Profile fetch error:', rpcError);
-          setHasCheckedUser(true);
           return;
         }
 
         if (profileData && profileData.length > 0 && profileData[0]?.role) {
           redirectToDashboard(profileData[0].role);
-        } else {
-          setHasCheckedUser(true);
         }
       } catch (err) {
         console.error('checkUser error:', err);
-        setHasCheckedUser(true);
       }
     };
 
     checkUser();
-  }, [hasCheckedUser, navigate, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
