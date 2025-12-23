@@ -26,29 +26,32 @@ export const Header = ({ showAuthButtons = true, onSignOut, children, studentId 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setIsAuthenticated(!!session);
       if (session?.user) {
-        // Fetch user role
         supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", session.user.id)
-          .single()
-          .then(({ data }) => {
-            setUserRole(data?.role || null);
+          .rpc("get_user_profile", { _user_id: session.user.id })
+          .then(({ data, error }) => {
+            if (!error && data && data.length > 0) {
+              setUserRole(data[0]?.role || null);
+            } else {
+              setUserRole(null);
+            }
           });
       }
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsAuthenticated(!!session);
       if (session?.user) {
         supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", session.user.id)
-          .single()
-          .then(({ data }) => {
-            setUserRole(data?.role || null);
+          .rpc("get_user_profile", { _user_id: session.user.id })
+          .then(({ data, error }) => {
+            if (!error && data && data.length > 0) {
+              setUserRole(data[0]?.role || null);
+            } else {
+              setUserRole(null);
+            }
           });
       } else {
         setUserRole(null);
@@ -88,7 +91,8 @@ export const Header = ({ showAuthButtons = true, onSignOut, children, studentId 
   };
 
   // Determine what to show based on auth state
-  const shouldShowAuthButtons = showAuthButtons && !isAuthenticated && isAuthenticated !== null;
+  // Show auth buttons immediately while loading (null) or when definitively not authenticated
+  const shouldShowAuthButtons = showAuthButtons && (isAuthenticated === null || isAuthenticated === false);
   const shouldShowSignOut = isAuthenticated === true;
 
   return (
