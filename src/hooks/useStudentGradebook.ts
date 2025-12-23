@@ -316,5 +316,6 @@ export const useStudentGradebook = (studentId: string | undefined) => {
     },
     enabled: !!studentId,
     staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
   });
 };

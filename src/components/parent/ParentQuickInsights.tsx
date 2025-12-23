@@ -183,6 +183,7 @@ export const ParentQuickInsights = ({ studentId, studentName }: ParentQuickInsig
     },
     enabled: !!studentId,
     staleTime: 5 * 60 * 1000, // 5 minute cache
+    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
   });
 
   const getInsightIcon = (type: string) => {

@@ -20,6 +20,7 @@ export const useStudentClassroomIds = (studentId: string | undefined) => {
       return data?.map((c) => c.classroom_id) || [];
     },
     enabled: !!studentId,
-    staleTime: 5 * 60 * 1000, // 5 minutes - classroom enrollment rarely changes
+    staleTime: 10 * 60 * 1000, // 10 minutes - classroom enrollment rarely changes
+    gcTime: 60 * 60 * 1000, // Keep in cache for 1 hour
   });
 };

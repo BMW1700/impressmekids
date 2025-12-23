@@ -63,6 +63,7 @@ export const ParentUpcomingAssignments = ({ studentId }: ParentUpcomingAssignmen
     },
     enabled: classroomIds.length > 0,
     staleTime: 5 * 60 * 1000, // 5 minutes - assignments don't change frequently
+    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
   });
 
   const isLoading = classroomsLoading || assignmentsLoading;

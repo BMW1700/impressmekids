@@ -55,7 +55,7 @@ const ParentDashboard = () => {
     queryFn: async () => {
       if (!user?.id) return [];
       const { data, error } = await supabase.rpc("get_parent_children", { 
-        _parent_user_id: user.id 
+        _user_id: user.id 
       });
       if (error) {
         console.error("Error fetching children:", error);
