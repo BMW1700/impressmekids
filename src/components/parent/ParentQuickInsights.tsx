@@ -2,17 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { 
   Brain, 
   TrendingUp, 
   Target, 
   Lightbulb, 
   Award,
-  BookOpen,
   ArrowUp,
   ArrowDown,
-  Minus,
   Sparkles
 } from "lucide-react";
 
@@ -33,17 +30,41 @@ export const ParentQuickInsights = ({ studentId, studentName }: ParentQuickInsig
         trend?: "up" | "down" | "stable";
       }[] = [];
 
-      // Get AURA data for reading insights
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const { data: auraRecords } = await supabase
-        .from("aura_records")
-        .select("wpm, clarity, confidence, created_at")
-        .eq("profile_id", studentId)
-        .gte("created_at", thirtyDaysAgo.toISOString())
-        .order("created_at", { ascending: true });
+      // Fetch all data in PARALLEL instead of sequential
+      const [auraResult, behaviorResult, scoresResult] = await Promise.all([
+        supabase
+          .from("aura_records")
+          .select("wpm, clarity, confidence, created_at")
+          .eq("profile_id", studentId)
+          .gte("created_at", thirtyDaysAgo.toISOString())
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("student_behavior_stats")
+          .select("*")
+          .eq("student_id", studentId),
+        supabase
+          .from("student_standard_scores")
+          .select(`
+            mastery_percentage,
+            assignments_completed,
+            learning_standards (
+              code,
+              description,
+              subject
+            )
+          `)
+          .eq("student_id", studentId)
+          .order("mastery_percentage", { ascending: false })
+      ]);
 
+      const auraRecords = auraResult.data;
+      const behaviorStats = behaviorResult.data;
+      const standardScores = scoresResult.data;
+
+      // Process AURA data
       if (auraRecords && auraRecords.length >= 3) {
         const recentRecords = auraRecords.slice(-5);
         const olderRecords = auraRecords.slice(0, Math.min(5, auraRecords.length - 5));
@@ -82,12 +103,7 @@ export const ParentQuickInsights = ({ studentId, studentName }: ParentQuickInsig
         }
       }
 
-      // Get behavior trends
-      const { data: behaviorStats } = await supabase
-        .from("student_behavior_stats")
-        .select("*")
-        .eq("student_id", studentId);
-
+      // Process behavior data
       if (behaviorStats && behaviorStats.length > 0) {
         const totalWeekly = behaviorStats.reduce((s, b) => s + (b.weekly_points || 0), 0);
         const bestStreak = Math.max(...behaviorStats.map((b) => b.current_streak || 0));
@@ -112,23 +128,8 @@ export const ParentQuickInsights = ({ studentId, studentName }: ParentQuickInsig
         }
       }
 
-      // Get standard scores for academic insights
-      const { data: standardScores } = await supabase
-        .from("student_standard_scores")
-        .select(`
-          mastery_percentage,
-          assignments_completed,
-          learning_standards (
-            code,
-            description,
-            subject
-          )
-        `)
-        .eq("student_id", studentId)
-        .order("mastery_percentage", { ascending: false });
-
+      // Process standard scores
       if (standardScores && standardScores.length > 0) {
-        // Find strongest subject
         const subjectMastery: Record<string, { total: number; count: number }> = {};
         standardScores.forEach((score: any) => {
           const subject = score.learning_standards?.subject || "General";
@@ -183,6 +184,7 @@ export const ParentQuickInsights = ({ studentId, studentName }: ParentQuickInsig
       return insights.slice(0, 4);
     },
     enabled: !!studentId,
+    staleTime: 30000, // 30 seconds cache
   });
 
   const getInsightIcon = (type: string) => {

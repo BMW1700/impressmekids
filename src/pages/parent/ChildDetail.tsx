@@ -22,11 +22,10 @@ interface ChildData {
 interface AuraRecord {
   id: string;
   created_at: string;
-  grade: number;
-  pronunciation: number;
+  grade: number | null;
   clarity: number;
   confidence: number;
-  pace: number;
+  wpm: number;
 }
 
 interface Assignment {
@@ -157,12 +156,12 @@ const ChildDetail = () => {
       if (consents?.aura_recording_consent) {
         const { data: aura } = await supabase
           .from("aura_records")
-          .select("id, created_at, grade, pronunciation, clarity, confidence, pace")
+          .select("id, created_at, grade, clarity, confidence, wpm")
           .eq("profile_id", studentId)
           .order("created_at", { ascending: false })
           .limit(10);
 
-        if (aura) setAuraRecords(aura as any);
+        if (aura) setAuraRecords(aura as AuraRecord[]);
       }
 
       // Load assignments
@@ -396,22 +395,18 @@ const ChildDetail = () => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                         <div>
-                          <p className="text-muted-foreground">Pronunciation</p>
-                          <p className="font-semibold">{record.pronunciation}%</p>
+                          <p className="text-muted-foreground">Reading Speed</p>
+                          <p className="font-semibold">{record.wpm} WPM</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Clarity</p>
-                          <p className="font-semibold">{record.clarity}%</p>
+                          <p className="font-semibold">{Math.round(record.clarity)}%</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Confidence</p>
-                          <p className="font-semibold">{record.confidence}%</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Pace</p>
-                          <p className="font-semibold">{record.pace}%</p>
+                          <p className="font-semibold">{Math.round(record.confidence)}%</p>
                         </div>
                       </div>
                     </CardContent>
