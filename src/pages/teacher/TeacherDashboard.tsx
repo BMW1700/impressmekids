@@ -379,13 +379,19 @@ const TeacherDashboard = () => {
                 </Card>
               ) : (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-                  {classrooms.map((classroom) => (
+                  {classrooms.map((classroom: any) => (
                     <div
                       key={classroom.id}
                       onClick={() => navigate(`/classrooms/${classroom.id}`)}
                       className="cursor-pointer h-full"
                     >
-                      <ClassroomCard classroom={classroom} isTeacher={true} />
+                      <ClassroomCard
+                        id={classroom.id}
+                        name={classroom.name}
+                        joinCode={classroom.join_code}
+                        studentCount={classroom.student_count || 0}
+                        createdAt={classroom.created_at}
+                      />
                     </div>
                   ))}
                 </div>
@@ -460,7 +466,8 @@ const TeacherDashboard = () => {
       <AllStudentsDialog
         open={showStudentsDialog}
         onOpenChange={setShowStudentsDialog}
-        classroomsWithStudents={classroomsWithStudents}
+        classrooms={classroomsWithStudents}
+        totalStudents={classroomsWithStudents.reduce((sum: number, c: any) => sum + (c.students?.length || 0), 0)}
       />
     </div>
   );
