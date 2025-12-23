@@ -106,36 +106,45 @@ const Auth = () => {
     }
     
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        // Check verification status
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_verified, role')
-          .eq('id', session.user.id)
-          .single();
-        
-        if (!profile?.is_verified) {
-          navigate('/pending-verification');
-          return;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        // Verification status (non-blocking if backend denies access)
+        try {
+          const { data: profile, error: profileError } = await Promise.race([
+            supabase
+              .from('profiles')
+              .select('is_verified')
+              .eq('id', session.user.id)
+              .maybeSingle(),
+            new Promise<{ data: any; error: any }>((_resolve, reject) =>
+              setTimeout(() => reject(new Error('profile_timeout')), 6000)
+            ),
+          ]);
+
+          if (!profileError && profile && profile.is_verified === false) {
+            navigate('/pending-verification');
+            return;
+          }
+        } catch {
+          // If this read fails/times out, don't block sign-in—role-based routing is handled below.
         }
 
         // Check if this is an OAuth callback that needs role selection
         const urlParams = new URLSearchParams(window.location.search);
         const isOAuthCallback = urlParams.get('code') || urlParams.get('access_token');
-        
+
         if (isOAuthCallback && session.user.email) {
           const district = await detectUserTypeFromEmail(session.user.email);
-          
+
           // ALWAYS require district and role selection for OAuth users
-          // If no district match, show district selection first
           if (!district.districtCode) {
             setShowDistrictModal(true);
             setAvailableRoles(district.availableRoles);
             return;
           }
-          
-          // If district matched, proceed to role selection
+
           if (district.requiresRoleSelection) {
             setPendingDistrictName(district.districtName || "");
             setPendingDistrictId(district.districtCode);
@@ -145,16 +154,38 @@ const Auth = () => {
           }
         }
 
-        const { data: profileData, error: profileError } = await supabase
-          .rpc('get_user_profile', { _user_id: session.user.id });
+        const { data: profileData, error: rpcError } = await Promise.race([
+          supabase.rpc('get_user_profile', { _user_id: session.user.id }),
+          new Promise<{ data: any; error: any }>((_resolve, reject) =>
+            setTimeout(() => reject(new Error('profile_rpc_timeout')), 8000)
+          ),
+        ]);
 
-        if (profileError) {
-          console.error('Profile fetch error:', profileError);
-        } else if (profileData && profileData.length > 0) {
-          redirectToDashboard(profileData[0].role);
-        } else {
-          console.warn('Profile not found for user:', session.user.id);
+        if (rpcError) {
+          toast({
+            title: "Signed in, but couldn't load your account",
+            description: "Please try again in a moment.",
+            variant: "destructive",
+          });
+          return;
         }
+
+        if (profileData && profileData.length > 0 && profileData[0]?.role) {
+          redirectToDashboard(profileData[0].role);
+          return;
+        }
+
+        toast({
+          title: "Account setup incomplete",
+          description: "Your account doesn't have a role assigned yet.",
+          variant: "destructive",
+        });
+      } catch {
+        toast({
+          title: "Error",
+          description: "Couldn't finish signing you in. Please try again.",
+          variant: "destructive",
+        });
       }
     };
 
@@ -563,63 +594,66 @@ const Auth = () => {
       });
 
       if (error) throw error;
+      if (!data.user) throw new Error("Sign in failed");
 
-      if (data.user) {
-        // Check verification status
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_verified, role')
-          .eq('id', data.user.id)
-          .single();
+      // Verification status (non-blocking if backend denies access)
+      try {
+        const { data: profile, error: profileError } = await Promise.race([
+          supabase
+            .from('profiles')
+            .select('is_verified')
+            .eq('id', data.user.id)
+            .maybeSingle(),
+          new Promise<{ data: any; error: any }>((_resolve, reject) =>
+            setTimeout(() => reject(new Error('profile_timeout')), 6000)
+          ),
+        ]);
 
-        if (!profile?.is_verified) {
+        if (!profileError && profile && profile.is_verified === false) {
           setIsLoading(false);
           navigate('/pending-verification');
           return;
         }
-
-        // Fetch full profile with retry
-        let profileData = null;
-        let attempts = 0;
-        const maxAttempts = 3;
-        
-        while (attempts < maxAttempts && !profileData) {
-          attempts++;
-          
-          const { data: pd, error: profileError } = await supabase
-            .rpc('get_user_profile', { _user_id: data.user.id });
-
-          if (profileError) {
-            console.error('Profile fetch error:', profileError);
-          } else if (pd && pd.length > 0) {
-            profileData = pd[0];
-          } else if (attempts < maxAttempts) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
-        }
-
-        if (!profileData) {
-          throw new Error('Profile not found. Please try again.');
-        }
-
-        toast({
-          title: "Welcome back!",
-          description: `Successfully signed in as ${profileData.role}!`,
-        });
-
-        redirectToDashboard(profileData.role);
+      } catch {
+        // If this read fails/times out, do not block login; role routing below still works.
       }
+
+      // Fetch role/profile via security-definer RPC (with a hard timeout so we never hang)
+      const { data: pd, error: profileError } = await Promise.race([
+        supabase.rpc('get_user_profile', { _user_id: data.user.id }),
+        new Promise<{ data: any; error: any }>((_resolve, reject) =>
+          setTimeout(() => reject(new Error('profile_rpc_timeout')), 8000)
+        ),
+      ]);
+
+      if (profileError) {
+        throw new Error("Signed in, but couldn't load your account. Please try again.");
+      }
+
+      const profileData = pd?.[0];
+      const userRole = profileData?.role;
+
+      if (!userRole) {
+        throw new Error("Account setup incomplete (missing role). Please contact support.");
+      }
+
+      toast({
+        title: "Welcome back!",
+        description: `Successfully signed in as ${userRole}!`,
+      });
+
+      redirectToDashboard(userRole);
     } catch (error: any) {
       console.error('Signin error:', error);
-      
+
       let errorMessage = error.message || "Failed to sign in";
-      
+
       if (error.message?.includes('Invalid login credentials')) {
         errorMessage = "Invalid email or password. Please check your credentials and try again.";
       } else if (error.message?.includes('Email not confirmed')) {
         errorMessage = "Please confirm your email address before signing in.";
       }
-      
+
       toast({
         title: "Error",
         description: errorMessage,
