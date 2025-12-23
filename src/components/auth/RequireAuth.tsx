@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { LongLoadNotice } from "@/components/system/LongLoadNotice";
 
 /**
  * Blocks protected routes until auth is resolved.
@@ -31,8 +32,10 @@ export function RequireAuth() {
 
   if (checking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="mt-4 text-sm text-muted-foreground">Checking your session…</div>
+        <LongLoadNotice />
       </div>
     );
   }
