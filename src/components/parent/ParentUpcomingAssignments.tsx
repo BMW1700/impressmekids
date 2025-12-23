@@ -27,12 +27,12 @@ export const ParentUpcomingAssignments = ({ studentId }: ParentUpcomingAssignmen
     queryFn: async () => {
       if (classroomIds.length === 0) return [];
 
-      const { data, error } = await supabase
+      // Step 1: Fetch assignments WITHOUT nested submissions (avoids fetching all students' submissions)
+      const { data: assignmentsData, error: assignmentsError } = await supabase
         .from("assignments")
         .select(`
           id, title, description, due_date, assignment_type, category,
-          classrooms ( name ),
-          assignment_submissions ( id, status, submitted_at )
+          classrooms ( name )
         `)
         .in("classroom_id", classroomIds)
         .eq("is_posted", true)
@@ -40,14 +40,29 @@ export const ParentUpcomingAssignments = ({ studentId }: ParentUpcomingAssignmen
         .order("due_date", { ascending: true })
         .limit(20);
 
-      if (error) throw error;
-      return data?.map((a: any) => ({
+      if (assignmentsError) throw assignmentsError;
+      if (!assignmentsData || assignmentsData.length === 0) return [];
+
+      // Step 2: Fetch ONLY this student's submissions for these assignments
+      const assignmentIds = assignmentsData.map(a => a.id);
+      const { data: submissionsData } = await supabase
+        .from("assignment_submissions")
+        .select("id, status, submitted_at, assignment_id")
+        .eq("student_id", studentId)
+        .in("assignment_id", assignmentIds);
+
+      // Create lookup map for fast merging
+      const submissionsByAssignment = new Map(
+        (submissionsData || []).map(s => [s.assignment_id, s])
+      );
+
+      return assignmentsData.map((a: any) => ({
         ...a,
-        submission: a.assignment_submissions?.find((s: any) => s) || null,
+        submission: submissionsByAssignment.get(a.id) || null,
       }));
     },
     enabled: classroomIds.length > 0,
-    staleTime: 30000,
+    staleTime: 5 * 60 * 1000, // 5 minutes - assignments don't change frequently
   });
 
   const isLoading = classroomsLoading || assignmentsLoading;

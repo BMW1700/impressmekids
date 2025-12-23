@@ -81,24 +81,27 @@ export const useStudentOverviewData = (studentId: string | undefined) => {
               .eq("is_posted", true)
           : Promise.resolve({ data: [], error: null }),
 
-        // Past due assignments (just IDs for counting)
+        // Past due assignments (limit to recent, count only)
         classroomIds.length > 0
           ? supabase
               .from("assignments")
               .select("id, classroom_id")
               .in("classroom_id", classroomIds)
               .lt("due_date", startDate)
+              .gte("due_date", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()) // Only last 30 days
               .eq("is_posted", true)
-              .limit(50)
+              .limit(30)
           : Promise.resolve({ data: [], error: null }),
 
-        // All submissions for this student (for grades and completed count)
+        // Submissions: only recent ones for grade calculation (last 90 days)
         classroomIds.length > 0
           ? supabase
               .from("assignment_submissions")
-              .select("assignment_id, grade, status, assignments!inner(classroom_id)")
+              .select("assignment_id, grade, status, submitted_at, assignments!inner(classroom_id)")
               .eq("student_id", studentId)
               .in("assignments.classroom_id", classroomIds)
+              .gte("submitted_at", new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString())
+              .limit(100)
           : Promise.resolve({ data: [], error: null }),
 
         // AURA stats - last 30 days only, limit records

@@ -34,13 +34,14 @@ interface WeeklyProgressData {
   isImproving: boolean;
 }
 
-export const useWeeklyProgress = (studentId: string | undefined, weeksToFetch = 8) => {
+export const useWeeklyProgress = (studentId: string | undefined, weeksToFetch = 4) => {
   return useQuery({
     queryKey: ["weekly-progress", studentId, weeksToFetch],
     queryFn: async (): Promise<WeeklyProgressData> => {
       if (!studentId) throw new Error("No student ID");
 
       const now = new Date();
+      // Only fetch 4 weeks by default for faster load
       const oldestWeekStart = startOfWeek(subWeeks(now, weeksToFetch - 1), { weekStartsOn: 1 });
       const newestWeekEnd = endOfWeek(now, { weekStartsOn: 1 });
 
@@ -52,21 +53,23 @@ export const useWeeklyProgress = (studentId: string | undefined, weeksToFetch = 
           .select("id, wpm, accuracy_percent, fluency_score, words_read, phoneme_accuracy, created_at")
           .eq("student_id", studentId)
           .gte("created_at", oldestWeekStart.toISOString())
-          .lte("created_at", newestWeekEnd.toISOString()),
+          .lte("created_at", newestWeekEnd.toISOString())
+          .limit(100), // Cap to prevent huge fetches
         supabase
           .from("aura_records")
           .select("clarity, confidence, wpm, created_at")
           .eq("profile_id", studentId)
           .gte("created_at", oldestWeekStart.toISOString())
-          .lte("created_at", newestWeekEnd.toISOString()),
+          .lte("created_at", newestWeekEnd.toISOString())
+          .limit(100), // Cap to prevent huge fetches
       ]);
 
       const allSessions = sessionsResult.data || [];
       const allAuraRecords = auraResult.data || [];
       
       // Get session IDs from the ALREADY date-bounded sessions (not a separate unbounded query)
-      // Cap at 50 sessions for word_readings to prevent huge IN clauses
-      const sessionIds = allSessions.slice(0, 50).map((s) => s.id);
+      // Cap at 30 sessions for word_readings to prevent huge IN clauses
+      const sessionIds = allSessions.slice(0, 30).map((s) => s.id);
 
       // Fetch word readings for substitution analysis (only if we have sessions)
       const wordReadingsResult = sessionIds.length > 0
@@ -254,6 +257,6 @@ export const useWeeklyProgress = (studentId: string | undefined, weeksToFetch = 
       };
     },
     enabled: !!studentId,
-    staleTime: 30000, // 30 seconds cache
+    staleTime: 5 * 60 * 1000, // 5 minute cache
   });
 };
