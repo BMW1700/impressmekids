@@ -385,7 +385,6 @@ export const ParentWeeklyReport = ({ studentId, studentName }: ParentWeeklyRepor
                   <h4 className="font-semibold mb-3">All Sound Scores This Week</h4>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {Object.entries(currentWeek.phonemeAccuracy)
-                      .filter(([phoneme]) => !phoneme.startsWith("_")) // filter out _inference etc.
                       .sort(([, a], [, b]) => b - a)
                       .map(([phoneme, score]) => (
                         <div key={phoneme} className="p-2 rounded-lg bg-muted/30">
@@ -403,7 +402,7 @@ export const ParentWeeklyReport = ({ studentId, studentName }: ParentWeeklyRepor
                             className="h-1.5"
                           />
                           <p className="text-xs text-muted-foreground mt-1">
-                            {getPhonemeDisplay(phoneme)} sound
+                            {getPhonemeLabel(phoneme)}
                           </p>
                         </div>
                       ))}
