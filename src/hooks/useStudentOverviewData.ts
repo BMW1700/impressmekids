@@ -43,7 +43,7 @@ export const useStudentOverviewData = (studentId: string | undefined) => {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      // Step 1: Get classroom IDs first
+      // Step 1: Get classroom IDs first (lightweight)
       const { data: classroomsData, error: classroomsError } = await supabase
         .from("classroom_students")
         .select(`
@@ -61,107 +61,101 @@ export const useStudentOverviewData = (studentId: string | undefined) => {
       const classrooms = classroomsData || [];
       const classroomIds = classrooms.map((c: any) => c.classroom_id);
 
-      // Step 2: Fetch all other data in parallel
+      // Step 2: Use COUNT queries instead of fetching full rows
       const [
-        dueTodayResult,
-        pastDueResult,
-        submissionsResult,
-        auraResult,
+        dueTodayCountResult,
+        pastDueCountResult,
+        completedCountResult,
+        auraCountResult,
+        auraStatsResult,
         behaviorResult,
         upcomingResult,
+        gradesResult,
       ] = await Promise.all([
-        // Due today assignments (just IDs for counting)
+        // Due today count (HEAD request - no row data)
         classroomIds.length > 0 
           ? supabase
               .from("assignments")
-              .select("id, classroom_id")
+              .select("id", { count: 'exact', head: true })
               .in("classroom_id", classroomIds)
               .gte("due_date", startDate)
               .lte("due_date", endDate)
               .eq("is_posted", true)
-          : Promise.resolve({ data: [], error: null }),
+          : Promise.resolve({ count: 0, error: null }),
 
-        // Past due assignments (limit to recent, count only)
+        // Past due count (last 14 days only, HEAD request)
         classroomIds.length > 0
           ? supabase
               .from("assignments")
-              .select("id, classroom_id")
+              .select("id", { count: 'exact', head: true })
               .in("classroom_id", classroomIds)
               .lt("due_date", startDate)
-              .gte("due_date", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()) // Only last 30 days
+              .gte("due_date", new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString())
               .eq("is_posted", true)
-              .limit(30)
-          : Promise.resolve({ data: [], error: null }),
+          : Promise.resolve({ count: 0, error: null }),
 
-        // Submissions: only recent ones for grade calculation (last 90 days)
-        classroomIds.length > 0
-          ? supabase
-              .from("assignment_submissions")
-              .select("assignment_id, grade, status, submitted_at, assignments!inner(classroom_id)")
-              .eq("student_id", studentId)
-              .in("assignments.classroom_id", classroomIds)
-              .gte("submitted_at", new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString())
-              .limit(100)
-          : Promise.resolve({ data: [], error: null }),
+        // Completed submissions count (HEAD request)
+        supabase
+          .from("assignment_submissions")
+          .select("id", { count: 'exact', head: true })
+          .eq("student_id", studentId)
+          .in("status", ["graded", "submitted"]),
 
-        // AURA stats - last 30 days only, limit records
+        // AURA session count (HEAD request)
+        supabase
+          .from("aura_records")
+          .select("id", { count: 'exact', head: true })
+          .eq("profile_id", studentId)
+          .gte("created_at", thirtyDaysAgo.toISOString()),
+
+        // AURA stats - minimal columns, last 20 only
         supabase
           .from("aura_records")
           .select("wpm, clarity, confidence, created_at")
           .eq("profile_id", studentId)
           .gte("created_at", thirtyDaysAgo.toISOString())
           .order("created_at", { ascending: false })
-          .limit(50),
+          .limit(20),
 
-        // Behavior stats
+        // Behavior stats (single row per student expected)
         supabase
           .from("student_behavior_stats")
           .select("total_points, weekly_points, current_streak")
-          .eq("student_id", studentId),
+          .eq("student_id", studentId)
+          .limit(1),
 
-        // Upcoming assignments count
+        // Upcoming assignments count per classroom (minimal fetch)
         classroomIds.length > 0
           ? supabase
               .from("assignments")
-              .select("id, classroom_id")
+              .select("classroom_id")
               .in("classroom_id", classroomIds)
               .eq("is_posted", true)
               .gte("due_date", new Date().toISOString())
+              .limit(100)
+          : Promise.resolve({ data: [], error: null }),
+
+        // Recent grades for grade calculation (minimal)
+        classroomIds.length > 0
+          ? supabase
+              .from("assignment_submissions")
+              .select("grade, assignments!inner(classroom_id)")
+              .eq("student_id", studentId)
+              .in("assignments.classroom_id", classroomIds)
+              .not("grade", "is", null)
+              .limit(50)
           : Promise.resolve({ data: [], error: null }),
       ]);
 
-      // Create submission lookup
-      const submissionsByAssignment = new Map<string, { grade: number | null; status: string }>();
-      const submissionsByClassroom = new Map<string, number[]>();
-      
-      (submissionsResult.data || []).forEach((sub: any) => {
-        submissionsByAssignment.set(sub.assignment_id, { grade: sub.grade, status: sub.status });
-        
+      // Calculate grades per classroom from recent submissions
+      const classroomGrades: Record<string, number[]> = {};
+      (gradesResult.data || []).forEach((sub: any) => {
         const cid = sub.assignments?.classroom_id;
         if (cid && sub.grade !== null) {
-          if (!submissionsByClassroom.has(cid)) submissionsByClassroom.set(cid, []);
-          submissionsByClassroom.get(cid)!.push(sub.grade);
+          if (!classroomGrades[cid]) classroomGrades[cid] = [];
+          classroomGrades[cid].push(sub.grade);
         }
       });
-
-      // Filter to incomplete assignments
-      const filterIncomplete = (assignments: any[]) =>
-        assignments.filter((a) => {
-          const sub = submissionsByAssignment.get(a.id);
-          return !sub || sub.status === "not_started" || sub.status === "in_progress";
-        });
-
-      const dueTodayIncomplete = filterIncomplete(dueTodayResult.data || []);
-      const pastDueIncomplete = filterIncomplete(pastDueResult.data || []);
-      const completedCount = (submissionsResult.data || []).filter(
-        (s: any) => s.status === "graded" || s.status === "submitted"
-      ).length;
-
-      // Calculate grades per classroom
-      const classroomGrades: Record<string, number | null> = {};
-      for (const [cid, grades] of submissionsByClassroom) {
-        classroomGrades[cid] = grades.reduce((a, b) => a + b, 0) / grades.length;
-      }
 
       // Upcoming counts per classroom
       const upcomingCounts: Record<string, number> = {};
@@ -170,13 +164,20 @@ export const useStudentOverviewData = (studentId: string | undefined) => {
       });
 
       // Build classroom summaries
-      const classroomSummaries: ClassroomSummary[] = classrooms.map((c: any) => ({
-        id: c.classroom_id,
-        name: c.classrooms?.name || "Unknown",
-        teacherName: (c.classrooms?.profiles as any)?.full_name || "Teacher",
-        finalGrade: classroomGrades[c.classroom_id] || null,
-        upcomingCount: upcomingCounts[c.classroom_id] || 0,
-      }));
+      const classroomSummaries: ClassroomSummary[] = classrooms.map((c: any) => {
+        const grades = classroomGrades[c.classroom_id] || [];
+        const avgGrade = grades.length > 0 
+          ? grades.reduce((a, b) => a + b, 0) / grades.length 
+          : null;
+        
+        return {
+          id: c.classroom_id,
+          name: c.classrooms?.name || "Unknown",
+          teacherName: (c.classrooms?.profiles as any)?.full_name || "Teacher",
+          finalGrade: avgGrade,
+          upcomingCount: upcomingCounts[c.classroom_id] || 0,
+        };
+      });
 
       // Overall grade
       const gradesWithValues = classroomSummaries.filter(c => c.finalGrade !== null);
@@ -185,13 +186,15 @@ export const useStudentOverviewData = (studentId: string | undefined) => {
         : null;
 
       // Process AURA stats
-      const auraData = auraResult.data || [];
+      const auraData = auraStatsResult.data || [];
       let auraStats = null;
       if (auraData.length > 0) {
         const avgWpm = auraData.reduce((sum, r) => sum + r.wpm, 0) / auraData.length;
         const avgClarity = auraData.reduce((sum, r) => sum + r.clarity, 0) / auraData.length;
         const avgConfidence = auraData.reduce((sum, r) => sum + r.confidence, 0) / auraData.length;
-        const wpmImprovement = auraData[0].wpm - auraData[auraData.length - 1].wpm;
+        const wpmImprovement = auraData.length > 1 
+          ? auraData[0].wpm - auraData[auraData.length - 1].wpm 
+          : 0;
 
         auraStats = {
           avgWpm: Math.round(avgWpm),
@@ -205,23 +208,23 @@ export const useStudentOverviewData = (studentId: string | undefined) => {
       // Process behavior stats
       const behaviorData = behaviorResult.data || [];
       const behaviorStats = {
-        totalPoints: behaviorData.reduce((sum, s) => sum + (s.total_points || 0), 0),
-        weeklyPoints: behaviorData.reduce((sum, s) => sum + (s.weekly_points || 0), 0),
-        streak: behaviorData.length > 0 ? Math.max(...behaviorData.map(s => s.current_streak || 0)) : 0,
+        totalPoints: behaviorData[0]?.total_points || 0,
+        weeklyPoints: behaviorData[0]?.weekly_points || 0,
+        streak: behaviorData[0]?.current_streak || 0,
       };
 
       return {
         classrooms: classroomSummaries,
-        dueTodayCount: dueTodayIncomplete.length,
-        pastDueCount: pastDueIncomplete.length,
-        completedCount,
-        auraSessionCount: auraData.length,
+        dueTodayCount: dueTodayCountResult.count || 0,
+        pastDueCount: pastDueCountResult.count || 0,
+        completedCount: completedCountResult.count || 0,
+        auraSessionCount: auraCountResult.count || 0,
         auraStats,
         behaviorStats,
         overallGrade,
       };
     },
     enabled: !!studentId,
-    staleTime: 5 * 60 * 1000, // 5 minutes - data doesn't change frequently
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
 };
