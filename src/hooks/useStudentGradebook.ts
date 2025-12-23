@@ -325,6 +325,6 @@ export const useStudentGradebook = (studentId: string | undefined) => {
       return gradebookData;
     },
     enabled: !!studentId,
-    staleTime: 60000, // 1 minute cache to avoid refetching on tab switches
+    staleTime: 5 * 60 * 1000, // 5 minute cache to avoid refetching on tab switches
   });
 };
