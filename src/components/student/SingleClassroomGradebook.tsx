@@ -257,7 +257,7 @@ const useSingleClassroomGradebook = (classroomId: string, studentId: string) => 
       };
     },
     enabled: !!classroomId && !!studentId,
-    staleTime: 30000,
+    staleTime: 60000, // 1 minute cache
   });
 };
 
