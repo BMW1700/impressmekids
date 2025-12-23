@@ -8,6 +8,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { PushNotificationPrompt } from "@/components/notifications/PushNotificationPrompt";
 import { OfflineIndicator } from "@/components/safety/OfflineIndicator";
 import { MLStatusProvider } from "@/components/ml/MLStatusProvider";
+import { SentryUserTracker } from "@/components/auth/SentryUserTracker";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import PendingVerification from "./pages/PendingVerification";
@@ -73,6 +74,7 @@ const App = () => (
             <Toaster />
             <Sonner />
             <PushNotificationPrompt />
+            <SentryUserTracker />
         <BrowserRouter>
         <OfflineIndicator />
         <Routes>
