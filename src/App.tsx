@@ -1,9 +1,9 @@
+import type { ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "next-themes";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { PushNotificationPrompt } from "@/components/notifications/PushNotificationPrompt";
@@ -66,21 +66,34 @@ import SecurityPortal from "./pages/SecurityPortal";
 
 const queryClient = new QueryClient();
 
+function RouteAwareProviders({ children }: { children: ReactNode }) {
+  const location = useLocation();
+  const path = location.pathname;
+
+  // Only enable ML on routes that actually need it (prevents huge startup work)
+  const enableML =
+    /aura|reading|calibration/i.test(path) ||
+    path.startsWith("/student/aura") ||
+    path.startsWith("/teacher/aura");
+
+  return <MLStatusProvider enabled={enableML}>{children}</MLStatusProvider>;
+}
+
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
     <LanguageProvider>
       <QueryClientProvider client={queryClient}>
-        <MLStatusProvider enabled={true}>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <PushNotificationPrompt />
-            <SentryUserTracker />
-            <BrowserRouter>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <PushNotificationPrompt />
+          <SentryUserTracker />
+          <BrowserRouter>
+            <RouteAwareProviders>
               <OfflineIndicator />
               <Routes>
                 {/* Public routes */}
-                
+
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicy />} />
@@ -148,11 +161,11 @@ const App = () => (
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
-            </BrowserRouter>
+            </RouteAwareProviders>
+          </BrowserRouter>
         </TooltipProvider>
-      </MLStatusProvider>
-    </QueryClientProvider>
-  </LanguageProvider>
+      </QueryClientProvider>
+    </LanguageProvider>
   </ThemeProvider>
 );
 
