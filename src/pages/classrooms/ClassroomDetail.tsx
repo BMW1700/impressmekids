@@ -986,7 +986,7 @@ const ClassroomDetail = () => {
                               </Badge>}
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            <strong>{set.flashcards.length}</strong> flashcards
+                            <strong>{Array.isArray(set.flashcards) ? set.flashcards.length : 0}</strong> flashcards
                           </p>
                           <p className="text-xs text-muted-foreground">
                             Created {new Date(set.created_at).toLocaleDateString()}
