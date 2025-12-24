@@ -185,7 +185,7 @@ const TeacherDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-background">
       <Header showAuthButtons={false} onSignOut={handleSignOut} />
 
       <main className="flex-1 py-8 animate-fade-in">
@@ -229,7 +229,7 @@ const TeacherDashboard = () => {
                     </Button>
                     <Button
                       variant="outline"
-                      className="bg-white hover:bg-gray-50"
+                      className="bg-card hover:bg-muted"
                       onClick={() => navigate("/teacher/aura-analytics")}
                     >
                       <AlertCircle className="h-4 w-4 mr-2" />

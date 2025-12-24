@@ -127,7 +127,7 @@ const StudentDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-background">
       {/* Full-screen drill alert overlay - appears during active drills */}
       <DrillAlertOverlay />
       <Header onSignOut={handleSignOut} studentId={profile?.id} />
