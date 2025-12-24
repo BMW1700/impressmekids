@@ -437,7 +437,7 @@ const ClassroomDetail = () => {
     }
   };
   if (isLoading || permissionsLoading) {
-    return <div className="min-h-screen flex items-center justify-center">
+    return <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>;
   }
@@ -451,7 +451,7 @@ const ClassroomDetail = () => {
   const effectiveAssignments = isSubstitute ? substituteAssignments : (assignments || []);
   
   if (!hasAccess) {
-    return <div className="min-h-screen flex flex-col">
+    return <div className="min-h-screen flex flex-col bg-background">
         <Header showAuthButtons={false} />
         <main className="flex-1 py-8">
           <div className="container mx-auto px-4 text-center">
@@ -466,7 +466,7 @@ const ClassroomDetail = () => {
       </div>;
   }
   if (!classroom) {
-    return <div className="min-h-screen flex flex-col">
+    return <div className="min-h-screen flex flex-col bg-background">
         <Header showAuthButtons={false} />
         <main className="flex-1 py-8">
           <div className="container mx-auto px-4 text-center">
@@ -507,7 +507,7 @@ const ClassroomDetail = () => {
     navigate('/auth');
   };
 
-  return <div className="min-h-screen flex flex-col">
+  return <div className="min-h-screen flex flex-col bg-background">
       <Header showAuthButtons={false} />
       
       {/* Substitute Teacher Banner */}
