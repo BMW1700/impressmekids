@@ -45,7 +45,7 @@ export const useStudentGradebook = (studentId: string | undefined) => {
     queryFn: async () => {
       if (!studentId) throw new Error("Student ID required");
 
-      // Get student's classrooms with teacher info
+      // Step 1: Get student's classrooms with teacher info
       const { data: classrooms, error: classroomsError } = await supabase
         .from("classroom_students")
         .select(`
@@ -67,15 +67,15 @@ export const useStudentGradebook = (studentId: string | undefined) => {
 
       const classroomIds = classrooms.map(c => c.classroom_id);
 
-      // Fetch ALL data in parallel instead of sequentially per classroom
-      const [syllabusResult, assignmentsResult, attendanceResult] = await Promise.all([
-        // Fetch all syllabi for these classrooms at once
+      // Step 2: Fetch data in parallel - assignments WITHOUT nested submissions
+      const [syllabusResult, assignmentsResult, studentSubmissionsResult, attendanceResult] = await Promise.all([
+        // Fetch all syllabi for these classrooms
         supabase
           .from("classroom_syllabus")
           .select("classroom_id, grade_weights")
           .in("classroom_id", classroomIds),
         
-        // Fetch all assignments for these classrooms at once
+        // Fetch all assignments WITHOUT nested submissions (the expensive part removed)
         supabase
           .from("assignments")
           .select(`
@@ -87,25 +87,27 @@ export const useStudentGradebook = (studentId: string | undefined) => {
             classroom_id,
             assignment_questions (
               points
-            ),
-            assignment_submissions (
-              id,
-              student_id,
-              grade,
-              status,
-              submitted_at,
-              graded_at,
-              teacher_feedback,
-              assignment_answers (
-                points_earned
-              )
             )
           `)
           .in("classroom_id", classroomIds)
           .eq("is_posted", true)
           .order("due_date", { ascending: true }),
         
-        // Fetch all attendance records for these classrooms at once
+        // Step 3: Fetch ONLY this student's submissions separately
+        supabase
+          .from("assignment_submissions")
+          .select(`
+            id,
+            assignment_id,
+            grade,
+            status,
+            submitted_at,
+            graded_at,
+            teacher_feedback
+          `)
+          .eq("student_id", studentId),
+        
+        // Fetch attendance records
         supabase
           .from("attendance_records")
           .select("classroom_id, status")
@@ -115,9 +117,19 @@ export const useStudentGradebook = (studentId: string | undefined) => {
 
       if (assignmentsResult.error) throw assignmentsResult.error;
 
-      // Create lookup maps for fast access
+      // Create lookup maps
       const syllabusMap = new Map<string, any>();
       syllabusResult.data?.forEach(s => syllabusMap.set(s.classroom_id, s.grade_weights));
+
+      // Create submission lookup by assignment_id
+      const submissionsByAssignment = new Map<string, any>();
+      studentSubmissionsResult.data?.forEach(sub => {
+        // Keep the best submission (graded > submitted > latest)
+        const existing = submissionsByAssignment.get(sub.assignment_id);
+        if (!existing || (sub.grade !== null && existing.grade === null)) {
+          submissionsByAssignment.set(sub.assignment_id, sub);
+        }
+      });
 
       const assignmentsByClassroom = new Map<string, any[]>();
       assignmentsResult.data?.forEach(a => {
@@ -133,7 +145,7 @@ export const useStudentGradebook = (studentId: string | undefined) => {
         attendanceByClassroom.set(a.classroom_id, list);
       });
 
-      // Now process each classroom using the pre-fetched data
+      // Process each classroom
       const gradebookData: GradebookClassroom[] = classrooms.map((classroom) => {
         const weights = syllabusMap.get(classroom.classroom_id) 
           ? (syllabusMap.get(classroom.classroom_id) as any)
@@ -142,37 +154,21 @@ export const useStudentGradebook = (studentId: string | undefined) => {
         const assignments = assignmentsByClassroom.get(classroom.classroom_id) || [];
         const attendanceRecords = attendanceByClassroom.get(classroom.classroom_id) || [];
 
-        // Calculate current grade and prepare assignment data
         let totalPoints = 0;
         let earnedPoints = 0;
         let gradedCount = 0;
 
-        // Track assignments by category
         const testAssignments: any[] = [];
         const quizAssignments: any[] = [];
         const homeworkAssignments: any[] = [];
 
         const assignmentsList = assignments.map((assignment) => {
-          // Calculate total points for this assignment from questions
           const assignmentTotalPoints = assignment.assignment_questions?.reduce(
             (sum: number, q: any) => sum + (q.points || 0), 0
           ) || 100;
           
-          // Filter to only this student's submissions, then prioritize graded ones
-          const studentSubmissions = assignment.assignment_submissions.filter(
-            (sub: any) => sub.student_id === studentId
-          );
-          const submission = studentSubmissions.find((sub: any) => sub.grade !== null) 
-            || studentSubmissions[0];
-
-          // Calculate points earned from answers
-          let assignmentPointsEarned: number | null = null;
-          if (submission?.assignment_answers) {
-            const earnedFromAnswers = submission.assignment_answers.reduce(
-              (sum: number, a: any) => sum + (a.points_earned || 0), 0
-            );
-            assignmentPointsEarned = earnedFromAnswers;
-          }
+          // Look up this student's submission from our map
+          const submission = submissionsByAssignment.get(assignment.id);
 
           let status: "Graded" | "Submitted" | "Incomplete" | "Past Due" | "Submitted Late" = "Incomplete";
           
@@ -186,7 +182,6 @@ export const useStudentGradebook = (studentId: string | undefined) => {
               earnedPoints += submission.grade;
               gradedCount++;
               
-              // Add to category arrays
               const assignmentData = { grade: submission.grade, category: assignment.category };
               if (assignment.category === "Test") {
                 testAssignments.push(assignmentData);
@@ -215,15 +210,13 @@ export const useStudentGradebook = (studentId: string | undefined) => {
             teacherFeedback: submission?.teacher_feedback || null,
             passageText: assignment.passage_text,
             classroomId: assignment.classroom_id,
-            pointsEarned: assignmentPointsEarned,
+            pointsEarned: null, // Load on-demand when viewing details
             totalPoints: assignmentTotalPoints,
           };
         });
 
-        // Calculate current grade (simple average)
         const currentGrade = gradedCount > 0 ? (earnedPoints / totalPoints) * 100 : null;
 
-        // Calculate category averages
         const calculateCategoryAverage = (categoryAssignments: any[]) => {
           if (categoryAssignments.length === 0) return 0;
           const sum = categoryAssignments.reduce((acc, a) => acc + a.grade, 0);
@@ -234,7 +227,6 @@ export const useStudentGradebook = (studentId: string | undefined) => {
         const quizAvg = calculateCategoryAverage(quizAssignments);
         const homeworkAvg = calculateCategoryAverage(homeworkAssignments);
 
-        // Calculate attendance metrics
         let daysPresent = 0;
         let daysTardy = 0;
         let daysAbsent = 0;
@@ -251,7 +243,6 @@ export const useStudentGradebook = (studentId: string | undefined) => {
           totalDaysRecorded > 0 ? attendancePoints / totalDaysRecorded : null;
         const attendancePercentage = attendanceAverage || 0;
 
-        // Calculate weighted final grade
         let finalGrade: number | null = null;
         if (gradedCount > 0 || totalDaysRecorded > 0) {
           let weightedSum = 0;
@@ -282,7 +273,6 @@ export const useStudentGradebook = (studentId: string | undefined) => {
           }
         }
 
-        // Get upcoming assignments (not submitted, not past due)
         const upcomingAssignments = assignmentsList
           .filter((a) => a.status === "Incomplete" && new Date(a.dueDate) >= new Date())
           .slice(0, 5)
@@ -325,6 +315,7 @@ export const useStudentGradebook = (studentId: string | undefined) => {
       return gradebookData;
     },
     enabled: !!studentId,
-    staleTime: 30000, // Cache for 30 seconds to avoid refetching on tab switches
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
   });
 };

@@ -18,7 +18,6 @@ if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
         voices.find(v => v.lang.startsWith('en')) || 
         voices[0];
       voicesLoaded = true;
-      console.log('🔊 Voices loaded, preferred:', preferredVoice?.name, preferredVoice?.lang);
     }
   };
   
@@ -37,7 +36,6 @@ export const unlockSpeechSynthesis = () => {
   if (speechUnlocked) return;
   
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-    console.warn('🔊 Speech synthesis not supported');
     return;
   }
 
@@ -46,14 +44,10 @@ export const unlockSpeechSynthesis = () => {
   unlockUtterance.volume = 0;
   window.speechSynthesis.speak(unlockUtterance);
   speechUnlocked = true;
-  console.log('🔊 Speech synthesis UNLOCKED via user gesture');
 };
 
 export const playCorrectPronunciation = (word: string, retryCount = 0) => {
-  console.log('🔊 ATTEMPTING TO SPEAK:', word, '(attempt', retryCount + 1, ')');
-  
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-    console.warn('🔊 Speech synthesis not supported');
     return;
   }
 
@@ -66,19 +60,16 @@ export const playCorrectPronunciation = (word: string, retryCount = 0) => {
         voices.find(v => v.lang.startsWith('en')) || 
         voices[0];
       voicesLoaded = true;
-      console.log('🔊 Voices force-loaded:', preferredVoice?.name);
     }
   }
 
   // Wait for voices if not loaded yet (max 8 retries, 250ms each = 2 seconds total)
   if (!voicesLoaded && retryCount < 8) {
-    console.log('🔊 Voices not loaded, retrying in 250ms... (attempt', retryCount + 1, ')');
     setTimeout(() => playCorrectPronunciation(word, retryCount + 1), 250);
     return;
   }
 
   if (!voicesLoaded) {
-    console.error('🔊 FAILED: Voices never loaded after 8 retries');
     // Show user-visible error
     if (typeof window !== 'undefined' && (window as any).__showVoiceError) {
       (window as any).__showVoiceError();
@@ -106,16 +97,10 @@ export const playCorrectPronunciation = (word: string, retryCount = 0) => {
       utterance.voice = preferredVoice;
     }
     
-    // Add event listeners for debugging
-    utterance.onstart = () => console.log('🔊 Speech STARTED:', word);
-    utterance.onend = () => console.log('🔊 Speech ENDED:', word);
     utterance.onerror = (e) => {
-      console.error('🔊 Speech ERROR:', word, e.error);
       // If error is "not-allowed", speech wasn't unlocked
       if (e.error === 'not-allowed') {
-        console.warn('🔊 Speech blocked - needs user gesture to unlock');
         speechUnlocked = false;
-        // Show user-visible error
         if (typeof window !== 'undefined' && (window as any).__showVoiceError) {
           (window as any).__showVoiceError();
         }

@@ -1,19 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useStudentClassroomIds } from "@/hooks/useStudentClassroomIds";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Activity, 
-  BookOpen, 
   CheckCircle2, 
   Mic, 
-  Trophy, 
+  Star, 
   MessageSquare,
-  Clock,
-  Star
+  Clock
 } from "lucide-react";
-import { format, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 
 interface ParentRecentActivityProps {
   studentId: string;
@@ -29,34 +28,68 @@ interface ActivityItem {
 }
 
 export const ParentRecentActivity = ({ studentId }: ParentRecentActivityProps) => {
-  const { data: activities, isLoading } = useQuery({
-    queryKey: ["parent-student-activity", studentId],
+  // Use shared hook for classroom IDs (cached across components)
+  const { data: classroomIds = [], isLoading: classroomsLoading } = useStudentClassroomIds(studentId);
+
+  const { data: activities, isLoading: activitiesLoading } = useQuery({
+    queryKey: ["parent-student-activity", studentId, classroomIds],
     queryFn: async () => {
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const sevenDaysAgoISO = sevenDaysAgo.toISOString();
+
+      // Fetch ALL data in PARALLEL (classroomIds already available from shared hook)
+      const [submissionsResult, readingsResult, behaviorsResult, announcementsResult] = await Promise.all([
+        supabase
+          .from("assignment_submissions")
+          .select(`
+            id,
+            status,
+            grade,
+            submitted_at,
+            graded_at,
+            teacher_feedback,
+            assignments (title)
+          `)
+          .eq("student_id", studentId)
+          .gte("created_at", sevenDaysAgoISO)
+          .order("created_at", { ascending: false })
+          .limit(10),
+        supabase
+          .from("aura_records")
+          .select("id, created_at, wpm, clarity, confidence, grade")
+          .eq("profile_id", studentId)
+          .gte("created_at", sevenDaysAgoISO)
+          .order("created_at", { ascending: false })
+          .limit(10),
+        supabase
+          .from("behavior_records")
+          .select(`
+            id,
+            points,
+            notes,
+            created_at,
+            behavior_categories (name, category_type)
+          `)
+          .eq("student_id", studentId)
+          .gte("created_at", sevenDaysAgoISO)
+          .order("created_at", { ascending: false })
+          .limit(10),
+        classroomIds.length > 0
+          ? supabase
+              .from("classroom_announcements")
+              .select(`id, title, content, created_at, classrooms (name)`)
+              .in("classroom_id", classroomIds)
+              .gte("created_at", sevenDaysAgoISO)
+              .order("created_at", { ascending: false })
+              .limit(5)
+          : Promise.resolve({ data: [] })
+      ]);
 
       const activities: ActivityItem[] = [];
 
-      // Get recent submissions
-      const { data: submissions } = await supabase
-        .from("assignment_submissions")
-        .select(`
-          id,
-          status,
-          grade,
-          submitted_at,
-          graded_at,
-          teacher_feedback,
-          assignments (
-            title
-          )
-        `)
-        .eq("student_id", studentId)
-        .gte("created_at", sevenDaysAgo.toISOString())
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      submissions?.forEach((sub: any) => {
+      // Process submissions
+      submissionsResult.data?.forEach((sub: any) => {
         if (sub.graded_at) {
           activities.push({
             id: `grade-${sub.id}`,
@@ -77,99 +110,53 @@ export const ParentRecentActivity = ({ studentId }: ParentRecentActivityProps) =
         }
       });
 
-      // Get recent reading sessions
-      const { data: readings } = await supabase
-        .from("aura_records")
-        .select("id, created_at, wpm, clarity, confidence, grade")
-        .eq("profile_id", studentId)
-        .gte("created_at", sevenDaysAgo.toISOString())
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      readings?.forEach((reading) => {
+      // Process readings
+      readingsResult.data?.forEach((reading) => {
         activities.push({
           id: `reading-${reading.id}`,
           type: "reading",
           title: "Reading session completed",
-          description: `${reading.wpm} WPM • ${reading.clarity}% clarity`,
+          description: `${reading.wpm} WPM • ${Math.round(reading.clarity)}% clarity`,
           timestamp: new Date(reading.created_at),
           metadata: { wpm: reading.wpm, clarity: reading.clarity },
         });
       });
 
-      // Get recent behavior events
-      const { data: behaviors } = await supabase
-        .from("behavior_records")
-        .select(`
-          id,
-          points,
-          notes,
-          created_at,
-          behavior_categories (
-            name,
-            category_type
-          )
-        `)
-        .eq("student_id", studentId)
-        .gte("created_at", sevenDaysAgo.toISOString())
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      behaviors?.forEach((behavior: any) => {
+      // Process behaviors
+      behaviorsResult.data?.forEach((behavior: any) => {
         activities.push({
           id: `behavior-${behavior.id}`,
           type: "behavior",
           title: behavior.behavior_categories?.name || "Behavior recorded",
           description: `${behavior.points > 0 ? "+" : ""}${behavior.points} points${behavior.notes ? " - " + behavior.notes : ""}`,
           timestamp: new Date(behavior.created_at),
-          metadata: { 
-            points: behavior.points, 
+          metadata: {
+            points: behavior.points,
             isPositive: behavior.behavior_categories?.category_type === "positive"
           },
         });
       });
 
-      // Get classrooms for announcements
-      const { data: classroomData } = await supabase
-        .from("classroom_students")
-        .select("classroom_id")
-        .eq("student_id", studentId);
-
-      const classroomIds = classroomData?.map((c) => c.classroom_id) || [];
-
-      if (classroomIds.length > 0) {
-        const { data: announcements } = await supabase
-          .from("classroom_announcements")
-          .select(`
-            id,
-            title,
-            content,
-            created_at,
-            classrooms (
-              name
-            )
-          `)
-          .in("classroom_id", classroomIds)
-          .gte("created_at", sevenDaysAgo.toISOString())
-          .order("created_at", { ascending: false })
-          .limit(5);
-
-        announcements?.forEach((ann: any) => {
-          activities.push({
-            id: `announcement-${ann.id}`,
-            type: "announcement",
-            title: ann.title,
-            description: `${ann.classrooms?.name}: ${ann.content.slice(0, 60)}...`,
-            timestamp: new Date(ann.created_at),
-          });
+      // Process announcements
+      announcementsResult.data?.forEach((ann: any) => {
+        activities.push({
+          id: `announcement-${ann.id}`,
+          type: "announcement",
+          title: ann.title,
+          description: `${ann.classrooms?.name}: ${ann.content.slice(0, 60)}...`,
+          timestamp: new Date(ann.created_at),
         });
-      }
+      });
 
       // Sort by timestamp
       return activities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
     },
     enabled: !!studentId,
+    staleTime: 2 * 60 * 1000, // 2 minutes for activity
+    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
   });
+
+  const isLoading = classroomsLoading || activitiesLoading;
 
   const getActivityIconClass = (type: string, metadata?: any) => {
     switch (type) {
@@ -178,7 +165,7 @@ export const ParentRecentActivity = ({ studentId }: ParentRecentActivityProps) =
       case "reading":
         return "icon-circle icon-circle-sm icon-circle-purple";
       case "behavior":
-        return metadata?.isPositive 
+        return metadata?.isPositive
           ? "icon-circle icon-circle-sm icon-circle-gold"
           : "icon-circle icon-circle-sm icon-circle-orange";
       case "announcement":
@@ -270,7 +257,7 @@ export const ParentRecentActivity = ({ studentId }: ParentRecentActivityProps) =
           <ScrollArea className="h-[300px] pr-4">
             <div className="space-y-3">
               {activities.map((activity) => (
-                <div 
+                <div
                   key={activity.id}
                   className="flex gap-3 p-4 rounded-xl bg-gradient-to-r from-muted/30 to-muted/10 hover:from-muted/50 hover:to-muted/20 transition-all duration-300 hover:scale-[1.01]"
                 >

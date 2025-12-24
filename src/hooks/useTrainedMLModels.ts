@@ -63,7 +63,7 @@ function forwardPass(weights: number[][], biases: number[], input: number[]): nu
   return output;
 }
 
-export const useTrainedMLModels = () => {
+export const useTrainedMLModels = (enabled = true) => {
   const [crossModalWeights, setCrossModalWeights] = useState<CrossModalWeights | null>(null);
   const [qLearningTable, setQLearningTable] = useState<Record<string, Record<string, number>> | null>(null);
   const [modelStatus, setModelStatus] = useState<ModelStatus>({
@@ -75,6 +75,11 @@ export const useTrainedMLModels = () => {
 
   // Reusable loadModels function
   const loadModels = useCallback(async () => {
+    if (!enabled) {
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -84,13 +89,13 @@ export const useTrainedMLModels = () => {
         .select('*')
         .eq('model_type', 'cross_modal_network')
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
       if (crossModalData?.weights) {
         const weights = crossModalData.weights as unknown as CrossModalWeights;
         setCrossModalWeights(weights);
-        const metadata = crossModalData.metadata as unknown as Record<string, any> || {};
-        setModelStatus(prev => ({
+        const metadata = (crossModalData.metadata as unknown as Record<string, any>) || {};
+        setModelStatus((prev) => ({
           ...prev,
           crossModalNetwork: {
             loaded: true,
@@ -100,6 +105,12 @@ export const useTrainedMLModels = () => {
           },
         }));
         console.log('[ML] Loaded Cross-Modal Network v' + crossModalData.model_version);
+      } else {
+        setCrossModalWeights(null);
+        setModelStatus((prev) => ({
+          ...prev,
+          crossModalNetwork: { loaded: false, version: null, accuracy: null, trainingExamples: 0 },
+        }));
       }
 
       // Load Q-Learning table
@@ -108,13 +119,13 @@ export const useTrainedMLModels = () => {
         .select('*')
         .eq('model_type', 'q_learning_table')
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
       if (qLearningData?.weights) {
         const table = qLearningData.weights as Record<string, Record<string, number>>;
         setQLearningTable(table);
-        const metadata = qLearningData.metadata as Record<string, any> || {};
-        setModelStatus(prev => ({
+        const metadata = (qLearningData.metadata as Record<string, any>) || {};
+        setModelStatus((prev) => ({
           ...prev,
           qLearningTable: {
             loaded: true,
@@ -124,15 +135,21 @@ export const useTrainedMLModels = () => {
           },
         }));
         console.log('[ML] Loaded Q-Learning Table v' + qLearningData.model_version);
+      } else {
+        setQLearningTable(null);
+        setModelStatus((prev) => ({
+          ...prev,
+          qLearningTable: { loaded: false, version: null, totalStates: 0, totalActions: 0 },
+        }));
       }
     } catch (error) {
       console.error('[ML] Failed to load models:', error);
+    } finally {
+      setIsLoading(false);
     }
+  }, [enabled]);
 
-    setIsLoading(false);
-  }, []);
-
-  // Load trained models on mount
+  // Load trained models on mount (only when enabled)
   useEffect(() => {
     loadModels();
   }, [loadModels]);
@@ -254,6 +271,10 @@ export const useTrainedMLModels = () => {
 
   // Trigger training and refetch models after success
   const triggerTraining = useCallback(async (): Promise<{ success: boolean; message: string }> => {
+    if (!enabled) {
+      return { success: false, message: 'ML is disabled on this route' };
+    }
+
     setIsTraining(true);
     try {
       const { data, error } = await supabase.functions.invoke('train-ml-models', {
@@ -278,7 +299,7 @@ export const useTrainedMLModels = () => {
     } finally {
       setIsTraining(false);
     }
-  }, [loadModels]);
+  }, [enabled, loadModels]);
 
   return {
     modelStatus,

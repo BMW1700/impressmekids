@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
@@ -30,9 +30,11 @@ import { CalendarWidget } from "@/components/calendar/CalendarWidget";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 const ParentDashboard = () => {
   const { t } = useLanguage();
+  const { user, profile, isLoading: authLoading, signOut } = useAuth();
   const [loading, setLoading] = useState(true);
   const [parentId, setParentId] = useState<string | null>(null);
   const [lookupModalOpen, setLookupModalOpen] = useState(false);
@@ -40,6 +42,7 @@ const ParentDashboard = () => {
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const hasRedirected = useRef(false);
 
   const handleLookupSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ["parent-student-links"] });
@@ -47,20 +50,12 @@ const ParentDashboard = () => {
     queryClient.invalidateQueries({ queryKey: ["parent-children", parentId] });
   };
 
-  const { data: session } = useQuery({
-    queryKey: ["session"],
-    queryFn: async () => {
-      const { data } = await supabase.auth.getSession();
-      return data.session;
-    },
-  });
-
   const { data: approvedChildren, isLoading: childrenLoading } = useQuery({
-    queryKey: ["parent-children", session?.user?.id],
+    queryKey: ["parent-children", user?.id],
     queryFn: async () => {
-      if (!session?.user?.id) return [];
+      if (!user?.id) return [];
       const { data, error } = await supabase.rpc("get_parent_children", { 
-        _user_id: session.user.id 
+        _user_id: user.id 
       });
       if (error) {
         console.error("Error fetching children:", error);
@@ -68,7 +63,7 @@ const ParentDashboard = () => {
       }
       return data || [];
     },
-    enabled: !!session?.user?.id,
+    enabled: !!user?.id,
   });
 
   // Fetch school IDs for all children
@@ -89,47 +84,70 @@ const ParentDashboard = () => {
   });
 
   useEffect(() => {
-    checkAuth();
-  }, []);
+    // Wait for auth to fully resolve before making any decisions
+    if (authLoading) return;
+    
+    // Prevent multiple redirects
+    if (hasRedirected.current) return;
+    
+    // Only redirect if we're SURE there's no user after auth resolved
+    if (!user) {
+      hasRedirected.current = true;
+      navigate("/auth");
+      return;
+    }
+    
+    // Wait for profile to load - don't redirect while profile is null but user exists
+    if (!profile) {
+      // Profile is still loading, just wait
+      return;
+    }
 
-  const checkAuth = async () => {
+    // Role redirects
+    if (profile.role !== 'parent') {
+      hasRedirected.current = true;
+      if (profile.role === 'teacher') navigate('/teacher/dashboard');
+      else if (profile.role === 'district_admin') navigate('/district/dashboard');
+      else navigate('/student/dashboard');
+      return;
+    }
+
+    // Verification check
+    if (!profile.is_verified) {
+      hasRedirected.current = true;
+      navigate('/pending-verification');
+      return;
+    }
+
+    // Load parent account
+    loadParentAccount();
+  }, [authLoading, user, profile]);
+
+  const loadParentAccount = async () => {
+    if (!user) return;
+    
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { navigate("/auth"); return; }
-
-      const { data: profileData } = await supabase.rpc('get_user_profile', { _user_id: session.user.id });
-      if (!profileData || profileData.length === 0) { navigate("/auth"); return; }
-
-      const userRole = profileData[0].role;
-      if (userRole !== 'parent') {
-        if (userRole === 'teacher') navigate('/teacher/dashboard');
-        else if (userRole === 'district_admin') navigate('/district/dashboard');
-        else navigate('/student/dashboard');
-        return;
-      }
-
-      const { data: profileDetails } = await supabase
-        .from('profiles').select('is_verified').eq('id', session.user.id).single();
-      if (!profileDetails?.is_verified) { navigate('/pending-verification'); return; }
-
-      const { data: parentAccount } = await supabase.rpc("get_parent_account", { _user_id: session.user.id });
+      const { data: parentAccount } = await supabase.rpc("get_parent_account", { _user_id: user.id });
+      
       if (!parentAccount || parentAccount.length === 0) {
         const { data: newParent } = await supabase
           .from("parent_accounts")
-          .insert({ user_id: session.user.id, email: session.user.email || "", full_name: session.user.user_metadata?.full_name || "Parent" })
-          .select().single();
+          .insert({ user_id: user.id, email: user.email || "", full_name: user.user_metadata?.full_name || "Parent" })
+          .select()
+          .single();
         if (newParent) setParentId(newParent.id);
       } else {
         setParentId(parentAccount[0].id);
       }
-      setLoading(false);
     } catch (error) {
-      console.error("Error in checkAuth:", error);
+      console.error("Error loading parent account:", error);
+    } finally {
       setLoading(false);
     }
   };
 
-  if (loading || childrenLoading) {
+  // Only block on auth loading - render shell immediately for data loading
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5">
         <div className="flex flex-col items-center gap-4">
@@ -141,6 +159,9 @@ const ParentDashboard = () => {
       </div>
     );
   }
+
+  // Show loading state for children as inline skeleton, not full-page block
+  const isChildrenReady = !loading && !childrenLoading;
 
   const firstChild = approvedChildren?.[0];
   const hasChildren = approvedChildren && approvedChildren.length > 0;
@@ -211,8 +232,23 @@ const ParentDashboard = () => {
           </div>
         </div>
 
+        {/* Loading skeleton for children */}
+        {!isChildrenReady && (
+          <div className="space-y-6">
+            <div className="skeleton-shimmer h-12 w-48 rounded-lg" />
+            <div className="grid lg:grid-cols-2 gap-6">
+              <div className="skeleton-shimmer h-64 rounded-xl" />
+              <div className="skeleton-shimmer h-64 rounded-xl" />
+            </div>
+            <div className="grid lg:grid-cols-2 gap-6">
+              <div className="skeleton-shimmer h-80 rounded-xl" />
+              <div className="skeleton-shimmer h-80 rounded-xl" />
+            </div>
+          </div>
+        )}
+
         {/* No Children Linked - Premium Empty State */}
-        {!hasChildren && (
+        {isChildrenReady && !hasChildren && (
           <Card variant="glass" className="mb-8 border-2 border-dashed border-primary/20">
             <CardContent className="pt-6">
               <div className="text-center space-y-8 py-12">
@@ -234,7 +270,7 @@ const ParentDashboard = () => {
         )}
 
         {/* Main Dashboard Content */}
-        {hasChildren && activeChildId && (
+        {isChildrenReady && hasChildren && activeChildId && (
           <div className="space-y-6">
             {/* Student Tabs - Only show if multiple children */}
             {hasMultipleChildren && (
@@ -289,8 +325,8 @@ const ParentDashboard = () => {
                 </div>
 
                 {/* Calendar Widget */}
-                {session?.user?.id && (
-                  <CalendarWidget userId={session.user.id} userRole="parent" childId={activeChildId} />
+                {user?.id && (
+                  <CalendarWidget userId={user.id} userRole="parent" childId={activeChildId} />
                 )}
 
                 {/* View Child Details Button */}
@@ -299,6 +335,24 @@ const ParentDashboard = () => {
                     variant="outline"
                     size="lg"
                     onClick={() => navigate(`/parent/child/${activeChildId}`)}
+                    onMouseEnter={() => {
+                      // Prefetch child detail data on hover
+                      if (activeChildId && user?.id) {
+                        queryClient.prefetchQuery({
+                          queryKey: ["parent-child-info", user.id, activeChildId],
+                          queryFn: async () => {
+                            const { data } = await supabase.rpc("get_parent_child_info", {
+                              _parent_user_id: user.id,
+                              _student_id: activeChildId,
+                            });
+                            return data?.[0] ? { full_name: data[0].full_name, email: data[0].email } : null;
+                          },
+                          staleTime: 5 * 60 * 1000,
+                        });
+                        // Also prefetch the route chunk
+                        import("./ChildDetail");
+                      }
+                    }}
                     className="gap-2 glass-card border-0 hover:bg-primary/5 transition-all hover:-translate-y-1"
                   >
                     {t("parentDashboard.actions.viewFullProfile")} <ChevronRight className="h-4 w-4" />
