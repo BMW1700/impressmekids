@@ -51,6 +51,15 @@ import { useClassroomFeatures } from "@/hooks/useClassroomFeatures";
 import { ClassroomTabsList } from "@/components/classroom/ClassroomTabsList";
 import { MeetingRequestsTab } from "@/components/teacher/MeetingRequestsTab";
 import { PendingStudentRequests } from "@/components/classroom/PendingStudentRequests";
+import { 
+  useClassroomDetail, 
+  useClassroomStudents, 
+  useClassroomTournaments, 
+  useClassroomAnnouncements, 
+  useClassroomParentRequests,
+  useClassroomFlashcards,
+  useUserProfile
+} from "@/hooks/useClassroomData";
 const ClassroomDetail = () => {
   const {
     id
@@ -60,22 +69,33 @@ const ClassroomDetail = () => {
   const {
     toast
   } = useToast();
-  const { session, user } = useAuth(); // Use AuthContext instead of getSession()
+  const { session, user } = useAuth();
   const {
     isTeacher,
     isStudent,
     isLoading: permissionsLoading
   } = useClassroomPermissions(id);
-  const [classroom, setClassroom] = useState<any>(null);
-  const [students, setStudents] = useState<any[]>([]);
-  const [profile, setProfile] = useState<any>(null);
-  const [tournaments, setTournaments] = useState<any[]>([]);
-  const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [parentRequests, setParentRequests] = useState<any[]>([]);
-  const [substituteAssignments, setSubstituteAssignments] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // Substitute teacher access
+
+  // React Query hooks for cached data fetching
+  const { data: classroomData, isLoading: classroomLoading, refetch: refetchClassroom } = useClassroomDetail(id);
+  const { data: studentsData = [], refetch: refetchStudents } = useClassroomStudents(id);
+  const { data: tournamentsData = [], refetch: refetchTournaments } = useClassroomTournaments(id);
+  const { data: announcementsData = [], refetch: refetchAnnouncements } = useClassroomAnnouncements(id);
+  const { data: parentRequestsData = [], refetch: refetchParentRequests } = useClassroomParentRequests(id, isTeacher);
+  const { data: flashcardSetsData = [], refetch: refetchFlashcards } = useClassroomFlashcards(id, isTeacher);
+  const { data: profileData } = useUserProfile();
+
+  // Refetch all classroom data
+  const loadClassroomData = () => {
+    refetchClassroom();
+    refetchStudents();
+    refetchTournaments();
+    refetchAnnouncements();
+    refetchParentRequests();
+    refetchFlashcards();
+  };
+
+  // Substitute teacher state (separate from cached data)
   const [substituteAccess, setSubstituteAccess] = useState<{
     classroomId: string;
     permissions: Record<string, boolean>;
@@ -84,13 +104,29 @@ const ClassroomDetail = () => {
     email: string;
     linkId: string;
   } | null>(null);
+  const [substituteAssignments, setSubstituteAssignments] = useState<any[]>([]);
+  const [substituteClassroom, setSubstituteClassroom] = useState<any>(null);
+  const [substituteStudents, setSubstituteStudents] = useState<any[]>([]);
+  const [substituteAnnouncements, setSubstituteAnnouncements] = useState<any[]>([]);
+  const [substituteLoading, setSubstituteLoading] = useState(false);
+
+  // Use substitute data if available, otherwise use React Query data
+  const classroom = substituteAccess ? substituteClassroom : classroomData;
+  const students = substituteAccess ? substituteStudents : studentsData;
+  const tournaments = tournamentsData;
+  const announcements = substituteAccess ? substituteAnnouncements : announcementsData;
+  const parentRequests = parentRequestsData;
+  const flashcardSets = flashcardSetsData;
+  const profile = profileData;
+  const isLoading = substituteAccess ? substituteLoading : (classroomLoading || permissionsLoading);
+
+  // UI state
   const [showCreateTournament, setShowCreateTournament] = useState(false);
   const [showSelectGame, setShowSelectGame] = useState(false);
   const [selectedGameType, setSelectedGameType] = useState<string>('jeopardy_duel');
   const [showCreateAnnouncement, setShowCreateAnnouncement] = useState(false);
   const [showCreateAssignment, setShowCreateAssignment] = useState(false);
   const [viewingAssignmentId, setViewingAssignmentId] = useState<string | null>(null);
-  const [flashcardSets, setFlashcardSets] = useState<any[]>([]);
   const [viewingFlashcardSet, setViewingFlashcardSet] = useState<any>(null);
   const [deleteAssignmentId, setDeleteAssignmentId] = useState<string | null>(null);
   const getCategoryColor = (category: string) => {
@@ -126,9 +162,9 @@ const ClassroomDetail = () => {
   const loadClassroomDataForSubstitute = async (accessData: typeof substituteAccess) => {
     if (!accessData || !id) return;
     
+    setSubstituteLoading(true);
     console.log('🔍 Loading classroom data for substitute teacher...');
     try {
-      // Fetch classroom using substitute-specific RPC
       const { data: classroomResult, error: classroomError } = await supabase.rpc('get_classroom_for_substitute', {
         p_classroom_id: id,
         p_link_id: accessData.linkId
@@ -146,75 +182,48 @@ const ClassroomDetail = () => {
         return;
       }
 
-      const classroomData = classroomResult[0];
-      setClassroom(classroomData);
-      console.log('✅ Classroom loaded for substitute:', classroomData.name);
+      setSubstituteClassroom(classroomResult[0]);
 
-      // Fetch students if permitted
       if (accessData.permissions.view_students) {
-        const { data: studentsResult, error: studentsError } = await supabase.rpc('get_students_for_substitute', {
+        const { data: studentsResult } = await supabase.rpc('get_students_for_substitute', {
           p_classroom_id: id,
           p_link_id: accessData.linkId
         });
-
-        if (!studentsError && studentsResult) {
-          const studentsData = studentsResult.map((student: any) => ({
+        if (studentsResult) {
+          setSubstituteStudents(studentsResult.map((student: any) => ({
             student_id: student.student_id,
             joined_at: student.joined_at,
-            profiles: {
-              id: student.student_id,
-              full_name: student.full_name,
-              email: student.email
-            },
+            profiles: { id: student.student_id, full_name: student.full_name, email: student.email },
             student_profiles: []
-          }));
-          setStudents(studentsData);
-          console.log('✅ Students loaded for substitute:', studentsData.length);
+          })));
         }
       }
 
-      // Fetch assignments if permitted
       if (accessData.permissions.view_assignments) {
-        const { data: assignmentsResult, error: assignmentsError } = await supabase.rpc('get_assignments_for_substitute', {
+        const { data: assignmentsResult } = await supabase.rpc('get_assignments_for_substitute', {
           p_classroom_id: id,
           p_link_id: accessData.linkId
         });
-
-        if (!assignmentsError && assignmentsResult) {
-          setSubstituteAssignments(assignmentsResult);
-          console.log('✅ Assignments loaded for substitute:', assignmentsResult.length);
-        }
+        if (assignmentsResult) setSubstituteAssignments(assignmentsResult);
       }
 
-      // Load announcements (public data)
-      const { data: announcementsData } = await supabase
+      const { data: announcementsResult } = await supabase
         .from('classroom_announcements')
         .select('*')
         .eq('classroom_id', id)
         .order('created_at', { ascending: false });
-      setAnnouncements(announcementsData || []);
-
-      setIsLoading(false);
+      setSubstituteAnnouncements(announcementsResult || []);
     } catch (err) {
       console.error('Error loading substitute data:', err);
-      setIsLoading(false);
+    } finally {
+      setSubstituteLoading(false);
     }
   };
 
+  // Check for substitute access on mount
   useEffect(() => {
-    // Wait for permissions and session to be determined before loading data
-    if (!permissionsLoading && session) {
-      loadClassroomData();
-    } else if (!permissionsLoading && !session) {
-      // No session and not loading = redirect to auth
-      navigate('/auth', { replace: true });
-    }
-  }, [id, permissionsLoading, session]);
-
-  const loadClassroomData = async () => {
-    if (!user || !id) return;
-
-    // First check for substitute access - they don't need auth session
+    if (!id) return;
+    
     const storedAccess = sessionStorage.getItem('substituteAccess');
     if (storedAccess) {
       try {
@@ -223,7 +232,7 @@ const ClassroomDetail = () => {
           const accessEnd = new Date(accessData.accessEnd);
           if (accessEnd > new Date()) {
             setSubstituteAccess(accessData);
-            await loadClassroomDataForSubstitute(accessData);
+            loadClassroomDataForSubstitute(accessData);
             return;
           }
         }
@@ -231,104 +240,12 @@ const ClassroomDetail = () => {
         sessionStorage.removeItem('substituteAccess');
       }
     }
-
-    try {
-      // Run critical queries in PARALLEL for faster loading
-      const [classroomResult, studentsResult, tournamentsResult, announcementsResult, profileResult] = await Promise.all([
-        // Query 1: Classroom
-        supabase.rpc('get_classroom_detail', { _user_id: user.id, _classroom_id: id }),
-        // Query 2: Students
-        supabase.rpc('get_classroom_students', { _user_id: user.id, _classroom_id: id }),
-        // Query 3: Tournaments
-        supabase.from('tournaments').select('*').eq('classroom_id', id).order('created_at', { ascending: false }),
-        // Query 4: Announcements
-        supabase.from('classroom_announcements').select('*').eq('classroom_id', id).order('created_at', { ascending: false }),
-        // Query 5: User profile
-        supabase.rpc('get_user_profile', { _user_id: user.id })
-      ]);
-
-      // Handle classroom result
-      if (classroomResult.error) throw classroomResult.error;
-      if (!classroomResult.data || classroomResult.data.length === 0) {
-        setIsLoading(false);
-        return;
-      }
-      const classroomData = classroomResult.data[0];
-      setClassroom(classroomData);
-
-      // Handle students result
-      if (!studentsResult.error && studentsResult.data) {
-        const studentsData = studentsResult.data.map((student: any) => ({
-          student_id: student.student_id,
-          joined_at: student.joined_at,
-          profiles: {
-            id: student.student_id,
-            full_name: student.full_name,
-            email: student.email,
-            student_profiles: student.grade ? [{ grade: student.grade, avatar_url: student.avatar_url }] : []
-          }
-        }));
-        setStudents(studentsData);
-      }
-
-      // Handle tournaments result
-      if (!tournamentsResult.error) {
-        setTournaments(tournamentsResult.data || []);
-      }
-
-      // Handle announcements result
-      if (!announcementsResult.error) {
-        setAnnouncements(announcementsResult.data || []);
-      }
-
-      // Handle profile result
-      if (!profileResult.error && profileResult.data?.length > 0) {
-        setProfile(profileResult.data[0]);
-      }
-
-      // Secondary queries (less critical - can load after initial render)
-      const isUserTeacher = classroomData.teacher_id === user.id;
-      
-      // Load flashcards
-      let flashcardsQuery = supabase.from('flashcard_sets')
-        .select('*, question_groups!question_group_id (title, subject, grade)')
-        .eq('classroom_id', id);
-      if (!isUserTeacher) {
-        flashcardsQuery = flashcardsQuery.eq('is_posted', true);
-      }
-      const { data: flashcardsData } = await flashcardsQuery.order('created_at', { ascending: false });
-      setFlashcardSets(flashcardsData || []);
-
-      // Load parent requests (teachers only)
-      if (isUserTeacher) {
-        const { data: requestsData } = await supabase
-          .from('parent_access_requests')
-          .select('*, parent_accounts!parent_id (full_name, email)')
-          .eq('classroom_id', id)
-          .order('created_at', { ascending: false });
-
-        if (requestsData) {
-          const enrichedRequests = await Promise.all(requestsData.map(async (request: any) => {
-            const { data: studentData } = await supabase
-              .from('profiles')
-              .select('full_name')
-              .eq('id', request.student_id)
-              .single();
-            return { ...request, profiles: studentData };
-          }));
-          setParentRequests(enrichedRequests);
-        }
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: `Failed to load classroom data: ${error?.message || 'Unknown error'}`,
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
+    
+    // Redirect if no session and not substitute
+    if (!permissionsLoading && !session && !substituteAccess) {
+      navigate('/auth', { replace: true });
     }
-  };
+  }, [id, permissionsLoading, session]);
   const copyJoinCode = () => {
     if (classroom?.join_code) {
       navigator.clipboard.writeText(classroom.join_code);

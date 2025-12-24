@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ClassroomCard } from "@/components/ClassroomCard";
@@ -30,150 +29,29 @@ import { Badge } from "@/components/ui/badge";
 import { Directory } from "@/components/Directory";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTeacherDashboardData, useTeacherAllStudents } from "@/hooks/useTeacherDashboardData";
 
 const TeacherDashboard = () => {
   const { user, profile, isLoading: authLoading, signOut } = useAuth();
-  const [classrooms, setClassrooms] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { 
+    classrooms, 
+    classroomsLoading, 
+    studentCount, 
+    activeAssignmentsCount,
+    refetch: refetchDashboard
+  } = useTeacherDashboardData();
+  
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showStudentsDialog, setShowStudentsDialog] = useState(false);
-  const [classroomsWithStudents, setClassroomsWithStudents] = useState<any[]>([]);
-  const [totalStudentCount, setTotalStudentCount] = useState(0);
-  const [activeAssignmentsCount, setActiveAssignmentsCount] = useState(0);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useLanguage();
 
-  useEffect(() => {
-    if (authLoading) return;
-    
-    // Auth is handled by RequireAuth + AuthContext
-    if (!user || !profile) {
-      navigate("/auth");
-      return;
-    }
+  // Lazy load all students only when dialog opens
+  const { data: classroomsWithStudents = [], refetch: loadAllStudents } = useTeacherAllStudents(classrooms);
 
-    // Role check
-    if (profile.role !== "teacher") {
-      navigate("/student/dashboard");
-      return;
-    }
-
-    // Verification check
-    if (!profile.is_verified) {
-      navigate("/pending-verification");
-      return;
-    }
-
-    // Load data in parallel
-    loadDashboardData();
-  }, [authLoading, user, profile]);
-
-  const formatWelcome = (name?: string) => {
-    const template = t("teacherDashboard.welcome");
-    return template.replace("{name}", name || "");
-  };
-
-  const loadDashboardData = async () => {
-    if (!user) return;
-    
-    try {
-      // Fetch all data in parallel for speed
-      const [classroomsResult, studentCountResult, assignmentCountResult] = await Promise.all([
-        supabase.rpc("get_teacher_classrooms", { p_teacher_id: user.id }),
-        null, // Will fetch after we have classroom IDs
-        null, // Will fetch after we have classroom IDs
-      ]);
-
-      if (classroomsResult.error) throw classroomsResult.error;
-      const classroomsData = classroomsResult.data || [];
-      setClassrooms(classroomsData);
-
-      // Fetch student counts and active assignments for all classrooms
-      if (classroomsData.length > 0) {
-        const classroomIds = classroomsData.map((c: any) => c.id);
-        
-        const [studentResult, assignmentResult] = await Promise.all([
-          supabase.from("classroom_students")
-            .select("classroom_id", { count: "exact", head: false })
-            .in("classroom_id", classroomIds),
-          supabase.from("assignments")
-            .select("*", { count: "exact", head: true })
-            .in("classroom_id", classroomIds)
-            .or(`due_date.gte.${new Date().toISOString()},due_date.is.null`),
-        ]);
-
-        setTotalStudentCount(studentResult.data?.length || 0);
-        setActiveAssignmentsCount(assignmentResult.count || 0);
-      } else {
-        setTotalStudentCount(0);
-        setActiveAssignmentsCount(0);
-      }
-    } catch (error: any) {
-      toast({
-        title: t("common.error"),
-        description: "Failed to load dashboard data",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadAllStudents = async () => {
-    if (!user) return;
-    
-    try {
-      // Fetch all classrooms with their students
-      const classroomsWithStudentsData = await Promise.all(
-        classrooms.map(async (classroom) => {
-          const { data: students } = await supabase
-            .from("classroom_students")
-            .select(`
-              student_id,
-              joined_at,
-              profiles:student_id (
-                id,
-                full_name,
-                email
-              )
-            `)
-            .eq("classroom_id", classroom.id)
-            .order("joined_at", { ascending: true });
-
-          return {
-            id: classroom.id,
-            name: classroom.name,
-            subject: classroom.subject,
-            grade: classroom.grade,
-            students:
-              students?.map((s: any) => ({
-                id: s.profiles.id,
-                full_name: s.profiles.full_name,
-                email: s.profiles.email,
-                joined_at: s.joined_at,
-              })) || [],
-          };
-        })
-      );
-
-      setClassroomsWithStudents(classroomsWithStudentsData);
-      setShowStudentsDialog(true);
-    } catch (error: any) {
-      toast({
-        title: t("common.error"),
-        description: "Failed to load student data",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/");
-  };
-
-  if (authLoading || isLoading) {
+  // Auth guards
+  if (authLoading || classroomsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20">
         <div className="text-center">
@@ -183,6 +61,37 @@ const TeacherDashboard = () => {
       </div>
     );
   }
+
+  if (!user || !profile) {
+    navigate("/auth");
+    return null;
+  }
+
+  if (profile.role !== "teacher") {
+    navigate("/student/dashboard");
+    return null;
+  }
+
+  if (!profile.is_verified) {
+    navigate("/pending-verification");
+    return null;
+  }
+
+  const formatWelcome = (name?: string) => {
+    const template = t("teacherDashboard.welcome");
+    return template.replace("{name}", name || "");
+  };
+
+  const handleOpenStudentsDialog = () => {
+    loadAllStudents();
+    setShowStudentsDialog(true);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -268,7 +177,7 @@ const TeacherDashboard = () => {
 
             <Card
               className="bg-card border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-              onClick={loadAllStudents}
+              onClick={handleOpenStudentsDialog}
             >
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
@@ -283,7 +192,7 @@ const TeacherDashboard = () => {
               <CardContent>
                 <div className="flex items-baseline gap-2">
                   <span className="text-4xl font-black bg-gradient-to-b from-[#9B6DD6] to-[#D4A04A] bg-clip-text text-transparent">
-                    {totalStudentCount}
+                    {studentCount}
                   </span>
                   <span className="text-sm text-emerald-500 font-medium flex items-center gap-0.5">
                     ↗ {t("teacherDashboard.stats.enrolledLabel")}
@@ -411,39 +320,98 @@ const TeacherDashboard = () => {
             </TabsContent>
 
             <TabsContent value="actions" className="mt-6 space-y-4">
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <Card className="p-6 cursor-pointer hover:bg-muted/50 transition-colors">
-                  <h3 className="font-bold mb-2">{t("teacherDashboard.quickActions.createAssignment.title")}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {t("teacherDashboard.quickActions.createAssignment.description")}
-                  </p>
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Browse Games */}
+                <Card className="p-6 hover:shadow-md transition-all border-l-4 border-l-amber-500">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+                      <Sparkles className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-bold mb-1">{t("teacherDashboard.quickActions.browseGames.title")}</h3>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        {t("teacherDashboard.quickActions.browseGames.description")}
+                      </p>
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto text-amber-600 dark:text-amber-400 font-medium"
+                        onClick={() => navigate("/games")}
+                      >
+                        {t("teacherDashboard.quickActions.browseGames.cta")} →
+                      </Button>
+                    </div>
+                  </div>
                 </Card>
-                <Card
-                  className="p-6 cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => navigate("/teacher/story-library")}
-                >
-                  <h3 className="font-bold mb-2">{t("teacherDashboard.quickActions.storyLibrary.title")}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {t("teacherDashboard.quickActions.storyLibrary.description")}
-                  </p>
+
+                {/* AURA Analytics */}
+                <Card className="p-6 hover:shadow-md transition-all border-l-4 border-l-purple-500">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0">
+                      <BarChart3 className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-bold mb-1">{t("teacherDashboard.quickActions.auraAnalytics.title")}</h3>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        {t("teacherDashboard.quickActions.auraAnalytics.description")}
+                      </p>
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto text-purple-600 dark:text-purple-400 font-medium"
+                        onClick={() => navigate("/teacher/aura-analytics")}
+                      >
+                        {t("teacherDashboard.quickActions.auraAnalytics.cta")} →
+                      </Button>
+                    </div>
+                  </div>
                 </Card>
-                <Card
-                  className="p-6 cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => navigate("/games")}
-                >
-                  <h3 className="font-bold mb-2">{t("teacherDashboard.quickActions.studyGames.title")}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {t("teacherDashboard.quickActions.studyGames.description")}
-                  </p>
+
+                {/* Story Library */}
+                <Card className="p-6 hover:shadow-md transition-all border-l-4 border-l-emerald-500">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
+                      <BookOpen className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-bold mb-1">{t("teacherDashboard.quickActions.storyLibrary.title")}</h3>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        {t("teacherDashboard.quickActions.storyLibrary.description")}
+                      </p>
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto text-emerald-600 dark:text-emerald-400 font-medium"
+                        onClick={() => navigate("/teacher/story-library")}
+                      >
+                        {t("teacherDashboard.quickActions.storyLibrary.cta")} →
+                      </Button>
+                    </div>
+                  </div>
                 </Card>
-                <Card
-                  className="p-6 cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => navigate("/teacher/reading-calibration")}
-                >
-                  <h3 className="font-bold mb-2">{t("teacherDashboard.quickActions.calibration.title")}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {t("teacherDashboard.quickActions.calibration.description")}
-                  </p>
+
+                {/* Resources */}
+                <Card className="p-6 hover:shadow-md transition-all border-l-4 border-l-blue-500 opacity-75">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                      <BookOpen className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-bold">{t("teacherDashboard.quickActions.resources.title")}</h3>
+                        <Badge variant="secondary" className="text-xs">
+                          {t("teacherDashboard.quickActions.resources.soon")}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        {t("teacherDashboard.quickActions.resources.description")}
+                      </p>
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto text-muted-foreground font-medium cursor-not-allowed"
+                        disabled
+                      >
+                        {t("teacherDashboard.quickActions.resources.cta")} →
+                      </Button>
+                    </div>
+                  </div>
                 </Card>
               </div>
             </TabsContent>
@@ -460,7 +428,7 @@ const TeacherDashboard = () => {
       <CreateClassroomModal
         open={showCreateModal}
         onOpenChange={setShowCreateModal}
-        onSuccess={loadDashboardData}
+        onSuccess={refetchDashboard}
       />
 
       <AllStudentsDialog
