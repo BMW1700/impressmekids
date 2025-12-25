@@ -40,6 +40,12 @@ const Auth = () => {
   const [districtCode, setDistrictCode] = useState("");
   const [districtInfo, setDistrictInfo] = useState<{district_code: string, name: string} | null>(null);
 
+  // Admin type selection (district admin vs school admin)
+  const [adminType, setAdminType] = useState<'district_admin' | 'school_admin' | null>(null);
+  const [selectedSchoolId, setSelectedSchoolId] = useState<string>("");
+  const [schoolsInDistrict, setSchoolsInDistrict] = useState<Array<{id: string, name: string}>>([]);
+  const [loadingSchools, setLoadingSchools] = useState(false);
+
   // District selection for student/parent signup
   const [selectedDistrictId, setSelectedDistrictId] = useState<string>("");
 
@@ -240,13 +246,38 @@ const Auth = () => {
         title: "District Found",
         description: `${data.name}`,
       });
+      
+      // If school admin, fetch schools for this district
+      if (adminType === 'school_admin') {
+        await fetchSchoolsForDistrict(data.district_code);
+      }
     } else {
       setDistrictInfo(null);
+      setSchoolsInDistrict([]);
       toast({
         title: "Invalid Code",
         description: "District code not found. Please check and try again.",
         variant: "destructive",
       });
+    }
+  };
+
+  const fetchSchoolsForDistrict = async (districtCode: string) => {
+    setLoadingSchools(true);
+    try {
+      const { data: schools, error } = await supabase
+        .from('schools')
+        .select('id, name')
+        .eq('district_id', districtCode)
+        .order('name');
+      
+      if (error) throw error;
+      setSchoolsInDistrict(schools || []);
+    } catch (err) {
+      console.error('Error fetching schools:', err);
+      setSchoolsInDistrict([]);
+    } finally {
+      setLoadingSchools(false);
     }
   };
 
@@ -373,12 +404,43 @@ const Auth = () => {
         }
       }
 
-      // Validation for teacher/admin signup
-      if (role === 'teacher' || role === 'admin') {
+      // Validation for teacher signup
+      if (role === 'teacher') {
         if (!districtCode || districtCode.length !== 12 || !districtInfo) {
           toast({
             title: "District Code Required",
             description: "Please enter a valid 12-digit district code.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Validation for admin signup
+      if (role === 'admin') {
+        if (!adminType) {
+          toast({
+            title: "Admin Type Required",
+            description: "Please select whether you are a District Admin or School Admin.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+        if (!districtCode || districtCode.length !== 12 || !districtInfo) {
+          toast({
+            title: "District Code Required",
+            description: "Please enter a valid 12-digit district code.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+        if (adminType === 'school_admin' && !selectedSchoolId) {
+          toast({
+            title: "School Selection Required",
+            description: "Please select the school you will be administering.",
             variant: "destructive",
           });
           setIsLoading(false);
@@ -470,14 +532,22 @@ const Auth = () => {
       // For admins, mark as verified immediately (they'll create the first admin manually)
       const isVerified = role === 'admin';
 
+      // Build profile update data
+      const profileUpdateData: Record<string, any> = {
+        district_id: districtId,
+        district_name: districtName,
+        is_verified: isVerified
+      };
+
+      // Add school_id for school admins
+      if (role === 'admin' && adminType === 'school_admin' && selectedSchoolId) {
+        profileUpdateData.school_id = selectedSchoolId;
+      }
+
       // Update profile with district info and verification status
       const { data: updatedProfile, error: profileError } = await supabase
         .from('profiles')
-        .update({ 
-          district_id: districtId,
-          district_name: districtName,
-          is_verified: isVerified
-        })
+        .update(profileUpdateData)
         .eq('id', data.user.id)
         .select();
 
@@ -1131,12 +1201,19 @@ const Auth = () => {
                     { value: 'student', label: 'Student' },
                     { value: 'parent', label: 'Parent' },
                     { value: 'teacher', label: 'Teacher' },
-                    { value: 'admin', label: 'District Admin' },
+                    { value: 'admin', label: 'Admin' },
                   ].map((option) => (
                     <button
                       key={option.value}
                       type="button"
-                      onClick={() => setRole(option.value as typeof role)}
+                      onClick={() => {
+                        setRole(option.value as typeof role);
+                        if (option.value !== 'admin') {
+                          setAdminType(null);
+                          setSelectedSchoolId("");
+                          setSchoolsInDistrict([]);
+                        }
+                      }}
                       className={`h-11 rounded-xl text-sm font-medium transition-all ${
                         role === option.value
                           ? 'bg-purple-600 text-white border-purple-500'
@@ -1149,8 +1226,49 @@ const Auth = () => {
                 </div>
               </div>
 
+              {/* Admin Type Selection - only for admin role */}
+              {role === 'admin' && (
+                <div className="space-y-3">
+                  <Label className="text-white text-sm font-medium">Admin Type</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAdminType('district_admin');
+                        setSelectedSchoolId("");
+                        setSchoolsInDistrict([]);
+                      }}
+                      className={`h-11 rounded-xl text-sm font-medium transition-all ${
+                        adminType === 'district_admin'
+                          ? 'bg-amber-500 text-white border-amber-500'
+                          : 'bg-white/5 text-white border border-white/10 hover:bg-white/10'
+                      }`}
+                    >
+                      District Admin
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAdminType('school_admin');
+                        // If district is already validated, fetch schools
+                        if (districtInfo) {
+                          fetchSchoolsForDistrict(districtInfo.district_code);
+                        }
+                      }}
+                      className={`h-11 rounded-xl text-sm font-medium transition-all ${
+                        adminType === 'school_admin'
+                          ? 'bg-amber-500 text-white border-amber-500'
+                          : 'bg-white/5 text-white border border-white/10 hover:bg-white/10'
+                      }`}
+                    >
+                      School Admin
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* District Code Input for Teacher/Admin */}
-              {(role === 'teacher' || role === 'admin') && (
+              {(role === 'teacher' || (role === 'admin' && adminType)) && (
                 <div className="space-y-2">
                   <Label htmlFor="district-code" className="text-white text-sm font-medium flex items-center gap-2">
                     <Building2 className="h-4 w-4" />
@@ -1179,6 +1297,39 @@ const Auth = () => {
                   />
                   {districtInfo && (
                     <p className="text-sm text-emerald-400">✓ {districtInfo.name}</p>
+                  )}
+                </div>
+              )}
+
+              {/* School Selection for School Admin */}
+              {role === 'admin' && adminType === 'school_admin' && districtInfo && (
+                <div className="space-y-2">
+                  <Label htmlFor="school-select" className="text-white text-sm font-medium flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    Select School
+                  </Label>
+                  {loadingSchools ? (
+                    <div className="flex items-center gap-2 text-white/60 py-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading schools...
+                    </div>
+                  ) : schoolsInDistrict.length > 0 ? (
+                    <select
+                      id="school-select"
+                      value={selectedSchoolId}
+                      onChange={(e) => setSelectedSchoolId(e.target.value)}
+                      className="w-full h-12 bg-white/15 border border-white/20 text-white rounded-xl px-4 focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur"
+                      required
+                    >
+                      <option value="" className="bg-gray-800">Select a school...</option>
+                      {schoolsInDistrict.map((school) => (
+                        <option key={school.id} value={school.id} className="bg-gray-800">
+                          {school.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p className="text-sm text-amber-400">No schools found in this district. Contact your district admin.</p>
                   )}
                 </div>
               )}
