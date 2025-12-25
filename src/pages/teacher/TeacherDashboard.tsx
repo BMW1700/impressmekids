@@ -322,78 +322,84 @@ const TeacherDashboard = () => {
             <TabsContent value="actions" className="mt-6 space-y-4">
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Browse Games */}
-                <Card 
-                  className="p-6 hover:shadow-lg transition-all cursor-pointer"
-                  onClick={() => navigate("/games")}
-                >
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                      <Sparkles className="h-6 w-6 text-white" />
+                <Card className="relative p-6 hover:shadow-lg transition-all">
+                  <Link
+                    to="/games"
+                    className="absolute inset-0 rounded-lg"
+                    aria-label={t("teacherDashboard.quickActions.browseGames.cta")}
+                  />
+                  <div className="relative z-10">
+                    <div className="flex items-start gap-4 mb-4">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                        <Sparkles className="h-6 w-6 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold">{t("teacherDashboard.quickActions.browseGames.title")}</h3>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold">{t("teacherDashboard.quickActions.browseGames.title")}</h3>
-                    </div>
+                    <p className="text-muted-foreground mb-4">
+                      {t("teacherDashboard.quickActions.browseGames.description")}
+                    </p>
+                    <Button variant="outline" className="w-full" asChild>
+                      <Link to="/games">
+                        {t("teacherDashboard.quickActions.browseGames.cta")} →
+                      </Link>
+                    </Button>
                   </div>
-                  <p className="text-muted-foreground mb-4">
-                    {t("teacherDashboard.quickActions.browseGames.description")}
-                  </p>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={(e) => { e.stopPropagation(); navigate("/games"); }}
-                  >
-                    {t("teacherDashboard.quickActions.browseGames.cta")} →
-                  </Button>
                 </Card>
 
                 {/* AURA Analytics */}
-                <Card 
-                  className="p-6 hover:shadow-lg transition-all cursor-pointer"
-                  onClick={() => navigate("/teacher/aura-analytics")}
-                >
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center flex-shrink-0">
-                      <BarChart3 className="h-6 w-6 text-white" />
+                <Card className="relative p-6 hover:shadow-lg transition-all">
+                  <Link
+                    to="/teacher/aura-analytics"
+                    className="absolute inset-0 rounded-lg"
+                    aria-label={t("teacherDashboard.quickActions.auraAnalytics.cta")}
+                  />
+                  <div className="relative z-10">
+                    <div className="flex items-start gap-4 mb-4">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center flex-shrink-0">
+                        <BarChart3 className="h-6 w-6 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold">{t("teacherDashboard.quickActions.auraAnalytics.title")}</h3>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold">{t("teacherDashboard.quickActions.auraAnalytics.title")}</h3>
-                    </div>
+                    <p className="text-muted-foreground mb-4">
+                      {t("teacherDashboard.quickActions.auraAnalytics.description")}
+                    </p>
+                    <Button variant="outline" className="w-full" asChild>
+                      <Link to="/teacher/aura-analytics">
+                        {t("teacherDashboard.quickActions.auraAnalytics.cta")} →
+                      </Link>
+                    </Button>
                   </div>
-                  <p className="text-muted-foreground mb-4">
-                    {t("teacherDashboard.quickActions.auraAnalytics.description")}
-                  </p>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={(e) => { e.stopPropagation(); navigate("/teacher/aura-analytics"); }}
-                  >
-                    {t("teacherDashboard.quickActions.auraAnalytics.cta")} →
-                  </Button>
                 </Card>
 
                 {/* Story Library */}
-                <Card 
-                  className="p-6 hover:shadow-lg transition-all cursor-pointer"
-                  onClick={() => navigate("/teacher/story-library")}
-                >
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center flex-shrink-0">
-                      <BookOpen className="h-6 w-6 text-white" />
+                <Card className="relative p-6 hover:shadow-lg transition-all">
+                  <Link
+                    to="/teacher/story-library"
+                    className="absolute inset-0 rounded-lg"
+                    aria-label={t("teacherDashboard.quickActions.storyLibrary.cta")}
+                  />
+                  <div className="relative z-10">
+                    <div className="flex items-start gap-4 mb-4">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center flex-shrink-0">
+                        <BookOpen className="h-6 w-6 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold">{t("teacherDashboard.quickActions.storyLibrary.title")}</h3>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold">{t("teacherDashboard.quickActions.storyLibrary.title")}</h3>
-                    </div>
+                    <p className="text-muted-foreground mb-4">
+                      {t("teacherDashboard.quickActions.storyLibrary.description")}
+                    </p>
+                    <Button variant="outline" className="w-full" asChild>
+                      <Link to="/teacher/story-library">
+                        {t("teacherDashboard.quickActions.storyLibrary.cta")} →
+                      </Link>
+                    </Button>
                   </div>
-                  <p className="text-muted-foreground mb-4">
-                    {t("teacherDashboard.quickActions.storyLibrary.description")}
-                  </p>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={(e) => { e.stopPropagation(); navigate("/teacher/story-library"); }}
-                  >
-                    {t("teacherDashboard.quickActions.storyLibrary.cta")} →
-                  </Button>
                 </Card>
 
                 {/* Resources */}
