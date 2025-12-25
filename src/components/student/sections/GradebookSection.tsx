@@ -1,9 +1,9 @@
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useStudentGradebook } from "@/hooks/useStudentGradebook";
 import { Loader2, TrendingUp, TrendingDown, Minus, Eye } from "lucide-react";
-import { useState } from "react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -56,13 +56,12 @@ export const GradebookSection = ({ studentId }: GradebookSectionProps) => {
       {gradebook && gradebook.length > 0 ? (
         <div className="space-y-6">
           {gradebook.map((classroom) => (
-            <>
+            <React.Fragment key={classroom.id}>
               <StandardsProgressSection
-                key={`standards-${classroom.id}`}
                 studentId={studentId}
                 classroomId={classroom.id}
               />
-              <Card key={classroom.id}>
+              <Card>
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -185,7 +184,7 @@ export const GradebookSection = ({ studentId }: GradebookSectionProps) => {
                   </CardContent>
                 )}
               </Card>
-            </>
+            </React.Fragment>
           ))}
         </div>
       ) : (
