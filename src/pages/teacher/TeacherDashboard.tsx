@@ -322,7 +322,10 @@ const TeacherDashboard = () => {
             <TabsContent value="actions" className="mt-6 space-y-4">
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Browse Games */}
-                <Card className="p-6 hover:shadow-lg transition-all">
+                <Card 
+                  className="p-6 hover:shadow-lg transition-all cursor-pointer"
+                  onClick={() => navigate("/games")}
+                >
                   <div className="flex items-start gap-4 mb-4">
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center flex-shrink-0">
                       <Sparkles className="h-6 w-6 text-white" />
@@ -337,14 +340,17 @@ const TeacherDashboard = () => {
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={() => navigate("/games")}
+                    onClick={(e) => { e.stopPropagation(); navigate("/games"); }}
                   >
                     {t("teacherDashboard.quickActions.browseGames.cta")} →
                   </Button>
                 </Card>
 
                 {/* AURA Analytics */}
-                <Card className="p-6 hover:shadow-lg transition-all">
+                <Card 
+                  className="p-6 hover:shadow-lg transition-all cursor-pointer"
+                  onClick={() => navigate("/teacher/aura-analytics")}
+                >
                   <div className="flex items-start gap-4 mb-4">
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center flex-shrink-0">
                       <BarChart3 className="h-6 w-6 text-white" />
@@ -359,14 +365,17 @@ const TeacherDashboard = () => {
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={() => navigate("/teacher/aura-analytics")}
+                    onClick={(e) => { e.stopPropagation(); navigate("/teacher/aura-analytics"); }}
                   >
                     {t("teacherDashboard.quickActions.auraAnalytics.cta")} →
                   </Button>
                 </Card>
 
                 {/* Story Library */}
-                <Card className="p-6 hover:shadow-lg transition-all">
+                <Card 
+                  className="p-6 hover:shadow-lg transition-all cursor-pointer"
+                  onClick={() => navigate("/teacher/story-library")}
+                >
                   <div className="flex items-start gap-4 mb-4">
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center flex-shrink-0">
                       <BookOpen className="h-6 w-6 text-white" />
@@ -381,7 +390,7 @@ const TeacherDashboard = () => {
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={() => navigate("/teacher/story-library")}
+                    onClick={(e) => { e.stopPropagation(); navigate("/teacher/story-library"); }}
                   >
                     {t("teacherDashboard.quickActions.storyLibrary.cta")} →
                   </Button>
