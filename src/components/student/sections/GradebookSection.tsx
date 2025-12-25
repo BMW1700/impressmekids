@@ -49,6 +49,11 @@ export const GradebookSection = ({ studentId }: GradebookSectionProps) => {
 
   const selectedClassData = gradebook?.find((c) => c.id === selectedClassroom);
 
+  const safeFormatDate = (value: any, fmt: string) => {
+    const d = value ? new Date(value) : null;
+    return d && !Number.isNaN(d.getTime()) ? format(d, fmt) : "—";
+  };
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-foreground">{t("student.gradebook.title")}</h1>
@@ -174,7 +179,7 @@ export const GradebookSection = ({ studentId }: GradebookSectionProps) => {
                           <div>
                             <p className="font-medium">{assignment.title}</p>
                             <p className="text-sm text-muted-foreground">
-                              {t("student.gradebook.due")} {format(new Date(assignment.dueDate), "MMM d, yyyy")}
+                              {t("student.gradebook.due")} {safeFormatDate(assignment.dueDate, "MMM d, yyyy")}
                             </p>
                           </div>
                           {getStatusBadge(assignment.status)}
@@ -263,7 +268,7 @@ export const GradebookSection = ({ studentId }: GradebookSectionProps) => {
                   <div className="flex-1">
                     <p className="font-semibold">{assignment.title}</p>
                     <p className="text-sm text-muted-foreground">
-                      {t("student.gradebook.due")}: {format(new Date(assignment.dueDate), "MMM d, yyyy")}
+                      {t("student.gradebook.due")}: {safeFormatDate(assignment.dueDate, "MMM d, yyyy")}
                     </p>
                   </div>
                   <div className="flex items-center gap-4">
@@ -306,7 +311,7 @@ export const GradebookSection = ({ studentId }: GradebookSectionProps) => {
               <div>
                 <h3 className="font-semibold text-lg">{selectedAssignment.title}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {t("student.gradebook.due")}: {format(new Date(selectedAssignment.dueDate), "MMMM d, yyyy")}
+                  {t("student.gradebook.due")}: {safeFormatDate(selectedAssignment.dueDate, "MMMM d, yyyy")}
                 </p>
               </div>
 
