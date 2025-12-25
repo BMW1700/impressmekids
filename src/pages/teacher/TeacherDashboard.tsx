@@ -320,98 +320,96 @@ const TeacherDashboard = () => {
             </TabsContent>
 
             <TabsContent value="actions" className="mt-6 space-y-4">
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid md:grid-cols-2 gap-6">
                 {/* Browse Games */}
-                <Card className="p-6 hover:shadow-md transition-all border-l-4 border-l-amber-500">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
-                      <Sparkles className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                <Card className="p-6 hover:shadow-lg transition-all">
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                      <Sparkles className="h-6 w-6 text-white" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-bold mb-1">{t("teacherDashboard.quickActions.browseGames.title")}</h3>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        {t("teacherDashboard.quickActions.browseGames.description")}
-                      </p>
-                      <Button
-                        variant="link"
-                        className="p-0 h-auto text-amber-600 dark:text-amber-400 font-medium"
-                        onClick={() => navigate("/games")}
-                      >
-                        {t("teacherDashboard.quickActions.browseGames.cta")} →
-                      </Button>
+                      <h3 className="text-lg font-bold">{t("teacherDashboard.quickActions.browseGames.title")}</h3>
                     </div>
                   </div>
+                  <p className="text-muted-foreground mb-4">
+                    {t("teacherDashboard.quickActions.browseGames.description")}
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => navigate("/games")}
+                  >
+                    {t("teacherDashboard.quickActions.browseGames.cta")} →
+                  </Button>
                 </Card>
 
                 {/* AURA Analytics */}
-                <Card className="p-6 hover:shadow-md transition-all border-l-4 border-l-purple-500">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0">
-                      <BarChart3 className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                <Card className="p-6 hover:shadow-lg transition-all">
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center flex-shrink-0">
+                      <BarChart3 className="h-6 w-6 text-white" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-bold mb-1">{t("teacherDashboard.quickActions.auraAnalytics.title")}</h3>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        {t("teacherDashboard.quickActions.auraAnalytics.description")}
-                      </p>
-                      <Button
-                        variant="link"
-                        className="p-0 h-auto text-purple-600 dark:text-purple-400 font-medium"
-                        onClick={() => navigate("/teacher/aura-analytics")}
-                      >
-                        {t("teacherDashboard.quickActions.auraAnalytics.cta")} →
-                      </Button>
+                      <h3 className="text-lg font-bold">{t("teacherDashboard.quickActions.auraAnalytics.title")}</h3>
                     </div>
                   </div>
+                  <p className="text-muted-foreground mb-4">
+                    {t("teacherDashboard.quickActions.auraAnalytics.description")}
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => navigate("/teacher/aura-analytics")}
+                  >
+                    {t("teacherDashboard.quickActions.auraAnalytics.cta")} →
+                  </Button>
                 </Card>
 
                 {/* Story Library */}
-                <Card className="p-6 hover:shadow-md transition-all border-l-4 border-l-emerald-500">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
-                      <BookOpen className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                <Card className="p-6 hover:shadow-lg transition-all">
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center flex-shrink-0">
+                      <BookOpen className="h-6 w-6 text-white" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-bold mb-1">{t("teacherDashboard.quickActions.storyLibrary.title")}</h3>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        {t("teacherDashboard.quickActions.storyLibrary.description")}
-                      </p>
-                      <Button
-                        variant="link"
-                        className="p-0 h-auto text-emerald-600 dark:text-emerald-400 font-medium"
-                        onClick={() => navigate("/teacher/story-library")}
-                      >
-                        {t("teacherDashboard.quickActions.storyLibrary.cta")} →
-                      </Button>
+                      <h3 className="text-lg font-bold">{t("teacherDashboard.quickActions.storyLibrary.title")}</h3>
                     </div>
                   </div>
+                  <p className="text-muted-foreground mb-4">
+                    {t("teacherDashboard.quickActions.storyLibrary.description")}
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => navigate("/teacher/story-library")}
+                  >
+                    {t("teacherDashboard.quickActions.storyLibrary.cta")} →
+                  </Button>
                 </Card>
 
                 {/* Resources */}
-                <Card className="p-6 hover:shadow-md transition-all border-l-4 border-l-blue-500 opacity-75">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                      <BookOpen className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                <Card className="p-6 hover:shadow-lg transition-all opacity-75">
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center flex-shrink-0">
+                      <Sparkles className="h-6 w-6 text-white" />
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-bold">{t("teacherDashboard.quickActions.resources.title")}</h3>
-                        <Badge variant="secondary" className="text-xs">
-                          {t("teacherDashboard.quickActions.resources.soon")}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        {t("teacherDashboard.quickActions.resources.description")}
-                      </p>
-                      <Button
-                        variant="link"
-                        className="p-0 h-auto text-muted-foreground font-medium cursor-not-allowed"
-                        disabled
-                      >
-                        {t("teacherDashboard.quickActions.resources.cta")} →
-                      </Button>
+                    <div className="flex-1 flex items-center gap-2">
+                      <h3 className="text-lg font-bold">{t("teacherDashboard.quickActions.resources.title")}</h3>
+                      <Badge variant="secondary" className="text-xs">
+                        {t("teacherDashboard.quickActions.resources.soon")}
+                      </Badge>
                     </div>
                   </div>
+                  <p className="text-muted-foreground mb-4">
+                    {t("teacherDashboard.quickActions.resources.description")}
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    disabled
+                  >
+                    {t("teacherDashboard.quickActions.resources.cta")} →
+                  </Button>
                 </Card>
               </div>
             </TabsContent>
