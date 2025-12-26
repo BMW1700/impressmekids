@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
@@ -8,22 +8,31 @@ import { Loader2, Menu } from "lucide-react";
 import { useStudentAssignmentStats } from "@/hooks/useStudentAssignmentStats";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { StudentDashboardSidebar } from "@/components/student/StudentDashboardSidebar";
-import { HomeSection } from "@/components/student/sections/HomeSection";
-import { TodaySection } from "@/components/student/sections/TodaySection";
-import { CoursesSection } from "@/components/student/sections/CoursesSection";
-import { ClubsSection } from "@/components/student/sections/ClubsSection";
-import { CalendarSection } from "@/components/student/sections/CalendarSection";
-import { AnnouncementsSection } from "@/components/student/sections/AnnouncementsSection";
-import { GradebookSection } from "@/components/student/sections/GradebookSection";
-import { GamesSection } from "@/components/student/sections/GamesSection";
-import { AuraReadingSection } from "@/components/student/sections/AuraReadingSection";
-import { DirectorySection } from "@/components/student/sections/DirectorySection";
-import { AccountSection } from "@/components/student/sections/AccountSection";
-import { SafetySection } from "@/components/student/sections/SafetySection";
-import { LinksResourcesSection } from "@/components/student/sections/LinksResourcesSection";
 import { SafetyAlertBanner } from "@/components/safety/SafetyAlertBanner";
 import { DrillAlertOverlay } from "@/components/student/DrillAlertOverlay";
 import { useAuth } from "@/contexts/AuthContext";
+
+// Lazy load all sections for faster initial render
+const HomeSection = lazy(() => import("@/components/student/sections/HomeSection").then(m => ({ default: m.HomeSection })));
+const TodaySection = lazy(() => import("@/components/student/sections/TodaySection").then(m => ({ default: m.TodaySection })));
+const CoursesSection = lazy(() => import("@/components/student/sections/CoursesSection").then(m => ({ default: m.CoursesSection })));
+const ClubsSection = lazy(() => import("@/components/student/sections/ClubsSection").then(m => ({ default: m.ClubsSection })));
+const CalendarSection = lazy(() => import("@/components/student/sections/CalendarSection").then(m => ({ default: m.CalendarSection })));
+const AnnouncementsSection = lazy(() => import("@/components/student/sections/AnnouncementsSection").then(m => ({ default: m.AnnouncementsSection })));
+const GradebookSection = lazy(() => import("@/components/student/sections/GradebookSection").then(m => ({ default: m.GradebookSection })));
+const GamesSection = lazy(() => import("@/components/student/sections/GamesSection").then(m => ({ default: m.GamesSection })));
+const AuraReadingSection = lazy(() => import("@/components/student/sections/AuraReadingSection").then(m => ({ default: m.AuraReadingSection })));
+const DirectorySection = lazy(() => import("@/components/student/sections/DirectorySection").then(m => ({ default: m.DirectorySection })));
+const AccountSection = lazy(() => import("@/components/student/sections/AccountSection").then(m => ({ default: m.AccountSection })));
+const SafetySection = lazy(() => import("@/components/student/sections/SafetySection").then(m => ({ default: m.SafetySection })));
+const LinksResourcesSection = lazy(() => import("@/components/student/sections/LinksResourcesSection").then(m => ({ default: m.LinksResourcesSection })));
+
+// Section loading skeleton
+const SectionLoader = () => (
+  <div className="py-12 flex items-center justify-center">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  </div>
+);
 
 const StudentDashboard = () => {
   const { user, profile, isLoading: authLoading, isProfileLoading, signOut } = useAuth();
@@ -117,22 +126,25 @@ const StudentDashboard = () => {
 
   const renderSection = () => {
     if (!profile) return null;
-    switch (activeSection) {
-      case "home": return <HomeSection userProfile={profile} studentProfile={studentProfile} assignmentStats={assignmentStats} classrooms={classrooms} />;
-      case "today": return <TodaySection studentId={profile.id} />;
-      case "courses": return <CoursesSection classrooms={classrooms} />;
-      case "clubs": return <ClubsSection studentId={profile.id} />;
-      case "calendar": return <CalendarSection studentId={profile.id} />;
-      case "announcements": return <AnnouncementsSection studentId={profile.id} />;
-      case "study-games": return <GamesSection />;
-      case "aura-reading": return <AuraReadingSection />;
-      case "safety": return <SafetySection />;
-      case "links-resources": return <LinksResourcesSection />;
-      case "gradebook": return <GradebookSection studentId={profile.id} />;
-      case "directory": return <DirectorySection />;
-      case "account": return <AccountSection userProfile={profile} studentProfile={studentProfile} />;
-      default: return <HomeSection userProfile={profile} studentProfile={studentProfile} assignmentStats={assignmentStats} />;
-    }
+    const content = (() => {
+      switch (activeSection) {
+        case "home": return <HomeSection userProfile={profile} studentProfile={studentProfile} assignmentStats={assignmentStats} classrooms={classrooms} />;
+        case "today": return <TodaySection studentId={profile.id} />;
+        case "courses": return <CoursesSection classrooms={classrooms} />;
+        case "clubs": return <ClubsSection studentId={profile.id} />;
+        case "calendar": return <CalendarSection studentId={profile.id} />;
+        case "announcements": return <AnnouncementsSection studentId={profile.id} />;
+        case "study-games": return <GamesSection />;
+        case "aura-reading": return <AuraReadingSection />;
+        case "safety": return <SafetySection />;
+        case "links-resources": return <LinksResourcesSection />;
+        case "gradebook": return <GradebookSection studentId={profile.id} />;
+        case "directory": return <DirectorySection />;
+        case "account": return <AccountSection userProfile={profile} studentProfile={studentProfile} />;
+        default: return <HomeSection userProfile={profile} studentProfile={studentProfile} assignmentStats={assignmentStats} />;
+      }
+    })();
+    return <Suspense fallback={<SectionLoader />}>{content}</Suspense>;
   };
 
   if (authLoading) {

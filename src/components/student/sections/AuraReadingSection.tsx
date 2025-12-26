@@ -1,31 +1,40 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { VoiceRecorder } from "@/components/aura/VoiceRecorder";
-import AuraFeedbackCard from "@/components/aura/AuraFeedbackCard";
-import AuraProgressChart from "@/components/aura/AuraProgressChart";
-import SpeakerDiarizationView from "@/components/aura/SpeakerDiarizationView";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Mic, TrendingUp, BookOpen, Library, Sparkles, Trophy, AlertTriangle } from "lucide-react";
-import GeneratedExercises from "@/components/aura/GeneratedExercises";
-import PhonemeMasteryPathway from "@/components/aura/PhonemeMasteryPathway";
-import DifficultyProgressCard from "@/components/aura/DifficultyProgressCard";
-import { PhonemePracticeExercises } from "@/components/aura/PhonemePracticeExercises";
-import { StoryLibrary } from "@/components/aura/StoryLibrary";
-import { GuidedReadingFlow } from "@/components/aura/GuidedReadingFlow";
-import { ReadingBookshelf } from "@/components/aura/ReadingBookshelf";
-import { SmartNotifications } from "@/components/aura/SmartNotifications";
+import { Mic, TrendingUp, BookOpen, Library, Sparkles, Trophy, AlertTriangle, Loader2 } from "lucide-react";
 import { unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
-import { GamificationHeader } from "@/components/aura/GamificationHeader";
-import { ActiveMissionsPanel } from "@/components/aura/ActiveMissionsPanel";
-import { ClassChallengeCard } from "@/components/aura/ClassChallengeCard";
-import { LeaderboardCard } from "@/components/aura/LeaderboardCard";
 import { useActiveScreeningPassage } from "@/hooks/useActiveScreeningPassage";
 import type { CuratedStory as Story } from "@/data/curatedStories";
+
+// Lazy load heavy components to prevent flicker on tab switch
+const VoiceRecorder = lazy(() => import("@/components/aura/VoiceRecorder").then(m => ({ default: m.VoiceRecorder })));
+const AuraFeedbackCard = lazy(() => import("@/components/aura/AuraFeedbackCard"));
+const AuraProgressChart = lazy(() => import("@/components/aura/AuraProgressChart"));
+const SpeakerDiarizationView = lazy(() => import("@/components/aura/SpeakerDiarizationView"));
+const GeneratedExercises = lazy(() => import("@/components/aura/GeneratedExercises"));
+const PhonemeMasteryPathway = lazy(() => import("@/components/aura/PhonemeMasteryPathway"));
+const DifficultyProgressCard = lazy(() => import("@/components/aura/DifficultyProgressCard"));
+const PhonemePracticeExercises = lazy(() => import("@/components/aura/PhonemePracticeExercises").then(m => ({ default: m.PhonemePracticeExercises })));
+const StoryLibrary = lazy(() => import("@/components/aura/StoryLibrary").then(m => ({ default: m.StoryLibrary })));
+const GuidedReadingFlow = lazy(() => import("@/components/aura/GuidedReadingFlow").then(m => ({ default: m.GuidedReadingFlow })));
+const ReadingBookshelf = lazy(() => import("@/components/aura/ReadingBookshelf").then(m => ({ default: m.ReadingBookshelf })));
+const SmartNotifications = lazy(() => import("@/components/aura/SmartNotifications").then(m => ({ default: m.SmartNotifications })));
+const GamificationHeader = lazy(() => import("@/components/aura/GamificationHeader").then(m => ({ default: m.GamificationHeader })));
+const ActiveMissionsPanel = lazy(() => import("@/components/aura/ActiveMissionsPanel").then(m => ({ default: m.ActiveMissionsPanel })));
+const ClassChallengeCard = lazy(() => import("@/components/aura/ClassChallengeCard").then(m => ({ default: m.ClassChallengeCard })));
+const LeaderboardCard = lazy(() => import("@/components/aura/LeaderboardCard").then(m => ({ default: m.LeaderboardCard })));
+
+// Loading fallback for lazy components
+const TabLoader = () => (
+  <div className="py-12 flex items-center justify-center">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  </div>
+);
 
 // Helper component to get student's classroom and show leaderboard
 const ClassroomLeaderboardWrapper = ({ studentId }: { studentId: string }) => {
@@ -50,11 +59,13 @@ const ClassroomLeaderboardWrapper = ({ studentId }: { studentId: string }) => {
   }
 
   return (
-    <LeaderboardCard 
-      classroomId={enrollment.classroom_id} 
-      currentStudentId={studentId}
-      title="Class Leaderboard 🏆"
-    />
+    <Suspense fallback={<TabLoader />}>
+      <LeaderboardCard 
+        classroomId={enrollment.classroom_id} 
+        currentStudentId={studentId}
+        title="Class Leaderboard 🏆"
+      />
+    </Suspense>
   );
 };
 
@@ -204,17 +215,19 @@ export const AuraReadingSection = () => {
   if (isReadingStory && selectedStory && user?.id) {
     return (
       <div onClick={handlePageInteraction}>
-        <GuidedReadingFlow
-          story={selectedStory}
-          studentId={user.id}
-          onBack={handleReadingBack}
-          onComplete={handleReadingComplete}
-          screeningPeriodId={activeScreening?.periodId}
-          screeningClassroomId={activeScreening?.classroomId}
-          screeningPassageId={activeScreening?.passageId}
-          screeningPassageTitle={activeScreening?.passage?.title}
-          screeningGradeLevel={activeScreening?.gradeLevel}
-        />
+        <Suspense fallback={<TabLoader />}>
+          <GuidedReadingFlow
+            story={selectedStory}
+            studentId={user.id}
+            onBack={handleReadingBack}
+            onComplete={handleReadingComplete}
+            screeningPeriodId={activeScreening?.periodId}
+            screeningClassroomId={activeScreening?.classroomId}
+            screeningPassageId={activeScreening?.passageId}
+            screeningPassageTitle={activeScreening?.passage?.title}
+            screeningGradeLevel={activeScreening?.gradeLevel}
+          />
+        </Suspense>
       </div>
     );
   }
@@ -222,7 +235,7 @@ export const AuraReadingSection = () => {
   return (
     <div className="space-y-6" onClick={handlePageInteraction}>
       {/* Header with Gamification Stats */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4 min-h-[64px]">
         <div className="flex items-center gap-3">
           <div className="p-3 rounded-full bg-gradient-to-br from-purple-500 to-blue-500">
             <Sparkles className="h-6 w-6 text-white" />
@@ -234,10 +247,16 @@ export const AuraReadingSection = () => {
         </div>
         
         {/* Gamification Stats Header */}
-        {user?.id && <GamificationHeader studentId={user.id} />}
+        {user?.id && (
+          <Suspense fallback={<div className="h-10 w-32 animate-pulse bg-muted rounded" />}>
+            <GamificationHeader studentId={user.id} />
+          </Suspense>
+        )}
       </div>
 
-      <SmartNotifications onNavigate={(path) => navigate(path)} />
+      <Suspense fallback={null}>
+        <SmartNotifications onNavigate={(path) => navigate(path)} />
+      </Suspense>
 
       {/* Active Screening Banner */}
       {activeScreening?.passage && (
@@ -323,94 +342,106 @@ export const AuraReadingSection = () => {
         </div>
 
         <TabsContent value="stories" className="mt-6">
-          <StoryLibrary onSelectStory={handleStorySelect} />
+          <Suspense fallback={<TabLoader />}>
+            <StoryLibrary onSelectStory={handleStorySelect} />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="bookshelf" className="mt-6">
-          <ReadingBookshelf />
+          <Suspense fallback={<TabLoader />}>
+            <ReadingBookshelf />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="practice" className="space-y-6 mt-6">
-          <Card className="hover:scale-[1.01] transition-transform duration-200">
-            <CardHeader>
-              <CardTitle>Record Your Practice</CardTitle>
-              <CardDescription>
-                Read a passage, answer a question, or practice pronunciation. Our AI will analyze your speech.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <VoiceRecorder 
-                onTranscriptionComplete={handleTranscriptionComplete}
-                isAnalyzing={isAnalyzing}
-              />
-            </CardContent>
-          </Card>
-
-          {latestAnalysis && (
-            <>
-              <AuraFeedbackCard analysis={latestAnalysis} />
-              
-              {latestAnalysis.speakerSegments && latestAnalysis.speakerSegments.length > 0 && (
-                <SpeakerDiarizationView
-                  segments={latestAnalysis.speakerSegments}
-                  diarizationConfidence={latestAnalysis.diarizationConfidence}
+          <Suspense fallback={<TabLoader />}>
+            <Card className="hover:scale-[1.01] transition-transform duration-200">
+              <CardHeader>
+                <CardTitle>Record Your Practice</CardTitle>
+                <CardDescription>
+                  Read a passage, answer a question, or practice pronunciation. Our AI will analyze your speech.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <VoiceRecorder 
+                  onTranscriptionComplete={handleTranscriptionComplete}
+                  isAnalyzing={isAnalyzing}
                 />
-              )}
-            </>
-          )}
+              </CardContent>
+            </Card>
+
+            {latestAnalysis && (
+              <>
+                <AuraFeedbackCard analysis={latestAnalysis} />
+                
+                {latestAnalysis.speakerSegments && latestAnalysis.speakerSegments.length > 0 && (
+                  <SpeakerDiarizationView
+                    segments={latestAnalysis.speakerSegments}
+                    diarizationConfidence={latestAnalysis.diarizationConfidence}
+                  />
+                )}
+              </>
+            )}
+          </Suspense>
         </TabsContent>
 
         {/* Challenges Tab */}
         <TabsContent value="challenges" className="mt-6 space-y-6">
-          {user?.id && (
-            <>
-              <ActiveMissionsPanel studentId={user.id} />
-              <ClassChallengeCard studentId={user.id} />
-              <ClassroomLeaderboardWrapper studentId={user.id} />
-            </>
-          )}
+          <Suspense fallback={<TabLoader />}>
+            {user?.id && (
+              <>
+                <ActiveMissionsPanel studentId={user.id} />
+                <ClassChallengeCard studentId={user.id} />
+                <ClassroomLeaderboardWrapper studentId={user.id} />
+              </>
+            )}
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="progress" className="mt-6">
-          {!records || records.length === 0 ? (
-            <Card className="hover:scale-[1.01] transition-transform duration-200">
-              <CardContent className="text-center py-12">
-                <div className="h-24 w-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center">
-                  <Mic className="h-12 w-12 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2">No Practice Sessions Yet</h3>
-                <p className="text-muted-foreground">Start recording to see your progress!</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <AuraProgressChart records={records} />
-          )}
+          <Suspense fallback={<TabLoader />}>
+            {!records || records.length === 0 ? (
+              <Card className="hover:scale-[1.01] transition-transform duration-200">
+                <CardContent className="text-center py-12">
+                  <div className="h-24 w-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center">
+                    <Mic className="h-12 w-12 text-white" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">No Practice Sessions Yet</h3>
+                  <p className="text-muted-foreground">Start recording to see your progress!</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <AuraProgressChart records={records} />
+            )}
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="exercises" className="mt-6 space-y-6">
-          {user?.id && (
-            <PhonemePracticeExercises studentId={user.id} />
-          )}
-          
-          {skillVector && (
-            <DifficultyProgressCard
-              currentLevel={skillVector.current_difficulty_level || 1}
-              performanceTrend={skillVector.performance_trend || 0}
-              recentGrades={(records || []).slice(0, 5).map(r => r.grade).filter(g => g !== null)}
-              difficultyHistory={(skillVector.difficulty_history as any) || []}
+          <Suspense fallback={<TabLoader />}>
+            {user?.id && (
+              <PhonemePracticeExercises studentId={user.id} />
+            )}
+            
+            {skillVector && (
+              <DifficultyProgressCard
+                currentLevel={skillVector.current_difficulty_level || 1}
+                performanceTrend={skillVector.performance_trend || 0}
+                recentGrades={(records || []).slice(0, 5).map(r => r.grade).filter(g => g !== null)}
+                difficultyHistory={(skillVector.difficulty_history as any) || []}
+              />
+            )}
+            
+            <PhonemeMasteryPathway
+              masteredPhonemes={latestAnalysis?.masteredPhonemes || []}
+              strugglingPhonemes={latestAnalysis?.problematicPhonemes || []}
+              studentGrade={5}
             />
-          )}
-          
-          <PhonemeMasteryPathway
-            masteredPhonemes={latestAnalysis?.masteredPhonemes || []}
-            strugglingPhonemes={latestAnalysis?.problematicPhonemes || []}
-            studentGrade={5}
-          />
-          
-          <GeneratedExercises 
-            problematicPhonemes={latestAnalysis?.problematicPhonemes || []}
-            studentGrade={5}
-          />
+            
+            <GeneratedExercises 
+              problematicPhonemes={latestAnalysis?.problematicPhonemes || []}
+              studentGrade={5}
+            />
+          </Suspense>
         </TabsContent>
       </Tabs>
     </div>

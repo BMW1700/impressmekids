@@ -819,7 +819,7 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center relative z-0 overflow-hidden p-4">
+    <div className="min-h-[100dvh] flex flex-col items-center justify-center relative z-0 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
       {/* Fixed background so gradient is identical regardless of tab/content height */}
       <div aria-hidden className="fixed inset-0 -z-10 bg-gradient-hero pointer-events-none" />
       
