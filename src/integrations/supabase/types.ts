@@ -1114,6 +1114,33 @@ export type Database = {
           },
         ]
       }
+      campaign_assets: {
+        Row: {
+          asset_key: string
+          asset_type: string
+          asset_url: string | null
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          asset_key: string
+          asset_type?: string
+          asset_url?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          asset_key?: string
+          asset_type?: string
+          asset_url?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       campaign_battle_sessions: {
         Row: {
           battle_status: string

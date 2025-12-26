@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Volume2, VolumeX, Sparkles, Play } from "lucide-react";
+import { ChevronLeft, Volume2, VolumeX, Sparkles, Star, Play } from "lucide-react";
 import { BattleHUD } from "./BattleHUD";
 import { BattleArena } from "./BattleArena";
 import { GrogState } from "./GrogCharacter";
@@ -32,6 +32,8 @@ interface BattleReaderProps {
   onBack: () => void;
   onComplete: () => void;
   onNextStory?: () => void;
+  ellaAvatarUrl?: string;
+  grogAvatarUrl?: string;
 }
 
 export const BattleReader = ({
@@ -42,6 +44,8 @@ export const BattleReader = ({
   onBack,
   onComplete,
   onNextStory,
+  ellaAvatarUrl,
+  grogAvatarUrl,
 }: BattleReaderProps) => {
   const { progress, startBattle, completeBattle } = useCampaignProgress(studentId);
   
@@ -56,6 +60,7 @@ export const BattleReader = ({
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [battleSessionId, setBattleSessionId] = useState<string | null>(null);
   const [readingStats, setReadingStats] = useState<any>(null);
+  const [hasStartedReading, setHasStartedReading] = useState(false);
   
   // Character states
   const [grogState, setGrogState] = useState<GrogState>('idle');
@@ -82,6 +87,9 @@ export const BattleReader = ({
   
   // CRITICAL FIX: Track processed word events to prevent double-applying damage
   const processedWordEventsRef = useRef<Set<string>>(new Set());
+
+  // Ref for WordByWordReader control
+  const readerStartRef = useRef<(() => void) | null>(null);
 
   // Handle difficulty selection
   const handleDifficultySelect = (difficulty: BattleDifficulty) => {
@@ -351,6 +359,7 @@ export const BattleReader = ({
     setShowCelebration(false);
     setGrogState('idle');
     setPlayerState('idle');
+    setHasStartedReading(false);
   };
 
   const handleNextStory = () => {
@@ -431,6 +440,34 @@ export const BattleReader = ({
         </Button>
       </div>
 
+      {/* START BUTTON BANNER - Above Battle Arena */}
+      {!hasStartedReading && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 rounded-xl p-4 flex items-center justify-center gap-4 shadow-lg"
+        >
+          <motion.div
+            animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            <Star className="h-10 w-10 text-yellow-900 fill-yellow-900" />
+          </motion.div>
+          <div className="text-center">
+            <p className="text-yellow-900 font-bold text-lg">Ready to Battle?</p>
+            <p className="text-yellow-800 text-sm">Click below to start reading!</p>
+          </div>
+          <Button
+            size="lg"
+            className="bg-yellow-900 hover:bg-yellow-800 text-yellow-100"
+            onClick={() => setHasStartedReading(true)}
+          >
+            <Play className="h-5 w-5 mr-2" />
+            Start Reading
+          </Button>
+        </motion.div>
+      )}
+
       {/* AURA Coach Indicator - Small bar at top */}
       <motion.div 
         className="flex items-center justify-center gap-2 py-1 bg-primary/10 rounded-md"
@@ -456,6 +493,8 @@ export const BattleReader = ({
         triggerAttackBeam={triggerAttackBeam}
         triggerDamageBeam={triggerDamageBeam}
         isCriticalHit={isCriticalHit}
+        ellaAvatarUrl={ellaAvatarUrl}
+        grogAvatarUrl={grogAvatarUrl}
       />
 
       {/* Battle Stats HUD - SINGLE source of HP display */}
@@ -489,16 +528,22 @@ export const BattleReader = ({
         🎯 Win by defeating the enemy OR finishing with 90%+ accuracy!
       </div>
 
-      {/* Reading Area - Story Text */}
-      <Card className="p-3">
-        <WordByWordReader
-          passageText={story.passage_text}
-          assignmentId={null}
-          onComplete={handleReadingComplete}
-          onWordResult={handleWordResult}
-          challengingMode={battleDifficulty === 'challenging'}
-          battleMode={true}
-        />
+      {/* Reading Area - Story Text with internal scroll */}
+      <Card className="p-3 max-h-[40vh] overflow-y-auto">
+        {hasStartedReading ? (
+          <WordByWordReader
+            passageText={story.passage_text}
+            assignmentId={null}
+            onComplete={handleReadingComplete}
+            onWordResult={handleWordResult}
+            challengingMode={battleDifficulty === 'challenging'}
+            battleMode={true}
+          />
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            <p>Click "Start Reading" above to begin the battle!</p>
+          </div>
+        )}
       </Card>
 
       {/* Victory/Defeat Celebration */}

@@ -12,6 +12,7 @@ interface GrogCharacterProps {
   worldNumber?: number;
   showDamage?: number;
   taunt?: string;
+  avatarUrl?: string;
 }
 
 const enemyConfigs: Record<EnemyType, { 
@@ -53,6 +54,7 @@ export const GrogCharacter = ({
   worldNumber = 1,
   showDamage,
   taunt,
+  avatarUrl,
 }: GrogCharacterProps) => {
   const [damageNumbers, setDamageNumbers] = useState<{ id: number; value: number }[]>([]);
   const config = enemyConfigs[enemyType];
@@ -87,21 +89,12 @@ export const GrogCharacter = ({
     }
   };
 
-  // Health bar color based on percentage
-  const getHealthColor = () => {
-    if (healthPercent > 60) return 'bg-green-500';
-    if (healthPercent > 30) return 'bg-yellow-500';
-    return 'bg-red-500';
-  };
-
   return (
     <div className="relative flex flex-col items-center gap-3">
       {/* Enemy Name */}
       <div className="text-sm font-bold text-foreground/80">
         {config.name}
       </div>
-
-      {/* Health Bar - REMOVED, only shown in BattleHUD */}
 
       {/* Main Character Container */}
       <motion.div
@@ -120,25 +113,38 @@ export const GrogCharacter = ({
 
         {/* Character Circle */}
         <div
-          className={`relative ${config.size} rounded-full bg-gradient-to-br ${config.gradient} flex items-center justify-center shadow-lg border-4 border-background`}
+          className={`relative ${config.size} rounded-full bg-gradient-to-br ${config.gradient} flex items-center justify-center shadow-lg border-4 border-background overflow-hidden`}
         >
-          <Icon className={`${enemyType === 'boss' ? 'w-14 h-14' : enemyType === 'elite' ? 'w-12 h-12' : enemyType === 'guard' ? 'w-10 h-10' : 'w-8 h-8'} text-white`} />
-          
-          {/* Eyes for character */}
-          <div className="absolute top-1/4 left-1/4 flex gap-1">
-            <motion.div
-              className="w-2 h-2 bg-yellow-300 rounded-full"
-              animate={{
-                scale: state === 'attacking' ? [1, 1.5, 1] : 1,
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt="Enemy avatar"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
               }}
             />
-            <motion.div
-              className="w-2 h-2 bg-yellow-300 rounded-full"
-              animate={{
-                scale: state === 'attacking' ? [1, 1.5, 1] : 1,
-              }}
-            />
-          </div>
+          ) : (
+            <>
+              <Icon className={`${enemyType === 'boss' ? 'w-14 h-14' : enemyType === 'elite' ? 'w-12 h-12' : enemyType === 'guard' ? 'w-10 h-10' : 'w-8 h-8'} text-white`} />
+              
+              {/* Eyes for character */}
+              <div className="absolute top-1/4 left-1/4 flex gap-1">
+                <motion.div
+                  className="w-2 h-2 bg-yellow-300 rounded-full"
+                  animate={{
+                    scale: state === 'attacking' ? [1, 1.5, 1] : 1,
+                  }}
+                />
+                <motion.div
+                  className="w-2 h-2 bg-yellow-300 rounded-full"
+                  animate={{
+                    scale: state === 'attacking' ? [1, 1.5, 1] : 1,
+                  }}
+                />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Hit flash effect */}

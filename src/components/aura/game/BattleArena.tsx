@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { GrogCharacter, GrogState, EnemyType } from "./GrogCharacter";
 import { PlayerCharacter, PlayerState, PlayerGender } from "./PlayerCharacter";
-import { EnergyBeamEffect, BeamType } from "./EnergyBeamEffect";
+import { EnergyBeamEffect } from "./EnergyBeamEffect";
 import { useState, useEffect } from "react";
 
 interface BattleArenaProps {
@@ -25,6 +25,10 @@ interface BattleArenaProps {
   triggerAttackBeam?: number;
   triggerDamageBeam?: number;
   isCriticalHit?: boolean;
+
+  // Custom avatars
+  ellaAvatarUrl?: string;
+  grogAvatarUrl?: string;
 }
 
 export const BattleArena = ({
@@ -41,6 +45,8 @@ export const BattleArena = ({
   triggerAttackBeam,
   triggerDamageBeam,
   isCriticalHit = false,
+  ellaAvatarUrl,
+  grogAvatarUrl,
 }: BattleArenaProps) => {
   const [showAttackBeam, setShowAttackBeam] = useState(false);
   const [showDamageBeam, setShowDamageBeam] = useState(false);
@@ -87,6 +93,7 @@ export const BattleArena = ({
             gender={playerGender}
             showDamage={showPlayerDamage}
             currentStreak={currentStreak}
+            avatarUrl={ellaAvatarUrl}
           />
         </motion.div>
 
@@ -126,6 +133,7 @@ export const BattleArena = ({
             enemyType={enemyType}
             taunt={enemyTaunt}
             showDamage={showEnemyDamage}
+            avatarUrl={grogAvatarUrl}
           />
         </motion.div>
       </div>

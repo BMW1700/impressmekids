@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
-import { Shield, Sword, Heart } from "lucide-react";
+import { Shield, Sword } from "lucide-react";
 
 export type PlayerState = 'idle' | 'attacking' | 'hit' | 'victory' | 'defeated';
 export type PlayerGender = 'knight' | 'dame';
@@ -11,6 +11,7 @@ interface PlayerCharacterProps {
   gender?: PlayerGender;
   showDamage?: number;
   currentStreak?: number;
+  avatarUrl?: string;
 }
 
 export const PlayerCharacter = ({
@@ -19,6 +20,7 @@ export const PlayerCharacter = ({
   gender = 'knight',
   showDamage,
   currentStreak = 0,
+  avatarUrl,
 }: PlayerCharacterProps) => {
   const [damageNumbers, setDamageNumbers] = useState<{ id: number; value: number }[]>([]);
 
@@ -50,13 +52,6 @@ export const PlayerCharacter = ({
     }
   };
 
-  // Health bar color
-  const getHealthColor = () => {
-    if (healthPercent > 60) return 'bg-green-500';
-    if (healthPercent > 30) return 'bg-yellow-500';
-    return 'bg-red-500';
-  };
-
   // Get streak glow intensity
   const getStreakGlow = () => {
     if (currentStreak >= 10) return 'shadow-[0_0_30px_rgba(59,130,246,0.8)]';
@@ -71,8 +66,6 @@ export const PlayerCharacter = ({
       <div className="text-sm font-bold text-foreground/80">
         {gender === 'knight' ? 'Brave Knight' : 'Brave Dame'}
       </div>
-
-      {/* Health Bar - REMOVED, only shown in BattleHUD */}
 
       {/* Main Character Container */}
       <motion.div
@@ -94,31 +87,44 @@ export const PlayerCharacter = ({
 
         {/* Character Circle */}
         <div
-          className={`relative w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center border-4 border-background ${getStreakGlow()}`}
+          className={`relative w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center border-4 border-background ${getStreakGlow()} overflow-hidden`}
         >
-          {/* Shield and Sword */}
-          <div className="relative">
-            <Shield className="w-8 h-8 text-white" />
-            <Sword className="w-5 h-5 text-yellow-300 absolute -right-2 -top-1 rotate-45" />
-          </div>
-          
-          {/* Knight Helmet Visor */}
-          <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 flex gap-2">
-            <motion.div
-              className="w-1.5 h-1.5 bg-cyan-300 rounded-full"
-              animate={{
-                opacity: state === 'attacking' ? [1, 0.5, 1] : 1,
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt="Player avatar"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
               }}
-              transition={{ duration: 0.2, repeat: state === 'attacking' ? 3 : 0 }}
             />
-            <motion.div
-              className="w-1.5 h-1.5 bg-cyan-300 rounded-full"
-              animate={{
-                opacity: state === 'attacking' ? [1, 0.5, 1] : 1,
-              }}
-              transition={{ duration: 0.2, repeat: state === 'attacking' ? 3 : 0 }}
-            />
-          </div>
+          ) : (
+            <>
+              {/* Shield and Sword */}
+              <div className="relative">
+                <Shield className="w-8 h-8 text-white" />
+                <Sword className="w-5 h-5 text-yellow-300 absolute -right-2 -top-1 rotate-45" />
+              </div>
+              
+              {/* Knight Helmet Visor */}
+              <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 flex gap-2">
+                <motion.div
+                  className="w-1.5 h-1.5 bg-cyan-300 rounded-full"
+                  animate={{
+                    opacity: state === 'attacking' ? [1, 0.5, 1] : 1,
+                  }}
+                  transition={{ duration: 0.2, repeat: state === 'attacking' ? 3 : 0 }}
+                />
+                <motion.div
+                  className="w-1.5 h-1.5 bg-cyan-300 rounded-full"
+                  animate={{
+                    opacity: state === 'attacking' ? [1, 0.5, 1] : 1,
+                  }}
+                  transition={{ duration: 0.2, repeat: state === 'attacking' ? 3 : 0 }}
+                />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Hit flash effect */}
