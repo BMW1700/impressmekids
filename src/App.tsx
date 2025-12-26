@@ -12,6 +12,7 @@ import { PushNotificationPrompt } from "@/components/notifications/PushNotificat
 import { OfflineIndicator } from "@/components/safety/OfflineIndicator";
 import { MLStatusProvider } from "@/components/ml/MLStatusProvider";
 import { SentryUserTracker } from "@/components/auth/SentryUserTracker";
+import { ScrollRestoration } from "@/components/system/ScrollRestoration";
 import { Loader2 } from "lucide-react";
 
 // Eagerly loaded critical routes
@@ -127,6 +128,7 @@ const App = () => (
             <SentryUserTracker />
           <BrowserRouter>
             <RouteAwareProviders>
+              <ScrollRestoration />
               <OfflineIndicator />
               <Suspense fallback={<PageLoader />}>
                 <Routes>
