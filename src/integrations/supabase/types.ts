@@ -1114,6 +1114,117 @@ export type Database = {
           },
         ]
       }
+      campaign_battle_sessions: {
+        Row: {
+          battle_status: string
+          correct_words: number
+          created_at: string
+          current_streak: number
+          damage_dealt: number
+          ended_at: string | null
+          enemy_current_hp: number
+          enemy_max_hp: number
+          enemy_type: string
+          id: string
+          longest_streak: number
+          player_hp: number
+          player_max_hp: number
+          started_at: string
+          story_category: string | null
+          story_title: string
+          student_id: string
+          words_read: number
+          world_number: number
+          xp_earned: number
+        }
+        Insert: {
+          battle_status?: string
+          correct_words?: number
+          created_at?: string
+          current_streak?: number
+          damage_dealt?: number
+          ended_at?: string | null
+          enemy_current_hp?: number
+          enemy_max_hp?: number
+          enemy_type?: string
+          id?: string
+          longest_streak?: number
+          player_hp?: number
+          player_max_hp?: number
+          started_at?: string
+          story_category?: string | null
+          story_title: string
+          student_id: string
+          words_read?: number
+          world_number?: number
+          xp_earned?: number
+        }
+        Update: {
+          battle_status?: string
+          correct_words?: number
+          created_at?: string
+          current_streak?: number
+          damage_dealt?: number
+          ended_at?: string | null
+          enemy_current_hp?: number
+          enemy_max_hp?: number
+          enemy_type?: string
+          id?: string
+          longest_streak?: number
+          player_hp?: number
+          player_max_hp?: number
+          started_at?: string
+          story_category?: string | null
+          story_title?: string
+          student_id?: string
+          words_read?: number
+          world_number?: number
+          xp_earned?: number
+        }
+        Relationships: []
+      }
+      campaign_progress: {
+        Row: {
+          books_rescued: number
+          created_at: string
+          current_world: number
+          grog_battles_won: number
+          id: string
+          longest_streak: number
+          student_id: string
+          total_damage_dealt: number
+          total_xp_earned: number
+          updated_at: string
+          world_progress: Json
+        }
+        Insert: {
+          books_rescued?: number
+          created_at?: string
+          current_world?: number
+          grog_battles_won?: number
+          id?: string
+          longest_streak?: number
+          student_id: string
+          total_damage_dealt?: number
+          total_xp_earned?: number
+          updated_at?: string
+          world_progress?: Json
+        }
+        Update: {
+          books_rescued?: number
+          created_at?: string
+          current_world?: number
+          grog_battles_won?: number
+          id?: string
+          longest_streak?: number
+          student_id?: string
+          total_damage_dealt?: number
+          total_xp_earned?: number
+          updated_at?: string
+          world_progress?: Json
+        }
+        Relationships: []
+      }
       classroom_announcements: {
         Row: {
           announcement_type: string
