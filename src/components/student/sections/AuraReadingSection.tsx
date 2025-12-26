@@ -25,6 +25,7 @@ import { ActiveMissionsPanel } from "@/components/aura/ActiveMissionsPanel";
 import { ClassChallengeCard } from "@/components/aura/ClassChallengeCard";
 import { LeaderboardCard } from "@/components/aura/LeaderboardCard";
 import { useActiveScreeningPassage } from "@/hooks/useActiveScreeningPassage";
+import { ImprovementTracker } from "@/components/shared/ImprovementTracker";
 import type { CuratedStory as Story } from "@/data/curatedStories";
 
 // Helper component to get student's classroom and show leaderboard
@@ -371,7 +372,17 @@ export const AuraReadingSection = () => {
           )}
         </TabsContent>
 
-        <TabsContent value="progress" className="mt-6">
+        <TabsContent value="progress" className="mt-6 space-y-6">
+          {/* Week-by-Week Improvement Tracker */}
+          {user?.id && (
+            <ImprovementTracker 
+              studentId={user.id} 
+              studentName="You"
+              variant="detailed"
+            />
+          )}
+          
+          {/* Existing Progress Chart */}
           {!records || records.length === 0 ? (
             <Card className="hover:scale-[1.01] transition-transform duration-200">
               <CardContent className="text-center py-12">

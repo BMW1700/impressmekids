@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { ArrowLeft, Play, RotateCcw, Trophy, Clock, Target } from "lucide-react"
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { USMap } from "@/components/games/USMap";
+import { useGameStats } from "@/hooks/useGameStats";
 
 interface GameState {
   status: "start" | "playing" | "finished";
@@ -49,6 +50,8 @@ const formatTime = (seconds: number): string => {
 };
 
 const USStatesMapQuiz = () => {
+  const { updateGameStats } = useGameStats();
+  const statsUpdatedRef = useRef(false);
   const [game, setGame] = useState<GameState>({
     status: "start",
     currentQuestion: 0,
@@ -77,6 +80,7 @@ const USStatesMapQuiz = () => {
 
   const startGame = useCallback(() => {
     const shuffledStates = shuffleArray(ALL_STATES).slice(0, QUESTIONS_PER_GAME);
+    statsUpdatedRef.current = false;
     setGame({
       status: "playing",
       currentQuestion: 0,
@@ -107,6 +111,12 @@ const USStatesMapQuiz = () => {
       setGame(prev => {
         const nextQuestion = prev.currentQuestion + 1;
         if (nextQuestion >= QUESTIONS_PER_GAME) {
+          // Game finished - update stats
+          if (!statsUpdatedRef.current) {
+            statsUpdatedRef.current = true;
+            const won = prev.correctAnswers >= QUESTIONS_PER_GAME * 0.7; // 70% to win
+            updateGameStats(won);
+          }
           return { ...prev, status: "finished", feedback: null };
         }
         return {

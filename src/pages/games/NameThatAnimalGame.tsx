@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Volume2, RotateCcw, ArrowLeft, PartyPopper } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { useGameStats } from "@/hooks/useGameStats";
 
 interface Animal {
   name: string;
@@ -36,12 +37,14 @@ const shuffleArray = <T,>(array: T[]): T[] => {
 };
 
 const NameThatAnimalGame = () => {
+  const { updateGameStats } = useGameStats();
   const [gameAnimals, setGameAnimals] = useState<Animal[]>([]);
   const [currentRound, setCurrentRound] = useState(0);
   const [nameChoices, setNameChoices] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<"correct" | "incorrect" | null>(null);
   const [isGameComplete, setIsGameComplete] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const statsUpdatedRef = useRef(false);
 
   // Initialize game
   const initializeGame = useCallback(() => {
@@ -50,6 +53,7 @@ const NameThatAnimalGame = () => {
     setCurrentRound(0);
     setIsGameComplete(false);
     setFeedback(null);
+    statsUpdatedRef.current = false;
   }, []);
 
   useEffect(() => {
@@ -137,6 +141,10 @@ const NameThatAnimalGame = () => {
         setFeedback(null);
         if (currentRound + 1 >= gameAnimals.length) {
           setIsGameComplete(true);
+          if (!statsUpdatedRef.current) {
+            statsUpdatedRef.current = true;
+            updateGameStats(true);
+          }
         } else {
           setCurrentRound(prev => prev + 1);
         }
