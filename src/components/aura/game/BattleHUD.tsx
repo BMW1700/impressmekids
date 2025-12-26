@@ -48,28 +48,28 @@ export const BattleHUD = ({
 
   return (
     <div className="w-full space-y-4">
-      {/* Top Section: Enemy vs Player */}
+      {/* Top Section: Player (LEFT) vs Enemy (RIGHT) - SWAPPED to match character positions */}
       <div className="flex items-start justify-between gap-4">
-        {/* Enemy HP */}
+        {/* Player HP - LEFT side (matches player character on left) */}
         <div className="flex-1 space-y-1">
           <div className="flex items-center gap-2">
-            <Swords className="w-4 h-4 text-red-500" />
-            <span className="text-sm font-bold text-foreground">{enemyName}</span>
+            <Heart className="w-4 h-4 text-pink-500" />
+            <span className="text-sm font-bold text-foreground">Your Energy</span>
           </div>
           <div className="relative">
             <div className="w-full h-4 bg-muted rounded-full overflow-hidden border border-border">
               <motion.div
                 className={`h-full ${
-                  enemyHealthPercent > 60 ? 'bg-gradient-to-r from-green-500 to-emerald-400' :
-                  enemyHealthPercent > 30 ? 'bg-gradient-to-r from-yellow-500 to-amber-400' :
-                  'bg-gradient-to-r from-red-500 to-rose-400'
+                  playerHealthPercent > 60 ? 'bg-gradient-to-r from-pink-500 to-rose-400' :
+                  playerHealthPercent > 30 ? 'bg-gradient-to-r from-orange-500 to-amber-400' :
+                  'bg-gradient-to-r from-red-600 to-red-400'
                 }`}
-                animate={{ width: `${enemyHealthPercent}%` }}
+                animate={{ width: `${playerHealthPercent}%` }}
                 transition={{ duration: 0.3 }}
               />
             </div>
             <span className="absolute right-2 top-0 text-xs font-bold text-white drop-shadow-lg">
-              {enemyHp}/{enemyMaxHp}
+              {playerHp}/{playerMaxHp}
             </span>
           </div>
         </div>
@@ -85,26 +85,26 @@ export const BattleHUD = ({
           </motion.div>
         </div>
 
-        {/* Player HP */}
+        {/* Enemy HP - RIGHT side (matches enemy character on right) */}
         <div className="flex-1 space-y-1">
           <div className="flex items-center gap-2 justify-end">
-            <span className="text-sm font-bold text-foreground">Your Energy</span>
-            <Heart className="w-4 h-4 text-pink-500" />
+            <span className="text-sm font-bold text-foreground">{enemyName}</span>
+            <Swords className="w-4 h-4 text-red-500" />
           </div>
           <div className="relative">
             <div className="w-full h-4 bg-muted rounded-full overflow-hidden border border-border">
               <motion.div
                 className={`h-full ${
-                  playerHealthPercent > 60 ? 'bg-gradient-to-r from-pink-500 to-rose-400' :
-                  playerHealthPercent > 30 ? 'bg-gradient-to-r from-orange-500 to-amber-400' :
-                  'bg-gradient-to-r from-red-600 to-red-400'
+                  enemyHealthPercent > 60 ? 'bg-gradient-to-r from-green-500 to-emerald-400' :
+                  enemyHealthPercent > 30 ? 'bg-gradient-to-r from-yellow-500 to-amber-400' :
+                  'bg-gradient-to-r from-red-500 to-rose-400'
                 }`}
-                animate={{ width: `${playerHealthPercent}%` }}
+                animate={{ width: `${enemyHealthPercent}%` }}
                 transition={{ duration: 0.3 }}
               />
             </div>
             <span className="absolute left-2 top-0 text-xs font-bold text-white drop-shadow-lg">
-              {playerHp}/{playerMaxHp}
+              {enemyHp}/{enemyMaxHp}
             </span>
           </div>
         </div>
