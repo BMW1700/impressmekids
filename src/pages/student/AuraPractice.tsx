@@ -256,7 +256,10 @@ const AuraPractice = () => {
         <div className="max-w-6xl mx-auto space-y-6">
           <Button
             variant="ghost"
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              navigate('/student/dashboard');
+              window.scrollTo(0, 0);
+            }}
             className="mb-2"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />

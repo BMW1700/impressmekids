@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Target, Clock, CheckCircle, Zap } from "lucide-react";
+import { Target, Clock, CheckCircle, Zap, Flame, Crown, BookOpen, Crosshair } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface ActiveMissionsPanelProps {
@@ -67,6 +67,11 @@ export const ActiveMissionsPanel = ({ studentId }: ActiveMissionsPanelProps) => 
     switch (type) {
       case 'daily_reading': return Clock;
       case 'weekly_wpm': return Zap;
+      case 'accuracy_master': return Crosshair;
+      case 'streak_builder': return Flame;
+      case 'word_champion': return Crown;
+      case 'phoneme_hunter': return BookOpen;
+      case 'speed_boost': return Zap;
       default: return Target;
     }
   };
@@ -76,6 +81,11 @@ export const ActiveMissionsPanel = ({ studentId }: ActiveMissionsPanelProps) => 
     switch (type) {
       case 'daily_reading': return 'from-purple-500 to-pink-500';
       case 'weekly_wpm': return 'from-blue-500 to-cyan-500';
+      case 'accuracy_master': return 'from-amber-500 to-yellow-500';
+      case 'streak_builder': return 'from-red-500 to-orange-500';
+      case 'word_champion': return 'from-indigo-500 to-purple-500';
+      case 'phoneme_hunter': return 'from-teal-500 to-green-500';
+      case 'speed_boost': return 'from-cyan-500 to-blue-500';
       default: return 'from-orange-500 to-amber-500';
     }
   };

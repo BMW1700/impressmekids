@@ -26,6 +26,7 @@ import { ClassChallengeCard } from "@/components/aura/ClassChallengeCard";
 import { LeaderboardCard } from "@/components/aura/LeaderboardCard";
 import { useActiveScreeningPassage } from "@/hooks/useActiveScreeningPassage";
 import { ImprovementTracker } from "@/components/shared/ImprovementTracker";
+import KidFriendlyProgress from "@/components/aura/KidFriendlyProgress";
 import type { CuratedStory as Story } from "@/data/curatedStories";
 
 // Helper component to get student's classroom and show leaderboard
@@ -373,6 +374,11 @@ export const AuraReadingSection = () => {
         </TabsContent>
 
         <TabsContent value="progress" className="mt-6 space-y-6">
+          {/* Kid-Friendly Progress - Simple and Fun! */}
+          {user?.id && (
+            <KidFriendlyProgress studentId={user.id} />
+          )}
+          
           {/* Week-by-Week Improvement Tracker */}
           {user?.id && (
             <ImprovementTracker 
