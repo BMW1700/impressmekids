@@ -791,24 +791,26 @@ export const WordByWordReader = ({
               }
             }
           } else {
-            // SUPERCHARGED V2: Look ahead up to 5 positions (expanded from 2)
+            // CRITICAL FIX: Look ahead max 2 positions (reduced from 5 to prevent skipping)
+            // Only skip if we have high confidence and word is somewhat unique
+            const commonWords = new Set(['the', 'a', 'an', 'is', 'are', 'was', 'were', 'to', 'of', 'and', 'in', 'on', 'it', 'he', 'she', 'they', 'we', 'i', 'you', 'that', 'this', 'for', 'with', 'as', 'at', 'be', 'have', 'has', 'had', 'do', 'does', 'did', 'can', 'will', 'would', 'could', 'should']);
             let foundAhead = -1;
-            for (let ahead = 1; ahead <= 5; ahead++) {
+            for (let ahead = 1; ahead <= 2; ahead++) {
               const aheadIdx = currentIdx + ahead;
               if (aheadIdx < words.length) {
-                // Try text match first
-                if (wordMatcher(spokenWord, words[aheadIdx])) {
-                  foundAhead = aheadIdx;
-                  break;
+                const targetWord = words[aheadIdx];
+                const normalizedTarget = targetWord.toLowerCase().replace(/[^a-z]/g, '');
+                
+                // Skip look-ahead for very common words (too likely to cause false matches)
+                if (commonWords.has(normalizedTarget) && normalizedTarget.length <= 4) {
+                  continue;
                 }
-                // SUPERCHARGED V2: Try phoneme match as fallback
-                if (!isStrictMode) {
-                  const phonemeResult = matchWithPhonemes(spokenWord, words[aheadIdx], 0.70);
-                  if (phonemeResult.isMatch) {
-                    foundAhead = aheadIdx;
-                    console.log('PHONEME LOOKAHEAD MATCH:', spokenWord, '→', words[aheadIdx]);
-                    break;
-                  }
+                
+                // Require higher confidence for look-ahead matches
+                if (wordMatcher(spokenWord, targetWord)) {
+                  foundAhead = aheadIdx;
+                  console.log('LOOKAHEAD MATCH (ahead=' + ahead + '):', spokenWord, '→', targetWord);
+                  break;
                 }
               }
             }
