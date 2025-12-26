@@ -8,11 +8,14 @@ import { BattleArena } from "./BattleArena";
 import { GrogState } from "./GrogCharacter";
 import { PlayerState } from "./PlayerCharacter";
 import { BookRescueCelebration } from "./BookRescueCelebration";
+import { StreakPower } from "./StreakPower";
+import { PurpleFireEffect } from "./PurpleFireEffect";
 import { 
   BattleState, 
   initializeBattle, 
   processWordResult, 
   calculateXpEarned,
+  calculatePowerDamage,
   EnemyType 
 } from "@/lib/battleMechanics";
 import { getRandomTaunt } from "@/lib/campaignData";
@@ -64,6 +67,14 @@ export const BattleReader = ({
   const [triggerDamageBeam, setTriggerDamageBeam] = useState(0);
   const [isCriticalHit, setIsCriticalHit] = useState(false);
   
+  // STREAK POWER SYSTEM
+  const [powerAvailable, setPowerAvailable] = useState(false);
+  const [powerCooldown, setPowerCooldown] = useState(false);
+  const [triggerPurpleFire, setTriggerPurpleFire] = useState(0);
+  const [purpleFireDamage, setPurpleFireDamage] = useState(0);
+  const [isMegaPower, setIsMegaPower] = useState(false);
+  const lastPowerStreakRef = useRef(0);
+  
   // CRITICAL FIX: Track processed word events to prevent double-applying damage
   const processedWordEventsRef = useRef<Set<string>>(new Set());
 
@@ -100,6 +111,63 @@ export const BattleReader = ({
     const interval = setInterval(showRandomTaunt, 15000 + Math.random() * 15000);
     return () => clearInterval(interval);
   }, [battleState.status, grogState]);
+
+  // STREAK POWER: Check if power should be available
+  useEffect(() => {
+    const streak = battleState.currentStreak;
+    const { tier } = calculatePowerDamage(streak);
+    
+    // Power becomes available at streak milestones (5, 10, 15, etc.)
+    // But only if we haven't already used power at this milestone
+    const currentMilestone = Math.floor(streak / 5) * 5;
+    
+    if (tier !== 'none' && currentMilestone > lastPowerStreakRef.current && !powerCooldown) {
+      setPowerAvailable(true);
+    }
+  }, [battleState.currentStreak, powerCooldown]);
+
+  // Handle power activation
+  const handlePowerActivate = useCallback(() => {
+    if (!powerAvailable || powerCooldown) return;
+    
+    const { damage, tier } = calculatePowerDamage(battleState.currentStreak);
+    if (tier === 'none') return;
+    
+    // Mark power as used at this milestone
+    const currentMilestone = Math.floor(battleState.currentStreak / 5) * 5;
+    lastPowerStreakRef.current = currentMilestone;
+    
+    // Set power cooldown
+    setPowerAvailable(false);
+    setPowerCooldown(true);
+    
+    // Trigger purple fire animation
+    setPurpleFireDamage(damage);
+    setIsMegaPower(tier === 'mega');
+    setTriggerPurpleFire(Date.now());
+    
+    // Apply damage to enemy
+    setBattleState(prev => {
+      const newEnemyHp = Math.max(0, prev.enemyHp - damage);
+      return {
+        ...prev,
+        enemyHp: newEnemyHp,
+        totalDamageDealt: prev.totalDamageDealt + damage,
+        status: newEnemyHp <= 0 ? 'victory' : prev.status,
+      };
+    });
+    
+    // Visual effects
+    setGrogState('hit');
+    setTimeout(() => {
+      setGrogState(battleState.enemyHp - purpleFireDamage <= 0 ? 'defeated' : 'idle');
+    }, 800);
+    
+    // Reset cooldown after animation
+    setTimeout(() => {
+      setPowerCooldown(false);
+    }, 1500);
+  }, [powerAvailable, powerCooldown, battleState.currentStreak, battleState.enemyHp, purpleFireDamage]);
 
   // Handle real-time word results from reader
   // CRITICAL FIX: Use functional state update to avoid stale state issues
@@ -262,6 +330,9 @@ export const BattleReader = ({
   const handleTryAgain = () => {
     // Reset everything for a fresh battle
     processedWordEventsRef.current = new Set();
+    lastPowerStreakRef.current = 0;
+    setPowerAvailable(false);
+    setPowerCooldown(false);
     setBattleState(initializeBattle(worldNumber, enemyType));
     setShowCelebration(false);
     setGrogState('idle');
@@ -282,43 +353,50 @@ export const BattleReader = ({
     : 0;
 
   return (
-    <div className="space-y-3">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-2 relative">
+      {/* Purple Fire Effect Overlay */}
+      <PurpleFireEffect
+        trigger={triggerPurpleFire}
+        damage={purpleFireDamage}
+        isMega={isMegaPower}
+      />
+
+      {/* Compact Header */}
+      <div className="flex items-center justify-between py-1">
         <Button
           variant="ghost"
           size="sm"
           onClick={onBack}
-          className="flex items-center gap-2"
+          className="flex items-center gap-1 h-8 px-2"
         >
           <ChevronLeft className="h-4 w-4" />
-          Retreat
+          <span className="text-sm">Back</span>
         </Button>
-        <div className="text-center">
-          <h2 className="text-lg font-bold">{story.title}</h2>
-          <p className="text-xs text-muted-foreground">Read aloud to attack!</p>
+        <div className="text-center flex-1">
+          <h2 className="text-base font-bold truncate">{story.title}</h2>
         </div>
         <Button
           variant="ghost"
           size="icon"
+          className="h-8 w-8"
           onClick={() => setSoundEnabled(!soundEnabled)}
         >
           {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
         </Button>
       </div>
 
-      {/* AURA Coach Indicator - Above Battle Arena */}
+      {/* AURA Coach Indicator - Small bar at top */}
       <motion.div 
-        className="flex items-center justify-center gap-2 py-2 bg-primary/10 rounded-lg"
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center justify-center gap-2 py-1 bg-primary/10 rounded-md"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
       >
-        <Sparkles className="h-4 w-4 text-primary animate-pulse" />
-        <span className="text-sm font-medium text-primary">AURA Coach Active</span>
-        <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+        <Sparkles className="h-3 w-3 text-primary animate-pulse" />
+        <span className="text-xs font-medium text-primary">AURA Coach Active</span>
+        <Sparkles className="h-3 w-3 text-primary animate-pulse" />
       </motion.div>
 
-      {/* Battle Arena - Characters with health bars */}
+      {/* Battle Arena - Characters */}
       <BattleArena
         enemyType={enemyType}
         enemyHealthPercent={(battleState.enemyHp / battleState.enemyMaxHp) * 100}
@@ -350,13 +428,23 @@ export const BattleReader = ({
         lastMessage={lastMessage}
       />
 
+      {/* Streak Power Button */}
+      <div className="flex justify-center">
+        <StreakPower
+          currentStreak={battleState.currentStreak}
+          onActivate={handlePowerActivate}
+          isAvailable={powerAvailable}
+          cooldownActive={powerCooldown}
+        />
+      </div>
+
       {/* Victory requirement hint */}
       <div className="text-center text-xs text-muted-foreground bg-muted/30 py-1 rounded">
         🎯 Win by defeating the enemy OR finishing with 90%+ accuracy!
       </div>
 
-      {/* Reading Area */}
-      <Card className="p-4">
+      {/* Reading Area - Story Text */}
+      <Card className="p-3">
         <WordByWordReader
           passageText={story.passage_text}
           assignmentId={null}

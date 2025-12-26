@@ -33,11 +33,12 @@ export interface EnemyAttackResult {
 
 // Get enemy HP based on world and difficulty
 export const getEnemyStats = (worldNumber: number, enemyType: EnemyType): { hp: number; attackPower: number } => {
+  // DOUBLED HP: Makes battles harder - goblins survive longer
   const baseHpByWorld: Record<number, number> = {
-    1: 100,  // Enchanted Forest - Easy
-    2: 200,  // Dark Caves - Medium
-    3: 350,  // Goblin Mountain - Hard
-    4: 500,  // Throne Room - Boss
+    1: 200,  // Enchanted Forest - Easy (was 100)
+    2: 400,  // Dark Caves - Medium (was 200)
+    3: 700,  // Goblin Mountain - Hard (was 350)
+    4: 1000, // Throne Room - Boss (was 500)
   };
 
   const hpMultiplierByType: Record<EnemyType, number> = {
@@ -176,6 +177,13 @@ export const calculateXpEarned = (
   }
 
   return xp;
+};
+
+// Calculate power damage based on streak level
+export const calculatePowerDamage = (streak: number): { damage: number; tier: 'none' | 'power' | 'mega' } => {
+  if (streak >= 10) return { damage: 100, tier: 'mega' };
+  if (streak >= 5) return { damage: 50, tier: 'power' };
+  return { damage: 0, tier: 'none' };
 };
 
 // Get enemy name based on type
