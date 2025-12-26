@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { Lock, Star, BookOpen, Crown, CheckCircle } from "lucide-react";
 import { campaignWorlds, type CampaignWorld } from "@/lib/campaignData";
 
@@ -18,13 +19,34 @@ export const CampaignWorldMap = ({
   booksRescued,
   onSelectWorld,
 }: CampaignWorldMapProps) => {
+  // Check if a world is unlocked based on completing stories in PREVIOUS world
   const isWorldUnlocked = (world: CampaignWorld): boolean => {
     if (world.id === 1) return true;
-    return booksRescued >= world.unlockRequirement;
+    
+    // Get previous world
+    const prevWorld = campaignWorlds.find(w => w.id === world.id - 1);
+    if (!prevWorld) return false;
+    
+    // Count completed stories in previous world
+    const prevWorldCompleted = worldProgress[(world.id - 1).toString()]?.length || 0;
+    
+    // Need to complete at least N stories in previous world (unlockRequirement)
+    return prevWorldCompleted >= world.unlockRequirement;
   };
 
   const getWorldCompletedCount = (worldId: number): number => {
     return worldProgress[worldId.toString()]?.length || 0;
+  };
+
+  // Get unlock progress for a locked world
+  const getUnlockProgress = (world: CampaignWorld): { current: number; required: number; percent: number } => {
+    if (world.id === 1) return { current: 0, required: 0, percent: 100 };
+    
+    const prevWorldCompleted = worldProgress[(world.id - 1).toString()]?.length || 0;
+    const required = world.unlockRequirement;
+    const percent = Math.min(100, (prevWorldCompleted / required) * 100);
+    
+    return { current: prevWorldCompleted, required, percent };
   };
 
   return (
@@ -49,6 +71,8 @@ export const CampaignWorldMap = ({
           const unlocked = isWorldUnlocked(world);
           const completed = getWorldCompletedCount(world.id);
           const isCurrentWorld = world.id === currentWorld;
+          const isWorldComplete = completed >= world.storyCount;
+          const unlockProgress = getUnlockProgress(world);
 
           return (
             <motion.div
@@ -62,7 +86,7 @@ export const CampaignWorldMap = ({
                   unlocked
                     ? 'cursor-pointer hover:scale-[1.02] hover:shadow-lg'
                     : 'opacity-60 cursor-not-allowed'
-                } ${isCurrentWorld ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+                } ${isCurrentWorld ? 'ring-2 ring-primary ring-offset-2' : ''} ${isWorldComplete ? 'ring-2 ring-green-500' : ''}`}
                 onClick={() => unlocked && onSelectWorld(world.id)}
               >
                 {/* Background Gradient */}
@@ -78,7 +102,11 @@ export const CampaignWorldMap = ({
                       <div
                         className={`w-10 h-10 rounded-full bg-gradient-to-br ${world.gradient} flex items-center justify-center text-white font-black text-lg`}
                       >
-                        {world.id}
+                        {isWorldComplete ? (
+                          <CheckCircle className="w-6 h-6" />
+                        ) : (
+                          world.id
+                        )}
                       </div>
                       <div>
                         <h3 className="font-bold text-foreground">{world.name}</h3>
@@ -89,25 +117,35 @@ export const CampaignWorldMap = ({
                     {!unlocked && (
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <Lock className="w-4 h-4" />
-                        <span className="text-xs">{world.unlockRequirement} books</span>
                       </div>
+                    )}
+                    
+                    {isWorldComplete && (
+                      <Badge className="bg-green-500">
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Complete
+                      </Badge>
                     )}
                   </div>
 
-                  {/* Progress */}
+                  {/* Progress for unlocked worlds */}
                   {unlocked && (
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">Progress</span>
+                        <span className="text-muted-foreground">Stories Completed</span>
                         <span className="font-medium">
-                          {completed}/{world.storyCount} stories
+                          {completed}/{world.storyCount}
                         </span>
                       </div>
+                      <Progress 
+                        value={(completed / world.storyCount) * 100} 
+                        className="h-2"
+                      />
                       <div className="flex gap-1">
                         {Array.from({ length: world.storyCount }).map((_, i) => (
                           <motion.div
                             key={i}
-                            className={`h-2 flex-1 rounded-full ${
+                            className={`h-1.5 flex-1 rounded-full ${
                               i < completed
                                 ? `bg-gradient-to-r ${world.gradient}`
                                 : 'bg-muted'
@@ -118,6 +156,27 @@ export const CampaignWorldMap = ({
                           />
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Unlock progress for locked worlds */}
+                  {!unlocked && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">
+                          Complete stories in World {world.id - 1} to unlock
+                        </span>
+                        <span className="font-medium text-amber-500">
+                          {unlockProgress.current}/{unlockProgress.required}
+                        </span>
+                      </div>
+                      <Progress 
+                        value={unlockProgress.percent} 
+                        className="h-2"
+                      />
+                      <p className="text-xs text-center text-muted-foreground">
+                        {unlockProgress.required - unlockProgress.current} more {unlockProgress.required - unlockProgress.current === 1 ? 'story' : 'stories'} to unlock
+                      </p>
                     </div>
                   )}
 
@@ -140,32 +199,38 @@ export const CampaignWorldMap = ({
                       size="sm"
                       className="w-full"
                     >
-                      {completed === world.storyCount ? (
+                      {isWorldComplete ? (
                         <>
                           <CheckCircle className="w-4 h-4 mr-2" />
-                          Completed!
+                          Completed - Play Again
+                        </>
+                      ) : completed > 0 ? (
+                        <>
+                          <BookOpen className="w-4 h-4 mr-2" />
+                          Continue ({completed}/{world.storyCount})
                         </>
                       ) : (
                         <>
                           <BookOpen className="w-4 h-4 mr-2" />
-                          {completed > 0 ? 'Continue' : 'Start Adventure'}
+                          Start Adventure
                         </>
                       )}
                     </Button>
                   )}
 
-                  {/* Locked Overlay */}
+                  {/* Locked state */}
                   {!unlocked && (
                     <div className="text-center py-2">
-                      <p className="text-sm text-muted-foreground">
-                        Rescue {world.unlockRequirement - booksRescued} more books to unlock
+                      <Lock className="w-8 h-8 mx-auto text-muted-foreground mb-2 opacity-50" />
+                      <p className="text-xs text-muted-foreground">
+                        Complete more stories in World {world.id - 1}
                       </p>
                     </div>
                   )}
                 </div>
 
                 {/* Current World Indicator */}
-                {isCurrentWorld && (
+                {isCurrentWorld && !isWorldComplete && (
                   <motion.div
                     className="absolute top-2 right-2"
                     animate={{ scale: [1, 1.1, 1] }}
@@ -193,7 +258,7 @@ export const CampaignWorldMap = ({
             <p className="text-sm text-muted-foreground mt-1">
               Princess Ella's library was full of magical books until Grog the Goblin King 
               stole them all! Only brave readers like you can rescue the books by reading 
-              them out loud. Each correct word deals damage to the goblins guarding the books!
+              them out loud. Complete stories in each world to unlock the next one!
             </p>
           </div>
         </div>
