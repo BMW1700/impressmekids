@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ClassroomCard } from "@/components/ClassroomCard";
@@ -22,7 +22,7 @@ import {
   PlusCircle,
   Sparkles,
   Users,
-  Link,
+  Link as LinkIcon,
 } from "lucide-react";
 import { liquidGlassTabClass } from "@/components/ui/liquid-glass-button";
 import { Badge } from "@/components/ui/badge";
@@ -232,7 +232,7 @@ const TeacherDashboard = () => {
                 {t("teacherDashboard.tabs.classrooms")}
               </TabsTrigger>
               <TabsTrigger value="links-resources" className={liquidGlassTabClass}>
-                <Link className="h-4 w-4 mr-2" />
+                <LinkIcon className="h-4 w-4 mr-2" />
                 Links & Resources
               </TabsTrigger>
               <TabsTrigger value="calendar" className={liquidGlassTabClass}>
@@ -323,7 +323,7 @@ const TeacherDashboard = () => {
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Browse Games */}
                 <Card className="relative p-6 hover:shadow-lg transition-all">
-                  <Link
+                  <RouterLink
                     to="/games"
                     className="absolute inset-0 rounded-lg"
                     aria-label={t("teacherDashboard.quickActions.browseGames.cta")}
@@ -341,16 +341,16 @@ const TeacherDashboard = () => {
                       {t("teacherDashboard.quickActions.browseGames.description")}
                     </p>
                     <Button variant="outline" className="w-full" asChild>
-                      <Link to="/games">
+                      <RouterLink to="/games">
                         {t("teacherDashboard.quickActions.browseGames.cta")} →
-                      </Link>
+                      </RouterLink>
                     </Button>
                   </div>
                 </Card>
 
                 {/* AURA Analytics */}
                 <Card className="relative p-6 hover:shadow-lg transition-all">
-                  <Link
+                  <RouterLink
                     to="/teacher/aura-analytics"
                     className="absolute inset-0 rounded-lg"
                     aria-label={t("teacherDashboard.quickActions.auraAnalytics.cta")}
@@ -368,16 +368,16 @@ const TeacherDashboard = () => {
                       {t("teacherDashboard.quickActions.auraAnalytics.description")}
                     </p>
                     <Button variant="outline" className="w-full" asChild>
-                      <Link to="/teacher/aura-analytics">
+                      <RouterLink to="/teacher/aura-analytics">
                         {t("teacherDashboard.quickActions.auraAnalytics.cta")} →
-                      </Link>
+                      </RouterLink>
                     </Button>
                   </div>
                 </Card>
 
                 {/* Story Library */}
                 <Card className="relative p-6 hover:shadow-lg transition-all">
-                  <Link
+                  <RouterLink
                     to="/teacher/story-library"
                     className="absolute inset-0 rounded-lg"
                     aria-label={t("teacherDashboard.quickActions.storyLibrary.cta")}
@@ -395,9 +395,9 @@ const TeacherDashboard = () => {
                       {t("teacherDashboard.quickActions.storyLibrary.description")}
                     </p>
                     <Button variant="outline" className="w-full" asChild>
-                      <Link to="/teacher/story-library">
+                      <RouterLink to="/teacher/story-library">
                         {t("teacherDashboard.quickActions.storyLibrary.cta")} →
-                      </Link>
+                      </RouterLink>
                     </Button>
                   </div>
                 </Card>
@@ -418,11 +418,7 @@ const TeacherDashboard = () => {
                   <p className="text-muted-foreground mb-4">
                     {t("teacherDashboard.quickActions.resources.description")}
                   </p>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    disabled
-                  >
+                  <Button variant="outline" className="w-full" disabled>
                     {t("teacherDashboard.quickActions.resources.cta")} →
                   </Button>
                 </Card>
