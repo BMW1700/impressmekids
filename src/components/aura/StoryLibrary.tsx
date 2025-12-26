@@ -1,20 +1,25 @@
 import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Search, Filter, Sparkles, Sword, BookOpen, Crown } from "lucide-react";
 import { StoryCard } from "./StoryCard";
 import { curatedStories, CuratedStory } from "@/data/curatedStories";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCampaignProgress } from "@/hooks/useCampaignProgress";
+import { motion } from "framer-motion";
 
 interface StoryLibraryProps {
   onSelectStory: (story: CuratedStory) => void;
+  onStartCampaign?: () => void;
 }
 
 const categories = ['all', 'animals', 'space', 'sports', 'fairy_tales', 'science', 'adventure', 'history'];
 const grades = ['all', 'K', '1', '2', '3', '4', '5'];
 
-export const StoryLibrary = ({ onSelectStory }: StoryLibraryProps) => {
+export const StoryLibrary = ({ onSelectStory, onStartCampaign }: StoryLibraryProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedGrade, setSelectedGrade] = useState("all");
@@ -137,8 +142,65 @@ export const StoryLibrary = ({ onSelectStory }: StoryLibraryProps) => {
     return sorted.slice(0, 3);
   }, [allStories]);
 
+  // Get current user for campaign progress
+  const { data: user } = useQuery({
+    queryKey: ['current-user'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      return user;
+    }
+  });
+
+  const { progress: campaignProgress } = useCampaignProgress(user?.id || '');
+
   return (
     <div className="space-y-6">
+      {/* Campaign Mode Banner */}
+      {onStartCampaign && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Card className="overflow-hidden border-2 border-primary/20 bg-gradient-to-r from-purple-500/10 via-indigo-500/10 to-blue-500/10">
+            <CardContent className="p-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-3xl shadow-lg">
+                    ⚔️
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg flex items-center gap-2">
+                      <Crown className="h-5 w-5 text-yellow-500" />
+                      Story Campaign Mode
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Battle Grog the Goblin King! Read aloud to defeat enemies and rescue stolen books.
+                    </p>
+                    {campaignProgress && (
+                      <div className="flex items-center gap-4 mt-1 text-xs">
+                        <span className="flex items-center gap-1">
+                          <BookOpen className="h-3 w-3" /> {campaignProgress.books_rescued} books rescued
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Sword className="h-3 w-3" /> {campaignProgress.grog_battles_won} battles won
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  onClick={onStartCampaign}
+                  className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+                >
+                  <Sword className="h-4 w-4 mr-2" />
+                  Enter Campaign
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
       {/* Search and Filters */}
       <div className="space-y-4">
         <div className="relative">

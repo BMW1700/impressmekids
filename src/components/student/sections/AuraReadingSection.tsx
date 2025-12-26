@@ -27,6 +27,8 @@ import { LeaderboardCard } from "@/components/aura/LeaderboardCard";
 import { useActiveScreeningPassage } from "@/hooks/useActiveScreeningPassage";
 import { ImprovementTracker } from "@/components/shared/ImprovementTracker";
 import KidFriendlyProgress from "@/components/aura/KidFriendlyProgress";
+import { CampaignModeEntry } from "@/components/aura/game/CampaignModeEntry";
+import { curatedStories } from "@/data/curatedStories";
 import type { CuratedStory as Story } from "@/data/curatedStories";
 
 // Helper component to get student's classroom and show leaderboard
@@ -67,6 +69,7 @@ export const AuraReadingSection = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [isReadingStory, setIsReadingStory] = useState(false);
+  const [isCampaignMode, setIsCampaignMode] = useState(false);
 
   // Setup global voice error handler for toast notifications
   useEffect(() => {
@@ -203,6 +206,19 @@ export const AuraReadingSection = () => {
     }
   };
 
+  // Campaign Mode
+  if (isCampaignMode && user?.id) {
+    return (
+      <div onClick={handlePageInteraction}>
+        <CampaignModeEntry
+          studentId={user.id}
+          onBack={() => setIsCampaignMode(false)}
+          stories={curatedStories}
+        />
+      </div>
+    );
+  }
+
   if (isReadingStory && selectedStory && user?.id) {
     return (
       <div onClick={handlePageInteraction}>
@@ -325,7 +341,10 @@ export const AuraReadingSection = () => {
         </div>
 
         <TabsContent value="stories" className="mt-6">
-          <StoryLibrary onSelectStory={handleStorySelect} />
+          <StoryLibrary 
+            onSelectStory={handleStorySelect} 
+            onStartCampaign={() => setIsCampaignMode(true)}
+          />
         </TabsContent>
 
         <TabsContent value="bookshelf" className="mt-6">
