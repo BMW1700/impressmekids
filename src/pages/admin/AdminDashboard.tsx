@@ -159,7 +159,8 @@ export default function AdminDashboard() {
     setEditStudentIdOpen(true);
   };
 
-  if (authLoading || loading || isLoading) {
+  // Only block on auth - let data load progressively
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
