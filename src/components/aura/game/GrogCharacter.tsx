@@ -101,18 +101,7 @@ export const GrogCharacter = ({
         {config.name}
       </div>
 
-      {/* Health Bar */}
-      <div className="w-32 h-3 bg-muted rounded-full overflow-hidden border border-border">
-        <motion.div
-          className={`h-full ${getHealthColor()}`}
-          initial={{ width: '100%' }}
-          animate={{ width: `${healthPercent}%` }}
-          transition={{ duration: 0.3 }}
-        />
-      </div>
-      <div className="text-xs text-muted-foreground font-medium">
-        {Math.round(healthPercent)}% HP
-      </div>
+      {/* Health Bar - REMOVED, only shown in BattleHUD */}
 
       {/* Main Character Container */}
       <motion.div

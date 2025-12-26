@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Volume2, VolumeX, Sparkles } from "lucide-react";
+import { ChevronLeft, Volume2, VolumeX, Sparkles, Play } from "lucide-react";
 import { BattleHUD } from "./BattleHUD";
 import { BattleArena } from "./BattleArena";
 import { GrogState } from "./GrogCharacter";
@@ -10,6 +10,7 @@ import { PlayerState } from "./PlayerCharacter";
 import { BookRescueCelebration } from "./BookRescueCelebration";
 import { StreakPower } from "./StreakPower";
 import { PurpleFireEffect } from "./PurpleFireEffect";
+import { BattleDifficultySelector, BattleDifficulty } from "./BattleDifficultySelector";
 import { 
   BattleState, 
   initializeBattle, 
@@ -43,6 +44,10 @@ export const BattleReader = ({
   onNextStory,
 }: BattleReaderProps) => {
   const { progress, startBattle, completeBattle } = useCampaignProgress(studentId);
+  
+  // DIFFICULTY SELECTION STATE
+  const [battleDifficulty, setBattleDifficulty] = useState<BattleDifficulty | null>(null);
+  const [showDifficultySelector, setShowDifficultySelector] = useState(true);
   
   const [battleState, setBattleState] = useState<BattleState>(() => 
     initializeBattle(worldNumber, enemyType)
@@ -78,8 +83,17 @@ export const BattleReader = ({
   // CRITICAL FIX: Track processed word events to prevent double-applying damage
   const processedWordEventsRef = useRef<Set<string>>(new Set());
 
+  // Handle difficulty selection
+  const handleDifficultySelect = (difficulty: BattleDifficulty) => {
+    setBattleDifficulty(difficulty);
+    setShowDifficultySelector(false);
+  };
+
   // Initialize battle session in database
   useEffect(() => {
+    // Only start battle after difficulty is selected
+    if (!battleDifficulty) return;
+    
     const initBattle = async () => {
       try {
         const session = await startBattle({
@@ -95,7 +109,7 @@ export const BattleReader = ({
       }
     };
     initBattle();
-  }, []);
+  }, [battleDifficulty]);
 
   // Random taunt every 15-30 seconds when enemy is idle
   useEffect(() => {
@@ -347,10 +361,39 @@ export const BattleReader = ({
     }
   };
 
-  // Calculate accuracy
+  // Calculate accuracy from battle state (source of truth)
   const accuracy = battleState.wordsRead > 0 
     ? Math.round((battleState.correctWords / battleState.wordsRead) * 100) 
     : 0;
+
+  // Show difficulty selector first
+  if (showDifficultySelector) {
+    return (
+      <div className="space-y-2">
+        {/* Compact Header */}
+        <div className="flex items-center justify-between py-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="flex items-center gap-1 h-8 px-2"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="text-sm">Back</span>
+          </Button>
+          <div className="text-center flex-1">
+            <h2 className="text-base font-bold truncate">{story.title}</h2>
+          </div>
+          <div className="w-8" /> {/* Spacer for alignment */}
+        </div>
+        
+        <BattleDifficultySelector 
+          onSelect={handleDifficultySelect}
+          storyTitle={story.title}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2 relative">
@@ -374,6 +417,9 @@ export const BattleReader = ({
         </Button>
         <div className="text-center flex-1">
           <h2 className="text-base font-bold truncate">{story.title}</h2>
+          <span className="text-xs text-muted-foreground">
+            {battleDifficulty === 'challenging' ? '⚡ Challenging Mode' : '🛡️ Normal Mode'}
+          </span>
         </div>
         <Button
           variant="ghost"
@@ -396,7 +442,7 @@ export const BattleReader = ({
         <Sparkles className="h-3 w-3 text-primary animate-pulse" />
       </motion.div>
 
-      {/* Battle Arena - Characters */}
+      {/* Battle Arena - Characters (NO HP bars, just visuals) */}
       <BattleArena
         enemyType={enemyType}
         enemyHealthPercent={(battleState.enemyHp / battleState.enemyMaxHp) * 100}
@@ -412,7 +458,7 @@ export const BattleReader = ({
         isCriticalHit={isCriticalHit}
       />
 
-      {/* Battle Stats HUD */}
+      {/* Battle Stats HUD - SINGLE source of HP display */}
       <BattleHUD
         enemyHp={battleState.enemyHp}
         enemyMaxHp={battleState.enemyMaxHp}
@@ -450,6 +496,8 @@ export const BattleReader = ({
           assignmentId={null}
           onComplete={handleReadingComplete}
           onWordResult={handleWordResult}
+          challengingMode={battleDifficulty === 'challenging'}
+          battleMode={true}
         />
       </Card>
 
