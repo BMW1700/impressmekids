@@ -1048,6 +1048,9 @@ const Auth = () => {
                       name="password"
                       type={showPassword ? "text" : "password"}
                       autoComplete="current-password"
+                      data-1p-ignore="false"
+                      data-lpignore="false"
+                      data-form-type="password"
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -1176,6 +1179,9 @@ const Auth = () => {
                     name="new-password"
                     type={showPassword ? "text" : "password"}
                     autoComplete="new-password"
+                    data-1p-ignore="false"
+                    data-lpignore="false"
+                    data-form-type="password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -1387,6 +1393,11 @@ const Auth = () => {
             ← Back to Home
           </Link>
         </div>
+        
+        {/* Reset button for stuck auth states - inside card to prevent layout shift */}
+        <div className="mt-4 flex justify-center">
+          <AuthResetButton />
+        </div>
       </div>
 
       {/* District Selection Modal for OAuth users without district email */}
@@ -1467,10 +1478,6 @@ const Auth = () => {
           });
         }}
       />
-      {/* Reset button for stuck auth states */}
-      <div className="mt-4 flex justify-center">
-        <AuthResetButton />
-      </div>
     </div>
   );
 };
