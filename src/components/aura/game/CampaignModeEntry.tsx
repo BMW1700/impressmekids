@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sword, BookOpen, Trophy, Flame, Star, ChevronRight, Crown } from "lucide-react";
+import { Sword, BookOpen, Trophy, Flame, Star, ChevronRight, Crown, CheckCircle, RotateCcw } from "lucide-react";
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import { useCampaignAssets } from "@/hooks/useCampaignAssets";
 import { CampaignWorldMap } from "./CampaignWorldMap";
@@ -376,14 +376,25 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
                 const isBoss = index >= totalStories * 0.75;
                 const isElite = !isBoss && index >= totalStories * 0.5;
                 
+                // Check if this story is completed
+                const worldProgress = (progress?.world_progress as Record<string, string[]>) || {};
+                const completedStories = worldProgress[selectedWorld.toString()] || [];
+                const isCompleted = completedStories.includes(story.title);
+                
                 return (
                   <Card
                     key={story.title}
-                    className="cursor-pointer hover:border-primary transition-colors"
+                    className={`cursor-pointer hover:border-primary transition-colors ${isCompleted ? 'ring-2 ring-green-500/50' : ''}`}
                     onClick={() => handleStorySelect(story)}
                   >
                     <div className={`h-24 bg-gradient-to-br ${story.cover_gradient} rounded-t-lg flex items-center justify-center relative`}>
-                      <span className="text-4xl">
+                      {/* Completed Overlay */}
+                      {isCompleted && (
+                        <div className="absolute inset-0 bg-black/30 rounded-t-lg flex items-center justify-center">
+                          <CheckCircle className="h-12 w-12 text-green-400 drop-shadow-lg" />
+                        </div>
+                      )}
+                      <span className={`text-4xl ${isCompleted ? 'opacity-50' : ''}`}>
                         {story.category === 'animals' && '🐾'}
                         {story.category === 'space' && '🚀'}
                         {story.category === 'sports' && '⚽'}
@@ -397,19 +408,32 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
                           <Crown className="h-3 w-3 mr-1" /> BOSS
                         </Badge>
                       )}
-                      {isElite && (
+                      {isElite && !isBoss && (
                         <Badge className="absolute top-2 right-2 bg-purple-500">
                           ELITE
+                        </Badge>
+                      )}
+                      {isCompleted && (
+                        <Badge className="absolute top-2 left-2 bg-green-500">
+                          ✓ Complete
                         </Badge>
                       )}
                     </div>
                     <CardContent className="p-4">
                       <h3 className="font-bold truncate">{story.title}</h3>
                       <p className="text-sm text-muted-foreground truncate">{story.description}</p>
-                      <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                        <span>{story.word_count} words</span>
-                        <span>•</span>
-                        <span>Grade {story.grade_level}</span>
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{story.word_count} words</span>
+                          <span>•</span>
+                          <span>Grade {story.grade_level}</span>
+                        </div>
+                        {isCompleted && (
+                          <Badge variant="outline" className="text-xs">
+                            <RotateCcw className="h-3 w-3 mr-1" />
+                            Play Again
+                          </Badge>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

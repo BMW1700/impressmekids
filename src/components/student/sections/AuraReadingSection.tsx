@@ -98,6 +98,22 @@ export const AuraReadingSection = () => {
     },
   });
 
+  // Get user profile for role checking
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      if (error) return null;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
   // Check for active screening period
   const { data: activeScreening } = useActiveScreeningPassage(user?.id);
 
@@ -214,6 +230,7 @@ export const AuraReadingSection = () => {
           studentId={user.id}
           onBack={() => setIsCampaignMode(false)}
           stories={curatedStories}
+          isAdmin={profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'district_admin'}
         />
       </div>
     );
