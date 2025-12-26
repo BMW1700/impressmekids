@@ -50,8 +50,8 @@ const TeacherDashboard = () => {
   // Lazy load all students only when dialog opens
   const { data: classroomsWithStudents = [], refetch: loadAllStudents } = useTeacherAllStudents(classrooms);
 
-  // Auth guards
-  if (authLoading || classroomsLoading) {
+  // Only block on auth - let data load progressively
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20">
         <div className="text-center">
