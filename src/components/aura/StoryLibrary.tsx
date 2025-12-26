@@ -14,14 +14,15 @@ import { motion } from "framer-motion";
 interface StoryLibraryProps {
   onSelectStory: (story: CuratedStory) => void;
   onStartCampaign?: () => void;
+  categoryFilter?: string | null;
 }
 
 const categories = ['all', 'animals', 'space', 'sports', 'fairy_tales', 'science', 'adventure', 'history'];
 const grades = ['all', 'K', '1', '2', '3', '4', '5'];
 
-export const StoryLibrary = ({ onSelectStory, onStartCampaign }: StoryLibraryProps) => {
+export const StoryLibrary = ({ onSelectStory, onStartCampaign, categoryFilter }: StoryLibraryProps) => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState(categoryFilter || "all");
   const [selectedGrade, setSelectedGrade] = useState("all");
 
   // Fetch student's reading progress
