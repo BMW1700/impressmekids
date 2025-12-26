@@ -75,6 +75,14 @@ interface WordByWordReaderProps {
   screeningPassageId?: string | null;
   screeningPassageTitle?: string | null;
   screeningGradeLevel?: number;
+  // Battle mode callback - fires on each word result
+  onWordResult?: (result: { 
+    correct: boolean; 
+    wordIndex: number; 
+    streak: number; 
+    word: string;
+    wordLength: number;
+  }) => void;
 }
 
 interface ReadingSessionResult {
@@ -216,6 +224,7 @@ export const WordByWordReader = ({
   screeningPassageId,
   screeningPassageTitle,
   screeningGradeLevel,
+  onWordResult,
 }: WordByWordReaderProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -736,6 +745,18 @@ export const WordByWordReader = ({
                 pendingIncorrectTimersRef.current.delete(currentIdx);
               }
               newMap.set(currentIdx, 'correct');
+              
+              // BATTLE MODE: Fire callback for correct word
+              if (onWordResult) {
+                const newStreak = correctStreakRef.current + 1;
+                onWordResult({
+                  correct: true,
+                  wordIndex: currentIdx,
+                  streak: newStreak,
+                  word: expectedWord,
+                  wordLength: expectedWord.length,
+                });
+              }
             } else {
               // Lower confidence match - set as pending-incorrect with shorter timer
               // Will become 'correct' after 1.5 seconds if not contradicted
@@ -750,6 +771,17 @@ export const WordByWordReader = ({
                     if (updated.get(wordIdx) === 'pending-incorrect') {
                       updated.set(wordIdx, 'correct');
                       realtimeWordStatusRef.current = updated;
+                      
+                      // BATTLE MODE: Fire callback for correct word (delayed)
+                      if (onWordResult) {
+                        onWordResult({
+                          correct: true,
+                          wordIndex: wordIdx,
+                          streak: correctStreakRef.current + 1,
+                          word: words[wordIdx],
+                          wordLength: words[wordIdx].length,
+                        });
+                      }
                     }
                     return updated;
                   });
@@ -797,6 +829,17 @@ export const WordByWordReader = ({
                         if (updated.get(wordIdx) === 'pending-incorrect') {
                           updated.set(wordIdx, 'incorrect');
                           realtimeWordStatusRef.current = updated;
+                          
+                          // BATTLE MODE: Fire callback for incorrect word
+                          if (onWordResult) {
+                            onWordResult({
+                              correct: false,
+                              wordIndex: wordIdx,
+                              streak: 0,
+                              word: words[wordIdx],
+                              wordLength: words[wordIdx].length,
+                            });
+                          }
                         }
                         return updated;
                       });
@@ -821,6 +864,17 @@ export const WordByWordReader = ({
                     if (updated.get(wordIdx) === 'pending-incorrect') {
                       updated.set(wordIdx, 'incorrect');
                       realtimeWordStatusRef.current = updated;
+                      
+                      // BATTLE MODE: Fire callback for incorrect word
+                      if (onWordResult) {
+                        onWordResult({
+                          correct: false,
+                          wordIndex: wordIdx,
+                          streak: 0,
+                          word: words[wordIdx],
+                          wordLength: words[wordIdx].length,
+                        });
+                      }
                     }
                     return updated;
                   });
