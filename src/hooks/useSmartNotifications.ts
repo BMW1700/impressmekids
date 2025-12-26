@@ -136,7 +136,7 @@ export const useSmartNotifications = () => {
               message: `You're only ${remaining} ${remaining === 1 ? 'story' : 'stories'} away from completing the ${category.replace('_', ' ')} category!`,
               action: {
                 label: 'View Stories',
-                path: '/student/aura-practice'
+                path: `/student/aura-practice?tab=stories&category=${encodeURIComponent(category)}`
               }
             });
           }

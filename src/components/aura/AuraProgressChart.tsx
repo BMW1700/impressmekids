@@ -12,10 +12,10 @@ const AuraProgressChart = ({ records }: AuraProgressChartProps) => {
     .reverse()
     .map((record) => ({
       date: format(new Date(record.created_at), 'MMM d'),
-      grade: record.grade,
-      pronunciation: record.pronunciation * 20,
-      clarity: record.clarity * 20,
-      confidence: record.confidence * 20,
+      grade: record.grade ?? 0,
+      pronunciation: (record.pronunciation ?? 0) * 20,
+      clarity: (record.clarity ?? 0) * 20,
+      confidence: (record.confidence ?? 0) * 20,
     }));
 
   return (
@@ -88,7 +88,7 @@ const AuraProgressChart = ({ records }: AuraProgressChartProps) => {
             </div>
             <div className="text-center p-4 border rounded-lg">
               <div className="text-2xl font-bold">
-                {(records.reduce((sum, r) => sum + r.pronunciation, 0) / records.length).toFixed(1)}
+                {(records.reduce((sum, r) => sum + (r.pronunciation ?? 0), 0) / records.length).toFixed(1)}
               </div>
               <div className="text-sm text-muted-foreground">Avg Pronunciation</div>
             </div>
