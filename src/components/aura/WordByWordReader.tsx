@@ -31,7 +31,8 @@ import { useMLIntegration } from '@/hooks/useMLIntegration';
 // SUPERCHARGED V3: Added homophones dictionary and transcript cleanup integration
 import { 
   isWordMatchStrict, 
-  isWordMatchLenient, 
+  isWordMatchLenient,
+  isWordMatchBattle,
   analyzeWordMatch,
   calculateSessionConfidence,
   findWordInWindow,
@@ -83,6 +84,9 @@ interface WordByWordReaderProps {
     word: string;
     wordLength: number;
   }) => void;
+  // Battle mode props - for challenging mode matching
+  battleMode?: boolean;
+  challengingMode?: boolean;
 }
 
 interface ReadingSessionResult {
@@ -225,6 +229,8 @@ export const WordByWordReader = ({
   screeningPassageTitle,
   screeningGradeLevel,
   onWordResult,
+  battleMode,
+  challengingMode,
 }: WordByWordReaderProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -309,11 +315,17 @@ export const WordByWordReader = ({
   const pitchHistoryRef = useRef<number[]>([]);
   const energyHistoryRef = useRef<number[]>([]);
   
-  // DUAL-MODE MATCHING: Determine if we're in strict benchmark mode or lenient practice mode
+  // DUAL-MODE MATCHING: Determine if we're in strict benchmark mode, challenging battle mode, or lenient practice mode
   const isStrictMode = Boolean(screeningPeriodId);
   const wordMatcher = useCallback((spoken: string, expected: string) => {
-    return isStrictMode ? isWordMatchStrict(spoken, expected) : isWordMatchLenient(spoken, expected);
-  }, [isStrictMode]);
+    if (isStrictMode) {
+      return isWordMatchStrict(spoken, expected);
+    }
+    if (challengingMode) {
+      return isWordMatchBattle(spoken, expected);
+    }
+    return isWordMatchLenient(spoken, expected);
+  }, [isStrictMode, challengingMode]);
   
   // NEW: Track speech API confidence for each word (for teacher verification)
   const wordConfidencesRef = useRef<Map<number, number>>(new Map());

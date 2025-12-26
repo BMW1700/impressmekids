@@ -298,6 +298,62 @@ export const isWordMatchStrict = (spoken: string, expected: string): boolean => 
 };
 
 /**
+ * BATTLE MODE word matching - for challenging difficulty in campaign mode
+ * Stricter than lenient but still fair for children
+ * - No children's speech variants (no "da" for "the")
+ * - Only true homophones accepted
+ * - 80% match required for longer words
+ */
+export const isWordMatchBattle = (spoken: string, expected: string): boolean => {
+  const normalizedSpoken = normalizeWord(spoken);
+  const normalizedExpected = normalizeWord(expected);
+  
+  // Exact match - definitely correct
+  if (normalizedSpoken === normalizedExpected) return true;
+  
+  // Empty check
+  if (!normalizedSpoken) return false;
+  if (!normalizedExpected) return false;
+  
+  // Only TRUE homophones (to/two/too) - NOT children's variants (da/the)
+  const trueHomophones = ['to', 'two', 'too', 'for', 'four', 'their', 'there', "theyre", 
+                         'your', "youre", 'its', "its", 'know', 'no', 'new', 'knew',
+                         'right', 'write', 'here', 'hear', 'see', 'sea', 'be', 'bee',
+                         'by', 'buy', 'bye', 'one', 'won', 'eight', 'ate', 'sun', 'son',
+                         'some', 'sum', 'pair', 'pear', 'peace', 'piece', 'tail', 'tale',
+                         'mail', 'male', 'sail', 'sale', 'made', 'maid', 'plain', 'plane',
+                         'role', 'roll', 'hole', 'whole', 'dear', 'deer', 'bare', 'bear',
+                         'hair', 'hare', 'fair', 'fare', 'stair', 'stare', 'knight', 'night',
+                         'wait', 'weight', 'week', 'weak', 'meat', 'meet', 'feat', 'feet',
+                         'road', 'rode', 'rain', 'reign', 'rein', 'break', 'brake'];
+  
+  if (isHomophone(normalizedSpoken, normalizedExpected)) {
+    // Only accept if BOTH words are in the true homophones list
+    if (trueHomophones.includes(normalizedExpected) || trueHomophones.includes(normalizedSpoken)) {
+      return true;
+    }
+    // Reject children's speech variants like "da" for "the"
+    return false;
+  }
+  
+  const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
+  
+  // SHORT WORDS (1-3 chars): Must be exact or 1 char difference max
+  if (normalizedExpected.length <= 3) {
+    return distance <= 1;
+  }
+  
+  // MEDIUM WORDS (4-6 chars): Max 1 char difference
+  if (normalizedExpected.length <= 6) {
+    return distance <= 1;
+  }
+  
+  // LONG WORDS (7+ chars): 80% match required (max 20% difference)
+  const maxAllowedDistance = Math.floor(normalizedExpected.length * 0.2);
+  return distance <= maxAllowedDistance;
+};
+
+/**
  * Word match with detailed result including confidence info
  */
 export interface WordMatchResult {

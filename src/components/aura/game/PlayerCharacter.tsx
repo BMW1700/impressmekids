@@ -72,19 +72,7 @@ export const PlayerCharacter = ({
         {gender === 'knight' ? 'Brave Knight' : 'Brave Dame'}
       </div>
 
-      {/* Health Bar */}
-      <div className="w-28 h-2.5 bg-muted rounded-full overflow-hidden border border-border">
-        <motion.div
-          className={`h-full ${getHealthColor()}`}
-          initial={{ width: '100%' }}
-          animate={{ width: `${healthPercent}%` }}
-          transition={{ duration: 0.3 }}
-        />
-      </div>
-      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-        <Heart className="h-3 w-3 text-red-500" />
-        {Math.round(healthPercent)}%
-      </div>
+      {/* Health Bar - REMOVED, only shown in BattleHUD */}
 
       {/* Main Character Container */}
       <motion.div
