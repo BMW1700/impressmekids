@@ -2,7 +2,10 @@ import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { CampaignModeEntry } from "@/components/aura/game/CampaignModeEntry";
+import KidFriendlyProgress from "@/components/aura/KidFriendlyProgress";
+import { curatedStories } from "@/data/curatedStories";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { VoiceRecorder } from "@/components/aura/VoiceRecorder";
@@ -70,6 +73,7 @@ const ClassroomLeaderboardWrapper = ({ studentId }: { studentId: string }) => {
 const AuraPractice = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [latestAnalysis, setLatestAnalysis] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
@@ -79,6 +83,17 @@ const AuraPractice = () => {
   const [customTopic, setCustomTopic] = useState<string | undefined>();
   const [presentationMetrics, setPresentationMetrics] = useState<PresentationMetrics | null>(null);
   const [presentationTranscript, setPresentationTranscript] = useState<string>('');
+  const [isCampaignMode, setIsCampaignMode] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>(searchParams.get('tab') || 'stories');
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(searchParams.get('category'));
+
+  // Handle URL params for tab navigation
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const category = searchParams.get('category');
+    if (tab) setActiveTab(tab);
+    if (category) setCategoryFilter(category);
+  }, [searchParams]);
 
   // Setup global voice error handler for toast notifications
   useEffect(() => {
@@ -205,6 +220,23 @@ const AuraPractice = () => {
     setIsReadingStory(false);
     setSelectedStory(null);
   };
+
+  // Campaign mode takes over the whole screen
+  if (isCampaignMode && user?.id) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
+        <Header />
+        <main className="flex-1 container mx-auto px-4 py-8">
+          <CampaignModeEntry
+            studentId={user.id}
+            onBack={() => setIsCampaignMode(false)}
+            stories={curatedStories}
+          />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   if (isReadingStory && selectedStory && user?.id) {
     return (
@@ -337,7 +369,7 @@ const AuraPractice = () => {
             </Card>
           )}
 
-          <Tabs defaultValue="stories" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
               <TabsList className="inline-flex w-max md:grid md:w-full md:grid-cols-6 min-w-max">
                 <TabsTrigger value="stories" className="hover:scale-105 transition-transform whitespace-nowrap px-3 md:px-4">
@@ -368,7 +400,11 @@ const AuraPractice = () => {
             </div>
 
             <TabsContent value="stories" className="mt-6">
-              <StoryLibrary onSelectStory={handleStorySelect} />
+              <StoryLibrary 
+                onSelectStory={handleStorySelect} 
+                onStartCampaign={() => setIsCampaignMode(true)}
+                categoryFilter={categoryFilter}
+              />
             </TabsContent>
 
             <TabsContent value="bookshelf" className="mt-6">
@@ -586,7 +622,10 @@ const AuraPractice = () => {
               )}
             </TabsContent>
 
-            <TabsContent value="progress" className="mt-6">
+            <TabsContent value="progress" className="mt-6 space-y-6">
+              {/* Kid-Friendly Progress at the top */}
+              {user?.id && <KidFriendlyProgress studentId={user.id} />}
+              
               {!records || records.length === 0 ? (
                 <Card className="hover:scale-[1.01] transition-transform duration-200">
                   <CardContent className="text-center py-12">

@@ -27,10 +27,19 @@ const AuraProgressChart = ({ records }: AuraProgressChartProps) => {
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis domain={[0, 100]} />
-              <Tooltip />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <XAxis dataKey="date" className="text-foreground" />
+              <YAxis domain={[0, 100]} className="text-foreground" />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'hsl(var(--card))', 
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                }}
+                labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600 }}
+                itemStyle={{ color: 'hsl(var(--foreground))' }}
+              />
               <Legend />
               <Line 
                 type="monotone" 
