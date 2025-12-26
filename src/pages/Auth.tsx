@@ -819,7 +819,7 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] flex flex-col items-center justify-center relative z-0 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+    <div className="min-h-screen flex flex-col items-center justify-center relative z-0 overflow-hidden p-4">
       {/* Fixed background so gradient is identical regardless of tab/content height */}
       <div aria-hidden className="fixed inset-0 -z-10 bg-gradient-hero pointer-events-none" />
       
@@ -1048,9 +1048,6 @@ const Auth = () => {
                       name="password"
                       type={showPassword ? "text" : "password"}
                       autoComplete="current-password"
-                      data-1p-ignore="false"
-                      data-lpignore="false"
-                      data-form-type="password"
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -1179,9 +1176,6 @@ const Auth = () => {
                     name="new-password"
                     type={showPassword ? "text" : "password"}
                     autoComplete="new-password"
-                    data-1p-ignore="false"
-                    data-lpignore="false"
-                    data-form-type="password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -1393,11 +1387,6 @@ const Auth = () => {
             ← Back to Home
           </Link>
         </div>
-        
-        {/* Reset button for stuck auth states - inside card to prevent layout shift */}
-        <div className="mt-4 flex justify-center">
-          <AuthResetButton />
-        </div>
       </div>
 
       {/* District Selection Modal for OAuth users without district email */}
@@ -1478,6 +1467,10 @@ const Auth = () => {
           });
         }}
       />
+      {/* Reset button for stuck auth states */}
+      <div className="mt-4 flex justify-center">
+        <AuthResetButton />
+      </div>
     </div>
   );
 };

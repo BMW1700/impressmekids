@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, lazy, Suspense } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
@@ -8,37 +8,28 @@ import { Loader2, Menu } from "lucide-react";
 import { useStudentAssignmentStats } from "@/hooks/useStudentAssignmentStats";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { StudentDashboardSidebar } from "@/components/student/StudentDashboardSidebar";
+import { HomeSection } from "@/components/student/sections/HomeSection";
+import { TodaySection } from "@/components/student/sections/TodaySection";
+import { CoursesSection } from "@/components/student/sections/CoursesSection";
+import { ClubsSection } from "@/components/student/sections/ClubsSection";
+import { CalendarSection } from "@/components/student/sections/CalendarSection";
+import { AnnouncementsSection } from "@/components/student/sections/AnnouncementsSection";
+import { GradebookSection } from "@/components/student/sections/GradebookSection";
+import { GamesSection } from "@/components/student/sections/GamesSection";
+import { AuraReadingSection } from "@/components/student/sections/AuraReadingSection";
+import { DirectorySection } from "@/components/student/sections/DirectorySection";
+import { AccountSection } from "@/components/student/sections/AccountSection";
+import { SafetySection } from "@/components/student/sections/SafetySection";
+import { LinksResourcesSection } from "@/components/student/sections/LinksResourcesSection";
 import { SafetyAlertBanner } from "@/components/safety/SafetyAlertBanner";
 import { DrillAlertOverlay } from "@/components/student/DrillAlertOverlay";
 import { useAuth } from "@/contexts/AuthContext";
 
-// Lazy load all sections for faster initial render
-const HomeSection = lazy(() => import("@/components/student/sections/HomeSection").then(m => ({ default: m.HomeSection })));
-const TodaySection = lazy(() => import("@/components/student/sections/TodaySection").then(m => ({ default: m.TodaySection })));
-const CoursesSection = lazy(() => import("@/components/student/sections/CoursesSection").then(m => ({ default: m.CoursesSection })));
-const ClubsSection = lazy(() => import("@/components/student/sections/ClubsSection").then(m => ({ default: m.ClubsSection })));
-const CalendarSection = lazy(() => import("@/components/student/sections/CalendarSection").then(m => ({ default: m.CalendarSection })));
-const AnnouncementsSection = lazy(() => import("@/components/student/sections/AnnouncementsSection").then(m => ({ default: m.AnnouncementsSection })));
-const GradebookSection = lazy(() => import("@/components/student/sections/GradebookSection").then(m => ({ default: m.GradebookSection })));
-const GamesSection = lazy(() => import("@/components/student/sections/GamesSection").then(m => ({ default: m.GamesSection })));
-const AuraReadingSection = lazy(() => import("@/components/student/sections/AuraReadingSection").then(m => ({ default: m.AuraReadingSection })));
-const DirectorySection = lazy(() => import("@/components/student/sections/DirectorySection").then(m => ({ default: m.DirectorySection })));
-const AccountSection = lazy(() => import("@/components/student/sections/AccountSection").then(m => ({ default: m.AccountSection })));
-const SafetySection = lazy(() => import("@/components/student/sections/SafetySection").then(m => ({ default: m.SafetySection })));
-const LinksResourcesSection = lazy(() => import("@/components/student/sections/LinksResourcesSection").then(m => ({ default: m.LinksResourcesSection })));
-
-// Section loading skeleton
-const SectionLoader = () => (
-  <div className="py-12 flex items-center justify-center">
-    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-  </div>
-);
-
 const StudentDashboard = () => {
-  const { user, profile, isLoading: authLoading, isProfileLoading, signOut } = useAuth();
+  const { user, profile, isLoading: authLoading, signOut } = useAuth();
   const [studentProfile, setStudentProfile] = useState<any>(null);
   const [classrooms, setClassrooms] = useState<any[]>([]);
-  const [isDataLoading, setIsDataLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeSection, setActiveSection] = useState("home");
   const [tabletSidebarOpen, setTabletSidebarOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -48,54 +39,37 @@ const StudentDashboard = () => {
 
   useEffect(() => {
     if (authLoading) return;
-
-    if (!user) {
-      navigate("/auth");
+    
+    if (!user || !profile) {
+      navigate('/auth');
       return;
     }
-
-    // Wait for profile (async) instead of redirecting prematurely
-    if (isProfileLoading || !profile) return;
 
     // Role redirects
-    if (profile.role === "district_manager") {
-      navigate("/district-manager/dashboard");
-      return;
-    }
-    if (profile.role === "teacher") {
-      navigate("/teacher/dashboard");
-      return;
-    }
-    if (profile.role === "admin") {
-      navigate("/admin/dashboard");
-      return;
-    }
-    if (profile.role === "parent") {
-      navigate("/parent/dashboard");
-      return;
-    }
+    if (profile.role === 'district_manager') { navigate('/district-manager/dashboard'); return; }
+    if (profile.role === 'teacher') { navigate('/teacher/dashboard'); return; }
+    if (profile.role === 'admin') { navigate('/admin/dashboard'); return; }
+    if (profile.role === 'parent') { navigate('/parent/dashboard'); return; }
 
     // Verification check
     if (!profile.is_verified) {
-      navigate("/pending-verification");
+      navigate('/pending-verification');
       return;
     }
 
     // Load data in parallel
     loadDashboardData();
-  }, [authLoading, isProfileLoading, user, profile]);
+  }, [authLoading, user, profile]);
 
   const loadDashboardData = async () => {
     if (!user) return;
-
-    setIsDataLoading(true);
-
+    
     try {
       // Fetch all data in parallel
       const [classroomsResult, publicProfileResult, studentDataResult] = await Promise.all([
-        supabase.rpc("get_student_classrooms", { _user_id: user.id }),
-        supabase.from("public_profiles").select("*").eq("id", user.id).single(),
-        supabase.from("student_profiles").select("stats").eq("user_id", user.id).single(),
+        supabase.rpc('get_student_classrooms', { _user_id: user.id }),
+        supabase.from('public_profiles').select('*').eq('id', user.id).single(),
+        supabase.from('student_profiles').select('stats').eq('user_id', user.id).single(),
       ]);
 
       if (classroomsResult.data) setClassrooms(classroomsResult.data);
@@ -103,7 +77,7 @@ const StudentDashboard = () => {
       // Handle student profile creation if needed
       if (!studentDataResult.data) {
         const { data: newProfile } = await supabase
-          .from("student_profiles")
+          .from('student_profiles')
           .insert({ user_id: user.id, stats: { games_played: 0, games_won: 0 } })
           .select()
           .single();
@@ -112,10 +86,10 @@ const StudentDashboard = () => {
         setStudentProfile({ ...publicProfileResult.data, stats: studentDataResult.data.stats });
       }
     } catch (error) {
-      console.error("Error loading dashboard:", error);
+      console.error('Error loading dashboard:', error);
       toast({ title: "Error", description: "Failed to load profile", variant: "destructive" });
     } finally {
-      setIsDataLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -126,28 +100,25 @@ const StudentDashboard = () => {
 
   const renderSection = () => {
     if (!profile) return null;
-    const content = (() => {
-      switch (activeSection) {
-        case "home": return <HomeSection userProfile={profile} studentProfile={studentProfile} assignmentStats={assignmentStats} classrooms={classrooms} />;
-        case "today": return <TodaySection studentId={profile.id} />;
-        case "courses": return <CoursesSection classrooms={classrooms} />;
-        case "clubs": return <ClubsSection studentId={profile.id} />;
-        case "calendar": return <CalendarSection studentId={profile.id} />;
-        case "announcements": return <AnnouncementsSection studentId={profile.id} />;
-        case "study-games": return <GamesSection />;
-        case "aura-reading": return <AuraReadingSection />;
-        case "safety": return <SafetySection />;
-        case "links-resources": return <LinksResourcesSection />;
-        case "gradebook": return <GradebookSection studentId={profile.id} />;
-        case "directory": return <DirectorySection />;
-        case "account": return <AccountSection userProfile={profile} studentProfile={studentProfile} />;
-        default: return <HomeSection userProfile={profile} studentProfile={studentProfile} assignmentStats={assignmentStats} />;
-      }
-    })();
-    return <Suspense fallback={<SectionLoader />}>{content}</Suspense>;
+    switch (activeSection) {
+      case "home": return <HomeSection userProfile={profile} studentProfile={studentProfile} assignmentStats={assignmentStats} classrooms={classrooms} />;
+      case "today": return <TodaySection studentId={profile.id} />;
+      case "courses": return <CoursesSection classrooms={classrooms} />;
+      case "clubs": return <ClubsSection studentId={profile.id} />;
+      case "calendar": return <CalendarSection studentId={profile.id} />;
+      case "announcements": return <AnnouncementsSection studentId={profile.id} />;
+      case "study-games": return <GamesSection />;
+      case "aura-reading": return <AuraReadingSection />;
+      case "safety": return <SafetySection />;
+      case "links-resources": return <LinksResourcesSection />;
+      case "gradebook": return <GradebookSection studentId={profile.id} />;
+      case "directory": return <DirectorySection />;
+      case "account": return <AccountSection userProfile={profile} studentProfile={studentProfile} />;
+      default: return <HomeSection userProfile={profile} studentProfile={studentProfile} assignmentStats={assignmentStats} />;
+    }
   };
 
-  if (authLoading) {
+  if (authLoading || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -217,19 +188,7 @@ const StudentDashboard = () => {
         </div>
         
         <main className="flex-1 overflow-y-auto">
-          <div className="container mx-auto px-4 py-8">
-            {isProfileLoading || !profile ? (
-              <div className="py-20 flex items-center justify-center">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
-              </div>
-            ) : isDataLoading ? (
-              <div className="py-20 flex items-center justify-center">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
-              </div>
-            ) : (
-              renderSection()
-            )}
-          </div>
+          <div className="container mx-auto px-4 py-8">{renderSection()}</div>
         </main>
       </div>
       <Footer />
