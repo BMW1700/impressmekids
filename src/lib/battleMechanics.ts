@@ -47,11 +47,12 @@ export const getEnemyStats = (worldNumber: number, enemyType: EnemyType): { hp: 
     boss: 1.5,
   };
 
+  // BALANCED: Reduced attack power for kid-friendly gameplay
   const attackPowerByType: Record<EnemyType, number> = {
-    minion: 5,
-    guard: 8,
-    elite: 12,
-    boss: 15,
+    minion: 2,
+    guard: 4,
+    elite: 6,
+    boss: 8,
   };
 
   const baseHp = baseHpByWorld[worldNumber] || 100;
@@ -114,12 +115,13 @@ export const calculateDamage = (
 };
 
 // Calculate damage taken when word is read incorrectly
+// BALANCED: Reduced damage so readers don't die too quickly
 export const calculateEnemyAttack = (enemyType: EnemyType): EnemyAttackResult => {
   const attackPower: Record<EnemyType, number> = {
-    minion: 5,
-    guard: 10,
-    elite: 15,
-    boss: 20,
+    minion: 2,   // Reduced from 5
+    guard: 4,    // Reduced from 10
+    elite: 6,    // Reduced from 15
+    boss: 8,     // Reduced from 20
   };
 
   const messages: Record<EnemyType, string[]> = {
