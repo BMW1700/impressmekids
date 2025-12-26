@@ -4,7 +4,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Volume2, VolumeX } from "lucide-react";
 import { BattleHUD } from "./BattleHUD";
-import { GrogCharacter, GrogState } from "./GrogCharacter";
+import { BattleArena } from "./BattleArena";
+import { GrogState } from "./GrogCharacter";
+import { PlayerState } from "./PlayerCharacter";
 import { BookRescueCelebration } from "./BookRescueCelebration";
 import { 
   BattleState, 
@@ -13,7 +15,7 @@ import {
   calculateXpEarned,
   EnemyType 
 } from "@/lib/battleMechanics";
-import { getRandomTaunt, getRandomEncouragement } from "@/lib/campaignData";
+import { getRandomTaunt } from "@/lib/campaignData";
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import { WordByWordReader } from "../WordByWordReader";
 import { CuratedStory } from "@/data/curatedStories";
@@ -37,19 +39,30 @@ export const BattleReader = ({
   onComplete,
   onNextStory,
 }: BattleReaderProps) => {
-  const { progress, startBattle, updateBattle, completeBattle } = useCampaignProgress(studentId);
+  const { progress, startBattle, completeBattle } = useCampaignProgress(studentId);
   
   const [battleState, setBattleState] = useState<BattleState>(() => 
     initializeBattle(worldNumber, enemyType)
   );
   const [showCelebration, setShowCelebration] = useState(false);
-  const [lastDamage, setLastDamage] = useState<number | undefined>();
-  const [lastMessage, setLastMessage] = useState<string | undefined>();
-  const [grogState, setGrogState] = useState<GrogState>('idle');
-  const [currentTaunt, setCurrentTaunt] = useState<string>("");
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [battleSessionId, setBattleSessionId] = useState<string | null>(null);
   const [readingStats, setReadingStats] = useState<any>(null);
+  
+  // Character states
+  const [grogState, setGrogState] = useState<GrogState>('idle');
+  const [playerState, setPlayerState] = useState<PlayerState>('idle');
+  const [currentTaunt, setCurrentTaunt] = useState<string>("");
+  
+  // Damage display
+  const [showEnemyDamage, setShowEnemyDamage] = useState<number | undefined>();
+  const [showPlayerDamage, setShowPlayerDamage] = useState<number | undefined>();
+  const [lastMessage, setLastMessage] = useState<string | undefined>();
+  
+  // Beam effect triggers
+  const [triggerAttackBeam, setTriggerAttackBeam] = useState(0);
+  const [triggerDamageBeam, setTriggerDamageBeam] = useState(0);
+  const [isCriticalHit, setIsCriticalHit] = useState(false);
 
   // Initialize battle session in database
   useEffect(() => {
@@ -70,12 +83,102 @@ export const BattleReader = ({
     initBattle();
   }, []);
 
+  // Random taunt every 15-30 seconds when enemy is idle
+  useEffect(() => {
+    if (battleState.status !== 'in_progress') return;
+    
+    const showRandomTaunt = () => {
+      if (grogState === 'idle' && Math.random() > 0.5) {
+        setCurrentTaunt(getRandomTaunt('grogTaunts'));
+        setTimeout(() => setCurrentTaunt(""), 3000);
+      }
+    };
+    
+    const interval = setInterval(showRandomTaunt, 15000 + Math.random() * 15000);
+    return () => clearInterval(interval);
+  }, [battleState.status, grogState]);
+
+  // Handle real-time word results from reader
+  const handleWordResult = useCallback((result: { 
+    correct: boolean; 
+    wordIndex: number; 
+    streak: number; 
+    word: string;
+    wordLength: number;
+  }) => {
+    if (battleState.status !== 'in_progress') return;
+    
+    const { newState, damageResult, attackResult } = processWordResult(
+      battleState,
+      result.correct,
+      enemyType,
+      result.wordLength
+    );
+    
+    setBattleState(newState);
+    
+    if (result.correct && damageResult) {
+      // Player attacks enemy
+      setPlayerState('attacking');
+      setGrogState('hit');
+      setShowEnemyDamage(damageResult.damage);
+      setLastMessage(damageResult.message || undefined);
+      setIsCriticalHit(damageResult.isCritical);
+      setTriggerAttackBeam(Date.now());
+      
+      // Clear taunt on hit
+      setCurrentTaunt("");
+      
+      // Reset states after animation
+      setTimeout(() => {
+        setPlayerState('idle');
+        setGrogState(newState.enemyHp <= 0 ? 'defeated' : 'idle');
+        setShowEnemyDamage(undefined);
+        setLastMessage(undefined);
+      }, 500);
+      
+    } else if (!result.correct && attackResult) {
+      // Enemy attacks player
+      setGrogState('attacking');
+      setPlayerState('hit');
+      setShowPlayerDamage(attackResult.damage);
+      setLastMessage(attackResult.message);
+      setTriggerDamageBeam(Date.now());
+      
+      // Show taunt on player mistake
+      if (Math.random() > 0.6) {
+        setCurrentTaunt(getRandomTaunt('playerHit'));
+      }
+      
+      // Reset states after animation
+      setTimeout(() => {
+        setGrogState('idle');
+        setPlayerState(newState.playerHp <= 0 ? 'defeated' : 'idle');
+        setShowPlayerDamage(undefined);
+        setLastMessage(undefined);
+      }, 500);
+    }
+    
+    // Check for battle end
+    if (newState.status === 'victory') {
+      setGrogState('defeated');
+      setPlayerState('victory');
+    } else if (newState.status === 'defeat') {
+      setPlayerState('defeated');
+      setGrogState('taunting');
+      setCurrentTaunt(getRandomTaunt('grogTaunts'));
+    }
+  }, [battleState, enemyType]);
+
   // Handle reading completion
   const handleReadingComplete = async (stats: any) => {
     setReadingStats(stats);
     
-    // Determine victory/defeat based on enemy HP or accuracy
-    const victory = battleState.enemyHp <= 0 || (stats.accuracy >= 70 && battleState.status !== 'defeat');
+    // Determine victory/defeat based on final state
+    const victory = battleState.status === 'victory' || 
+      (battleState.enemyHp <= 0) || 
+      (stats.accuracy >= 70 && battleState.playerHp > 0);
+    
     const defeatedBeforeFinish = battleState.enemyHp <= 0 && battleState.wordsRead < story.word_count;
     
     const xpEarned = calculateXpEarned(
@@ -96,6 +199,10 @@ export const BattleReader = ({
 
     if (victory) {
       setGrogState('defeated');
+      setPlayerState('victory');
+    } else {
+      setGrogState('taunting');
+      setPlayerState('defeated');
     }
 
     // Save to database
@@ -130,6 +237,7 @@ export const BattleReader = ({
     setBattleState(initializeBattle(worldNumber, enemyType));
     setShowCelebration(false);
     setGrogState('idle');
+    setPlayerState('idle');
   };
 
   const handleNextStory = () => {
@@ -146,7 +254,7 @@ export const BattleReader = ({
     : 0;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
         <Button
@@ -158,6 +266,10 @@ export const BattleReader = ({
           <ChevronLeft className="h-4 w-4" />
           Retreat
         </Button>
+        <div className="text-center">
+          <h2 className="text-lg font-bold">{story.title}</h2>
+          <p className="text-xs text-muted-foreground">Read aloud to attack!</p>
+        </div>
         <Button
           variant="ghost"
           size="icon"
@@ -167,41 +279,37 @@ export const BattleReader = ({
         </Button>
       </div>
 
-      {/* Battle Arena */}
-      <Card className="p-4 bg-gradient-to-b from-background to-muted/50 relative overflow-hidden">
-        {/* Battle HUD */}
-        <BattleHUD
-          enemyHp={battleState.enemyHp}
-          enemyMaxHp={battleState.enemyMaxHp}
-          playerHp={battleState.playerHp}
-          playerMaxHp={battleState.playerMaxHp}
-          currentStreak={battleState.currentStreak}
-          wordsRead={battleState.wordsRead}
-          correctWords={battleState.correctWords}
-          totalWords={story.word_count}
-          worldNumber={worldNumber}
-          enemyName={`World ${worldNumber} ${enemyType.charAt(0).toUpperCase() + enemyType.slice(1)}`}
-          lastDamage={lastDamage}
-          lastMessage={lastMessage}
-        />
+      {/* Battle Arena - Characters with health bars */}
+      <BattleArena
+        enemyType={enemyType}
+        enemyHealthPercent={(battleState.enemyHp / battleState.enemyMaxHp) * 100}
+        enemyState={grogState}
+        enemyTaunt={currentTaunt}
+        playerHealthPercent={(battleState.playerHp / battleState.playerMaxHp) * 100}
+        playerState={playerState}
+        currentStreak={battleState.currentStreak}
+        showPlayerDamage={showPlayerDamage}
+        showEnemyDamage={showEnemyDamage}
+        triggerAttackBeam={triggerAttackBeam}
+        triggerDamageBeam={triggerDamageBeam}
+        isCriticalHit={isCriticalHit}
+      />
 
-        {/* Enemy Character */}
-        <div className="flex justify-center my-6">
-          <GrogCharacter
-            state={grogState}
-            healthPercent={(battleState.enemyHp / battleState.enemyMaxHp) * 100}
-            enemyType={enemyType}
-            taunt={currentTaunt}
-            showDamage={lastDamage}
-          />
-        </div>
-      </Card>
-
-      {/* Story Title */}
-      <div className="text-center">
-        <h2 className="text-xl font-bold">{story.title}</h2>
-        <p className="text-sm text-muted-foreground">Read aloud to defeat the enemy!</p>
-      </div>
+      {/* Battle Stats HUD */}
+      <BattleHUD
+        enemyHp={battleState.enemyHp}
+        enemyMaxHp={battleState.enemyMaxHp}
+        playerHp={battleState.playerHp}
+        playerMaxHp={battleState.playerMaxHp}
+        currentStreak={battleState.currentStreak}
+        wordsRead={battleState.wordsRead}
+        correctWords={battleState.correctWords}
+        totalWords={story.word_count}
+        worldNumber={worldNumber}
+        enemyName={`World ${worldNumber} ${enemyType.charAt(0).toUpperCase() + enemyType.slice(1)}`}
+        lastDamage={showEnemyDamage}
+        lastMessage={lastMessage}
+      />
 
       {/* Reading Area */}
       <Card className="p-4">
@@ -209,6 +317,7 @@ export const BattleReader = ({
           passageText={story.passage_text}
           assignmentId={null}
           onComplete={handleReadingComplete}
+          onWordResult={handleWordResult}
         />
       </Card>
 
