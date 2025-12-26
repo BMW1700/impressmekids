@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, RotateCcw, Shuffle, Undo2, HelpCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CelebrationEffect } from "@/components/aura/CelebrationEffect";
 import { motion, AnimatePresence } from "framer-motion";
-
+import { useGameStats } from "@/hooks/useGameStats";
 type Difficulty = 'easy' | 'standard';
 type GameStatus = 'playing' | 'won' | 'lost';
 type Operation = '+' | '-' | '×' | '÷';
@@ -281,6 +281,7 @@ const HowToPlay = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
 
 const NumberMaker = () => {
   const navigate = useNavigate();
+  const { updateGameStats } = useGameStats();
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
   const [targetNumber, setTargetNumber] = useState(0);
   const [numberCards, setNumberCards] = useState<number[]>([]);
@@ -292,6 +293,7 @@ const NumberMaker = () => {
   const [celebrationTrigger, setCelebrationTrigger] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [newCardIndex, setNewCardIndex] = useState<number | null>(null);
+  const statsUpdatedRef = useRef(false);
 
   const operations: Operation[] = ['+', '-', '×', '÷'];
 
@@ -310,6 +312,7 @@ const NumberMaker = () => {
     setMoveHistory([]);
     setErrorMessage(null);
     setNewCardIndex(null);
+    statsUpdatedRef.current = false;
   };
 
   const resetPuzzle = () => {
@@ -393,8 +396,16 @@ const NumberMaker = () => {
         if (newCards[0] === targetNumber) {
           setGameStatus('won');
           setCelebrationTrigger(prev => prev + 1);
+          if (!statsUpdatedRef.current) {
+            statsUpdatedRef.current = true;
+            updateGameStats(true);
+          }
         } else {
           setGameStatus('lost');
+          if (!statsUpdatedRef.current) {
+            statsUpdatedRef.current = true;
+            updateGameStats(false);
+          }
         }
       }
     }
