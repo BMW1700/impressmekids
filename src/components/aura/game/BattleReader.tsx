@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Volume2, VolumeX } from "lucide-react";
+import { ChevronLeft, Volume2, VolumeX, Sparkles } from "lucide-react";
 import { BattleHUD } from "./BattleHUD";
 import { BattleArena } from "./BattleArena";
 import { GrogState } from "./GrogCharacter";
@@ -63,6 +63,9 @@ export const BattleReader = ({
   const [triggerAttackBeam, setTriggerAttackBeam] = useState(0);
   const [triggerDamageBeam, setTriggerDamageBeam] = useState(0);
   const [isCriticalHit, setIsCriticalHit] = useState(false);
+  
+  // CRITICAL FIX: Track processed word events to prevent double-applying damage
+  const processedWordEventsRef = useRef<Set<string>>(new Set());
 
   // Initialize battle session in database
   useEffect(() => {
@@ -99,6 +102,7 @@ export const BattleReader = ({
   }, [battleState.status, grogState]);
 
   // Handle real-time word results from reader
+  // CRITICAL FIX: Use functional state update to avoid stale state issues
   const handleWordResult = useCallback((result: { 
     correct: boolean; 
     wordIndex: number; 
@@ -106,86 +110,108 @@ export const BattleReader = ({
     word: string;
     wordLength: number;
   }) => {
-    if (battleState.status !== 'in_progress') return;
+    // Create unique event key to prevent double-processing
+    const eventKey = `${result.wordIndex}-${result.correct}`;
+    if (processedWordEventsRef.current.has(eventKey)) {
+      return; // Already processed this exact event
+    }
+    processedWordEventsRef.current.add(eventKey);
     
-    const { newState, damageResult, attackResult } = processWordResult(
-      battleState,
-      result.correct,
-      enemyType,
-      result.wordLength
-    );
-    
-    setBattleState(newState);
-    
-    if (result.correct && damageResult) {
-      // Player attacks enemy
-      setPlayerState('attacking');
-      setGrogState('hit');
-      setShowEnemyDamage(damageResult.damage);
-      setLastMessage(damageResult.message || undefined);
-      setIsCriticalHit(damageResult.isCritical);
-      setTriggerAttackBeam(Date.now());
-      
-      // Clear taunt on hit
-      setCurrentTaunt("");
-      
-      // Reset states after animation
-      setTimeout(() => {
-        setPlayerState('idle');
-        setGrogState(newState.enemyHp <= 0 ? 'defeated' : 'idle');
-        setShowEnemyDamage(undefined);
-        setLastMessage(undefined);
-      }, 500);
-      
-    } else if (!result.correct && attackResult) {
-      // Enemy attacks player
-      setGrogState('attacking');
-      setPlayerState('hit');
-      setShowPlayerDamage(attackResult.damage);
-      setLastMessage(attackResult.message);
-      setTriggerDamageBeam(Date.now());
-      
-      // Show taunt on player mistake
-      if (Math.random() > 0.6) {
-        setCurrentTaunt(getRandomTaunt('playerHit'));
+    // Use functional update to ensure we always work with latest state
+    setBattleState(prevState => {
+      if (prevState.status !== 'in_progress') {
+        return prevState; // Don't update if battle is over
       }
       
-      // Reset states after animation
-      setTimeout(() => {
-        setGrogState('idle');
-        setPlayerState(newState.playerHp <= 0 ? 'defeated' : 'idle');
-        setShowPlayerDamage(undefined);
-        setLastMessage(undefined);
-      }, 500);
-    }
-    
-    // Check for battle end
-    if (newState.status === 'victory') {
-      setGrogState('defeated');
-      setPlayerState('victory');
-    } else if (newState.status === 'defeat') {
-      setPlayerState('defeated');
-      setGrogState('taunting');
-      setCurrentTaunt(getRandomTaunt('grogTaunts'));
-    }
-  }, [battleState, enemyType]);
+      const { newState, damageResult, attackResult } = processWordResult(
+        prevState,
+        result.correct,
+        enemyType,
+        result.wordLength
+      );
+      
+      // Trigger visual effects based on result
+      if (result.correct && damageResult) {
+        // Player attacks enemy
+        setPlayerState('attacking');
+        setGrogState('hit');
+        setShowEnemyDamage(damageResult.damage);
+        setLastMessage(damageResult.message || undefined);
+        setIsCriticalHit(damageResult.isCritical);
+        setTriggerAttackBeam(Date.now());
+        
+        // Clear taunt on hit
+        setCurrentTaunt("");
+        
+        // Reset states after animation
+        setTimeout(() => {
+          setPlayerState('idle');
+          setGrogState(newState.enemyHp <= 0 ? 'defeated' : 'idle');
+          setShowEnemyDamage(undefined);
+          setLastMessage(undefined);
+        }, 500);
+        
+      } else if (!result.correct && attackResult) {
+        // Enemy attacks player
+        setGrogState('attacking');
+        setPlayerState('hit');
+        setShowPlayerDamage(attackResult.damage);
+        setLastMessage(attackResult.message);
+        setTriggerDamageBeam(Date.now());
+        
+        // Show taunt on player mistake
+        if (Math.random() > 0.6) {
+          setCurrentTaunt(getRandomTaunt('playerHit'));
+        }
+        
+        // Reset states after animation
+        setTimeout(() => {
+          setGrogState('idle');
+          setPlayerState(newState.playerHp <= 0 ? 'defeated' : 'idle');
+          setShowPlayerDamage(undefined);
+          setLastMessage(undefined);
+        }, 500);
+      }
+      
+      // Check for battle end
+      if (newState.status === 'victory') {
+        setGrogState('defeated');
+        setPlayerState('victory');
+      } else if (newState.status === 'defeat') {
+        setPlayerState('defeated');
+        setGrogState('taunting');
+        setCurrentTaunt(getRandomTaunt('grogTaunts'));
+      }
+      
+      return newState;
+    });
+  }, [enemyType]);
 
   // Handle reading completion
+  // VICTORY RULES: Win if goblin dies OR (story finished AND accuracy >= 90%)
   const handleReadingComplete = async (stats: any) => {
     setReadingStats(stats);
     
-    // Determine victory/defeat based on final state
-    const victory = battleState.status === 'victory' || 
-      (battleState.enemyHp <= 0) || 
-      (stats.accuracy >= 70 && battleState.playerHp > 0);
+    // Get final battle state for victory calculation
+    const finalState = battleState;
+    const accuracy = finalState.wordsRead > 0 
+      ? (finalState.correctWords / finalState.wordsRead) * 100 
+      : 0;
     
-    const defeatedBeforeFinish = battleState.enemyHp <= 0 && battleState.wordsRead < story.word_count;
+    // VICTORY CONDITIONS:
+    // 1. Killed the goblin (enemyHp <= 0)
+    // 2. Finished story with 90%+ accuracy AND still alive
+    const killedGoblin = finalState.enemyHp <= 0;
+    const passedAccuracyGate = accuracy >= 90 && finalState.playerHp > 0;
+    const victory = killedGoblin || passedAccuracyGate;
+    
+    const defeatedBeforeFinish = killedGoblin && finalState.wordsRead < story.word_count;
     
     const xpEarned = calculateXpEarned(
       victory,
-      battleState.wordsRead,
-      battleState.correctWords,
-      battleState.longestStreak,
+      finalState.wordsRead,
+      finalState.correctWords,
+      finalState.longestStreak,
       worldNumber,
       defeatedBeforeFinish
     );
@@ -212,8 +238,8 @@ export const BattleReader = ({
           battleId: battleSessionId,
           victory,
           xpEarned,
-          damageDealt: battleState.totalDamageDealt,
-          longestStreak: battleState.longestStreak,
+          damageDealt: finalState.totalDamageDealt,
+          longestStreak: finalState.longestStreak,
           storyTitle: story.title,
           worldNumber,
         });
@@ -234,6 +260,8 @@ export const BattleReader = ({
   };
 
   const handleTryAgain = () => {
+    // Reset everything for a fresh battle
+    processedWordEventsRef.current = new Set();
     setBattleState(initializeBattle(worldNumber, enemyType));
     setShowCelebration(false);
     setGrogState('idle');
@@ -279,6 +307,17 @@ export const BattleReader = ({
         </Button>
       </div>
 
+      {/* AURA Coach Indicator - Above Battle Arena */}
+      <motion.div 
+        className="flex items-center justify-center gap-2 py-2 bg-primary/10 rounded-lg"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+        <span className="text-sm font-medium text-primary">AURA Coach Active</span>
+        <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+      </motion.div>
+
       {/* Battle Arena - Characters with health bars */}
       <BattleArena
         enemyType={enemyType}
@@ -310,6 +349,11 @@ export const BattleReader = ({
         lastDamage={showEnemyDamage}
         lastMessage={lastMessage}
       />
+
+      {/* Victory requirement hint */}
+      <div className="text-center text-xs text-muted-foreground bg-muted/30 py-1 rounded">
+        🎯 Win by defeating the enemy OR finishing with 90%+ accuracy!
+      </div>
 
       {/* Reading Area */}
       <Card className="p-4">

@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sword, BookOpen, Trophy, Flame, Star, ChevronRight, Crown } from "lucide-react";
+import { Sword, BookOpen, Trophy, Flame, Star, ChevronRight, Crown, Settings } from "lucide-react";
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import { CampaignWorldMap } from "./CampaignWorldMap";
 import { BattleReader } from "./BattleReader";
+import { CampaignVideoGate } from "./CampaignVideoGate";
+import { CampaignAssetUploader } from "./CampaignAssetUploader";
 import { campaignWorlds, princessElla, grogTheGoblinKing, categoryToWorld } from "@/lib/campaignData";
 import { CuratedStory } from "@/data/curatedStories";
 import type { EnemyType } from "@/lib/battleMechanics";
@@ -15,20 +17,45 @@ interface CampaignModeEntryProps {
   studentId: string;
   onBack: () => void;
   stories: CuratedStory[];
+  isAdmin?: boolean;
 }
 
-type CampaignView = 'intro' | 'world-map' | 'story-select' | 'battle';
+interface CampaignAssets {
+  ellaAvatarUrl?: string;
+  grogAvatarUrl?: string;
+  campaignIntroVideoUrl?: string;
+  worldIntroVideos?: Record<number, string>;
+  storyIntroVideos?: Record<string, string>;
+}
 
-export const CampaignModeEntry = ({ studentId, onBack, stories }: CampaignModeEntryProps) => {
+type CampaignView = 'intro' | 'intro-video' | 'world-map' | 'world-video' | 'story-select' | 'story-video' | 'battle';
+
+export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false }: CampaignModeEntryProps) => {
   const { progress, progressLoading } = useCampaignProgress(studentId);
   const [currentView, setCurrentView] = useState<CampaignView>('intro');
   const [selectedWorld, setSelectedWorld] = useState<number>(1);
   const [selectedStory, setSelectedStory] = useState<CuratedStory | null>(null);
   const [enemyType, setEnemyType] = useState<EnemyType>('minion');
+  const [hasSeenIntroVideo, setHasSeenIntroVideo] = useState(false);
+  const [seenWorldVideos, setSeenWorldVideos] = useState<Set<number>>(new Set());
+  
+  // Campaign assets - stored in localStorage for now (could be moved to DB)
+  const [campaignAssets, setCampaignAssets] = useState<CampaignAssets>(() => {
+    try {
+      const saved = localStorage.getItem('campaign_assets');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // Save assets to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('campaign_assets', JSON.stringify(campaignAssets));
+  }, [campaignAssets]);
 
   // Get stories for selected world based on category mapping
   const getWorldStories = (worldNumber: number) => {
-    // Get categories that belong to this world
     const worldCategories = Object.entries(categoryToWorld)
       .filter(([_, world]) => world === worldNumber)
       .map(([category]) => category);
@@ -36,13 +63,40 @@ export const CampaignModeEntry = ({ studentId, onBack, stories }: CampaignModeEn
     return stories.filter(story => worldCategories.includes(story.category));
   };
 
-  // Handle world selection
+  // Handle entering campaign (with optional intro video)
+  const handleEnterCampaign = () => {
+    if (campaignAssets.campaignIntroVideoUrl && !hasSeenIntroVideo) {
+      setCurrentView('intro-video');
+    } else {
+      setCurrentView('world-map');
+    }
+  };
+
+  // Handle intro video complete
+  const handleIntroVideoComplete = () => {
+    setHasSeenIntroVideo(true);
+    setCurrentView('world-map');
+  };
+
+  // Handle world selection (with optional world video)
   const handleWorldSelect = (worldNumber: number) => {
     setSelectedWorld(worldNumber);
+    
+    const worldVideoUrl = campaignAssets.worldIntroVideos?.[worldNumber];
+    if (worldVideoUrl && !seenWorldVideos.has(worldNumber)) {
+      setCurrentView('world-video');
+    } else {
+      setCurrentView('story-select');
+    }
+  };
+
+  // Handle world video complete
+  const handleWorldVideoComplete = () => {
+    setSeenWorldVideos(prev => new Set([...prev, selectedWorld]));
     setCurrentView('story-select');
   };
 
-  // Handle story selection and determine enemy type
+  // Handle story selection
   const handleStorySelect = (story: CuratedStory) => {
     setSelectedStory(story);
     
@@ -61,6 +115,17 @@ export const CampaignModeEntry = ({ studentId, onBack, stories }: CampaignModeEn
       setEnemyType('minion');
     }
     
+    // Check for story-specific video
+    const storyVideoUrl = campaignAssets.storyIntroVideos?.[story.title];
+    if (storyVideoUrl) {
+      setCurrentView('story-video');
+    } else {
+      setCurrentView('battle');
+    }
+  };
+
+  // Handle story video complete
+  const handleStoryVideoComplete = () => {
     setCurrentView('battle');
   };
 
@@ -95,6 +160,37 @@ export const CampaignModeEntry = ({ studentId, onBack, stories }: CampaignModeEn
 
   const booksRescued = progress?.books_rescued || 0;
 
+  // Render video gates
+  if (currentView === 'intro-video') {
+    return (
+      <CampaignVideoGate
+        videoUrl={campaignAssets.campaignIntroVideoUrl}
+        title="Story Campaign Introduction"
+        onComplete={handleIntroVideoComplete}
+      />
+    );
+  }
+
+  if (currentView === 'world-video') {
+    return (
+      <CampaignVideoGate
+        videoUrl={campaignAssets.worldIntroVideos?.[selectedWorld]}
+        title={`World ${selectedWorld}: ${campaignWorlds[selectedWorld - 1]?.name || 'Unknown'}`}
+        onComplete={handleWorldVideoComplete}
+      />
+    );
+  }
+
+  if (currentView === 'story-video' && selectedStory) {
+    return (
+      <CampaignVideoGate
+        videoUrl={campaignAssets.storyIntroVideos?.[selectedStory.title]}
+        title={selectedStory.title}
+        onComplete={handleStoryVideoComplete}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       <AnimatePresence mode="wait">
@@ -125,6 +221,17 @@ export const CampaignModeEntry = ({ studentId, onBack, stories }: CampaignModeEn
                     </p>
                   </motion.div>
                 </div>
+                
+                {/* Admin Settings Button */}
+                {isAdmin && (
+                  <div className="absolute top-4 right-4">
+                    <CampaignAssetUploader
+                      assets={campaignAssets}
+                      onAssetsChange={setCampaignAssets}
+                      isAdmin={isAdmin}
+                    />
+                  </div>
+                )}
               </div>
 
               <CardContent className="p-6 space-y-6">
@@ -132,8 +239,20 @@ export const CampaignModeEntry = ({ studentId, onBack, stories }: CampaignModeEn
                 <div className="grid md:grid-cols-2 gap-6">
                   {/* Princess Ella */}
                   <div className="text-center space-y-3">
-                    <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-5xl shadow-lg">
-                      👸
+                    <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-5xl shadow-lg overflow-hidden">
+                      {campaignAssets.ellaAvatarUrl ? (
+                        <img
+                          src={campaignAssets.ellaAvatarUrl}
+                          alt="Princess Ella"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                            (e.target as HTMLImageElement).parentElement!.innerHTML = '👸';
+                          }}
+                        />
+                      ) : (
+                        '👸'
+                      )}
                     </div>
                     <div>
                       <h3 className="font-bold text-lg">{princessElla.name}</h3>
@@ -146,9 +265,21 @@ export const CampaignModeEntry = ({ studentId, onBack, stories }: CampaignModeEn
                     <motion.div
                       animate={{ y: [0, -5, 0] }}
                       transition={{ repeat: Infinity, duration: 2 }}
-                      className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-green-600 to-emerald-800 flex items-center justify-center text-5xl shadow-lg"
+                      className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-green-600 to-emerald-800 flex items-center justify-center text-5xl shadow-lg overflow-hidden"
                     >
-                      👹
+                      {campaignAssets.grogAvatarUrl ? (
+                        <img
+                          src={campaignAssets.grogAvatarUrl}
+                          alt="Grog the Goblin King"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                            (e.target as HTMLImageElement).parentElement!.innerHTML = '👹';
+                          }}
+                        />
+                      ) : (
+                        '👹'
+                      )}
                     </motion.div>
                     <div>
                       <h3 className="font-bold text-lg text-red-500">{grogTheGoblinKing.name}</h3>
@@ -204,7 +335,7 @@ export const CampaignModeEntry = ({ studentId, onBack, stories }: CampaignModeEn
                   <Button
                     size="lg"
                     className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
-                    onClick={() => setCurrentView('world-map')}
+                    onClick={handleEnterCampaign}
                   >
                     <Sword className="h-5 w-5 mr-2" />
                     Enter the Campaign
