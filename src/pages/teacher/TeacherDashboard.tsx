@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ClassroomCard } from "@/components/ClassroomCard";
@@ -22,7 +22,7 @@ import {
   PlusCircle,
   Sparkles,
   Users,
-  Link,
+  Link as LinkIcon,
 } from "lucide-react";
 import { liquidGlassTabClass } from "@/components/ui/liquid-glass-button";
 import { Badge } from "@/components/ui/badge";
@@ -32,15 +32,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTeacherDashboardData, useTeacherAllStudents } from "@/hooks/useTeacherDashboardData";
 
 const TeacherDashboard = () => {
-  const { user, profile, isLoading: authLoading, signOut } = useAuth();
-  const { 
-    classrooms, 
-    classroomsLoading, 
-    studentCount, 
+  const { user, profile, isLoading: authLoading, isProfileLoading, signOut } = useAuth();
+  const {
+    classrooms,
+    classroomsLoading,
+    studentCount,
     activeAssignmentsCount,
-    refetch: refetchDashboard
+    refetch: refetchDashboard,
   } = useTeacherDashboardData();
-  
+
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showStudentsDialog, setShowStudentsDialog] = useState(false);
   const navigate = useNavigate();
@@ -51,7 +51,7 @@ const TeacherDashboard = () => {
   const { data: classroomsWithStudents = [], refetch: loadAllStudents } = useTeacherAllStudents(classrooms);
 
   // Auth guards
-  if (authLoading || classroomsLoading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20">
         <div className="text-center">
@@ -62,9 +62,20 @@ const TeacherDashboard = () => {
     );
   }
 
-  if (!user || !profile) {
+  if (!user) {
     navigate("/auth");
     return null;
+  }
+
+  if (isProfileLoading || !profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20">
+        <div className="text-center">
+          <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-3" />
+          <p className="text-muted-foreground">{t("teacherDashboard.loading")}</p>
+        </div>
+      </div>
+    );
   }
 
   if (profile.role !== "teacher") {
@@ -165,9 +176,13 @@ const TeacherDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-black bg-gradient-to-b from-[#9B6DD6] to-[#D4A04A] bg-clip-text text-primary">
-                    {classrooms.length}
-                  </span>
+                  {classroomsLoading ? (
+                    <div className="h-10 w-16 rounded-md bg-muted animate-pulse" aria-label="Loading classroom count" />
+                  ) : (
+                    <span className="text-4xl font-black bg-gradient-to-b from-[#9B6DD6] to-[#D4A04A] bg-clip-text text-primary">
+                      {classrooms.length}
+                    </span>
+                  )}
                   <span className="text-sm text-emerald-500 font-medium flex items-center gap-0.5">
                     ↗ {t("teacherDashboard.stats.activeLabel")}
                   </span>
@@ -191,9 +206,13 @@ const TeacherDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-black bg-gradient-to-b from-[#9B6DD6] to-[#D4A04A] bg-clip-text text-transparent">
-                    {studentCount}
-                  </span>
+                  {classroomsLoading ? (
+                    <div className="h-10 w-16 rounded-md bg-muted animate-pulse" aria-label="Loading student count" />
+                  ) : (
+                    <span className="text-4xl font-black bg-gradient-to-b from-[#9B6DD6] to-[#D4A04A] bg-clip-text text-transparent">
+                      {studentCount}
+                    </span>
+                  )}
                   <span className="text-sm text-emerald-500 font-medium flex items-center gap-0.5">
                     ↗ {t("teacherDashboard.stats.enrolledLabel")}
                   </span>
@@ -214,9 +233,13 @@ const TeacherDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-black bg-gradient-to-b from-[#9B6DD6] to-[#D4A04A] bg-clip-text text-[#22c0c0]">
-                    {activeAssignmentsCount}
-                  </span>
+                  {classroomsLoading ? (
+                    <div className="h-10 w-16 rounded-md bg-muted animate-pulse" aria-label="Loading assignment count" />
+                  ) : (
+                    <span className="text-4xl font-black bg-gradient-to-b from-[#9B6DD6] to-[#D4A04A] bg-clip-text text-[#22c0c0]">
+                      {activeAssignmentsCount}
+                    </span>
+                  )}
                   <Badge className="bg-amber-400 text-amber-900 hover:bg-amber-400 border-0 text-xs">
                     {t("teacherDashboard.stats.mlPowered")}
                   </Badge>
@@ -232,7 +255,7 @@ const TeacherDashboard = () => {
                 {t("teacherDashboard.tabs.classrooms")}
               </TabsTrigger>
               <TabsTrigger value="links-resources" className={liquidGlassTabClass}>
-                <Link className="h-4 w-4 mr-2" />
+                <LinkIcon className="h-4 w-4 mr-2" />
                 Links & Resources
               </TabsTrigger>
               <TabsTrigger value="calendar" className={liquidGlassTabClass}>
@@ -265,7 +288,15 @@ const TeacherDashboard = () => {
                 </Button>
               </div>
 
-              {classrooms.length === 0 ? (
+              {classroomsLoading ? (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+                  {Array.from({ length: 3 }).map((_, idx) => (
+                    <Card key={idx} className="h-[180px] animate-pulse">
+                      <div className="h-full w-full rounded-lg bg-muted" />
+                    </Card>
+                  ))}
+                </div>
+              ) : classrooms.length === 0 ? (
                 <Card className="p-12 text-center">
                   <div className="max-w-md mx-auto">
                     <div className="h-24 w-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center">
@@ -322,13 +353,12 @@ const TeacherDashboard = () => {
             <TabsContent value="actions" className="mt-6 space-y-4">
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Browse Games */}
-                <Card className="relative p-6 hover:shadow-lg transition-all">
-                  <Link
-                    to="/games"
-                    className="absolute inset-0 rounded-lg"
-                    aria-label={t("teacherDashboard.quickActions.browseGames.cta")}
-                  />
-                  <div className="relative z-10">
+                <RouterLink
+                  to="/games"
+                  className="block rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={t("teacherDashboard.quickActions.browseGames.cta")}
+                >
+                  <Card className="p-6 hover:shadow-lg transition-all hover:-translate-y-0.5">
                     <div className="flex items-start gap-4 mb-4">
                       <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center flex-shrink-0">
                         <Sparkles className="h-6 w-6 text-white" />
@@ -340,22 +370,19 @@ const TeacherDashboard = () => {
                     <p className="text-muted-foreground mb-4">
                       {t("teacherDashboard.quickActions.browseGames.description")}
                     </p>
-                    <Button variant="outline" className="w-full" asChild>
-                      <Link to="/games">
-                        {t("teacherDashboard.quickActions.browseGames.cta")} →
-                      </Link>
+                    <Button variant="outline" className="w-full pointer-events-none">
+                      {t("teacherDashboard.quickActions.browseGames.cta")} →
                     </Button>
-                  </div>
-                </Card>
+                  </Card>
+                </RouterLink>
 
                 {/* AURA Analytics */}
-                <Card className="relative p-6 hover:shadow-lg transition-all">
-                  <Link
-                    to="/teacher/aura-analytics"
-                    className="absolute inset-0 rounded-lg"
-                    aria-label={t("teacherDashboard.quickActions.auraAnalytics.cta")}
-                  />
-                  <div className="relative z-10">
+                <RouterLink
+                  to="/teacher/aura-analytics"
+                  className="block rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={t("teacherDashboard.quickActions.auraAnalytics.cta")}
+                >
+                  <Card className="p-6 hover:shadow-lg transition-all hover:-translate-y-0.5">
                     <div className="flex items-start gap-4 mb-4">
                       <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center flex-shrink-0">
                         <BarChart3 className="h-6 w-6 text-white" />
@@ -367,22 +394,19 @@ const TeacherDashboard = () => {
                     <p className="text-muted-foreground mb-4">
                       {t("teacherDashboard.quickActions.auraAnalytics.description")}
                     </p>
-                    <Button variant="outline" className="w-full" asChild>
-                      <Link to="/teacher/aura-analytics">
-                        {t("teacherDashboard.quickActions.auraAnalytics.cta")} →
-                      </Link>
+                    <Button variant="outline" className="w-full pointer-events-none">
+                      {t("teacherDashboard.quickActions.auraAnalytics.cta")} →
                     </Button>
-                  </div>
-                </Card>
+                  </Card>
+                </RouterLink>
 
                 {/* Story Library */}
-                <Card className="relative p-6 hover:shadow-lg transition-all">
-                  <Link
-                    to="/teacher/story-library"
-                    className="absolute inset-0 rounded-lg"
-                    aria-label={t("teacherDashboard.quickActions.storyLibrary.cta")}
-                  />
-                  <div className="relative z-10">
+                <RouterLink
+                  to="/teacher/story-library"
+                  className="block rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={t("teacherDashboard.quickActions.storyLibrary.cta")}
+                >
+                  <Card className="p-6 hover:shadow-lg transition-all hover:-translate-y-0.5">
                     <div className="flex items-start gap-4 mb-4">
                       <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center flex-shrink-0">
                         <BookOpen className="h-6 w-6 text-white" />
@@ -394,13 +418,11 @@ const TeacherDashboard = () => {
                     <p className="text-muted-foreground mb-4">
                       {t("teacherDashboard.quickActions.storyLibrary.description")}
                     </p>
-                    <Button variant="outline" className="w-full" asChild>
-                      <Link to="/teacher/story-library">
-                        {t("teacherDashboard.quickActions.storyLibrary.cta")} →
-                      </Link>
+                    <Button variant="outline" className="w-full pointer-events-none">
+                      {t("teacherDashboard.quickActions.storyLibrary.cta")} →
                     </Button>
-                  </div>
-                </Card>
+                  </Card>
+                </RouterLink>
 
                 {/* Resources */}
                 <Card className="p-6 hover:shadow-lg transition-all opacity-75">
@@ -418,11 +440,7 @@ const TeacherDashboard = () => {
                   <p className="text-muted-foreground mb-4">
                     {t("teacherDashboard.quickActions.resources.description")}
                   </p>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    disabled
-                  >
+                  <Button variant="outline" className="w-full" disabled>
                     {t("teacherDashboard.quickActions.resources.cta")} →
                   </Button>
                 </Card>
