@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, Volume2, VolumeX, Sparkles } from "lucide-react";
 import { BattleHUD } from "./BattleHUD";
 import { BattleArena } from "./BattleArena";
-import { PowerButton } from "./PowerButton";
 import { GrogState } from "./GrogCharacter";
 import { PlayerState } from "./PlayerCharacter";
 import { BookRescueCelebration } from "./BookRescueCelebration";
@@ -30,10 +29,6 @@ interface BattleReaderProps {
   onComplete: () => void;
   onNextStory?: () => void;
 }
-
-// Power unlocks at streak 5, deals 3x damage
-const POWER_STREAK_REQUIREMENT = 5;
-const POWER_DAMAGE_MULTIPLIER = 3;
 
 export const BattleReader = ({
   story,
@@ -67,12 +62,7 @@ export const BattleReader = ({
   // Beam effect triggers
   const [triggerAttackBeam, setTriggerAttackBeam] = useState(0);
   const [triggerDamageBeam, setTriggerDamageBeam] = useState(0);
-  const [triggerPowerBeam, setTriggerPowerBeam] = useState(0);
   const [isCriticalHit, setIsCriticalHit] = useState(false);
-  
-  // Power ability state
-  const [powerReady, setPowerReady] = useState(false);
-  const [powerCharging, setPowerCharging] = useState(0);
   
   // CRITICAL FIX: Track processed word events to prevent double-applying damage
   const processedWordEventsRef = useRef<Set<string>>(new Set());
@@ -110,54 +100,6 @@ export const BattleReader = ({
     const interval = setInterval(showRandomTaunt, 15000 + Math.random() * 15000);
     return () => clearInterval(interval);
   }, [battleState.status, grogState]);
-
-  // Update power charging based on streak
-  useEffect(() => {
-    const chargePercent = Math.min((battleState.currentStreak / POWER_STREAK_REQUIREMENT) * 100, 100);
-    setPowerCharging(chargePercent);
-    setPowerReady(battleState.currentStreak >= POWER_STREAK_REQUIREMENT);
-  }, [battleState.currentStreak]);
-
-  // Handle power activation
-  const handlePowerActivate = useCallback(() => {
-    if (!powerReady || battleState.status !== 'in_progress') return;
-    
-    // Calculate power damage (3x base damage)
-    const baseDamage = 10;
-    const powerDamage = baseDamage * POWER_DAMAGE_MULTIPLIER;
-    
-    // Apply damage to enemy
-    setBattleState(prev => {
-      const newEnemyHp = Math.max(0, prev.enemyHp - powerDamage);
-      return {
-        ...prev,
-        enemyHp: newEnemyHp,
-        totalDamageDealt: prev.totalDamageDealt + powerDamage,
-        currentStreak: 0, // Reset streak after using power
-        status: newEnemyHp <= 0 ? 'victory' : prev.status,
-      };
-    });
-    
-    // Trigger visual effects
-    setPlayerState('attacking');
-    setGrogState('hit');
-    setShowEnemyDamage(powerDamage);
-    setLastMessage("⚡ POWER STRIKE! ⚡");
-    setTriggerPowerBeam(Date.now());
-    setPowerReady(false);
-    setPowerCharging(0);
-    
-    // Reset states after animation
-    setTimeout(() => {
-      setPlayerState('idle');
-      setBattleState(prev => {
-        setGrogState(prev.enemyHp <= 0 ? 'defeated' : 'idle');
-        return prev;
-      });
-      setShowEnemyDamage(undefined);
-      setLastMessage(undefined);
-    }, 600);
-  }, [powerReady, battleState.status]);
 
   // Handle real-time word results from reader
   // CRITICAL FIX: Use functional state update to avoid stale state issues
@@ -324,8 +266,6 @@ export const BattleReader = ({
     setShowCelebration(false);
     setGrogState('idle');
     setPlayerState('idle');
-    setPowerReady(false);
-    setPowerCharging(0);
   };
 
   const handleNextStory = () => {
@@ -341,104 +281,82 @@ export const BattleReader = ({
     ? Math.round((battleState.correctWords / battleState.wordsRead) * 100) 
     : 0;
 
-  // Enemy name for display
-  const enemyName = enemyType === 'minion' ? 'Minion' : 
-                    enemyType === 'guard' ? 'Guard' : 
-                    enemyType === 'elite' ? 'Elite' : 'Boss';
-
   return (
-    <div className="space-y-2">
-      {/* Compact Header */}
+    <div className="space-y-3">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <Button
           variant="ghost"
           size="sm"
           onClick={onBack}
-          className="flex items-center gap-1 h-8 px-2"
+          className="flex items-center gap-2"
         >
           <ChevronLeft className="h-4 w-4" />
-          <span className="text-xs">Back</span>
+          Retreat
         </Button>
-        <div className="text-center flex-1">
-          <h2 className="text-sm font-bold truncate">{story.title}</h2>
+        <div className="text-center">
+          <h2 className="text-lg font-bold">{story.title}</h2>
+          <p className="text-xs text-muted-foreground">Read aloud to attack!</p>
         </div>
-        <div className="flex items-center gap-1">
-          <motion.div 
-            className="flex items-center gap-1 px-2 py-0.5 bg-primary/10 rounded text-xs"
-            animate={{ opacity: [0.7, 1, 0.7] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          >
-            <Sparkles className="h-3 w-3 text-primary" />
-            <span className="text-primary font-medium">Coach</span>
-          </motion.div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSoundEnabled(!soundEnabled)}
-            className="h-8 w-8"
-          >
-            {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-          </Button>
-        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setSoundEnabled(!soundEnabled)}
+        >
+          {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+        </Button>
       </div>
 
-      {/* Compact Battle Arena with integrated health bars */}
+      {/* AURA Coach Indicator - Above Battle Arena */}
+      <motion.div 
+        className="flex items-center justify-center gap-2 py-2 bg-primary/10 rounded-lg"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+        <span className="text-sm font-medium text-primary">AURA Coach Active</span>
+        <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+      </motion.div>
+
+      {/* Battle Arena - Characters with health bars */}
       <BattleArena
         enemyType={enemyType}
         enemyHealthPercent={(battleState.enemyHp / battleState.enemyMaxHp) * 100}
         enemyState={grogState}
         enemyTaunt={currentTaunt}
-        enemyHp={battleState.enemyHp}
-        enemyMaxHp={battleState.enemyMaxHp}
-        enemyName={enemyName}
         playerHealthPercent={(battleState.playerHp / battleState.playerMaxHp) * 100}
         playerState={playerState}
-        playerHp={battleState.playerHp}
-        playerMaxHp={battleState.playerMaxHp}
         currentStreak={battleState.currentStreak}
         showPlayerDamage={showPlayerDamage}
         showEnemyDamage={showEnemyDamage}
         triggerAttackBeam={triggerAttackBeam}
         triggerDamageBeam={triggerDamageBeam}
-        triggerPowerBeam={triggerPowerBeam}
         isCriticalHit={isCriticalHit}
       />
 
-      {/* Compact Stats HUD with Power Button */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1">
-          <BattleHUD
-            enemyHp={battleState.enemyHp}
-            enemyMaxHp={battleState.enemyMaxHp}
-            playerHp={battleState.playerHp}
-            playerMaxHp={battleState.playerMaxHp}
-            currentStreak={battleState.currentStreak}
-            wordsRead={battleState.wordsRead}
-            correctWords={battleState.correctWords}
-            totalWords={story.word_count}
-            worldNumber={worldNumber}
-            enemyName={enemyName}
-            lastDamage={showEnemyDamage}
-            lastMessage={lastMessage}
-          />
-        </div>
-        
-        {/* Power Button */}
-        <PowerButton
-          powerReady={powerReady}
-          powerCharging={powerCharging}
-          onActivate={handlePowerActivate}
-          disabled={battleState.status !== 'in_progress'}
-        />
-      </div>
+      {/* Battle Stats HUD */}
+      <BattleHUD
+        enemyHp={battleState.enemyHp}
+        enemyMaxHp={battleState.enemyMaxHp}
+        playerHp={battleState.playerHp}
+        playerMaxHp={battleState.playerMaxHp}
+        currentStreak={battleState.currentStreak}
+        wordsRead={battleState.wordsRead}
+        correctWords={battleState.correctWords}
+        totalWords={story.word_count}
+        worldNumber={worldNumber}
+        enemyName={`World ${worldNumber} ${enemyType.charAt(0).toUpperCase() + enemyType.slice(1)}`}
+        lastDamage={showEnemyDamage}
+        lastMessage={lastMessage}
+      />
 
       {/* Victory requirement hint */}
-      <div className="text-center text-[10px] text-muted-foreground">
-        🎯 Defeat enemy OR finish with 90%+ accuracy to win!
+      <div className="text-center text-xs text-muted-foreground bg-muted/30 py-1 rounded">
+        🎯 Win by defeating the enemy OR finishing with 90%+ accuracy!
       </div>
 
-      {/* Reading Area - More compact */}
-      <Card className="p-3">
+      {/* Reading Area */}
+      <Card className="p-4">
         <WordByWordReader
           passageText={story.passage_text}
           assignmentId={null}

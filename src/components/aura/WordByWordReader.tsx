@@ -791,26 +791,24 @@ export const WordByWordReader = ({
               }
             }
           } else {
-            // CRITICAL FIX: Look ahead max 2 positions (reduced from 5 to prevent skipping)
-            // Only skip if we have high confidence and word is somewhat unique
-            const commonWords = new Set(['the', 'a', 'an', 'is', 'are', 'was', 'were', 'to', 'of', 'and', 'in', 'on', 'it', 'he', 'she', 'they', 'we', 'i', 'you', 'that', 'this', 'for', 'with', 'as', 'at', 'be', 'have', 'has', 'had', 'do', 'does', 'did', 'can', 'will', 'would', 'could', 'should']);
+            // SUPERCHARGED V2: Look ahead up to 5 positions (expanded from 2)
             let foundAhead = -1;
-            for (let ahead = 1; ahead <= 2; ahead++) {
+            for (let ahead = 1; ahead <= 5; ahead++) {
               const aheadIdx = currentIdx + ahead;
               if (aheadIdx < words.length) {
-                const targetWord = words[aheadIdx];
-                const normalizedTarget = targetWord.toLowerCase().replace(/[^a-z]/g, '');
-                
-                // Skip look-ahead for very common words (too likely to cause false matches)
-                if (commonWords.has(normalizedTarget) && normalizedTarget.length <= 4) {
-                  continue;
-                }
-                
-                // Require higher confidence for look-ahead matches
-                if (wordMatcher(spokenWord, targetWord)) {
+                // Try text match first
+                if (wordMatcher(spokenWord, words[aheadIdx])) {
                   foundAhead = aheadIdx;
-                  console.log('LOOKAHEAD MATCH (ahead=' + ahead + '):', spokenWord, '→', targetWord);
                   break;
+                }
+                // SUPERCHARGED V2: Try phoneme match as fallback
+                if (!isStrictMode) {
+                  const phonemeResult = matchWithPhonemes(spokenWord, words[aheadIdx], 0.70);
+                  if (phonemeResult.isMatch) {
+                    foundAhead = aheadIdx;
+                    console.log('PHONEME LOOKAHEAD MATCH:', spokenWord, '→', words[aheadIdx]);
+                    break;
+                  }
                 }
               }
             }
