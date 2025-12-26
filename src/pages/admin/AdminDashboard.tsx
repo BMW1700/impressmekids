@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -33,7 +32,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const { user, profile, isLoading: authLoading, signOut } = useAuth();
+  const { user, profile, isLoading: authLoading, isProfileLoading, signOut } = useAuth();
   const [loading, setLoading] = useState(true);
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null);
   const { teachers, students, admins, isLoading } = useAdminData(selectedSchoolId);
@@ -79,42 +78,26 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (authLoading) return;
-    
+
     if (!user) {
       navigate("/auth");
       return;
     }
 
-    checkAdminAccess();
-  }, [authLoading, user]);
+    if (isProfileLoading || !profile) return;
 
-  const checkAdminAccess = async () => {
-    if (!user) return;
-    
-    try {
-      const { data: userRole } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .single();
-
-      if (userRole?.role !== "admin") {
-        toast.error("Access denied. Admin privileges required.");
-        navigate("/");
-        return;
-      }
-
-      // Set default school from profile
-      if (profile?.school_id) {
-        setSelectedSchoolId(profile.school_id);
-      }
-
-      setLoading(false);
-    } catch (error) {
-      console.error("Error checking admin access:", error);
-      navigate("/auth");
+    if (profile.role !== "admin") {
+      toast.error("Access denied. Admin privileges required.");
+      navigate("/");
+      return;
     }
-  };
+
+    if (profile.school_id) {
+      setSelectedSchoolId(profile.school_id);
+    }
+
+    setLoading(false);
+  }, [authLoading, isProfileLoading, user, profile]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -159,7 +142,7 @@ export default function AdminDashboard() {
     setEditStudentIdOpen(true);
   };
 
-  if (authLoading || loading || isLoading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

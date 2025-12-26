@@ -26,10 +26,10 @@ import { DrillAlertOverlay } from "@/components/student/DrillAlertOverlay";
 import { useAuth } from "@/contexts/AuthContext";
 
 const StudentDashboard = () => {
-  const { user, profile, isLoading: authLoading, signOut } = useAuth();
+  const { user, profile, isLoading: authLoading, isProfileLoading, signOut } = useAuth();
   const [studentProfile, setStudentProfile] = useState<any>(null);
   const [classrooms, setClassrooms] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isDataLoading, setIsDataLoading] = useState(true);
   const [activeSection, setActiveSection] = useState("home");
   const [tabletSidebarOpen, setTabletSidebarOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -39,37 +39,54 @@ const StudentDashboard = () => {
 
   useEffect(() => {
     if (authLoading) return;
-    
-    if (!user || !profile) {
-      navigate('/auth');
+
+    if (!user) {
+      navigate("/auth");
       return;
     }
 
+    // Wait for profile (async) instead of redirecting prematurely
+    if (isProfileLoading || !profile) return;
+
     // Role redirects
-    if (profile.role === 'district_manager') { navigate('/district-manager/dashboard'); return; }
-    if (profile.role === 'teacher') { navigate('/teacher/dashboard'); return; }
-    if (profile.role === 'admin') { navigate('/admin/dashboard'); return; }
-    if (profile.role === 'parent') { navigate('/parent/dashboard'); return; }
+    if (profile.role === "district_manager") {
+      navigate("/district-manager/dashboard");
+      return;
+    }
+    if (profile.role === "teacher") {
+      navigate("/teacher/dashboard");
+      return;
+    }
+    if (profile.role === "admin") {
+      navigate("/admin/dashboard");
+      return;
+    }
+    if (profile.role === "parent") {
+      navigate("/parent/dashboard");
+      return;
+    }
 
     // Verification check
     if (!profile.is_verified) {
-      navigate('/pending-verification');
+      navigate("/pending-verification");
       return;
     }
 
     // Load data in parallel
     loadDashboardData();
-  }, [authLoading, user, profile]);
+  }, [authLoading, isProfileLoading, user, profile]);
 
   const loadDashboardData = async () => {
     if (!user) return;
-    
+
+    setIsDataLoading(true);
+
     try {
       // Fetch all data in parallel
       const [classroomsResult, publicProfileResult, studentDataResult] = await Promise.all([
-        supabase.rpc('get_student_classrooms', { _user_id: user.id }),
-        supabase.from('public_profiles').select('*').eq('id', user.id).single(),
-        supabase.from('student_profiles').select('stats').eq('user_id', user.id).single(),
+        supabase.rpc("get_student_classrooms", { _user_id: user.id }),
+        supabase.from("public_profiles").select("*").eq("id", user.id).single(),
+        supabase.from("student_profiles").select("stats").eq("user_id", user.id).single(),
       ]);
 
       if (classroomsResult.data) setClassrooms(classroomsResult.data);
@@ -77,7 +94,7 @@ const StudentDashboard = () => {
       // Handle student profile creation if needed
       if (!studentDataResult.data) {
         const { data: newProfile } = await supabase
-          .from('student_profiles')
+          .from("student_profiles")
           .insert({ user_id: user.id, stats: { games_played: 0, games_won: 0 } })
           .select()
           .single();
@@ -86,10 +103,10 @@ const StudentDashboard = () => {
         setStudentProfile({ ...publicProfileResult.data, stats: studentDataResult.data.stats });
       }
     } catch (error) {
-      console.error('Error loading dashboard:', error);
+      console.error("Error loading dashboard:", error);
       toast({ title: "Error", description: "Failed to load profile", variant: "destructive" });
     } finally {
-      setIsLoading(false);
+      setIsDataLoading(false);
     }
   };
 
@@ -118,7 +135,7 @@ const StudentDashboard = () => {
     }
   };
 
-  if (authLoading || isLoading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -188,7 +205,19 @@ const StudentDashboard = () => {
         </div>
         
         <main className="flex-1 overflow-y-auto">
-          <div className="container mx-auto px-4 py-8">{renderSection()}</div>
+          <div className="container mx-auto px-4 py-8">
+            {isProfileLoading || !profile ? (
+              <div className="py-20 flex items-center justify-center">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              </div>
+            ) : isDataLoading ? (
+              <div className="py-20 flex items-center justify-center">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              </div>
+            ) : (
+              renderSection()
+            )}
+          </div>
         </main>
       </div>
       <Footer />
