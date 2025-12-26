@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sword, BookOpen, Trophy, Flame, Star, ChevronRight, Crown, Settings } from "lucide-react";
+import { Sword, BookOpen, Trophy, Flame, Star, ChevronRight, Crown } from "lucide-react";
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
+import { useCampaignAssets } from "@/hooks/useCampaignAssets";
 import { CampaignWorldMap } from "./CampaignWorldMap";
 import { BattleReader } from "./BattleReader";
 import { CampaignVideoGate } from "./CampaignVideoGate";
@@ -20,39 +21,16 @@ interface CampaignModeEntryProps {
   isAdmin?: boolean;
 }
 
-interface CampaignAssets {
-  ellaAvatarUrl?: string;
-  grogAvatarUrl?: string;
-  campaignIntroVideoUrl?: string;
-  worldIntroVideos?: Record<number, string>;
-  storyIntroVideos?: Record<string, string>;
-}
-
 type CampaignView = 'intro' | 'intro-video' | 'world-map' | 'world-video' | 'story-select' | 'story-video' | 'battle';
 
 export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false }: CampaignModeEntryProps) => {
   const { progress, progressLoading } = useCampaignProgress(studentId);
+  const { assets, updateCampaignIntroVideo, updateWorldIntroVideo } = useCampaignAssets();
+  
   const [currentView, setCurrentView] = useState<CampaignView>('intro');
   const [selectedWorld, setSelectedWorld] = useState<number>(1);
   const [selectedStory, setSelectedStory] = useState<CuratedStory | null>(null);
   const [enemyType, setEnemyType] = useState<EnemyType>('minion');
-  const [hasSeenIntroVideo, setHasSeenIntroVideo] = useState(false);
-  const [seenWorldVideos, setSeenWorldVideos] = useState<Set<number>>(new Set());
-  
-  // Campaign assets - stored in localStorage for now (could be moved to DB)
-  const [campaignAssets, setCampaignAssets] = useState<CampaignAssets>(() => {
-    try {
-      const saved = localStorage.getItem('campaign_assets');
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
-
-  // Save assets to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('campaign_assets', JSON.stringify(campaignAssets));
-  }, [campaignAssets]);
 
   // Get stories for selected world based on category mapping
   const getWorldStories = (worldNumber: number) => {
@@ -63,36 +41,24 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
     return stories.filter(story => worldCategories.includes(story.category));
   };
 
-  // Handle entering campaign (with optional intro video)
+  // Handle entering campaign - ALWAYS show video gate
   const handleEnterCampaign = () => {
-    if (campaignAssets.campaignIntroVideoUrl && !hasSeenIntroVideo) {
-      setCurrentView('intro-video');
-    } else {
-      setCurrentView('world-map');
-    }
+    setCurrentView('intro-video');
   };
 
   // Handle intro video complete
   const handleIntroVideoComplete = () => {
-    setHasSeenIntroVideo(true);
     setCurrentView('world-map');
   };
 
-  // Handle world selection (with optional world video)
+  // Handle world selection - ALWAYS show video gate
   const handleWorldSelect = (worldNumber: number) => {
     setSelectedWorld(worldNumber);
-    
-    const worldVideoUrl = campaignAssets.worldIntroVideos?.[worldNumber];
-    if (worldVideoUrl && !seenWorldVideos.has(worldNumber)) {
-      setCurrentView('world-video');
-    } else {
-      setCurrentView('story-select');
-    }
+    setCurrentView('world-video');
   };
 
   // Handle world video complete
   const handleWorldVideoComplete = () => {
-    setSeenWorldVideos(prev => new Set([...prev, selectedWorld]));
     setCurrentView('story-select');
   };
 
@@ -116,7 +82,7 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
     }
     
     // Check for story-specific video
-    const storyVideoUrl = campaignAssets.storyIntroVideos?.[story.title];
+    const storyVideoUrl = assets.storyIntroVideos?.[story.title];
     if (storyVideoUrl) {
       setCurrentView('story-video');
     } else {
@@ -160,13 +126,16 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
 
   const booksRescued = progress?.books_rescued || 0;
 
-  // Render video gates
+  // Render video gates - ALWAYS show (even without video configured)
   if (currentView === 'intro-video') {
     return (
       <CampaignVideoGate
-        videoUrl={campaignAssets.campaignIntroVideoUrl}
+        videoUrl={assets.campaignIntroVideoUrl}
         title="Story Campaign Introduction"
         onComplete={handleIntroVideoComplete}
+        isAdmin={isAdmin}
+        onVideoUrlChange={(url) => updateCampaignIntroVideo(url)}
+        assetKey="campaign-intro"
       />
     );
   }
@@ -174,9 +143,12 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
   if (currentView === 'world-video') {
     return (
       <CampaignVideoGate
-        videoUrl={campaignAssets.worldIntroVideos?.[selectedWorld]}
+        videoUrl={assets.worldIntroVideos?.[selectedWorld]}
         title={`World ${selectedWorld}: ${campaignWorlds[selectedWorld - 1]?.name || 'Unknown'}`}
         onComplete={handleWorldVideoComplete}
+        isAdmin={isAdmin}
+        onVideoUrlChange={(url) => updateWorldIntroVideo(selectedWorld, url)}
+        assetKey={`world-${selectedWorld}-intro`}
       />
     );
   }
@@ -184,7 +156,7 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
   if (currentView === 'story-video' && selectedStory) {
     return (
       <CampaignVideoGate
-        videoUrl={campaignAssets.storyIntroVideos?.[selectedStory.title]}
+        videoUrl={assets.storyIntroVideos?.[selectedStory.title]}
         title={selectedStory.title}
         onComplete={handleStoryVideoComplete}
       />
@@ -225,11 +197,7 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
                 {/* Admin Settings Button */}
                 {isAdmin && (
                   <div className="absolute top-4 right-4">
-                    <CampaignAssetUploader
-                      assets={campaignAssets}
-                      onAssetsChange={setCampaignAssets}
-                      isAdmin={isAdmin}
-                    />
+                    <CampaignAssetUploader isAdmin={isAdmin} />
                   </div>
                 )}
               </div>
@@ -240,9 +208,9 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
                   {/* Princess Ella */}
                   <div className="text-center space-y-3">
                     <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-5xl shadow-lg overflow-hidden">
-                      {campaignAssets.ellaAvatarUrl ? (
+                      {assets.ellaAvatarUrl ? (
                         <img
-                          src={campaignAssets.ellaAvatarUrl}
+                          src={assets.ellaAvatarUrl}
                           alt="Princess Ella"
                           className="w-full h-full object-cover"
                           onError={(e) => {
@@ -267,9 +235,9 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
                       transition={{ repeat: Infinity, duration: 2 }}
                       className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-green-600 to-emerald-800 flex items-center justify-center text-5xl shadow-lg overflow-hidden"
                     >
-                      {campaignAssets.grogAvatarUrl ? (
+                      {assets.grogAvatarUrl ? (
                         <img
-                          src={campaignAssets.grogAvatarUrl}
+                          src={assets.grogAvatarUrl}
                           alt="Grog the Goblin King"
                           className="w-full h-full object-cover"
                           onError={(e) => {
@@ -475,6 +443,8 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
               onBack={() => setCurrentView('story-select')}
               onComplete={handleBattleComplete}
               onNextStory={handleNextStory}
+              ellaAvatarUrl={assets.ellaAvatarUrl}
+              grogAvatarUrl={assets.grogAvatarUrl}
             />
           </motion.div>
         )}

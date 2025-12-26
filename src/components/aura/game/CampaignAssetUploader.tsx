@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,54 +10,144 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Settings, Upload, Image, Video, Check, X } from "lucide-react";
-
-interface CampaignAssets {
-  ellaAvatarUrl?: string;
-  grogAvatarUrl?: string;
-  campaignIntroVideoUrl?: string;
-  worldIntroVideos?: Record<number, string>;
-  storyIntroVideos?: Record<string, string>;
-}
+import { Settings, Upload, Image, Video, Check, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useCampaignAssets } from "@/hooks/useCampaignAssets";
 
 interface CampaignAssetUploaderProps {
-  assets: CampaignAssets;
-  onAssetsChange: (assets: CampaignAssets) => void;
   isAdmin?: boolean;
 }
 
 export const CampaignAssetUploader = ({
-  assets,
-  onAssetsChange,
   isAdmin = false,
 }: CampaignAssetUploaderProps) => {
   const [open, setOpen] = useState(false);
-  const [localAssets, setLocalAssets] = useState<CampaignAssets>(assets);
+  const [isUploading, setIsUploading] = useState<string | null>(null);
+  const ellaInputRef = useRef<HTMLInputElement>(null);
+  const grogInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+  
+  const { 
+    assets, 
+    updateEllaAvatar, 
+    updateGrogAvatar, 
+    updateCampaignIntroVideo,
+    updateWorldIntroVideo,
+  } = useCampaignAssets();
+
+  // Local state for URL inputs
+  const [localUrls, setLocalUrls] = useState({
+    ellaAvatarUrl: '',
+    grogAvatarUrl: '',
+    campaignIntroVideoUrl: '',
+    worldIntroVideos: {} as Record<number, string>,
+  });
+
+  // Sync local state when assets load
+  useState(() => {
+    if (assets) {
+      setLocalUrls({
+        ellaAvatarUrl: assets.ellaAvatarUrl || '',
+        grogAvatarUrl: assets.grogAvatarUrl || '',
+        campaignIntroVideoUrl: assets.campaignIntroVideoUrl || '',
+        worldIntroVideos: assets.worldIntroVideos || {},
+      });
+    }
+  });
 
   if (!isAdmin) {
     return null;
   }
 
-  const handleSave = () => {
-    onAssetsChange(localAssets);
-    setOpen(false);
+  // Handle image file upload
+  const handleImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    assetType: 'ella' | 'grog'
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file (JPG, PNG, etc.)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB for images)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Image must be under 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(assetType);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${assetType}-avatar-${Date.now()}.${fileExt}`;
+
+      const { data, error } = await supabase.storage
+        .from('campaign-assets')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true,
+        });
+
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage
+        .from('campaign-assets')
+        .getPublicUrl(data.path);
+
+      const publicUrl = urlData.publicUrl;
+
+      if (assetType === 'ella') {
+        updateEllaAvatar(publicUrl);
+        setLocalUrls(prev => ({ ...prev, ellaAvatarUrl: publicUrl }));
+      } else {
+        updateGrogAvatar(publicUrl);
+        setLocalUrls(prev => ({ ...prev, grogAvatarUrl: publicUrl }));
+      }
+
+      toast({
+        title: "Avatar uploaded!",
+        description: `${assetType === 'ella' ? 'Princess Ella' : 'Grog'} avatar has been updated.`,
+      });
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload image. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(null);
+    }
   };
 
-  const updateAsset = (key: keyof CampaignAssets, value: string) => {
-    setLocalAssets(prev => ({
-      ...prev,
-      [key]: value,
-    }));
-  };
-
-  const updateWorldVideo = (worldNumber: number, url: string) => {
-    setLocalAssets(prev => ({
-      ...prev,
-      worldIntroVideos: {
-        ...prev.worldIntroVideos,
-        [worldNumber]: url,
-      },
-    }));
+  // Handle URL saves
+  const handleSaveUrl = (type: 'ella' | 'grog' | 'campaign' | 'world', worldNum?: number) => {
+    if (type === 'ella' && localUrls.ellaAvatarUrl) {
+      updateEllaAvatar(localUrls.ellaAvatarUrl);
+      toast({ title: "Saved!", description: "Princess Ella avatar URL saved." });
+    } else if (type === 'grog' && localUrls.grogAvatarUrl) {
+      updateGrogAvatar(localUrls.grogAvatarUrl);
+      toast({ title: "Saved!", description: "Grog avatar URL saved." });
+    } else if (type === 'campaign' && localUrls.campaignIntroVideoUrl) {
+      updateCampaignIntroVideo(localUrls.campaignIntroVideoUrl);
+      toast({ title: "Saved!", description: "Campaign intro video URL saved." });
+    } else if (type === 'world' && worldNum && localUrls.worldIntroVideos[worldNum]) {
+      updateWorldIntroVideo(worldNum, localUrls.worldIntroVideos[worldNum]);
+      toast({ title: "Saved!", description: `World ${worldNum} intro video URL saved.` });
+    }
   };
 
   return (
@@ -88,23 +177,53 @@ export const CampaignAssetUploader = ({
             <div className="grid grid-cols-2 gap-4">
               {/* Princess Ella */}
               <div className="space-y-2">
-                <Label htmlFor="ella-avatar">Princess Ella Avatar URL</Label>
+                <Label>Princess Ella Avatar</Label>
+                
+                {/* Upload Button */}
+                <div className="flex gap-2">
+                  <input
+                    ref={ellaInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleImageUpload(e, 'ella')}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => ellaInputRef.current?.click()}
+                    disabled={isUploading === 'ella'}
+                  >
+                    {isUploading === 'ella' ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4 mr-2" />
+                    )}
+                    Upload
+                  </Button>
+                </div>
+
+                {/* URL Input */}
                 <div className="flex gap-2">
                   <Input
-                    id="ella-avatar"
-                    placeholder="https://example.com/ella.png"
-                    value={localAssets.ellaAvatarUrl || ''}
-                    onChange={(e) => updateAsset('ellaAvatarUrl', e.target.value)}
+                    placeholder="Or paste image URL"
+                    value={localUrls.ellaAvatarUrl}
+                    onChange={(e) => setLocalUrls(prev => ({ ...prev, ellaAvatarUrl: e.target.value }))}
                   />
+                  <Button size="icon" onClick={() => handleSaveUrl('ella')} disabled={!localUrls.ellaAvatarUrl}>
+                    <Check className="h-4 w-4" />
+                  </Button>
                 </div>
-                {localAssets.ellaAvatarUrl && (
+
+                {/* Preview */}
+                {(localUrls.ellaAvatarUrl || assets.ellaAvatarUrl) && (
                   <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-pink-400">
                     <img
-                      src={localAssets.ellaAvatarUrl}
+                      src={localUrls.ellaAvatarUrl || assets.ellaAvatarUrl}
                       alt="Ella preview"
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = '';
+                        (e.target as HTMLImageElement).style.display = 'none';
                       }}
                     />
                   </div>
@@ -113,23 +232,53 @@ export const CampaignAssetUploader = ({
 
               {/* Grog */}
               <div className="space-y-2">
-                <Label htmlFor="grog-avatar">Grog Avatar URL</Label>
+                <Label>Grog Avatar</Label>
+                
+                {/* Upload Button */}
+                <div className="flex gap-2">
+                  <input
+                    ref={grogInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleImageUpload(e, 'grog')}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => grogInputRef.current?.click()}
+                    disabled={isUploading === 'grog'}
+                  >
+                    {isUploading === 'grog' ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4 mr-2" />
+                    )}
+                    Upload
+                  </Button>
+                </div>
+
+                {/* URL Input */}
                 <div className="flex gap-2">
                   <Input
-                    id="grog-avatar"
-                    placeholder="https://example.com/grog.png"
-                    value={localAssets.grogAvatarUrl || ''}
-                    onChange={(e) => updateAsset('grogAvatarUrl', e.target.value)}
+                    placeholder="Or paste image URL"
+                    value={localUrls.grogAvatarUrl}
+                    onChange={(e) => setLocalUrls(prev => ({ ...prev, grogAvatarUrl: e.target.value }))}
                   />
+                  <Button size="icon" onClick={() => handleSaveUrl('grog')} disabled={!localUrls.grogAvatarUrl}>
+                    <Check className="h-4 w-4" />
+                  </Button>
                 </div>
-                {localAssets.grogAvatarUrl && (
+
+                {/* Preview */}
+                {(localUrls.grogAvatarUrl || assets.grogAvatarUrl) && (
                   <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-green-600">
                     <img
-                      src={localAssets.grogAvatarUrl}
+                      src={localUrls.grogAvatarUrl || assets.grogAvatarUrl}
                       alt="Grog preview"
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = '';
+                        (e.target as HTMLImageElement).style.display = 'none';
                       }}
                     />
                   </div>
@@ -147,13 +296,17 @@ export const CampaignAssetUploader = ({
 
             {/* Campaign Intro */}
             <div className="space-y-2">
-              <Label htmlFor="campaign-intro">Campaign Intro Video URL</Label>
-              <Input
-                id="campaign-intro"
-                placeholder="https://youtube.com/watch?v=... or direct MP4 URL"
-                value={localAssets.campaignIntroVideoUrl || ''}
-                onChange={(e) => updateAsset('campaignIntroVideoUrl', e.target.value)}
-              />
+              <Label>Campaign Intro Video URL</Label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="https://youtube.com/watch?v=... or direct MP4 URL"
+                  value={localUrls.campaignIntroVideoUrl}
+                  onChange={(e) => setLocalUrls(prev => ({ ...prev, campaignIntroVideoUrl: e.target.value }))}
+                />
+                <Button size="icon" onClick={() => handleSaveUrl('campaign')} disabled={!localUrls.campaignIntroVideoUrl}>
+                  <Check className="h-4 w-4" />
+                </Button>
+              </div>
               <p className="text-xs text-muted-foreground">
                 This video plays when entering Story Mode for the first time.
               </p>
@@ -167,26 +320,25 @@ export const CampaignAssetUploader = ({
                   <span className="text-sm w-20">World {worldNumber}:</span>
                   <Input
                     placeholder={`World ${worldNumber} intro video URL`}
-                    value={localAssets.worldIntroVideos?.[worldNumber] || ''}
-                    onChange={(e) => updateWorldVideo(worldNumber, e.target.value)}
+                    value={localUrls.worldIntroVideos[worldNumber] || assets.worldIntroVideos?.[worldNumber] || ''}
+                    onChange={(e) => setLocalUrls(prev => ({
+                      ...prev,
+                      worldIntroVideos: { ...prev.worldIntroVideos, [worldNumber]: e.target.value }
+                    }))}
                   />
+                  <Button 
+                    size="icon" 
+                    onClick={() => handleSaveUrl('world', worldNumber)}
+                    disabled={!localUrls.worldIntroVideos[worldNumber]}
+                  >
+                    <Check className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
               <p className="text-xs text-muted-foreground">
                 These videos play before entering each world on the map.
               </p>
             </div>
-          </div>
-
-          {/* Save Button */}
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave} className="flex items-center gap-2">
-              <Check className="h-4 w-4" />
-              Save Changes
-            </Button>
           </div>
         </div>
       </DialogContent>
