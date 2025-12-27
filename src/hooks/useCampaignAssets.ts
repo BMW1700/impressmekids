@@ -5,8 +5,11 @@ export interface CampaignAssets {
   ellaAvatarUrl?: string;
   grogAvatarUrl?: string;
   campaignIntroVideoUrl?: string;
+  campaignIntroVideoUrls?: string[]; // Array for multi-video campaign intro
   worldIntroVideos?: Record<number, string>;
+  worldIntroVideoArrays?: Record<number, string[]>; // Multi-video per world
   storyIntroVideos?: Record<string, string>;
+  storyIntroVideoArrays?: Record<string, string[]>; // Multi-video per story
 }
 
 // Asset key constants
@@ -14,8 +17,11 @@ const ASSET_KEYS = {
   ELLA_AVATAR: 'ella_avatar',
   GROG_AVATAR: 'grog_avatar',
   CAMPAIGN_INTRO: 'campaign_intro_video',
+  CAMPAIGN_INTRO_ARRAY: 'campaign_intro_videos', // JSON array
   WORLD_INTRO_PREFIX: 'world_intro_video_',
+  WORLD_INTRO_ARRAY_PREFIX: 'world_intro_videos_', // JSON array
   STORY_INTRO_PREFIX: 'story_intro_video_',
+  STORY_INTRO_ARRAY_PREFIX: 'story_intro_videos_', // JSON array
 };
 
 export const useCampaignAssets = () => {
@@ -37,7 +43,9 @@ export const useCampaignAssets = () => {
       // Transform DB rows to CampaignAssets shape
       const result: CampaignAssets = {
         worldIntroVideos: {},
+        worldIntroVideoArrays: {},
         storyIntroVideos: {},
+        storyIntroVideoArrays: {},
       };
 
       data?.forEach((row: { asset_key: string; asset_url: string | null }) => {
@@ -47,10 +55,28 @@ export const useCampaignAssets = () => {
           result.grogAvatarUrl = row.asset_url || undefined;
         } else if (row.asset_key === ASSET_KEYS.CAMPAIGN_INTRO) {
           result.campaignIntroVideoUrl = row.asset_url || undefined;
+        } else if (row.asset_key === ASSET_KEYS.CAMPAIGN_INTRO_ARRAY) {
+          try {
+            result.campaignIntroVideoUrls = row.asset_url ? JSON.parse(row.asset_url) : [];
+          } catch { result.campaignIntroVideoUrls = []; }
+        } else if (row.asset_key.startsWith(ASSET_KEYS.WORLD_INTRO_ARRAY_PREFIX)) {
+          const worldNum = parseInt(row.asset_key.replace(ASSET_KEYS.WORLD_INTRO_ARRAY_PREFIX, ''), 10);
+          if (!isNaN(worldNum) && row.asset_url) {
+            try {
+              result.worldIntroVideoArrays![worldNum] = JSON.parse(row.asset_url);
+            } catch { result.worldIntroVideoArrays![worldNum] = []; }
+          }
         } else if (row.asset_key.startsWith(ASSET_KEYS.WORLD_INTRO_PREFIX)) {
           const worldNum = parseInt(row.asset_key.replace(ASSET_KEYS.WORLD_INTRO_PREFIX, ''), 10);
           if (!isNaN(worldNum) && row.asset_url) {
             result.worldIntroVideos![worldNum] = row.asset_url;
+          }
+        } else if (row.asset_key.startsWith(ASSET_KEYS.STORY_INTRO_ARRAY_PREFIX)) {
+          const storyTitle = row.asset_key.replace(ASSET_KEYS.STORY_INTRO_ARRAY_PREFIX, '');
+          if (row.asset_url) {
+            try {
+              result.storyIntroVideoArrays![storyTitle] = JSON.parse(row.asset_url);
+            } catch { result.storyIntroVideoArrays![storyTitle] = []; }
           }
         } else if (row.asset_key.startsWith(ASSET_KEYS.STORY_INTRO_PREFIX)) {
           const storyTitle = row.asset_key.replace(ASSET_KEYS.STORY_INTRO_PREFIX, '');
@@ -98,8 +124,17 @@ export const useCampaignAssets = () => {
   const updateWorldIntroVideo = (worldNumber: number, url: string) => 
     updateAsset.mutate({ key: `${ASSET_KEYS.WORLD_INTRO_PREFIX}${worldNumber}`, url, type: 'video' });
 
+  const updateWorldIntroVideos = (worldNumber: number, urls: string[]) => 
+    updateAsset.mutate({ key: `${ASSET_KEYS.WORLD_INTRO_ARRAY_PREFIX}${worldNumber}`, url: JSON.stringify(urls), type: 'video' });
+
   const updateStoryIntroVideo = (storyTitle: string, url: string) => 
     updateAsset.mutate({ key: `${ASSET_KEYS.STORY_INTRO_PREFIX}${storyTitle}`, url, type: 'video' });
+
+  const updateStoryIntroVideos = (storyTitle: string, urls: string[]) => 
+    updateAsset.mutate({ key: `${ASSET_KEYS.STORY_INTRO_ARRAY_PREFIX}${storyTitle}`, url: JSON.stringify(urls), type: 'video' });
+
+  const updateCampaignIntroVideos = (urls: string[]) => 
+    updateAsset.mutate({ key: ASSET_KEYS.CAMPAIGN_INTRO_ARRAY, url: JSON.stringify(urls), type: 'video' });
 
   return {
     assets: assets || {} as CampaignAssets,
@@ -107,8 +142,11 @@ export const useCampaignAssets = () => {
     updateEllaAvatar,
     updateGrogAvatar,
     updateCampaignIntroVideo,
+    updateCampaignIntroVideos,
     updateWorldIntroVideo,
+    updateWorldIntroVideos,
     updateStoryIntroVideo,
+    updateStoryIntroVideos,
     updateAsset: updateAsset.mutate,
   };
 };
