@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sword, BookOpen, Trophy, Flame, Star, ChevronRight, Crown, CheckCircle, RotateCcw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Sword, BookOpen, Trophy, Flame, Star, ChevronRight, Crown, CheckCircle, RotateCcw, Pencil, Upload, X } from "lucide-react";
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import { useCampaignAssets } from "@/hooks/useCampaignAssets";
 import { CampaignWorldMap } from "./CampaignWorldMap";
@@ -12,6 +13,8 @@ import { CampaignVideoGate } from "./CampaignVideoGate";
 import { CampaignAssetUploader } from "./CampaignAssetUploader";
 import { campaignWorlds, princessElla, grogTheGoblinKing, categoryToWorld } from "@/lib/campaignData";
 import { CuratedStory } from "@/data/curatedStories";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import type { EnemyType } from "@/lib/battleMechanics";
 
 interface CampaignModeEntryProps {
@@ -25,12 +28,73 @@ type CampaignView = 'intro' | 'intro-video' | 'world-map' | 'world-video' | 'sto
 
 export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false }: CampaignModeEntryProps) => {
   const { progress, progressLoading } = useCampaignProgress(studentId);
-  const { assets, updateCampaignIntroVideo, updateWorldIntroVideo } = useCampaignAssets();
+  const { assets, updateCampaignIntroVideo, updateWorldIntroVideo, updateEllaAvatar, updateGrogAvatar, updateStoryIntroVideo } = useCampaignAssets();
+  const { toast } = useToast();
   
   const [currentView, setCurrentView] = useState<CampaignView>('intro');
   const [selectedWorld, setSelectedWorld] = useState<number>(1);
   const [selectedStory, setSelectedStory] = useState<CuratedStory | null>(null);
   const [enemyType, setEnemyType] = useState<EnemyType>('minion');
+  
+  // Edit states for character avatars
+  const [editingCharacter, setEditingCharacter] = useState<'ella' | 'grog' | null>(null);
+  const [avatarUrlInput, setAvatarUrlInput] = useState('');
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const ellaFileInputRef = useRef<HTMLInputElement>(null);
+  const grogFileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Handle avatar file upload
+  const handleAvatarUpload = async (file: File, character: 'ella' | 'grog') => {
+    if (!file.type.startsWith('image/')) {
+      toast({ title: "Invalid file type", description: "Please upload an image file", variant: "destructive" });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Image must be under 5MB", variant: "destructive" });
+      return;
+    }
+    
+    setIsUploadingAvatar(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${character}-avatar-${Date.now()}.${fileExt}`;
+      
+      const { data, error } = await supabase.storage
+        .from('campaign-assets')
+        .upload(fileName, file, { cacheControl: '3600', upsert: true });
+      
+      if (error) throw error;
+      
+      const { data: urlData } = supabase.storage.from('campaign-assets').getPublicUrl(data.path);
+      
+      if (character === 'ella') {
+        updateEllaAvatar(urlData.publicUrl);
+      } else {
+        updateGrogAvatar(urlData.publicUrl);
+      }
+      
+      toast({ title: "Avatar updated!", description: `${character === 'ella' ? 'Princess Ella' : 'Grog'}'s avatar has been updated.` });
+      setEditingCharacter(null);
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({ title: "Upload failed", description: "Failed to upload avatar", variant: "destructive" });
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+  
+  const handleSaveAvatarUrl = (character: 'ella' | 'grog') => {
+    if (avatarUrlInput.trim()) {
+      if (character === 'ella') {
+        updateEllaAvatar(avatarUrlInput.trim());
+      } else {
+        updateGrogAvatar(avatarUrlInput.trim());
+      }
+      toast({ title: "Avatar updated!", description: `${character === 'ella' ? 'Princess Ella' : 'Grog'}'s avatar has been updated.` });
+    }
+    setEditingCharacter(null);
+    setAvatarUrlInput('');
+  };
 
   // Get stories for selected world based on category mapping
   const getWorldStories = (worldNumber: number) => {
@@ -203,25 +267,91 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
               </div>
 
               <CardContent className="p-6 space-y-6">
+                {/* Hidden file inputs for avatar uploads */}
+                <input
+                  ref={ellaFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => e.target.files?.[0] && handleAvatarUpload(e.target.files[0], 'ella')}
+                />
+                <input
+                  ref={grogFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => e.target.files?.[0] && handleAvatarUpload(e.target.files[0], 'grog')}
+                />
+                
                 {/* Story Setup */}
                 <div className="grid md:grid-cols-2 gap-6">
                   {/* Princess Ella */}
                   <div className="text-center space-y-3">
-                    <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-5xl shadow-lg overflow-hidden">
-                      {assets.ellaAvatarUrl ? (
-                        <img
-                          src={assets.ellaAvatarUrl}
-                          alt="Princess Ella"
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none';
-                            (e.target as HTMLImageElement).parentElement!.innerHTML = '👸';
-                          }}
-                        />
-                      ) : (
-                        '👸'
+                    <div className="relative w-24 h-24 mx-auto group">
+                      <div className="w-full h-full rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-5xl shadow-lg overflow-hidden">
+                        {assets.ellaAvatarUrl ? (
+                          <img
+                            src={assets.ellaAvatarUrl}
+                            alt="Princess Ella"
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                              (e.target as HTMLImageElement).parentElement!.innerHTML = '👸';
+                            }}
+                          />
+                        ) : (
+                          '👸'
+                        )}
+                      </div>
+                      {/* Edit Button Overlay */}
+                      {isAdmin && (
+                        <button
+                          onClick={() => { setEditingCharacter('ella'); setAvatarUrlInput(assets.ellaAvatarUrl || ''); }}
+                          className="absolute bottom-0 right-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
                       )}
                     </div>
+                    
+                    {/* Ella Edit Panel */}
+                    {editingCharacter === 'ella' && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-muted/50 rounded-lg p-3 space-y-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Edit Ella's Avatar</span>
+                          <button onClick={() => setEditingCharacter(null)} className="p-1 hover:bg-muted rounded">
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => ellaFileInputRef.current?.click()}
+                            disabled={isUploadingAvatar}
+                          >
+                            <Upload className="h-3 w-3 mr-1" />
+                            {isUploadingAvatar ? 'Uploading...' : 'Upload'}
+                          </Button>
+                        </div>
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Or paste image URL..."
+                            value={avatarUrlInput}
+                            onChange={(e) => setAvatarUrlInput(e.target.value)}
+                            className="text-xs h-8"
+                          />
+                          <Button size="sm" onClick={() => handleSaveAvatarUrl('ella')} disabled={!avatarUrlInput.trim()}>
+                            Save
+                          </Button>
+                        </div>
+                      </motion.div>
+                    )}
+                    
                     <div>
                       <h3 className="font-bold text-lg">{princessElla.name}</h3>
                       <p className="text-sm text-muted-foreground">{princessElla.description}</p>
@@ -230,25 +360,75 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
 
                   {/* Grog */}
                   <div className="text-center space-y-3">
-                    <motion.div
-                      animate={{ y: [0, -5, 0] }}
-                      transition={{ repeat: Infinity, duration: 2 }}
-                      className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-green-600 to-emerald-800 flex items-center justify-center text-5xl shadow-lg overflow-hidden"
-                    >
-                      {assets.grogAvatarUrl ? (
-                        <img
-                          src={assets.grogAvatarUrl}
-                          alt="Grog the Goblin King"
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none';
-                            (e.target as HTMLImageElement).parentElement!.innerHTML = '👹';
-                          }}
-                        />
-                      ) : (
-                        '👹'
+                    <div className="relative w-24 h-24 mx-auto group">
+                      <motion.div
+                        animate={{ y: [0, -5, 0] }}
+                        transition={{ repeat: Infinity, duration: 2 }}
+                        className="w-full h-full rounded-full bg-gradient-to-br from-green-600 to-emerald-800 flex items-center justify-center text-5xl shadow-lg overflow-hidden"
+                      >
+                        {assets.grogAvatarUrl ? (
+                          <img
+                            src={assets.grogAvatarUrl}
+                            alt="Grog the Goblin King"
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                              (e.target as HTMLImageElement).parentElement!.innerHTML = '👹';
+                            }}
+                          />
+                        ) : (
+                          '👹'
+                        )}
+                      </motion.div>
+                      {/* Edit Button Overlay */}
+                      {isAdmin && (
+                        <button
+                          onClick={() => { setEditingCharacter('grog'); setAvatarUrlInput(assets.grogAvatarUrl || ''); }}
+                          className="absolute bottom-0 right-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
                       )}
-                    </motion.div>
+                    </div>
+                    
+                    {/* Grog Edit Panel */}
+                    {editingCharacter === 'grog' && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-muted/50 rounded-lg p-3 space-y-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Edit Grog's Avatar</span>
+                          <button onClick={() => setEditingCharacter(null)} className="p-1 hover:bg-muted rounded">
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => grogFileInputRef.current?.click()}
+                            disabled={isUploadingAvatar}
+                          >
+                            <Upload className="h-3 w-3 mr-1" />
+                            {isUploadingAvatar ? 'Uploading...' : 'Upload'}
+                          </Button>
+                        </div>
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Or paste image URL..."
+                            value={avatarUrlInput}
+                            onChange={(e) => setAvatarUrlInput(e.target.value)}
+                            className="text-xs h-8"
+                          />
+                          <Button size="sm" onClick={() => handleSaveAvatarUrl('grog')} disabled={!avatarUrlInput.trim()}>
+                            Save
+                          </Button>
+                        </div>
+                      </motion.div>
+                    )}
+                    
                     <div>
                       <h3 className="font-bold text-lg text-red-500">{grogTheGoblinKing.name}</h3>
                       <p className="text-sm text-muted-foreground">{grogTheGoblinKing.description}</p>
