@@ -228,7 +228,8 @@ export const CampaignVideoGate = ({
               )}
             </div>
             <div className="flex items-center gap-2">
-              {isAdmin && (
+              {/* TODO: TEMPORARY - Remove true || to restore admin-only edit controls */}
+              {(true || isAdmin) && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -254,7 +255,8 @@ export const CampaignVideoGate = ({
           </div>
 
           {/* Admin Upload Panel - Multi-Video Management */}
-          {showUploadPanel && isAdmin && (
+          {/* TODO: TEMPORARY - Removed isAdmin check */}
+          {showUploadPanel && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
@@ -369,16 +371,9 @@ export const CampaignVideoGate = ({
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
                 <div className="text-6xl opacity-30">🎬</div>
                 <p className="text-white/60 text-center px-8">
-                  {isAdmin 
-                    ? "No cutscene videos configured. Click 'Manage Videos' above to add up to 5."
-                    : "No cutscene configured for this section."
-                  }
+                {/* TODO: TEMPORARY - Showing admin message to all users */}
+                  No cutscene videos configured. Click 'Manage Videos' above to add up to 5.
                 </p>
-                {!isAdmin && (
-                  <Button onClick={handleSkip} variant="secondary">
-                    Continue
-                  </Button>
-                )}
               </div>
             ) : !hasStarted ? (
               // Play button overlay

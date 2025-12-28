@@ -259,9 +259,10 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
                 </div>
                 
                 {/* Admin Settings Button */}
-                {isAdmin && (
+                {/* TODO: TEMPORARY - Remove true || to restore admin-only edit controls */}
+                {(true || isAdmin) && (
                   <div className="absolute top-4 right-4">
-                    <CampaignAssetUploader isAdmin={isAdmin} />
+                    <CampaignAssetUploader isAdmin={true} />
                   </div>
                 )}
               </div>
@@ -303,8 +304,8 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
                           '👸'
                         )}
                       </div>
-                      {/* Edit Button Overlay */}
-                      {isAdmin && (
+                      {/* TODO: TEMPORARY - Remove true || to restore admin-only edit controls */}
+                      {(true || isAdmin) && (
                         <button
                           onClick={() => { setEditingCharacter('ella'); setAvatarUrlInput(assets.ellaAvatarUrl || ''); }}
                           className="absolute bottom-0 right-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors opacity-0 group-hover:opacity-100"
@@ -380,8 +381,8 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
                           '👹'
                         )}
                       </motion.div>
-                      {/* Edit Button Overlay */}
-                      {isAdmin && (
+                      {/* TODO: TEMPORARY - Remove true || to restore admin-only edit controls */}
+                      {(true || isAdmin) && (
                         <button
                           onClick={() => { setEditingCharacter('grog'); setAvatarUrlInput(assets.grogAvatarUrl || ''); }}
                           className="absolute bottom-0 right-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors opacity-0 group-hover:opacity-100"
