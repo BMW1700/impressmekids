@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { CampaignModeEntry } from "@/components/aura/game/CampaignModeEntry";
+import { RPGBattleArena } from "@/components/aura/game/rpg/RPGBattleArena";
+import type { EnemyType } from "@/lib/battleMechanics";
 import KidFriendlyProgress from "@/components/aura/KidFriendlyProgress";
 import { curatedStories } from "@/data/curatedStories";
 import { Header } from "@/components/Header";
@@ -84,6 +86,9 @@ const AuraPractice = () => {
   const [presentationMetrics, setPresentationMetrics] = useState<PresentationMetrics | null>(null);
   const [presentationTranscript, setPresentationTranscript] = useState<string>('');
   const [isCampaignMode, setIsCampaignMode] = useState(false);
+  const [isRpgMode, setIsRpgMode] = useState(false);
+  const [rpgStory, setRpgStory] = useState<Story | null>(null);
+  const [rpgEnemyType, setRpgEnemyType] = useState<EnemyType>('minion');
   const [activeTab, setActiveTab] = useState<string>(searchParams.get('tab') || 'stories');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(searchParams.get('category'));
 
@@ -255,6 +260,85 @@ const AuraPractice = () => {
     );
   }
 
+  // RPG Battle Mode takes over the whole screen
+  if (isRpgMode && rpgStory && user?.id) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
+        <Header />
+        <main className="flex-1 container mx-auto px-4 py-8">
+          <RPGBattleArena
+            story={rpgStory}
+            enemyType={rpgEnemyType}
+            studentId={user.id}
+            onBack={() => {
+              setIsRpgMode(false);
+              setRpgStory(null);
+            }}
+            onComplete={(stats) => {
+              console.log('RPG Battle complete:', stats);
+              refetch();
+            }}
+          />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // RPG Mode story selection screen
+  if (isRpgMode && !rpgStory && user?.id) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
+        <Header />
+        <main className="flex-1 container mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto space-y-6">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" onClick={() => setIsRpgMode(false)}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+              <h1 className="text-3xl font-bold">🎮 RPG Battle Mode</h1>
+            </div>
+            
+            <Card className="p-6">
+              <h2 className="text-xl font-bold mb-4">Choose Your Battle Story</h2>
+              <p className="text-muted-foreground mb-6">
+                Select a story to read in battle. Your words will become attacks!
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {curatedStories.slice(0, 9).map((story, idx) => (
+                  <Card
+                    key={idx}
+                    className="cursor-pointer hover:border-primary transition-colors p-4"
+                    onClick={() => {
+                      setRpgStory(story);
+                      // Vary enemy type based on story difficulty
+                      const enemies: EnemyType[] = ['minion', 'guard', 'elite', 'boss'];
+                      setRpgEnemyType(enemies[Math.min(story.difficulty_level - 1, 3)] || 'minion');
+                    }}
+                  >
+                    <h3 className="font-bold">{story.title}</h3>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{story.description}</p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-xs bg-primary/10 px-2 py-1 rounded">
+                        Grade {story.grade_level}
+                      </span>
+                      <span className="text-xs bg-amber-500/10 px-2 py-1 rounded">
+                        {story.word_count} words
+                      </span>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </Card>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   if (isReadingStory && selectedStory && user?.id) {
     return (
       <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
@@ -420,6 +504,7 @@ const AuraPractice = () => {
               <StoryLibrary 
                 onSelectStory={handleStorySelect} 
                 onStartCampaign={() => setIsCampaignMode(true)}
+                onStartRpgMode={() => setIsRpgMode(true)}
                 categoryFilter={categoryFilter}
               />
             </TabsContent>

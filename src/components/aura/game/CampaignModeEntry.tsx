@@ -28,7 +28,7 @@ type CampaignView = 'intro' | 'intro-video' | 'world-map' | 'world-video' | 'sto
 
 export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false }: CampaignModeEntryProps) => {
   const { progress, progressLoading } = useCampaignProgress(studentId);
-  const { assets, updateCampaignIntroVideo, updateWorldIntroVideo, updateEllaAvatar, updateGrogAvatar, updateStoryIntroVideo } = useCampaignAssets();
+  const { assets, updateCampaignIntroVideo, updateCampaignIntroVideos, updateWorldIntroVideo, updateWorldIntroVideos, updateEllaAvatar, updateGrogAvatar, updateStoryIntroVideo, updateStoryIntroVideos } = useCampaignAssets();
   const { toast } = useToast();
   
   const [currentView, setCurrentView] = useState<CampaignView>('intro');
@@ -195,10 +195,12 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
     return (
       <CampaignVideoGate
         videoUrl={assets.campaignIntroVideoUrl}
+        videoUrls={assets.campaignIntroVideoUrls || []}
         title="Story Campaign Introduction"
         onComplete={handleIntroVideoComplete}
         isAdmin={isAdmin}
         onVideoUrlChange={(url) => updateCampaignIntroVideo(url)}
+        onVideoUrlsChange={(urls) => updateCampaignIntroVideos(urls)}
         assetKey="campaign-intro"
       />
     );
@@ -208,10 +210,12 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
     return (
       <CampaignVideoGate
         videoUrl={assets.worldIntroVideos?.[selectedWorld]}
+        videoUrls={assets.worldIntroVideoArrays?.[selectedWorld] || []}
         title={`World ${selectedWorld}: ${campaignWorlds[selectedWorld - 1]?.name || 'Unknown'}`}
         onComplete={handleWorldVideoComplete}
         isAdmin={isAdmin}
         onVideoUrlChange={(url) => updateWorldIntroVideo(selectedWorld, url)}
+        onVideoUrlsChange={(urls) => updateWorldIntroVideos(selectedWorld, urls)}
         assetKey={`world-${selectedWorld}-intro`}
       />
     );
@@ -221,8 +225,13 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
     return (
       <CampaignVideoGate
         videoUrl={assets.storyIntroVideos?.[selectedStory.title]}
+        videoUrls={assets.storyIntroVideoArrays?.[selectedStory.title] || []}
         title={selectedStory.title}
         onComplete={handleStoryVideoComplete}
+        isAdmin={isAdmin}
+        onVideoUrlChange={(url) => updateStoryIntroVideo(selectedStory.title, url)}
+        onVideoUrlsChange={(urls) => updateStoryIntroVideos(selectedStory.title, urls)}
+        assetKey={`story-${selectedStory.title}-intro`}
       />
     );
   }
