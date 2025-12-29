@@ -56,12 +56,14 @@ export const RPGBattleArena = ({
   // Combat stats
   const [playerHp, setPlayerHp] = useState(heroKnight.maxHp);
   const [wizardHp, setWizardHp] = useState(allyWizard.maxHp);
+  const [wizardMp, setWizardMp] = useState(50);
   const [enemyHp, setEnemyHp] = useState(enemy.maxHp);
   const [streak, setStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
   const [wordsRead, setWordsRead] = useState(0);
   const [correctWords, setCorrectWords] = useState(0);
   const [totalDamage, setTotalDamage] = useState(0);
+  const [inventory, setInventory] = useState({ health_potion: 2, magic_potion: 1 });
   
   // Word reading state
   const [words, setWords] = useState<string[]>([]);
@@ -136,7 +138,6 @@ export const RPGBattleArena = ({
   const handleCommand = (command: CommandType) => {
     setCurrentCommand(command);
     if (command === 'defend') {
-      // Defending logic - skip this turn but reduce incoming damage
       setIsPlayerTurn(false);
       setTimeout(() => {
         setIsPlayerTurn(true);
@@ -144,6 +145,43 @@ export const RPGBattleArena = ({
       }, 1500);
     }
   };
+
+  // Handle spell casting
+  const handleCastSpell = useCallback((spell: Spell) => {
+    if (wizardMp < spell.mpCost) return;
+    
+    setWizardMp(prev => prev - spell.mpCost);
+    setAttackType(spell.effect);
+    setDamageAmount(spell.damage);
+    setHeroAttacking(true);
+    
+    setTimeout(() => {
+      setHeroAttacking(false);
+      setEnemyTakingDamage(true);
+      setShowDamageNumber(true);
+      setEnemyHp(prev => Math.max(0, prev - spell.damage));
+      setTotalDamage(prev => prev + spell.damage);
+      triggerScreenShake();
+      
+      setTimeout(() => {
+        setEnemyTakingDamage(false);
+        setShowDamageNumber(false);
+      }, 600);
+    }, 300);
+  }, [wizardMp]);
+
+  // Handle item usage
+  const handleUseItem = useCallback((item: Item) => {
+    if (!inventory[item.id] || inventory[item.id] <= 0) return;
+    
+    setInventory(prev => ({ ...prev, [item.id]: prev[item.id] - 1 }));
+    
+    if (item.effect === 'heal_hp') {
+      setPlayerHp(prev => Math.min(heroKnight.maxHp, prev + item.value));
+    } else if (item.effect === 'restore_mp') {
+      setWizardMp(prev => Math.min(50, prev + item.value));
+    }
+  }, [inventory]);
 
   // Handle word result
   const handleWordResult = useCallback((correct: boolean) => {
@@ -381,23 +419,31 @@ export const RPGBattleArena = ({
                   <div className="hidden md:block">
                     <RPGCommandMenu
                       onSelectCommand={handleCommand}
+                      onCastSpell={handleCastSpell}
+                      onUseItem={handleUseItem}
                       isPlayerTurn={isPlayerTurn}
                       currentCommand={currentCommand}
                       disabled={currentWordResult !== null}
+                      currentMp={wizardMp}
+                      inventory={inventory}
                     />
                   </div>
 
-                  {/* Center: Word Display or Dialogue */}
+                  {/* Center: Voice Reading */}
                   <div className="space-y-4">
-                    <RPGDialogueBox
-                      speakerName={heroKnight.name}
-                      speakerColor={heroKnight.color}
-                      dialogue=""
-                      showWordPrompt={currentCommand === 'read'}
-                      currentWord={words[currentWordIndex]}
-                      wordProgress={{ current: currentWordIndex + 1, total: words.length }}
-                      isTyping={false}
-                    />
+                    {currentCommand === 'read' && words[currentWordIndex] && (
+                      <RPGWordReader
+                        word={words[currentWordIndex]}
+                        onResult={handleWordResult}
+                        disabled={currentWordResult !== null || !isPlayerTurn}
+                        streak={streak}
+                      />
+                    )}
+
+                    {/* Word Progress */}
+                    <div className="text-center text-sm text-slate-400">
+                      Word {currentWordIndex + 1} of {words.length}
+                    </div>
 
                     {/* Word Attack Effect */}
                     {currentWordResult !== null && (
@@ -409,28 +455,6 @@ export const RPGBattleArena = ({
                         attackType={attackType}
                       />
                     )}
-
-                    {/* Simulated Input Buttons */}
-                    <div className="flex justify-center gap-3">
-                      <Button
-                        size="lg"
-                        onClick={() => handleSimulatedInput(true)}
-                        disabled={currentWordResult !== null}
-                        className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 
-                          text-white font-bold px-8 shadow-lg shadow-emerald-500/30"
-                      >
-                        ✓ Correct
-                      </Button>
-                      <Button
-                        size="lg"
-                        onClick={() => handleSimulatedInput(false)}
-                        disabled={currentWordResult !== null}
-                        className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 
-                          text-white font-bold px-8 shadow-lg shadow-red-500/30"
-                      >
-                        ✗ Miss
-                      </Button>
-                    </div>
                   </div>
 
                   {/* Party Stats */}
@@ -438,7 +462,7 @@ export const RPGBattleArena = ({
                     <RPGPartyStats
                       members={[
                         { name: heroKnight.name, currentHp: playerHp, maxHp: heroKnight.maxHp, isDefending: currentCommand === 'defend' },
-                        { name: allyWizard.name, currentHp: wizardHp, maxHp: allyWizard.maxHp, currentMp: 30, maxMp: 50 },
+                        { name: allyWizard.name, currentHp: wizardHp, maxHp: allyWizard.maxHp, currentMp: wizardMp, maxMp: 50 },
                       ]}
                       streak={streak}
                       longestStreak={longestStreak}
