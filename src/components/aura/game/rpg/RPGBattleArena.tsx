@@ -8,6 +8,9 @@ import { RPGDialogueBox } from "./RPGDialogueBox";
 import { RPGCommandMenu } from "./RPGCommandMenu";
 import { RPGPartyStats } from "./RPGPartyStats";
 import { RPGWordAttack } from "./RPGWordAttack";
+import { RPGWordReader } from "./RPGWordReader";
+import { Spell } from "./RPGSpellMenu";
+import { Item } from "./RPGItemMenu";
 import { 
   heroKnight, 
   allyWizard, 
