@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Flame, Trophy, Skull, Star } from "lucide-react";
+import { ArrowLeft, Flame, Trophy, Skull, Star, AlertTriangle } from "lucide-react";
 import { RPGBattleBackground } from "./RPGBattleBackground";
 import { RPGCharacter } from "./RPGCharacter";
 import { RPGDialogueBox } from "./RPGDialogueBox";
@@ -9,6 +9,7 @@ import { RPGCommandMenu } from "./RPGCommandMenu";
 import { RPGPartyStats } from "./RPGPartyStats";
 import { RPGWordAttack } from "./RPGWordAttack";
 import { RPGWordReader } from "./RPGWordReader";
+import { RPGWordBarrage } from "./RPGWordBarrage";
 import { Spell } from "./RPGSpellMenu";
 import { Item } from "./RPGItemMenu";
 import { 
@@ -16,11 +17,12 @@ import {
   allyWizard, 
   getEnemyForBattle,
   heroDialogue,
-  wizardDialogue 
+  wizardDialogue,
+  EnemyAbility 
 } from "@/lib/rpgBattleData";
 import { CuratedStory } from "@/data/curatedStories";
 
-type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'victory' | 'defeat';
+type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'enemy_turn' | 'victory' | 'defeat';
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
 
 interface RPGBattleArenaProps {
@@ -55,6 +57,7 @@ export const RPGBattleArena = ({
   const [currentCommand, setCurrentCommand] = useState<CommandType | null>(null);
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
   const [screenShake, setScreenShake] = useState(false);
+  const [barrageTriggered, setBarrageTriggered] = useState(false);
   
   // Combat stats
   const [playerHp, setPlayerHp] = useState(heroKnight.maxHp);
@@ -68,11 +71,18 @@ export const RPGBattleArena = ({
   const [totalDamage, setTotalDamage] = useState(0);
   const [inventory, setInventory] = useState({ health_potion: 2, magic_potion: 1 });
   
+  // Status effects
+  const [isPoisoned, setIsPoisoned] = useState(false);
+  const [poisonDamage, setPoisonDamage] = useState(0);
+  const [isDebuffed, setIsDebuffed] = useState(false);
+  const [debuffTurns, setDebuffTurns] = useState(0);
+  
   // Word reading state
   const [words, setWords] = useState<string[]>([]);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [currentWordResult, setCurrentWordResult] = useState<boolean | null>(null);
   const [attackType, setAttackType] = useState<'fire' | 'ice' | 'lightning' | 'slash'>('fire');
+  const [barrageWords, setBarrageWords] = useState<string[]>([]);
 
   // Animation states
   const [heroAttacking, setHeroAttacking] = useState(false);
@@ -81,12 +91,45 @@ export const RPGBattleArena = ({
   const [heroTakingDamage, setHeroTakingDamage] = useState(false);
   const [showDamageNumber, setShowDamageNumber] = useState(false);
   const [damageAmount, setDamageAmount] = useState(0);
+  const [enemyAbilityMessage, setEnemyAbilityMessage] = useState<string | null>(null);
 
   // Parse story into words
   useEffect(() => {
     const storyWords = story.passage_text.split(/\s+/).filter(w => w.length > 0);
     setWords(storyWords);
   }, [story.passage_text]);
+
+  // Check for barrage trigger (50% HP)
+  useEffect(() => {
+    if (!barrageTriggered && enemyHp <= enemy.maxHp / 2 && enemyHp > 0 && phase === 'reading') {
+      setBarrageTriggered(true);
+      triggerWordBarrage();
+    }
+  }, [enemyHp, enemy.maxHp, barrageTriggered, phase]);
+
+  // Trigger word barrage attack
+  const triggerWordBarrage = useCallback(() => {
+    const wordCount = enemy.barrageWordCount || 5;
+    const availableWords = words.slice(currentWordIndex, currentWordIndex + wordCount + 10);
+    const barrageSelection = availableWords.slice(0, wordCount);
+    setBarrageWords(barrageSelection);
+    setPhase('barrage');
+  }, [words, currentWordIndex, enemy.barrageWordCount]);
+
+  // Handle barrage completion
+  const handleBarrageComplete = useCallback((destroyed: number, missed: number) => {
+    // Bonus XP for destroying words
+    if (destroyed > 0) {
+      setCorrectWords(prev => prev + destroyed);
+    }
+    setPhase('reading');
+  }, []);
+
+  // Handle barrage word hit
+  const handleBarrageWordHit = useCallback((damage: number) => {
+    setPlayerHp(prev => Math.max(0, prev - damage));
+    triggerScreenShake();
+  }, []);
 
   // Get current dialogue
   const getCurrentDialogue = useCallback(() => {
@@ -125,11 +168,17 @@ export const RPGBattleArena = ({
 
   // Calculate word damage
   const calculateDamage = useCallback((wordLength: number, currentStreak: number) => {
-    const baseDamage = Math.max(8, wordLength * 3);
+    let baseDamage = Math.max(8, wordLength * 3);
     const streakBonus = Math.floor(currentStreak / 2) * 5;
     const criticalBonus = Math.random() > 0.85 ? 15 : 0;
+    
+    // Apply debuff if active
+    if (isDebuffed) {
+      baseDamage = Math.floor(baseDamage * 0.7);
+    }
+    
     return baseDamage + streakBonus + criticalBonus;
-  }, []);
+  }, [isDebuffed]);
 
   // Trigger screen shake
   const triggerScreenShake = () => {
@@ -169,27 +218,98 @@ export const RPGBattleArena = ({
       setTimeout(() => {
         setEnemyTakingDamage(false);
         setShowDamageNumber(false);
+        // Trigger enemy turn after spell
+        triggerEnemyTurn();
       }, 600);
     }, 300);
   }, [wizardMp]);
 
   // Handle item usage
   const handleUseItem = useCallback((item: Item) => {
-    if (!inventory[item.id] || inventory[item.id] <= 0) return;
+    if (!inventory[item.id as keyof typeof inventory] || inventory[item.id as keyof typeof inventory] <= 0) return;
     
-    setInventory(prev => ({ ...prev, [item.id]: prev[item.id] - 1 }));
+    setInventory(prev => ({ ...prev, [item.id]: prev[item.id as keyof typeof prev] - 1 }));
     
     if (item.effect === 'heal_hp') {
       setPlayerHp(prev => Math.min(heroKnight.maxHp, prev + item.value));
+      // Clear poison on healing
+      setIsPoisoned(false);
+      setPoisonDamage(0);
     } else if (item.effect === 'restore_mp') {
       setWizardMp(prev => Math.min(50, prev + item.value));
     }
   }, [inventory]);
 
-  // Handle word result
-  const handleWordResult = useCallback((correct: boolean) => {
+  // Enemy turn logic
+  const triggerEnemyTurn = useCallback(() => {
+    if (!enemy.specialAbilities || enemy.specialAbilities.length === 0) return;
+    
+    setPhase('enemy_turn');
+    setIsPlayerTurn(false);
+    
+    // Pick a random ability
+    const ability = enemy.specialAbilities[Math.floor(Math.random() * enemy.specialAbilities.length)];
+    setEnemyAbilityMessage(`${enemy.name} uses ${ability.name}!`);
+    
+    setTimeout(() => {
+      setEnemyAttacking(true);
+      
+      setTimeout(() => {
+        setEnemyAttacking(false);
+        
+        // Apply ability effects
+        switch (ability.effect) {
+          case 'poison':
+            setIsPoisoned(true);
+            setPoisonDamage(ability.damage);
+            setPlayerHp(prev => Math.max(0, prev - Math.floor(ability.damage / 2)));
+            break;
+          case 'debuff':
+            setIsDebuffed(true);
+            setDebuffTurns(3);
+            if (ability.damage > 0) {
+              setPlayerHp(prev => Math.max(0, prev - ability.damage));
+            }
+            break;
+          case 'silence':
+            // Disable magic temporarily (handled in UI)
+            setWizardMp(prev => Math.max(0, prev - 20));
+            break;
+          default:
+            setPlayerHp(prev => Math.max(0, prev - ability.damage));
+        }
+        
+        setHeroTakingDamage(true);
+        triggerScreenShake();
+        
+        setTimeout(() => {
+          setHeroTakingDamage(false);
+          setEnemyAbilityMessage(null);
+          setPhase('reading');
+          setIsPlayerTurn(true);
+        }, 600);
+      }, 400);
+    }, 1000);
+  }, [enemy]);
+
+  // Handle word result from RPGWordReader
+  const handleWordResult = useCallback((correct: boolean, spokenWord: string, wordIndex: number) => {
     setWordsRead(prev => prev + 1);
     setCurrentWordResult(correct);
+
+    // Apply poison damage if poisoned
+    if (isPoisoned && poisonDamage > 0) {
+      setPlayerHp(prev => Math.max(0, prev - 2));
+    }
+
+    // Reduce debuff turns
+    if (isDebuffed && debuffTurns > 0) {
+      setDebuffTurns(prev => {
+        const newTurns = prev - 1;
+        if (newTurns <= 0) setIsDebuffed(false);
+        return newTurns;
+      });
+    }
 
     if (correct) {
       const newStreak = streak + 1;
@@ -199,8 +319,8 @@ export const RPGBattleArena = ({
         setLongestStreak(newStreak);
       }
 
-      const word = words[currentWordIndex];
-      const damage = Math.floor(calculateDamage(word.length, newStreak) * enemy.wordDamageMultiplier);
+      const word = words[currentWordIndex + wordIndex];
+      const damage = Math.floor(calculateDamage(word?.length || 5, newStreak) * enemy.wordDamageMultiplier);
       setTotalDamage(prev => prev + damage);
       setDamageAmount(damage);
       
@@ -242,19 +362,14 @@ export const RPGBattleArena = ({
       }, 300);
     }
 
-    // Move to next word after animation
+    // Move word index forward
+    setCurrentWordIndex(prev => prev + 1);
+
+    // Clear result after animation
     setTimeout(() => {
       setCurrentWordResult(null);
-      if (currentWordIndex < words.length - 1) {
-        setCurrentWordIndex(prev => prev + 1);
-      } else {
-        // All words read - check for victory
-        if (enemyHp > 0) {
-          setPhase('combat');
-        }
-      }
     }, 800);
-  }, [streak, longestStreak, words, currentWordIndex, enemy, calculateDamage, enemyHp]);
+  }, [streak, longestStreak, words, currentWordIndex, enemy, calculateDamage, isPoisoned, poisonDamage, isDebuffed, debuffTurns]);
 
   // Check for phase transitions
   useEffect(() => {
@@ -280,12 +395,11 @@ export const RPGBattleArena = ({
     });
   }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete]);
 
-  // Simulated word input
-  const handleSimulatedInput = (correct: boolean) => {
-    if (phase === 'reading' && currentCommand === 'read') {
-      handleWordResult(correct);
-    }
-  };
+  // Get current batch of words for reading
+  const getCurrentWordBatch = useCallback(() => {
+    const batchSize = 10;
+    return words.slice(currentWordIndex, currentWordIndex + batchSize);
+  }, [words, currentWordIndex]);
 
   return (
     <motion.div 
@@ -295,6 +409,59 @@ export const RPGBattleArena = ({
     >
       {/* Battle Background */}
       <RPGBattleBackground enemyType={enemyType} />
+
+      {/* Word Barrage Overlay */}
+      <AnimatePresence>
+        {phase === 'barrage' && (
+          <RPGWordBarrage
+            words={barrageWords}
+            onComplete={handleBarrageComplete}
+            onWordHit={handleBarrageWordHit}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Enemy Ability Message */}
+      <AnimatePresence>
+        {enemyAbilityMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-1/3 left-1/2 -translate-x-1/2 z-40"
+          >
+            <div className="bg-red-900/90 border-2 border-red-500 px-6 py-3 rounded-lg
+              shadow-[0_0_30px_rgba(239,68,68,0.5)]">
+              <span className="text-white font-bold text-lg">{enemyAbilityMessage}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Status Effects Display */}
+      <AnimatePresence>
+        {(isPoisoned || isDebuffed) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute top-24 left-4 z-30 flex flex-col gap-2"
+          >
+            {isPoisoned && (
+              <div className="flex items-center gap-2 bg-green-900/80 px-3 py-1.5 rounded-lg border border-green-500">
+                <span className="text-lg">☠️</span>
+                <span className="text-green-300 text-sm font-medium">Poisoned</span>
+              </div>
+            )}
+            {isDebuffed && (
+              <div className="flex items-center gap-2 bg-purple-900/80 px-3 py-1.5 rounded-lg border border-purple-500">
+                <AlertTriangle className="h-4 w-4 text-purple-300" />
+                <span className="text-purple-300 text-sm font-medium">Weakened ({debuffTurns})</span>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main Battle Layout */}
       <div className="relative z-10 h-full flex flex-col">
@@ -434,24 +601,20 @@ export const RPGBattleArena = ({
 
                   {/* Center: Voice Reading */}
                   <div className="space-y-4">
-                    {currentCommand === 'read' && words[currentWordIndex] && (
+                    {currentCommand === 'read' && getCurrentWordBatch().length > 0 && (
                       <RPGWordReader
-                        word={words[currentWordIndex]}
+                        words={getCurrentWordBatch()}
                         onResult={handleWordResult}
                         disabled={currentWordResult !== null || !isPlayerTurn}
                         streak={streak}
+                        batchSize={10}
                       />
                     )}
-
-                    {/* Word Progress */}
-                    <div className="text-center text-sm text-slate-400">
-                      Word {currentWordIndex + 1} of {words.length}
-                    </div>
 
                     {/* Word Attack Effect */}
                     {currentWordResult !== null && (
                       <RPGWordAttack
-                        word={words[currentWordIndex]}
+                        word={words[currentWordIndex - 1] || ""}
                         isCorrect={currentWordResult}
                         streak={streak}
                         damage={damageAmount}
@@ -471,6 +634,25 @@ export const RPGBattleArena = ({
                       longestStreak={longestStreak}
                     />
                   </div>
+                </motion.div>
+              )}
+
+              {/* Enemy Turn Phase */}
+              {phase === 'enemy_turn' && (
+                <motion.div
+                  key="enemy_turn"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="text-center py-8"
+                >
+                  <motion.div
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ repeat: Infinity, duration: 0.5 }}
+                    className="text-2xl font-bold text-red-400"
+                  >
+                    {enemy.name}'s Turn!
+                  </motion.div>
                 </motion.div>
               )}
 
