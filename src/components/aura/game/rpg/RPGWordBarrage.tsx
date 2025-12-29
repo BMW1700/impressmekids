@@ -213,12 +213,44 @@ export const RPGWordBarrage = ({
 
   return (
     <div className="fixed inset-0 z-50 pointer-events-none">
-      {/* Overlay */}
+      {/* Overlay - gradient shows direction of attack */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="absolute inset-0 bg-gradient-to-r from-purple-900/50 via-black/60 to-transparent"
+        className="absolute inset-0 bg-gradient-to-r from-purple-900/30 via-black/40 to-red-900/50"
       />
+      
+      {/* Direction indicator - arrows showing words moving toward heroes */}
+      <div className="absolute inset-y-0 right-[20%] w-2 pointer-events-none">
+        <motion.div
+          className="h-full flex flex-col justify-center gap-4 opacity-30"
+          animate={{ opacity: [0.2, 0.5, 0.2] }}
+          transition={{ repeat: Infinity, duration: 1.5 }}
+        >
+          {[...Array(8)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="text-red-500 text-2xl"
+              animate={{ x: [0, 10, 0] }}
+              transition={{ repeat: Infinity, duration: 0.8, delay: i * 0.1 }}
+            >
+              →
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+      
+      {/* Hero zone indicator */}
+      <div className="absolute right-0 top-0 bottom-0 w-[25%] pointer-events-none">
+        <motion.div
+          className="h-full border-l-4 border-dashed border-red-500/50"
+          animate={{ borderColor: ['rgba(239,68,68,0.3)', 'rgba(239,68,68,0.7)', 'rgba(239,68,68,0.3)'] }}
+          transition={{ repeat: Infinity, duration: 1 }}
+        />
+        <div className="absolute top-1/2 -translate-y-1/2 right-4 text-red-400/60 text-sm font-medium rotate-90 whitespace-nowrap">
+          HERO ZONE
+        </div>
+      </div>
 
       {/* Warning Banner */}
       <motion.div
@@ -230,13 +262,13 @@ export const RPGWordBarrage = ({
           shadow-[0_0_30px_rgba(239,68,68,0.5)] border border-red-400/50">
           <div className="flex items-center gap-3 text-white">
             <Zap className="h-6 w-6 animate-pulse" />
-            <span className="font-bold text-lg">WORD BARRAGE! Click a word and speak it!</span>
+            <span className="font-bold text-lg">WORD BARRAGE! Click a word and speak it before it reaches you!</span>
             <Zap className="h-6 w-6 animate-pulse" />
           </div>
         </div>
       </motion.div>
 
-      {/* Floating Words */}
+      {/* Floating Words - moving LEFT to RIGHT toward heroes */}
       <div className="absolute inset-0">
         <AnimatePresence>
           {barrageWords.map((word) => (
@@ -255,10 +287,11 @@ export const RPGWordBarrage = ({
                   top: `${word.y}%`,
                 }}
                 onClick={() => handleSelectWord(word)}
-                initial={{ scale: 0, opacity: 0 }}
+                initial={{ scale: 0, opacity: 0, x: -50 }}
                 animate={{ 
                   scale: 1, 
                   opacity: 1,
+                  x: 0,
                   y: [0, -8, 0, 8, 0], // Gentle floating
                 }}
                 exit={{ 
@@ -272,12 +305,30 @@ export const RPGWordBarrage = ({
               >
                 {word.word}
                 
-                {/* Glow effect */}
+                {/* Direction arrow trail */}
                 <motion.div
-                  className="absolute inset-0 rounded-xl bg-purple-400/20 blur-md -z-10"
+                  className="absolute -right-6 top-1/2 -translate-y-1/2 text-red-400 text-lg"
+                  animate={{ x: [0, 8, 0], opacity: [0.3, 0.8, 0.3] }}
+                  transition={{ repeat: Infinity, duration: 0.6 }}
+                >
+                  →
+                </motion.div>
+                
+                {/* Glow effect with danger gradient */}
+                <motion.div
+                  className="absolute inset-0 rounded-xl bg-gradient-to-r from-purple-400/20 to-red-400/30 blur-md -z-10"
                   animate={{ scale: [1, 1.2, 1], opacity: [0.4, 0.2, 0.4] }}
                   transition={{ repeat: Infinity, duration: 1.5 }}
                 />
+                
+                {/* Danger pulse when close to heroes */}
+                {word.x > 55 && (
+                  <motion.div
+                    className="absolute inset-0 rounded-xl border-2 border-red-500"
+                    animate={{ scale: [1, 1.3, 1], opacity: [0.8, 0, 0.8] }}
+                    transition={{ repeat: Infinity, duration: 0.5 }}
+                  />
+                )}
               </motion.button>
             )
           ))}

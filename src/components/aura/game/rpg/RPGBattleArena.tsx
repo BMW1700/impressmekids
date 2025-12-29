@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Flame, Trophy, Skull, Star, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Flame, Trophy, Skull, Star, AlertTriangle, Coins } from "lucide-react";
 import { RPGBattleBackground } from "./RPGBattleBackground";
 import { RPGCharacter } from "./RPGCharacter";
 import { RPGDialogueBox } from "./RPGDialogueBox";
@@ -10,6 +10,8 @@ import { RPGPartyStats } from "./RPGPartyStats";
 import { RPGWordAttack } from "./RPGWordAttack";
 import { RPGWordReader } from "./RPGWordReader";
 import { RPGWordBarrage } from "./RPGWordBarrage";
+import { RPGSpellEffects } from "./RPGSpellEffects";
+import { RPGCoinDrop } from "./RPGCoinDrop";
 import { Spell } from "./RPGSpellMenu";
 import { Item } from "./RPGItemMenu";
 import { 
@@ -20,6 +22,7 @@ import {
   wizardDialogue,
 } from "@/lib/rpgBattleData";
 import { CuratedStory } from "@/data/curatedStories";
+import { calculateGoldEarned, calculateXpEarned } from "@/lib/gameEconomy";
 
 type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'enemy_turn' | 'victory' | 'defeat';
 type InventoryKey = 'health_potion' | 'magic_potion';
@@ -92,6 +95,17 @@ export const RPGBattleArena = ({
   const [showDamageNumber, setShowDamageNumber] = useState(false);
   const [damageAmount, setDamageAmount] = useState(0);
   const [enemyAbilityMessage, setEnemyAbilityMessage] = useState<string | null>(null);
+  
+  // Spell effects state
+  const [activeSpell, setActiveSpell] = useState<'fire' | 'ice' | 'lightning' | 'slash' | null>(null);
+  const [showSpellEffect, setShowSpellEffect] = useState(false);
+  
+  // Currency/rewards state
+  const [goldEarned, setGoldEarned] = useState(0);
+  const [xpEarned, setXpEarned] = useState(0);
+  const [showCoinDrop, setShowCoinDrop] = useState(false);
+  const [pendingGold, setPendingGold] = useState(0);
+  const [pendingXp, setPendingXp] = useState(0);
 
   // Parse story into words - memoized for stability
   const storyWords = useMemo(() => {
@@ -330,8 +344,31 @@ export const RPGBattleArena = ({
       setTotalDamage(prev => prev + damage);
       setDamageAmount(damage);
       
-      // Attack animation sequence
+      // Calculate and trigger gold/XP rewards
+      const goldAmount = calculateGoldEarned({ 
+        wordCorrect: true, 
+        streak: newStreak, 
+        wordLength: word?.length || 5 
+      });
+      const xpAmount = calculateXpEarned({ 
+        wordCorrect: true, 
+        streak: newStreak 
+      });
+      
+      // Trigger coin drop animation
+      if (goldAmount > 0 || xpAmount > 0) {
+        setPendingGold(goldAmount);
+        setPendingXp(xpAmount);
+        setShowCoinDrop(true);
+      }
+      
+      // Attack animation sequence with spell effect
       setHeroAttacking(true);
+      
+      // Trigger spell effect based on attack type
+      setActiveSpell(attackType);
+      setShowSpellEffect(true);
+      
       setTimeout(() => {
         setHeroAttacking(false);
         setEnemyTakingDamage(true);
@@ -375,7 +412,22 @@ export const RPGBattleArena = ({
     setTimeout(() => {
       setCurrentWordResult(null);
     }, 800);
-  }, [streak, longestStreak, words, currentWordIndex, enemy, calculateDamage, isPoisoned, poisonDamage, isDebuffed, debuffTurns]);
+  }, [streak, longestStreak, words, currentWordIndex, enemy, calculateDamage, isPoisoned, poisonDamage, isDebuffed, debuffTurns, attackType]);
+  
+  // Handle coin collection complete
+  const handleCoinCollectionComplete = useCallback(() => {
+    setGoldEarned(prev => prev + pendingGold);
+    setXpEarned(prev => prev + pendingXp);
+    setShowCoinDrop(false);
+    setPendingGold(0);
+    setPendingXp(0);
+  }, [pendingGold, pendingXp]);
+  
+  // Handle spell effect complete
+  const handleSpellComplete = useCallback(() => {
+    setShowSpellEffect(false);
+    setActiveSpell(null);
+  }, []);
 
   // Check for phase transitions
   useEffect(() => {
@@ -415,6 +467,34 @@ export const RPGBattleArena = ({
     >
       {/* Battle Background */}
       <RPGBattleBackground enemyType={enemyType} />
+
+      {/* Spell Effects Overlay */}
+      <RPGSpellEffects
+        spellType={activeSpell}
+        isActive={showSpellEffect}
+        onComplete={handleSpellComplete}
+      />
+      
+      {/* Coin Drop Animation */}
+      {showCoinDrop && (
+        <RPGCoinDrop
+          goldAmount={pendingGold}
+          xpAmount={pendingXp}
+          onCollectionComplete={handleCoinCollectionComplete}
+        />
+      )}
+      
+      {/* Gold/XP Display */}
+      <div className="absolute top-20 left-4 z-30 flex flex-col gap-2">
+        <div className="flex items-center gap-2 bg-amber-900/80 px-3 py-1.5 rounded-lg border border-amber-500">
+          <Coins className="h-4 w-4 text-amber-300" />
+          <span className="text-amber-300 text-sm font-bold">{goldEarned}</span>
+        </div>
+        <div className="flex items-center gap-2 bg-blue-900/80 px-3 py-1.5 rounded-lg border border-blue-500">
+          <Star className="h-4 w-4 text-blue-300" />
+          <span className="text-blue-300 text-sm font-bold">{xpEarned} XP</span>
+        </div>
+      </div>
 
       {/* Word Barrage Overlay */}
       <AnimatePresence>
