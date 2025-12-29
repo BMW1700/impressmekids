@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Flame, Zap, Snowflake, Sword } from "lucide-react";
 
@@ -20,121 +20,144 @@ export const RPGWordAttack = ({
   onAnimationComplete,
 }: RPGWordAttackProps) => {
   const [showAttack, setShowAttack] = useState(false);
+  const [showCritical, setShowCritical] = useState(false);
 
   useEffect(() => {
     if (isCorrect === true) {
       setShowAttack(true);
+      setShowCritical(damage >= 20);
       const timer = setTimeout(() => {
         setShowAttack(false);
+        setShowCritical(false);
         onAnimationComplete?.();
-      }, 800);
+      }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [isCorrect, onAnimationComplete]);
+  }, [isCorrect, damage, onAnimationComplete]);
 
   const getAttackIcon = () => {
+    const iconClass = "h-10 w-10 drop-shadow-lg";
     switch (attackType) {
       case 'fire':
-        return <Flame className="h-8 w-8 text-orange-500" />;
+        return <Flame className={`${iconClass} text-orange-400`} />;
       case 'ice':
-        return <Snowflake className="h-8 w-8 text-cyan-400" />;
+        return <Snowflake className={`${iconClass} text-cyan-300`} />;
       case 'lightning':
-        return <Zap className="h-8 w-8 text-yellow-400" />;
+        return <Zap className={`${iconClass} text-yellow-300`} />;
       case 'slash':
-        return <Sword className="h-8 w-8 text-gray-300" />;
+        return <Sword className={`${iconClass} text-slate-200`} />;
       default:
-        return <Flame className="h-8 w-8 text-orange-500" />;
+        return <Flame className={`${iconClass} text-orange-400`} />;
     }
   };
 
   const getAttackColor = () => {
     switch (attackType) {
-      case 'fire':
-        return 'from-orange-500 to-red-600';
-      case 'ice':
-        return 'from-cyan-400 to-blue-600';
-      case 'lightning':
-        return 'from-yellow-400 to-amber-600';
-      case 'slash':
-        return 'from-gray-300 to-gray-500';
-      default:
-        return 'from-orange-500 to-red-600';
+      case 'fire': return 'from-orange-500 via-red-500 to-yellow-500';
+      case 'ice': return 'from-cyan-400 via-blue-500 to-indigo-500';
+      case 'lightning': return 'from-yellow-300 via-amber-400 to-orange-400';
+      case 'slash': return 'from-slate-300 via-slate-400 to-slate-500';
+      default: return 'from-orange-500 via-red-500 to-yellow-500';
+    }
+  };
+
+  const getGlowColor = () => {
+    switch (attackType) {
+      case 'fire': return 'rgba(249, 115, 22, 0.6)';
+      case 'ice': return 'rgba(34, 211, 238, 0.6)';
+      case 'lightning': return 'rgba(250, 204, 21, 0.6)';
+      case 'slash': return 'rgba(148, 163, 184, 0.6)';
+      default: return 'rgba(249, 115, 22, 0.6)';
     }
   };
 
   return (
-    <div className="relative">
-      {/* Word Display */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ 
-          opacity: 1, 
-          scale: 1,
-          color: isCorrect === true ? '#22c55e' : isCorrect === false ? '#ef4444' : undefined,
-        }}
-        className="text-2xl md:text-3xl font-bold text-center py-4"
-      >
-        {word}
-      </motion.div>
-
-      {/* Streak Indicator */}
-      {streak > 1 && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="absolute -top-2 -right-2 bg-gradient-to-r from-orange-500 to-red-500 text-white 
-            px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1"
-        >
-          <Flame className="h-3 w-3" />
-          x{streak}
-        </motion.div>
-      )}
-
-      {/* Attack Animation */}
+    <div className="relative h-20 flex items-center justify-center">
+      {/* Success Attack Animation */}
       <AnimatePresence>
         {showAttack && isCorrect && (
-          <motion.div
-            initial={{ opacity: 0, x: -100, scale: 0.5 }}
-            animate={{ opacity: 1, x: 100, scale: 1.2 }}
-            exit={{ opacity: 0, scale: 0.5 }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-            className="absolute inset-0 flex items-center justify-center pointer-events-none"
-          >
-            {/* Projectile */}
+          <>
+            {/* Main projectile */}
             <motion.div
-              className={`w-16 h-16 rounded-full bg-gradient-to-r ${getAttackColor()} 
-                flex items-center justify-center shadow-lg`}
-              animate={{ 
-                rotate: attackType === 'fire' ? [0, 360] : 0,
-                scale: [1, 1.2, 1],
-              }}
-              transition={{ duration: 0.3, repeat: 1 }}
+              initial={{ opacity: 0, x: 100, scale: 0.5 }}
+              animate={{ opacity: 1, x: -100, scale: 1.2 }}
+              exit={{ opacity: 0, scale: 0 }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+              className="absolute flex items-center justify-center"
             >
-              {getAttackIcon()}
+              <motion.div
+                className={`w-20 h-20 rounded-full bg-gradient-to-r ${getAttackColor()} 
+                  flex items-center justify-center`}
+                style={{ boxShadow: `0 0 40px ${getGlowColor()}` }}
+                animate={{ 
+                  rotate: attackType === 'fire' ? [0, 360] : 0,
+                  scale: [1, 1.3, 1],
+                }}
+                transition={{ duration: 0.3, repeat: 1 }}
+              >
+                {getAttackIcon()}
+              </motion.div>
             </motion.div>
 
-            {/* Damage Number */}
-            <motion.div
-              initial={{ opacity: 1, y: 0 }}
-              animate={{ opacity: 0, y: -40 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="absolute text-2xl font-black text-red-500 drop-shadow-lg"
-              style={{ textShadow: '2px 2px 0px black' }}
-            >
-              -{damage}
-            </motion.div>
-
-            {/* Trail Effect */}
-            {[...Array(5)].map((_, i) => (
+            {/* Trailing particles */}
+            {[...Array(8)].map((_, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0.8, x: -100 - i * 20, scale: 1 - i * 0.15 }}
-                animate={{ opacity: 0, x: 50 }}
-                transition={{ duration: 0.4, delay: i * 0.05 }}
-                className={`absolute w-8 h-8 rounded-full bg-gradient-to-r ${getAttackColor()} blur-sm`}
+                initial={{ opacity: 0.9, x: 100 - i * 15, scale: 1 - i * 0.1 }}
+                animate={{ opacity: 0, x: -100 }}
+                transition={{ duration: 0.4, delay: i * 0.03 }}
+                className={`absolute w-6 h-6 rounded-full bg-gradient-to-r ${getAttackColor()} blur-sm`}
               />
             ))}
-          </motion.div>
+
+            {/* Impact burst */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: [0, 1, 0], scale: [0, 2, 3] }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="absolute -left-20"
+            >
+              <div 
+                className={`w-24 h-24 rounded-full bg-gradient-to-r ${getAttackColor()} blur-xl`}
+                style={{ boxShadow: `0 0 60px ${getGlowColor()}` }}
+              />
+            </motion.div>
+
+            {/* Floating damage number */}
+            <motion.div
+              initial={{ opacity: 1, y: 0, x: -50, scale: 1 }}
+              animate={{ opacity: 0, y: -60, scale: 1.5 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="absolute pointer-events-none"
+            >
+              <span 
+                className="text-4xl font-black text-red-400"
+                style={{ 
+                  textShadow: '3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000',
+                }}
+              >
+                -{damage}
+              </span>
+            </motion.div>
+
+            {/* Critical hit text */}
+            {showCritical && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: -40 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+                className="absolute -top-4 left-0 right-0 flex justify-center pointer-events-none"
+              >
+                <span 
+                  className="text-lg font-black text-yellow-300 tracking-wider"
+                  style={{ textShadow: '2px 2px 0 #000' }}
+                >
+                  ⚡ CRITICAL! ⚡
+                </span>
+              </motion.div>
+            )}
+          </>
         )}
       </AnimatePresence>
 
@@ -142,21 +165,45 @@ export const RPGWordAttack = ({
       <AnimatePresence>
         {isCorrect === false && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+            initial={{ opacity: 0, scale: 0.5, rotate: -20 }}
+            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            transition={{ duration: 0.3 }}
+            className="absolute flex flex-col items-center gap-2"
           >
             <motion.div
-              animate={{ rotate: [0, -10, 10, -10, 0] }}
-              transition={{ duration: 0.3 }}
-              className="text-4xl"
+              animate={{ rotate: [0, -15, 15, -15, 0] }}
+              transition={{ duration: 0.4 }}
+              className="text-5xl"
             >
               ❌
             </motion.div>
+            <motion.span
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-red-400 font-bold text-sm"
+            >
+              MISS!
+            </motion.span>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Streak combo indicator */}
+      {streak >= 3 && isCorrect === true && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute -bottom-2 right-0"
+        >
+          <div className="flex items-center gap-1 bg-gradient-to-r from-orange-500 to-red-500 
+            px-3 py-1 rounded-full text-white text-xs font-bold shadow-lg">
+            <Flame className="h-3 w-3" />
+            <span>x{streak} COMBO!</span>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 };
