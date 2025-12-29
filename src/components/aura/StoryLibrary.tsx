@@ -14,13 +14,14 @@ import { motion } from "framer-motion";
 interface StoryLibraryProps {
   onSelectStory: (story: CuratedStory) => void;
   onStartCampaign?: () => void;
+  onStartRpgMode?: () => void;
   categoryFilter?: string | null;
 }
 
 const categories = ['all', 'animals', 'space', 'sports', 'fairy_tales', 'science', 'adventure', 'history'];
 const grades = ['all', 'K', '1', '2', '3', '4', '5'];
 
-export const StoryLibrary = ({ onSelectStory, onStartCampaign, categoryFilter }: StoryLibraryProps) => {
+export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, categoryFilter }: StoryLibraryProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(categoryFilter || "all");
   const [selectedGrade, setSelectedGrade] = useState("all");
@@ -161,7 +162,9 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, categoryFilter }:
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
+          className="space-y-4"
         >
+          {/* Story Campaign Mode */}
           <Card className="overflow-hidden border-2 border-primary/20 bg-gradient-to-r from-purple-500/10 via-indigo-500/10 to-blue-500/10">
             <CardContent className="p-4">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -199,6 +202,38 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, categoryFilter }:
               </div>
             </CardContent>
           </Card>
+
+          {/* RPG Battle Mode (Beta) */}
+          {onStartRpgMode && (
+            <Card className="overflow-hidden border-2 border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-red-500/10">
+              <CardContent className="p-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-red-600 flex items-center justify-center text-3xl shadow-lg">
+                      🎮
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-amber-500" />
+                        RPG Battle Mode
+                        <Badge variant="secondary" className="text-xs">BETA</Badge>
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Turn-based RPG combat! Knight & Wizard vs Goblins. Words are your weapons!
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={onStartRpgMode}
+                    className="bg-gradient-to-r from-amber-500 to-red-600 hover:from-amber-600 hover:to-red-700"
+                  >
+                    <Sword className="h-4 w-4 mr-2" />
+                    Enter RPG Mode
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </motion.div>
       )}
 

@@ -101,29 +101,31 @@ export const CampaignVideoGate = ({
     return url;
   };
   
-  // Update a specific video slot
+  // Update a specific video slot - preserve empty slots for stable indexing
   const updateVideoSlot = (index: number, url: string) => {
-    const newUrls = [...allVideos];
-    // Ensure array is long enough
-    while (newUrls.length <= index) {
-      newUrls.push('');
-    }
+    // Create a fixed-size array to maintain slot positions
+    const newUrls: string[] = Array.from({ length: maxVideos }, (_, i) => allVideos[i] || '');
     newUrls[index] = url;
     
     if (onVideoUrlsChange) {
-      onVideoUrlsChange(newUrls.filter(v => v)); // Remove empty strings
+      // Keep the array as-is to preserve slot positions
+      onVideoUrlsChange(newUrls);
     } else if (onVideoUrlChange && index === 0) {
       onVideoUrlChange(url);
     }
   };
   
   const removeVideoSlot = (index: number) => {
-    const newUrls = allVideos.filter((_, i) => i !== index);
+    // Clear the slot instead of removing to preserve indices
+    const newUrls: string[] = Array.from({ length: maxVideos }, (_, i) => allVideos[i] || '');
+    newUrls[index] = '';
     if (onVideoUrlsChange) {
       onVideoUrlsChange(newUrls);
     }
-    if (currentVideoIndex >= newUrls.length) {
-      setCurrentVideoIndex(Math.max(0, newUrls.length - 1));
+    // Adjust currentVideoIndex if needed
+    const validCount = newUrls.filter(v => v).length;
+    if (currentVideoIndex >= validCount) {
+      setCurrentVideoIndex(Math.max(0, validCount - 1));
     }
   };
 
