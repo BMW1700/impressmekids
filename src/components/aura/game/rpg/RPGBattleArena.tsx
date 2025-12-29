@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Flame, Trophy, Skull, Star, AlertTriangle } from "lucide-react";
@@ -18,11 +18,11 @@ import {
   getEnemyForBattle,
   heroDialogue,
   wizardDialogue,
-  EnemyAbility 
 } from "@/lib/rpgBattleData";
 import { CuratedStory } from "@/data/curatedStories";
 
 type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'enemy_turn' | 'victory' | 'defeat';
+type InventoryKey = 'health_potion' | 'magic_potion';
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
 
 interface RPGBattleArenaProps {
@@ -69,7 +69,7 @@ export const RPGBattleArena = ({
   const [wordsRead, setWordsRead] = useState(0);
   const [correctWords, setCorrectWords] = useState(0);
   const [totalDamage, setTotalDamage] = useState(0);
-  const [inventory, setInventory] = useState({ health_potion: 2, magic_potion: 1 });
+  const [inventory, setInventory] = useState<Record<InventoryKey, number>>({ health_potion: 2, magic_potion: 1 });
   
   // Status effects
   const [isPoisoned, setIsPoisoned] = useState(false);
@@ -93,11 +93,16 @@ export const RPGBattleArena = ({
   const [damageAmount, setDamageAmount] = useState(0);
   const [enemyAbilityMessage, setEnemyAbilityMessage] = useState<string | null>(null);
 
-  // Parse story into words
+  // Parse story into words - memoized for stability
+  const storyWords = useMemo(() => {
+    if (!story?.passage_text) return [];
+    return story.passage_text.split(/\s+/).filter(w => w.length > 0);
+  }, [story?.passage_text]);
+
+  // Set words on mount
   useEffect(() => {
-    const storyWords = story.passage_text.split(/\s+/).filter(w => w.length > 0);
     setWords(storyWords);
-  }, [story.passage_text]);
+  }, [storyWords]);
 
   // Check for barrage trigger (50% HP)
   useEffect(() => {
@@ -226,9 +231,10 @@ export const RPGBattleArena = ({
 
   // Handle item usage
   const handleUseItem = useCallback((item: Item) => {
-    if (!inventory[item.id as keyof typeof inventory] || inventory[item.id as keyof typeof inventory] <= 0) return;
+    const itemKey = item.id as InventoryKey;
+    if (!inventory[itemKey] || inventory[itemKey] <= 0) return;
     
-    setInventory(prev => ({ ...prev, [item.id]: prev[item.id as keyof typeof prev] - 1 }));
+    setInventory(prev => ({ ...prev, [itemKey]: prev[itemKey] - 1 }));
     
     if (item.effect === 'heal_hp') {
       setPlayerHp(prev => Math.min(heroKnight.maxHp, prev + item.value));

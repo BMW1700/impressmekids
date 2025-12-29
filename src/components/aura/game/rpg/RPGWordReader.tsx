@@ -33,27 +33,11 @@ export const RPGWordReader = ({
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Get current batch of words to display
-  const currentBatch = words.slice(0, Math.min(batchSize, words.length));
+  const currentBatch = words?.slice(0, Math.min(batchSize, words?.length || 0)) || [];
   const currentWord = currentBatch[currentIndex] || "";
   const cleanWord = currentWord.replace(/[^a-zA-Z']/g, '');
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      stopListening();
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Auto-start listening when in continuous mode and not processing
-  useEffect(() => {
-    if (readingMode === 'continuous' && !isProcessing && !isProcessingRef.current && currentIndex < currentBatch.length) {
-      startListening();
-    }
-  }, [readingMode, currentIndex, isProcessing]);
-
+  // Stop listening function - defined first so other callbacks can use it
   const stopListening = useCallback(() => {
     if (recognitionRef.current) {
       try {
@@ -137,6 +121,7 @@ export const RPGWordReader = ({
 
   const startListening = useCallback(() => {
     if (disabled || isProcessing || isProcessingRef.current) return;
+    if (!cleanWord) return; // Don't start if no word to read
     
     unlockSpeechSynthesis();
     
@@ -203,8 +188,12 @@ export const RPGWordReader = ({
       console.error('Speech recognition error:', event.error);
       if (event.error === 'no-speech' || event.error === 'audio-capture') {
         // Restart listening if in continuous mode
-        if (readingMode === 'continuous') {
-          setTimeout(() => startListening(), 500);
+        if (readingMode === 'continuous' && !isProcessingRef.current) {
+          setTimeout(() => {
+            if (readingMode === 'continuous') {
+              startListening();
+            }
+          }, 500);
         }
       }
     };
@@ -212,7 +201,11 @@ export const RPGWordReader = ({
     recognition.onend = () => {
       if (!isProcessingRef.current && readingMode === 'continuous') {
         // Restart listening automatically
-        setTimeout(() => startListening(), 100);
+        setTimeout(() => {
+          if (readingMode === 'continuous' && !isProcessingRef.current) {
+            startListening();
+          }
+        }, 100);
       }
     };
 
@@ -224,6 +217,26 @@ export const RPGWordReader = ({
       console.error('Failed to start recognition:', e);
     }
   }, [disabled, isProcessing, cleanWord, handleCorrect, handleIncorrect, readingMode]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopListening();
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [stopListening]);
+
+  // Auto-start listening when in continuous mode and not processing
+  useEffect(() => {
+    if (readingMode === 'continuous' && !isProcessing && !isProcessingRef.current && currentIndex < currentBatch.length && cleanWord) {
+      const timer = setTimeout(() => {
+        startListening();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [readingMode, currentIndex, isProcessing, currentBatch.length, cleanWord, startListening]);
 
   const startContinuousReading = () => {
     setReadingMode('continuous');
@@ -240,10 +253,19 @@ export const RPGWordReader = ({
   };
 
   const hearWord = useCallback(() => {
-    playCorrectPronunciation(cleanWord);
+    if (cleanWord) {
+      playCorrectPronunciation(cleanWord);
+    }
   }, [cleanWord]);
 
-  if (currentBatch.length === 0) return null;
+  // Safety check - don't render if no words
+  if (!currentBatch || currentBatch.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-4 p-4">
+        <p className="text-slate-400">No words to read.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center gap-4">
@@ -315,7 +337,7 @@ export const RPGWordReader = ({
             textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
           }}
         >
-          {cleanWord}
+          {cleanWord || "Ready"}
         </motion.p>
 
         {/* Spoken Text Feedback */}
@@ -342,7 +364,7 @@ export const RPGWordReader = ({
           variant="outline"
           size="lg"
           onClick={hearWord}
-          disabled={readingMode === 'continuous' || isProcessing}
+          disabled={readingMode === 'continuous' || isProcessing || !cleanWord}
           className="border-blue-400/50 text-blue-300 hover:bg-blue-500/20 hover:text-blue-200
             shadow-lg shadow-blue-500/20"
         >
@@ -355,7 +377,7 @@ export const RPGWordReader = ({
           <Button
             size="lg"
             onClick={startContinuousReading}
-            disabled={disabled || isProcessing}
+            disabled={disabled || isProcessing || !cleanWord}
             className="min-w-[180px] font-bold text-lg shadow-lg transition-all
               bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 
               shadow-emerald-500/30"
