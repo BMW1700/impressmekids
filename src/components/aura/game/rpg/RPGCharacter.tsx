@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Shield, Sparkles } from "lucide-react";
 import { RPGCharacter as RPGCharacterType, RPGEnemy } from "@/lib/rpgBattleData";
+import { RPGCharacterSprite } from "./RPGCharacterSprite";
 
 interface RPGCharacterProps {
   character: RPGCharacterType | RPGEnemy;
@@ -13,6 +14,22 @@ interface RPGCharacterProps {
   isDefending?: boolean;
   showSprite?: boolean;
 }
+
+// Map character/enemy types to sprite types
+type SpriteType = 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer';
+
+const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean): SpriteType => {
+  if (isEnemy) {
+    const enemy = character as RPGEnemy;
+    switch (enemy.type) {
+      case 'final_boss': return 'sorcerer';
+      case 'boss': return 'boss';
+      default: return 'goblin';
+    }
+  }
+  const hero = character as RPGCharacterType;
+  return hero.type === 'ally' ? 'wizard' : 'knight';
+};
 
 export const RPGCharacter = ({
   character,
@@ -30,22 +47,7 @@ export const RPGCharacter = ({
                   hpPercentage > 25 ? 'from-yellow-400 to-amber-500' : 
                   'from-red-400 to-rose-500';
 
-  // Get character-appropriate emoji/icon
-  const getCharacterEmoji = () => {
-    if (isEnemy) {
-      const enemy = character as RPGEnemy;
-      switch (enemy.type) {
-        case 'final_boss': return '🧙‍♂️';
-        case 'boss': return '👹';
-        case 'elite': return '👺';
-        case 'guard': return '🛡️';
-        default: return '👾';
-      }
-    } else {
-      const hero = character as RPGCharacterType;
-      return hero.type === 'ally' ? '🧙‍♀️' : '⚔️';
-    }
-  };
+  const spriteType = getSpriteType(character, isEnemy);
 
   return (
     <div className={`relative flex flex-col items-center ${isEnemy ? '' : ''}`}>
@@ -123,151 +125,43 @@ export const RPGCharacter = ({
         </div>
       </motion.div>
 
-      {/* Character Sprite Container */}
+      {/* 3D Character Sprite */}
       {showSprite && (
-        <motion.div
-          animate={{
-            x: isAttacking ? (isEnemy ? -50 : 50) : 0,
-            scale: isTakingDamage ? 0.9 : 1,
-          }}
-          transition={{ 
-            type: 'spring', 
-            stiffness: 400, 
-            damping: 15,
-            duration: isAttacking ? 0.2 : 0.3,
-          }}
-          className="relative"
-        >
-          {/* Shadow under character */}
-          <motion.div
-            className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-24 h-4 bg-black/40 rounded-[100%] blur-md"
-            animate={{
-              scale: isAttacking ? 0.5 : [1, 1.05, 1],
-              opacity: isAttacking ? 0.3 : 0.5,
-            }}
-            transition={{ 
-              duration: 2, 
-              repeat: isAttacking ? 0 : Infinity,
-              ease: "easeInOut",
-            }}
-          />
+        <RPGCharacterSprite
+          type={spriteType}
+          isEnemy={isEnemy}
+          isAttacking={isAttacking}
+          isTakingDamage={isTakingDamage}
+          isDefending={isDefending}
+          size="lg"
+        />
+      )}
 
-          {/* Main Sprite */}
-          <motion.div
-            className={`relative w-28 h-36 md:w-36 md:h-44 rounded-xl 
-              bg-gradient-to-b ${character.color} 
-              flex items-center justify-center 
-              shadow-[0_10px_40px_rgba(0,0,0,0.5)] 
-              border-2 border-white/20
-              ${isEnemy ? '' : ''}`}
-            animate={{
-              y: isTakingDamage ? [0, -5, 0] : [0, -4, 0],
-              rotate: isTakingDamage ? [0, -5, 5, -5, 0] : 0,
-            }}
-            transition={{
-              duration: isTakingDamage ? 0.3 : 2.5,
-              repeat: isTakingDamage ? 0 : Infinity,
-              ease: "easeInOut",
-            }}
-          >
-            {/* Inner glow */}
-            <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/40 via-transparent to-white/10" />
-
-            {/* Character Avatar or Emoji */}
-            {character.avatar ? (
-              <img
-                src={character.avatar}
-                alt={character.name}
-                className={`w-full h-full object-cover rounded-xl ${isEnemy ? 'scale-x-[-1]' : ''}`}
-              />
-            ) : (
-              <motion.span 
-                className="text-5xl md:text-6xl drop-shadow-lg"
-                animate={{
-                  scale: isAttacking ? [1, 1.3, 1] : 1,
-                }}
-                transition={{ duration: 0.3 }}
-              >
-                {getCharacterEmoji()}
-              </motion.span>
-            )}
-
-            {/* Attack Effect */}
-            <AnimatePresence>
-              {isAttacking && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0, rotate: -45 }}
-                  animate={{ opacity: 1, scale: 1.5, rotate: 0 }}
-                  exit={{ opacity: 0, scale: 0 }}
-                  className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                >
-                  <span className="text-5xl">💥</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Damage Flash Overlay */}
-            <AnimatePresence>
-              {isTakingDamage && (
-                <motion.div
-                  initial={{ opacity: 0.8 }}
-                  animate={{ opacity: [0.8, 0, 0.6, 0] }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.4 }}
-                  className="absolute inset-0 bg-red-500 rounded-xl"
-                />
-              )}
-            </AnimatePresence>
-
-            {/* Defending Shield Effect */}
-            <AnimatePresence>
-              {isDefending && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0 }}
-                  className="absolute inset-0 flex items-center justify-center"
-                >
-                  <motion.div
-                    className="absolute inset-0 border-4 border-blue-400/50 rounded-xl"
-                    animate={{ 
-                      boxShadow: ['0 0 10px rgba(59,130,246,0.5)', '0 0 30px rgba(59,130,246,0.8)', '0 0 10px rgba(59,130,246,0.5)']
-                    }}
-                    transition={{ repeat: Infinity, duration: 1 }}
-                  />
-                  <Shield className="h-12 w-12 text-blue-400 drop-shadow-lg" />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Magical particles for boss enemies */}
-            {isEnemy && (character as RPGEnemy).type === 'final_boss' && (
-              <div className="absolute inset-0 overflow-hidden rounded-xl pointer-events-none">
-                {[...Array(5)].map((_, i) => (
-                  <motion.div
-                    key={i}
-                    className="absolute w-2 h-2 bg-purple-400 rounded-full"
-                    style={{
-                      left: `${20 + i * 15}%`,
-                      bottom: '10%',
-                    }}
-                    animate={{
-                      y: [0, -60, 0],
-                      opacity: [0, 1, 0],
-                      scale: [0.5, 1, 0.5],
-                    }}
-                    transition={{
-                      duration: 2,
-                      delay: i * 0.3,
-                      repeat: Infinity,
-                      ease: "easeOut",
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-          </motion.div>
-        </motion.div>
+      {/* Magical particles for boss enemies */}
+      {isEnemy && (character as RPGEnemy).type === 'final_boss' && showSprite && (
+        <div className="absolute top-20 inset-x-0 overflow-hidden pointer-events-none">
+          {[...Array(5)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute w-2 h-2 bg-purple-400 rounded-full"
+              style={{
+                left: `${20 + i * 15}%`,
+                bottom: '10%',
+              }}
+              animate={{
+                y: [0, -60, 0],
+                opacity: [0, 1, 0],
+                scale: [0.5, 1, 0.5],
+              }}
+              transition={{
+                duration: 2,
+                delay: i * 0.3,
+                repeat: Infinity,
+                ease: "easeOut",
+              }}
+            />
+          ))}
+        </div>
       )}
     </div>
   );

@@ -1,27 +1,30 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, MicOff, Volume2, Check, X, Loader2 } from "lucide-react";
+import { Mic, MicOff, Volume2, Check, X, Loader2, Pause, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { playCorrectPronunciation, SoundEffects } from "@/lib/pronunciationPlayer";
 import { unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
 
 interface RPGWordReaderProps {
-  word: string;
-  onResult: (correct: boolean, spokenWord: string) => void;
+  words: string[];
+  onResult: (correct: boolean, spokenWord: string, wordIndex: number) => void;
   disabled?: boolean;
   streak?: number;
+  batchSize?: number;
 }
 
 const soundEffects = new SoundEffects();
 
 export const RPGWordReader = ({
-  word,
+  words,
   onResult,
   disabled = false,
   streak = 0,
+  batchSize = 10,
 }: RPGWordReaderProps) => {
-  const [isListening, setIsListening] = useState(false);
+  const [readingMode, setReadingMode] = useState<'idle' | 'continuous' | 'paused'>('idle');
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
   const [spokenText, setSpokenText] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -29,9 +32,12 @@ export const RPGWordReader = ({
   const isProcessingRef = useRef(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const cleanWord = word.replace(/[^a-zA-Z']/g, '');
+  // Get current batch of words to display
+  const currentBatch = words.slice(0, Math.min(batchSize, words.length));
+  const currentWord = currentBatch[currentIndex] || "";
+  const cleanWord = currentWord.replace(/[^a-zA-Z']/g, '');
 
-  // Cleanup on unmount or word change
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       stopListening();
@@ -39,7 +45,14 @@ export const RPGWordReader = ({
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [word]);
+  }, []);
+
+  // Auto-start listening when in continuous mode and not processing
+  useEffect(() => {
+    if (readingMode === 'continuous' && !isProcessing && !isProcessingRef.current && currentIndex < currentBatch.length) {
+      startListening();
+    }
+  }, [readingMode, currentIndex, isProcessing]);
 
   const stopListening = useCallback(() => {
     if (recognitionRef.current) {
@@ -50,7 +63,6 @@ export const RPGWordReader = ({
       }
       recognitionRef.current = null;
     }
-    setIsListening(false);
   }, []);
 
   const handleCorrect = useCallback(() => {
@@ -61,20 +73,32 @@ export const RPGWordReader = ({
     setFeedback('correct');
     soundEffects.correctWord();
     
-    if (streak > 0 && (streak + 1) % 5 === 0) {
+    const newStreak = streak + 1;
+    if (newStreak > 0 && newStreak % 5 === 0) {
       soundEffects.streakAchieved();
     }
     
     stopListening();
+    
+    // Report result
+    onResult(true, cleanWord, currentIndex);
     
     timeoutRef.current = setTimeout(() => {
       setFeedback(null);
       setSpokenText("");
       setIsProcessing(false);
       isProcessingRef.current = false;
-      onResult(true, cleanWord);
-    }, 600);
-  }, [onResult, cleanWord, stopListening, streak]);
+      
+      // Auto-advance to next word
+      if (currentIndex < currentBatch.length - 1) {
+        setCurrentIndex(prev => prev + 1);
+      } else {
+        // Finished all words in batch
+        setReadingMode('idle');
+        setCurrentIndex(0);
+      }
+    }, 400);
+  }, [onResult, cleanWord, stopListening, streak, currentIndex, currentBatch.length]);
 
   const handleIncorrect = useCallback((spoken: string) => {
     if (isProcessingRef.current) return;
@@ -90,19 +114,29 @@ export const RPGWordReader = ({
     // Play correct pronunciation after showing incorrect
     setTimeout(() => {
       playCorrectPronunciation(cleanWord);
-    }, 400);
+    }, 300);
+    
+    // Report result
+    onResult(false, spoken, currentIndex);
     
     timeoutRef.current = setTimeout(() => {
       setFeedback(null);
       setSpokenText("");
       setIsProcessing(false);
       isProcessingRef.current = false;
-      onResult(false, spoken);
-    }, 1200);
-  }, [onResult, cleanWord, stopListening]);
+      
+      // Auto-advance even on incorrect
+      if (currentIndex < currentBatch.length - 1) {
+        setCurrentIndex(prev => prev + 1);
+      } else {
+        setReadingMode('idle');
+        setCurrentIndex(0);
+      }
+    }, 800);
+  }, [onResult, cleanWord, stopListening, currentIndex, currentBatch.length]);
 
   const startListening = useCallback(() => {
-    if (disabled || isProcessing) return;
+    if (disabled || isProcessing || isProcessingRef.current) return;
     
     unlockSpeechSynthesis();
     
@@ -120,7 +154,6 @@ export const RPGWordReader = ({
     recognition.maxAlternatives = 5;
 
     recognition.onstart = () => {
-      setIsListening(true);
       setSpokenText("");
       setFeedback(null);
     };
@@ -149,8 +182,8 @@ export const RPGWordReader = ({
 
         // Also check original transcript
         if (!matched) {
-          const words = transcript.split(/\s+/).filter((w: string) => w.length > 0);
-          for (const spokenWord of words) {
+          const wordsSpoken = transcript.split(/\s+/).filter((w: string) => w.length > 0);
+          for (const spokenWord of wordsSpoken) {
             if (isWordMatchLenient(spokenWord, cleanWord)) {
               matched = true;
               break;
@@ -169,13 +202,17 @@ export const RPGWordReader = ({
     recognition.onerror = (event: any) => {
       console.error('Speech recognition error:', event.error);
       if (event.error === 'no-speech' || event.error === 'audio-capture') {
-        setIsListening(false);
+        // Restart listening if in continuous mode
+        if (readingMode === 'continuous') {
+          setTimeout(() => startListening(), 500);
+        }
       }
     };
 
     recognition.onend = () => {
-      if (!isProcessingRef.current) {
-        setIsListening(false);
+      if (!isProcessingRef.current && readingMode === 'continuous') {
+        // Restart listening automatically
+        setTimeout(() => startListening(), 100);
       }
     };
 
@@ -186,15 +223,57 @@ export const RPGWordReader = ({
     } catch (e) {
       console.error('Failed to start recognition:', e);
     }
-  }, [disabled, isProcessing, cleanWord, handleCorrect, handleIncorrect]);
+  }, [disabled, isProcessing, cleanWord, handleCorrect, handleIncorrect, readingMode]);
+
+  const startContinuousReading = () => {
+    setReadingMode('continuous');
+    setCurrentIndex(0);
+  };
+
+  const pauseReading = () => {
+    setReadingMode('paused');
+    stopListening();
+  };
+
+  const resumeReading = () => {
+    setReadingMode('continuous');
+  };
 
   const hearWord = useCallback(() => {
     playCorrectPronunciation(cleanWord);
   }, [cleanWord]);
 
+  if (currentBatch.length === 0) return null;
+
   return (
     <div className="flex flex-col items-center gap-4">
-      {/* Word Display */}
+      {/* Word Queue Display */}
+      <div className="flex flex-wrap gap-2 justify-center max-w-md">
+        {currentBatch.map((word, index) => {
+          const clean = word.replace(/[^a-zA-Z']/g, '');
+          const isActive = index === currentIndex;
+          const isCompleted = index < currentIndex;
+          
+          return (
+            <motion.div
+              key={`${word}-${index}`}
+              className={`px-3 py-1.5 rounded-lg font-medium text-sm transition-all
+                ${isActive 
+                  ? 'bg-blue-500 text-white scale-110 shadow-lg shadow-blue-500/30' 
+                  : isCompleted 
+                    ? 'bg-emerald-500/50 text-emerald-200' 
+                    : 'bg-slate-700/60 text-slate-400'
+                }`}
+              animate={isActive ? { scale: [1, 1.05, 1] } : {}}
+              transition={{ repeat: isActive ? Infinity : 0, duration: 1.5 }}
+            >
+              {clean}
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* Current Word Display */}
       <motion.div
         className={`relative px-12 py-6 rounded-2xl border-2 text-center min-w-[280px]
           ${feedback === 'correct' 
@@ -251,6 +330,11 @@ export const RPGWordReader = ({
         )}
       </motion.div>
 
+      {/* Progress */}
+      <div className="text-center text-sm text-slate-400">
+        Word {currentIndex + 1} of {currentBatch.length}
+      </div>
+
       {/* Action Buttons */}
       <div className="flex items-center gap-3">
         {/* Hear Word Button */}
@@ -258,7 +342,7 @@ export const RPGWordReader = ({
           variant="outline"
           size="lg"
           onClick={hearWord}
-          disabled={isListening || isProcessing}
+          disabled={readingMode === 'continuous' || isProcessing}
           className="border-blue-400/50 text-blue-300 hover:bg-blue-500/20 hover:text-blue-200
             shadow-lg shadow-blue-500/20"
         >
@@ -266,39 +350,53 @@ export const RPGWordReader = ({
           Hear
         </Button>
 
-        {/* Read Button */}
-        <Button
-          size="lg"
-          onClick={isListening ? stopListening : startListening}
-          disabled={disabled || isProcessing}
-          className={`min-w-[160px] font-bold text-lg shadow-lg transition-all
-            ${isListening 
-              ? 'bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 shadow-red-500/30' 
-              : 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 shadow-emerald-500/30'
-            }`}
-        >
-          {isProcessing ? (
-            <>
-              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-              Processing...
-            </>
-          ) : isListening ? (
-            <>
-              <MicOff className="h-5 w-5 mr-2" />
-              Stop
-            </>
-          ) : (
-            <>
-              <Mic className="h-5 w-5 mr-2" />
-              Read Aloud
-            </>
-          )}
-        </Button>
+        {/* Main Read Button - Modes: Start / Pause / Resume */}
+        {readingMode === 'idle' && (
+          <Button
+            size="lg"
+            onClick={startContinuousReading}
+            disabled={disabled || isProcessing}
+            className="min-w-[180px] font-bold text-lg shadow-lg transition-all
+              bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 
+              shadow-emerald-500/30"
+          >
+            <Play className="h-5 w-5 mr-2" />
+            Start Reading
+          </Button>
+        )}
+
+        {readingMode === 'continuous' && (
+          <Button
+            size="lg"
+            onClick={pauseReading}
+            disabled={isProcessing}
+            className="min-w-[180px] font-bold text-lg shadow-lg transition-all
+              bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 
+              shadow-amber-500/30"
+          >
+            <Pause className="h-5 w-5 mr-2" />
+            Pause
+          </Button>
+        )}
+
+        {readingMode === 'paused' && (
+          <Button
+            size="lg"
+            onClick={resumeReading}
+            disabled={disabled || isProcessing}
+            className="min-w-[180px] font-bold text-lg shadow-lg transition-all
+              bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 
+              shadow-emerald-500/30"
+          >
+            <Play className="h-5 w-5 mr-2" />
+            Resume
+          </Button>
+        )}
       </div>
 
       {/* Listening Indicator */}
       <AnimatePresence>
-        {isListening && (
+        {readingMode === 'continuous' && !isProcessing && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -330,6 +428,18 @@ export const RPGWordReader = ({
                 />
               ))}
             </div>
+          </motion.div>
+        )}
+
+        {readingMode === 'paused' && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="flex items-center gap-2 text-amber-400"
+          >
+            <MicOff className="h-5 w-5" />
+            <span className="text-sm font-medium">Paused - Click Resume to continue</span>
           </motion.div>
         )}
       </AnimatePresence>

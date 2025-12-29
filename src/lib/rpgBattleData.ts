@@ -18,8 +18,17 @@ export interface RPGAbility {
   name: string;
   description: string;
   damage: number;
-  effect?: 'fire' | 'ice' | 'lightning' | 'heal' | 'slash' | 'block';
+  effect?: 'fire' | 'ice' | 'lightning' | 'heal' | 'slash' | 'block' | 'poison' | 'debuff' | 'silence';
   animationType: 'projectile' | 'melee' | 'aoe' | 'buff';
+}
+
+export interface EnemyAbility {
+  id: string;
+  name: string;
+  damage: number;
+  effect: 'poison' | 'debuff' | 'silence' | 'word_barrage';
+  description: string;
+  icon: string;
 }
 
 export interface RPGEnemy {
@@ -35,6 +44,8 @@ export interface RPGEnemy {
   dialogueIntro: string[];
   dialogueAttack: string[];
   dialogueDefeat: string[];
+  specialAbilities?: EnemyAbility[];
+  barrageWordCount?: number;
 }
 
 // Heroes
@@ -70,15 +81,15 @@ export const allyWizard: RPGCharacter = {
   ],
 };
 
-// Regular Enemies
+// Regular Enemies - BUFFED
 export const goblinMinion: RPGEnemy = {
   id: 'goblin_minion',
   name: 'Goblin Scout',
   type: 'minion',
-  maxHp: 40,
-  attack: 8,
-  defense: 2,
-  wordDamageMultiplier: 1.0,
+  maxHp: 80, // Was 40
+  attack: 12, // Was 8
+  defense: 4, // Was 2
+  wordDamageMultiplier: 0.85, // Harder to damage
   color: 'from-green-600 to-emerald-700',
   dialogueIntro: [
     "Hehe! You think you can stop us?",
@@ -92,16 +103,20 @@ export const goblinMinion: RPGEnemy = {
     "Ack! Words... too... powerful...",
     "I'll tell the King about you!",
   ],
+  specialAbilities: [
+    { id: 'poison_dagger', name: 'Poison Dagger', damage: 8, effect: 'poison', description: 'Deals damage over time', icon: '🗡️' },
+  ],
+  barrageWordCount: 4,
 };
 
 export const goblinGuard: RPGEnemy = {
   id: 'goblin_guard',
   name: 'Goblin Guard',
   type: 'guard',
-  maxHp: 70,
-  attack: 12,
-  defense: 5,
-  wordDamageMultiplier: 0.8,
+  maxHp: 120, // Was 70
+  attack: 15, // Was 12
+  defense: 8, // Was 5
+  wordDamageMultiplier: 0.7, // Was 0.8
   color: 'from-green-700 to-emerald-800',
   dialogueIntro: [
     "Halt! No one passes without paying the toll!",
@@ -115,16 +130,21 @@ export const goblinGuard: RPGEnemy = {
     "The King... won't be pleased...",
     "Your words cut deeper than any sword...",
   ],
+  specialAbilities: [
+    { id: 'shield_block', name: 'Shield Block', damage: 0, effect: 'debuff', description: 'Reduces next word damage by 50%', icon: '🛡️' },
+    { id: 'poison_dagger', name: 'Poison Dagger', damage: 10, effect: 'poison', description: 'Deals damage over time', icon: '🗡️' },
+  ],
+  barrageWordCount: 5,
 };
 
 export const goblinElite: RPGEnemy = {
   id: 'goblin_elite',
   name: 'Goblin Warlord',
   type: 'elite',
-  maxHp: 100,
-  attack: 18,
-  defense: 8,
-  wordDamageMultiplier: 0.6,
+  maxHp: 180, // Was 100
+  attack: 22, // Was 18
+  defense: 12, // Was 8
+  wordDamageMultiplier: 0.5, // Was 0.6
   color: 'from-red-600 to-red-800',
   dialogueIntro: [
     "So, you're the one causing trouble...",
@@ -138,17 +158,22 @@ export const goblinElite: RPGEnemy = {
     "Impossible... defeated by mere words...",
     "The King... must be warned...",
   ],
+  specialAbilities: [
+    { id: 'berserker_rage', name: 'Berserker Rage', damage: 20, effect: 'debuff', description: 'Doubles attack damage for 2 turns', icon: '💢' },
+    { id: 'poison_dagger', name: 'Poison Dagger', damage: 12, effect: 'poison', description: 'Deals damage over time', icon: '🗡️' },
+  ],
+  barrageWordCount: 6,
 };
 
-// Boss Enemies
+// Boss Enemies - BUFFED
 export const grogTheGoblinKing: RPGEnemy = {
   id: 'grog',
   name: 'Grog the Goblin King',
   type: 'boss',
-  maxHp: 200,
-  attack: 25,
-  defense: 12,
-  wordDamageMultiplier: 0.5,
+  maxHp: 300, // Was 200
+  attack: 30, // Was 25
+  defense: 15, // Was 12
+  wordDamageMultiplier: 0.4, // Was 0.5
   color: 'from-green-800 to-black',
   dialogueIntro: [
     "MWAHAHAHA! So you've finally reached my throne!",
@@ -165,16 +190,22 @@ export const grogTheGoblinKing: RPGEnemy = {
     "You... may have defeated me... but Galair will finish you!",
     "The books... take them... I never wanted to read anyway!",
   ],
+  specialAbilities: [
+    { id: 'royal_slam', name: 'Royal Slam', damage: 25, effect: 'debuff', description: 'Massive damage and stuns', icon: '👑' },
+    { id: 'summon_minions', name: 'Mocking Taunt', damage: 0, effect: 'debuff', description: 'Reduces word damage by 30%', icon: '🎭' },
+    { id: 'poison_cloud', name: 'Poison Cloud', damage: 15, effect: 'poison', description: 'Deals heavy damage over time', icon: '☠️' },
+  ],
+  barrageWordCount: 8,
 };
 
 export const galairTheWickedSorcerer: RPGEnemy = {
   id: 'galair',
   name: 'Galair the Wicked Sorcerer',
   type: 'final_boss',
-  maxHp: 300,
-  attack: 35,
-  defense: 15,
-  wordDamageMultiplier: 0.4,
+  maxHp: 500, // Was 300
+  attack: 40, // Was 35
+  defense: 20, // Was 15
+  wordDamageMultiplier: 0.3, // Was 0.4
   color: 'from-purple-900 to-black',
   dialogueIntro: [
     "Foolish mortal... you've come so far, only to fall here.",
@@ -194,6 +225,13 @@ export const galairTheWickedSorcerer: RPGEnemy = {
     "The books... the knowledge... it was never meant to be hoarded...",
     "Perhaps... reading... isn't so bad after all...",
   ],
+  specialAbilities: [
+    { id: 'dark_blast', name: 'Dark Blast', damage: 30, effect: 'debuff', description: 'Dark energy attack', icon: '🌑' },
+    { id: 'silence', name: 'Silence', damage: 0, effect: 'silence', description: 'Disables magic for 2 turns', icon: '🔇' },
+    { id: 'void_poison', name: 'Void Poison', damage: 20, effect: 'poison', description: 'Devastating damage over time', icon: '💀' },
+    { id: 'massive_barrage', name: 'Word Storm', damage: 0, effect: 'word_barrage', description: 'Summons massive word barrage', icon: '🌀' },
+  ],
+  barrageWordCount: 10,
 };
 
 // Get enemy by type for battle
