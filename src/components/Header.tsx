@@ -96,7 +96,7 @@ export const Header = ({ showAuthButtons = true, onSignOut, children, studentId 
                 <Button variant="ghost" asChild>
                   <Link to="/auth">{t('nav.signIn')}</Link>
                 </Button>
-                <Button className="bg-gradient-primary hover:opacity-90" asChild>
+                <Button className="bg-gradient-primary hover:opacity-90 hidden sm:inline-flex" asChild>
                   <Link to="/auth">{t('nav.getStarted')}</Link>
                 </Button>
               </>
