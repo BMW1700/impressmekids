@@ -38,6 +38,9 @@ export const RPGWordReader = ({
   const isProcessingRef = useRef(false);
   const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // CRITICAL: Lock the target word when recognition starts to prevent mismatch
+  const lockedTargetWordRef = useRef<string>("");
+  const lockedTargetIndexRef = useRef<number>(0);
 
   // Keep refs in sync
   useEffect(() => {
@@ -164,6 +167,11 @@ export const RPGWordReader = ({
     const wordToMatch = currentBatch[currentIndexRef.current]?.replace(/[^a-zA-Z']/g, '');
     if (!wordToMatch) return;
     
+    // CRITICAL: Lock the target word and index at the START of recognition
+    // This prevents any mismatch if index changes during async recognition
+    lockedTargetWordRef.current = wordToMatch;
+    lockedTargetIndexRef.current = currentIndexRef.current;
+    
     cleanup();
     unlockSpeechSynthesis();
     
@@ -197,7 +205,16 @@ export const RPGWordReader = ({
       setSpokenText(transcript);
 
       if (result.isFinal) {
-        const targetWord = currentBatch[currentIndexRef.current]?.replace(/[^a-zA-Z']/g, '') || '';
+        // CRITICAL: Use the LOCKED target word, not current index
+        // This ensures we always compare against the word that was displayed when recognition started
+        const targetWord = lockedTargetWordRef.current;
+        
+        // Safety check: if locked word doesn't match current display, something went wrong
+        if (!targetWord) {
+          console.warn('No locked target word - ignoring result');
+          return;
+        }
+        
         let matched = false;
         
         // Check all alternatives
