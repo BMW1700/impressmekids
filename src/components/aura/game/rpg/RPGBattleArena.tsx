@@ -210,13 +210,17 @@ export const RPGBattleArena = ({
     }, 1000);
   }, [words, batchStartIndex, enemy.name]);
 
-  // Handle barrage completion
+  // Handle barrage completion - CRITICAL: advance batchStartIndex by words used in barrage
   const handleBarrageComplete = useCallback((destroyed: number, missed: number) => {
     if (destroyed > 0) {
       setCorrectWords(prev => prev + destroyed);
     }
+    // Advance past the words used in the barrage so we don't repeat them
+    const wordsUsedInBarrage = barrageWords.length;
+    setBatchStartIndex(prev => prev + wordsUsedInBarrage);
+    console.log('[RPGBattle] Barrage complete, advancing batchStartIndex by:', wordsUsedInBarrage);
     setPhase('reading');
-  }, []);
+  }, [barrageWords.length]);
 
   // Handle barrage word hit
   const handleBarrageWordHit = useCallback((damage: number) => {
