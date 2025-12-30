@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { ArrowLeft, Lock, Star, Swords, Crown, TreePine, Mountain, Castle, Flame } from "lucide-react";
 import { campaignWorlds, CampaignWorld } from "@/lib/campaignData";
 
-interface WorldProgress {
+export interface WorldProgress {
   worldId: number;
   levelsCompleted: number;
   totalLevels: number;

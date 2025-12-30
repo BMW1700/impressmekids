@@ -16,7 +16,7 @@ interface RPGCharacterProps {
 }
 
 // Map character/enemy types to sprite types
-type SpriteType = 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer';
+type SpriteType = 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon';
 
 const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean): SpriteType => {
   if (isEnemy) {
@@ -24,6 +24,7 @@ const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean)
     switch (enemy.type) {
       case 'final_boss': return 'sorcerer';
       case 'boss': return 'boss';
+      case 'dragon': return 'dragon';
       default: return 'goblin';
     }
   }

@@ -5,6 +5,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { CampaignModeEntry } from "@/components/aura/game/CampaignModeEntry";
 import { RPGBattleArena } from "@/components/aura/game/rpg/RPGBattleArena";
+import { RPGWorldMap, type WorldProgress } from "@/components/aura/game/rpg/RPGWorldMap";
+import { RPGLevelSelect, type CampaignLevel } from "@/components/aura/game/rpg/RPGLevelSelect";
+import { campaignWorlds, type CampaignWorld } from "@/lib/campaignData";
 import type { EnemyType } from "@/lib/battleMechanics";
 import KidFriendlyProgress from "@/components/aura/KidFriendlyProgress";
 import { curatedStories } from "@/data/curatedStories";
@@ -87,6 +90,9 @@ const AuraPractice = () => {
   const [presentationTranscript, setPresentationTranscript] = useState<string>('');
   const [isCampaignMode, setIsCampaignMode] = useState(false);
   const [isRpgMode, setIsRpgMode] = useState(false);
+  const [rpgView, setRpgView] = useState<'world_map' | 'level_select' | 'battle'>('world_map');
+  const [selectedWorld, setSelectedWorld] = useState<CampaignWorld | null>(null);
+  const [selectedLevel, setSelectedLevel] = useState<CampaignLevel | null>(null);
   const [rpgStory, setRpgStory] = useState<Story | null>(null);
   const [rpgEnemyType, setRpgEnemyType] = useState<EnemyType>('minion');
   const [activeTab, setActiveTab] = useState<string>(searchParams.get('tab') || 'stories');
@@ -261,7 +267,7 @@ const AuraPractice = () => {
   }
 
   // RPG Battle Mode takes over the whole screen
-  if (isRpgMode && rpgStory && user?.id) {
+  if (isRpgMode && rpgView === 'battle' && rpgStory && user?.id) {
     return (
       <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
         <Header />
@@ -271,12 +277,15 @@ const AuraPractice = () => {
             enemyType={rpgEnemyType}
             studentId={user.id}
             onBack={() => {
-              setIsRpgMode(false);
+              setRpgView('level_select');
               setRpgStory(null);
             }}
             onComplete={(stats) => {
               console.log('RPG Battle complete:', stats);
               refetch();
+              // Go back to level select after battle
+              setRpgView('level_select');
+              setRpgStory(null);
             }}
           />
         </main>
@@ -285,63 +294,77 @@ const AuraPractice = () => {
     );
   }
 
-  // RPG Mode - World Map and Level Select
-  if (isRpgMode && !rpgStory && user?.id) {
-    // Simple story selection for now - world map integration would require more state
+  // RPG Mode - Level Select
+  if (isRpgMode && rpgView === 'level_select' && selectedWorld && user?.id) {
+    // Generate levels from world's level data + curated stories
+    const levels: CampaignLevel[] = selectedWorld.levels.map((levelData, idx) => {
+      const story = curatedStories[levelData.storyIndex] || curatedStories[idx % curatedStories.length];
+      
+      return {
+        id: levelData.id,
+        story,
+        enemies: levelData.enemies as ('minion' | 'guard' | 'elite' | 'boss' | 'dragon')[],
+        isBossLevel: levelData.isBossLevel,
+        starsEarned: 0, // TODO: Load from campaign_progress
+        isCompleted: false,
+        isUnlocked: idx <= 1, // First 2 levels unlocked
+      };
+    });
+
     return (
       <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
-        <Header />
-        <main className="flex-1 container mx-auto px-4 py-8">
-          <div className="max-w-4xl mx-auto space-y-6">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" onClick={() => setIsRpgMode(false)}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-              <h1 className="text-3xl font-bold">🎮 RPG Battle Mode</h1>
-            </div>
-            
-            <Card className="p-6 bg-gradient-to-r from-purple-900/30 to-indigo-900/30 border-purple-500/30">
-              <h2 className="text-xl font-bold mb-4">🗺️ Choose Your Battle Story</h2>
-              <p className="text-muted-foreground mb-6">
-                Select a story to read in battle. Your words will become attacks! 
-                <span className="text-amber-400 font-bold"> Drake the Dragon awaits brave readers!</span>
-              </p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {curatedStories.slice(0, 9).map((story, idx) => (
-                  <Card
-                    key={idx}
-                    className="cursor-pointer hover:border-primary hover:scale-105 transition-all p-4 bg-slate-800/50"
-                    onClick={() => {
-                      setRpgStory(story);
-                      // Vary enemy type - guard and elite will trigger Drake after!
-                      const enemies: EnemyType[] = ['minion', 'guard', 'elite', 'boss'];
-                      setRpgEnemyType(enemies[Math.min(story.difficulty_level - 1, 3)] || 'minion');
-                    }}
-                  >
-                    <h3 className="font-bold">{story.title}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2">{story.description}</p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="text-xs bg-primary/10 px-2 py-1 rounded">
-                        Grade {story.grade_level}
-                      </span>
-                      <span className="text-xs bg-amber-500/10 px-2 py-1 rounded">
-                        {story.word_count} words
-                      </span>
-                    </div>
-                    {story.difficulty_level >= 2 && (
-                      <div className="mt-2 text-xs text-orange-400 flex items-center gap-1">
-                        🐉 <span>+ Drake the Dragon!</span>
-                      </div>
-                    )}
-                  </Card>
-                ))}
-              </div>
-            </Card>
-          </div>
-        </main>
-        <Footer />
+        <RPGLevelSelect
+          world={selectedWorld}
+          levels={levels}
+          onSelectLevel={(level) => {
+            setSelectedLevel(level);
+            setRpgStory(level.story);
+            // Set enemy type based on level
+            const primaryEnemy = level.enemies[0];
+            const enemyMap: Record<string, EnemyType> = {
+              minion: 'minion',
+              guard: 'guard',
+              elite: 'elite',
+              boss: 'boss',
+            };
+            setRpgEnemyType(enemyMap[primaryEnemy] || 'minion');
+            setRpgView('battle');
+          }}
+          onBack={() => {
+            setSelectedWorld(null);
+            setRpgView('world_map');
+          }}
+        />
+      </div>
+    );
+  }
+
+  // RPG Mode - World Map
+  if (isRpgMode && rpgView === 'world_map' && user?.id) {
+    // Mock world progress - TODO: Load from campaign_progress table
+    const worldProgress: WorldProgress[] = campaignWorlds.map(w => ({
+      worldId: w.id,
+      levelsCompleted: w.id === 1 ? 2 : 0,
+      totalLevels: 6,
+      starsEarned: w.id === 1 ? 4 : 0,
+      isUnlocked: w.id <= 2, // First 2 worlds unlocked for demo
+    }));
+
+    return (
+      <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
+        <RPGWorldMap
+          worldProgress={worldProgress}
+          totalBooksRescued={4}
+          onSelectWorld={(world) => {
+            setSelectedWorld(world);
+            setRpgView('level_select');
+          }}
+          onBack={() => {
+            setIsRpgMode(false);
+            setRpgView('world_map');
+            setSelectedWorld(null);
+          }}
+        />
       </div>
     );
   }

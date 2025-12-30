@@ -290,33 +290,50 @@ export const RPGFireballBarrage = ({
                   transition: { duration: 0.3 }
                 }}
               >
-                {/* Fireball core */}
-                <motion.div
-                  className={`relative w-24 h-24 rounded-full flex items-center justify-center
+              {/* Fireball core */}
+              <motion.div
+                className={`relative w-28 h-28 rounded-full flex items-center justify-center
+                  ${fireball.selected 
+                    ? 'bg-gradient-to-br from-yellow-200 via-orange-400 to-red-600' 
+                    : 'bg-gradient-to-br from-orange-400 via-red-500 to-red-700'
+                  }`}
+                animate={{
+                  boxShadow: fireball.selected 
+                    ? ['0 0 60px rgba(251,191,36,0.9)', '0 0 100px rgba(251,191,36,1)', '0 0 60px rgba(251,191,36,0.9)']
+                    : ['0 0 40px rgba(249,115,22,0.7)', '0 0 60px rgba(249,115,22,0.9)', '0 0 40px rgba(249,115,22,0.7)'],
+                }}
+                transition={{ repeat: Infinity, duration: 0.4 }}
+              >
+                {/* Word inside - ENHANCED visibility */}
+                <span 
+                  className={`font-black text-xl z-10 uppercase tracking-wider px-2 py-1 rounded
                     ${fireball.selected 
-                      ? 'bg-gradient-to-br from-yellow-300 via-orange-400 to-red-600' 
-                      : 'bg-gradient-to-br from-orange-400 via-red-500 to-red-700'
+                      ? 'text-black bg-yellow-300/80' 
+                      : 'text-white bg-black/40'
                     }`}
-                  animate={{
-                    boxShadow: fireball.selected 
-                      ? ['0 0 60px rgba(251,191,36,0.9)', '0 0 80px rgba(251,191,36,1)', '0 0 60px rgba(251,191,36,0.9)']
-                      : ['0 0 30px rgba(249,115,22,0.6)', '0 0 50px rgba(249,115,22,0.8)', '0 0 30px rgba(249,115,22,0.6)'],
+                  style={{
+                    textShadow: fireball.selected 
+                      ? 'none' 
+                      : '0 0 10px rgba(255,255,255,0.8), 2px 2px 0 #000, -2px -2px 0 #000',
                   }}
-                  transition={{ repeat: Infinity, duration: 0.5 }}
                 >
-                  {/* Word inside */}
-                  <span className={`font-bold text-lg z-10 drop-shadow-lg
-                    ${fireball.selected ? 'text-black' : 'text-white'}`}>
-                    {fireball.word}
-                  </span>
-                  
-                  {/* Inner glow */}
-                  <motion.div
-                    className="absolute inset-2 rounded-full bg-gradient-to-t from-transparent via-yellow-300/30 to-yellow-200/50"
-                    animate={{ opacity: [0.5, 0.8, 0.5] }}
-                    transition={{ repeat: Infinity, duration: 0.3 }}
-                  />
-                </motion.div>
+                  {fireball.word}
+                </span>
+                
+                {/* Inner glow */}
+                <motion.div
+                  className="absolute inset-2 rounded-full bg-gradient-to-t from-transparent via-yellow-300/40 to-yellow-200/60"
+                  animate={{ opacity: [0.5, 0.9, 0.5] }}
+                  transition={{ repeat: Infinity, duration: 0.3 }}
+                />
+                
+                {/* Hot core */}
+                <motion.div
+                  className="absolute inset-6 rounded-full bg-gradient-to-br from-white/60 to-yellow-200/30"
+                  animate={{ scale: [0.8, 1, 0.8], opacity: [0.4, 0.7, 0.4] }}
+                  transition={{ repeat: Infinity, duration: 0.5 }}
+                />
+              </motion.div>
                 
                 {/* Fire trail */}
                 <motion.div

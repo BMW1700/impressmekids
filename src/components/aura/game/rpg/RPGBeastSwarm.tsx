@@ -349,31 +349,46 @@ export const RPGBeastSwarm = ({
               }}
               className={`rounded-full flex flex-col items-center justify-center cursor-pointer
                 bg-gradient-to-br ${beastColors[beast.type]}
-                ${beast.selected ? 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-transparent z-50' : 'z-40'}
-                shadow-lg hover:scale-110 transition-transform
-                border-2 border-white/30`}
+                ${beast.selected ? 'ring-4 ring-yellow-400 ring-offset-4 ring-offset-purple-900 z-50' : 'z-40'}
+                shadow-[0_0_20px_rgba(139,92,246,0.5)] hover:scale-110 transition-transform
+                border-3 border-white/40`}
             >
-              {/* Beast emoji */}
-              <span className="text-2xl">{beastEmojis[beast.type]}</span>
+              {/* Glowing aura */}
+              <motion.div
+                className="absolute inset-0 rounded-full"
+                animate={{ 
+                  boxShadow: beast.selected 
+                    ? ['0 0 30px rgba(251,191,36,0.8)', '0 0 50px rgba(251,191,36,1)', '0 0 30px rgba(251,191,36,0.8)']
+                    : ['0 0 15px rgba(139,92,246,0.5)', '0 0 25px rgba(139,92,246,0.7)', '0 0 15px rgba(139,92,246,0.5)']
+                }}
+                transition={{ repeat: Infinity, duration: 0.6 }}
+              />
               
-              {/* Word in center */}
-              <span className="text-white font-bold text-xs px-1 text-center leading-tight
-                drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
+              {/* Beast emoji */}
+              <span className="text-3xl">{beastEmojis[beast.type]}</span>
+              
+              {/* Word in center - ENHANCED visibility */}
+              <span 
+                className="text-white font-black text-sm px-2 py-0.5 rounded bg-black/50 text-center leading-tight mt-1"
+                style={{
+                  textShadow: '0 0 8px rgba(255,255,255,0.8), 1px 1px 0 #000',
+                }}
+              >
                 {beast.word}
               </span>
               
               {/* Wings animation */}
               <motion.div
-                animate={{ rotate: [-15, 15, -15] }}
-                transition={{ repeat: Infinity, duration: 0.2 }}
-                className="absolute -left-2 top-1/2 -translate-y-1/2 text-lg opacity-50"
+                animate={{ rotate: [-20, 20, -20] }}
+                transition={{ repeat: Infinity, duration: 0.15 }}
+                className="absolute -left-3 top-1/2 -translate-y-1/2 text-xl opacity-70"
               >
                 ◀
               </motion.div>
               <motion.div
-                animate={{ rotate: [15, -15, 15] }}
-                transition={{ repeat: Infinity, duration: 0.2 }}
-                className="absolute -right-2 top-1/2 -translate-y-1/2 text-lg opacity-50"
+                animate={{ rotate: [20, -20, 20] }}
+                transition={{ repeat: Infinity, duration: 0.15 }}
+                className="absolute -right-3 top-1/2 -translate-y-1/2 text-xl opacity-70"
               >
                 ▶
               </motion.div>
