@@ -550,21 +550,21 @@ const ClassroomDetail = () => {
 
           {/* Quick Actions Section */}
           {isTeacher && <div className="mb-8 p-6 rounded-2xl bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5 border-2 border-primary/10 shadow-card">
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                 <div>
                   <h2 className="text-2xl font-bold mb-1">Quick Actions</h2>
                   <p className="text-sm text-muted-foreground">Manage your classroom content and activities</p>
                 </div>
-                <div className="flex gap-3">
-                  <Button variant="outline" size="lg" onClick={() => navigate(`/teacher/questions/${id}`)} className="hover:bg-primary/5 hover:border-primary/30">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Button variant="outline" size="lg" onClick={() => navigate(`/teacher/questions/${id}`)} className="hover:bg-primary/5 hover:border-primary/30 w-full">
                     <BookOpen className="mr-2 h-5 w-5" />
                     Manage Questions
                   </Button>
-                  <Button variant="outline" size="lg" onClick={() => navigate(`/teacher/assignment/create/${id}`)} className="hover:bg-secondary/5 hover:border-secondary/30">
+                  <Button variant="outline" size="lg" onClick={() => navigate(`/teacher/assignment/create/${id}`)} className="hover:bg-secondary/5 hover:border-secondary/30 w-full">
                     <FileText className="mr-2 h-5 w-5" />
                     Create Assignment
                   </Button>
-                  <Button size="lg" className="bg-gradient-primary hover:opacity-90 shadow-card" onClick={() => setShowCreateAnnouncement(true)}>
+                  <Button size="lg" className="bg-gradient-primary hover:opacity-90 shadow-card w-full" onClick={() => setShowCreateAnnouncement(true)}>
                     <Megaphone className="mr-2 h-5 w-5" />
                     Send Announcement
                   </Button>
