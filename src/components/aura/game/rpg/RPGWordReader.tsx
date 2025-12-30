@@ -41,6 +41,9 @@ export const RPGWordReader = ({
   // CRITICAL: Lock the target word when recognition starts to prevent mismatch
   const lockedTargetWordRef = useRef<string>("");
   const lockedTargetIndexRef = useRef<number>(0);
+  // Word generation ID - increments when words prop changes to ignore late events
+  const wordGenerationRef = useRef<number>(0);
+  const lockedGenerationRef = useRef<number>(0);
 
   // Keep refs in sync
   useEffect(() => {
@@ -50,6 +53,16 @@ export const RPGWordReader = ({
   useEffect(() => {
     currentIndexRef.current = currentIndex;
   }, [currentIndex]);
+
+  // CRITICAL: When words array changes, increment generation to invalidate old recognition
+  useEffect(() => {
+    wordGenerationRef.current += 1;
+    // Reset state when words change
+    setCurrentIndex(0);
+    currentIndexRef.current = 0;
+    setSpokenText("");
+    setFeedback(null);
+  }, [words]);
 
   // Get current batch of words
   const currentBatch = words?.slice(0, Math.min(batchSize, words?.length || 0)) || [];
@@ -173,10 +186,11 @@ export const RPGWordReader = ({
     const wordToMatch = currentBatch[currentIndexRef.current]?.replace(/[^a-zA-Z']/g, '');
     if (!wordToMatch) return;
     
-    // CRITICAL: Lock the target word and index at the START of recognition
-    // This prevents any mismatch if index changes during async recognition
+    // CRITICAL: Lock the target word, index, AND generation at the START of recognition
+    // This prevents any mismatch if words/index changes during async recognition
     lockedTargetWordRef.current = wordToMatch;
     lockedTargetIndexRef.current = currentIndexRef.current;
+    lockedGenerationRef.current = wordGenerationRef.current;
     
     cleanup();
     unlockSpeechSynthesis();
@@ -188,12 +202,16 @@ export const RPGWordReader = ({
     }
 
     setRecognitionState('starting');
+    setSpokenText(""); // Clear spoken text for new recognition
     
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
     recognition.maxAlternatives = 5;
+    
+    // Capture the generation at start
+    const capturedGeneration = wordGenerationRef.current;
 
     recognition.onstart = () => {
       if (stateRef.current === 'starting') {
@@ -206,12 +224,17 @@ export const RPGWordReader = ({
     recognition.onresult = (event: any) => {
       if (isProcessingRef.current) return;
       
+      // CRITICAL: Ignore late results from a previous word generation
+      if (capturedGeneration !== wordGenerationRef.current) {
+        console.warn('[RPGWordReader] Ignoring stale recognition result from generation', capturedGeneration, 'current is', wordGenerationRef.current);
+        return;
+      }
+      
       const result = event.results[0];
       const transcript = result[0].transcript.trim().toLowerCase();
       
-      // Only update spoken text if we have a locked target word
-      // This prevents showing spoken text from a previous word
-      if (lockedTargetWordRef.current) {
+      // Only update spoken text if we have a locked target word and generation matches
+      if (lockedTargetWordRef.current && lockedGenerationRef.current === wordGenerationRef.current) {
         setSpokenText(transcript);
       }
 
@@ -223,6 +246,12 @@ export const RPGWordReader = ({
         // Safety check: if locked word doesn't match current display, something went wrong
         if (!targetWord) {
           console.warn('No locked target word - ignoring result');
+          return;
+        }
+        
+        // Safety check: if generation changed, this is a stale result
+        if (lockedGenerationRef.current !== wordGenerationRef.current) {
+          console.warn('[RPGWordReader] Ignoring stale final result');
           return;
         }
         
