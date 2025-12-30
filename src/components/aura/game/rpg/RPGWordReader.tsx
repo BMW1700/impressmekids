@@ -225,12 +225,26 @@ export const RPGWordReader = ({
     }, 1500);
   }, [handleIncorrectFinal]);
 
+  // Get target word from ref-synced index (avoids stale closure)
+  const getTargetWord = useCallback((index: number) => {
+    const batch = words?.slice(0, Math.min(batchSize, words?.length || 0)) || [];
+    return batch[index]?.replace(/[^a-zA-Z']/g, '') || '';
+  }, [words, batchSize]);
+
+  // State ref for echo retry (avoid stale closure)
+  const recognitionStateRef = useRef<RecognitionState>('idle');
+  useEffect(() => {
+    recognitionStateRef.current = recognitionState;
+  }, [recognitionState]);
+
   // Process speech result
   const processResult = useCallback((transcript: string, alternatives: string[]) => {
     if (isProcessingRef.current) return;
     
     const wordIndex = currentIndexRef.current;
-    const targetWord = currentBatch[wordIndex]?.replace(/[^a-zA-Z']/g, '') || '';
+    const targetWord = getTargetWord(wordIndex);
+    
+    console.log('[RPGWordReader] Processing:', { transcript, targetWord, wordIndex });
     
     if (!targetWord) return;
     
@@ -263,20 +277,23 @@ export const RPGWordReader = ({
       }
     }
     
+    console.log('[RPGWordReader] Match result:', { matched, bestSpoken, targetWord });
+    
     if (matched) {
       handleCorrect(bestSpoken, wordIndex);
     } else {
-      // Check if we should do echo retry
-      if (enableEchoRetry && recognitionState !== 'echo_retry') {
+      // Check if we should do echo retry - use ref to avoid stale state
+      const currentRecState = recognitionStateRef.current;
+      if (enableEchoRetry && currentRecState !== 'echo_retry') {
         startEchoRetry(transcript, targetWord, wordIndex);
-      } else if (recognitionState === 'echo_retry') {
+      } else if (currentRecState === 'echo_retry') {
         // Already in echo - this attempt also failed, but let timeout handle final
         setSpokenText(transcript);
       } else {
         handleIncorrectFinal(transcript, targetWord, wordIndex);
       }
     }
-  }, [currentBatch, enableEchoRetry, recognitionState, handleCorrect, handleIncorrectFinal, startEchoRetry]);
+  }, [getTargetWord, enableEchoRetry, handleCorrect, handleIncorrectFinal, startEchoRetry]);
 
   // Create and start the recognition session (ONE instance, kept alive)
   const startRecognitionSession = useCallback(() => {
