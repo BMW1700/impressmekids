@@ -26,7 +26,7 @@ export interface EnemyAbility {
   id: string;
   name: string;
   damage: number;
-  effect: 'poison' | 'debuff' | 'silence' | 'word_barrage' | 'fireball_barrage' | 'asteroid_barrage';
+  effect: 'poison' | 'debuff' | 'silence' | 'word_barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'ice_crystal' | 'ghostly_whisper' | 'rolling_boulder' | 'freeze' | 'shadow_veil' | 'earthquake';
   description: string;
   icon: string;
 }
@@ -34,7 +34,7 @@ export interface EnemyAbility {
 export interface RPGEnemy {
   id: string;
   name: string;
-  type: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon';
+  type: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian';
   maxHp: number;
   attack: number;
   defense: number;
@@ -290,8 +290,104 @@ export const miniBeast: RPGEnemy = {
   barrageWordCount: 1,
 };
 
+// New Enemies - Ice Golem (World 2 Boss)
+export const iceGolem: RPGEnemy = {
+  id: 'ice_golem',
+  name: 'Frostfang the Ice Golem',
+  type: 'ice_golem',
+  maxHp: 220,
+  attack: 28,
+  defense: 20,
+  wordDamageMultiplier: 0.55,
+  color: 'from-cyan-400 to-blue-800',
+  dialogueIntro: [
+    "FREEZE... LITTLE... READER...",
+    "YOUR WORDS... TURN TO ICE...",
+    "THE COLD... WILL SILENCE YOU...",
+  ],
+  dialogueAttack: [
+    "*ice crystals form*",
+    "FEEL THE CHILL!",
+    "*glacial slam*",
+  ],
+  dialogueDefeat: [
+    "I... melt... before your... warmth...",
+    "Your words... burn like fire...",
+  ],
+  specialAbilities: [
+    { id: 'ice_crystal_barrage', name: 'Ice Crystal Barrage', damage: 0, effect: 'ice_crystal', description: 'Words appear in freezing crystals!', icon: '❄️' },
+    { id: 'frozen_heart', name: 'Frozen Heart', damage: 10, effect: 'freeze', description: 'Slows word acceptance speed', icon: '🧊' },
+    { id: 'blizzard', name: 'Blizzard', damage: 15, effect: 'debuff', description: 'Screen fills with snow', icon: '🌨️' },
+  ],
+  barrageWordCount: 6,
+};
+
+// Shadow Wraith (World 3 Enemy)
+export const shadowWraith: RPGEnemy = {
+  id: 'shadow_wraith',
+  name: 'Whisper the Shadow Wraith',
+  type: 'shadow_wraith',
+  maxHp: 180,
+  attack: 32,
+  defense: 12,
+  wordDamageMultiplier: 0.6,
+  color: 'from-purple-900 to-slate-900',
+  dialogueIntro: [
+    "Yooour wooords... faaade into nooothingness...",
+    "I AM THE DARKNESS...",
+    "Can you read... what you cannot see?",
+  ],
+  dialogueAttack: [
+    "*whispers from shadows*",
+    "VANISH!",
+    "*soul-draining gaze*",
+  ],
+  dialogueDefeat: [
+    "The light... it burns...",
+    "Your voice... disperses the shadows...",
+  ],
+  specialAbilities: [
+    { id: 'ghostly_whispers', name: 'Ghostly Whispers', damage: 0, effect: 'ghostly_whisper', description: 'Words fade over time!', icon: '👻' },
+    { id: 'shadow_veil', name: 'Shadow Veil', damage: 0, effect: 'shadow_veil', description: '50% of letters become invisible', icon: '🌑' },
+    { id: 'soul_drain', name: 'Soul Drain', damage: 18, effect: 'poison', description: 'Steals HP based on missed words', icon: '💀' },
+  ],
+  barrageWordCount: 5,
+};
+
+// Stone Guardian (World 3 Boss)
+export const stoneGuardian: RPGEnemy = {
+  id: 'stone_guardian',
+  name: 'Granite the Stone Guardian',
+  type: 'stone_guardian',
+  maxHp: 350,
+  attack: 25,
+  defense: 30,
+  wordDamageMultiplier: 0.35,
+  color: 'from-stone-500 to-stone-800',
+  dialogueIntro: [
+    "THE MOUNTAIN... PROTECTS... THE BOOKS...",
+    "YOU SHALL NOT PASS!",
+    "STONE ENDURES... FOREVER...",
+  ],
+  dialogueAttack: [
+    "*massive boulder slam*",
+    "CRUMBLE BEFORE ME!",
+    "*the earth shakes*",
+  ],
+  dialogueDefeat: [
+    "The mountain... falls...",
+    "Your words... crack even stone...",
+  ],
+  specialAbilities: [
+    { id: 'rolling_boulders', name: 'Rolling Boulders', damage: 0, effect: 'rolling_boulder', description: 'Words on rolling rocks!', icon: '🪨' },
+    { id: 'earthquake', name: 'Earthquake', damage: 12, effect: 'earthquake', description: 'Shakes and jumbles words', icon: '🌋' },
+    { id: 'stone_armor', name: 'Stone Armor', damage: 0, effect: 'debuff', description: 'Reduces damage until 5-word streak', icon: '🛡️' },
+  ],
+  barrageWordCount: 7,
+};
+
 // Get enemy by type for battle
-export const getEnemyForBattle = (enemyType: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast'): RPGEnemy => {
+export const getEnemyForBattle = (enemyType: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian'): RPGEnemy => {
   switch (enemyType) {
     case 'minion':
       return goblinMinion;
@@ -307,6 +403,12 @@ export const getEnemyForBattle = (enemyType: 'minion' | 'guard' | 'elite' | 'bos
       return drakeTheDragon;
     case 'mini_beast':
       return miniBeast;
+    case 'ice_golem':
+      return iceGolem;
+    case 'shadow_wraith':
+      return shadowWraith;
+    case 'stone_guardian':
+      return stoneGuardian;
     default:
       return goblinMinion;
   }
