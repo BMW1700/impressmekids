@@ -39,6 +39,10 @@ export const RPGWordBarrage = ({
   const animationRef = useRef<number | null>(null);
   const destroyedRef = useRef(0);
   const missedRef = useRef(0);
+  // Lock the selected word to prevent race conditions
+  const selectedWordRef = useRef<BarrageWord | null>(null);
+  const isListeningRef = useRef(false);
+  const recognitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Initialize with SLOW floating words
   useEffect(() => {
@@ -107,26 +111,59 @@ export const RPGWordBarrage = ({
     };
   }, [isActive, onComplete, onWordHit]);
 
+  // Reset all listening state
+  const resetListeningState = useCallback(() => {
+    if (recognitionTimeoutRef.current) {
+      clearTimeout(recognitionTimeoutRef.current);
+      recognitionTimeoutRef.current = null;
+    }
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch (e) {}
+      recognitionRef.current = null;
+    }
+    setIsListening(false);
+    isListeningRef.current = false;
+    setSelectedWord(null);
+    selectedWordRef.current = null;
+    setSpokenText("");
+    setBarrageWords(prev => prev.map(w => ({ ...w, selected: false })));
+  }, []);
+
   // Click to select word
   const handleSelectWord = useCallback((word: BarrageWord) => {
-    if (word.destroyed || isListening) return;
+    if (word.destroyed) return;
     
-    // Deselect previous
+    // If already listening to a different word, cancel and start new
+    if (isListeningRef.current) {
+      resetListeningState();
+    }
+    
+    // Deselect previous and select new
     setBarrageWords(prev => prev.map(w => ({ ...w, selected: w.id === word.id })));
     setSelectedWord(word);
+    selectedWordRef.current = word; // Lock the word in ref
     startListening(word);
-  }, [isListening]);
+  }, [resetListeningState]);
 
   // Speech recognition for selected word
   const startListening = useCallback((word: BarrageWord) => {
     if (recognitionRef.current) {
       try { recognitionRef.current.abort(); } catch (e) {}
+      recognitionRef.current = null;
     }
     
     unlockSpeechSynthesis();
     
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    if (!SpeechRecognition) return;
+    if (!SpeechRecognition) {
+      console.error('Speech recognition not supported');
+      resetListeningState();
+      return;
+    }
+
+    // Lock the target word at the start
+    const lockedWord = word;
+    selectedWordRef.current = word;
 
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
@@ -136,7 +173,13 @@ export const RPGWordBarrage = ({
 
     recognition.onstart = () => {
       setIsListening(true);
+      isListeningRef.current = true;
       setSpokenText("");
+      // Clear safety timeout since recognition started
+      if (recognitionTimeoutRef.current) {
+        clearTimeout(recognitionTimeoutRef.current);
+        recognitionTimeoutRef.current = null;
+      }
     };
 
     recognition.onresult = (event: any) => {
@@ -145,6 +188,8 @@ export const RPGWordBarrage = ({
       setSpokenText(transcript);
 
       if (result.isFinal) {
+        // Use the LOCKED word, not the state
+        const targetWord = lockedWord.word;
         let matched = false;
         
         // Check all alternatives
@@ -152,7 +197,7 @@ export const RPGWordBarrage = ({
           const alt = result[i]?.transcript?.trim().toLowerCase() || '';
           const altWords = alt.split(/\s+/);
           for (const spoken of altWords) {
-            if (isWordMatchLenient(spoken, word.word)) {
+            if (isWordMatchLenient(spoken, targetWord)) {
               matched = true;
               break;
             }
@@ -165,43 +210,65 @@ export const RPGWordBarrage = ({
           destroyedRef.current += 1;
           setWordsDestroyed(destroyedRef.current);
           setBarrageWords(prev => 
-            prev.map(w => w.id === word.id ? { ...w, destroyed: true, selected: false } : w)
+            prev.map(w => w.id === lockedWord.id ? { ...w, destroyed: true, selected: false } : w)
           );
         } else {
           // WRONG - instant damage!
           soundEffects.incorrectWord();
-          onWordHit(18); // Higher damage for wrong word
+          onWordHit(18);
           missedRef.current += 1;
           setWordsMissed(missedRef.current);
           setBarrageWords(prev => 
-            prev.map(w => w.id === word.id ? { ...w, destroyed: true, selected: false } : w)
+            prev.map(w => w.id === lockedWord.id ? { ...w, destroyed: true, selected: false } : w)
           );
         }
 
+        // Reset state after processing
         setIsListening(false);
+        isListeningRef.current = false;
         setSelectedWord(null);
+        selectedWordRef.current = null;
         setSpokenText("");
         try { recognition.stop(); } catch (e) {}
       }
     };
 
-    recognition.onerror = () => {
-      setIsListening(false);
-      setSelectedWord(null);
-      setBarrageWords(prev => prev.map(w => ({ ...w, selected: false })));
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error:', event.error);
+      resetListeningState();
     };
 
     recognition.onend = () => {
-      setIsListening(false);
+      // Only reset if we didn't already process a result
+      if (isListeningRef.current) {
+        resetListeningState();
+      }
     };
 
     recognitionRef.current = recognition;
-    try { recognition.start(); } catch (e) {}
-  }, [onWordHit]);
+    
+    // Set safety timeout - if recognition doesn't start in 2s, reset
+    recognitionTimeoutRef.current = setTimeout(() => {
+      if (!isListeningRef.current) {
+        console.warn('Speech recognition failed to start, resetting');
+        resetListeningState();
+      }
+    }, 2000);
+    
+    try { 
+      recognition.start(); 
+    } catch (e) {
+      console.error('Failed to start speech recognition:', e);
+      resetListeningState();
+    }
+  }, [onWordHit, resetListeningState]);
 
   // Cleanup
   useEffect(() => {
     return () => {
+      if (recognitionTimeoutRef.current) {
+        clearTimeout(recognitionTimeoutRef.current);
+      }
       if (recognitionRef.current) {
         try { recognitionRef.current.abort(); } catch (e) {}
       }
