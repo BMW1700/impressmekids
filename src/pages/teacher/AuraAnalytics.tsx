@@ -144,7 +144,7 @@ const AuraAnalytics = () => {
 
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
@@ -157,16 +157,16 @@ const AuraAnalytics = () => {
                 <BarChart3 className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold flex items-center gap-2">
+                <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2 flex-wrap">
                   AURA Analytics
                   <MLStatusBadge variant="detailed" showIfFallback />
                 </h1>
-                <p className="text-muted-foreground">Track student speaking progress with ML insights</p>
+                <p className="text-muted-foreground text-sm md:text-base">Track student speaking progress with ML insights</p>
               </div>
             </div>
 
             <Select value={classroomId} onValueChange={handleClassroomChange}>
-              <SelectTrigger className="w-64">
+              <SelectTrigger className="w-full md:w-64">
                 <SelectValue placeholder="Select classroom" />
               </SelectTrigger>
               <SelectContent>
