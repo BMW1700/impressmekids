@@ -113,7 +113,7 @@ export const ClassroomAIInsights = ({ classroomId }: ClassroomAIInsightsProps) =
   return (
     <div className="space-y-6">
       {/* Enhanced Header with AI Processing Indicator */}
-      <div className="flex items-center justify-between p-6 rounded-2xl bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 border-2 border-primary/20 shadow-elegant">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-6 rounded-2xl bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 border-2 border-primary/20 shadow-elegant">
         <div className="flex items-center gap-4">
           <div className="relative">
             <div className="w-16 h-16 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-lg">
@@ -133,7 +133,7 @@ export const ClassroomAIInsights = ({ classroomId }: ClassroomAIInsightsProps) =
           onClick={() => generateSummary(classroomId)}
           disabled={isGenerating}
           size="lg"
-          className="bg-gradient-primary hover:opacity-90 shadow-card"
+          className="bg-gradient-primary hover:opacity-90 shadow-card w-full md:w-auto"
         >
           {isGenerating && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
           <Sparkles className="mr-2 h-5 w-5" />
