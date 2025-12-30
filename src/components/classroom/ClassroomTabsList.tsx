@@ -5,6 +5,14 @@ import { cn } from "@/lib/utils";
 import { useClassroomFeatures } from "@/hooks/useClassroomFeatures";
 import { liquidGlassTabClass } from "@/components/ui/liquid-glass-button";
 import { useTabOrder } from "@/hooks/useTabOrder";
+import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   DragDropContext,
   Droppable,
@@ -33,6 +41,8 @@ interface ClassroomTabsListProps {
   classroomId: string;
   isTeacher: boolean;
   parentRequests: any[];
+  currentTab?: string;
+  onTabChange?: (value: string) => void;
 }
 
 // Tab configuration with icons and labels
@@ -88,7 +98,10 @@ export const ClassroomTabsList = ({
   classroomId,
   isTeacher,
   parentRequests,
+  currentTab,
+  onTabChange,
 }: ClassroomTabsListProps) => {
+  const isMobile = useIsMobile();
   const { isFeatureEnabled } = useClassroomFeatures(classroomId);
   const {
     orderedTabs,
@@ -218,9 +231,50 @@ export const ClassroomTabsList = ({
     );
   };
 
+  // Mobile dropdown for teacher
+  const renderMobileDropdown = (tabs: string[]) => {
+    const currentConfig = TAB_CONFIG[currentTab || tabs[0]];
+    const CurrentIcon = currentConfig?.icon || Users;
+    
+    return (
+      <div className="w-full">
+        <Select value={currentTab || tabs[0]} onValueChange={(value) => onTabChange?.(value)}>
+          <SelectTrigger className="w-full h-12 bg-muted/50 rounded-xl border-0">
+            <SelectValue>
+              <div className="flex items-center gap-2">
+                <CurrentIcon className="h-4 w-4" />
+                {currentConfig?.label || currentTab}
+              </div>
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent className="bg-background border shadow-lg z-50">
+            {tabs.map((tabId) => {
+              const config = TAB_CONFIG[tabId];
+              if (!config && tabId !== "trends") return null;
+              const Icon = config?.icon || BarChart3;
+              return (
+                <SelectItem key={tabId} value={tabId} className="cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-4 w-4" />
+                    {config?.label || "Trends"}
+                  </div>
+                </SelectItem>
+              );
+            })}
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  };
+
   if (isTeacher) {
     const cols = 5;
     const rows = chunkArray(visibleTeacherTabs, cols);
+
+    // Mobile view - show dropdown
+    if (isMobile) {
+      return renderMobileDropdown(visibleTeacherTabs);
+    }
 
     return (
       <div className="relative">
@@ -290,6 +344,11 @@ export const ClassroomTabsList = ({
         )}
       </div>
     );
+  }
+
+  // Student view - show dropdown on mobile
+  if (isMobile) {
+    return renderMobileDropdown(STUDENT_TABS);
   }
 
   // Student view - no drag and drop
