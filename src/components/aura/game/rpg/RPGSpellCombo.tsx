@@ -2,13 +2,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Zap } from "lucide-react";
 
-declare global {
-  interface Window {
-    SpeechRecognition: typeof SpeechRecognition;
-    webkitSpeechRecognition: typeof SpeechRecognition;
-  }
-}
-
 interface ComboWord {
   id: number;
   word: string;
@@ -31,7 +24,7 @@ export const RPGSpellCombo = ({
   const [isListening, setIsListening] = useState(false);
   const [comboProgress, setComboProgress] = useState(0);
   const [timeLeft, setTimeLeft] = useState(15);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   // Initialize combo words
   useEffect(() => {
@@ -83,7 +76,7 @@ export const RPGSpellCombo = ({
 
   // Start speech recognition
   const startListening = useCallback(() => {
-    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognitionAPI = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
     if (!SpeechRecognitionAPI) return;
 
     recognitionRef.current = new SpeechRecognitionAPI();
