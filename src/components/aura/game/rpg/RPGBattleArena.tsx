@@ -10,6 +10,8 @@ import { RPGPartyStats } from "./RPGPartyStats";
 import { RPGWordAttack } from "./RPGWordAttack";
 import { RPGWordReader } from "./RPGWordReader";
 import { RPGWordBarrage } from "./RPGWordBarrage";
+import { RPGFireballBarrage } from "./RPGFireballBarrage";
+import { RPGAsteroidBarrage } from "./RPGAsteroidBarrage";
 import { RPGSpellEffects } from "./RPGSpellEffects";
 import { RPGCoinDrop } from "./RPGCoinDrop";
 import { Spell } from "./RPGSpellMenu";
@@ -24,13 +26,13 @@ import {
 import { CuratedStory } from "@/data/curatedStories";
 import { calculateGoldEarned, calculateXpEarned } from "@/lib/gameEconomy";
 
-type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'enemy_turn' | 'victory' | 'defeat';
+type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'enemy_turn' | 'victory' | 'defeat';
 type InventoryKey = 'health_potion' | 'magic_potion';
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
 
 interface RPGBattleArenaProps {
   story: CuratedStory;
-  enemyType: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss';
+  enemyType: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon';
   studentId: string;
   onBack: () => void;
   onComplete: (victory: boolean, stats: BattleStats) => void;
@@ -510,6 +512,20 @@ export const RPGBattleArena = ({
       <AnimatePresence>
         {phase === 'barrage' && (
           <RPGWordBarrage
+            words={barrageWords}
+            onComplete={handleBarrageComplete}
+            onWordHit={handleBarrageWordHit}
+          />
+        )}
+        {phase === 'fireball_barrage' && (
+          <RPGFireballBarrage
+            words={barrageWords}
+            onComplete={handleBarrageComplete}
+            onWordHit={handleBarrageWordHit}
+          />
+        )}
+        {phase === 'asteroid_barrage' && (
+          <RPGAsteroidBarrage
             words={barrageWords}
             onComplete={handleBarrageComplete}
             onWordHit={handleBarrageWordHit}

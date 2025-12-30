@@ -26,7 +26,7 @@ export interface EnemyAbility {
   id: string;
   name: string;
   damage: number;
-  effect: 'poison' | 'debuff' | 'silence' | 'word_barrage';
+  effect: 'poison' | 'debuff' | 'silence' | 'word_barrage' | 'fireball_barrage' | 'asteroid_barrage';
   description: string;
   icon: string;
 }
@@ -34,7 +34,7 @@ export interface EnemyAbility {
 export interface RPGEnemy {
   id: string;
   name: string;
-  type: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss';
+  type: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon';
   maxHp: number;
   attack: number;
   defense: number;
@@ -202,10 +202,10 @@ export const galairTheWickedSorcerer: RPGEnemy = {
   id: 'galair',
   name: 'Galair the Wicked Sorcerer',
   type: 'final_boss',
-  maxHp: 500, // Was 300
-  attack: 40, // Was 35
-  defense: 20, // Was 15
-  wordDamageMultiplier: 0.3, // Was 0.4
+  maxHp: 500,
+  attack: 40,
+  defense: 20,
+  wordDamageMultiplier: 0.3,
   color: 'from-purple-900 to-black',
   dialogueIntro: [
     "Foolish mortal... you've come so far, only to fall here.",
@@ -229,13 +229,49 @@ export const galairTheWickedSorcerer: RPGEnemy = {
     { id: 'dark_blast', name: 'Dark Blast', damage: 30, effect: 'debuff', description: 'Dark energy attack', icon: '🌑' },
     { id: 'silence', name: 'Silence', damage: 0, effect: 'silence', description: 'Disables magic for 2 turns', icon: '🔇' },
     { id: 'void_poison', name: 'Void Poison', damage: 20, effect: 'poison', description: 'Devastating damage over time', icon: '💀' },
-    { id: 'massive_barrage', name: 'Word Storm', damage: 0, effect: 'word_barrage', description: 'Summons massive word barrage', icon: '🌀' },
+    { id: 'word_prison', name: 'Word Prison', damage: 0, effect: 'asteroid_barrage', description: 'Summons word asteroids!', icon: '☄️' },
   ],
   barrageWordCount: 10,
 };
 
+// Dragon Enemy
+export const dalairTheDragon: RPGEnemy = {
+  id: 'dalair',
+  name: 'Dalair the Destroyer',
+  type: 'dragon',
+  maxHp: 280,
+  attack: 35,
+  defense: 18,
+  wordDamageMultiplier: 0.45,
+  color: 'from-orange-600 to-red-900',
+  dialogueIntro: [
+    "ROOOAAAR! Another mortal dares challenge me?!",
+    "I am DALAIR, the Destroyer of Libraries!",
+    "I have burned a thousand books... yours will be next!",
+    "Your words will turn to ASH in my flames!",
+  ],
+  dialogueAttack: [
+    "*breathes scorching flames*",
+    "FEEL THE BURN!",
+    "*massive wing gust*",
+    "You cannot escape my fire!",
+  ],
+  dialogueDefeat: [
+    "Impossible... my flames... extinguished by words...",
+    "Perhaps... books aren't for burning after all...",
+    "Your knowledge... it's too powerful...",
+  ],
+  specialAbilities: [
+    { id: 'fireball_barrage', name: 'Fireball Barrage', damage: 0, effect: 'fireball_barrage', description: 'Launches fireballs with words!', icon: '🔥' },
+    { id: 'breath_attack', name: 'Dragon Breath', damage: 25, effect: 'debuff', description: 'Scorching flames reduce damage', icon: '🐉' },
+    { id: 'wing_gust', name: 'Wing Gust', damage: 15, effect: 'silence', description: 'Blows away your words', icon: '💨' },
+    { id: 'word_prison', name: 'Meteor Storm', damage: 0, effect: 'asteroid_barrage', description: 'Summons flaming meteors!', icon: '☄️' },
+  ],
+  barrageWordCount: 7,
+};
+
 // Get enemy by type for battle
-export const getEnemyForBattle = (enemyType: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss'): RPGEnemy => {
+export const getEnemyForBattle = (enemyType: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon'): RPGEnemy => {
   switch (enemyType) {
     case 'minion':
       return goblinMinion;
@@ -247,6 +283,8 @@ export const getEnemyForBattle = (enemyType: 'minion' | 'guard' | 'elite' | 'bos
       return grogTheGoblinKing;
     case 'final_boss':
       return galairTheWickedSorcerer;
+    case 'dragon':
+      return dalairTheDragon;
     default:
       return goblinMinion;
   }

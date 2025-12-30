@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 
-type CharacterType = 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer';
+type CharacterType = 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon';
 
 interface RPGCharacterSpriteProps {
   type: CharacterType;
@@ -359,6 +359,73 @@ export const RPGCharacterSprite = ({
     </div>
   );
 
+  const renderDragon = () => (
+    <div className="relative w-full h-full flex items-center justify-center">
+      {/* Dragon Body */}
+      <div className="absolute inset-x-[5%] top-[25%] bottom-[5%]
+        bg-gradient-to-b from-orange-600 via-red-700 to-red-900
+        rounded-[30%]
+        shadow-[inset_-6px_-6px_20px_rgba(0,0,0,0.5),0_0_30px_rgba(249,115,22,0.4)]">
+        {/* Scales */}
+        <div className="absolute top-[15%] left-[20%] right-[20%] h-[60%]
+          bg-gradient-to-b from-orange-500/30 to-transparent rounded-full" />
+      </div>
+      
+      {/* Dragon Head */}
+      <div className="absolute top-[0%] left-[15%] right-[15%] h-[30%]
+        bg-gradient-to-b from-orange-500 to-red-700
+        rounded-[50%_50%_40%_40%]
+        shadow-[inset_-4px_-4px_12px_rgba(0,0,0,0.4)]">
+        {/* Snout */}
+        <div className="absolute bottom-[-10%] left-[30%] right-[30%] h-[40%]
+          bg-gradient-to-b from-orange-600 to-red-800 rounded-b-[50%]" />
+        {/* Eyes */}
+        <div className="absolute top-[30%] left-[15%] w-[22%] h-[30%]
+          bg-gradient-to-b from-yellow-300 to-amber-500 rounded-full
+          shadow-[0_0_15px_rgba(251,191,36,0.8)]">
+          <div className="absolute top-[35%] left-[35%] w-[40%] h-[40%] bg-black rounded-full" />
+        </div>
+        <div className="absolute top-[30%] right-[15%] w-[22%] h-[30%]
+          bg-gradient-to-b from-yellow-300 to-amber-500 rounded-full
+          shadow-[0_0_15px_rgba(251,191,36,0.8)]">
+          <div className="absolute top-[35%] right-[35%] w-[40%] h-[40%] bg-black rounded-full" />
+        </div>
+        {/* Horns */}
+        <div className="absolute -top-[25%] left-[10%] w-[20%] h-[40%]
+          bg-gradient-to-t from-slate-700 to-slate-500 rounded-t-full"
+          style={{ transform: 'rotate(-20deg)' }} />
+        <div className="absolute -top-[25%] right-[10%] w-[20%] h-[40%]
+          bg-gradient-to-t from-slate-700 to-slate-500 rounded-t-full"
+          style={{ transform: 'rotate(20deg)' }} />
+      </div>
+      
+      {/* Wings */}
+      <motion.div 
+        className="absolute top-[20%] -left-[40%] w-[50%] h-[50%]
+          bg-gradient-to-br from-red-600/80 to-red-900/60"
+        style={{ clipPath: 'polygon(100% 50%, 0% 0%, 20% 50%, 0% 100%)' }}
+        animate={{ rotate: [-5, 5, -5] }}
+        transition={{ repeat: Infinity, duration: 2 }}
+      />
+      <motion.div 
+        className="absolute top-[20%] -right-[40%] w-[50%] h-[50%]
+          bg-gradient-to-bl from-red-600/80 to-red-900/60"
+        style={{ clipPath: 'polygon(0% 50%, 100% 0%, 80% 50%, 100% 100%)' }}
+        animate={{ rotate: [5, -5, 5] }}
+        transition={{ repeat: Infinity, duration: 2 }}
+      />
+      
+      {/* Fire Breath Effect */}
+      <motion.div
+        className="absolute bottom-[35%] left-[-20%] w-[25%] h-[15%]
+          bg-gradient-to-l from-orange-500 via-yellow-400 to-transparent
+          rounded-full blur-sm"
+        animate={{ opacity: [0.5, 1, 0.5], scale: [0.8, 1.2, 0.8] }}
+        transition={{ repeat: Infinity, duration: 1 }}
+      />
+    </div>
+  );
+
   const renderCharacter = () => {
     switch (type) {
       case 'knight': return renderKnight();
@@ -366,6 +433,7 @@ export const RPGCharacterSprite = ({
       case 'goblin': return renderGoblin();
       case 'boss': return renderBoss();
       case 'sorcerer': return renderSorcerer();
+      case 'dragon': return renderDragon();
       default: return renderKnight();
     }
   };
