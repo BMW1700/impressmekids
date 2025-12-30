@@ -154,18 +154,35 @@ export const RPGWordReader = ({
     setCompletedWords(prev => new Set([...prev, wordIndex]));
     onResult(true, spokenWord, wordIndex);
     
-    // Brief pause to show feedback, then advance
+    // CRITICAL FIX: Advance index IMMEDIATELY so next speech results compare to next word
+    const nextIndex = wordIndex + 1;
+    const batch = words?.slice(0, Math.min(batchSize, words?.length || 0)) || [];
+    const hasMoreWords = nextIndex < batch.length;
+    
+    if (hasMoreWords) {
+      // Update refs IMMEDIATELY before any async delays
+      setCurrentIndex(nextIndex);
+      currentIndexRef.current = nextIndex;
+      console.log('[RPGWordReader] Advanced to word index:', nextIndex, 'target:', batch[nextIndex]);
+    }
+    
+    // Brief pause to show feedback, then clear UI
     feedbackTimeoutRef.current = setTimeout(() => {
       setFeedback(null);
       setSpokenText("");
       isProcessingRef.current = false;
       
-      const continued = advanceToNextWord(wordIndex);
-      if (continued) {
+      if (hasMoreWords) {
         setRecognitionState('listening');
+      } else {
+        // Batch complete
+        setCurrentIndex(0);
+        currentIndexRef.current = 0;
+        stopRecognitionSession();
+        setRecognitionState('idle');
       }
     }, 300);
-  }, [streak, onResult, advanceToNextWord]);
+  }, [streak, onResult, words, batchSize, stopRecognitionSession]);
 
   // Handle incorrect word (after echo fails or no echo)
   const handleIncorrectFinal = useCallback((spokenWord: string, expectedWord: string, wordIndex: number) => {
@@ -183,17 +200,34 @@ export const RPGWordReader = ({
     
     onResult(false, spokenWord, wordIndex);
     
+    // CRITICAL FIX: Advance index IMMEDIATELY so next speech results compare to next word
+    const nextIndex = wordIndex + 1;
+    const batch = words?.slice(0, Math.min(batchSize, words?.length || 0)) || [];
+    const hasMoreWords = nextIndex < batch.length;
+    
+    if (hasMoreWords) {
+      // Update refs IMMEDIATELY before any async delays
+      setCurrentIndex(nextIndex);
+      currentIndexRef.current = nextIndex;
+      console.log('[RPGWordReader] Advanced to word index:', nextIndex, 'target:', batch[nextIndex]);
+    }
+    
     feedbackTimeoutRef.current = setTimeout(() => {
       setFeedback(null);
       setSpokenText("");
       isProcessingRef.current = false;
       
-      const continued = advanceToNextWord(wordIndex);
-      if (continued) {
+      if (hasMoreWords) {
         setRecognitionState('listening');
+      } else {
+        // Batch complete
+        setCurrentIndex(0);
+        currentIndexRef.current = 0;
+        stopRecognitionSession();
+        setRecognitionState('idle');
       }
     }, 700);
-  }, [onResult, advanceToNextWord]);
+  }, [onResult, words, batchSize, stopRecognitionSession]);
 
   // Start echo retry mode
   const startEchoRetry = useCallback((spokenWord: string, expectedWord: string, wordIndex: number) => {
