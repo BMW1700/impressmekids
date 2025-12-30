@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, MicOff, Volume2, Check, X, Pause, Play, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -52,24 +52,35 @@ export const RPGWordReader = ({
   
   // Word generation tracking
   const wordGenerationRef = useRef(0);
+  
+  // Stable key for detecting actual word content changes (not just array reference)
+  const wordsKey = useMemo(() => words?.join("|") || "", [words]);
+  const prevWordsKeyRef = useRef(wordsKey);
 
   // Keep refs in sync
   useEffect(() => {
     currentIndexRef.current = currentIndex;
   }, [currentIndex]);
 
-  // When words change, reset
+  // Only reset when word CONTENT actually changes, not on every render
   useEffect(() => {
-    wordGenerationRef.current += 1;
-    setCurrentIndex(0);
-    currentIndexRef.current = 0;
-    setSpokenText("");
-    setFeedback(null);
-    setCompletedWords(new Set());
-  }, [words]);
+    if (prevWordsKeyRef.current !== wordsKey) {
+      console.log('[RPGWordReader] Words changed, resetting. Old:', prevWordsKeyRef.current.substring(0, 50), 'New:', wordsKey.substring(0, 50));
+      prevWordsKeyRef.current = wordsKey;
+      wordGenerationRef.current += 1;
+      setCurrentIndex(0);
+      currentIndexRef.current = 0;
+      setSpokenText("");
+      setFeedback(null);
+      setCompletedWords(new Set());
+      isProcessingRef.current = false;
+    }
+  }, [wordsKey]);
 
-  // Get current batch
-  const currentBatch = words?.slice(0, Math.min(batchSize, words?.length || 0)) || [];
+  // Get current batch - memoized for stability
+  const currentBatch = useMemo(() => {
+    return words?.slice(0, Math.min(batchSize, words?.length || 0)) || [];
+  }, [words, batchSize]);
   const currentWord = currentBatch[currentIndex] || "";
   const cleanWord = currentWord.replace(/[^a-zA-Z']/g, '');
 
@@ -358,31 +369,42 @@ export const RPGWordReader = ({
       }
     };
     
+    // Track which results we've already processed to avoid double-processing
+    const processedResultsRef = { current: new Set<number>() };
+    
     recognition.onresult = (event: any) => {
-      // Get the latest result
-      const resultIndex = event.results.length - 1;
-      const result = event.results[resultIndex];
-      const transcript = result[0]?.transcript?.trim() || '';
-      
-      // Show interim results
-      if (!result.isFinal) {
-        if (!isProcessingRef.current) {
-          setSpokenText(transcript.toLowerCase());
+      // CRITICAL FIX: Use event.resultIndex to only process NEW results
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        const transcript = result[0]?.transcript?.trim() || '';
+        
+        // Show interim results for the latest
+        if (!result.isFinal) {
+          if (!isProcessingRef.current && i === event.results.length - 1) {
+            setSpokenText(transcript.toLowerCase());
+          }
+          continue;
         }
-        return;
+        
+        // Skip if we already processed this result index
+        if (processedResultsRef.current.has(i)) {
+          continue;
+        }
+        processedResultsRef.current.add(i);
+        
+        // Final result - process it
+        const wordIdx = currentIndexRef.current;
+        console.log('[RPGWordReader] Final transcript:', transcript, '| wordIndex:', wordIdx, '| target:', getTargetWord(wordIdx));
+        
+        // Collect alternatives
+        const alternatives: string[] = [];
+        for (let j = 0; j < result.length; j++) {
+          const alt = result[j]?.transcript?.trim() || '';
+          if (alt) alternatives.push(alt);
+        }
+        
+        processResult(transcript, alternatives);
       }
-      
-      // Final result - process it
-      console.log('[RPGWordReader] Final transcript:', transcript);
-      
-      // Collect alternatives
-      const alternatives: string[] = [];
-      for (let i = 0; i < result.length; i++) {
-        const alt = result[i]?.transcript?.trim() || '';
-        if (alt) alternatives.push(alt);
-      }
-      
-      processResult(transcript, alternatives);
     };
     
     recognition.onerror = (event: any) => {

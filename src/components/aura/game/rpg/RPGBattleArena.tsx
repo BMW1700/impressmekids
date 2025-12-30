@@ -506,11 +506,15 @@ export const RPGBattleArena = ({
     });
   }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete]);
 
-  // Get current batch of words for reading - returns 5 words at a time
-  const getCurrentWordBatch = useCallback(() => {
+  // Get current batch of words for reading - MEMOIZED for stable reference
+  // This prevents RPGWordReader from resetting on every parent re-render
+  const currentWordBatch = useMemo(() => {
     if (currentWordIndex >= words.length) return [];
     return words.slice(currentWordIndex, currentWordIndex + 5);
   }, [words, currentWordIndex]);
+
+  // Keep the callback for backward compat
+  const getCurrentWordBatch = useCallback(() => currentWordBatch, [currentWordBatch]);
 
   return (
     <motion.div 
@@ -754,9 +758,9 @@ export const RPGBattleArena = ({
 
                   {/* Center: Voice Reading */}
                   <div className="space-y-4">
-                    {currentCommand === 'read' && getCurrentWordBatch().length > 0 && (
+                    {currentCommand === 'read' && currentWordBatch.length > 0 && (
                       <RPGWordReader
-                        words={getCurrentWordBatch()}
+                        words={currentWordBatch}
                         onResult={handleWordResult}
                         disabled={currentWordResult !== null || !isPlayerTurn}
                         streak={streak}
