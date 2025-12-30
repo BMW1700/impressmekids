@@ -426,12 +426,12 @@ export default function AdminDashboard() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex gap-4">
-                    <Button onClick={() => navigate("/admin/safety")}>
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <Button onClick={() => navigate("/admin/safety")} className="w-full sm:w-auto">
                       <Shield className="mr-2 h-4 w-4" />
                       Open Safety Dashboard
                     </Button>
-                    <Button variant="outline" onClick={() => navigate("/admin/security")}>
+                    <Button variant="outline" onClick={() => navigate("/admin/security")} className="w-full sm:w-auto">
                       View Security Settings
                     </Button>
                   </div>
