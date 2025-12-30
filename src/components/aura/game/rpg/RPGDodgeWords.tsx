@@ -2,13 +2,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, X } from "lucide-react";
 
-declare global {
-  interface Window {
-    SpeechRecognition: typeof SpeechRecognition;
-    webkitSpeechRecognition: typeof SpeechRecognition;
-  }
-}
-
 interface FlyingWord {
   id: number;
   word: string;
@@ -45,7 +38,7 @@ export const RPGDodgeWords = ({
   const [correctHits, setCorrectHits] = useState(0);
   const [wrongHits, setWrongHits] = useState(0);
   const [dodged, setDodged] = useState(0);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<any>(null);
   const spawnedRef = useRef(false);
 
   // Initialize flying words
@@ -141,7 +134,7 @@ export const RPGDodgeWords = ({
 
   // Start speech recognition
   const startListening = useCallback((word: FlyingWord) => {
-    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognitionAPI = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
     if (!SpeechRecognitionAPI) return;
 
     recognitionRef.current = new SpeechRecognitionAPI();

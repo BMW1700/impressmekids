@@ -2,12 +2,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Snowflake } from "lucide-react";
 
-declare global {
-  interface Window {
-    SpeechRecognition: typeof SpeechRecognition;
-    webkitSpeechRecognition: typeof SpeechRecognition;
-  }
-}
 interface IceCrystal {
   id: number;
   word: string;
@@ -35,7 +29,7 @@ export const RPGIceCrystalBarrage = ({
   const [isListening, setIsListening] = useState(false);
   const [destroyed, setDestroyed] = useState(0);
   const [missed, setMissed] = useState(0);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   // Initialize crystals
   useEffect(() => {
@@ -94,7 +88,7 @@ export const RPGIceCrystalBarrage = ({
 
   // Start speech recognition
   const startListening = useCallback((crystal: IceCrystal) => {
-    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognitionAPI = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
     if (!SpeechRecognitionAPI) return;
 
     recognitionRef.current = new SpeechRecognitionAPI();

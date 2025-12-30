@@ -1,13 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-declare global {
-  interface Window {
-    SpeechRecognition: typeof SpeechRecognition;
-    webkitSpeechRecognition: typeof SpeechRecognition;
-  }
-}
-
 interface Boulder {
   id: number;
   word: string;
@@ -37,7 +30,7 @@ export const RPGRollingBoulders = ({
   const [isListening, setIsListening] = useState(false);
   const [destroyed, setDestroyed] = useState(0);
   const [missed, setMissed] = useState(0);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   // Initialize boulders
   useEffect(() => {
@@ -103,7 +96,7 @@ export const RPGRollingBoulders = ({
 
   // Start speech recognition
   const startListening = useCallback((boulder: Boulder) => {
-    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognitionAPI = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
     if (!SpeechRecognitionAPI) return;
 
     recognitionRef.current = new SpeechRecognitionAPI();

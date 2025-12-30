@@ -2,13 +2,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Shield, Zap } from "lucide-react";
 
-declare global {
-  interface Window {
-    SpeechRecognition: typeof SpeechRecognition;
-    webkitSpeechRecognition: typeof SpeechRecognition;
-  }
-}
-
 interface ShieldWord {
   id: number;
   word: string;
@@ -31,7 +24,7 @@ export const RPGWordShield = ({
   const [isListening, setIsListening] = useState(false);
   const [attackStarted, setAttackStarted] = useState(false);
   const [phase, setPhase] = useState<'building' | 'impact' | 'done'>('building');
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   // Initialize words
   useEffect(() => {
@@ -72,7 +65,7 @@ export const RPGWordShield = ({
 
   // Start continuous speech recognition
   const startListening = useCallback(() => {
-    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognitionAPI = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
     if (!SpeechRecognitionAPI) return;
 
     recognitionRef.current = new SpeechRecognitionAPI();
