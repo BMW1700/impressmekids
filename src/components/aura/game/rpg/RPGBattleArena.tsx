@@ -85,7 +85,8 @@ export const RPGBattleArena = ({
   
   // Word reading state
   const [words, setWords] = useState<string[]>([]);
-  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const [batchStartIndex, setBatchStartIndex] = useState(0); // Start of current 5-word batch (0, 5, 10, ...)
+  const [lastSpokenGlobalIndex, setLastSpokenGlobalIndex] = useState(-1); // For attack display
   const [currentWordResult, setCurrentWordResult] = useState<boolean | null>(null);
   const [attackType, setAttackType] = useState<'fire' | 'ice' | 'lightning' | 'slash'>('fire');
   const [barrageWords, setBarrageWords] = useState<string[]>([]);
@@ -144,16 +145,16 @@ export const RPGBattleArena = ({
   // Trigger word barrage attack
   const triggerWordBarrage = useCallback(() => {
     const wordCount = enemy.barrageWordCount || 5;
-    const availableWords = words.slice(currentWordIndex, currentWordIndex + wordCount + 10);
+    const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 10);
     const barrageSelection = availableWords.slice(0, wordCount);
     setBarrageWords(barrageSelection);
     setPhase('barrage');
-  }, [words, currentWordIndex, enemy.barrageWordCount]);
+  }, [words, batchStartIndex, enemy.barrageWordCount]);
 
   // Trigger special barrage based on enemy type
   const triggerSpecialBarrage = useCallback(() => {
     const wordCount = (enemy.barrageWordCount || 5) + 2;
-    const availableWords = words.slice(currentWordIndex, currentWordIndex + wordCount + 10);
+    const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 10);
     const barrageSelection = availableWords.slice(0, wordCount);
     setBarrageWords(barrageSelection);
     
@@ -171,7 +172,7 @@ export const RPGBattleArena = ({
         setPhase('asteroid_barrage');
       }, 1000);
     }
-  }, [words, currentWordIndex, enemy.barrageWordCount, enemy.name, enemyType]);
+  }, [words, batchStartIndex, enemy.barrageWordCount, enemy.name, enemyType]);
 
   // Handle barrage completion
   const handleBarrageComplete = useCallback((destroyed: number, missed: number) => {
@@ -359,12 +360,23 @@ export const RPGBattleArena = ({
   }, [enemy]);
 
   // Handle word result from RPGWordReader
-  // CRITICAL: With batchSize={1}, wordIndex is ALWAYS 0, so we use currentWordIndex directly
+  // wordIndex is 0-4 within the current batch
   const handleWordResult = useCallback((correct: boolean, spokenWord: string, wordIndex: number) => {
-    // Safety: wordIndex should always be 0 with batchSize={1}
-    if (wordIndex !== 0) {
-      console.warn('[RPGBattle] Unexpected wordIndex:', wordIndex, '- expected 0 with batchSize=1');
-    }
+    // Calculate the global index in the full words array
+    const globalIndex = batchStartIndex + wordIndex;
+    const word = words[globalIndex] || "";
+    
+    console.log('[RPGBattle] handleWordResult:', { 
+      batchStart: batchStartIndex, 
+      wordIndex, 
+      globalIndex, 
+      expectedWord: word,
+      spokenWord, 
+      correct 
+    });
+    
+    // Track this word for attack display
+    setLastSpokenGlobalIndex(globalIndex);
     
     setWordsRead(prev => prev + 1);
     setCurrentWordResult(correct);
@@ -391,9 +403,7 @@ export const RPGBattleArena = ({
         setLongestStreak(newStreak);
       }
 
-      // Use currentWordIndex directly (not + wordIndex) since batchSize=1
-      const word = words[currentWordIndex];
-      const damage = Math.floor(calculateDamage(word?.length || 5, newStreak) * enemy.wordDamageMultiplier);
+      const damage = Math.floor(calculateDamage(word.length || 5, newStreak) * enemy.wordDamageMultiplier);
       setTotalDamage(prev => prev + damage);
       setDamageAmount(damage);
       
@@ -401,7 +411,7 @@ export const RPGBattleArena = ({
       const goldAmount = calculateGoldEarned({ 
         wordCorrect: true, 
         streak: newStreak, 
-        wordLength: word?.length || 5 
+        wordLength: word.length || 5 
       });
       const xpAmount = calculateXpEarned({ 
         wordCorrect: true, 
@@ -458,14 +468,20 @@ export const RPGBattleArena = ({
       }, 300);
     }
 
-    // Move word index forward
-    setCurrentWordIndex(prev => prev + 1);
+    // Only advance batch when we finish the current batch (wordIndex reaches end)
+    // The batch size is 5, so when wordIndex === 4, we've finished the batch
+    const batchSize = 5;
+    if (wordIndex >= batchSize - 1) {
+      // Move to next batch
+      setBatchStartIndex(prev => prev + batchSize);
+      console.log('[RPGBattle] Advancing to next batch:', batchStartIndex + batchSize);
+    }
 
     // Clear result after animation
     setTimeout(() => {
       setCurrentWordResult(null);
     }, 800);
-  }, [streak, longestStreak, words, currentWordIndex, enemy, calculateDamage, isPoisoned, poisonDamage, isDebuffed, debuffTurns, attackType]);
+  }, [streak, longestStreak, words, batchStartIndex, enemy, calculateDamage, isPoisoned, poisonDamage, isDebuffed, debuffTurns, attackType]);
   
   // Handle coin collection complete
   const handleCoinCollectionComplete = useCallback(() => {
@@ -507,11 +523,11 @@ export const RPGBattleArena = ({
   }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete]);
 
   // Get current batch of words for reading - MEMOIZED for stable reference
-  // This prevents RPGWordReader from resetting on every parent re-render
+  // batchStartIndex only changes when we complete a full batch, keeping this stable
   const currentWordBatch = useMemo(() => {
-    if (currentWordIndex >= words.length) return [];
-    return words.slice(currentWordIndex, currentWordIndex + 5);
-  }, [words, currentWordIndex]);
+    if (batchStartIndex >= words.length) return [];
+    return words.slice(batchStartIndex, batchStartIndex + 5);
+  }, [words, batchStartIndex]);
 
   // Keep the callback for backward compat
   const getCurrentWordBatch = useCallback(() => currentWordBatch, [currentWordBatch]);
@@ -772,7 +788,7 @@ export const RPGBattleArena = ({
                     {/* Word Attack Effect */}
                     {currentWordResult !== null && (
                       <RPGWordAttack
-                        word={words[currentWordIndex - 1] || ""}
+                        word={words[lastSpokenGlobalIndex] || ""}
                         isCorrect={currentWordResult}
                         streak={streak}
                         damage={damageAmount}
