@@ -458,13 +458,6 @@ const AuraPractice = () => {
 
   // RPG Mode - World Map
   if (isRpgMode && rpgView === 'world_map' && user?.id) {
-    // Initialize progress if needed
-    useEffect(() => {
-      if (!campaignProgress?.books_rescued && campaignProgress?.books_rescued !== 0) {
-        initializeProgress();
-      }
-    }, [campaignProgress, initializeProgress]);
-    
     // Calculate world progress from campaign data
     const worldProgressData = campaignProgress?.world_progress as Record<string, string[]> || {};
     const totalBooksRescued = campaignProgress?.books_rescued || 0;
