@@ -1,11 +1,11 @@
 import { motion } from "framer-motion";
 import { useMemo } from "react";
 
-type BackgroundTheme = 'castle' | 'dungeon' | 'forest' | 'throne' | 'volcano' | 'ice_cave';
+type BackgroundTheme = 'castle' | 'dungeon' | 'forest' | 'throne' | 'volcano' | 'ice_cave' | 'ruins' | 'shadow_realm';
 
 interface RPGBattleBackgroundProps {
   theme?: BackgroundTheme;
-  enemyType?: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast';
+  enemyType?: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian';
 }
 
 export const RPGBattleBackground = ({ 
@@ -20,6 +20,9 @@ export const RPGBattleBackground = ({
       case 'dragon': return 'volcano';
       case 'elite': return 'dungeon';
       case 'guard': return 'castle';
+      case 'ice_golem': return 'ice_cave';
+      case 'shadow_wraith': return 'shadow_realm';
+      case 'stone_guardian': return 'ruins';
       default: return 'forest';
     }
   }, [enemyType]);
@@ -66,6 +69,22 @@ export const RPGBattleBackground = ({
           accent: 'bg-cyan-400/20',
           particles: 'bg-cyan-200',
           ambientColor: 'rgba(34, 211, 238, 0.2)',
+        };
+      case 'shadow_realm':
+        return {
+          sky: 'from-purple-950 via-slate-900 to-black',
+          ground: 'from-slate-900 to-black',
+          accent: 'bg-purple-500/30',
+          particles: 'bg-purple-400',
+          ambientColor: 'rgba(147, 51, 234, 0.3)',
+        };
+      case 'ruins':
+        return {
+          sky: 'from-amber-950 via-stone-800 to-slate-900',
+          ground: 'from-stone-700 to-stone-950',
+          accent: 'bg-amber-500/20',
+          particles: 'bg-amber-300',
+          ambientColor: 'rgba(217, 119, 6, 0.25)',
         };
       case 'forest':
       default:

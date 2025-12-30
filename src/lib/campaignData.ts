@@ -1,6 +1,6 @@
 // Campaign data for Grog the Goblin King Story Campaign
 
-export type CampaignEnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'dragon' | 'final_boss';
+export type CampaignEnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'dragon' | 'final_boss' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian';
 
 export interface CampaignLevel {
   id: number;
@@ -70,43 +70,43 @@ export const campaignWorlds: CampaignWorld[] = [
   },
   {
     id: 2,
-    name: 'The Dark Caves',
-    description: 'Deep underground where goblins hide their treasures',
-    gradient: 'from-slate-500 via-purple-600 to-indigo-700',
-    bgColor: 'bg-slate-900/30',
+    name: 'The Frozen Depths',
+    description: 'The icy caverns where the Ice Golem guards stolen books',
+    gradient: 'from-cyan-400 via-blue-500 to-indigo-700',
+    bgColor: 'bg-cyan-900/30',
     enemyTypes: ['minion', 'guard'],
     requiredGradeLevel: 1,
     storyCount: 6,
     unlockRequirement: 3,
-    lore: 'The Dark Caves twist and turn beneath the mountain. Grog\'s guards patrol here, making sure no one finds the hidden book chambers.',
+    lore: 'The Frozen Depths are cold and treacherous. An ancient Ice Golem guards the deepest chambers where Grog hid the most magical books.',
     levels: [
       { id: 1, storyIndex: 5, enemies: ['guard'], isBossLevel: false, starThresholds: [60, 80, 95] },
       { id: 2, storyIndex: 6, enemies: ['guard', 'minion'], isBossLevel: false, starThresholds: [55, 75, 90] },
-      { id: 3, storyIndex: 7, enemies: ['guard', 'guard'], isBossLevel: false, starThresholds: [55, 75, 90] },
+      { id: 3, storyIndex: 7, enemies: ['shadow_wraith'], isBossLevel: false, starThresholds: [55, 75, 90] },
       { id: 4, storyIndex: 8, enemies: ['elite'], isBossLevel: false, starThresholds: [50, 70, 85] },
-      { id: 5, storyIndex: 9, enemies: ['elite', 'guard'], isBossLevel: false, starThresholds: [50, 70, 85] },
-      { id: 6, storyIndex: 10, enemies: ['elite', 'dragon'], isBossLevel: true, starThresholds: [45, 65, 80] },
+      { id: 5, storyIndex: 9, enemies: ['shadow_wraith', 'guard'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 6, storyIndex: 10, enemies: ['ice_golem'], isBossLevel: true, starThresholds: [45, 65, 80] },
     ],
   },
   {
     id: 3,
-    name: 'Goblin Mountain',
-    description: 'The treacherous path to Grog\'s fortress',
-    gradient: 'from-orange-500 via-red-500 to-rose-600',
-    bgColor: 'bg-orange-900/20',
+    name: 'The Ancient Ruins',
+    description: 'Where the Stone Guardian protects ancient knowledge',
+    gradient: 'from-amber-500 via-orange-500 to-stone-600',
+    bgColor: 'bg-stone-900/20',
     enemyTypes: ['guard', 'elite'],
     requiredGradeLevel: 2,
     storyCount: 7,
     unlockRequirement: 5,
-    lore: 'Goblin Mountain rises above the clouds. Only the bravest readers dare to climb its slopes, facing Grog\'s elite warriors.',
+    lore: 'The Ancient Ruins hold secrets older than the kingdom itself. A massive Stone Guardian awakens to stop any who seek the books.',
     levels: [
       { id: 1, storyIndex: 11, enemies: ['elite'], isBossLevel: false, starThresholds: [55, 75, 90] },
-      { id: 2, storyIndex: 12, enemies: ['elite', 'guard'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 2, storyIndex: 12, enemies: ['shadow_wraith', 'guard'], isBossLevel: false, starThresholds: [50, 70, 85] },
       { id: 3, storyIndex: 13, enemies: ['elite', 'elite'], isBossLevel: false, starThresholds: [50, 70, 85] },
-      { id: 4, storyIndex: 14, enemies: ['elite', 'guard', 'minion'], isBossLevel: false, starThresholds: [45, 65, 80] },
+      { id: 4, storyIndex: 14, enemies: ['shadow_wraith', 'shadow_wraith'], isBossLevel: false, starThresholds: [45, 65, 80] },
       { id: 5, storyIndex: 15, enemies: ['boss'], isBossLevel: false, starThresholds: [45, 65, 80] },
       { id: 6, storyIndex: 16, enemies: ['boss', 'elite'], isBossLevel: false, starThresholds: [40, 60, 75] },
-      { id: 7, storyIndex: 17, enemies: ['boss', 'dragon'], isBossLevel: true, starThresholds: [40, 60, 75] },
+      { id: 7, storyIndex: 17, enemies: ['stone_guardian'], isBossLevel: true, starThresholds: [40, 60, 75] },
     ],
   },
   {
