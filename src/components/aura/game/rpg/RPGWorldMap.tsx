@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Lock, Star, Swords, Crown, TreePine, Mountain, Castle, Flame } from "lucide-react";
+import { ArrowLeft, Lock, Star, Swords, Crown, TreePine, Mountain, Castle, Flame, Sparkles, Skull } from "lucide-react";
 import { campaignWorlds, CampaignWorld } from "@/lib/campaignData";
 
 export interface WorldProgress {
@@ -24,6 +24,93 @@ const worldIcons: Record<number, React.ReactNode> = {
   2: <Mountain className="h-8 w-8" />,
   3: <Flame className="h-8 w-8" />,
   4: <Crown className="h-8 w-8" />,
+};
+
+// Animated connecting path between worlds
+const WorldPath = ({ isActive, delay }: { isActive: boolean; delay: number }) => (
+  <div className="absolute left-1/2 -translate-x-1/2 h-12 w-1 flex flex-col items-center justify-center gap-1 overflow-hidden">
+    {[0, 1, 2, 3].map((i) => (
+      <motion.div
+        key={i}
+        className={`w-2 h-2 rounded-full ${isActive ? 'bg-amber-400' : 'bg-slate-600'}`}
+        initial={{ opacity: 0.3, scale: 0.8 }}
+        animate={isActive ? {
+          opacity: [0.3, 1, 0.3],
+          scale: [0.8, 1.2, 0.8],
+        } : {}}
+        transition={{
+          duration: 1.5,
+          delay: delay + i * 0.15,
+          repeat: Infinity,
+        }}
+      />
+    ))}
+  </div>
+);
+
+// Animated star with pulsing glow
+const AnimatedStar = ({ filled, delay }: { filled: boolean; delay: number }) => (
+  <motion.div
+    initial={{ rotate: -180, opacity: 0, scale: 0 }}
+    animate={{ rotate: 0, opacity: 1, scale: 1 }}
+    transition={{ delay, type: "spring", stiffness: 200 }}
+  >
+    <motion.div
+      animate={filled ? {
+        filter: ['drop-shadow(0 0 4px rgba(250, 204, 21, 0.5))', 'drop-shadow(0 0 12px rgba(250, 204, 21, 0.8))', 'drop-shadow(0 0 4px rgba(250, 204, 21, 0.5))'],
+      } : {}}
+      transition={{ duration: 2, repeat: Infinity }}
+    >
+      <Star
+        className={`h-6 w-6 transition-all duration-300 ${
+          filled
+            ? 'text-yellow-400 fill-yellow-400'
+            : 'text-slate-600'
+        }`}
+      />
+    </motion.div>
+  </motion.div>
+);
+
+// Boss silhouette component
+const BossSilhouette = ({ worldId, isUnlocked }: { worldId: number; isUnlocked: boolean }) => {
+  const getBossIcon = () => {
+    switch (worldId) {
+      case 1:
+        return <Skull className="h-6 w-6" />;
+      case 2:
+        return <Mountain className="h-6 w-6" />;
+      case 3:
+        return <Flame className="h-6 w-6" />;
+      case 4:
+        return <Crown className="h-6 w-6" />;
+      default:
+        return <Skull className="h-6 w-6" />;
+    }
+  };
+
+  return (
+    <motion.div
+      className={`absolute -right-2 -top-2 p-2 rounded-full ${
+        isUnlocked 
+          ? 'bg-red-900/80 border border-red-500/50' 
+          : 'bg-slate-800/80 border border-slate-600/50'
+      }`}
+      animate={isUnlocked ? {
+        scale: [1, 1.1, 1],
+        boxShadow: [
+          '0 0 10px rgba(239, 68, 68, 0.3)',
+          '0 0 20px rgba(239, 68, 68, 0.5)',
+          '0 0 10px rgba(239, 68, 68, 0.3)',
+        ],
+      } : {}}
+      transition={{ duration: 2, repeat: Infinity }}
+    >
+      <div className={isUnlocked ? 'text-red-400' : 'text-slate-500'}>
+        {getBossIcon()}
+      </div>
+    </motion.div>
+  );
 };
 
 export const RPGWorldMap = ({
@@ -49,136 +136,294 @@ export const RPGWorldMap = ({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900 p-4">
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900 p-4 relative overflow-hidden">
+      {/* Animated background particles */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {Array.from({ length: 20 }).map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-1 h-1 bg-purple-400/30 rounded-full"
+            initial={{
+              x: Math.random() * window.innerWidth,
+              y: Math.random() * window.innerHeight,
+            }}
+            animate={{
+              y: [null, -100],
+              opacity: [0, 0.8, 0],
+            }}
+            transition={{
+              duration: 4 + Math.random() * 4,
+              delay: Math.random() * 5,
+              repeat: Infinity,
+            }}
+          />
+        ))}
+      </div>
+
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="relative z-10 flex items-center justify-between mb-6">
         <Button variant="ghost" onClick={onBack} className="text-white hover:bg-white/10">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
         </Button>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-amber-900/60 px-4 py-2 rounded-full border border-amber-500/50">
-            <span className="text-2xl">📚</span>
+        <motion.div 
+          className="flex items-center gap-4"
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          <motion.div 
+            className="flex items-center gap-2 bg-amber-900/60 px-4 py-2 rounded-full border border-amber-500/50"
+            animate={{
+              boxShadow: [
+                '0 0 10px rgba(245, 158, 11, 0.3)',
+                '0 0 20px rgba(245, 158, 11, 0.5)',
+                '0 0 10px rgba(245, 158, 11, 0.3)',
+              ],
+            }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            <motion.span 
+              className="text-2xl"
+              animate={{ rotate: [-5, 5, -5] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              📚
+            </motion.span>
             <span className="text-amber-300 font-bold">{totalBooksRescued} Books Rescued</span>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
 
       {/* Title */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-8"
+        className="text-center mb-8 relative z-10"
       >
-        <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-500 mb-2">
-          🗺️ World Map
-        </h1>
+        <motion.div
+          className="inline-block"
+          animate={{
+            textShadow: [
+              '0 0 20px rgba(251, 191, 36, 0.3)',
+              '0 0 40px rgba(251, 191, 36, 0.5)',
+              '0 0 20px rgba(251, 191, 36, 0.3)',
+            ],
+          }}
+          transition={{ duration: 3, repeat: Infinity }}
+        >
+          <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-500 mb-2">
+            🗺️ World Map
+          </h1>
+        </motion.div>
         <p className="text-purple-300 text-lg">Choose your adventure!</p>
+        
+        {/* Sparkle decorations */}
+        <motion.div
+          className="absolute -left-4 top-0"
+          animate={{ rotate: 360, scale: [1, 1.2, 1] }}
+          transition={{ duration: 4, repeat: Infinity }}
+        >
+          <Sparkles className="h-6 w-6 text-yellow-400/50" />
+        </motion.div>
+        <motion.div
+          className="absolute -right-4 bottom-0"
+          animate={{ rotate: -360, scale: [1, 1.2, 1] }}
+          transition={{ duration: 5, repeat: Infinity }}
+        >
+          <Sparkles className="h-5 w-5 text-purple-400/50" />
+        </motion.div>
       </motion.div>
 
-      {/* World Cards */}
-      <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
-        {campaignWorlds.map((world, index) => {
-          const progress = getWorldProgress(world.id);
-          const unlocked = isWorldUnlocked(world);
-          const completionPercent = progress.totalLevels > 0 
-            ? (progress.levelsCompleted / progress.totalLevels) * 100 
-            : 0;
+      {/* World Cards with Connecting Paths */}
+      <div className="max-w-4xl mx-auto relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {campaignWorlds.map((world, index) => {
+            const progress = getWorldProgress(world.id);
+            const unlocked = isWorldUnlocked(world);
+            const completionPercent = progress.totalLevels > 0 
+              ? (progress.levelsCompleted / progress.totalLevels) * 100 
+              : 0;
+            const isComplete = progress.levelsCompleted >= progress.totalLevels;
+            const avgStarsPerLevel = progress.levelsCompleted > 0 
+              ? Math.floor(progress.starsEarned / progress.levelsCompleted)
+              : 0;
 
-          return (
-            <motion.div
-              key={world.id}
-              initial={{ opacity: 0, scale: 0.8, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ delay: index * 0.15 }}
-            >
-              <Card
-                className={`relative overflow-hidden cursor-pointer transition-all duration-300
-                  ${unlocked 
-                    ? 'hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/30' 
-                    : 'opacity-60 cursor-not-allowed grayscale'
-                  }
-                  border-2 ${unlocked ? 'border-purple-500/50' : 'border-slate-600'}`}
-                onClick={() => unlocked && onSelectWorld(world)}
+            return (
+              <motion.div
+                key={world.id}
+                initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ delay: index * 0.15 }}
+                className="relative"
               >
-                {/* Background Gradient */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${world.gradient} opacity-20`} />
-                
-                {/* Lock Overlay */}
-                {!unlocked && (
-                  <div className="absolute inset-0 bg-slate-900/70 flex items-center justify-center z-10">
-                    <div className="text-center">
-                      <Lock className="h-12 w-12 text-slate-400 mx-auto mb-2" />
-                      <p className="text-slate-400 text-sm">
-                        Complete {world.unlockRequirement} stories in previous world
-                      </p>
-                    </div>
+                {/* Path connector to next world (except for last) */}
+                {index < campaignWorlds.length - 1 && index % 2 === 1 && (
+                  <div className="hidden md:block absolute -bottom-6 left-1/2 -translate-x-1/2">
+                    <WorldPath isActive={isComplete} delay={index * 0.2} />
                   </div>
                 )}
 
-                <div className="relative p-6 z-5">
-                  {/* World Icon & Number */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className={`p-3 rounded-xl bg-gradient-to-br ${world.gradient} text-white shadow-lg`}>
-                      {worldIcons[world.id] || <Swords className="h-8 w-8" />}
-                    </div>
-                    <div className="text-right">
-                      <span className="text-sm text-purple-300">World</span>
-                      <div className="text-3xl font-black text-white">{world.id}</div>
-                    </div>
-                  </div>
-
-                  {/* World Name */}
-                  <h3 className={`text-2xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r ${world.gradient}`}>
-                    {world.name}
-                  </h3>
-                  <p className="text-slate-300 text-sm mb-4">{world.description}</p>
-
-                  {/* Progress Bar */}
-                  <div className="mb-3">
-                    <div className="flex justify-between text-xs text-slate-400 mb-1">
-                      <span>Progress</span>
-                      <span>{progress.levelsCompleted}/{progress.totalLevels} Levels</span>
-                    </div>
-                    <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${completionPercent}%` }}
-                        transition={{ delay: index * 0.15 + 0.3, duration: 0.5 }}
-                        className={`h-full bg-gradient-to-r ${world.gradient}`}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Stars */}
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1">
-                      {[...Array(3)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`h-5 w-5 ${
-                            i < Math.floor(progress.starsEarned / progress.totalLevels)
-                              ? 'text-yellow-400 fill-yellow-400'
-                              : 'text-slate-600'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-slate-400 text-sm">{progress.starsEarned} stars</span>
-                  </div>
-
-                  {/* Boss Indicator */}
-                  {world.id === 4 && (
-                    <div className="mt-4 flex items-center gap-2 bg-red-900/50 px-3 py-2 rounded-lg border border-red-500/50">
-                      <Crown className="h-5 w-5 text-red-400" />
-                      <span className="text-red-300 font-bold text-sm">FINAL BOSS: Grog the Goblin King!</span>
+                <Card
+                  className={`relative overflow-hidden cursor-pointer transition-all duration-300
+                    ${unlocked 
+                      ? 'hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/30' 
+                      : 'opacity-60 cursor-not-allowed grayscale'
+                    }
+                    border-2 ${unlocked ? 'border-purple-500/50' : 'border-slate-600'}`}
+                  onClick={() => unlocked && onSelectWorld(world)}
+                >
+                  {/* Background Gradient */}
+                  <motion.div 
+                    className={`absolute inset-0 bg-gradient-to-br ${world.gradient} opacity-20`}
+                    animate={unlocked && !isComplete ? {
+                      opacity: [0.15, 0.25, 0.15],
+                    } : {}}
+                    transition={{ duration: 3, repeat: Infinity }}
+                  />
+                  
+                  {/* Completion Glow Effect */}
+                  {isComplete && (
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 via-amber-500/10 to-orange-500/10"
+                      animate={{
+                        opacity: [0.2, 0.4, 0.2],
+                      }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    />
+                  )}
+                  
+                  {/* Lock Overlay */}
+                  {!unlocked && (
+                    <div className="absolute inset-0 bg-slate-900/70 flex items-center justify-center z-10">
+                      <motion.div 
+                        className="text-center"
+                        initial={{ scale: 0.8 }}
+                        animate={{ scale: 1 }}
+                      >
+                        <motion.div
+                          animate={{ y: [0, -5, 0] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        >
+                          <Lock className="h-12 w-12 text-slate-400 mx-auto mb-2" />
+                        </motion.div>
+                        <p className="text-slate-400 text-sm">
+                          Complete {world.unlockRequirement} stories in previous world
+                        </p>
+                      </motion.div>
                     </div>
                   )}
-                </div>
-              </Card>
-            </motion.div>
-          );
-        })}
+
+                  {/* Boss Silhouette for worlds with bosses */}
+                  {world.id >= 1 && (
+                    <BossSilhouette worldId={world.id} isUnlocked={unlocked} />
+                  )}
+
+                  <div className="relative p-6 z-5">
+                    {/* World Icon & Number */}
+                    <div className="flex items-start justify-between mb-4">
+                      <motion.div 
+                        className={`p-3 rounded-xl bg-gradient-to-br ${world.gradient} text-white shadow-lg`}
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        {worldIcons[world.id] || <Swords className="h-8 w-8" />}
+                      </motion.div>
+                      <div className="text-right">
+                        <span className="text-sm text-purple-300">World</span>
+                        <motion.div 
+                          className="text-3xl font-black text-white"
+                          animate={unlocked ? { scale: [1, 1.05, 1] } : {}}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        >
+                          {world.id}
+                        </motion.div>
+                      </div>
+                    </div>
+
+                    {/* World Name */}
+                    <h3 className={`text-2xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r ${world.gradient}`}>
+                      {world.name}
+                    </h3>
+                    <p className="text-slate-300 text-sm mb-4">{world.description}</p>
+
+                    {/* Progress Bar */}
+                    <div className="mb-3">
+                      <div className="flex justify-between text-xs text-slate-400 mb-1">
+                        <span>Progress</span>
+                        <span>{progress.levelsCompleted}/{progress.totalLevels} Levels</span>
+                      </div>
+                      <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${completionPercent}%` }}
+                          transition={{ delay: index * 0.15 + 0.3, duration: 0.5 }}
+                          className={`h-full bg-gradient-to-r ${world.gradient}`}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Animated Stars */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3].map((star) => (
+                          <AnimatedStar
+                            key={star}
+                            filled={star <= avgStarsPerLevel}
+                            delay={index * 0.15 + star * 0.1}
+                          />
+                        ))}
+                      </div>
+                      <motion.span 
+                        className="text-slate-400 text-sm"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: index * 0.15 + 0.5 }}
+                      >
+                        {progress.starsEarned} stars
+                      </motion.span>
+                    </div>
+
+                    {/* Boss Indicator for World 4 */}
+                    {world.id === 4 && (
+                      <motion.div 
+                        className="mt-4 flex items-center gap-2 bg-red-900/50 px-3 py-2 rounded-lg border border-red-500/50"
+                        animate={{
+                          boxShadow: [
+                            '0 0 10px rgba(239, 68, 68, 0.2)',
+                            '0 0 20px rgba(239, 68, 68, 0.4)',
+                            '0 0 10px rgba(239, 68, 68, 0.2)',
+                          ],
+                        }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      >
+                        <motion.div
+                          animate={{ rotate: [0, 10, -10, 0] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        >
+                          <Crown className="h-5 w-5 text-red-400" />
+                        </motion.div>
+                        <span className="text-red-300 font-bold text-sm">FINAL BOSS: Grog the Goblin King!</span>
+                      </motion.div>
+                    )}
+
+                    {/* Completion Badge */}
+                    {isComplete && (
+                      <motion.div
+                        className="absolute top-2 right-2 bg-green-500/90 text-white text-xs font-bold px-2 py-1 rounded-full"
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: index * 0.15 + 0.6, type: "spring" }}
+                      >
+                        ✓ COMPLETE
+                      </motion.div>
+                    )}
+                  </div>
+                </Card>
+              </motion.div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Bottom Lore */}
@@ -186,12 +431,22 @@ export const RPGWorldMap = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.8 }}
-        className="mt-8 text-center"
+        className="mt-8 text-center relative z-10"
       >
-        <p className="text-purple-400 italic max-w-2xl mx-auto">
+        <motion.p 
+          className="text-purple-400 italic max-w-2xl mx-auto"
+          animate={{
+            textShadow: [
+              '0 0 10px rgba(168, 85, 247, 0.2)',
+              '0 0 20px rgba(168, 85, 247, 0.3)',
+              '0 0 10px rgba(168, 85, 247, 0.2)',
+            ],
+          }}
+          transition={{ duration: 4, repeat: Infinity }}
+        >
           "Princess Ella's books are scattered across four worlds. 
           Defeat Grog's minions, rescue the books, and restore magic to the kingdom!"
-        </p>
+        </motion.p>
       </motion.div>
     </div>
   );
