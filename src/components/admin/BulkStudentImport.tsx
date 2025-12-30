@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Upload, Download, Users, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { Upload, Download, Users, AlertCircle, CheckCircle2, Loader2, FileUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface CSVRow {
   email: string;
@@ -21,6 +22,8 @@ interface ImportResult {
 }
 
 export function BulkStudentImport() {
+  const isMobile = useIsMobile();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -194,7 +197,7 @@ student3@school.edu,Mike Johnson,XYZ456,10`;
           </AlertDescription>
         </Alert>
 
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-4">
           <Button
             variant="outline"
             onClick={downloadTemplate}
@@ -204,15 +207,44 @@ student3@school.edu,Mike Johnson,XYZ456,10`;
             Download Template
           </Button>
 
-          <div className="flex-1">
-            <Input
-              type="file"
-              accept=".csv"
-              onChange={handleFileChange}
-              disabled={isProcessing}
-              className="cursor-pointer"
-            />
-          </div>
+          {isMobile ? (
+            /* Mobile: Custom styled button */
+            <div className="flex-1">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                onChange={handleFileChange}
+                disabled={isProcessing}
+                className="hidden"
+              />
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isProcessing}
+                className="w-full flex items-center gap-2"
+              >
+                <FileUp className="h-4 w-4" />
+                Choose File
+              </Button>
+              {file && (
+                <p className="text-sm text-muted-foreground mt-2 truncate">
+                  Selected: {file.name}
+                </p>
+              )}
+            </div>
+          ) : (
+            /* Desktop: Standard file input */
+            <div className="flex-1">
+              <Input
+                type="file"
+                accept=".csv"
+                onChange={handleFileChange}
+                disabled={isProcessing}
+                className="cursor-pointer"
+              />
+            </div>
+          )}
         </div>
 
         {file && (
