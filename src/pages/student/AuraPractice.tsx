@@ -285,8 +285,9 @@ const AuraPractice = () => {
     );
   }
 
-  // RPG Mode story selection screen
+  // RPG Mode - World Map and Level Select
   if (isRpgMode && !rpgStory && user?.id) {
+    // Simple story selection for now - world map integration would require more state
     return (
       <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
         <Header />
@@ -300,20 +301,21 @@ const AuraPractice = () => {
               <h1 className="text-3xl font-bold">🎮 RPG Battle Mode</h1>
             </div>
             
-            <Card className="p-6">
-              <h2 className="text-xl font-bold mb-4">Choose Your Battle Story</h2>
+            <Card className="p-6 bg-gradient-to-r from-purple-900/30 to-indigo-900/30 border-purple-500/30">
+              <h2 className="text-xl font-bold mb-4">🗺️ Choose Your Battle Story</h2>
               <p className="text-muted-foreground mb-6">
-                Select a story to read in battle. Your words will become attacks!
+                Select a story to read in battle. Your words will become attacks! 
+                <span className="text-amber-400 font-bold"> Drake the Dragon awaits brave readers!</span>
               </p>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {curatedStories.slice(0, 9).map((story, idx) => (
                   <Card
                     key={idx}
-                    className="cursor-pointer hover:border-primary transition-colors p-4"
+                    className="cursor-pointer hover:border-primary hover:scale-105 transition-all p-4 bg-slate-800/50"
                     onClick={() => {
                       setRpgStory(story);
-                      // Vary enemy type based on story difficulty
+                      // Vary enemy type - guard and elite will trigger Drake after!
                       const enemies: EnemyType[] = ['minion', 'guard', 'elite', 'boss'];
                       setRpgEnemyType(enemies[Math.min(story.difficulty_level - 1, 3)] || 'minion');
                     }}
@@ -328,6 +330,11 @@ const AuraPractice = () => {
                         {story.word_count} words
                       </span>
                     </div>
+                    {story.difficulty_level >= 2 && (
+                      <div className="mt-2 text-xs text-orange-400 flex items-center gap-1">
+                        🐉 <span>+ Drake the Dragon!</span>
+                      </div>
+                    )}
                   </Card>
                 ))}
               </div>

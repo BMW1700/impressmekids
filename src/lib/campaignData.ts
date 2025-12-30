@@ -1,5 +1,15 @@
 // Campaign data for Grog the Goblin King Story Campaign
 
+export type CampaignEnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'dragon' | 'final_boss';
+
+export interface CampaignLevel {
+  id: number;
+  storyIndex: number; // Index into curatedStories
+  enemies: CampaignEnemyType[];
+  isBossLevel: boolean;
+  starThresholds: [number, number, number]; // Accuracy % for 1/2/3 stars
+}
+
 export interface CampaignWorld {
   id: number;
   name: string;
@@ -11,6 +21,7 @@ export interface CampaignWorld {
   storyCount: number;
   unlockRequirement: number; // Books rescued in previous world to unlock
   lore: string;
+  levels: CampaignLevel[];
 }
 
 export interface CampaignCharacter {
@@ -36,7 +47,7 @@ export const grogTheGoblinKing: CampaignCharacter = {
   quote: 'You\'ll never get these books back! Reading is boring! Mwahahaha!',
 };
 
-// Campaign worlds
+// Campaign worlds with level structure
 export const campaignWorlds: CampaignWorld[] = [
   {
     id: 1,
@@ -49,6 +60,13 @@ export const campaignWorlds: CampaignWorld[] = [
     storyCount: 5,
     unlockRequirement: 0,
     lore: 'The Enchanted Forest was once full of reading fairies who would help children learn. Now Grog\'s minions roam the trees, guarding the stolen books.',
+    levels: [
+      { id: 1, storyIndex: 0, enemies: ['minion'], isBossLevel: false, starThresholds: [60, 80, 95] },
+      { id: 2, storyIndex: 1, enemies: ['minion'], isBossLevel: false, starThresholds: [60, 80, 95] },
+      { id: 3, storyIndex: 2, enemies: ['minion', 'minion'], isBossLevel: false, starThresholds: [60, 80, 95] },
+      { id: 4, storyIndex: 3, enemies: ['minion', 'guard'], isBossLevel: false, starThresholds: [55, 75, 90] },
+      { id: 5, storyIndex: 4, enemies: ['guard', 'dragon'], isBossLevel: true, starThresholds: [50, 70, 85] },
+    ],
   },
   {
     id: 2,
@@ -61,6 +79,14 @@ export const campaignWorlds: CampaignWorld[] = [
     storyCount: 6,
     unlockRequirement: 3,
     lore: 'The Dark Caves twist and turn beneath the mountain. Grog\'s guards patrol here, making sure no one finds the hidden book chambers.',
+    levels: [
+      { id: 1, storyIndex: 5, enemies: ['guard'], isBossLevel: false, starThresholds: [60, 80, 95] },
+      { id: 2, storyIndex: 6, enemies: ['guard', 'minion'], isBossLevel: false, starThresholds: [55, 75, 90] },
+      { id: 3, storyIndex: 7, enemies: ['guard', 'guard'], isBossLevel: false, starThresholds: [55, 75, 90] },
+      { id: 4, storyIndex: 8, enemies: ['elite'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 5, storyIndex: 9, enemies: ['elite', 'guard'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 6, storyIndex: 10, enemies: ['elite', 'dragon'], isBossLevel: true, starThresholds: [45, 65, 80] },
+    ],
   },
   {
     id: 3,
@@ -73,6 +99,15 @@ export const campaignWorlds: CampaignWorld[] = [
     storyCount: 7,
     unlockRequirement: 5,
     lore: 'Goblin Mountain rises above the clouds. Only the bravest readers dare to climb its slopes, facing Grog\'s elite warriors.',
+    levels: [
+      { id: 1, storyIndex: 11, enemies: ['elite'], isBossLevel: false, starThresholds: [55, 75, 90] },
+      { id: 2, storyIndex: 12, enemies: ['elite', 'guard'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 3, storyIndex: 13, enemies: ['elite', 'elite'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 4, storyIndex: 14, enemies: ['elite', 'guard', 'minion'], isBossLevel: false, starThresholds: [45, 65, 80] },
+      { id: 5, storyIndex: 15, enemies: ['boss'], isBossLevel: false, starThresholds: [45, 65, 80] },
+      { id: 6, storyIndex: 16, enemies: ['boss', 'elite'], isBossLevel: false, starThresholds: [40, 60, 75] },
+      { id: 7, storyIndex: 17, enemies: ['boss', 'dragon'], isBossLevel: true, starThresholds: [40, 60, 75] },
+    ],
   },
   {
     id: 4,
@@ -85,6 +120,13 @@ export const campaignWorlds: CampaignWorld[] = [
     storyCount: 5,
     unlockRequirement: 6,
     lore: 'Grog\'s Throne Room is filled with mountains of stolen books. This is where the Goblin King himself guards the most precious stories. Defeat him to save them all!',
+    levels: [
+      { id: 1, storyIndex: 18, enemies: ['boss', 'elite'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 2, storyIndex: 19, enemies: ['boss', 'elite', 'guard'], isBossLevel: false, starThresholds: [45, 65, 80] },
+      { id: 3, storyIndex: 20, enemies: ['boss', 'boss'], isBossLevel: false, starThresholds: [40, 60, 75] },
+      { id: 4, storyIndex: 21, enemies: ['boss', 'dragon'], isBossLevel: false, starThresholds: [40, 60, 75] },
+      { id: 5, storyIndex: 22, enemies: ['final_boss', 'dragon'], isBossLevel: true, starThresholds: [35, 55, 70] },
+    ],
   },
 ];
 
@@ -212,4 +254,10 @@ export const categoryToWorld: Record<string, number> = {
 // Get world for a story category
 export const getWorldForCategory = (category: string): number => {
   return categoryToWorld[category] || 1;
+};
+
+// Get total levels count for a world
+export const getWorldLevelCount = (worldId: number): number => {
+  const world = getWorldById(worldId);
+  return world?.levels.length || 0;
 };
