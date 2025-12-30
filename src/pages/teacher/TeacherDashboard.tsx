@@ -226,30 +226,30 @@ const TeacherDashboard = () => {
           </div>
 
           <Tabs defaultValue="classrooms" className="w-full">
-            <TabsList className="grid w-full grid-cols-6 h-auto p-2 bg-muted/50 rounded-xl gap-2">
+            <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 h-auto p-2 bg-muted/50 rounded-xl gap-2">
               <TabsTrigger value="classrooms" className={liquidGlassTabClass}>
-                <Users className="h-4 w-4 mr-2" />
-                {t("teacherDashboard.tabs.classrooms")}
+                <Users className="h-4 w-4 mr-1 md:mr-2" />
+                <span className="text-xs md:text-sm">{t("teacherDashboard.tabs.classrooms")}</span>
               </TabsTrigger>
               <TabsTrigger value="links-resources" className={liquidGlassTabClass}>
-                <LinkIcon className="h-4 w-4 mr-2" />
-                Links & Resources
+                <LinkIcon className="h-4 w-4 mr-1 md:mr-2" />
+                <span className="text-xs md:text-sm">Links</span>
               </TabsTrigger>
               <TabsTrigger value="calendar" className={liquidGlassTabClass}>
-                <CalendarIcon className="h-4 w-4 mr-2" />
-                {t("teacherDashboard.tabs.calendar")}
+                <CalendarIcon className="h-4 w-4 mr-1 md:mr-2" />
+                <span className="text-xs md:text-sm">{t("teacherDashboard.tabs.calendar")}</span>
               </TabsTrigger>
               <TabsTrigger value="directory" className={liquidGlassTabClass}>
-                <Users className="h-4 w-4 mr-2" />
-                {t("teacherDashboard.tabs.directory")}
+                <Users className="h-4 w-4 mr-1 md:mr-2" />
+                <span className="text-xs md:text-sm">{t("teacherDashboard.tabs.directory")}</span>
               </TabsTrigger>
               <TabsTrigger value="actions" className={liquidGlassTabClass}>
-                <BookOpen className="h-4 w-4 mr-2" />
-                {t("teacherDashboard.tabs.quickActions")}
+                <BookOpen className="h-4 w-4 mr-1 md:mr-2" />
+                <span className="text-xs md:text-sm">Actions</span>
               </TabsTrigger>
               <TabsTrigger value="ml-training" className={liquidGlassTabClass}>
-                <Brain className="h-4 w-4 mr-2" />
-                {t("teacherDashboard.tabs.mlTraining")}
+                <Brain className="h-4 w-4 mr-1 md:mr-2" />
+                <span className="text-xs md:text-sm">ML Training</span>
               </TabsTrigger>
             </TabsList>
 
