@@ -124,18 +124,35 @@ export const RPGBattleArena = ({
   useEffect(() => {
     if (!barrageTriggered && enemyHp <= enemy.maxHp / 2 && enemyHp > 0 && phase === 'reading') {
       setBarrageTriggered(true);
-      triggerWordBarrage();
+      triggerBarrageByEnemy();
     }
   }, [enemyHp, enemy.maxHp, barrageTriggered, phase]);
 
-  // Trigger word barrage attack
-  const triggerWordBarrage = useCallback(() => {
+  // Trigger barrage based on enemy type
+  const triggerBarrageByEnemy = useCallback(() => {
     const wordCount = enemy.barrageWordCount || 5;
     const availableWords = words.slice(currentWordIndex, currentWordIndex + wordCount + 10);
     const barrageSelection = availableWords.slice(0, wordCount);
     setBarrageWords(barrageSelection);
-    setPhase('barrage');
-  }, [words, currentWordIndex, enemy.barrageWordCount]);
+    
+    // Dragon uses fireball or asteroid barrage
+    if (enemyType === 'dragon') {
+      // Randomly choose between fireball and asteroid
+      const barrageType = Math.random() > 0.5 ? 'fireball_barrage' : 'asteroid_barrage';
+      setPhase(barrageType);
+    } else if (enemyType === 'final_boss') {
+      // Final boss uses asteroid barrage
+      setPhase('asteroid_barrage');
+    } else {
+      // Default word barrage for goblins
+      setPhase('barrage');
+    }
+  }, [words, currentWordIndex, enemy.barrageWordCount, enemyType]);
+
+  // Trigger word barrage attack (legacy, kept for compatibility)
+  const triggerWordBarrage = useCallback(() => {
+    triggerBarrageByEnemy();
+  }, [triggerBarrageByEnemy]);
 
   // Handle barrage completion
   const handleBarrageComplete = useCallback((destroyed: number, missed: number) => {
@@ -143,7 +160,10 @@ export const RPGBattleArena = ({
     if (destroyed > 0) {
       setCorrectWords(prev => prev + destroyed);
     }
+    // Return to reading phase and player turn
+    setEnemyAbilityMessage(null);
     setPhase('reading');
+    setIsPlayerTurn(true);
   }, []);
 
   // Handle barrage word hit
@@ -281,6 +301,22 @@ export const RPGBattleArena = ({
         
         // Apply ability effects
         switch (ability.effect) {
+          case 'fireball_barrage': {
+            // Trigger fireball barrage phase
+            const wordCount = enemy.barrageWordCount || 5;
+            const availableWords = words.slice(currentWordIndex, currentWordIndex + wordCount + 10);
+            setBarrageWords(availableWords.slice(0, wordCount));
+            setPhase('fireball_barrage');
+            return; // Early return - don't go back to reading yet
+          }
+          case 'asteroid_barrage': {
+            // Trigger asteroid barrage phase  
+            const wordCount = enemy.barrageWordCount || 5;
+            const availableWords = words.slice(currentWordIndex, currentWordIndex + wordCount + 10);
+            setBarrageWords(availableWords.slice(0, wordCount));
+            setPhase('asteroid_barrage');
+            return; // Early return
+          }
           case 'poison':
             setIsPoisoned(true);
             setPoisonDamage(ability.damage);
@@ -312,7 +348,7 @@ export const RPGBattleArena = ({
         }, 600);
       }, 400);
     }, 1000);
-  }, [enemy]);
+  }, [enemy, words, currentWordIndex]);
 
   // Handle word result from RPGWordReader
   // CRITICAL: With batchSize={1}, wordIndex is ALWAYS 0, so we use currentWordIndex directly

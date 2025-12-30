@@ -12,6 +12,7 @@ interface RPGWordReaderProps {
   disabled?: boolean;
   streak?: number;
   batchSize?: number;
+  baseWordIndex?: number;
 }
 
 type RecognitionState = 'idle' | 'starting' | 'listening' | 'processing' | 'paused' | 'error';
@@ -24,6 +25,7 @@ export const RPGWordReader = ({
   disabled = false,
   streak = 0,
   batchSize = 10,
+  baseWordIndex = 0,
 }: RPGWordReaderProps) => {
   // Recognition state machine
   const [recognitionState, setRecognitionState] = useState<RecognitionState>('idle');
@@ -38,12 +40,18 @@ export const RPGWordReader = ({
   const isProcessingRef = useRef(false);
   const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const watchdogTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
   // CRITICAL: Lock the target word when recognition starts to prevent mismatch
   const lockedTargetWordRef = useRef<string>("");
   const lockedTargetIndexRef = useRef<number>(0);
   // Word generation ID - increments when words prop changes to ignore late events
   const wordGenerationRef = useRef<number>(0);
   const lockedGenerationRef = useRef<number>(0);
+  
+  // PERSISTENT MIC: Single source of truth for "should mic be on"
+  const wantsListeningRef = useRef(false);
+  const micStreamRef = useRef<MediaStream | null>(null);
 
   // Keep refs in sync
   useEffect(() => {
@@ -69,8 +77,8 @@ export const RPGWordReader = ({
   const currentWord = currentBatch[currentIndex] || "";
   const cleanWord = currentWord.replace(/[^a-zA-Z']/g, '');
 
-  // Cleanup function
-  const cleanup = useCallback(() => {
+  // Clear all timeouts
+  const clearAllTimeouts = useCallback(() => {
     if (restartTimeoutRef.current) {
       clearTimeout(restartTimeoutRef.current);
       restartTimeoutRef.current = null;
@@ -79,6 +87,14 @@ export const RPGWordReader = ({
       clearTimeout(feedbackTimeoutRef.current);
       feedbackTimeoutRef.current = null;
     }
+    if (watchdogTimeoutRef.current) {
+      clearTimeout(watchdogTimeoutRef.current);
+      watchdogTimeoutRef.current = null;
+    }
+  }, []);
+
+  // Abort current recognition
+  const abortRecognition = useCallback(() => {
     if (recognitionRef.current) {
       try {
         recognitionRef.current.abort();
@@ -89,11 +105,37 @@ export const RPGWordReader = ({
     }
   }, []);
 
-  // Stop recognition
+  // Full cleanup
+  const cleanup = useCallback(() => {
+    clearAllTimeouts();
+    abortRecognition();
+  }, [clearAllTimeouts, abortRecognition]);
+
+  // Stop recognition completely (user pause or component unmount)
   const stopRecognition = useCallback(() => {
+    wantsListeningRef.current = false;
     cleanup();
     setRecognitionState('idle');
+    // Release mic stream
+    if (micStreamRef.current) {
+      micStreamRef.current.getTracks().forEach(track => track.stop());
+      micStreamRef.current = null;
+    }
   }, [cleanup]);
+
+  // CENTRALIZED restart logic
+  const scheduleRestart = useCallback((reason: string, delay: number = 150) => {
+    if (!wantsListeningRef.current) return;
+    if (isProcessingRef.current) return;
+    
+    console.log(`[RPGWordReader] Scheduling restart (${reason}) in ${delay}ms`);
+    
+    restartTimeoutRef.current = setTimeout(() => {
+      if (wantsListeningRef.current && !isProcessingRef.current) {
+        startRecognition();
+      }
+    }, delay);
+  }, []);
 
   // Process correct word
   const handleCorrect = useCallback((word: string) => {
@@ -110,12 +152,12 @@ export const RPGWordReader = ({
       soundEffects.streakAchieved();
     }
     
-    // Use the locked index, not currentIndexRef which may have changed
-    onResult(true, word, lockedTargetIndexRef.current);
+    // Report absolute index: baseWordIndex + local index
+    onResult(true, word, baseWordIndex + lockedTargetIndexRef.current);
     
     feedbackTimeoutRef.current = setTimeout(() => {
       setFeedback(null);
-      setSpokenText(""); // Clear for next word
+      setSpokenText("");
       isProcessingRef.current = false;
       
       const nextIndex = lockedTargetIndexRef.current + 1;
@@ -123,19 +165,16 @@ export const RPGWordReader = ({
         setCurrentIndex(nextIndex);
         currentIndexRef.current = nextIndex;
         setRecognitionState('idle');
-        // Auto-restart after brief delay
-        restartTimeoutRef.current = setTimeout(() => {
-          if (stateRef.current === 'idle') {
-            startRecognition();
-          }
-        }, 200);
+        // Auto-restart immediately if wantsListening
+        scheduleRestart('correct-next', 100);
       } else {
+        // Batch complete - notify parent can load next batch
         setRecognitionState('idle');
         setCurrentIndex(0);
         currentIndexRef.current = 0;
       }
-    }, 400);
-  }, [streak, currentBatch.length, onResult, cleanup]);
+    }, 350);
+  }, [streak, currentBatch.length, onResult, cleanup, baseWordIndex, scheduleRestart]);
 
   // Process incorrect word
   const handleIncorrect = useCallback((spoken: string, word: string) => {
@@ -152,12 +191,12 @@ export const RPGWordReader = ({
       playCorrectPronunciation(word);
     }, 300);
     
-    // Use the locked index, not currentIndexRef which may have changed
-    onResult(false, spoken, lockedTargetIndexRef.current);
+    // Report absolute index
+    onResult(false, spoken, baseWordIndex + lockedTargetIndexRef.current);
     
     feedbackTimeoutRef.current = setTimeout(() => {
       setFeedback(null);
-      setSpokenText(""); // Clear for next word
+      setSpokenText("");
       isProcessingRef.current = false;
       
       const nextIndex = lockedTargetIndexRef.current + 1;
@@ -165,18 +204,14 @@ export const RPGWordReader = ({
         setCurrentIndex(nextIndex);
         currentIndexRef.current = nextIndex;
         setRecognitionState('idle');
-        restartTimeoutRef.current = setTimeout(() => {
-          if (stateRef.current === 'idle') {
-            startRecognition();
-          }
-        }, 300);
+        scheduleRestart('incorrect-next', 200);
       } else {
         setRecognitionState('idle');
         setCurrentIndex(0);
         currentIndexRef.current = 0;
       }
-    }, 800);
-  }, [currentBatch.length, onResult, cleanup]);
+    }, 600);
+  }, [currentBatch.length, onResult, cleanup, baseWordIndex, scheduleRestart]);
 
   // Start recognition - the core function
   const startRecognition = useCallback(() => {
@@ -187,7 +222,6 @@ export const RPGWordReader = ({
     if (!wordToMatch) return;
     
     // CRITICAL: Lock the target word, index, AND generation at the START of recognition
-    // This prevents any mismatch if words/index changes during async recognition
     lockedTargetWordRef.current = wordToMatch;
     lockedTargetIndexRef.current = currentIndexRef.current;
     lockedGenerationRef.current = wordGenerationRef.current;
@@ -202,7 +236,7 @@ export const RPGWordReader = ({
     }
 
     setRecognitionState('starting');
-    setSpokenText(""); // Clear spoken text for new recognition
+    setSpokenText("");
     
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
@@ -210,7 +244,6 @@ export const RPGWordReader = ({
     recognition.lang = 'en-US';
     recognition.maxAlternatives = 5;
     
-    // Capture the generation at start
     const capturedGeneration = wordGenerationRef.current;
 
     recognition.onstart = () => {
@@ -218,38 +251,48 @@ export const RPGWordReader = ({
         setRecognitionState('listening');
         setSpokenText("");
         setFeedback(null);
+        
+        // Start silence watchdog - if no final result in 5s, restart
+        watchdogTimeoutRef.current = setTimeout(() => {
+          if (wantsListeningRef.current && stateRef.current === 'listening' && !isProcessingRef.current) {
+            console.log('[RPGWordReader] Watchdog: no result, restarting...');
+            abortRecognition();
+            scheduleRestart('watchdog', 100);
+          }
+        }, 5000);
       }
     };
 
     recognition.onresult = (event: any) => {
       if (isProcessingRef.current) return;
       
+      // Clear watchdog on any result
+      if (watchdogTimeoutRef.current) {
+        clearTimeout(watchdogTimeoutRef.current);
+        watchdogTimeoutRef.current = null;
+      }
+      
       // CRITICAL: Ignore late results from a previous word generation
       if (capturedGeneration !== wordGenerationRef.current) {
-        console.warn('[RPGWordReader] Ignoring stale recognition result from generation', capturedGeneration, 'current is', wordGenerationRef.current);
+        console.warn('[RPGWordReader] Ignoring stale recognition result');
         return;
       }
       
       const result = event.results[0];
       const transcript = result[0].transcript.trim().toLowerCase();
       
-      // Only update spoken text if we have a locked target word and generation matches
       if (lockedTargetWordRef.current && lockedGenerationRef.current === wordGenerationRef.current) {
         setSpokenText(transcript);
       }
 
       if (result.isFinal) {
-        // CRITICAL: Use the LOCKED target word, not current index
-        // This ensures we always compare against the word that was displayed when recognition started
         const targetWord = lockedTargetWordRef.current;
         
-        // Safety check: if locked word doesn't match current display, something went wrong
         if (!targetWord) {
           console.warn('No locked target word - ignoring result');
           return;
         }
         
-        // Safety check: if generation changed, this is a stale result
         if (lockedGenerationRef.current !== wordGenerationRef.current) {
           console.warn('[RPGWordReader] Ignoring stale final result');
           return;
@@ -289,28 +332,33 @@ export const RPGWordReader = ({
     };
 
     recognition.onerror = (event: any) => {
+      // Clear watchdog
+      if (watchdogTimeoutRef.current) {
+        clearTimeout(watchdogTimeoutRef.current);
+        watchdogTimeoutRef.current = null;
+      }
+      
       if (event.error === 'no-speech' || event.error === 'audio-capture' || event.error === 'aborted') {
-        // Auto-restart on recoverable errors
-        if (stateRef.current === 'listening' && !isProcessingRef.current) {
-          restartTimeoutRef.current = setTimeout(() => {
-            if (stateRef.current !== 'paused' && stateRef.current !== 'processing') {
-              startRecognition();
-            }
-          }, 300);
+        // Recoverable - schedule restart if we still want to listen
+        if (wantsListeningRef.current && !isProcessingRef.current) {
+          scheduleRestart(`error-${event.error}`, 200);
         }
       } else {
+        console.error('[RPGWordReader] Recognition error:', event.error);
         setRecognitionState('error');
       }
     };
 
     recognition.onend = () => {
-      if (!isProcessingRef.current && stateRef.current === 'listening') {
-        // Unexpected end - restart
-        restartTimeoutRef.current = setTimeout(() => {
-          if (stateRef.current !== 'paused' && stateRef.current !== 'processing' && stateRef.current !== 'idle') {
-            startRecognition();
-          }
-        }, 100);
+      // Clear watchdog
+      if (watchdogTimeoutRef.current) {
+        clearTimeout(watchdogTimeoutRef.current);
+        watchdogTimeoutRef.current = null;
+      }
+      
+      // If we still want to listen and not processing, restart
+      if (wantsListeningRef.current && !isProcessingRef.current && stateRef.current !== 'paused') {
+        scheduleRestart('onend', 100);
       }
     };
 
@@ -321,30 +369,53 @@ export const RPGWordReader = ({
     } catch (e) {
       console.error('Failed to start recognition:', e);
       setRecognitionState('error');
+      // Try again after delay
+      if (wantsListeningRef.current) {
+        scheduleRestart('start-failed', 500);
+      }
     }
-  }, [disabled, currentBatch, cleanup, handleCorrect, handleIncorrect]);
+  }, [disabled, currentBatch, cleanup, handleCorrect, handleIncorrect, abortRecognition, scheduleRestart]);
+
+  // Warm up mic permission to reduce errors
+  const warmUpMic = useCallback(async () => {
+    try {
+      if (!micStreamRef.current) {
+        micStreamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log('[RPGWordReader] Mic warmed up');
+      }
+    } catch (e) {
+      console.warn('[RPGWordReader] Could not warm up mic:', e);
+    }
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      cleanup();
+      stopRecognition();
     };
-  }, [cleanup]);
+  }, [stopRecognition]);
 
   // Control functions
-  const startReading = () => {
+  const startReading = async () => {
     setCurrentIndex(0);
     currentIndexRef.current = 0;
     isProcessingRef.current = false;
+    wantsListeningRef.current = true;
+    
+    // Warm up mic first
+    await warmUpMic();
+    
     startRecognition();
   };
 
   const pauseReading = () => {
+    wantsListeningRef.current = false;
     cleanup();
     setRecognitionState('paused');
   };
 
   const resumeReading = () => {
+    wantsListeningRef.current = true;
     startRecognition();
   };
 
@@ -500,34 +571,45 @@ export const RPGWordReader = ({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
-            className="flex items-center gap-2 text-emerald-400"
+            className="flex flex-col items-center gap-2"
           >
-            <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 0.8 }}>
+            <motion.div
+              className="flex items-center gap-2 text-emerald-400"
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ repeat: Infinity, duration: 1 }}
+            >
               <Mic className="h-5 w-5" />
+              <span className="font-medium">Listening...</span>
             </motion.div>
-            <span className="text-sm font-medium">Listening... Say the word!</span>
-            <div className="flex items-center gap-0.5 ml-2">
-              {[...Array(5)].map((_, i) => (
+            <div className="flex gap-1">
+              {[0, 1, 2, 3, 4].map(i => (
                 <motion.div
                   key={i}
                   className="w-1 bg-emerald-400 rounded-full"
-                  animate={{ height: ['8px', '20px', '8px'] }}
-                  transition={{ repeat: Infinity, duration: 0.5, delay: i * 0.1 }}
+                  animate={{ height: [8, 20, 8] }}
+                  transition={{
+                    repeat: Infinity,
+                    duration: 0.5,
+                    delay: i * 0.1,
+                  }}
                 />
               ))}
             </div>
           </motion.div>
         )}
+      </AnimatePresence>
 
+      {/* Paused Indicator */}
+      <AnimatePresence>
         {isPaused && (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             className="flex items-center gap-2 text-amber-400"
           >
             <MicOff className="h-5 w-5" />
-            <span className="text-sm font-medium">Paused - Click Resume to continue</span>
+            <span>Paused - tap Resume to continue</span>
           </motion.div>
         )}
       </AnimatePresence>

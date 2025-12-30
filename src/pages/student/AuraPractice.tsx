@@ -313,9 +313,19 @@ const AuraPractice = () => {
                     className="cursor-pointer hover:border-primary transition-colors p-4"
                     onClick={() => {
                       setRpgStory(story);
-                      // Vary enemy type based on story difficulty
-                      const enemies: EnemyType[] = ['minion', 'guard', 'elite', 'boss'];
-                      setRpgEnemyType(enemies[Math.min(story.difficulty_level - 1, 3)] || 'minion');
+                      // Vary enemy type based on story difficulty, with chance for dragon
+                      const roll = Math.random();
+                      if (roll > 0.85 || story.title.toLowerCase().includes('dragon')) {
+                        // 15% chance for dragon or if story mentions dragon
+                        setRpgEnemyType('dragon');
+                      } else if (roll > 0.7) {
+                        // 15% chance for final boss
+                        setRpgEnemyType('final_boss');
+                      } else {
+                        // Standard progression based on difficulty
+                        const enemies: ('minion' | 'guard' | 'elite' | 'boss')[] = ['minion', 'guard', 'elite', 'boss'];
+                        setRpgEnemyType(enemies[Math.min(story.difficulty_level - 1, 3)] || 'minion');
+                      }
                     }}
                   >
                     <h3 className="font-bold">{story.title}</h3>

@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Skull, Crown, Shield, Sword } from "lucide-react";
 
 export type GrogState = 'idle' | 'hit' | 'attacking' | 'defeated' | 'taunting';
-export type EnemyType = 'minion' | 'guard' | 'elite' | 'boss';
+export type EnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon';
 
 interface GrogCharacterProps {
   state: GrogState;
@@ -44,6 +44,18 @@ const enemyConfigs: Record<EnemyType, {
     gradient: 'from-yellow-400 via-amber-500 to-orange-600',
     size: 'w-28 h-28',
     name: 'Grog the Goblin King',
+  },
+  final_boss: {
+    icon: Crown,
+    gradient: 'from-purple-600 via-violet-500 to-fuchsia-600',
+    size: 'w-32 h-32',
+    name: 'Galair the Wicked Sorcerer',
+  },
+  dragon: {
+    icon: Skull,
+    gradient: 'from-red-600 via-orange-500 to-yellow-500',
+    size: 'w-36 h-36',
+    name: 'Dalair the Destroyer',
   },
 };
 
