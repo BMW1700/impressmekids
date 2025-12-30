@@ -146,6 +146,7 @@ const ClassroomDetail = () => {
   const [showEditClassroom, setShowEditClassroom] = useState(false);
   const [studentToRemove, setStudentToRemove] = useState<any>(null);
   const [showRemoveStudentModal, setShowRemoveStudentModal] = useState(false);
+  const [currentTab, setCurrentTab] = useState<string | null>(null);
   const {
     assignments
   } = useAssignments(id);
@@ -572,11 +573,17 @@ const ClassroomDetail = () => {
               </div>
             </div>}
 
-          <Tabs defaultValue={searchParams.get('tab') || (isStudent && !isSubstitute ? "assignments" : "students")} className="mb-8">
+          <Tabs 
+            value={currentTab || searchParams.get('tab') || (isStudent && !isSubstitute ? "assignments" : "students")} 
+            onValueChange={setCurrentTab}
+            className="mb-8"
+          >
             <ClassroomTabsList 
               classroomId={id!}
               isTeacher={canViewAsTeacher}
               parentRequests={parentRequests}
+              currentTab={currentTab || searchParams.get('tab') || (isStudent && !isSubstitute ? "assignments" : "students")}
+              onTabChange={setCurrentTab}
             />
 
             {canViewAsTeacher && <TabsContent value="students" className="mt-6">
