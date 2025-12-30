@@ -7,7 +7,9 @@ import { CampaignModeEntry } from "@/components/aura/game/CampaignModeEntry";
 import { RPGBattleArena } from "@/components/aura/game/rpg/RPGBattleArena";
 import { RPGWorldMap, type WorldProgress } from "@/components/aura/game/rpg/RPGWorldMap";
 import { RPGLevelSelect, type CampaignLevel } from "@/components/aura/game/rpg/RPGLevelSelect";
+import { BookRescueCelebration } from "@/components/aura/game/BookRescueCelebration";
 import { campaignWorlds, type CampaignWorld } from "@/lib/campaignData";
+import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import type { EnemyType } from "@/lib/battleMechanics";
 import KidFriendlyProgress from "@/components/aura/KidFriendlyProgress";
 import { curatedStories } from "@/data/curatedStories";
@@ -97,6 +99,20 @@ const AuraPractice = () => {
   const [rpgEnemyType, setRpgEnemyType] = useState<EnemyType>('minion');
   const [activeTab, setActiveTab] = useState<string>(searchParams.get('tab') || 'stories');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(searchParams.get('category'));
+  
+  // Victory celebration state
+  const [showVictoryCelebration, setShowVictoryCelebration] = useState(false);
+  const [victoryStats, setVictoryStats] = useState<{
+    victory: boolean;
+    xpEarned: number;
+    damageDealt: number;
+    longestStreak: number;
+    wordsRead: number;
+    correctWords: number;
+    accuracy: number;
+    defeatedBeforeFinish: boolean;
+  } | null>(null);
+  const [currentBattleId, setCurrentBattleId] = useState<string | null>(null);
 
   // Handle URL params for tab navigation
   useEffect(() => {
@@ -154,6 +170,13 @@ const AuraPractice = () => {
   // Check for active screening period
   const { data: activeScreening } = useActiveScreeningPassage(user?.id);
 
+  // Campaign progress hook
+  const { 
+    progress: campaignProgress, 
+    startBattle, 
+    completeBattle,
+    initializeProgress 
+  } = useCampaignProgress(user?.id);
   const { data: records, refetch } = useQuery({
     queryKey: ['aura-records', user?.id],
     queryFn: async () => {
@@ -268,6 +291,40 @@ const AuraPractice = () => {
 
   // RPG Battle Mode takes over the whole screen
   if (isRpgMode && rpgView === 'battle' && rpgStory && user?.id) {
+    const handleBattleComplete = async (victory: boolean, stats: { wordsRead: number; correctWords: number; longestStreak: number; damageDealt: number; xpEarned: number }) => {
+      console.log('RPG Battle complete:', stats, 'victory:', victory);
+      
+      const accuracy = stats.wordsRead > 0 ? Math.round((stats.correctWords / stats.wordsRead) * 100) : 0;
+      
+      // Set victory stats for celebration modal
+      setVictoryStats({
+        victory,
+        xpEarned: stats.xpEarned,
+        damageDealt: stats.damageDealt,
+        longestStreak: stats.longestStreak,
+        wordsRead: stats.wordsRead,
+        correctWords: stats.correctWords,
+        accuracy,
+        defeatedBeforeFinish: victory && stats.correctWords < stats.wordsRead * 0.8,
+      });
+      
+      // Save progress to database
+      if (currentBattleId && selectedWorld) {
+        await completeBattle({
+          battleId: currentBattleId,
+          victory,
+          xpEarned: stats.xpEarned,
+          damageDealt: stats.damageDealt,
+          longestStreak: stats.longestStreak,
+          storyTitle: rpgStory?.title || 'Unknown',
+          worldNumber: selectedWorld.id,
+        });
+      }
+      
+      refetch();
+      setShowVictoryCelebration(true);
+    };
+
     return (
       <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
         <Header />
@@ -279,13 +336,45 @@ const AuraPractice = () => {
             onBack={() => {
               setRpgView('level_select');
               setRpgStory(null);
+              setCurrentBattleId(null);
             }}
-            onComplete={(stats) => {
-              console.log('RPG Battle complete:', stats);
-              refetch();
-              // Go back to level select after battle
+            onComplete={handleBattleComplete}
+          />
+          
+          {/* Victory/Defeat Celebration Modal */}
+          <BookRescueCelebration
+            open={showVictoryCelebration}
+            onClose={() => setShowVictoryCelebration(false)}
+            victory={victoryStats?.victory || false}
+            storyTitle={rpgStory?.title || 'Story'}
+            stats={victoryStats || {
+              xpEarned: 0,
+              damageDealt: 0,
+              longestStreak: 0,
+              wordsRead: 0,
+              correctWords: 0,
+              accuracy: 0,
+              defeatedBeforeFinish: false,
+            }}
+            worldNumber={selectedWorld?.id || 1}
+            booksRescued={campaignProgress?.books_rescued || 0}
+            onPlayAgain={() => {
+              setShowVictoryCelebration(false);
+              // Reload the same level
+              window.location.reload();
+            }}
+            onNextStory={() => {
+              setShowVictoryCelebration(false);
               setRpgView('level_select');
               setRpgStory(null);
+              setCurrentBattleId(null);
+            }}
+            onBackToMap={() => {
+              setShowVictoryCelebration(false);
+              setRpgView('world_map');
+              setRpgStory(null);
+              setSelectedWorld(null);
+              setCurrentBattleId(null);
             }}
           />
         </main>
@@ -296,40 +385,68 @@ const AuraPractice = () => {
 
   // RPG Mode - Level Select
   if (isRpgMode && rpgView === 'level_select' && selectedWorld && user?.id) {
+    // Get world progress from campaign data
+    const worldProgressData = campaignProgress?.world_progress as Record<string, string[]> || {};
+    const completedStories = worldProgressData[selectedWorld.id.toString()] || [];
+    
     // Generate levels from world's level data + curated stories
     const levels: CampaignLevel[] = selectedWorld.levels.map((levelData, idx) => {
       const story = curatedStories[levelData.storyIndex] || curatedStories[idx % curatedStories.length];
+      const isCompleted = completedStories.includes(story.title);
+      
+      // Unlock logic: first level always unlocked, subsequent levels unlock when previous is completed
+      const isUnlocked = idx === 0 || completedStories.includes(
+        curatedStories[selectedWorld.levels[idx - 1]?.storyIndex]?.title || ''
+      ) || completedStories.length >= idx;
       
       return {
         id: levelData.id,
         story,
         enemies: levelData.enemies as ('minion' | 'guard' | 'elite' | 'boss' | 'dragon')[],
         isBossLevel: levelData.isBossLevel,
-        starsEarned: 0, // TODO: Load from campaign_progress
-        isCompleted: false,
-        isUnlocked: idx <= 1, // First 2 levels unlocked
+        starsEarned: isCompleted ? 2 : 0, // Default 2 stars for completed
+        isCompleted,
+        isUnlocked,
       };
     });
+
+    const handleLevelSelect = async (level: CampaignLevel) => {
+      setSelectedLevel(level);
+      setRpgStory(level.story);
+      
+      // Set enemy type based on level
+      const primaryEnemy = level.enemies[0];
+      const enemyMap: Record<string, EnemyType> = {
+        minion: 'minion',
+        guard: 'guard',
+        elite: 'elite',
+        boss: 'boss',
+      };
+      setRpgEnemyType(enemyMap[primaryEnemy] || 'minion');
+      
+      // Start battle session in database
+      try {
+        const battleSession = await startBattle({
+          storyTitle: level.story.title,
+          storyCategory: level.story.category,
+          worldNumber: selectedWorld.id,
+          enemyType: primaryEnemy,
+          enemyMaxHp: 100,
+        });
+        setCurrentBattleId(battleSession.id);
+      } catch (error) {
+        console.error('Failed to start battle session:', error);
+      }
+      
+      setRpgView('battle');
+    };
 
     return (
       <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
         <RPGLevelSelect
           world={selectedWorld}
           levels={levels}
-          onSelectLevel={(level) => {
-            setSelectedLevel(level);
-            setRpgStory(level.story);
-            // Set enemy type based on level
-            const primaryEnemy = level.enemies[0];
-            const enemyMap: Record<string, EnemyType> = {
-              minion: 'minion',
-              guard: 'guard',
-              elite: 'elite',
-              boss: 'boss',
-            };
-            setRpgEnemyType(enemyMap[primaryEnemy] || 'minion');
-            setRpgView('battle');
-          }}
+          onSelectLevel={handleLevelSelect}
           onBack={() => {
             setSelectedWorld(null);
             setRpgView('world_map');
@@ -341,20 +458,43 @@ const AuraPractice = () => {
 
   // RPG Mode - World Map
   if (isRpgMode && rpgView === 'world_map' && user?.id) {
-    // Mock world progress - TODO: Load from campaign_progress table
-    const worldProgress: WorldProgress[] = campaignWorlds.map(w => ({
-      worldId: w.id,
-      levelsCompleted: w.id === 1 ? 2 : 0,
-      totalLevels: 6,
-      starsEarned: w.id === 1 ? 4 : 0,
-      isUnlocked: w.id <= 2, // First 2 worlds unlocked for demo
-    }));
+    // Initialize progress if needed
+    useEffect(() => {
+      if (!campaignProgress?.books_rescued && campaignProgress?.books_rescued !== 0) {
+        initializeProgress();
+      }
+    }, [campaignProgress, initializeProgress]);
+    
+    // Calculate world progress from campaign data
+    const worldProgressData = campaignProgress?.world_progress as Record<string, string[]> || {};
+    const totalBooksRescued = campaignProgress?.books_rescued || 0;
+    
+    const worldProgress: WorldProgress[] = campaignWorlds.map(w => {
+      const worldStories = worldProgressData[w.id.toString()] || [];
+      const totalLevels = w.levels.length;
+      const levelsCompleted = worldStories.length;
+      
+      // World unlock logic based on previous world completion
+      let isUnlocked = w.id === 1;
+      if (w.id > 1) {
+        const prevWorldStories = worldProgressData[(w.id - 1).toString()] || [];
+        isUnlocked = prevWorldStories.length >= w.unlockRequirement;
+      }
+      
+      return {
+        worldId: w.id,
+        levelsCompleted,
+        totalLevels,
+        starsEarned: levelsCompleted * 2, // 2 stars per completed level (can enhance later)
+        isUnlocked,
+      };
+    });
 
     return (
       <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
         <RPGWorldMap
           worldProgress={worldProgress}
-          totalBooksRescued={4}
+          totalBooksRescued={totalBooksRescued}
           onSelectWorld={(world) => {
             setSelectedWorld(world);
             setRpgView('level_select');
