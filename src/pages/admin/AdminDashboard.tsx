@@ -5,7 +5,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Users, GraduationCap, Shield, Calendar, Settings, School, Link } from "lucide-react";
+import { Loader2, Users, GraduationCap, Shield, Calendar, Settings, School, Link, FileUp, Zap, Database, UserPlus, UserCheck } from "lucide-react";
 import { useAdminData } from "@/hooks/useAdminData";
 import { liquidGlassTabClass } from "@/components/ui/liquid-glass-button";
 import { TeacherListCard } from "@/components/admin/TeacherListCard";
@@ -30,12 +30,22 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useSchools } from "@/hooks/useSchools";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { user, profile, isLoading: authLoading, signOut } = useAuth();
   const [loading, setLoading] = useState(true);
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null);
+  const [currentTab, setCurrentTab] = useState("teachers");
   const { teachers, students, admins, isLoading } = useAdminData(selectedSchoolId);
   const { schools } = useSchools();
 
@@ -265,44 +275,87 @@ export default function AdminDashboard() {
           </div>
 
           {/* Main Content Tabs */}
-          <Tabs defaultValue="teachers" className="space-y-4">
-            <div className="space-y-2">
-              {selectedSchoolId ? (
-                <>
-                  {/* School-specific view: Row 1 - Teachers, Students, Admins */}
-                  <TabsList className="grid w-full grid-cols-3 h-auto p-2 bg-muted/50 rounded-xl gap-2">
-                    <TabsTrigger value="teachers" className={liquidGlassTabClass}>Teachers</TabsTrigger>
-                    <TabsTrigger value="students" className={liquidGlassTabClass}>Students</TabsTrigger>
-                    <TabsTrigger value="admins" className={liquidGlassTabClass}>Admins</TabsTrigger>
-                  </TabsList>
-                  {/* School-specific view: Row 2 - Parental Linking, Calendar, Safety */}
-                  <TabsList className="grid w-full grid-cols-3 h-auto p-2 bg-muted/50 rounded-xl gap-2">
-                    <TabsTrigger value="parent-requests" className={liquidGlassTabClass}>Parental Linking</TabsTrigger>
-                    <TabsTrigger value="calendar" className={liquidGlassTabClass}>Calendar</TabsTrigger>
-                    <TabsTrigger value="safety" className={liquidGlassTabClass}>Safety</TabsTrigger>
-                  </TabsList>
-                </>
-              ) : (
-                <>
-                  {/* All Schools view: Row 1 - Teachers, Students, Admins, Account Requests, Parental Linking */}
-                  <TabsList className="grid w-full grid-cols-5 h-auto p-2 bg-muted/50 rounded-xl gap-2">
-                    <TabsTrigger value="teachers" className={liquidGlassTabClass}>Teachers</TabsTrigger>
-                    <TabsTrigger value="students" className={liquidGlassTabClass}>Students</TabsTrigger>
-                    <TabsTrigger value="admins" className={liquidGlassTabClass}>Admins</TabsTrigger>
-                    <TabsTrigger value="teacher-requests" className={liquidGlassTabClass}>Account Requests</TabsTrigger>
-                    <TabsTrigger value="parent-requests" className={liquidGlassTabClass}>Parental Linking</TabsTrigger>
-                  </TabsList>
-                  {/* All Schools view: Row 2 - Import, Clever, Calendar, Safety, Backups */}
-                  <TabsList className="grid w-full grid-cols-5 h-auto p-2 bg-muted/50 rounded-xl gap-2">
-                    <TabsTrigger value="import" className={liquidGlassTabClass}>Import</TabsTrigger>
-                    <TabsTrigger value="clever" className={liquidGlassTabClass}>Clever</TabsTrigger>
-                    <TabsTrigger value="calendar" className={liquidGlassTabClass}>Calendar</TabsTrigger>
-                    <TabsTrigger value="safety" className={liquidGlassTabClass}>Safety</TabsTrigger>
-                    <TabsTrigger value="backups" className={liquidGlassTabClass}>Backups</TabsTrigger>
-                  </TabsList>
-                </>
-              )}
-            </div>
+          <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-4">
+            {isMobile ? (
+              /* Mobile: Dropdown selector */
+              <Select value={currentTab} onValueChange={setCurrentTab}>
+                <SelectTrigger className="w-full h-12 bg-muted/50 rounded-xl border-0">
+                  <SelectValue>
+                    <div className="flex items-center gap-2">
+                      {currentTab === "teachers" && <><Users className="h-4 w-4" />Teachers</>}
+                      {currentTab === "students" && <><GraduationCap className="h-4 w-4" />Students</>}
+                      {currentTab === "admins" && <><Shield className="h-4 w-4" />Admins</>}
+                      {currentTab === "teacher-requests" && <><UserCheck className="h-4 w-4" />Account Requests</>}
+                      {currentTab === "parent-requests" && <><UserPlus className="h-4 w-4" />Parental Linking</>}
+                      {currentTab === "import" && <><FileUp className="h-4 w-4" />Import</>}
+                      {currentTab === "clever" && <><Zap className="h-4 w-4" />Clever</>}
+                      {currentTab === "calendar" && <><Calendar className="h-4 w-4" />Calendar</>}
+                      {currentTab === "safety" && <><Shield className="h-4 w-4" />Safety</>}
+                      {currentTab === "backups" && <><Database className="h-4 w-4" />Backups</>}
+                    </div>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="bg-background border shadow-lg z-50">
+                  <SelectItem value="teachers"><div className="flex items-center gap-2"><Users className="h-4 w-4" />Teachers</div></SelectItem>
+                  <SelectItem value="students"><div className="flex items-center gap-2"><GraduationCap className="h-4 w-4" />Students</div></SelectItem>
+                  <SelectItem value="admins"><div className="flex items-center gap-2"><Shield className="h-4 w-4" />Admins</div></SelectItem>
+                  {!selectedSchoolId && (
+                    <SelectItem value="teacher-requests"><div className="flex items-center gap-2"><UserCheck className="h-4 w-4" />Account Requests</div></SelectItem>
+                  )}
+                  <SelectItem value="parent-requests"><div className="flex items-center gap-2"><UserPlus className="h-4 w-4" />Parental Linking</div></SelectItem>
+                  {!selectedSchoolId && (
+                    <>
+                      <SelectItem value="import"><div className="flex items-center gap-2"><FileUp className="h-4 w-4" />Import</div></SelectItem>
+                      <SelectItem value="clever"><div className="flex items-center gap-2"><Zap className="h-4 w-4" />Clever</div></SelectItem>
+                    </>
+                  )}
+                  <SelectItem value="calendar"><div className="flex items-center gap-2"><Calendar className="h-4 w-4" />Calendar</div></SelectItem>
+                  <SelectItem value="safety"><div className="flex items-center gap-2"><Shield className="h-4 w-4" />Safety</div></SelectItem>
+                  {!selectedSchoolId && (
+                    <SelectItem value="backups"><div className="flex items-center gap-2"><Database className="h-4 w-4" />Backups</div></SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            ) : (
+              /* Desktop: Tab lists */
+              <div className="space-y-2">
+                {selectedSchoolId ? (
+                  <>
+                    {/* School-specific view: Row 1 - Teachers, Students, Admins */}
+                    <TabsList className="grid w-full grid-cols-3 h-auto p-2 bg-muted/50 rounded-xl gap-2">
+                      <TabsTrigger value="teachers" className={liquidGlassTabClass}>Teachers</TabsTrigger>
+                      <TabsTrigger value="students" className={liquidGlassTabClass}>Students</TabsTrigger>
+                      <TabsTrigger value="admins" className={liquidGlassTabClass}>Admins</TabsTrigger>
+                    </TabsList>
+                    {/* School-specific view: Row 2 - Parental Linking, Calendar, Safety */}
+                    <TabsList className="grid w-full grid-cols-3 h-auto p-2 bg-muted/50 rounded-xl gap-2">
+                      <TabsTrigger value="parent-requests" className={liquidGlassTabClass}>Parental Linking</TabsTrigger>
+                      <TabsTrigger value="calendar" className={liquidGlassTabClass}>Calendar</TabsTrigger>
+                      <TabsTrigger value="safety" className={liquidGlassTabClass}>Safety</TabsTrigger>
+                    </TabsList>
+                  </>
+                ) : (
+                  <>
+                    {/* All Schools view: Row 1 - Teachers, Students, Admins, Account Requests, Parental Linking */}
+                    <TabsList className="grid w-full grid-cols-5 h-auto p-2 bg-muted/50 rounded-xl gap-2">
+                      <TabsTrigger value="teachers" className={liquidGlassTabClass}>Teachers</TabsTrigger>
+                      <TabsTrigger value="students" className={liquidGlassTabClass}>Students</TabsTrigger>
+                      <TabsTrigger value="admins" className={liquidGlassTabClass}>Admins</TabsTrigger>
+                      <TabsTrigger value="teacher-requests" className={liquidGlassTabClass}>Account Requests</TabsTrigger>
+                      <TabsTrigger value="parent-requests" className={liquidGlassTabClass}>Parental Linking</TabsTrigger>
+                    </TabsList>
+                    {/* All Schools view: Row 2 - Import, Clever, Calendar, Safety, Backups */}
+                    <TabsList className="grid w-full grid-cols-5 h-auto p-2 bg-muted/50 rounded-xl gap-2">
+                      <TabsTrigger value="import" className={liquidGlassTabClass}>Import</TabsTrigger>
+                      <TabsTrigger value="clever" className={liquidGlassTabClass}>Clever</TabsTrigger>
+                      <TabsTrigger value="calendar" className={liquidGlassTabClass}>Calendar</TabsTrigger>
+                      <TabsTrigger value="safety" className={liquidGlassTabClass}>Safety</TabsTrigger>
+                      <TabsTrigger value="backups" className={liquidGlassTabClass}>Backups</TabsTrigger>
+                    </TabsList>
+                  </>
+                )}
+              </div>
+            )}
 
 
             {!selectedSchoolId && (
