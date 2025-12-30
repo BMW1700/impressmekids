@@ -13,6 +13,9 @@ import { RPGWordBarrage } from "./RPGWordBarrage";
 import { RPGFireballBarrage } from "./RPGFireballBarrage";
 import { RPGAsteroidBarrage } from "./RPGAsteroidBarrage";
 import { RPGBeastSwarm } from "./RPGBeastSwarm";
+import { RPGIceCrystalBarrage } from "./RPGIceCrystalBarrage";
+import { RPGGhostlyWhispers } from "./RPGGhostlyWhispers";
+import { RPGRollingBoulders } from "./RPGRollingBoulders";
 import { RPGEnemyTransition } from "./RPGEnemyTransition";
 import { RPGSpellEffects } from "./RPGSpellEffects";
 import { RPGCoinDrop } from "./RPGCoinDrop";
@@ -29,8 +32,8 @@ import {
 import { CuratedStory } from "@/data/curatedStories";
 import { calculateGoldEarned, calculateXpEarned } from "@/lib/gameEconomy";
 
-type EnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast';
-type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat';
+type EnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian';
+type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat';
 type InventoryKey = 'health_potion' | 'magic_potion';
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
 
@@ -181,12 +184,30 @@ export const RPGBattleArena = ({
     const barrageSelection = availableWords.slice(0, wordCount);
     setBarrageWords(barrageSelection);
     
-    // Dragon uses fireball, others use asteroid
-    if (enemyType === 'dragon') {
+    // Different attacks based on enemy type
+    if (currentEnemyType === 'dragon') {
       setEnemyAbilityMessage(`${enemy.name} unleashes FIREBALL BARRAGE!`);
       setTimeout(() => {
         setEnemyAbilityMessage(null);
         setPhase('fireball_barrage');
+      }, 1000);
+    } else if (currentEnemyType === 'ice_golem') {
+      setEnemyAbilityMessage(`${enemy.name} unleashes ICE CRYSTAL BARRAGE!`);
+      setTimeout(() => {
+        setEnemyAbilityMessage(null);
+        setPhase('ice_crystal_barrage');
+      }, 1000);
+    } else if (currentEnemyType === 'shadow_wraith') {
+      setEnemyAbilityMessage(`${enemy.name} summons GHOSTLY WHISPERS!`);
+      setTimeout(() => {
+        setEnemyAbilityMessage(null);
+        setPhase('ghostly_whispers');
+      }, 1000);
+    } else if (currentEnemyType === 'stone_guardian') {
+      setEnemyAbilityMessage(`${enemy.name} triggers ROLLING BOULDERS!`);
+      setTimeout(() => {
+        setEnemyAbilityMessage(null);
+        setPhase('rolling_boulders');
       }, 1000);
     } else {
       setEnemyAbilityMessage(`${enemy.name} summons WORD PRISON!`);
@@ -489,22 +510,35 @@ export const RPGBattleArena = ({
       setAttackType(types[Math.min(Math.floor(newStreak / 3), types.length - 1)]);
     } else {
       setStreak(0);
-      // Enemy counter-attack on miss
-      const damage = Math.floor(enemy.attack * 0.5);
-      
-      setTimeout(() => {
-        setEnemyAttacking(true);
+      // 30% chance enemy counter-attacks on miss
+      if (Math.random() < 0.3) {
+        const damage = Math.floor(enemy.attack * 0.5);
+        setEnemyAbilityMessage(`${enemy.name} strikes back!`);
+        
+        // Add floating damage for player
+        setFloatingDamages(prev => [...prev, {
+          id: Date.now(),
+          damage,
+          x: 70 + Math.random() * 10,
+          y: 60 + Math.random() * 10,
+          isPlayer: true
+        }]);
+        
         setTimeout(() => {
-          setEnemyAttacking(false);
-          setHeroTakingDamage(true);
-          setPlayerHp(prev => Math.max(0, prev - damage));
-          triggerScreenShake();
-          
+          setEnemyAttacking(true);
           setTimeout(() => {
-            setHeroTakingDamage(false);
-          }, 400);
+            setEnemyAttacking(false);
+            setHeroTakingDamage(true);
+            setPlayerHp(prev => Math.max(0, prev - damage));
+            triggerScreenShake();
+            
+            setTimeout(() => {
+              setHeroTakingDamage(false);
+              setEnemyAbilityMessage(null);
+            }, 400);
+          }, 300);
         }, 300);
-      }, 300);
+      }
     }
 
     // Only advance batch when we finish the current batch (wordIndex reaches end)
@@ -663,6 +697,27 @@ export const RPGBattleArena = ({
         )}
         {phase === 'beast_swarm' && (
           <RPGBeastSwarm
+            words={barrageWords}
+            onComplete={handleBarrageComplete}
+            onWordHit={handleBarrageWordHit}
+          />
+        )}
+        {phase === 'ice_crystal_barrage' && (
+          <RPGIceCrystalBarrage
+            words={barrageWords}
+            onComplete={handleBarrageComplete}
+            onWordHit={handleBarrageWordHit}
+          />
+        )}
+        {phase === 'ghostly_whispers' && (
+          <RPGGhostlyWhispers
+            words={barrageWords}
+            onComplete={handleBarrageComplete}
+            onWordHit={handleBarrageWordHit}
+          />
+        )}
+        {phase === 'rolling_boulders' && (
+          <RPGRollingBoulders
             words={barrageWords}
             onComplete={handleBarrageComplete}
             onWordHit={handleBarrageWordHit}

@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 
-type CharacterType = 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon';
+type CharacterType = 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian';
 
 interface RPGCharacterSpriteProps {
   type: CharacterType;
@@ -426,6 +426,245 @@ export const RPGCharacterSprite = ({
     </div>
   );
 
+  // Ice Golem - Crystalline ice creature
+  const renderIceGolem = () => (
+    <div className="relative w-full h-full flex items-center justify-center">
+      {/* Main Body - Crystalline Ice */}
+      <div className="absolute inset-x-[10%] top-[20%] bottom-[5%]
+        bg-gradient-to-b from-cyan-300 via-blue-400 to-blue-700
+        rounded-[25%]
+        shadow-[inset_-6px_-6px_20px_rgba(0,0,0,0.3),0_0_40px_rgba(34,211,238,0.5)]"
+        style={{ clipPath: 'polygon(20% 0%, 80% 0%, 100% 30%, 100% 100%, 0% 100%, 0% 30%)' }}>
+        {/* Ice Cracks */}
+        <div className="absolute top-[20%] left-[30%] w-[40%] h-[2px] bg-white/60 rotate-12" />
+        <div className="absolute top-[40%] left-[20%] w-[30%] h-[1px] bg-white/40 -rotate-6" />
+        <div className="absolute top-[60%] right-[25%] w-[25%] h-[1px] bg-white/50 rotate-3" />
+      </div>
+      
+      {/* Head */}
+      <div className="absolute top-[5%] left-[20%] right-[20%] h-[22%]
+        bg-gradient-to-b from-cyan-200 to-cyan-400
+        rounded-[40%]
+        shadow-[inset_-3px_-3px_10px_rgba(0,0,0,0.2),0_0_20px_rgba(34,211,238,0.4)]">
+        {/* Glowing Eyes */}
+        <motion.div 
+          className="absolute top-[40%] left-[20%] w-[20%] h-[25%]
+            bg-gradient-to-b from-white to-cyan-200 rounded-full
+            shadow-[0_0_15px_rgba(255,255,255,0.9)]"
+          animate={{ opacity: [0.7, 1, 0.7] }}
+          transition={{ repeat: Infinity, duration: 1.5 }}
+        />
+        <motion.div 
+          className="absolute top-[40%] right-[20%] w-[20%] h-[25%]
+            bg-gradient-to-b from-white to-cyan-200 rounded-full
+            shadow-[0_0_15px_rgba(255,255,255,0.9)]"
+          animate={{ opacity: [0.7, 1, 0.7] }}
+          transition={{ repeat: Infinity, duration: 1.5 }}
+        />
+      </div>
+      
+      {/* Ice Spikes on Shoulders */}
+      <div className="absolute top-[18%] -left-[5%] w-[20%] h-[25%]
+        bg-gradient-to-t from-cyan-400 to-cyan-100
+        shadow-lg"
+        style={{ clipPath: 'polygon(50% 0%, 100% 100%, 0% 100%)' }} />
+      <div className="absolute top-[18%] -right-[5%] w-[20%] h-[25%]
+        bg-gradient-to-t from-cyan-400 to-cyan-100
+        shadow-lg"
+        style={{ clipPath: 'polygon(50% 0%, 100% 100%, 0% 100%)' }} />
+      
+      {/* Floating Ice Shards */}
+      {[...Array(4)].map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute w-3 h-5 bg-gradient-to-t from-cyan-400 to-white rounded-sm"
+          style={{ left: `${15 + i * 22}%`, top: '65%' }}
+          animate={{
+            y: [0, -15, 0],
+            rotate: [0, 180, 360],
+            opacity: [0.6, 1, 0.6],
+          }}
+          transition={{
+            repeat: Infinity,
+            duration: 2,
+            delay: i * 0.3,
+          }}
+        />
+      ))}
+      
+      {/* Cold Mist */}
+      <motion.div
+        className="absolute bottom-0 left-0 right-0 h-[20%]
+          bg-gradient-to-t from-cyan-300/50 to-transparent rounded-b-full"
+        animate={{ opacity: [0.3, 0.6, 0.3] }}
+        transition={{ repeat: Infinity, duration: 2 }}
+      />
+    </div>
+  );
+
+  // Shadow Wraith - Ethereal ghost creature
+  const renderShadowWraith = () => (
+    <div className="relative w-full h-full flex items-center justify-center">
+      {/* Main Body - Ethereal Form */}
+      <motion.div 
+        className="absolute inset-x-[10%] top-[15%] bottom-[10%]
+          bg-gradient-to-b from-purple-800/80 via-slate-900/90 to-purple-900/60
+          rounded-t-[40%] rounded-b-[60%]
+          shadow-[0_0_40px_rgba(147,51,234,0.5)]"
+        animate={{ opacity: [0.7, 0.9, 0.7] }}
+        transition={{ repeat: Infinity, duration: 2 }}
+      >
+        {/* Wispy edges */}
+        <div className="absolute inset-0 rounded-t-[40%] rounded-b-[60%]
+          bg-gradient-to-b from-transparent via-purple-500/20 to-transparent" />
+      </motion.div>
+      
+      {/* Hood */}
+      <motion.div 
+        className="absolute top-[5%] left-[15%] right-[15%] h-[25%]
+          bg-gradient-to-b from-slate-800 to-purple-900
+          rounded-[50%]
+          shadow-[inset_-4px_-4px_15px_rgba(0,0,0,0.6),0_0_20px_rgba(147,51,234,0.4)]"
+        animate={{ y: [0, -3, 0] }}
+        transition={{ repeat: Infinity, duration: 3 }}
+      >
+        {/* Glowing Purple Eyes */}
+        <motion.div 
+          className="absolute top-[45%] left-[25%] w-[18%] h-[25%]
+            bg-gradient-to-b from-purple-400 to-purple-600 rounded-full
+            shadow-[0_0_20px_rgba(168,85,247,1)]"
+          animate={{ opacity: [0.5, 1, 0.5], scale: [0.9, 1.1, 0.9] }}
+          transition={{ repeat: Infinity, duration: 1.5 }}
+        />
+        <motion.div 
+          className="absolute top-[45%] right-[25%] w-[18%] h-[25%]
+            bg-gradient-to-b from-purple-400 to-purple-600 rounded-full
+            shadow-[0_0_20px_rgba(168,85,247,1)]"
+          animate={{ opacity: [0.5, 1, 0.5], scale: [0.9, 1.1, 0.9] }}
+          transition={{ repeat: Infinity, duration: 1.5, delay: 0.2 }}
+        />
+      </motion.div>
+      
+      {/* Shadow Particles Rising */}
+      {[...Array(6)].map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute w-2 h-2 bg-purple-500/60 rounded-full"
+          style={{ left: `${10 + i * 14}%`, bottom: '20%' }}
+          animate={{
+            y: [0, -60, -80],
+            opacity: [0, 0.8, 0],
+            scale: [0.5, 1, 0.3],
+          }}
+          transition={{
+            repeat: Infinity,
+            duration: 2.5,
+            delay: i * 0.4,
+          }}
+        />
+      ))}
+      
+      {/* Ghostly Trail */}
+      <motion.div
+        className="absolute bottom-0 left-[20%] right-[20%] h-[30%]
+          bg-gradient-to-t from-purple-600/40 to-transparent"
+        style={{ filter: 'blur(8px)' }}
+        animate={{ opacity: [0.3, 0.6, 0.3], scaleY: [0.8, 1.2, 0.8] }}
+        transition={{ repeat: Infinity, duration: 1.5 }}
+      />
+    </div>
+  );
+
+  // Stone Guardian - Ancient rock creature
+  const renderStoneGuardian = () => (
+    <div className="relative w-full h-full flex items-center justify-center">
+      {/* Main Body - Rocky Form */}
+      <div className="absolute inset-x-[5%] top-[20%] bottom-[5%]
+        bg-gradient-to-b from-stone-500 via-stone-600 to-stone-800
+        rounded-[20%]
+        shadow-[inset_-6px_-6px_20px_rgba(0,0,0,0.5),inset_4px_4px_10px_rgba(255,255,255,0.1)]">
+        {/* Rock Texture Lines */}
+        <div className="absolute top-[15%] left-[10%] w-[80%] h-[2px] bg-stone-700/60" />
+        <div className="absolute top-[35%] left-[15%] w-[70%] h-[1px] bg-stone-400/40" />
+        <div className="absolute top-[55%] left-[20%] w-[60%] h-[2px] bg-stone-700/50" />
+        
+        {/* Glowing Runes */}
+        <motion.div 
+          className="absolute top-[20%] left-[30%] w-[40%] h-[15%]
+            flex items-center justify-center"
+          animate={{ opacity: [0.4, 1, 0.4] }}
+          transition={{ repeat: Infinity, duration: 2 }}
+        >
+          <span className="text-amber-400 text-lg drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]">᚛᚜</span>
+        </motion.div>
+        <motion.div 
+          className="absolute top-[45%] left-[25%] w-[50%] h-[10%]
+            flex items-center justify-center"
+          animate={{ opacity: [0.4, 1, 0.4] }}
+          transition={{ repeat: Infinity, duration: 2, delay: 0.5 }}
+        >
+          <span className="text-amber-400 text-sm drop-shadow-[0_0_6px_rgba(251,191,36,0.8)]">ᛟᛞᚨᛚ</span>
+        </motion.div>
+      </div>
+      
+      {/* Head */}
+      <div className="absolute top-[5%] left-[15%] right-[15%] h-[22%]
+        bg-gradient-to-b from-stone-400 to-stone-600
+        rounded-[40%_40%_30%_30%]
+        shadow-[inset_-4px_-4px_12px_rgba(0,0,0,0.4)]">
+        {/* Glowing Eyes */}
+        <motion.div 
+          className="absolute top-[40%] left-[18%] w-[22%] h-[30%]
+            bg-gradient-to-b from-amber-400 to-orange-500 rounded-[30%]
+            shadow-[0_0_15px_rgba(251,191,36,0.8)]"
+          animate={{ opacity: [0.7, 1, 0.7] }}
+          transition={{ repeat: Infinity, duration: 1.5 }}
+        />
+        <motion.div 
+          className="absolute top-[40%] right-[18%] w-[22%] h-[30%]
+            bg-gradient-to-b from-amber-400 to-orange-500 rounded-[30%]
+            shadow-[0_0_15px_rgba(251,191,36,0.8)]"
+          animate={{ opacity: [0.7, 1, 0.7] }}
+          transition={{ repeat: Infinity, duration: 1.5 }}
+        />
+      </div>
+      
+      {/* Moss Patches */}
+      <div className="absolute top-[30%] left-[5%] w-[15%] h-[10%]
+        bg-gradient-to-r from-green-600 to-green-500 rounded-full opacity-70" />
+      <div className="absolute top-[50%] right-[8%] w-[12%] h-[8%]
+        bg-gradient-to-r from-green-500 to-green-600 rounded-full opacity-60" />
+      
+      {/* Ground Cracks */}
+      <motion.div
+        className="absolute bottom-[-5%] left-[10%] right-[10%] h-[10%]"
+        animate={{ opacity: [0.3, 0.6, 0.3] }}
+        transition={{ repeat: Infinity, duration: 2 }}
+      >
+        <div className="w-full h-full bg-gradient-to-t from-amber-600/40 to-transparent"
+          style={{ clipPath: 'polygon(20% 100%, 25% 50%, 30% 100%, 50% 60%, 55% 100%, 70% 50%, 80% 100%)' }} />
+      </motion.div>
+      
+      {/* Dust Particles */}
+      {[...Array(4)].map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute w-1.5 h-1.5 bg-stone-400/60 rounded-full"
+          style={{ left: `${20 + i * 18}%`, bottom: '15%' }}
+          animate={{
+            y: [0, -20, 0],
+            opacity: [0, 0.7, 0],
+          }}
+          transition={{
+            repeat: Infinity,
+            duration: 3,
+            delay: i * 0.5,
+          }}
+        />
+      ))}
+    </div>
+  );
+
   const renderCharacter = () => {
     switch (type) {
       case 'knight': return renderKnight();
@@ -434,6 +673,9 @@ export const RPGCharacterSprite = ({
       case 'boss': return renderBoss();
       case 'sorcerer': return renderSorcerer();
       case 'dragon': return renderDragon();
+      case 'ice_golem': return renderIceGolem();
+      case 'shadow_wraith': return renderShadowWraith();
+      case 'stone_guardian': return renderStoneGuardian();
       default: return renderKnight();
     }
   };
