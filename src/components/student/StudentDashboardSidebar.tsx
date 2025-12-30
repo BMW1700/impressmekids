@@ -60,7 +60,7 @@ export const StudentDashboardSidebar = ({
         <div className="absolute -bottom-12 right-0 w-40 h-40 bg-accent/5 rounded-full blur-3xl" />
       </div>
       
-      <div className="relative p-6">
+      <div className="relative p-6 overflow-y-auto max-h-full">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3">
