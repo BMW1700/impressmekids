@@ -63,6 +63,7 @@ export const RPGBattleArena = ({
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
   const [screenShake, setScreenShake] = useState(false);
   const [barrageTriggered, setBarrageTriggered] = useState(false);
+  const [specialBarrageTriggered, setSpecialBarrageTriggered] = useState(false);
   
   // Combat stats
   const [playerHp, setPlayerHp] = useState(heroKnight.maxHp);
@@ -108,6 +109,13 @@ export const RPGBattleArena = ({
   const [showCoinDrop, setShowCoinDrop] = useState(false);
   const [pendingGold, setPendingGold] = useState(0);
   const [pendingXp, setPendingXp] = useState(0);
+  
+  // Combo power-up announcements
+  const [comboAnnouncement, setComboAnnouncement] = useState<string | null>(null);
+  const [comboPowerLevel, setComboPowerLevel] = useState<'normal' | 'power' | 'mega' | 'ultra'>('normal');
+  
+  // Floating damage numbers
+  const [floatingDamages, setFloatingDamages] = useState<{id: number; damage: number; x: number; y: number; isPlayer: boolean; isCritical?: boolean}[]>([]);
 
   // Parse story into words - memoized for stability
   const storyWords = useMemo(() => {
@@ -120,13 +128,18 @@ export const RPGBattleArena = ({
     setWords(storyWords);
   }, [storyWords]);
 
-  // Check for barrage trigger (50% HP)
+  // Check for barrage trigger (50% HP) and special barrage (25% HP)
   useEffect(() => {
-    if (!barrageTriggered && enemyHp <= enemy.maxHp / 2 && enemyHp > 0 && phase === 'reading') {
+    if (!barrageTriggered && enemyHp <= enemy.maxHp * 0.5 && enemyHp > enemy.maxHp * 0.25 && phase === 'reading') {
       setBarrageTriggered(true);
       triggerWordBarrage();
     }
-  }, [enemyHp, enemy.maxHp, barrageTriggered, phase]);
+    // Trigger special barrage at 25% HP based on enemy type
+    if (!specialBarrageTriggered && enemyHp <= enemy.maxHp * 0.25 && enemyHp > 0 && phase === 'reading') {
+      setSpecialBarrageTriggered(true);
+      triggerSpecialBarrage();
+    }
+  }, [enemyHp, enemy.maxHp, barrageTriggered, specialBarrageTriggered, phase]);
 
   // Trigger word barrage attack
   const triggerWordBarrage = useCallback(() => {
@@ -136,6 +149,29 @@ export const RPGBattleArena = ({
     setBarrageWords(barrageSelection);
     setPhase('barrage');
   }, [words, currentWordIndex, enemy.barrageWordCount]);
+
+  // Trigger special barrage based on enemy type
+  const triggerSpecialBarrage = useCallback(() => {
+    const wordCount = (enemy.barrageWordCount || 5) + 2;
+    const availableWords = words.slice(currentWordIndex, currentWordIndex + wordCount + 10);
+    const barrageSelection = availableWords.slice(0, wordCount);
+    setBarrageWords(barrageSelection);
+    
+    // Dragon uses fireball, others use asteroid
+    if (enemyType === 'dragon') {
+      setEnemyAbilityMessage(`${enemy.name} unleashes FIREBALL BARRAGE!`);
+      setTimeout(() => {
+        setEnemyAbilityMessage(null);
+        setPhase('fireball_barrage');
+      }, 1000);
+    } else {
+      setEnemyAbilityMessage(`${enemy.name} summons WORD PRISON!`);
+      setTimeout(() => {
+        setEnemyAbilityMessage(null);
+        setPhase('asteroid_barrage');
+      }, 1000);
+    }
+  }, [words, currentWordIndex, enemy.barrageWordCount, enemy.name, enemyType]);
 
   // Handle barrage completion
   const handleBarrageComplete = useCallback((destroyed: number, missed: number) => {
@@ -149,6 +185,14 @@ export const RPGBattleArena = ({
   // Handle barrage word hit
   const handleBarrageWordHit = useCallback((damage: number) => {
     setPlayerHp(prev => Math.max(0, prev - damage));
+    // Add floating damage number
+    setFloatingDamages(prev => [...prev, {
+      id: Date.now(),
+      damage,
+      x: 70 + Math.random() * 10,
+      y: 60 + Math.random() * 10,
+      isPlayer: true
+    }]);
     triggerScreenShake();
   }, []);
 
@@ -462,13 +506,10 @@ export const RPGBattleArena = ({
     });
   }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete]);
 
-  // Get current batch of words for reading
-  // NOTE: Using batchSize={1} for RPGWordReader to ensure single word at a time
-  // The parent (this component) is the sole source of truth for word progression
+  // Get current batch of words for reading - returns 5 words at a time
   const getCurrentWordBatch = useCallback(() => {
-    // Return single word as array since batchSize={1}
     if (currentWordIndex >= words.length) return [];
-    return [words[currentWordIndex]];
+    return words.slice(currentWordIndex, currentWordIndex + 5);
   }, [words, currentWordIndex]);
 
   return (
@@ -719,7 +760,8 @@ export const RPGBattleArena = ({
                         onResult={handleWordResult}
                         disabled={currentWordResult !== null || !isPlayerTurn}
                         streak={streak}
-                        batchSize={1}
+                        batchSize={5}
+                        enableEchoRetry={true}
                       />
                     )}
 

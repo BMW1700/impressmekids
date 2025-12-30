@@ -194,6 +194,7 @@ export const grogTheGoblinKing: RPGEnemy = {
     { id: 'royal_slam', name: 'Royal Slam', damage: 25, effect: 'debuff', description: 'Massive damage and stuns', icon: '👑' },
     { id: 'summon_minions', name: 'Mocking Taunt', damage: 0, effect: 'debuff', description: 'Reduces word damage by 30%', icon: '🎭' },
     { id: 'poison_cloud', name: 'Poison Cloud', damage: 15, effect: 'poison', description: 'Deals heavy damage over time', icon: '☠️' },
+    { id: 'word_prison', name: 'Word Prison', damage: 0, effect: 'asteroid_barrage', description: 'Summons word asteroids!', icon: '☄️' },
   ],
   barrageWordCount: 8,
 };
