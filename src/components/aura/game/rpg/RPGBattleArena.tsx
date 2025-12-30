@@ -510,35 +510,33 @@ export const RPGBattleArena = ({
       setAttackType(types[Math.min(Math.floor(newStreak / 3), types.length - 1)]);
     } else {
       setStreak(0);
-      // 30% chance enemy counter-attacks on miss
-      if (Math.random() < 0.3) {
-        const damage = Math.floor(enemy.attack * 0.5);
-        setEnemyAbilityMessage(`${enemy.name} strikes back!`);
-        
-        // Add floating damage for player
-        setFloatingDamages(prev => [...prev, {
-          id: Date.now(),
-          damage,
-          x: 70 + Math.random() * 10,
-          y: 60 + Math.random() * 10,
-          isPlayer: true
-        }]);
-        
+      // Enemy always counter-attacks on miss
+      const damage = Math.floor(enemy.attack * 0.5);
+      setEnemyAbilityMessage(`${enemy.name} strikes back!`);
+      
+      // Add floating damage for player
+      setFloatingDamages(prev => [...prev, {
+        id: Date.now(),
+        damage,
+        x: 70 + Math.random() * 10,
+        y: 60 + Math.random() * 10,
+        isPlayer: true
+      }]);
+      
+      setTimeout(() => {
+        setEnemyAttacking(true);
         setTimeout(() => {
-          setEnemyAttacking(true);
+          setEnemyAttacking(false);
+          setHeroTakingDamage(true);
+          setPlayerHp(prev => Math.max(0, prev - damage));
+          triggerScreenShake();
+          
           setTimeout(() => {
-            setEnemyAttacking(false);
-            setHeroTakingDamage(true);
-            setPlayerHp(prev => Math.max(0, prev - damage));
-            triggerScreenShake();
-            
-            setTimeout(() => {
-              setHeroTakingDamage(false);
-              setEnemyAbilityMessage(null);
-            }, 400);
-          }, 300);
+            setHeroTakingDamage(false);
+            setEnemyAbilityMessage(null);
+          }, 400);
         }, 300);
-      }
+      }, 300);
     }
 
     // Only advance batch when we finish the current batch (wordIndex reaches end)
