@@ -1,6 +1,6 @@
 // Battle mechanics for Grog the Goblin King Story Campaign
 
-export type EnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon';
+export type EnemyType = 'minion' | 'guard' | 'elite' | 'boss';
 export type BattleStatus = 'in_progress' | 'victory' | 'defeat';
 
 export interface BattleState {
@@ -46,8 +46,6 @@ export const getEnemyStats = (worldNumber: number, enemyType: EnemyType): { hp: 
     guard: 0.75,
     elite: 1.0,
     boss: 1.5,
-    final_boss: 2.0,
-    dragon: 2.5,
   };
 
   // BALANCED: Reduced attack power for kid-friendly gameplay
@@ -56,8 +54,6 @@ export const getEnemyStats = (worldNumber: number, enemyType: EnemyType): { hp: 
     guard: 4,
     elite: 6,
     boss: 8,
-    final_boss: 10,
-    dragon: 12,
   };
 
   const baseHp = baseHpByWorld[worldNumber] || 100;
@@ -123,12 +119,10 @@ export const calculateDamage = (
 // BALANCED: Reduced damage so readers don't die too quickly
 export const calculateEnemyAttack = (enemyType: EnemyType): EnemyAttackResult => {
   const attackPower: Record<EnemyType, number> = {
-    minion: 2,
-    guard: 4,
-    elite: 6,
-    boss: 8,
-    final_boss: 10,
-    dragon: 12,
+    minion: 2,   // Reduced from 5
+    guard: 4,    // Reduced from 10
+    elite: 6,    // Reduced from 15
+    boss: 8,     // Reduced from 20
   };
 
   const messages: Record<EnemyType, string[]> = {
@@ -136,8 +130,6 @@ export const calculateEnemyAttack = (enemyType: EnemyType): EnemyAttackResult =>
     guard: ['The guard strikes back!', 'That one hurt!'],
     elite: ['Powerful blow!', 'The elite hits hard!'],
     boss: ['Grog smashes you!', 'The Goblin King attacks!'],
-    final_boss: ['Galair casts dark magic!', 'The Wicked Sorcerer strikes!'],
-    dragon: ['Dalair breathes fire!', 'The dragon claws at you!'],
   };
 
   const damage = attackPower[enemyType];
@@ -202,32 +194,24 @@ export const getEnemyName = (enemyType: EnemyType, worldNumber: number): string 
       guard: 'Goblin Scout',
       elite: 'Forest Guardian',
       boss: 'Grog the Goblin King',
-      final_boss: 'Galair the Wicked Sorcerer',
-      dragon: 'Dalair the Destroyer',
     },
     2: {
       minion: 'Cave Gremlin',
       guard: 'Stone Troll',
       elite: 'Shadow Lurker',
       boss: 'Grog the Goblin King',
-      final_boss: 'Galair the Wicked Sorcerer',
-      dragon: 'Dalair the Destroyer',
     },
     3: {
       minion: 'Mountain Gnome',
       guard: 'Boulder Brute',
       elite: 'Peak Guardian',
       boss: 'Grog the Goblin King',
-      final_boss: 'Galair the Wicked Sorcerer',
-      dragon: 'Dalair the Destroyer',
     },
     4: {
       minion: 'Throne Guard',
       guard: 'Royal Defender',
       elite: 'Dark Knight',
       boss: 'Grog the Goblin King',
-      final_boss: 'Galair the Wicked Sorcerer',
-      dragon: 'Dalair the Destroyer',
     },
   };
 
