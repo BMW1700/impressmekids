@@ -12,6 +12,8 @@ import { RPGWordReader } from "./RPGWordReader";
 import { RPGWordBarrage } from "./RPGWordBarrage";
 import { RPGFireballBarrage } from "./RPGFireballBarrage";
 import { RPGAsteroidBarrage } from "./RPGAsteroidBarrage";
+import { RPGBeastSwarm } from "./RPGBeastSwarm";
+import { RPGEnemyTransition } from "./RPGEnemyTransition";
 import { RPGSpellEffects } from "./RPGSpellEffects";
 import { RPGCoinDrop } from "./RPGCoinDrop";
 import { Spell } from "./RPGSpellMenu";
@@ -22,17 +24,19 @@ import {
   getEnemyForBattle,
   heroDialogue,
   wizardDialogue,
+  RPGEnemy,
 } from "@/lib/rpgBattleData";
 import { CuratedStory } from "@/data/curatedStories";
 import { calculateGoldEarned, calculateXpEarned } from "@/lib/gameEconomy";
 
-type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'enemy_turn' | 'victory' | 'defeat';
+type EnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast';
+type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat';
 type InventoryKey = 'health_potion' | 'magic_potion';
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
 
 interface RPGBattleArenaProps {
   story: CuratedStory;
-  enemyType: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon';
+  enemyType: EnemyType;
   studentId: string;
   onBack: () => void;
   onComplete: (victory: boolean, stats: BattleStats) => void;
@@ -53,7 +57,20 @@ export const RPGBattleArena = ({
   onBack,
   onComplete,
 }: RPGBattleArenaProps) => {
-  const enemy = getEnemyForBattle(enemyType);
+  // Multi-enemy queue system
+  const buildEnemyQueue = useCallback((primaryType: EnemyType): EnemyType[] => {
+    // For certain levels, add Drake the Dragon after the primary enemy
+    if (primaryType === 'guard' || primaryType === 'elite') {
+      return [primaryType, 'dragon'];
+    }
+    return [primaryType];
+  }, []);
+  
+  const [enemyQueue] = useState<EnemyType[]>(() => buildEnemyQueue(enemyType));
+  const [currentEnemyIndex, setCurrentEnemyIndex] = useState(0);
+  const currentEnemyType = enemyQueue[currentEnemyIndex];
+  const enemy = getEnemyForBattle(currentEnemyType);
+  const [defeatedEnemy, setDefeatedEnemy] = useState<RPGEnemy | null>(null);
   
   // Battle state
   const [phase, setPhase] = useState<BattlePhase>('intro');
@@ -64,6 +81,7 @@ export const RPGBattleArena = ({
   const [screenShake, setScreenShake] = useState(false);
   const [barrageTriggered, setBarrageTriggered] = useState(false);
   const [specialBarrageTriggered, setSpecialBarrageTriggered] = useState(false);
+  const [beastSwarmTriggered, setBeastSwarmTriggered] = useState(false);
   
   // Combat stats
   const [playerHp, setPlayerHp] = useState(heroKnight.maxHp);
@@ -129,7 +147,7 @@ export const RPGBattleArena = ({
     setWords(storyWords);
   }, [storyWords]);
 
-  // Check for barrage trigger (50% HP) and special barrage (25% HP)
+  // Check for barrage triggers based on HP thresholds
   useEffect(() => {
     if (!barrageTriggered && enemyHp <= enemy.maxHp * 0.5 && enemyHp > enemy.maxHp * 0.25 && phase === 'reading') {
       setBarrageTriggered(true);
@@ -140,7 +158,12 @@ export const RPGBattleArena = ({
       setSpecialBarrageTriggered(true);
       triggerSpecialBarrage();
     }
-  }, [enemyHp, enemy.maxHp, barrageTriggered, specialBarrageTriggered, phase]);
+    // Drake's beast swarm at 15% HP
+    if (!beastSwarmTriggered && currentEnemyType === 'dragon' && enemyHp <= enemy.maxHp * 0.15 && enemyHp > 0 && phase === 'reading') {
+      setBeastSwarmTriggered(true);
+      triggerBeastSwarm();
+    }
+  }, [enemyHp, enemy.maxHp, barrageTriggered, specialBarrageTriggered, beastSwarmTriggered, phase, currentEnemyType]);
 
   // Trigger word barrage attack
   const triggerWordBarrage = useCallback(() => {
@@ -172,11 +195,23 @@ export const RPGBattleArena = ({
         setPhase('asteroid_barrage');
       }, 1000);
     }
-  }, [words, batchStartIndex, enemy.barrageWordCount, enemy.name, enemyType]);
+  }, [words, batchStartIndex, enemy.barrageWordCount, enemy.name, currentEnemyType]);
+
+  // Trigger beast swarm attack (Drake only)
+  const triggerBeastSwarm = useCallback(() => {
+    const wordCount = 6;
+    const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 10);
+    const swarmSelection = availableWords.slice(0, wordCount);
+    setBarrageWords(swarmSelection);
+    setEnemyAbilityMessage(`${enemy.name} summons BEAST SWARM!`);
+    setTimeout(() => {
+      setEnemyAbilityMessage(null);
+      setPhase('beast_swarm');
+    }, 1000);
+  }, [words, batchStartIndex, enemy.name]);
 
   // Handle barrage completion
   const handleBarrageComplete = useCallback((destroyed: number, missed: number) => {
-    // Bonus XP for destroying words
     if (destroyed > 0) {
       setCorrectWords(prev => prev + destroyed);
     }
@@ -498,14 +533,36 @@ export const RPGBattleArena = ({
     setActiveSpell(null);
   }, []);
 
-  // Check for phase transitions
+  // Check for phase transitions - handle multi-enemy
   useEffect(() => {
-    if (enemyHp <= 0 && phase !== 'victory') {
-      setPhase('victory');
+    if (enemyHp <= 0 && phase !== 'victory' && phase !== 'enemy_transition') {
+      // Check if there are more enemies
+      if (currentEnemyIndex < enemyQueue.length - 1) {
+        // Transition to next enemy
+        setDefeatedEnemy(enemy);
+        setPhase('enemy_transition');
+      } else {
+        setPhase('victory');
+      }
     } else if (playerHp <= 0 && phase !== 'defeat') {
       setPhase('defeat');
     }
-  }, [enemyHp, playerHp, phase]);
+  }, [enemyHp, playerHp, phase, currentEnemyIndex, enemyQueue.length, enemy]);
+
+  // Handle enemy transition complete
+  const handleTransitionComplete = useCallback(() => {
+    const nextIndex = currentEnemyIndex + 1;
+    setCurrentEnemyIndex(nextIndex);
+    const nextEnemy = getEnemyForBattle(enemyQueue[nextIndex]);
+    setEnemyHp(nextEnemy.maxHp);
+    setBarrageTriggered(false);
+    setSpecialBarrageTriggered(false);
+    setBeastSwarmTriggered(false);
+    setDefeatedEnemy(null);
+    setPhase('intro');
+    setDialogueIndex(0);
+    setCurrentSpeaker('enemy');
+  }, [currentEnemyIndex, enemyQueue]);
 
   // Handle battle end
   const handleBattleEnd = useCallback((victory: boolean) => {
@@ -539,7 +596,15 @@ export const RPGBattleArena = ({
       transition={{ duration: 0.3 }}
     >
       {/* Battle Background */}
-      <RPGBattleBackground enemyType={enemyType} />
+      <RPGBattleBackground enemyType={currentEnemyType} />
+
+      {/* Enemy Transition Overlay */}
+      <RPGEnemyTransition
+        isActive={phase === 'enemy_transition'}
+        defeatedEnemy={defeatedEnemy}
+        nextEnemy={currentEnemyIndex < enemyQueue.length - 1 ? getEnemyForBattle(enemyQueue[currentEnemyIndex + 1]) : null}
+        onTransitionComplete={handleTransitionComplete}
+      />
 
       {/* Spell Effects Overlay */}
       <RPGSpellEffects
@@ -587,6 +652,13 @@ export const RPGBattleArena = ({
         )}
         {phase === 'asteroid_barrage' && (
           <RPGAsteroidBarrage
+            words={barrageWords}
+            onComplete={handleBarrageComplete}
+            onWordHit={handleBarrageWordHit}
+          />
+        )}
+        {phase === 'beast_swarm' && (
+          <RPGBeastSwarm
             words={barrageWords}
             onComplete={handleBarrageComplete}
             onWordHit={handleBarrageWordHit}

@@ -235,10 +235,10 @@ export const galairTheWickedSorcerer: RPGEnemy = {
   barrageWordCount: 10,
 };
 
-// Dragon Enemy
-export const dalairTheDragon: RPGEnemy = {
-  id: 'dalair',
-  name: 'Dalair the Destroyer',
+// Dragon Enemy - Drake the Dragon (renamed from Dalair)
+export const drakeTheDragon: RPGEnemy = {
+  id: 'drake',
+  name: 'Drake the Dragon',
   type: 'dragon',
   maxHp: 280,
   attack: 35,
@@ -246,33 +246,52 @@ export const dalairTheDragon: RPGEnemy = {
   wordDamageMultiplier: 0.45,
   color: 'from-orange-600 to-red-900',
   dialogueIntro: [
-    "ROOOAAAR! Another mortal dares challenge me?!",
-    "I am DALAIR, the Destroyer of Libraries!",
-    "I have burned a thousand books... yours will be next!",
+    "ROOOAAAR! The goblin was just the warm-up!",
+    "I am DRAKE, the Fire-Breathing Guardian of Books!",
+    "I have incinerated countless readers... you'll be next!",
     "Your words will turn to ASH in my flames!",
+    "Watch my FIREBALLS fly!",
   ],
   dialogueAttack: [
     "*breathes scorching flames*",
-    "FEEL THE BURN!",
+    "BURN, LITTLE READER!",
     "*massive wing gust*",
-    "You cannot escape my fire!",
+    "FIREBALL INCOMING!",
+    "My beasts will swarm you!",
   ],
   dialogueDefeat: [
     "Impossible... my flames... extinguished by words...",
+    "Your reading power... it burns brighter than my fire...",
     "Perhaps... books aren't for burning after all...",
-    "Your knowledge... it's too powerful...",
   ],
   specialAbilities: [
     { id: 'fireball_barrage', name: 'Fireball Barrage', damage: 0, effect: 'fireball_barrage', description: 'Launches fireballs with words!', icon: '🔥' },
+    { id: 'beast_swarm', name: 'Beast Swarm', damage: 0, effect: 'word_barrage', description: 'Summons flying beasts with words!', icon: '🦇' },
     { id: 'breath_attack', name: 'Dragon Breath', damage: 25, effect: 'debuff', description: 'Scorching flames reduce damage', icon: '🐉' },
     { id: 'wing_gust', name: 'Wing Gust', damage: 15, effect: 'silence', description: 'Blows away your words', icon: '💨' },
-    { id: 'word_prison', name: 'Meteor Storm', damage: 0, effect: 'asteroid_barrage', description: 'Summons flaming meteors!', icon: '☄️' },
   ],
   barrageWordCount: 7,
 };
 
+// Mini Flying Beast Enemy (summoned by Drake)
+export const miniBeast: RPGEnemy = {
+  id: 'mini_beast',
+  name: 'Fire Imp',
+  type: 'minion',
+  maxHp: 30,
+  attack: 8,
+  defense: 2,
+  wordDamageMultiplier: 1.0,
+  color: 'from-orange-400 to-red-600',
+  dialogueIntro: ["*screeches*"],
+  dialogueAttack: ["*dives at you*"],
+  dialogueDefeat: ["*poof*"],
+  specialAbilities: [],
+  barrageWordCount: 1,
+};
+
 // Get enemy by type for battle
-export const getEnemyForBattle = (enemyType: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon'): RPGEnemy => {
+export const getEnemyForBattle = (enemyType: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast'): RPGEnemy => {
   switch (enemyType) {
     case 'minion':
       return goblinMinion;
@@ -285,7 +304,9 @@ export const getEnemyForBattle = (enemyType: 'minion' | 'guard' | 'elite' | 'bos
     case 'final_boss':
       return galairTheWickedSorcerer;
     case 'dragon':
-      return dalairTheDragon;
+      return drakeTheDragon;
+    case 'mini_beast':
+      return miniBeast;
     default:
       return goblinMinion;
   }

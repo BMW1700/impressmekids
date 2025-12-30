@@ -5,7 +5,7 @@ type BackgroundTheme = 'castle' | 'dungeon' | 'forest' | 'throne' | 'volcano' | 
 
 interface RPGBattleBackgroundProps {
   theme?: BackgroundTheme;
-  enemyType?: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon';
+  enemyType?: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast';
 }
 
 export const RPGBattleBackground = ({ 
