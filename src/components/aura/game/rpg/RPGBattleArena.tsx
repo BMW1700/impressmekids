@@ -313,7 +313,13 @@ export const RPGBattleArena = ({
   }, [enemy]);
 
   // Handle word result from RPGWordReader
+  // CRITICAL: With batchSize={1}, wordIndex is ALWAYS 0, so we use currentWordIndex directly
   const handleWordResult = useCallback((correct: boolean, spokenWord: string, wordIndex: number) => {
+    // Safety: wordIndex should always be 0 with batchSize={1}
+    if (wordIndex !== 0) {
+      console.warn('[RPGBattle] Unexpected wordIndex:', wordIndex, '- expected 0 with batchSize=1');
+    }
+    
     setWordsRead(prev => prev + 1);
     setCurrentWordResult(correct);
 
@@ -339,7 +345,8 @@ export const RPGBattleArena = ({
         setLongestStreak(newStreak);
       }
 
-      const word = words[currentWordIndex + wordIndex];
+      // Use currentWordIndex directly (not + wordIndex) since batchSize=1
+      const word = words[currentWordIndex];
       const damage = Math.floor(calculateDamage(word?.length || 5, newStreak) * enemy.wordDamageMultiplier);
       setTotalDamage(prev => prev + damage);
       setDamageAmount(damage);
@@ -454,9 +461,12 @@ export const RPGBattleArena = ({
   }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete]);
 
   // Get current batch of words for reading
+  // NOTE: Using batchSize={1} for RPGWordReader to ensure single word at a time
+  // The parent (this component) is the sole source of truth for word progression
   const getCurrentWordBatch = useCallback(() => {
-    const batchSize = 10;
-    return words.slice(currentWordIndex, currentWordIndex + batchSize);
+    // Return single word as array since batchSize={1}
+    if (currentWordIndex >= words.length) return [];
+    return [words[currentWordIndex]];
   }, [words, currentWordIndex]);
 
   return (
@@ -693,7 +703,7 @@ export const RPGBattleArena = ({
                         onResult={handleWordResult}
                         disabled={currentWordResult !== null || !isPlayerTurn}
                         streak={streak}
-                        batchSize={10}
+                        batchSize={1}
                       />
                     )}
 
