@@ -97,16 +97,18 @@ export const RPGWordReader = ({
       soundEffects.streakAchieved();
     }
     
-    onResult(true, word, currentIndexRef.current);
+    // Use the locked index, not currentIndexRef which may have changed
+    onResult(true, word, lockedTargetIndexRef.current);
     
     feedbackTimeoutRef.current = setTimeout(() => {
       setFeedback(null);
-      setSpokenText("");
+      setSpokenText(""); // Clear for next word
       isProcessingRef.current = false;
       
-      const nextIndex = currentIndexRef.current + 1;
+      const nextIndex = lockedTargetIndexRef.current + 1;
       if (nextIndex < currentBatch.length) {
         setCurrentIndex(nextIndex);
+        currentIndexRef.current = nextIndex;
         setRecognitionState('idle');
         // Auto-restart after brief delay
         restartTimeoutRef.current = setTimeout(() => {
@@ -117,6 +119,7 @@ export const RPGWordReader = ({
       } else {
         setRecognitionState('idle');
         setCurrentIndex(0);
+        currentIndexRef.current = 0;
       }
     }, 400);
   }, [streak, currentBatch.length, onResult, cleanup]);
@@ -136,16 +139,18 @@ export const RPGWordReader = ({
       playCorrectPronunciation(word);
     }, 300);
     
-    onResult(false, spoken, currentIndexRef.current);
+    // Use the locked index, not currentIndexRef which may have changed
+    onResult(false, spoken, lockedTargetIndexRef.current);
     
     feedbackTimeoutRef.current = setTimeout(() => {
       setFeedback(null);
-      setSpokenText("");
+      setSpokenText(""); // Clear for next word
       isProcessingRef.current = false;
       
-      const nextIndex = currentIndexRef.current + 1;
+      const nextIndex = lockedTargetIndexRef.current + 1;
       if (nextIndex < currentBatch.length) {
         setCurrentIndex(nextIndex);
+        currentIndexRef.current = nextIndex;
         setRecognitionState('idle');
         restartTimeoutRef.current = setTimeout(() => {
           if (stateRef.current === 'idle') {
@@ -155,6 +160,7 @@ export const RPGWordReader = ({
       } else {
         setRecognitionState('idle');
         setCurrentIndex(0);
+        currentIndexRef.current = 0;
       }
     }, 800);
   }, [currentBatch.length, onResult, cleanup]);
@@ -202,7 +208,12 @@ export const RPGWordReader = ({
       
       const result = event.results[0];
       const transcript = result[0].transcript.trim().toLowerCase();
-      setSpokenText(transcript);
+      
+      // Only update spoken text if we have a locked target word
+      // This prevents showing spoken text from a previous word
+      if (lockedTargetWordRef.current) {
+        setSpokenText(transcript);
+      }
 
       if (result.isFinal) {
         // CRITICAL: Use the LOCKED target word, not current index
