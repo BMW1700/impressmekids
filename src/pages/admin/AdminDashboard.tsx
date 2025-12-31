@@ -50,10 +50,11 @@ export default function AdminDashboard() {
   // Determine admin type: District Admin has no school_id but has district_id
   const isDistrictAdmin = !profile?.school_id && !!profile?.district_id;
   
-  // For data filtering, use district_id for District Admins
+  // For data filtering, always pass district_id for admin filtering
   const { teachers, students, admins, isLoading } = useAdminData(
     selectedSchoolId, 
-    isDistrictAdmin ? profile?.district_id : null
+    profile?.district_id,
+    isDistrictAdmin
   );
   const { schools } = useSchools(profile?.district_id);
 

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export const useAdminData = (schoolId?: string | null, districtId?: string | null) => {
+export const useAdminData = (schoolId?: string | null, districtId?: string | null, isDistrictAdmin?: boolean) => {
   const { data: teachers, isLoading: teachersLoading } = useQuery({
     queryKey: ["admin-teachers", schoolId, districtId],
     queryFn: async () => {
@@ -43,20 +43,39 @@ export const useAdminData = (schoolId?: string | null, districtId?: string | nul
   });
 
   const { data: admins, isLoading: adminsLoading } = useQuery({
-    queryKey: ["admin-admins", schoolId, districtId],
+    queryKey: ["admin-admins", schoolId, districtId, isDistrictAdmin],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_all_admins");
       if (error) throw error;
       
       let filteredData = data;
       
-      // Filter by school if schoolId is provided
-      if (schoolId && filteredData) {
-        filteredData = filteredData.filter((admin: any) => admin.school_id === schoolId);
-      } else if (districtId && filteredData) {
-        // Filter by district if no specific school selected
-        filteredData = filteredData.filter((admin: any) => admin.district_id === districtId);
+      if (isDistrictAdmin && districtId) {
+        // District Admin: Show all admins in their district
+        filteredData = filteredData?.filter((admin: any) => 
+          admin.district_id === districtId
+        );
+      } else if (schoolId && districtId) {
+        // School Admin: Show District Admins of their district + School Admins of their school
+        filteredData = filteredData?.filter((admin: any) => 
+          (admin.district_id === districtId && !admin.school_id) ||  // District Admins
+          admin.school_id === schoolId  // School Admins of their school
+        );
+      } else if (districtId) {
+        // Fallback: filter by district
+        filteredData = filteredData?.filter((admin: any) => 
+          admin.district_id === districtId
+        );
       }
+      
+      // Sort: District Admins first (school_id is null), then School Admins
+      filteredData?.sort((a: any, b: any) => {
+        const aIsDistrictAdmin = !a.school_id;
+        const bIsDistrictAdmin = !b.school_id;
+        if (aIsDistrictAdmin && !bIsDistrictAdmin) return -1;
+        if (!aIsDistrictAdmin && bIsDistrictAdmin) return 1;
+        return 0;
+      });
       
       return filteredData;
     },
