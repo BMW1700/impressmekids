@@ -6776,6 +6776,7 @@ export type Database = {
         Args: never
         Returns: {
           created_at: string
+          district_id: string
           email: string
           full_name: string
           id: string
@@ -6787,6 +6788,7 @@ export type Database = {
         Args: never
         Returns: {
           classroom_count: number
+          district_id: string
           email: string
           full_name: string
           id: string
@@ -6800,6 +6802,7 @@ export type Database = {
         Args: never
         Returns: {
           classroom_count: number
+          district_id: string
           email: string
           full_name: string
           id: string
