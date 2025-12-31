@@ -46,8 +46,16 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState("teachers");
-  const { teachers, students, admins, isLoading } = useAdminData(selectedSchoolId);
-  const { schools } = useSchools();
+  
+  // Determine admin type: District Admin has no school_id but has district_id
+  const isDistrictAdmin = !profile?.school_id && !!profile?.district_id;
+  
+  // For data filtering, use district_id for District Admins
+  const { teachers, students, admins, isLoading } = useAdminData(
+    selectedSchoolId, 
+    isDistrictAdmin ? profile?.district_id : null
+  );
+  const { schools } = useSchools(profile?.district_id);
 
   // Teacher classrooms modal state
   const [teacherClassroomsOpen, setTeacherClassroomsOpen] = useState(false);
@@ -114,7 +122,8 @@ export default function AdminDashboard() {
         return;
       }
 
-      // Set default school from profile
+      // Set default school from profile for School Admins (locked to their school)
+      // District Admins start with null (All Schools view)
       if (profile?.school_id) {
         setSelectedSchoolId(profile.school_id);
       }
@@ -194,7 +203,10 @@ export default function AdminDashboard() {
             <div className="flex flex-wrap gap-2 items-center">
               <AdminSchoolSelector 
                 value={selectedSchoolId} 
-                onChange={setSelectedSchoolId} 
+                onChange={setSelectedSchoolId}
+                isDistrictAdmin={isDistrictAdmin}
+                districtId={profile?.district_id}
+                lockedSchoolName={!isDistrictAdmin ? schools?.find(s => s.id === profile?.school_id)?.name : undefined}
               />
               {selectedSchoolId ? (
                 <Button 
