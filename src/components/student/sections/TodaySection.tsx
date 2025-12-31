@@ -75,7 +75,7 @@ export const TodaySection = ({ studentId }: TodaySectionProps) => {
                       )}
                     </p>
                   </div>
-                  <Link to={`/student/assignments/${assignment.id}`}>
+                  <Link to={`/student/assignment/${assignment.id}`}>
                     <Button>{t("student.today.start")}</Button>
                   </Link>
                 </div>
@@ -123,7 +123,7 @@ export const TodaySection = ({ studentId }: TodaySectionProps) => {
                       )}
                     </p>
                   </div>
-                  <Link to={`/student/assignments/${assignment.id}`}>
+                  <Link to={`/student/assignment/${assignment.id}`}>
                     <Button variant="destructive">{t("student.today.completeNow")}</Button>
                   </Link>
                 </div>
