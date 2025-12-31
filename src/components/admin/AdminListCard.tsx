@@ -31,9 +31,9 @@ export const AdminListCard = ({ admin, onConnectToSchool }: AdminListCardProps) 
               </div>
             )}
           </div>
-          <Badge variant="default" className="gap-1">
+          <Badge variant={admin.school_id ? "secondary" : "default"} className="gap-1">
             <Shield className="h-3 w-3" />
-            Admin
+            {admin.school_id ? "School Admin" : "District Admin"}
           </Badge>
         </div>
       </CardHeader>
