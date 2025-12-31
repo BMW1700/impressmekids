@@ -811,6 +811,7 @@ export const RPGBattleArena = ({
                 isTakingDamage={enemyTakingDamage}
                 damageNumber={damageAmount}
                 showDamage={showDamageNumber}
+                usePremiumSprites={true}
               />
             </motion.div>
 
@@ -839,10 +840,13 @@ export const RPGBattleArena = ({
                 isAttacking={heroAttacking}
                 isTakingDamage={heroTakingDamage}
                 isDefending={currentCommand === 'defend'}
+                currentStreak={streak}
+                usePremiumSprites={true}
               />
               <RPGCharacter
                 character={allyWizard}
                 currentHp={wizardHp}
+                usePremiumSprites={true}
               />
             </motion.div>
           </div>

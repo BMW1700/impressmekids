@@ -875,3 +875,166 @@ All colors MUST be HSL.
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
 }
+
+/* ======================================
+   PREMIUM CHARACTER ANIMATIONS
+   ====================================== */
+
+/* Character breathing animation */
+@keyframes character-breathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-3px) scale(1.02); }
+}
+
+/* Hit reaction with brightness flash */
+@keyframes character-hit {
+  0% { transform: translateX(0); filter: brightness(1); }
+  25% { transform: translateX(-8px); filter: brightness(1.8); }
+  50% { transform: translateX(4px); filter: brightness(1.5); }
+  100% { transform: translateX(0); filter: brightness(1); }
+}
+
+/* Attack forward lunge */
+@keyframes character-attack {
+  0% { transform: translateX(0) rotate(0deg); }
+  40% { transform: translateX(20px) rotate(5deg); }
+  60% { transform: translateX(-5px) rotate(-2deg); }
+  100% { transform: translateX(0) rotate(0deg); }
+}
+
+/* Defeat spin and fade */
+@keyframes character-defeat {
+  0% { transform: rotate(0deg) scale(1); opacity: 1; }
+  100% { transform: rotate(360deg) scale(0); opacity: 0; }
+}
+
+/* Cape wave physics */
+@keyframes cape-wave {
+  0%, 100% { d: path('M85 45 Q95 80 90 120 Q85 100 80 80 Q75 100 70 120 L70 45 Z'); }
+  25% { d: path('M85 45 Q100 75 95 120 Q90 95 85 75 Q80 95 75 120 L70 45 Z'); }
+  50% { d: path('M85 45 Q98 82 92 120 Q87 98 82 78 Q77 98 72 120 L70 45 Z'); }
+  75% { d: path('M85 45 Q92 78 88 120 Q83 102 78 82 Q73 102 68 120 L70 45 Z'); }
+}
+
+/* Core energy pulse */
+@keyframes core-pulse {
+  0%, 100% { opacity: 0.8; filter: drop-shadow(0 0 5px currentColor); }
+  50% { opacity: 1; filter: drop-shadow(0 0 15px currentColor); }
+}
+
+/* Magic orb orbit */
+@keyframes orb-orbit {
+  0% { transform: rotate(0deg) translateX(20px) rotate(0deg); }
+  100% { transform: rotate(360deg) translateX(20px) rotate(-360deg); }
+}
+
+/* Robe sway animation */
+@keyframes robe-sway {
+  0%, 100% { transform: skewX(0deg); }
+  25% { transform: skewX(2deg); }
+  75% { transform: skewX(-2deg); }
+}
+
+/* Floating magic runes */
+@keyframes rune-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.3; }
+  50% { transform: translateY(-10px) rotate(180deg); opacity: 0.7; }
+}
+
+/* Particle burst */
+@keyframes particle-burst {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--tx, 30px), var(--ty, -30px)) scale(0); opacity: 0; }
+}
+
+/* Screen shake effect */
+@keyframes screen-shake {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-3px, -2px); }
+  20% { transform: translate(3px, 2px); }
+  30% { transform: translate(-2px, 3px); }
+  40% { transform: translate(2px, -2px); }
+  50% { transform: translate(-3px, 1px); }
+  60% { transform: translate(3px, -1px); }
+  70% { transform: translate(-1px, 2px); }
+  80% { transform: translate(1px, -3px); }
+  90% { transform: translate(-2px, -1px); }
+}
+
+/* Damage number pop */
+@keyframes damage-pop {
+  0% { transform: scale(1.5) translateY(0); opacity: 1; }
+  100% { transform: scale(1) translateY(-50px); opacity: 0; }
+}
+
+/* Victory sparkle */
+@keyframes victory-sparkle {
+  0% { transform: scale(0) rotate(0deg); opacity: 1; }
+  50% { transform: scale(1.2) rotate(180deg); opacity: 1; }
+  100% { transform: scale(0) rotate(360deg); opacity: 0; }
+}
+
+/* Streak fire glow */
+@keyframes streak-fire {
+  0%, 100% { filter: drop-shadow(0 0 8px hsl(37 91% 55%)); }
+  50% { filter: drop-shadow(0 0 20px hsl(37 91% 55%)) drop-shadow(0 0 30px hsl(24 95% 53%)); }
+}
+
+/* Eye glow pulse */
+@keyframes eye-glow {
+  0%, 100% { filter: drop-shadow(0 0 4px currentColor); opacity: 0.8; }
+  50% { filter: drop-shadow(0 0 10px currentColor); opacity: 1; }
+}
+
+/* Animation utility classes */
+.animate-breathe {
+  animation: character-breathe 1.5s ease-in-out infinite;
+}
+
+.animate-hit {
+  animation: character-hit 0.3s ease-out;
+}
+
+.animate-attack {
+  animation: character-attack 0.4s ease-out;
+}
+
+.animate-defeat {
+  animation: character-defeat 0.8s ease-out forwards;
+}
+
+.animate-cape-wave {
+  animation: cape-wave 1.2s ease-in-out infinite;
+}
+
+.animate-core-pulse {
+  animation: core-pulse 2s ease-in-out infinite;
+}
+
+.animate-orb-orbit {
+  animation: orb-orbit 3s linear infinite;
+}
+
+.animate-robe-sway {
+  animation: robe-sway 3s ease-in-out infinite;
+}
+
+.animate-rune-float {
+  animation: rune-float 4s ease-in-out infinite;
+}
+
+.animate-screen-shake {
+  animation: screen-shake 0.3s ease-out;
+}
+
+.animate-damage-pop {
+  animation: damage-pop 0.8s ease-out forwards;
+}
+
+.animate-victory-sparkle {
+  animation: victory-sparkle 0.6s ease-out forwards;
+}
+
+.animate-streak-fire {
+  animation: streak-fire 0.5s ease-in-out infinite;
+}
