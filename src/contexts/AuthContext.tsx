@@ -8,6 +8,7 @@ interface UserProfile {
   role: string | null;
   is_verified: boolean;
   school_id: string | null;
+  district_id: string | null;
 }
 
 interface AuthContextType {
@@ -86,10 +87,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!error && data && data.length > 0) {
         const profileData = data[0];
         
-        // Fetch verification status separately (profile table)
+        // Fetch verification status and district_id separately (profile table)
         const { data: verificationData } = await supabase
           .from('profiles')
-          .select('is_verified, school_id')
+          .select('is_verified, school_id, district_id')
           .eq('id', userId)
           .single();
         
@@ -99,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role: profileData.role,
           is_verified: verificationData?.is_verified ?? false,
           school_id: verificationData?.school_id ?? null,
+          district_id: verificationData?.district_id ?? null,
         });
       } else {
         setProfile(null);

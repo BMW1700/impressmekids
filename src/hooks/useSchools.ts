@@ -11,16 +11,23 @@ export interface School {
   updated_at: string;
 }
 
-export const useSchools = () => {
+export const useSchools = (districtId?: string | null) => {
   const queryClient = useQueryClient();
 
   const { data: schools, isLoading } = useQuery({
-    queryKey: ["schools"],
+    queryKey: ["schools", districtId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("schools")
         .select("*")
         .order("name");
+      
+      // Filter by district if provided
+      if (districtId) {
+        query = query.eq("district_id", districtId);
+      }
+      
+      const { data, error } = await query;
       
       if (error) throw error;
       return data as School[];

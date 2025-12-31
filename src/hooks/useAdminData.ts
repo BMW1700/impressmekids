@@ -1,43 +1,64 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export const useAdminData = (schoolId?: string | null) => {
+export const useAdminData = (schoolId?: string | null, districtId?: string | null) => {
   const { data: teachers, isLoading: teachersLoading } = useQuery({
-    queryKey: ["admin-teachers", schoolId],
+    queryKey: ["admin-teachers", schoolId, districtId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_all_teachers");
       if (error) throw error;
+      
+      let filteredData = data;
+      
       // Filter by school if schoolId is provided
-      if (schoolId && data) {
-        return data.filter((teacher: any) => teacher.school_id === schoolId);
+      if (schoolId && filteredData) {
+        filteredData = filteredData.filter((teacher: any) => teacher.school_id === schoolId);
+      } else if (districtId && filteredData) {
+        // Filter by district if no specific school selected
+        filteredData = filteredData.filter((teacher: any) => teacher.district_id === districtId);
       }
-      return data;
+      
+      return filteredData;
     },
   });
 
   const { data: students, isLoading: studentsLoading } = useQuery({
-    queryKey: ["admin-students", schoolId],
+    queryKey: ["admin-students", schoolId, districtId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_all_students");
       if (error) throw error;
+      
+      let filteredData = data;
+      
       // Filter by school if schoolId is provided
-      if (schoolId && data) {
-        return data.filter((student: any) => student.school_id === schoolId);
+      if (schoolId && filteredData) {
+        filteredData = filteredData.filter((student: any) => student.school_id === schoolId);
+      } else if (districtId && filteredData) {
+        // Filter by district if no specific school selected
+        filteredData = filteredData.filter((student: any) => student.district_id === districtId);
       }
-      return data;
+      
+      return filteredData;
     },
   });
 
   const { data: admins, isLoading: adminsLoading } = useQuery({
-    queryKey: ["admin-admins", schoolId],
+    queryKey: ["admin-admins", schoolId, districtId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_all_admins");
       if (error) throw error;
+      
+      let filteredData = data;
+      
       // Filter by school if schoolId is provided
-      if (schoolId && data) {
-        return data.filter((admin: any) => admin.school_id === schoolId);
+      if (schoolId && filteredData) {
+        filteredData = filteredData.filter((admin: any) => admin.school_id === schoolId);
+      } else if (districtId && filteredData) {
+        // Filter by district if no specific school selected
+        filteredData = filteredData.filter((admin: any) => admin.district_id === districtId);
       }
-      return data;
+      
+      return filteredData;
     },
   });
 
