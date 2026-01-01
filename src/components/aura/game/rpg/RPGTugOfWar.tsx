@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Skull, Coins, Star, Timer, Volume2 } from "lucide-react";
+import { Trophy, Skull, Coins, Star, Timer, Volume2, Pause, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { TugOfWarBackground } from "./TugOfWarBackground";
@@ -12,6 +12,8 @@ import { SirValor } from "../characters/SirValor";
 import { Elara } from "../characters/Elara";
 import { GoblinGuard } from "../characters/GoblinGuard";
 
+const soundEffects = new SoundEffects();
+
 interface RPGTugOfWarProps {
   words: string[];
   heroName?: string;
@@ -19,8 +21,6 @@ interface RPGTugOfWarProps {
   onComplete: (victory: boolean, stats: { wordsRead: number; correctWords: number; incorrectWords: number }) => void;
   onWordResult?: (word: string, correct: boolean) => void;
 }
-
-const soundEffects = new SoundEffects();
 
 interface FloatingReward {
   id: number;
@@ -63,6 +63,9 @@ export const RPGTugOfWar = ({
   
   // Auto-pull timer
   const [autoPullTimer, setAutoPullTimer] = useState(AUTO_PULL_SECONDS);
+  
+  // Pause state
+  const [isPaused, setIsPaused] = useState(false);
   
   // Rewards
   const [floatingRewards, setFloatingRewards] = useState<FloatingReward[]>([]);
@@ -128,9 +131,9 @@ export const RPGTugOfWar = ({
     }, 800);
   }, [gameOver]);
 
-  // Auto-pull timer - enemies pull every 20 seconds
+  // Auto-pull timer - enemies pull every 20 seconds (pauses when game is paused)
   useEffect(() => {
-    if (gameOver || !selectedCharacter) return;
+    if (gameOver || !selectedCharacter || isPaused) return;
     
     const interval = setInterval(() => {
       setAutoPullTimer(prev => {
@@ -143,7 +146,7 @@ export const RPGTugOfWar = ({
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [gameOver, selectedCharacter, handleEnemyAutoPull]);
+  }, [gameOver, selectedCharacter, handleEnemyAutoPull, isPaused]);
 
   // Handle word result from RPGWordReader
   const handleWordResult = useCallback((correct: boolean, spokenWord: string, wordIndex: number) => {
@@ -160,8 +163,7 @@ export const RPGTugOfWar = ({
       soundEffects.correctWord();
       soundEffects.comboSuccess();
       
-      // Reset auto-pull timer on correct word
-      setAutoPullTimer(AUTO_PULL_SECONDS);
+      // NOTE: Timer continues from where it was, does NOT reset on correct word
       
       // Award gold and XP
       const goldReward = 5;
@@ -211,6 +213,15 @@ export const RPGTugOfWar = ({
       window.speechSynthesis.speak(utterance);
     }
   }, [currentWord]);
+
+  // Pause/Resume handlers
+  const handlePause = useCallback(() => {
+    setIsPaused(true);
+  }, []);
+
+  const handleResume = useCallback(() => {
+    setIsPaused(false);
+  }, []);
 
   // Calculate visual positions
   const progressPercent = ((ropePosition + WIN_THRESHOLD) / (WIN_THRESHOLD * 2)) * 100;
@@ -413,9 +424,46 @@ export const RPGTugOfWar = ({
       {/* Word Display & Controls - Uses RPGWordReader for proper matching */}
       {!gameOver && (
         <div className="absolute bottom-0 left-0 right-0 z-20 p-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent">
+          {/* Paused Overlay */}
+          <AnimatePresence>
+            {isPaused && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center z-30"
+              >
+                <div className="text-center">
+                  <Pause className="h-12 w-12 text-yellow-400 mx-auto mb-2" />
+                  <h3 className="text-2xl font-bold text-white mb-2">PAUSED</h3>
+                  <p className="text-white/70 mb-4">Timer frozen at {autoPullTimer}s</p>
+                  
+                  {/* Large Hear Word button when paused */}
+                  <Button
+                    size="lg"
+                    onClick={pronounceWord}
+                    className="bg-blue-600 hover:bg-blue-700 text-white mb-4"
+                  >
+                    <Volume2 className="h-5 w-5 mr-2" />
+                    Hear "{currentWord}"
+                  </Button>
+                  
+                  <Button
+                    size="lg"
+                    onClick={handleResume}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <Play className="h-5 w-5 mr-2" />
+                    Resume
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Feedback */}
           <AnimatePresence>
-            {feedback && (
+            {feedback && !isPaused && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.8, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -429,8 +477,17 @@ export const RPGTugOfWar = ({
             )}
           </AnimatePresence>
 
-          {/* Hear Word Button */}
-          <div className="flex justify-center mb-2">
+          {/* Pause Button & Hear Word */}
+          <div className="flex justify-center gap-3 mb-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handlePause}
+              className="bg-yellow-500/20 border-yellow-400/50 text-yellow-200 hover:bg-yellow-500/30"
+            >
+              <Pause className="h-4 w-4 mr-1" />
+              Pause
+            </Button>
             <Button
               size="sm"
               variant="outline"
@@ -443,10 +500,11 @@ export const RPGTugOfWar = ({
           </div>
 
           {/* RPGWordReader - handles speech recognition with proper matching */}
+          {/* Pass isPaused to control mic - when paused, RPGWordReader won't listen */}
           <RPGWordReader
             words={[currentWord]}
             onResult={handleWordResult}
-            disabled={gameOver}
+            disabled={gameOver || isPaused}
             streak={correctWords}
             batchSize={1}
             enableEchoRetry={true}
