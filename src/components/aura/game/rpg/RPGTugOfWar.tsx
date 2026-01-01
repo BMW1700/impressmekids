@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Flag, Users, Trophy, Skull } from "lucide-react";
+import { Flag, Users, Trophy, Skull, Coins, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 
@@ -13,6 +13,14 @@ interface RPGTugOfWarProps {
 }
 
 const soundEffects = new SoundEffects();
+
+interface FloatingReward {
+  id: number;
+  gold: number;
+  xp: number;
+  x: number;
+  y: number;
+}
 
 export const RPGTugOfWar = ({
   words,
@@ -32,6 +40,12 @@ export const RPGTugOfWar = ({
   const [gameOver, setGameOver] = useState(false);
   const [victory, setVictory] = useState(false);
   const [pullingAnimation, setPullingAnimation] = useState<'hero' | 'enemy' | null>(null);
+  
+  // Rewards
+  const [floatingRewards, setFloatingRewards] = useState<FloatingReward[]>([]);
+  const [totalGold, setTotalGold] = useState(0);
+  const [totalXp, setTotalXp] = useState(0);
+  const rewardIdRef = useRef(0);
 
   const recognitionRef = useRef<any>(null);
 
@@ -81,21 +95,51 @@ export const RPGTugOfWar = ({
     }
   }, [ropePosition, gameOver, wordsRead, correctWords, incorrectWords, onComplete]);
 
+  const showFloatingReward = useCallback((gold: number, xp: number) => {
+    const id = rewardIdRef.current++;
+    // Position near the center flag
+    const x = 45 + Math.random() * 10;
+    const y = 40 + Math.random() * 10;
+    setFloatingRewards(prev => [...prev, { id, gold, xp, x, y }]);
+    setTimeout(() => {
+      setFloatingRewards(prev => prev.filter(r => r.id !== id));
+    }, 1500);
+  }, []);
+
   const handleWordResult = useCallback((correct: boolean) => {
     setWordsRead(prev => prev + 1);
+    const newPosition = correct 
+      ? Math.min(ropePosition + 1, WIN_THRESHOLD)
+      : Math.max(ropePosition - 2, LOSE_THRESHOLD);
     
     if (correct) {
       setCorrectWords(prev => prev + 1);
       setFeedback('correct');
       setPullingAnimation('hero');
-      setRopePosition(prev => Math.min(prev + 1, WIN_THRESHOLD));
+      setRopePosition(newPosition);
       soundEffects.correctWord();
       soundEffects.comboSuccess();
+      
+      // Award gold and XP on correct words
+      const goldReward = 5;
+      const xpReward = 2;
+      setTotalGold(prev => prev + goldReward);
+      setTotalXp(prev => prev + xpReward);
+      showFloatingReward(goldReward, xpReward);
+      
+      // Bonus at milestones (3, 6, 9)
+      if (newPosition === 3 || newPosition === 6 || newPosition === 9) {
+        const bonusGold = 10;
+        const bonusXp = 5;
+        setTotalGold(prev => prev + bonusGold);
+        setTotalXp(prev => prev + bonusXp);
+        setTimeout(() => showFloatingReward(bonusGold, bonusXp), 300);
+      }
     } else {
       setIncorrectWords(prev => prev + 1);
       setFeedback('incorrect');
       setPullingAnimation('enemy');
-      setRopePosition(prev => Math.max(prev - 2, LOSE_THRESHOLD));
+      setRopePosition(newPosition);
       soundEffects.incorrectWord();
       soundEffects.rockCrumble();
     }
@@ -110,7 +154,7 @@ export const RPGTugOfWar = ({
         setCurrentWordIndex(prev => prev + 1);
       }
     }, 800);
-  }, [currentWord, currentWordIndex, words.length, onWordResult]);
+  }, [currentWord, currentWordIndex, words.length, onWordResult, ropePosition, showFloatingReward]);
 
   const startListening = useCallback(() => {
     if (!recognitionRef.current || isListening || gameOver) return;
@@ -160,6 +204,26 @@ export const RPGTugOfWar = ({
         <p className="text-amber-200 text-sm">Read words correctly to pull the rope!</p>
       </div>
 
+      {/* Rewards Display */}
+      <div className="flex justify-center gap-4 mb-2">
+        <motion.div 
+          className="flex items-center gap-1 bg-yellow-500/30 backdrop-blur-sm px-3 py-1 rounded-full"
+          animate={{ scale: totalGold > 0 ? [1, 1.1, 1] : 1 }}
+          key={totalGold}
+        >
+          <Coins className="h-4 w-4 text-yellow-400" />
+          <span className="text-yellow-300 font-bold">{totalGold}</span>
+        </motion.div>
+        <motion.div 
+          className="flex items-center gap-1 bg-purple-500/30 backdrop-blur-sm px-3 py-1 rounded-full"
+          animate={{ scale: totalXp > 0 ? [1, 1.1, 1] : 1 }}
+          key={totalXp}
+        >
+          <Star className="h-4 w-4 text-purple-400" />
+          <span className="text-purple-300 font-bold">{totalXp} XP</span>
+        </motion.div>
+      </div>
+
       {/* Score Display */}
       <div className="flex justify-between px-8 mb-4">
         <div className="text-center">
@@ -175,6 +239,28 @@ export const RPGTugOfWar = ({
           <div className="text-white/70 text-sm">Pull: {Math.max(0, ropePosition)}</div>
         </div>
       </div>
+
+      {/* Floating Rewards */}
+      <AnimatePresence>
+        {floatingRewards.map(reward => (
+          <motion.div
+            key={reward.id}
+            className="absolute pointer-events-none z-30 flex flex-col items-center"
+            style={{ left: `${reward.x}%`, top: `${reward.y}%` }}
+            initial={{ opacity: 0, y: 0, scale: 0.5 }}
+            animate={{ opacity: 1, y: -60, scale: 1 }}
+            exit={{ opacity: 0, y: -100 }}
+            transition={{ duration: 1.2 }}
+          >
+            <div className="flex items-center gap-1 bg-yellow-500/90 px-2 py-1 rounded-full text-sm font-bold text-yellow-900 shadow-lg">
+              <Coins className="h-3 w-3" /> +{reward.gold}
+            </div>
+            <div className="flex items-center gap-1 bg-purple-500/90 px-2 py-1 rounded-full text-sm font-bold text-purple-100 mt-1 shadow-lg">
+              <Star className="h-3 w-3" /> +{reward.xp} XP
+            </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
 
       {/* Arena */}
       <div className="flex-1 relative overflow-hidden">
