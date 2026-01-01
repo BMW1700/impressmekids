@@ -317,17 +317,12 @@ export const RPGTugOfWar = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
-      {/* V2 BADGE - proves you're in the new Tug of War */}
-      <div className="absolute top-2 left-2 z-50 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded shadow-lg">
-        Tug of War v2 • Kids + Goblins + Rope
-      </div>
-      
       {/* Background */}
       <TugOfWarBackground />
 
       {/* Header */}
       <div className="relative z-10 p-4 text-center">
-        <h2 className="text-3xl font-black text-white drop-shadow-lg">
+        <h2 className="text-3xl font-black text-white drop-shadow-lg" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
           ⚔️ TUG OF WAR ⚔️
         </h2>
         <p className="text-white/90 text-sm drop-shadow">Read words to pull the rope!</p>
@@ -373,7 +368,7 @@ export const RPGTugOfWar = ({
           <span className="text-white font-bold drop-shadow">Score: {correctWords}/{wordsRead}</span>
           <span className="text-green-400 font-bold drop-shadow">{heroName}</span>
         </div>
-        <div className="h-4 bg-black/30 rounded-full overflow-hidden backdrop-blur-sm">
+        <div className="h-4 bg-black/30 rounded-full overflow-hidden backdrop-blur-sm relative">
           <motion.div
             className="h-full bg-gradient-to-r from-red-500 via-yellow-500 to-green-500"
             animate={{ width: `${progressPercent}%` }}
@@ -406,74 +401,88 @@ export const RPGTugOfWar = ({
         ))}
       </AnimatePresence>
 
-      {/* Teams & Arena */}
-      <div className="relative z-10 flex-1 flex items-end justify-between px-4 pb-32">
-        {/* Enemy Team (Left) */}
-        <div className="flex flex-col items-center">
-          <motion.div 
-            className="flex items-end gap-1"
-            animate={pullingAnimation === 'enemy' ? { x: [-5, 0] } : pullingAnimation === 'hero' ? { x: [5, 0] } : {}}
-          >
-            {/* Small goblins */}
-            {[0, 1, 2].map(i => (
-              <div key={i} className="scale-50 origin-bottom">
-                <GoblinGuard 
-                  state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
-                  healthPercent={100}
-                  size="small"
-                />
-              </div>
-            ))}
-            {/* Leader goblin */}
+      {/* Rope - positioned in the middle where teams connect */}
+      <TugOfWarRope 
+        ropePosition={ropePosition}
+        maxPosition={WIN_THRESHOLD}
+        isPulling={pullingAnimation}
+      />
+
+      {/* Teams Container - positioned at rope level */}
+      <div className="absolute left-0 right-0 z-10 flex items-end justify-between px-8" style={{ bottom: '120px' }}>
+        {/* Enemy Team (Left) - Goblins pulling rope */}
+        <motion.div 
+          className="flex flex-col items-center"
+          animate={pullingAnimation === 'enemy' ? { x: [-8, 0] } : pullingAnimation === 'hero' ? { x: [8, 0] } : {}}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="flex items-end gap-0">
+            {/* Goblins in a row - all facing right toward rope */}
+            <div className="scale-50 origin-bottom-right -mr-2">
+              <GoblinGuard 
+                state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
+                healthPercent={100}
+                size="small"
+              />
+            </div>
+            <div className="scale-55 origin-bottom -mr-1">
+              <GoblinGuard 
+                state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
+                healthPercent={100}
+                size="small"
+              />
+            </div>
+            <div className="scale-60 origin-bottom -mr-1">
+              <GoblinGuard 
+                state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
+                healthPercent={100}
+                size="small"
+              />
+            </div>
+            {/* Leader goblin - largest */}
             <GoblinGuard 
               state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
               healthPercent={100}
               size="medium"
-              flipX
             />
-          </motion.div>
-          <div className="text-red-600 font-bold text-sm mt-2 bg-white/80 px-2 py-0.5 rounded">
+          </div>
+          <div className="text-red-600 font-bold text-sm mt-1 bg-white/90 px-3 py-1 rounded-full shadow">
             {enemyName}
           </div>
-        </div>
+        </motion.div>
 
-        {/* Hero Team (Right) */}
-        <div className="flex flex-col items-center">
-          <motion.div 
-            className="flex items-end gap-1"
-            animate={pullingAnimation === 'hero' ? { x: [5, 0] } : pullingAnimation === 'enemy' ? { x: [-5, 0] } : {}}
-          >
-            {/* Leader character */}
+        {/* Hero Team (Right) - Leader + Kids pulling rope */}
+        <motion.div 
+          className="flex flex-col items-center"
+          animate={pullingAnimation === 'hero' ? { x: [8, 0] } : pullingAnimation === 'enemy' ? { x: [-8, 0] } : {}}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="flex items-end gap-0">
+            {/* Leader character - facing left toward rope */}
             <LeaderComponent 
               state={leaderState as any}
               healthPercent={100}
               size="medium"
               flipX
             />
-            {/* Kids */}
+            {/* Kids in a row - facing left toward rope */}
             {[0, 1, 2].map(i => (
-              <TugOfWarKid 
-                key={i}
-                index={i}
-                isPulling={pullingAnimation === 'hero'}
-                isStraining={pullingAnimation === 'enemy'}
-                side="hero"
-                size="small"
-              />
+              <div key={i} className="-ml-1">
+                <TugOfWarKid 
+                  index={i}
+                  isPulling={pullingAnimation === 'hero'}
+                  isStraining={pullingAnimation === 'enemy'}
+                  side="hero"
+                  size="small"
+                />
+              </div>
             ))}
-          </motion.div>
-          <div className="text-blue-600 font-bold text-sm mt-2 bg-white/80 px-2 py-0.5 rounded">
+          </div>
+          <div className="text-blue-600 font-bold text-sm mt-1 bg-white/90 px-3 py-1 rounded-full shadow">
             {heroName}'s Team
           </div>
-        </div>
+        </motion.div>
       </div>
-
-      {/* Rope */}
-      <TugOfWarRope 
-        ropePosition={ropePosition}
-        maxPosition={WIN_THRESHOLD}
-        isPulling={pullingAnimation}
-      />
 
       {/* Word Display & Controls */}
       {!gameOver && (
