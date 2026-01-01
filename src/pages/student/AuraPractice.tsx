@@ -7,6 +7,7 @@ import { CampaignModeEntry } from "@/components/aura/game/CampaignModeEntry";
 import { RPGBattleArena } from "@/components/aura/game/rpg/RPGBattleArena";
 import { RPGWorldMap, type WorldProgress } from "@/components/aura/game/rpg/RPGWorldMap";
 import { RPGLevelSelect, type CampaignLevel } from "@/components/aura/game/rpg/RPGLevelSelect";
+import { type BattleMode } from "@/components/aura/game/rpg/RPGBattleModeSelector";
 import { BookRescueCelebration } from "@/components/aura/game/BookRescueCelebration";
 import { campaignWorlds, type CampaignWorld } from "@/lib/campaignData";
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
@@ -410,7 +411,7 @@ const AuraPractice = () => {
       };
     });
 
-    const handleLevelSelect = async (level: CampaignLevel) => {
+    const handleLevelSelect = async (level: CampaignLevel, battleMode: BattleMode) => {
       setSelectedLevel(level);
       setRpgStory(level.story);
       
@@ -423,6 +424,9 @@ const AuraPractice = () => {
         boss: 'boss',
       };
       setRpgEnemyType(enemyMap[primaryEnemy] || 'minion');
+      
+      // TODO: Pass battleMode to RPGBattleArena for mode-specific gameplay
+      console.log('[AuraPractice] Selected battle mode:', battleMode);
       
       // Start battle session in database
       try {
