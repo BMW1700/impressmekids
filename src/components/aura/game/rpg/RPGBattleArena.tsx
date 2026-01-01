@@ -56,10 +56,13 @@ type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fi
 type InventoryKey = 'health_potion' | 'magic_potion';
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
 
+export type BattleModeType = 'classic' | 'tug_of_war' | 'balloon';
+
 interface RPGBattleArenaProps {
   story: CuratedStory;
   enemyType: EnemyType;
   studentId: string;
+  battleMode?: BattleModeType;
   onBack: () => void;
   onComplete: (victory: boolean, stats: BattleStats) => void;
 }
@@ -76,6 +79,7 @@ export const RPGBattleArena = ({
   story,
   enemyType,
   studentId,
+  battleMode = 'classic',
   onBack,
   onComplete,
 }: RPGBattleArenaProps) => {
@@ -205,6 +209,19 @@ export const RPGBattleArena = ({
   useEffect(() => {
     setWords(storyWords);
   }, [storyWords]);
+
+  // Handle non-classic battle modes - skip intro and go directly to the selected mode
+  useEffect(() => {
+    if (battleMode === 'tug_of_war' && storyWords.length > 0) {
+      console.log('[RPGBattle] Starting in Tug of War mode with', storyWords.length, 'words');
+      setBarrageWords(storyWords);
+      setPhase('tug_of_war');
+    } else if (battleMode === 'balloon' && storyWords.length > 0) {
+      console.log('[RPGBattle] Starting in Balloon Bonanza mode with', storyWords.length, 'words');
+      setBarrageWords(storyWords);
+      setPhase('balloon_battle');
+    }
+  }, [battleMode, storyWords]);
 
   // Check for barrage triggers based on HP thresholds
   useEffect(() => {
@@ -459,9 +476,21 @@ export const RPGBattleArena = ({
   
   // Handle Tug of War complete
   const handleTugOfWarComplete = useCallback((victory: boolean, stats: { wordsRead: number; correctWords: number; incorrectWords: number }) => {
-    console.log('[RPGBattle] Tug of War complete:', { victory, stats });
+    console.log('[RPGBattle] Tug of War complete:', { victory, stats, battleMode });
     setWordsRead(prev => prev + stats.wordsRead);
     setCorrectWords(prev => prev + stats.correctWords);
+    
+    // If this is the main battle mode (not a mini-game), trigger full victory/defeat
+    if (battleMode === 'tug_of_war') {
+      if (victory) {
+        battleSounds.celebrationSound();
+        setTotalDamage(stats.correctWords * 5);
+      }
+      setPhase(victory ? 'victory' : 'defeat');
+      return;
+    }
+    
+    // Mini-game behavior
     if (victory) {
       const bonusDamage = Math.floor(stats.correctWords * 5);
       battleSounds.celebrationSound();
@@ -472,13 +501,25 @@ export const RPGBattleArena = ({
     }
     setBatchStartIndex(prev => prev + barrageWords.length);
     returnToReading();
-  }, [barrageWords.length, returnToReading]);
+  }, [barrageWords.length, returnToReading, battleMode]);
   
   // Handle Balloon Battle complete
   const handleBalloonBattleComplete = useCallback((victory: boolean, stats: { wordsRead: number; correctWords: number; balloonsLost: number }) => {
-    console.log('[RPGBattle] Balloon Battle complete:', { victory, stats });
+    console.log('[RPGBattle] Balloon Battle complete:', { victory, stats, battleMode });
     setWordsRead(prev => prev + stats.wordsRead);
     setCorrectWords(prev => prev + stats.correctWords);
+    
+    // If this is the main battle mode (not a mini-game), trigger full victory/defeat
+    if (battleMode === 'balloon') {
+      if (victory) {
+        battleSounds.celebrationSound();
+        setTotalDamage(stats.correctWords * 3 + (stats.balloonsLost === 0 ? 50 : 0));
+      }
+      setPhase(victory ? 'victory' : 'defeat');
+      return;
+    }
+    
+    // Mini-game behavior
     if (victory) {
       const bonusDamage = Math.floor(stats.correctWords * 3) + (stats.balloonsLost === 0 ? 50 : 0);
       battleSounds.celebrationSound();
@@ -489,7 +530,7 @@ export const RPGBattleArena = ({
     }
     setBatchStartIndex(prev => prev + barrageWords.length);
     returnToReading();
-  }, [barrageWords.length, returnToReading]);
+  }, [barrageWords.length, returnToReading, battleMode]);
   
   // Handle mini-game damage
   const handleMiniGameDamage = useCallback((damage: number) => {

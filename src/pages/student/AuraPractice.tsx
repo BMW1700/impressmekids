@@ -98,6 +98,7 @@ const AuraPractice = () => {
   const [selectedLevel, setSelectedLevel] = useState<CampaignLevel | null>(null);
   const [rpgStory, setRpgStory] = useState<Story | null>(null);
   const [rpgEnemyType, setRpgEnemyType] = useState<EnemyType>('minion');
+  const [selectedBattleMode, setSelectedBattleMode] = useState<BattleMode>('classic');
   const [activeTab, setActiveTab] = useState<string>(searchParams.get('tab') || 'stories');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(searchParams.get('category'));
   
@@ -334,10 +335,12 @@ const AuraPractice = () => {
             story={rpgStory}
             enemyType={rpgEnemyType}
             studentId={user.id}
+            battleMode={selectedBattleMode}
             onBack={() => {
               setRpgView('level_select');
               setRpgStory(null);
               setCurrentBattleId(null);
+              setSelectedBattleMode('classic'); // Reset mode on back
             }}
             onComplete={handleBattleComplete}
           />
@@ -414,6 +417,7 @@ const AuraPractice = () => {
     const handleLevelSelect = async (level: CampaignLevel, battleMode: BattleMode) => {
       setSelectedLevel(level);
       setRpgStory(level.story);
+      setSelectedBattleMode(battleMode); // Save the selected battle mode
       
       // Set enemy type based on level
       const primaryEnemy = level.enemies[0];
@@ -425,7 +429,6 @@ const AuraPractice = () => {
       };
       setRpgEnemyType(enemyMap[primaryEnemy] || 'minion');
       
-      // TODO: Pass battleMode to RPGBattleArena for mode-specific gameplay
       console.log('[AuraPractice] Selected battle mode:', battleMode);
       
       // Start battle session in database
