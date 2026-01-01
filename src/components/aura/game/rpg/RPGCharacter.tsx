@@ -5,6 +5,10 @@ import { RPGCharacterSprite } from "./RPGCharacterSprite";
 import { GoblinGuard, GoblinState } from "../characters/GoblinGuard";
 import { SirValor, KnightState } from "../characters/SirValor";
 import { Elara, WizardState } from "../characters/Elara";
+import { DrakeTheDragon, DragonState } from "../characters/DrakeTheDragon";
+import { IceGolem, IceGolemState } from "../characters/IceGolem";
+import { ShadowWraith, WraithState } from "../characters/ShadowWraith";
+import { StoneGuardian, GuardianState } from "../characters/StoneGuardian";
 
 interface RPGCharacterProps {
   character: RPGCharacterType | RPGEnemy;
@@ -85,27 +89,61 @@ export const RPGCharacter = ({
 
   // Render premium sprite based on type
   const renderPremiumSprite = () => {
+    const commonState = currentHp <= 0 ? 'defeated' : isTakingDamage ? 'hit' : isAttacking ? 'attacking' : 'idle';
+    
     if (isEnemy) {
-      // For enemies, use GoblinGuard for goblin types
-      if (spriteType === 'goblin' || spriteType === 'boss') {
+      if (spriteType === 'dragon') {
         return (
-          <GoblinGuard
-            state={getGoblinState(isAttacking, isTakingDamage, currentHp, character.maxHp)}
+          <DrakeTheDragon
+            state={commonState as DragonState}
             healthPercent={hpPercentage}
-            showDamage={showDamage ? damageNumber : undefined}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
             size="medium"
           />
         );
       }
-      // Fall back to old sprites for other enemy types for now
+      if (spriteType === 'ice_golem') {
+        return (
+          <IceGolem
+            state={commonState as IceGolemState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      if (spriteType === 'shadow_wraith') {
+        return (
+          <ShadowWraith
+            state={commonState as WraithState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      if (spriteType === 'stone_guardian') {
+        return (
+          <StoneGuardian
+            state={commonState as GuardianState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      // Goblin types
       return (
-        <RPGCharacterSprite
-          type={spriteType}
-          isEnemy={isEnemy}
-          isAttacking={isAttacking}
-          isTakingDamage={isTakingDamage}
-          isDefending={isDefending}
-          size="lg"
+        <GoblinGuard
+          state={getGoblinState(isAttacking, isTakingDamage, currentHp, character.maxHp)}
+          healthPercent={hpPercentage}
+          currentHp={currentHp}
+          maxHp={character.maxHp}
+          size="medium"
         />
       );
     }
@@ -116,7 +154,8 @@ export const RPGCharacter = ({
         <SirValor
           state={getKnightState(isAttacking, isTakingDamage, isDefending, currentHp, character.maxHp)}
           healthPercent={hpPercentage}
-          showDamage={showDamage ? damageNumber : undefined}
+          currentHp={currentHp}
+          maxHp={character.maxHp}
           size="medium"
           currentStreak={currentStreak}
         />
@@ -128,7 +167,8 @@ export const RPGCharacter = ({
         <Elara
           state={getWizardState(isAttacking, isTakingDamage, currentHp, character.maxHp)}
           healthPercent={hpPercentage}
-          showDamage={showDamage ? damageNumber : undefined}
+          currentHp={currentHp}
+          maxHp={character.maxHp}
           size="medium"
         />
       );
