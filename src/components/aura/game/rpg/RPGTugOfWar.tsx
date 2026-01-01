@@ -7,7 +7,6 @@ import { TugOfWarBackground } from "./TugOfWarBackground";
 import { TugOfWarRope } from "./TugOfWarRope";
 import { TugOfWarKid } from "./TugOfWarKid";
 import { TugOfWarCharacterSelect } from "./TugOfWarCharacterSelect";
-import { TugOfWarGrip } from "./TugOfWarGrip";
 import { SirValor } from "../characters/SirValor";
 import { Elara } from "../characters/Elara";
 import { GoblinGuard } from "../characters/GoblinGuard";
@@ -319,10 +318,6 @@ export const RPGTugOfWar = ({
   const LeaderComponent = selectedCharacter === 'valor' ? SirValor : Elara;
   const leaderState = pullingAnimation === 'hero' ? 'pulling' : pullingAnimation === 'enemy' ? 'hit' : 'idle';
 
-  // Skin colors for grip overlays
-  const goblinSkinColors = ['#4a5d23', '#3d4f1c', '#526628', '#445520'];
-  const kidSkinColors = ['#f5d6c6', '#e8c4a0', '#d4a574', '#c68642', '#fcd5b8', '#8d5524'];
-
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Background */}
@@ -410,96 +405,41 @@ export const RPGTugOfWar = ({
       </AnimatePresence>
 
       {/* ============ UNIFIED TUG-OF-WAR RIG ============ */}
-      {/* This container holds EVERYTHING that moves together: rope + teams + grips */}
+      {/* This container holds EVERYTHING that moves together: rope + teams */}
       <motion.div 
         className="absolute left-0 right-0 z-[10]"
-        style={{ bottom: '80px', height: '180px' }}
+        style={{ bottom: '100px', height: '200px' }}
         animate={{ 
           x: `${ropeOffsetPercent}%`,
         }}
         transition={{ type: 'spring', stiffness: 150, damping: 20 }}
       >
-        {/* Rope Layer */}
-        <div 
-          className="absolute left-0 right-0 pointer-events-none"
-          style={{ 
-            top: '50%', 
-            transform: 'translateY(-50%)',
-            height: '80px',
-          }}
-        >
-          <TugOfWarRope 
-            ropePosition={ropePosition}
-            maxPosition={WIN_THRESHOLD}
-            isPulling={pullingAnimation}
-          />
-        </div>
-
-        {/* Grip Overlays - hands on rope */}
-        <div 
-          className="absolute left-0 right-0 pointer-events-none"
-          style={{ 
-            top: '50%', 
-            transform: 'translateY(-50%)',
-            height: '80px',
-          }}
-        >
-          {/* Goblin grips (left side of rope: 8-30%) */}
-          {[8, 16, 24, 32].map((pos, i) => (
-            <TugOfWarGrip 
-              key={`goblin-grip-${i}`}
-              xPercent={pos}
-              side="enemy"
-              isPulling={pullingAnimation === 'enemy'}
-              skinColor={goblinSkinColors[i]}
-            />
-          ))}
+        {/* Teams and Rope positioned together - rope passes through hands */}
+        <div className="relative w-full h-full">
           
-          {/* Hero grip (around 62%) */}
-          <TugOfWarGrip 
-            xPercent={62}
-            side="hero"
-            isPulling={pullingAnimation === 'hero'}
-            skinColor="#f5d6c6"
-          />
-          
-          {/* Kid grips (right side: 70-88%) */}
-          {[70, 78, 86].map((pos, i) => (
-            <TugOfWarGrip 
-              key={`kid-grip-${i}`}
-              xPercent={pos}
-              side="hero"
-              isPulling={pullingAnimation === 'hero'}
-              skinColor={kidSkinColors[i]}
-            />
-          ))}
-        </div>
-
-        {/* Teams Container - positioned at rope level */}
-        <div className="absolute left-0 right-0 top-0 bottom-0 flex items-end justify-between px-4">
-          {/* Enemy Team (Left) - Goblins */}
+          {/* Enemy Team (Left) - Goblins - positioned so their arms reach the rope */}
           <motion.div 
-            className="flex flex-col items-center"
-            animate={pullingAnimation === 'enemy' ? { x: [-20, 0] } : pullingAnimation === 'hero' ? { x: [20, 0] } : {}}
+            className="absolute left-[2%] bottom-4 flex flex-col items-center z-[12]"
+            animate={pullingAnimation === 'enemy' ? { x: [-15, 0] } : pullingAnimation === 'hero' ? { x: [15, 0] } : {}}
             transition={{ duration: 0.3 }}
           >
             <div className="flex items-end gap-0">
-              {/* Goblins in a row */}
-              <div className="scale-[0.55] origin-bottom-right -mr-3">
+              {/* Goblins in a row - facing right toward rope */}
+              <div className="scale-[0.5] origin-bottom-right -mr-4">
                 <GoblinGuard 
                   state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
                   healthPercent={100}
                   size="small"
                 />
               </div>
-              <div className="scale-[0.65] origin-bottom -mr-2">
+              <div className="scale-[0.6] origin-bottom -mr-3">
                 <GoblinGuard 
                   state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
                   healthPercent={100}
                   size="small"
                 />
               </div>
-              <div className="scale-[0.75] origin-bottom -mr-1">
+              <div className="scale-[0.7] origin-bottom -mr-2">
                 <GoblinGuard 
                   state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
                   healthPercent={100}
@@ -507,7 +447,7 @@ export const RPGTugOfWar = ({
                 />
               </div>
               {/* Leader goblin */}
-              <div className="scale-[0.9] origin-bottom">
+              <div className="scale-[0.85] origin-bottom">
                 <GoblinGuard 
                   state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
                   healthPercent={100}
@@ -515,20 +455,48 @@ export const RPGTugOfWar = ({
                 />
               </div>
             </div>
-            <div className="text-red-600 font-bold text-sm mt-2 bg-white/90 px-3 py-1 rounded-full shadow">
+            <div className="text-red-600 font-bold text-xs mt-1 bg-white/90 px-2 py-0.5 rounded-full shadow">
               {enemyName}
             </div>
           </motion.div>
 
-          {/* Hero Team (Right) - Leader + Kids */}
+          {/* THE ROPE - runs horizontally through the scene */}
+          <div 
+            className="absolute left-0 right-0 pointer-events-none z-[11]"
+            style={{ 
+              top: '55%', 
+              transform: 'translateY(-50%)',
+              height: '60px',
+            }}
+          >
+            <TugOfWarRope 
+              ropePosition={ropePosition}
+              maxPosition={WIN_THRESHOLD}
+              isPulling={pullingAnimation}
+            />
+          </div>
+
+          {/* Hero Team (Right) - Leader + Kids - positioned so kids' arms reach rope */}
           <motion.div 
-            className="flex flex-col items-center"
-            animate={pullingAnimation === 'hero' ? { x: [20, 0] } : pullingAnimation === 'enemy' ? { x: [-20, 0] } : {}}
+            className="absolute right-[2%] bottom-4 flex flex-col items-center z-[12]"
+            animate={pullingAnimation === 'hero' ? { x: [15, 0] } : pullingAnimation === 'enemy' ? { x: [-15, 0] } : {}}
             transition={{ duration: 0.3 }}
           >
             <div className="flex items-end gap-0">
-              {/* Leader character */}
-              <div className="scale-[0.9] origin-bottom">
+              {/* Kids first (they're holding the rope, arms extend left) */}
+              {[2, 1, 0].map(i => (
+                <div key={i} className="-mr-10 z-[13]">
+                  <TugOfWarKid 
+                    index={i}
+                    isPulling={pullingAnimation === 'hero'}
+                    isStraining={pullingAnimation === 'enemy'}
+                    side="hero"
+                    size="small"
+                  />
+                </div>
+              ))}
+              {/* Leader character at the back */}
+              <div className="scale-[0.85] origin-bottom ml-2">
                 <LeaderComponent 
                   state={leaderState as any}
                   healthPercent={100}
@@ -536,20 +504,8 @@ export const RPGTugOfWar = ({
                   flipX
                 />
               </div>
-              {/* Kids in a row */}
-              {[0, 1, 2].map(i => (
-                <div key={i} className="-ml-2">
-                  <TugOfWarKid 
-                    index={i}
-                    isPulling={pullingAnimation === 'hero'}
-                    isStraining={pullingAnimation === 'enemy'}
-                    side="hero"
-                    size="medium"
-                  />
-                </div>
-              ))}
             </div>
-            <div className="text-blue-600 font-bold text-sm mt-2 bg-white/90 px-3 py-1 rounded-full shadow">
+            <div className="text-blue-600 font-bold text-xs mt-1 bg-white/90 px-2 py-0.5 rounded-full shadow">
               {heroName}'s Team
             </div>
           </motion.div>
