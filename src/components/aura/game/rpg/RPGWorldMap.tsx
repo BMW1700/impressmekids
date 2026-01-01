@@ -1,8 +1,18 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Lock, Star, Swords, Crown, TreePine, Mountain, Castle, Flame, Sparkles, Skull } from "lucide-react";
+import { ArrowLeft, Lock, Star, Swords, Crown, TreePine, Mountain, Castle, Flame, Sparkles } from "lucide-react";
 import { campaignWorlds, CampaignWorld } from "@/lib/campaignData";
+import { 
+  DrakeSilhouette, 
+  IceGolemSilhouette, 
+  StoneGuardianSilhouette, 
+  GrogSilhouette 
+} from "../characters/BossSilhouettes";
+import { AnimatedStarCounter } from "../effects/StarCollectionEffect";
+import { AnimatedBookCounter } from "../effects/FlyingBookAnimation";
+import { MilestoneCelebration } from "../effects/MilestoneCelebration";
 
 export interface WorldProgress {
   worldId: number;
@@ -26,25 +36,68 @@ const worldIcons: Record<number, React.ReactNode> = {
   4: <Crown className="h-8 w-8" />,
 };
 
-// Animated connecting path between worlds
+// Enhanced SVG connecting path with dotted line and particle flow
 const WorldPath = ({ isActive, delay }: { isActive: boolean; delay: number }) => (
-  <div className="absolute left-1/2 -translate-x-1/2 h-12 w-1 flex flex-col items-center justify-center gap-1 overflow-hidden">
-    {[0, 1, 2, 3].map((i) => (
-      <motion.div
-        key={i}
-        className={`w-2 h-2 rounded-full ${isActive ? 'bg-amber-400' : 'bg-slate-600'}`}
-        initial={{ opacity: 0.3, scale: 0.8 }}
-        animate={isActive ? {
-          opacity: [0.3, 1, 0.3],
-          scale: [0.8, 1.2, 0.8],
-        } : {}}
-        transition={{
-          duration: 1.5,
-          delay: delay + i * 0.15,
-          repeat: Infinity,
-        }}
+  <div className="absolute left-1/2 -translate-x-1/2 h-16 w-8 flex flex-col items-center justify-center overflow-visible">
+    {/* SVG path with dashed line */}
+    <svg className="absolute w-full h-full overflow-visible" viewBox="0 0 32 64">
+      {/* Background dashed line */}
+      <path
+        d="M16 0 L16 64"
+        stroke={isActive ? "#22C55E" : "#475569"}
+        strokeWidth="3"
+        strokeDasharray="6 4"
+        strokeLinecap="round"
+        fill="none"
+        className="transition-colors duration-500"
       />
-    ))}
+      {/* Glow effect for active paths */}
+      {isActive && (
+        <path
+          d="M16 0 L16 64"
+          stroke="#22C55E"
+          strokeWidth="8"
+          strokeDasharray="6 4"
+          strokeLinecap="round"
+          fill="none"
+          opacity="0.3"
+          filter="blur(4px)"
+        />
+      )}
+    </svg>
+    
+    {/* Animated particles flowing along path */}
+    {isActive && (
+      <>
+        {[0, 1, 2].map((i) => (
+          <motion.div
+            key={i}
+            className="absolute w-2 h-2 rounded-full bg-green-400 shadow-lg shadow-green-400/50"
+            initial={{ top: "0%", opacity: 0 }}
+            animate={{
+              top: ["0%", "100%"],
+              opacity: [0, 1, 1, 0],
+            }}
+            transition={{
+              duration: 1.5,
+              delay: delay + i * 0.5,
+              repeat: Infinity,
+              ease: "linear",
+            }}
+          />
+        ))}
+      </>
+    )}
+    
+    {/* Locked path indicator */}
+    {!isActive && (
+      <motion.div
+        className="absolute w-3 h-3 rounded-full bg-slate-600 border border-slate-500"
+        style={{ top: "50%" }}
+        animate={{ opacity: [0.5, 0.8, 0.5] }}
+        transition={{ duration: 2, repeat: Infinity }}
+      />
+    )}
   </div>
 );
 
@@ -72,32 +125,31 @@ const AnimatedStar = ({ filled, delay }: { filled: boolean; delay: number }) => 
   </motion.div>
 );
 
-// Boss silhouette component
+// Boss silhouette component with proper SVG characters
 const BossSilhouette = ({ worldId, isUnlocked }: { worldId: number; isUnlocked: boolean }) => {
-  const getBossIcon = () => {
+  const renderSilhouette = () => {
     switch (worldId) {
       case 1:
-        return <Skull className="h-6 w-6" />;
+        return <DrakeSilhouette isUnlocked={isUnlocked} size="small" />;
       case 2:
-        return <Mountain className="h-6 w-6" />;
+        return <IceGolemSilhouette isUnlocked={isUnlocked} size="small" />;
       case 3:
-        return <Flame className="h-6 w-6" />;
+        return <StoneGuardianSilhouette isUnlocked={isUnlocked} size="small" />;
       case 4:
-        return <Crown className="h-6 w-6" />;
+        return <GrogSilhouette isUnlocked={isUnlocked} size="small" />;
       default:
-        return <Skull className="h-6 w-6" />;
+        return <DrakeSilhouette isUnlocked={isUnlocked} size="small" />;
     }
   };
 
   return (
     <motion.div
-      className={`absolute -right-2 -top-2 p-2 rounded-full ${
+      className={`absolute -right-3 -top-3 p-1 rounded-full ${
         isUnlocked 
-          ? 'bg-red-900/80 border border-red-500/50' 
+          ? 'bg-slate-900/90 border border-red-500/50' 
           : 'bg-slate-800/80 border border-slate-600/50'
       }`}
       animate={isUnlocked ? {
-        scale: [1, 1.1, 1],
         boxShadow: [
           '0 0 10px rgba(239, 68, 68, 0.3)',
           '0 0 20px rgba(239, 68, 68, 0.5)',
@@ -106,9 +158,7 @@ const BossSilhouette = ({ worldId, isUnlocked }: { worldId: number; isUnlocked: 
       } : {}}
       transition={{ duration: 2, repeat: Infinity }}
     >
-      <div className={isUnlocked ? 'text-red-400' : 'text-slate-500'}>
-        {getBossIcon()}
-      </div>
+      {renderSilhouette()}
     </motion.div>
   );
 };
@@ -119,6 +169,8 @@ export const RPGWorldMap = ({
   onSelectWorld,
   onBack,
 }: RPGWorldMapProps) => {
+  const [previousBookCount] = useState(totalBooksRescued);
+
   const getWorldProgress = (worldId: number): WorldProgress => {
     return worldProgress.find(p => p.worldId === worldId) || {
       worldId,
@@ -137,6 +189,9 @@ export const RPGWorldMap = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900 p-4 relative overflow-hidden">
+      {/* Milestone celebrations */}
+      <MilestoneCelebration currentCount={totalBooksRescued} />
+
       {/* Animated background particles */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {Array.from({ length: 20 }).map((_, i) => (
@@ -144,8 +199,8 @@ export const RPGWorldMap = ({
             key={i}
             className="absolute w-1 h-1 bg-purple-400/30 rounded-full"
             initial={{
-              x: Math.random() * window.innerWidth,
-              y: Math.random() * window.innerHeight,
+              x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000),
+              y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800),
             }}
             animate={{
               y: [null, -100],
@@ -172,8 +227,9 @@ export const RPGWorldMap = ({
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 0.2 }}
         >
+          {/* Enhanced animated book counter */}
           <motion.div 
-            className="flex items-center gap-2 bg-amber-900/60 px-4 py-2 rounded-full border border-amber-500/50"
+            className="bg-amber-900/60 px-4 py-2 rounded-full border border-amber-500/50"
             animate={{
               boxShadow: [
                 '0 0 10px rgba(245, 158, 11, 0.3)',
@@ -183,14 +239,10 @@ export const RPGWorldMap = ({
             }}
             transition={{ duration: 2, repeat: Infinity }}
           >
-            <motion.span 
-              className="text-2xl"
-              animate={{ rotate: [-5, 5, -5] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              📚
-            </motion.span>
-            <span className="text-amber-300 font-bold">{totalBooksRescued} Books Rescued</span>
+            <AnimatedBookCounter 
+              count={totalBooksRescued} 
+              previousCount={previousBookCount} 
+            />
           </motion.div>
         </motion.div>
       </div>
@@ -235,9 +287,9 @@ export const RPGWorldMap = ({
         </motion.div>
       </motion.div>
 
-      {/* World Cards with Connecting Paths */}
+      {/* World Cards with Enhanced Connecting Paths */}
       <div className="max-w-4xl mx-auto relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {campaignWorlds.map((world, index) => {
             const progress = getWorldProgress(world.id);
             const unlocked = isWorldUnlocked(world);
@@ -257,9 +309,9 @@ export const RPGWorldMap = ({
                 transition={{ delay: index * 0.15 }}
                 className="relative"
               >
-                {/* Path connector to next world (except for last) */}
+                {/* Enhanced SVG path connector to next world */}
                 {index < campaignWorlds.length - 1 && index % 2 === 1 && (
-                  <div className="hidden md:block absolute -bottom-6 left-1/2 -translate-x-1/2">
+                  <div className="hidden md:block absolute -bottom-8 left-1/2 -translate-x-1/2 z-0">
                     <WorldPath isActive={isComplete} delay={index * 0.2} />
                   </div>
                 )}
@@ -314,7 +366,7 @@ export const RPGWorldMap = ({
                     </div>
                   )}
 
-                  {/* Boss Silhouette for worlds with bosses */}
+                  {/* Boss Silhouette with proper SVG character */}
                   {world.id >= 1 && (
                     <BossSilhouette worldId={world.id} isUnlocked={unlocked} />
                   )}
@@ -363,7 +415,7 @@ export const RPGWorldMap = ({
                       </div>
                     </div>
 
-                    {/* Animated Stars */}
+                    {/* Animated Stars with counter */}
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-1">
                         {[1, 2, 3].map((star) => (
@@ -374,14 +426,10 @@ export const RPGWorldMap = ({
                           />
                         ))}
                       </div>
-                      <motion.span 
-                        className="text-slate-400 text-sm"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: index * 0.15 + 0.5 }}
-                      >
-                        {progress.starsEarned} stars
-                      </motion.span>
+                      <AnimatedStarCounter 
+                        count={progress.starsEarned} 
+                        delay={index * 0.15 + 0.5} 
+                      />
                     </div>
 
                     {/* Boss Indicator for World 4 */}
@@ -410,7 +458,7 @@ export const RPGWorldMap = ({
                     {/* Completion Badge */}
                     {isComplete && (
                       <motion.div
-                        className="absolute top-2 right-2 bg-green-500/90 text-white text-xs font-bold px-2 py-1 rounded-full"
+                        className="absolute top-2 right-12 bg-green-500/90 text-white text-xs font-bold px-2 py-1 rounded-full"
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={{ delay: index * 0.15 + 0.6, type: "spring" }}

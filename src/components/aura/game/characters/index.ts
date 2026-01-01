@@ -6,3 +6,13 @@ export { DrakeTheDragon, type DragonState } from './DrakeTheDragon';
 export { IceGolem, type IceGolemState } from './IceGolem';
 export { ShadowWraith, type WraithState } from './ShadowWraith';
 export { StoneGuardian, type GuardianState } from './StoneGuardian';
+
+// Export boss silhouettes for world map
+export { 
+  DrakeSilhouette, 
+  IceGolemSilhouette, 
+  StoneGuardianSilhouette, 
+  GrogSilhouette, 
+  GalairSilhouette,
+  BossSilhouettes 
+} from './BossSilhouettes';
