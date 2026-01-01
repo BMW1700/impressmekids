@@ -6,6 +6,8 @@ export type GoblinState = 'idle' | 'hit' | 'attacking' | 'defeated' | 'taunting'
 interface GoblinGuardProps {
   state: GoblinState;
   healthPercent: number;
+  currentHp?: number;
+  maxHp?: number;
   showDamage?: number;
   size?: 'small' | 'medium' | 'large';
   flipX?: boolean;
@@ -20,6 +22,8 @@ const sizeConfig = {
 export const GoblinGuard = ({
   state,
   healthPercent,
+  currentHp,
+  maxHp,
   showDamage,
   size = 'medium',
   flipX = false,
@@ -348,8 +352,14 @@ export const GoblinGuard = ({
       </svg>
 
       {/* Health bar */}
-      <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-full max-w-[80px]">
-        <div className="h-2 bg-black/50 rounded-full overflow-hidden border border-black/30">
+      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-full max-w-[90px]">
+        {currentHp !== undefined && maxHp !== undefined && (
+          <div className="text-center text-xs font-bold text-white mb-0.5" 
+               style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>
+            {currentHp}/{maxHp}
+          </div>
+        )}
+        <div className="h-2.5 bg-black/60 rounded-full overflow-hidden border border-black/40">
           <motion.div
             className="h-full rounded-full"
             style={{
