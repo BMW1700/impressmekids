@@ -52,15 +52,22 @@ const KID_VARIANTS = [
     socks: '#ffffff', sockStripe: '#f97316', shoes: '#1f2937',
     accessory: 'bows'
   },
+  { 
+    hair: '#1a1a1a', hairStyle: 'puffs', 
+    skin: '#5c3c21', 
+    shirt: '#ffffff', shorts: '#be185d',
+    socks: '#ffffff', sockStripe: '#a855f7', shoes: '#1f2937',
+    accessory: 'bows'
+  },
 ];
 
 export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'medium' }: TugOfWarKidProps) => {
   const variant = KID_VARIANTS[index % KID_VARIANTS.length];
   
   const sizeConfig = {
-    small: { width: 70, height: 100 },
-    medium: { width: 90, height: 125 },
-    large: { width: 110, height: 150 }
+    small: { width: 90, height: 115 },
+    medium: { width: 110, height: 140 },
+    large: { width: 130, height: 165 }
   };
   
   const { width, height } = sizeConfig[size];
@@ -124,6 +131,31 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
             <circle cx="61" cy="14" r="3" fill="#f472b6" />
           </g>
         );
+      case 'puffs':
+        return (
+          <g>
+            <ellipse cx="50" cy="18" rx="11" ry="8" fill={hairColor} />
+            {/* Two cute puff balls */}
+            <circle cx="35" cy="16" r="9" fill={hairColor} />
+            <circle cx="65" cy="16" r="9" fill={hairColor} />
+            {/* Puff texture */}
+            <circle cx="33" cy="13" r="3" fill={hairColor} opacity="0.7" />
+            <circle cx="37" cy="12" r="2.5" fill={hairColor} opacity="0.7" />
+            <circle cx="63" cy="13" r="3" fill={hairColor} opacity="0.7" />
+            <circle cx="67" cy="12" r="2.5" fill={hairColor} opacity="0.7" />
+            {/* Little pink bows */}
+            <g transform="translate(35, 8)">
+              <ellipse cx="-3" cy="0" rx="3" ry="2" fill="#ec4899" />
+              <ellipse cx="3" cy="0" rx="3" ry="2" fill="#ec4899" />
+              <circle cx="0" cy="0" r="2" fill="#f472b6" />
+            </g>
+            <g transform="translate(65, 8)">
+              <ellipse cx="-3" cy="0" rx="3" ry="2" fill="#ec4899" />
+              <ellipse cx="3" cy="0" rx="3" ry="2" fill="#ec4899" />
+              <circle cx="0" cy="0" r="2" fill="#f472b6" />
+            </g>
+          </g>
+        );
       default:
         return <ellipse cx="50" cy="16" rx="13" ry="10" fill={hairColor} />;
     }
@@ -150,8 +182,8 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
           : { duration: 2, repeat: Infinity, ease: 'easeInOut', delay: index * 0.15 }
       }
     >
-      {/* Simplified viewBox - character body only, no extended arms */}
-      <svg viewBox="0 0 100 115" width={width} height={height} className="overflow-visible">
+      {/* Extended viewBox for arms reaching toward rope */}
+      <svg viewBox="-30 0 130 115" width={width} height={height} className="overflow-visible">
         <defs>
           <linearGradient id={`kidShirt-${index}-${side}`} x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor={variant.shirt} />
@@ -241,38 +273,38 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
             <path d="M38 22 Q50 17 62 22" stroke="#ef4444" strokeWidth="3" fill="none" strokeLinecap="round" />
           )}
 
-          {/* === ARMS - Simple pulling pose, bent at sides === */}
-          {/* Back arm */}
+          {/* === ARMS - Extended toward rope === */}
+          {/* Back arm - reaching out horizontally */}
           <motion.path
             d={isPulling 
-              ? "M38 48 L30 52 L25 48" 
+              ? "M38 48 L15 50 L-10 48" 
               : isStraining 
-              ? "M38 48 L34 55 L30 52" 
-              : "M38 48 L32 52 L28 50"}
+              ? "M38 48 L20 52 L0 50" 
+              : "M38 48 L18 51 L-5 49"}
             stroke={variant.skin}
             strokeWidth="9"
             strokeLinecap="round"
             strokeLinejoin="round"
             fill="none"
           />
-          {/* Back hand */}
-          <circle cx={isPulling ? 24 : isStraining ? 29 : 27} cy={isPulling ? 47 : isStraining ? 51 : 49} r="5" fill={variant.skin} />
+          {/* Back hand gripping rope */}
+          <circle cx={isPulling ? -12 : isStraining ? -2 : -7} cy={isPulling ? 47 : isStraining ? 49 : 48} r="6" fill={variant.skin} />
 
-          {/* Front arm */}
+          {/* Front arm - reaching out horizontally */}
           <motion.path
             d={isPulling 
-              ? "M38 54 L28 58 L22 55" 
+              ? "M38 54 L12 56 L-15 54" 
               : isStraining 
-              ? "M38 54 L32 60 L28 58" 
-              : "M38 54 L30 58 L26 56"}
+              ? "M38 54 L18 58 L-5 56" 
+              : "M38 54 L15 57 L-10 55"}
             stroke={variant.skin}
             strokeWidth="10"
             strokeLinecap="round"
             strokeLinejoin="round"
             fill="none"
           />
-          {/* Front hand */}
-          <circle cx={isPulling ? 21 : isStraining ? 27 : 25} cy={isPulling ? 54 : isStraining ? 57 : 55} r="6" fill={variant.skin} />
+          {/* Front hand gripping rope */}
+          <circle cx={isPulling ? -17 : isStraining ? -7 : -12} cy={isPulling ? 53 : isStraining ? 55 : 54} r="7" fill={variant.skin} />
         </g>
 
         {/* === HEAD === */}
