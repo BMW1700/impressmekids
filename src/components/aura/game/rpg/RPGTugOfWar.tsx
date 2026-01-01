@@ -143,9 +143,10 @@ export const RPGTugOfWar = ({
     }, 800);
   }, [gameOver]);
 
-  // Auto-pull timer - enemies pull every 20 seconds (pauses when game is paused)
+  // Auto-pull timer - enemies pull every 20 seconds
+  // PAUSES when game is paused OR when user is actively listening/speaking!
   useEffect(() => {
-    if (gameOver || !selectedCharacter || isPaused) return;
+    if (gameOver || !selectedCharacter || isPaused || isListening) return;
     
     const interval = setInterval(() => {
       setAutoPullTimer(prev => {
@@ -158,7 +159,7 @@ export const RPGTugOfWar = ({
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [gameOver, selectedCharacter, handleEnemyAutoPull, isPaused]);
+  }, [gameOver, selectedCharacter, handleEnemyAutoPull, isPaused, isListening]);
 
   // Process a spoken word result
   const processWordResult = useCallback((correct: boolean, wordIdx: number) => {
