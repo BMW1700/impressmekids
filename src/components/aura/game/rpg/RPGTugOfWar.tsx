@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Skull, Coins, Star, Mic, MicOff, Pause, Play, Timer, Volume2 } from "lucide-react";
+import { Trophy, Skull, Coins, Star, Timer, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { TugOfWarBackground } from "./TugOfWarBackground";
 import { TugOfWarRope } from "./TugOfWarRope";
 import { TugOfWarKid } from "./TugOfWarKid";
 import { TugOfWarCharacterSelect } from "./TugOfWarCharacterSelect";
+import { RPGWordReader } from "./RPGWordReader";
 import { SirValor } from "../characters/SirValor";
 import { Elara } from "../characters/Elara";
 import { GoblinGuard } from "../characters/GoblinGuard";
@@ -29,8 +30,15 @@ interface FloatingReward {
   y: number;
 }
 
-// Goblin auto-pull every 20 seconds
+// Thresholds
+const WIN_THRESHOLD = 10;
+const LOSE_THRESHOLD = -10;
 const AUTO_PULL_SECONDS = 20;
+
+// Pull amounts
+const HERO_PULL = 2;  // +2 for correct word
+const ENEMY_PULL = 1; // -1 for incorrect word
+const AUTO_PULL = 2;  // -2 for timeout
 
 export const RPGTugOfWar = ({
   words,
@@ -53,11 +61,7 @@ export const RPGTugOfWar = ({
   const [victory, setVictory] = useState(false);
   const [pullingAnimation, setPullingAnimation] = useState<'hero' | 'enemy' | null>(null);
   
-  // Microphone states - continuous with pause
-  const [isMicActive, setIsMicActive] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  
-  // Auto-pull timer - now 20 seconds
+  // Auto-pull timer
   const [autoPullTimer, setAutoPullTimer] = useState(AUTO_PULL_SECONDS);
   
   // Rewards
@@ -66,54 +70,32 @@ export const RPGTugOfWar = ({
   const [totalXp, setTotalXp] = useState(0);
   const rewardIdRef = useRef(0);
 
-  const recognitionRef = useRef<any>(null);
-  const isListeningRef = useRef(false);
+  // Game completion ref to prevent multiple calls
+  const gameCompletedRef = useRef(false);
 
+  // Current word
   const currentWord = words[currentWordIndex] || "";
-  const WIN_THRESHOLD = 10;
-  const LOSE_THRESHOLD = -10;
 
-  // Calculate the rope offset - this moves the ENTIRE rig (rope + teams)
-  const ropeOffsetPercent = (ropePosition / WIN_THRESHOLD) * 12; // -12% to +12%
-
-  // Initialize speech recognition
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = true;
-        recognitionRef.current.interimResults = false;
-        recognitionRef.current.lang = 'en-US';
-      }
-    }
-    
-    return () => {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch (e) {}
-      }
-    };
-  }, []);
+  // Calculate the rope offset - moves the ENTIRE rig
+  const ropeOffsetPercent = (ropePosition / WIN_THRESHOLD) * 15; // -15% to +15%
 
   // Check for win/lose conditions
   useEffect(() => {
-    if (gameOver) return;
+    if (gameOver || gameCompletedRef.current) return;
 
     if (ropePosition >= WIN_THRESHOLD) {
+      gameCompletedRef.current = true;
       setGameOver(true);
       setVictory(true);
       soundEffects.celebrationSound();
-      stopMic();
       setTimeout(() => {
         onComplete(true, { wordsRead, correctWords, incorrectWords });
       }, 2000);
     } else if (ropePosition <= LOSE_THRESHOLD) {
+      gameCompletedRef.current = true;
       setGameOver(true);
       setVictory(false);
       soundEffects.rockCrumble();
-      stopMic();
       setTimeout(() => {
         onComplete(false, { wordsRead, correctWords, incorrectWords });
       }, 2000);
@@ -131,13 +113,12 @@ export const RPGTugOfWar = ({
   }, []);
 
   const handleEnemyAutoPull = useCallback(() => {
-    if (gameOver) return;
+    if (gameOver || gameCompletedRef.current) return;
     
-    const newPosition = Math.max(ropePosition - 2, LOSE_THRESHOLD);
     setIncorrectWords(prev => prev + 1);
     setFeedback('incorrect');
     setPullingAnimation('enemy');
-    setRopePosition(newPosition);
+    setRopePosition(prev => Math.max(prev - AUTO_PULL, LOSE_THRESHOLD));
     soundEffects.incorrectWord();
     soundEffects.rockCrumble();
     
@@ -145,11 +126,11 @@ export const RPGTugOfWar = ({
       setFeedback(null);
       setPullingAnimation(null);
     }, 800);
-  }, [gameOver, ropePosition]);
+  }, [gameOver]);
 
   // Auto-pull timer - enemies pull every 20 seconds
   useEffect(() => {
-    if (gameOver || !selectedCharacter || isPaused) return;
+    if (gameOver || !selectedCharacter) return;
     
     const interval = setInterval(() => {
       setAutoPullTimer(prev => {
@@ -162,15 +143,16 @@ export const RPGTugOfWar = ({
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [gameOver, selectedCharacter, isPaused, handleEnemyAutoPull]);
+  }, [gameOver, selectedCharacter, handleEnemyAutoPull]);
 
-  const handleWordResult = useCallback((correct: boolean) => {
+  // Handle word result from RPGWordReader
+  const handleWordResult = useCallback((correct: boolean, spokenWord: string, wordIndex: number) => {
+    if (gameOver || gameCompletedRef.current) return;
+    
     setWordsRead(prev => prev + 1);
-    const newPosition = correct 
-      ? Math.min(ropePosition + 1, WIN_THRESHOLD)
-      : Math.max(ropePosition - 2, LOSE_THRESHOLD);
     
     if (correct) {
+      const newPosition = Math.min(ropePosition + HERO_PULL, WIN_THRESHOLD);
       setCorrectWords(prev => prev + 1);
       setFeedback('correct');
       setPullingAnimation('hero');
@@ -197,6 +179,7 @@ export const RPGTugOfWar = ({
         setTimeout(() => showFloatingReward(bonusGold, bonusXp), 300);
       }
     } else {
+      const newPosition = Math.max(ropePosition - ENEMY_PULL, LOSE_THRESHOLD);
       setIncorrectWords(prev => prev + 1);
       setFeedback('incorrect');
       setPullingAnimation('enemy');
@@ -214,78 +197,8 @@ export const RPGTugOfWar = ({
       if (currentWordIndex < words.length - 1) {
         setCurrentWordIndex(prev => prev + 1);
       }
-    }, 800);
-  }, [currentWord, currentWordIndex, words.length, onWordResult, ropePosition, showFloatingReward]);
-
-  const startMic = useCallback(() => {
-    if (!recognitionRef.current || gameOver) return;
-
-    setIsMicActive(true);
-    setIsPaused(false);
-    isListeningRef.current = true;
-
-    recognitionRef.current.onresult = (event: any) => {
-      if (!isListeningRef.current) return;
-      
-      const lastResult = event.results[event.results.length - 1];
-      if (lastResult.isFinal) {
-        const transcript = lastResult[0].transcript.toLowerCase().trim();
-        const targetWord = currentWord.toLowerCase().replace(/[^a-z]/g, '');
-        const spokenWord = transcript.replace(/[^a-z]/g, '');
-        
-        const isCorrect = spokenWord === targetWord || 
-                          transcript.includes(targetWord) ||
-                          targetWord.includes(spokenWord);
-        
-        handleWordResult(isCorrect);
-      }
-    };
-
-    recognitionRef.current.onerror = (e: any) => {
-      console.log('Speech error:', e.error);
-      if (e.error === 'no-speech') {
-        try {
-          recognitionRef.current.stop();
-          setTimeout(() => {
-            if (isListeningRef.current && !isPaused) {
-              recognitionRef.current.start();
-            }
-          }, 100);
-        } catch (err) {}
-      }
-    };
-
-    recognitionRef.current.onend = () => {
-      if (isListeningRef.current && !isPaused && !gameOver) {
-        try {
-          recognitionRef.current.start();
-        } catch (e) {}
-      }
-    };
-
-    try {
-      recognitionRef.current.start();
-    } catch (e) {
-      setIsMicActive(false);
-    }
-  }, [gameOver, currentWord, handleWordResult, isPaused]);
-
-  const stopMic = useCallback(() => {
-    isListeningRef.current = false;
-    setIsMicActive(false);
-    setIsPaused(false);
-    try {
-      recognitionRef.current?.stop();
-    } catch (e) {}
-  }, []);
-
-  const pauseMic = useCallback(() => {
-    setIsPaused(true);
-    isListeningRef.current = false;
-    try {
-      recognitionRef.current?.stop();
-    } catch (e) {}
-  }, []);
+    }, 600);
+  }, [currentWord, currentWordIndex, words.length, onWordResult, ropePosition, showFloatingReward, gameOver]);
 
   // TTS to hear the word pronunciation
   const pronounceWord = useCallback(() => {
@@ -298,14 +211,6 @@ export const RPGTugOfWar = ({
       window.speechSynthesis.speak(utterance);
     }
   }, [currentWord]);
-
-  const resumeMic = useCallback(() => {
-    setIsPaused(false);
-    isListeningRef.current = true;
-    try {
-      recognitionRef.current?.start();
-    } catch (e) {}
-  }, []);
 
   // Calculate visual positions
   const progressPercent = ((ropePosition + WIN_THRESHOLD) / (WIN_THRESHOLD * 2)) * 100;
@@ -342,7 +247,7 @@ export const RPGTugOfWar = ({
           <span className="text-yellow-200 font-bold">{totalGold}</span>
         </motion.div>
         
-        {/* Auto-pull timer - now shows 20s */}
+        {/* Auto-pull timer */}
         <motion.div 
           className={`flex items-center gap-1 backdrop-blur-sm px-3 py-1 rounded-full ${
             autoPullTimer <= 5 ? 'bg-red-500/60' : 'bg-orange-500/40'
@@ -404,50 +309,40 @@ export const RPGTugOfWar = ({
         ))}
       </AnimatePresence>
 
-      {/* ============ UNIFIED TUG-OF-WAR RIG ============ */}
-      {/* This container holds EVERYTHING that moves together: rope + teams */}
+      {/* ============ TUG-OF-WAR SCENE ============ */}
+      {/* This is the main game area with rope and teams */}
       <motion.div 
         className="absolute left-0 right-0 z-[10]"
-        style={{ bottom: '100px', height: '200px' }}
-        animate={{ 
-          x: `${ropeOffsetPercent}%`,
-        }}
+        style={{ bottom: '180px', height: '220px' }}
+        animate={{ x: `${ropeOffsetPercent}%` }}
         transition={{ type: 'spring', stiffness: 150, damping: 20 }}
       >
-        {/* Teams and Rope positioned together - rope passes through hands */}
-        <div className="relative w-full h-full">
+        {/* Full-width container for the tug of war scene */}
+        <div className="relative w-full h-full flex items-end justify-center">
           
-          {/* Enemy Team (Left) - Goblins - positioned so their arms reach the rope */}
+          {/* Enemy Team (Left Side) - Goblins */}
           <motion.div 
-            className="absolute left-[2%] bottom-4 flex flex-col items-center z-[12]"
-            animate={pullingAnimation === 'enemy' ? { x: [-15, 0] } : pullingAnimation === 'hero' ? { x: [15, 0] } : {}}
+            className="absolute left-[5%] bottom-0 flex flex-col items-center z-[15]"
+            animate={pullingAnimation === 'enemy' ? { x: [-10, 0] } : pullingAnimation === 'hero' ? { x: [10, 0] } : {}}
             transition={{ duration: 0.3 }}
           >
-            <div className="flex items-end gap-0">
+            <div className="flex items-end">
               {/* Goblins in a row - facing right toward rope */}
-              <div className="scale-[0.5] origin-bottom-right -mr-4">
+              <div className="scale-[0.5] origin-bottom-right -mr-2">
                 <GoblinGuard 
                   state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
                   healthPercent={100}
                   size="small"
                 />
               </div>
-              <div className="scale-[0.6] origin-bottom -mr-3">
+              <div className="scale-[0.6] origin-bottom -mr-1">
                 <GoblinGuard 
                   state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
                   healthPercent={100}
                   size="small"
                 />
               </div>
-              <div className="scale-[0.7] origin-bottom -mr-2">
-                <GoblinGuard 
-                  state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
-                  healthPercent={100}
-                  size="small"
-                />
-              </div>
-              {/* Leader goblin */}
-              <div className="scale-[0.85] origin-bottom">
+              <div className="scale-[0.7] origin-bottom">
                 <GoblinGuard 
                   state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
                   healthPercent={100}
@@ -460,13 +355,16 @@ export const RPGTugOfWar = ({
             </div>
           </motion.div>
 
-          {/* THE ROPE - runs horizontally through the scene */}
+          {/* THE ROPE - spans across the middle */}
           <div 
-            className="absolute left-0 right-0 pointer-events-none z-[11]"
+            className="absolute inset-x-0 pointer-events-none z-[12]"
             style={{ 
-              top: '55%', 
+              top: '50%', 
               transform: 'translateY(-50%)',
-              height: '60px',
+              height: '80px',
+              left: '15%',
+              right: '15%',
+              width: '70%',
             }}
           >
             <TugOfWarRope 
@@ -476,16 +374,25 @@ export const RPGTugOfWar = ({
             />
           </div>
 
-          {/* Hero Team (Right) - Leader + Kids - positioned so kids' arms reach rope */}
+          {/* Hero Team (Right Side) - Leader + Kids */}
           <motion.div 
-            className="absolute right-[2%] bottom-4 flex flex-col items-center z-[12]"
-            animate={pullingAnimation === 'hero' ? { x: [15, 0] } : pullingAnimation === 'enemy' ? { x: [-15, 0] } : {}}
+            className="absolute right-[5%] bottom-0 flex flex-col items-center z-[15]"
+            animate={pullingAnimation === 'hero' ? { x: [10, 0] } : pullingAnimation === 'enemy' ? { x: [-10, 0] } : {}}
             transition={{ duration: 0.3 }}
           >
-            <div className="flex items-end gap-0">
-              {/* Kids first (they're holding the rope, arms extend left) */}
-              {[2, 1, 0].map(i => (
-                <div key={i} className="-mr-10 z-[13]">
+            <div className="flex items-end">
+              {/* Leader character at the back */}
+              <div className="scale-[0.7] origin-bottom mr-1">
+                <LeaderComponent 
+                  state={leaderState as any}
+                  healthPercent={100}
+                  size="medium"
+                  flipX
+                />
+              </div>
+              {/* Kids pulling */}
+              {[0, 1, 2].map(i => (
+                <div key={i} className="scale-[0.55] origin-bottom -ml-4">
                   <TugOfWarKid 
                     index={i}
                     isPulling={pullingAnimation === 'hero'}
@@ -495,15 +402,6 @@ export const RPGTugOfWar = ({
                   />
                 </div>
               ))}
-              {/* Leader character at the back */}
-              <div className="scale-[0.85] origin-bottom ml-2">
-                <LeaderComponent 
-                  state={leaderState as any}
-                  healthPercent={100}
-                  size="medium"
-                  flipX
-                />
-              </div>
             </div>
             <div className="text-blue-600 font-bold text-xs mt-1 bg-white/90 px-2 py-0.5 rounded-full shadow">
               {heroName}'s Team
@@ -512,9 +410,9 @@ export const RPGTugOfWar = ({
         </div>
       </motion.div>
 
-      {/* Word Display & Controls */}
+      {/* Word Display & Controls - Uses RPGWordReader for proper matching */}
       {!gameOver && (
-        <div className="absolute bottom-0 left-0 right-0 z-20 p-6 bg-gradient-to-t from-black/80 via-black/60 to-transparent">
+        <div className="absolute bottom-0 left-0 right-0 z-20 p-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent">
           {/* Feedback */}
           <AnimatePresence>
             {feedback && (
@@ -522,7 +420,7 @@ export const RPGTugOfWar = ({
                 initial={{ opacity: 0, scale: 0.8, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.8 }}
-                className={`text-center mb-4 text-2xl font-black ${
+                className={`text-center mb-2 text-2xl font-black ${
                   feedback === 'correct' ? 'text-green-400' : 'text-red-400'
                 }`}
               >
@@ -531,85 +429,28 @@ export const RPGTugOfWar = ({
             )}
           </AnimatePresence>
 
-          {/* Current Word */}
-          <motion.div
-            key={currentWordIndex}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-6"
-          >
-            <div className="text-white/60 text-sm mb-2">Read this word:</div>
-            <div className="text-5xl font-black text-white tracking-wide drop-shadow-lg">
-              {currentWord}
-            </div>
-          </motion.div>
-
-          {/* Mic Controls */}
-          <div className="flex justify-center gap-4">
-            {!isMicActive ? (
-              <Button
-                size="lg"
-                onClick={startMic}
-                disabled={gameOver}
-                className="px-8 py-6 text-xl font-bold rounded-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500"
-              >
-                <Mic className="h-6 w-6 mr-2" />
-                Start Reading
-              </Button>
-            ) : (
-              <div className="flex gap-2">
-                {isPaused ? (
-                  <>
-                    <Button
-                      size="lg"
-                      onClick={pronounceWord}
-                      className="px-6 py-6 text-xl font-bold rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500"
-                    >
-                      <Volume2 className="h-6 w-6 mr-2" />
-                      Hear Word
-                    </Button>
-                    <Button
-                      size="lg"
-                      onClick={resumeMic}
-                      className="px-6 py-6 text-xl font-bold rounded-full bg-gradient-to-r from-green-500 to-emerald-600"
-                    >
-                      <Play className="h-6 w-6 mr-2" />
-                      Resume
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    size="lg"
-                    onClick={pauseMic}
-                    className="px-6 py-6 text-xl font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500"
-                  >
-                    <Pause className="h-6 w-6 mr-2" />
-                    Pause
-                  </Button>
-                )}
-                <Button
-                  size="lg"
-                  onClick={stopMic}
-                  variant="destructive"
-                  className="px-6 py-6 text-xl font-bold rounded-full"
-                >
-                  <MicOff className="h-6 w-6 mr-2" />
-                  Stop
-                </Button>
-              </div>
-            )}
+          {/* Hear Word Button */}
+          <div className="flex justify-center mb-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={pronounceWord}
+              className="bg-blue-500/20 border-blue-400/50 text-blue-200 hover:bg-blue-500/30"
+            >
+              <Volume2 className="h-4 w-4 mr-1" />
+              Hear Word
+            </Button>
           </div>
 
-          {/* Mic status indicator */}
-          {isMicActive && (
-            <motion.div 
-              className={`text-center mt-3 text-sm font-bold ${isPaused ? 'text-yellow-400' : 'text-green-400'}`}
-              animate={!isPaused ? { opacity: [1, 0.5, 1] } : {}}
-              transition={{ duration: 1, repeat: Infinity }}
-            >
-              {isPaused ? '⏸️ Paused - Timer running!' : '🎤 Listening...'}
-            </motion.div>
-          )}
+          {/* RPGWordReader - handles speech recognition with proper matching */}
+          <RPGWordReader
+            words={[currentWord]}
+            onResult={handleWordResult}
+            disabled={gameOver}
+            streak={correctWords}
+            batchSize={1}
+            enableEchoRetry={true}
+          />
         </div>
       )}
 
