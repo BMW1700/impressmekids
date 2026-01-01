@@ -265,40 +265,46 @@ export const RPGBattleArena = ({
   }, [words, batchStartIndex]);
   
   // Handle Word Shield complete
+  // Handle Word Shield complete - delay to let mic cleanup
   const handleWordShieldComplete = useCallback((shieldStrength: number, damage: number) => {
-    // Player takes reduced damage based on shield strength
-    const reducedDamage = Math.floor(20 * (1 - shieldStrength / 100));
-    if (reducedDamage > 0) {
-      setPlayerHp(prev => Math.max(0, prev - reducedDamage));
-    }
-    // Deal bonus damage to enemy if shield was strong
-    if (shieldStrength > 50) {
-      setEnemyHp(prev => Math.max(0, prev - damage));
-      setTotalDamage(prev => prev + damage);
-    }
-    setBatchStartIndex(prev => prev + barrageWords.length);
-    setPhase('reading');
+    // Add delay to allow mini-game recognition to fully cleanup before returning to reading
+    setTimeout(() => {
+      const reducedDamage = Math.floor(20 * (1 - shieldStrength / 100));
+      if (reducedDamage > 0) {
+        setPlayerHp(prev => Math.max(0, prev - reducedDamage));
+      }
+      if (shieldStrength > 50) {
+        setEnemyHp(prev => Math.max(0, prev - damage));
+        setTotalDamage(prev => prev + damage);
+      }
+      setBatchStartIndex(prev => prev + barrageWords.length);
+      setPhase('reading');
+    }, 300);
   }, [barrageWords.length]);
   
-  // Handle Spell Combo complete
+  // Handle Spell Combo complete - delay to let mic cleanup
   const handleSpellComboComplete = useCallback((success: boolean, multiplier: number) => {
-    if (success) {
-      const damage = Math.floor(50 * multiplier);
-      setEnemyHp(prev => Math.max(0, prev - damage));
-      setTotalDamage(prev => prev + damage);
-      setCorrectWords(prev => prev + barrageWords.length);
-    }
-    setBatchStartIndex(prev => prev + barrageWords.length);
-    setPhase('reading');
+    setTimeout(() => {
+      if (success) {
+        const damage = Math.floor(50 * multiplier);
+        setEnemyHp(prev => Math.max(0, prev - damage));
+        setTotalDamage(prev => prev + damage);
+        setCorrectWords(prev => prev + barrageWords.length);
+      }
+      setBatchStartIndex(prev => prev + barrageWords.length);
+      setPhase('reading');
+    }, 300);
   }, [barrageWords.length]);
   
   // Handle Dodge Words complete
   const handleDodgeWordsComplete = useCallback((correctHits: number, wrongHits: number, dodged: number) => {
-    const damage = correctHits * 15;
-    setEnemyHp(prev => Math.max(0, prev - damage));
-    setTotalDamage(prev => prev + damage);
-    setCorrectWords(prev => prev + correctHits);
-    setPhase('reading');
+    setTimeout(() => {
+      const damage = correctHits * 15;
+      setEnemyHp(prev => Math.max(0, prev - damage));
+      setTotalDamage(prev => prev + damage);
+      setCorrectWords(prev => prev + correctHits);
+      setPhase('reading');
+    }, 300);
   }, []);
   
   // Handle Dodge Words damage
@@ -307,26 +313,30 @@ export const RPGBattleArena = ({
     triggerScreenShake();
   }, []);
   
-  // Handle Rhyme Chain complete
+  // Handle Rhyme Chain complete - delay to let mic cleanup
   const handleRhymeChainComplete = useCallback((score: number, damage: number) => {
-    if (damage > 0) {
-      setEnemyHp(prev => Math.max(0, prev - damage));
-      setTotalDamage(prev => prev + damage);
-    }
-    setCorrectWords(prev => prev + score);
-    setBatchStartIndex(prev => prev + barrageWords.length);
-    setPhase('reading');
+    setTimeout(() => {
+      if (damage > 0) {
+        setEnemyHp(prev => Math.max(0, prev - damage));
+        setTotalDamage(prev => prev + damage);
+      }
+      setCorrectWords(prev => prev + score);
+      setBatchStartIndex(prev => prev + barrageWords.length);
+      setPhase('reading');
+    }, 300);
   }, [barrageWords.length]);
   
-  // Handle Speed Typist complete
+  // Handle Speed Typist complete - delay to let mic cleanup
   const handleSpeedTypistComplete = useCallback((wordsSpoken: number, damage: number) => {
-    if (damage > 0) {
-      setEnemyHp(prev => Math.max(0, prev - damage));
-      setTotalDamage(prev => prev + damage);
-    }
-    setCorrectWords(prev => prev + wordsSpoken);
-    setBatchStartIndex(prev => prev + barrageWords.length);
-    setPhase('reading');
+    setTimeout(() => {
+      if (damage > 0) {
+        setEnemyHp(prev => Math.max(0, prev - damage));
+        setTotalDamage(prev => prev + damage);
+      }
+      setCorrectWords(prev => prev + wordsSpoken);
+      setBatchStartIndex(prev => prev + barrageWords.length);
+      setPhase('reading');
+    }, 300);
   }, [barrageWords.length]);
   
   // Handle mini-game damage
