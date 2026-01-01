@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Flame, Trophy, Skull, Star, AlertTriangle, Coins, Volume2, VolumeX } from "lucide-react";
@@ -40,6 +40,7 @@ import { CuratedStory } from "@/data/curatedStories";
 import { calculateGoldEarned, calculateXpEarned } from "@/lib/gameEconomy";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { speechManager } from "@/lib/speechRecognitionManager";
+import { supabase } from "@/integrations/supabase/client";
 
 // Sound effects singleton
 const battleSounds = new SoundEffects();
@@ -172,12 +173,17 @@ export const RPGBattleArena = ({
     console.log('[RPGBattle] Returning to reading state');
     // Force stop any lingering recognition
     speechManager.forceStop();
+    
+    // Clear any pending state immediately
+    setCurrentWordResult(null);
+    setEnemyAbilityMessage(null);
+    
     // Small delay to ensure cleanup completes
     setTimeout(() => {
       setPhase('reading');
       setCurrentCommand('read');
-      setCurrentWordResult(null);
       setIsPlayerTurn(true);
+      console.log('[RPGBattle] State reset complete - phase: reading, command: read');
     }, 100);
   }, []);
 
@@ -822,11 +828,44 @@ export const RPGBattleArena = ({
     setCurrentSpeaker('enemy');
   }, [currentEnemyIndex, enemyQueue]);
 
-  // Handle battle end
-  const handleBattleEnd = useCallback((victory: boolean) => {
+  // Track battle start time for duration calculation
+  const battleStartTime = useRef(Date.now());
+  
+  // Handle battle end - also saves reading session for teacher visibility
+  const handleBattleEnd = useCallback(async (victory: boolean) => {
     const xpEarned = victory ? 
       Math.floor(100 + correctWords * 5 + longestStreak * 10 + totalDamage * 0.5) :
       Math.floor(correctWords * 2);
+    
+    // Calculate battle duration and WPM
+    const durationSeconds = Math.max(1, (Date.now() - battleStartTime.current) / 1000);
+    const wpm = Math.round((wordsRead / durationSeconds) * 60);
+    const accuracyPercent = wordsRead > 0 ? Math.round((correctWords / wordsRead) * 100) : 0;
+    
+    // Save to reading_sessions for teacher visibility
+    if (studentId && wordsRead > 0) {
+      try {
+        const { error } = await supabase.from('reading_sessions').insert({
+          student_id: studentId,
+          passage_text: story.passage_text?.slice(0, 500) || story.title,
+          words_read: wordsRead,
+          duration_seconds: Math.round(durationSeconds),
+          wpm: wpm,
+          accuracy_percent: accuracyPercent,
+          fluency_score: Math.min(100, Math.round(accuracyPercent * 0.7 + Math.min(wpm, 150) * 0.3)),
+          wcpm: Math.round(correctWords / (durationSeconds / 60)),
+          fluency_level: accuracyPercent >= 95 ? 'independent' : accuracyPercent >= 90 ? 'instructional' : 'frustration',
+        });
+        
+        if (error) {
+          console.error('[RPGBattle] Failed to save reading session:', error);
+        } else {
+          console.log('[RPGBattle] Reading session saved for teacher visibility');
+        }
+      } catch (err) {
+        console.error('[RPGBattle] Error saving reading session:', err);
+      }
+    }
 
     onComplete(victory, {
       wordsRead,
@@ -835,17 +874,21 @@ export const RPGBattleArena = ({
       damageDealt: totalDamage,
       xpEarned,
     });
-  }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete]);
+  }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete, studentId, story]);
 
   // Get current batch of words for reading - MEMOIZED for stable reference
   // batchStartIndex only changes when we complete a full batch, keeping this stable
   const currentWordBatch = useMemo(() => {
-    if (batchStartIndex >= words.length) return [];
+    // If we've read all words, show a message batch instead of empty
+    if (batchStartIndex >= words.length) {
+      // Return empty - UI will handle showing "all words read" message
+      return [];
+    }
     return words.slice(batchStartIndex, batchStartIndex + 5);
   }, [words, batchStartIndex]);
-
-  // Keep the callback for backward compat
-  const getCurrentWordBatch = useCallback(() => currentWordBatch, [currentWordBatch]);
+  
+  // Check if all words have been read
+  const allWordsRead = batchStartIndex >= words.length && words.length > 0;
 
   return (
     <motion.div 
@@ -1186,6 +1229,15 @@ export const RPGBattleArena = ({
                         batchSize={5}
                         enableEchoRetry={true}
                       />
+                    )}
+                    
+                    {/* All words read message */}
+                    {currentCommand === 'read' && allWordsRead && currentWordResult === null && (
+                      <div className="bg-gradient-to-r from-amber-900/80 to-yellow-900/80 border-2 border-amber-500 rounded-xl p-6 text-center">
+                        <div className="text-2xl mb-2">📚✨</div>
+                        <p className="text-lg font-bold text-amber-300">All words read!</p>
+                        <p className="text-sm text-amber-200/80 mt-1">Keep attacking with spells or items!</p>
+                      </div>
                     )}
 
                     {/* Word Attack Effect */}

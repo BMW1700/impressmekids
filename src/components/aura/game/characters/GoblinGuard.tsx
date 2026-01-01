@@ -90,9 +90,10 @@ export const GoblinGuard = ({
         };
       case 'defeated':
         return {
-          rotate: [0, 360],
-          scale: [1, 0],
-          opacity: [1, 0],
+          rotate: [0, 15],
+          y: [0, 20],
+          scale: [1, 0.9],
+          opacity: [1, 0.6],
           transition: { duration: 0.8 },
         };
       case 'taunting':
