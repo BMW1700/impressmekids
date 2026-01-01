@@ -95,7 +95,7 @@ export const SirValor = ({
         return {
           y: [0, 20],
           rotate: [0, -15],
-          opacity: [1, 0],
+          opacity: [1, 0.5],
           transition: { duration: 1 },
         };
       case 'blocking':
