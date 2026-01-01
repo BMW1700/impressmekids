@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Music, Zap, Star, Target } from "lucide-react";
+import { Music, Star, Target } from "lucide-react";
+import { speechManager } from "@/lib/speechRecognitionManager";
+import { SoundEffects } from "@/lib/pronunciationPlayer";
 
 interface RhymeWord {
   id: number;
@@ -15,6 +17,8 @@ interface RPGRhymeChainProps {
   onComplete: (score: number, damage: number) => void;
   onDamage: (damage: number) => void;
 }
+
+const sounds = new SoundEffects();
 
 // Common rhyme patterns
 const rhymePairs: Record<string, string[]> = {
@@ -59,7 +63,23 @@ export const RPGRhymeChain = ({
   const [phase, setPhase] = useState<'ready' | 'playing' | 'complete'>('ready');
   const [isListening, setIsListening] = useState(false);
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-  const recognitionRef = useRef<any>(null);
+  
+  const isMountedRef = useRef(true);
+  const currentIndexRef = useRef(0);
+  const rhymeWordsRef = useRef<RhymeWord[]>([]);
+  const phaseRef = useRef<'ready' | 'playing' | 'complete'>('ready');
+
+  useEffect(() => {
+    currentIndexRef.current = currentIndex;
+  }, [currentIndex]);
+
+  useEffect(() => {
+    rhymeWordsRef.current = rhymeWords;
+  }, [rhymeWords]);
+
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
 
   // Initialize rhyme words
   useEffect(() => {
@@ -72,10 +92,15 @@ export const RPGRhymeChain = ({
       missed: false,
     }));
     setRhymeWords(rhymes);
+    rhymeWordsRef.current = rhymes;
+    
+    sounds.miniGameStart();
     
     setTimeout(() => {
-      setPhase('playing');
-      startListening();
+      if (isMountedRef.current) {
+        setPhase('playing');
+        startListening();
+      }
     }, 1500);
   }, [words]);
 
@@ -86,6 +111,7 @@ export const RPGRhymeChain = ({
     const interval = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
+          speechManager.stop('rhyme_chain');
           setPhase('complete');
           return 0;
         }
@@ -100,75 +126,79 @@ export const RPGRhymeChain = ({
   useEffect(() => {
     if (phase === 'complete') {
       const damage = score * 8 + combo * 15;
-      onComplete(score, damage);
+      setTimeout(() => {
+        if (isMountedRef.current) {
+          onComplete(score, damage);
+        }
+      }, 1500);
     }
   }, [phase, score, combo, onComplete]);
 
-  // Start speech recognition
+  // Start recognition using manager
   const startListening = useCallback(() => {
-    if (!('webkitSpeechRecognition' in window)) return;
-    
-    const SpeechRecognition = (window as any).webkitSpeechRecognition;
-    recognitionRef.current = new SpeechRecognition();
-    recognitionRef.current.continuous = true;
-    recognitionRef.current.interimResults = false;
-    
-    recognitionRef.current.onstart = () => setIsListening(true);
-    recognitionRef.current.onend = () => {
-      if (phase === 'playing') {
-        recognitionRef.current?.start();
-      }
-    };
-    
-    recognitionRef.current.onresult = (event: any) => {
-      const result = event.results[event.results.length - 1];
-      if (result.isFinal) {
-        const spoken = result[0].transcript.trim().toLowerCase();
-        checkRhyme(spoken);
-      }
-    };
-    
-    try {
-      recognitionRef.current.start();
-    } catch (e) {
-      console.log('Speech recognition error:', e);
-    }
-  }, [phase]);
-
-  // Check if spoken word rhymes
-  const checkRhyme = useCallback((spokenWord: string) => {
-    if (currentIndex >= rhymeWords.length) return;
-    
-    const currentRhyme = rhymeWords[currentIndex];
-    const expectedRhyme = currentRhyme.rhymesWith.toLowerCase();
-    const isMatch = spokenWord.includes(expectedRhyme) || expectedRhyme.includes(spokenWord);
-    
-    if (isMatch) {
-      setFeedback('correct');
-      setScore(prev => prev + 1);
-      setCombo(prev => prev + 1);
-      setRhymeWords(prev => prev.map((w, i) => 
-        i === currentIndex ? { ...w, spoken: true } : w
-      ));
-      setCurrentIndex(prev => prev + 1);
-      
-      // Check if all done
-      if (currentIndex >= rhymeWords.length - 1) {
-        setPhase('complete');
-      }
-    } else {
-      setFeedback('wrong');
-      setCombo(0);
-      onDamage(8);
-    }
-    
-    setTimeout(() => setFeedback(null), 500);
-  }, [currentIndex, rhymeWords, onDamage]);
+    speechManager.start({
+      owner: 'rhyme_chain',
+      continuous: true,
+      interimResults: false,
+      onStart: () => {
+        if (isMountedRef.current) {
+          setIsListening(true);
+        }
+      },
+      onEnd: () => {
+        if (isMountedRef.current) {
+          setIsListening(false);
+        }
+      },
+      onResult: (transcript, alternatives, isFinal) => {
+        if (!isFinal || !isMountedRef.current || phaseRef.current !== 'playing') return;
+        
+        const currentIdx = currentIndexRef.current;
+        const words = rhymeWordsRef.current;
+        
+        if (currentIdx >= words.length) return;
+        
+        const currentRhyme = words[currentIdx];
+        const expectedRhyme = currentRhyme.rhymesWith.toLowerCase();
+        const spoken = transcript.toLowerCase().trim();
+        const isMatch = spoken.includes(expectedRhyme) || expectedRhyme.includes(spoken);
+        
+        if (isMatch) {
+          sounds.correctWord();
+          setFeedback('correct');
+          setScore(prev => prev + 1);
+          setCombo(prev => prev + 1);
+          setRhymeWords(prev => prev.map((w, i) => 
+            i === currentIdx ? { ...w, spoken: true } : w
+          ));
+          setCurrentIndex(prev => prev + 1);
+          
+          // Check if all done
+          if (currentIdx >= words.length - 1) {
+            speechManager.stop('rhyme_chain');
+            setPhase('complete');
+          }
+        } else {
+          sounds.incorrectWord();
+          setFeedback('wrong');
+          setCombo(0);
+          onDamage(8);
+        }
+        
+        setTimeout(() => setFeedback(null), 500);
+      },
+      onError: (error) => {
+        console.log('[RhymeChain] Recognition error:', error);
+      },
+    });
+  }, [onDamage]);
 
   // Cleanup
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
-      recognitionRef.current?.stop();
+      isMountedRef.current = false;
+      speechManager.abort('rhyme_chain');
     };
   }, []);
 

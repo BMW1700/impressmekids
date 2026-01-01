@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Flame, Trophy, Skull, Star, AlertTriangle, Coins } from "lucide-react";
+import { ArrowLeft, Flame, Trophy, Skull, Star, AlertTriangle, Coins, Volume2, VolumeX } from "lucide-react";
 import { RPGBattleBackground } from "./RPGBattleBackground";
 import { RPGCharacter } from "./RPGCharacter";
 import { RPGDialogueBox } from "./RPGDialogueBox";
@@ -38,6 +38,11 @@ import {
 } from "@/lib/rpgBattleData";
 import { CuratedStory } from "@/data/curatedStories";
 import { calculateGoldEarned, calculateXpEarned } from "@/lib/gameEconomy";
+import { SoundEffects } from "@/lib/pronunciationPlayer";
+import { speechManager } from "@/lib/speechRecognitionManager";
+
+// Sound effects singleton
+const battleSounds = new SoundEffects();
 
 type EnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian';
 // UPDATED: Added new mini-game phases
@@ -153,6 +158,28 @@ export const RPGBattleArena = ({
   
   // Floating damage numbers
   const [floatingDamages, setFloatingDamages] = useState<{id: number; damage: number; x: number; y: number; isPlayer: boolean; isCritical?: boolean}[]>([]);
+  
+  // Sound toggle
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  
+  // Update sound effects when toggle changes
+  useEffect(() => {
+    battleSounds.setSoundEnabled(soundEnabled);
+  }, [soundEnabled]);
+  
+  // Helper function to return to reading state cleanly after any mini-game/barrage
+  const returnToReading = useCallback(() => {
+    console.log('[RPGBattle] Returning to reading state');
+    // Force stop any lingering recognition
+    speechManager.forceStop();
+    // Small delay to ensure cleanup completes
+    setTimeout(() => {
+      setPhase('reading');
+      setCurrentCommand('read');
+      setCurrentWordResult(null);
+      setIsPlayerTurn(true);
+    }, 100);
+  }, []);
 
   // Parse story into words - memoized for stability
   const storyWords = useMemo(() => {
@@ -264,48 +291,50 @@ export const RPGBattleArena = ({
     }, 1000);
   }, [words, batchStartIndex]);
   
-  // Handle Word Shield complete
-  // Handle Word Shield complete - delay to let mic cleanup
+  // Handle Word Shield complete - uses returnToReading for clean state
   const handleWordShieldComplete = useCallback((shieldStrength: number, damage: number) => {
-    // Add delay to allow mini-game recognition to fully cleanup before returning to reading
-    setTimeout(() => {
-      const reducedDamage = Math.floor(20 * (1 - shieldStrength / 100));
-      if (reducedDamage > 0) {
-        setPlayerHp(prev => Math.max(0, prev - reducedDamage));
-      }
-      if (shieldStrength > 50) {
-        setEnemyHp(prev => Math.max(0, prev - damage));
-        setTotalDamage(prev => prev + damage);
-      }
-      setBatchStartIndex(prev => prev + barrageWords.length);
-      setPhase('reading');
-    }, 300);
-  }, [barrageWords.length]);
+    console.log('[RPGBattle] Word Shield complete:', { shieldStrength, damage });
+    // Play shield block sound
+    if (shieldStrength > 50) {
+      battleSounds.shieldBlock();
+    }
+    
+    const reducedDamage = Math.floor(20 * (1 - shieldStrength / 100));
+    if (reducedDamage > 0) {
+      setPlayerHp(prev => Math.max(0, prev - reducedDamage));
+    }
+    if (shieldStrength > 50) {
+      setEnemyHp(prev => Math.max(0, prev - damage));
+      setTotalDamage(prev => prev + damage);
+    }
+    setBatchStartIndex(prev => prev + barrageWords.length);
+    returnToReading();
+  }, [barrageWords.length, returnToReading]);
   
-  // Handle Spell Combo complete - delay to let mic cleanup
+  // Handle Spell Combo complete - uses returnToReading for clean state
   const handleSpellComboComplete = useCallback((success: boolean, multiplier: number) => {
-    setTimeout(() => {
-      if (success) {
-        const damage = Math.floor(50 * multiplier);
-        setEnemyHp(prev => Math.max(0, prev - damage));
-        setTotalDamage(prev => prev + damage);
-        setCorrectWords(prev => prev + barrageWords.length);
-      }
-      setBatchStartIndex(prev => prev + barrageWords.length);
-      setPhase('reading');
-    }, 300);
-  }, [barrageWords.length]);
+    console.log('[RPGBattle] Spell Combo complete:', { success, multiplier });
+    if (success) {
+      battleSounds.comboSuccess();
+      battleSounds.magicSparkle();
+      const damage = Math.floor(50 * multiplier);
+      setEnemyHp(prev => Math.max(0, prev - damage));
+      setTotalDamage(prev => prev + damage);
+      setCorrectWords(prev => prev + barrageWords.length);
+    }
+    setBatchStartIndex(prev => prev + barrageWords.length);
+    returnToReading();
+  }, [barrageWords.length, returnToReading]);
   
   // Handle Dodge Words complete
   const handleDodgeWordsComplete = useCallback((correctHits: number, wrongHits: number, dodged: number) => {
-    setTimeout(() => {
-      const damage = correctHits * 15;
-      setEnemyHp(prev => Math.max(0, prev - damage));
-      setTotalDamage(prev => prev + damage);
-      setCorrectWords(prev => prev + correctHits);
-      setPhase('reading');
-    }, 300);
-  }, []);
+    console.log('[RPGBattle] Dodge Words complete:', { correctHits, wrongHits, dodged });
+    const damage = correctHits * 15;
+    setEnemyHp(prev => Math.max(0, prev - damage));
+    setTotalDamage(prev => prev + damage);
+    setCorrectWords(prev => prev + correctHits);
+    returnToReading();
+  }, [returnToReading]);
   
   // Handle Dodge Words damage
   const handleDodgeWordsDamage = useCallback((damage: number) => {
@@ -313,31 +342,31 @@ export const RPGBattleArena = ({
     triggerScreenShake();
   }, []);
   
-  // Handle Rhyme Chain complete - delay to let mic cleanup
+  // Handle Rhyme Chain complete - uses returnToReading for clean state
   const handleRhymeChainComplete = useCallback((score: number, damage: number) => {
-    setTimeout(() => {
-      if (damage > 0) {
-        setEnemyHp(prev => Math.max(0, prev - damage));
-        setTotalDamage(prev => prev + damage);
-      }
-      setCorrectWords(prev => prev + score);
-      setBatchStartIndex(prev => prev + barrageWords.length);
-      setPhase('reading');
-    }, 300);
-  }, [barrageWords.length]);
+    console.log('[RPGBattle] Rhyme Chain complete:', { score, damage });
+    if (damage > 0) {
+      battleSounds.magicSparkle();
+      setEnemyHp(prev => Math.max(0, prev - damage));
+      setTotalDamage(prev => prev + damage);
+    }
+    setCorrectWords(prev => prev + score);
+    setBatchStartIndex(prev => prev + barrageWords.length);
+    returnToReading();
+  }, [barrageWords.length, returnToReading]);
   
-  // Handle Speed Typist complete - delay to let mic cleanup
+  // Handle Speed Typist complete - uses returnToReading for clean state
   const handleSpeedTypistComplete = useCallback((wordsSpoken: number, damage: number) => {
-    setTimeout(() => {
-      if (damage > 0) {
-        setEnemyHp(prev => Math.max(0, prev - damage));
-        setTotalDamage(prev => prev + damage);
-      }
-      setCorrectWords(prev => prev + wordsSpoken);
-      setBatchStartIndex(prev => prev + barrageWords.length);
-      setPhase('reading');
-    }, 300);
-  }, [barrageWords.length]);
+    console.log('[RPGBattle] Speed Typist complete:', { wordsSpoken, damage });
+    if (damage > 0) {
+      battleSounds.lightningCrack();
+      setEnemyHp(prev => Math.max(0, prev - damage));
+      setTotalDamage(prev => prev + damage);
+    }
+    setCorrectWords(prev => prev + wordsSpoken);
+    setBatchStartIndex(prev => prev + barrageWords.length);
+    returnToReading();
+  }, [barrageWords.length, returnToReading]);
   
   // Handle mini-game damage
   const handleMiniGameDamage = useCallback((damage: number) => {
@@ -410,15 +439,15 @@ export const RPGBattleArena = ({
 
   // Handle barrage completion - CRITICAL: advance batchStartIndex by words used in barrage
   const handleBarrageComplete = useCallback((destroyed: number, missed: number) => {
+    console.log('[RPGBattle] Barrage complete:', { destroyed, missed });
     if (destroyed > 0) {
       setCorrectWords(prev => prev + destroyed);
     }
     // Advance past the words used in the barrage so we don't repeat them
     const wordsUsedInBarrage = barrageWords.length;
     setBatchStartIndex(prev => prev + wordsUsedInBarrage);
-    console.log('[RPGBattle] Barrage complete, advancing batchStartIndex by:', wordsUsedInBarrage);
-    setPhase('reading');
-  }, [barrageWords.length]);
+    returnToReading();
+  }, [barrageWords.length, returnToReading]);
 
   // Handle barrage word hit
   const handleBarrageWordHit = useCallback((damage: number) => {
@@ -668,6 +697,22 @@ export const RPGBattleArena = ({
       // Trigger spell effect based on attack type
       setActiveSpell(attackType);
       setShowSpellEffect(true);
+      
+      // Play elemental sound effect
+      switch (attackType) {
+        case 'fire':
+          battleSounds.fireWhoosh();
+          break;
+        case 'ice':
+          battleSounds.iceShimmer();
+          break;
+        case 'lightning':
+          battleSounds.lightningCrack();
+          break;
+        case 'slash':
+          battleSounds.rockCrumble();
+          break;
+      }
       
       setTimeout(() => {
         setHeroAttacking(false);
@@ -1002,6 +1047,19 @@ export const RPGBattleArena = ({
                 <span className="font-bold">x{streak}</span>
               </motion.div>
             )}
+            {/* Sound Toggle */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSoundEnabled(!soundEnabled)}
+              className="text-white/70 hover:text-white hover:bg-white/10 p-2"
+            >
+              {soundEnabled ? (
+                <Volume2 className="h-4 w-4" />
+              ) : (
+                <VolumeX className="h-4 w-4" />
+              )}
+            </Button>
           </div>
         </div>
 

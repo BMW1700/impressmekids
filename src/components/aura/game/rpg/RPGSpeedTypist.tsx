@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Zap, Timer, Flame, Target } from "lucide-react";
+import { speechManager } from "@/lib/speechRecognitionManager";
+import { SoundEffects } from "@/lib/pronunciationPlayer";
 
 interface SpeedWord {
   id: number;
   word: string;
   spoken: boolean;
   missed: boolean;
-  position: number; // 0-100 horizontal position
+  position: number;
 }
 
 interface RPGSpeedTypistProps {
@@ -15,6 +17,8 @@ interface RPGSpeedTypistProps {
   onComplete: (wordsSpoken: number, damage: number) => void;
   onDamage: (damage: number) => void;
 }
+
+const sounds = new SoundEffects();
 
 export const RPGSpeedTypist = ({
   words,
@@ -29,20 +33,39 @@ export const RPGSpeedTypist = ({
   const [isListening, setIsListening] = useState(false);
   const [streak, setStreak] = useState(0);
   const [feedback, setFeedback] = useState<{ type: 'correct' | 'wrong'; word: string } | null>(null);
-  const recognitionRef = useRef<any>(null);
-  const countdownRef = useRef(3);
+  const [countdownValue, setCountdownValue] = useState(3);
+  
+  const isMountedRef = useRef(true);
+  const currentIndexRef = useRef(0);
+  const speedWordsRef = useRef<SpeedWord[]>([]);
+  const phaseRef = useRef<'countdown' | 'playing' | 'complete'>('countdown');
+
+  useEffect(() => {
+    currentIndexRef.current = currentIndex;
+  }, [currentIndex]);
+
+  useEffect(() => {
+    speedWordsRef.current = speedWords;
+  }, [speedWords]);
+
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
 
   // Initialize words
   useEffect(() => {
-    const limitedWords = words.slice(0, 15); // More words for speed challenge
+    const limitedWords = words.slice(0, 15);
     const initialWords: SpeedWord[] = limitedWords.map((word, i) => ({
       id: i,
       word,
       spoken: false,
       missed: false,
-      position: 10 + (i * 6) % 80, // Spread across screen
+      position: 10 + (i * 6) % 80,
     }));
     setSpeedWords(initialWords);
+    speedWordsRef.current = initialWords;
+    
+    sounds.miniGameStart();
   }, [words]);
 
   // Countdown then start
@@ -50,11 +73,14 @@ export const RPGSpeedTypist = ({
     if (phase !== 'countdown') return;
     
     const interval = setInterval(() => {
-      countdownRef.current -= 1;
-      if (countdownRef.current <= 0) {
-        setPhase('playing');
-        startListening();
-      }
+      setCountdownValue(prev => {
+        if (prev <= 1) {
+          setPhase('playing');
+          startListening();
+          return 0;
+        }
+        return prev - 1;
+      });
     }, 1000);
 
     return () => clearInterval(interval);
@@ -67,6 +93,7 @@ export const RPGSpeedTypist = ({
     const interval = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
+          speechManager.stop('speed_typist');
           setPhase('complete');
           return 0;
         }
@@ -81,76 +108,74 @@ export const RPGSpeedTypist = ({
   useEffect(() => {
     if (phase === 'complete') {
       const damage = score * 10 + streak * 5;
-      onComplete(score, damage);
+      setTimeout(() => {
+        if (isMountedRef.current) {
+          onComplete(score, damage);
+        }
+      }, 1500);
     }
   }, [phase, score, streak, onComplete]);
 
-  // Start speech recognition
+  // Start recognition using manager
   const startListening = useCallback(() => {
-    if (!('webkitSpeechRecognition' in window)) return;
-    
-    const SpeechRecognition = (window as any).webkitSpeechRecognition;
-    recognitionRef.current = new SpeechRecognition();
-    recognitionRef.current.continuous = true;
-    recognitionRef.current.interimResults = false;
-    
-    recognitionRef.current.onstart = () => setIsListening(true);
-    recognitionRef.current.onend = () => {
-      if (phase === 'playing') {
-        try {
-          recognitionRef.current?.start();
-        } catch (e) {
-          console.log('Speech restart error:', e);
+    speechManager.start({
+      owner: 'speed_typist',
+      continuous: true,
+      interimResults: false,
+      onStart: () => {
+        if (isMountedRef.current) {
+          setIsListening(true);
         }
-      }
-    };
-    
-    recognitionRef.current.onresult = (event: any) => {
-      const result = event.results[event.results.length - 1];
-      if (result.isFinal) {
-        const spoken = result[0].transcript.trim().toLowerCase();
-        checkWord(spoken);
-      }
-    };
-    
-    try {
-      recognitionRef.current.start();
-    } catch (e) {
-      console.log('Speech recognition error:', e);
-    }
-  }, [phase]);
-
-  // Check spoken word
-  const checkWord = useCallback((spokenWord: string) => {
-    if (currentIndex >= speedWords.length) return;
-    
-    const currentWord = speedWords[currentIndex];
-    const cleanSpoken = spokenWord.replace(/[^\w\s]/g, '').toLowerCase();
-    const cleanTarget = currentWord.word.replace(/[^\w\s]/g, '').toLowerCase();
-    
-    const isMatch = cleanSpoken.includes(cleanTarget) || cleanTarget.includes(cleanSpoken);
-    
-    if (isMatch) {
-      setFeedback({ type: 'correct', word: currentWord.word });
-      setScore(prev => prev + 1);
-      setStreak(prev => prev + 1);
-      setSpeedWords(prev => prev.map((w, i) => 
-        i === currentIndex ? { ...w, spoken: true } : w
-      ));
-      setCurrentIndex(prev => prev + 1);
-    } else {
-      setFeedback({ type: 'wrong', word: spokenWord });
-      setStreak(0);
-      onDamage(5);
-    }
-    
-    setTimeout(() => setFeedback(null), 400);
-  }, [currentIndex, speedWords, onDamage]);
+      },
+      onEnd: () => {
+        if (isMountedRef.current) {
+          setIsListening(false);
+        }
+      },
+      onResult: (transcript, alternatives, isFinal) => {
+        if (!isFinal || !isMountedRef.current || phaseRef.current !== 'playing') return;
+        
+        const currentIdx = currentIndexRef.current;
+        const words = speedWordsRef.current;
+        
+        if (currentIdx >= words.length) return;
+        
+        const currentWord = words[currentIdx];
+        const cleanSpoken = transcript.replace(/[^\w\s]/g, '').toLowerCase();
+        const cleanTarget = currentWord.word.replace(/[^\w\s]/g, '').toLowerCase();
+        
+        const isMatch = cleanSpoken.includes(cleanTarget) || cleanTarget.includes(cleanSpoken);
+        
+        if (isMatch) {
+          sounds.correctWord();
+          setFeedback({ type: 'correct', word: currentWord.word });
+          setScore(prev => prev + 1);
+          setStreak(prev => prev + 1);
+          setSpeedWords(prev => prev.map((w, i) => 
+            i === currentIdx ? { ...w, spoken: true } : w
+          ));
+          setCurrentIndex(prev => prev + 1);
+        } else {
+          sounds.incorrectWord();
+          setFeedback({ type: 'wrong', word: transcript });
+          setStreak(0);
+          onDamage(5);
+        }
+        
+        setTimeout(() => setFeedback(null), 400);
+      },
+      onError: (error) => {
+        console.log('[SpeedTypist] Recognition error:', error);
+      },
+    });
+  }, [onDamage]);
 
   // Cleanup
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
-      recognitionRef.current?.stop();
+      isMountedRef.current = false;
+      speechManager.abort('speed_typist');
     };
   }, []);
 
@@ -256,12 +281,12 @@ export const RPGSpeedTypist = ({
               className="text-center"
             >
               <motion.div
-                key={countdownRef.current}
+                key={countdownValue}
                 initial={{ scale: 1.5 }}
                 animate={{ scale: 1 }}
                 className="text-9xl font-black text-yellow-400"
               >
-                {countdownRef.current > 0 ? countdownRef.current : 'GO!'}
+                {countdownValue > 0 ? countdownValue : 'GO!'}
               </motion.div>
               <p className="text-orange-200 text-xl mt-4">Get ready to speak fast!</p>
             </motion.div>

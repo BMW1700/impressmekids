@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Zap, Mic } from "lucide-react";
+import { speechManager } from "@/lib/speechRecognitionManager";
+import { SoundEffects } from "@/lib/pronunciationPlayer";
 
 interface ComboWord {
   id: number;
@@ -14,6 +16,8 @@ interface RPGSpellComboProps {
   onComplete: (success: boolean, comboMultiplier: number) => void;
 }
 
+const sounds = new SoundEffects();
+
 export const RPGSpellCombo = ({
   words,
   onComplete,
@@ -26,7 +30,6 @@ export const RPGSpellCombo = ({
   const [timeLeft, setTimeLeft] = useState(15);
   
   // Refs to avoid stale closures
-  const recognitionRef = useRef<any>(null);
   const isMountedRef = useRef(true);
   const currentIndexRef = useRef(0);
   const comboWordsRef = useRef<ComboWord[]>([]);
@@ -45,17 +48,6 @@ export const RPGSpellCombo = ({
     phaseRef.current = phase;
   }, [phase]);
 
-  // Stop recognition helper
-  const stopRecognition = useCallback(() => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch (e) {}
-      recognitionRef.current = null;
-    }
-    setIsListening(false);
-  }, []);
-
   // Initialize combo words
   useEffect(() => {
     const limitedWords = words.slice(0, 5);
@@ -67,6 +59,9 @@ export const RPGSpellCombo = ({
     }));
     setComboWords(initialWords);
     comboWordsRef.current = initialWords;
+    
+    // Play start sound
+    sounds.miniGameStart();
     
     setTimeout(() => {
       if (isMountedRef.current) {
@@ -87,7 +82,7 @@ export const RPGSpellCombo = ({
     const interval = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
-          stopRecognition();
+          speechManager.stop('spell_combo');
           setPhase('failed');
           setTimeout(() => {
             if (isMountedRef.current) {
@@ -101,7 +96,7 @@ export const RPGSpellCombo = ({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [phase, onComplete, stopRecognition]);
+  }, [phase, onComplete]);
 
   // Check for completion
   useEffect(() => {
@@ -109,8 +104,9 @@ export const RPGSpellCombo = ({
     
     const allSpoken = comboWords.every(w => w.spoken);
     if (allSpoken && comboWords.length > 0) {
-      stopRecognition();
+      speechManager.stop('spell_combo');
       setPhase('success');
+      sounds.comboSuccess();
       const multiplier = Math.min(5, comboWords.length);
       setTimeout(() => {
         if (isMountedRef.current) {
@@ -118,47 +114,28 @@ export const RPGSpellCombo = ({
         }
       }, 2500);
     }
-  }, [comboWords, phase, onComplete, stopRecognition]);
+  }, [comboWords, phase, onComplete]);
 
-  // Start speech recognition
+  // Start recognition using manager
   const startListening = useCallback(() => {
-    const SpeechRecognitionAPI = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    if (!SpeechRecognitionAPI) return;
-
-    stopRecognition();
-
-    const recognition = new SpeechRecognitionAPI();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-    recognitionRef.current = recognition;
-
-    recognition.onstart = () => {
-      if (isMountedRef.current) {
-        setIsListening(true);
-      }
-    };
-
-    recognition.onend = () => {
-      if (isMountedRef.current) {
-        setIsListening(false);
-        if (phaseRef.current === 'casting' && isMountedRef.current) {
-          setTimeout(() => {
-            if (isMountedRef.current && phaseRef.current === 'casting') {
-              try {
-                recognition.start();
-              } catch (e) {}
-            }
-          }, 100);
+    speechManager.start({
+      owner: 'spell_combo',
+      continuous: true,
+      interimResults: true,
+      onStart: () => {
+        if (isMountedRef.current) {
+          setIsListening(true);
         }
-      }
-    };
-
-    recognition.onresult = (event: any) => {
-      if (!isMountedRef.current || phaseRef.current !== 'casting') return;
-      
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const spoken = event.results[i][0].transcript.toLowerCase().trim();
+      },
+      onEnd: () => {
+        if (isMountedRef.current) {
+          setIsListening(false);
+        }
+      },
+      onResult: (transcript, alternatives, isFinal) => {
+        if (!isMountedRef.current || phaseRef.current !== 'casting') return;
+        
+        const spoken = transcript.toLowerCase().trim();
         const spokenWords = spoken.split(' ');
         
         spokenWords.forEach(spokenWord => {
@@ -175,6 +152,7 @@ export const RPGSpellCombo = ({
                 cleanSpoken.includes(targetWord) || 
                 targetWord.includes(cleanSpoken) ||
                 (cleanSpoken.length >= 3 && targetWord.startsWith(cleanSpoken.slice(0, 3)))) {
+              sounds.magicSparkle();
               setComboWords(prev => prev.map((w, idx) => ({
                 ...w,
                 spoken: idx <= currentIdx ? true : w.spoken,
@@ -185,34 +163,21 @@ export const RPGSpellCombo = ({
             }
           }
         });
-      }
-    };
-
-    recognition.onerror = (event: any) => {
-      if (event.error === 'no-speech' || event.error === 'audio-capture') {
-        if (isMountedRef.current && phaseRef.current === 'casting') {
-          setTimeout(() => {
-            if (isMountedRef.current && phaseRef.current === 'casting') {
-              startListening();
-            }
-          }, 500);
-        }
-      }
-    };
-
-    try {
-      recognition.start();
-    } catch (e) {}
-  }, [stopRecognition]);
+      },
+      onError: (error) => {
+        console.log('[SpellCombo] Recognition error:', error);
+      },
+    });
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
-      stopRecognition();
+      speechManager.abort('spell_combo');
     };
-  }, [stopRecognition]);
+  }, []);
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-50">

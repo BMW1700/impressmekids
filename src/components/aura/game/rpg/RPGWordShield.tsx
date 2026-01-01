@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Shield, Zap, Mic } from "lucide-react";
+import { speechManager } from "@/lib/speechRecognitionManager";
+import { SoundEffects } from "@/lib/pronunciationPlayer";
 
 interface ShieldWord {
   id: number;
@@ -12,6 +14,8 @@ interface RPGWordShieldProps {
   words: string[];
   onComplete: (shieldStrength: number, damage: number) => void;
 }
+
+const sounds = new SoundEffects();
 
 export const RPGWordShield = ({
   words,
@@ -26,8 +30,7 @@ export const RPGWordShield = ({
   const [phase, setPhase] = useState<'building' | 'impact' | 'done'>('building');
   const [lastRecognized, setLastRecognized] = useState<string>('');
   
-  // Use refs to avoid stale closures in speech recognition callbacks
-  const recognitionRef = useRef<any>(null);
+  // Use refs to avoid stale closures
   const isMountedRef = useRef(true);
   const currentWordIndexRef = useRef(0);
   const shieldWordsRef = useRef<ShieldWord[]>([]);
@@ -52,6 +55,9 @@ export const RPGWordShield = ({
     setShieldWords(initialWords);
     shieldWordsRef.current = initialWords;
     
+    // Play start sound
+    sounds.miniGameStart();
+    
     // Small delay before starting recognition
     const timer = setTimeout(() => {
       if (isMountedRef.current) {
@@ -69,7 +75,7 @@ export const RPGWordShield = ({
     const interval = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
-          stopRecognition();
+          speechManager.stop('shield');
           setAttackStarted(true);
           setPhase('impact');
           return 0;
@@ -98,62 +104,26 @@ export const RPGWordShield = ({
     return () => clearTimeout(timer);
   }, [phase, shieldPower, onComplete]);
 
-  // Stop recognition helper
-  const stopRecognition = useCallback(() => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch (e) {
-        // Ignore errors during cleanup
-      }
-      recognitionRef.current = null;
-    }
-    setIsListening(false);
-  }, []);
-
-  // Start continuous speech recognition
+  // Start recognition using manager
   const startListening = useCallback(() => {
-    const SpeechRecognitionAPI = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    if (!SpeechRecognitionAPI) return;
-
-    // Clean up any existing recognition
-    stopRecognition();
-
-    const recognition = new SpeechRecognitionAPI();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-    recognitionRef.current = recognition;
-
-    recognition.onstart = () => {
-      if (isMountedRef.current) {
-        setIsListening(true);
-      }
-    };
-
-    recognition.onend = () => {
-      if (isMountedRef.current) {
-        setIsListening(false);
-        // Only restart if still in building phase and component is mounted
-        if (phaseRef.current === 'building' && isMountedRef.current) {
-          setTimeout(() => {
-            if (isMountedRef.current && phaseRef.current === 'building') {
-              try {
-                recognition.start();
-              } catch (e) {
-                // Recognition may have been aborted
-              }
-            }
-          }, 100);
+    speechManager.start({
+      owner: 'shield',
+      continuous: true,
+      interimResults: true,
+      onStart: () => {
+        if (isMountedRef.current) {
+          setIsListening(true);
         }
-      }
-    };
-
-    recognition.onresult = (event: any) => {
-      if (!isMountedRef.current || phaseRef.current !== 'building') return;
-      
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const spoken = event.results[i][0].transcript.toLowerCase().trim();
+      },
+      onEnd: () => {
+        if (isMountedRef.current) {
+          setIsListening(false);
+        }
+      },
+      onResult: (transcript, alternatives, isFinal) => {
+        if (!isMountedRef.current || phaseRef.current !== 'building') return;
+        
+        const spoken = transcript.toLowerCase().trim();
         setLastRecognized(spoken);
         const spokenWords = spoken.split(' ');
         
@@ -173,6 +143,7 @@ export const RPGWordShield = ({
                 targetWord.includes(cleanSpoken) ||
                 (cleanSpoken.length >= 3 && targetWord.startsWith(cleanSpoken.slice(0, 3)))) {
               // Word matched!
+              sounds.correctWord();
               setShieldWords(prev => prev.map((w, idx) => 
                 idx === currentIdx ? { ...w, spoken: true } : w
               ));
@@ -181,29 +152,12 @@ export const RPGWordShield = ({
             }
           }
         });
-      }
-    };
-
-    recognition.onerror = (event: any) => {
-      console.log('[WordShield] Recognition error:', event.error);
-      if (event.error === 'no-speech' || event.error === 'audio-capture') {
-        // Try to restart after error
-        if (isMountedRef.current && phaseRef.current === 'building') {
-          setTimeout(() => {
-            if (isMountedRef.current && phaseRef.current === 'building') {
-              startListening();
-            }
-          }, 500);
-        }
-      }
-    };
-
-    try {
-      recognition.start();
-    } catch (e) {
-      console.log('[WordShield] Failed to start recognition:', e);
-    }
-  }, [stopRecognition]);
+      },
+      onError: (error) => {
+        console.log('[WordShield] Recognition error:', error);
+      },
+    });
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -211,9 +165,9 @@ export const RPGWordShield = ({
     
     return () => {
       isMountedRef.current = false;
-      stopRecognition();
+      speechManager.abort('shield');
     };
-  }, [stopRecognition]);
+  }, []);
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-50">
