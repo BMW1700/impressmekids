@@ -91,30 +91,18 @@ export const RPGTugOfWar = ({
     };
   }, []);
 
-  // Auto-pull timer - enemies pull every 10 seconds if not reading
+  // Log on mount to prove v2 is loaded
   useEffect(() => {
-    if (gameOver || !selectedCharacter || isPaused || isMicActive) return;
-    
-    const interval = setInterval(() => {
-      setAutoPullTimer(prev => {
-        if (prev <= 1) {
-          // Enemy auto-pulls!
-          handleEnemyAutoPull();
-          return 10;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    
-    return () => clearInterval(interval);
-  }, [gameOver, selectedCharacter, isPaused, isMicActive]);
+    console.log("[TUG-OF-WAR] v2 mounted", { 
+      selectedCharacter, 
+      ropePosition, 
+      isMicActive, 
+      isPaused,
+      wordsCount: words.length 
+    });
+  }, []);
 
-  // Reset timer when mic is active
-  useEffect(() => {
-    if (isMicActive && !isPaused) {
-      setAutoPullTimer(10);
-    }
-  }, [isMicActive, isPaused]);
+  // Auto-pull timer is set up below after handleEnemyAutoPull is defined
 
   // Check for win/lose conditions
   useEffect(() => {
@@ -165,6 +153,23 @@ export const RPGTugOfWar = ({
       setPullingAnimation(null);
     }, 800);
   }, [gameOver, ropePosition]);
+
+  // Auto-pull timer - enemies pull every 10 seconds EVEN IF MIC IS ACTIVE (creates pressure)
+  useEffect(() => {
+    if (gameOver || !selectedCharacter || isPaused) return;
+    
+    const interval = setInterval(() => {
+      setAutoPullTimer(prev => {
+        if (prev <= 1) {
+          handleEnemyAutoPull();
+          return 10;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [gameOver, selectedCharacter, isPaused, handleEnemyAutoPull]);
 
   const handleWordResult = useCallback((correct: boolean) => {
     setWordsRead(prev => prev + 1);
@@ -312,6 +317,11 @@ export const RPGTugOfWar = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
+      {/* V2 BADGE - proves you're in the new Tug of War */}
+      <div className="absolute top-2 left-2 z-50 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded shadow-lg">
+        Tug of War v2 • Kids + Goblins + Rope
+      </div>
+      
       {/* Background */}
       <TugOfWarBackground />
 
