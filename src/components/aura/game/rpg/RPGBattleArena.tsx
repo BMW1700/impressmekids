@@ -29,6 +29,7 @@ import { RPGSpeedTypist } from "./RPGSpeedTypist";
 // NEW: Import Tug of War and Balloon Battle modes
 import { RPGTugOfWar } from "./RPGTugOfWar";
 import { RPGBalloonBattle } from "./RPGBalloonBattle";
+import { RPGBalloonQuickPop } from "./RPGBalloonQuickPop";
 // NEW: Import Fireball Defense mode
 import { RPGFireballDefense } from "./RPGFireballDefense";
 import { Spell } from "./RPGSpellMenu";

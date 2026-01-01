@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Skull, Heart } from "lucide-react";
+import { Trophy, Skull, Heart, Coins, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 
@@ -14,15 +14,29 @@ interface RPGBalloonBattleProps {
 
 const soundEffects = new SoundEffects();
 
+// Hero balloons - colorful with cute faces
 const HERO_BALLOON_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#a855f7'];
+const HERO_FACES = ['⚔️', '🛡️', '🏹', '✨', '💫'];
+
+// Enemy balloons - dark with menacing faces
 const ENEMY_BALLOON_COLOR = '#1f2937';
+const ENEMY_FACES = ['👹', '💀', '🦇', '👻', '🐲'];
 
 interface Balloon {
   id: number;
   color: string;
+  face: string;
   hp: number;
   maxHp: number;
   popped: boolean;
+}
+
+interface FloatingReward {
+  id: number;
+  gold: number;
+  xp: number;
+  x: number;
+  y: number;
 }
 
 export const RPGBalloonBattle = ({
@@ -37,19 +51,21 @@ export const RPGBalloonBattle = ({
     HERO_BALLOON_COLORS.map((color, i) => ({
       id: i,
       color,
+      face: HERO_FACES[i],
       hp: 1,
       maxHp: 1,
       popped: false,
     }))
   );
 
-  // Enemy has 5 balloons with 5 HP each
+  // Enemy has 5 balloons with 3 HP each (reduced from 5)
   const [enemyBalloons, setEnemyBalloons] = useState<Balloon[]>(
     Array(5).fill(null).map((_, i) => ({
       id: i,
       color: ENEMY_BALLOON_COLOR,
-      hp: 5,
-      maxHp: 5,
+      face: ENEMY_FACES[i],
+      hp: 3,
+      maxHp: 3,
       popped: false,
     }))
   );
@@ -64,6 +80,12 @@ export const RPGBalloonBattle = ({
   const [victory, setVictory] = useState(false);
   const [poppingBalloon, setPoppingBalloon] = useState<{ side: 'hero' | 'enemy'; id: number } | null>(null);
   const [damageIndicator, setDamageIndicator] = useState<{ side: 'hero' | 'enemy'; id: number } | null>(null);
+  
+  // Rewards
+  const [floatingRewards, setFloatingRewards] = useState<FloatingReward[]>([]);
+  const [totalGold, setTotalGold] = useState(0);
+  const [totalXp, setTotalXp] = useState(0);
+  const rewardIdRef = useRef(0);
 
   const recognitionRef = useRef<any>(null);
 
@@ -117,6 +139,16 @@ export const RPGBalloonBattle = ({
     }
   }, [heroBalloons, enemyBalloons, gameOver, wordsRead, correctWords, balloonsLost, onComplete]);
 
+  const showFloatingReward = useCallback((gold: number, xp: number, isEnemy: boolean, balloonId: number) => {
+    const id = rewardIdRef.current++;
+    const x = isEnemy ? 20 + (balloonId % 3) * 10 : 70 + (balloonId % 3) * 10;
+    const y = 35 + Math.floor(balloonId / 3) * 10;
+    setFloatingRewards(prev => [...prev, { id, gold, xp, x, y }]);
+    setTimeout(() => {
+      setFloatingRewards(prev => prev.filter(r => r.id !== id));
+    }, 1500);
+  }, []);
+
   const handleWordResult = useCallback((correct: boolean) => {
     setWordsRead(prev => prev + 1);
     
@@ -135,9 +167,21 @@ export const RPGBalloonBattle = ({
             if (newHp <= 0) {
               setPoppingBalloon({ side: 'enemy', id: b.id });
               soundEffects.celebrationSound();
+              // Reward for popping enemy balloon
+              const goldReward = 10;
+              const xpReward = 5;
+              setTotalGold(prev => prev + goldReward);
+              setTotalXp(prev => prev + xpReward);
+              showFloatingReward(goldReward, xpReward, true, b.id);
               return { ...b, hp: 0, popped: true };
             }
             soundEffects.magicSparkle();
+            // Small reward for damage
+            const goldReward = 3;
+            const xpReward = 2;
+            setTotalGold(prev => prev + goldReward);
+            setTotalXp(prev => prev + xpReward);
+            showFloatingReward(goldReward, xpReward, true, b.id);
             return { ...b, hp: newHp };
           }
           return b;
@@ -174,7 +218,7 @@ export const RPGBalloonBattle = ({
         setCurrentWordIndex(prev => prev + 1);
       }
     }, 800);
-  }, [currentWord, currentWordIndex, words.length, currentEnemyBalloon, heroBalloons, onWordResult]);
+  }, [currentWord, currentWordIndex, words.length, currentEnemyBalloon, heroBalloons, onWordResult, showFloatingReward]);
 
   const startListening = useCallback(() => {
     if (!recognitionRef.current || isListening || gameOver) return;
@@ -216,6 +260,8 @@ export const RPGBalloonBattle = ({
 
     if (balloon.popped && !isPopping) return null;
 
+    const balloonColor = side === 'enemy' ? `hsl(${220 + index * 15}, 30%, ${20 + index * 5}%)` : balloon.color;
+
     return (
       <motion.div
         key={balloon.id}
@@ -223,10 +269,10 @@ export const RPGBalloonBattle = ({
         initial={{ scale: 1, opacity: 1 }}
         animate={
           isPopping
-            ? { scale: [1, 1.3, 0], opacity: [1, 1, 0], rotate: [0, 10, -10, 0] }
+            ? { scale: [1, 1.4, 0], opacity: [1, 1, 0], rotate: [0, 15, -15, 0] }
             : isDamaged
-            ? { scale: [1, 0.9, 1.1, 1], x: [0, -5, 5, 0] }
-            : { scale: 1, y: [0, -5, 0] }
+            ? { scale: [1, 0.85, 1.15, 1], x: [0, -8, 8, 0] }
+            : { scale: 1, y: [0, -6, 0] }
         }
         transition={
           isPopping
@@ -238,51 +284,84 @@ export const RPGBalloonBattle = ({
       >
         {/* Balloon */}
         <div
-          className={`w-16 h-20 rounded-full relative ${isTarget ? 'ring-4 ring-yellow-400 ring-opacity-50' : ''}`}
+          className={`w-20 h-24 rounded-[50%] relative ${isTarget ? 'ring-4 ring-yellow-400 ring-opacity-70' : ''}`}
           style={{
-            background: `radial-gradient(ellipse at 30% 30%, ${balloon.color}dd, ${balloon.color})`,
-            boxShadow: `0 4px 20px ${balloon.color}40`,
+            background: `radial-gradient(ellipse at 30% 25%, ${balloonColor}ee, ${balloonColor}bb, ${balloonColor})`,
+            boxShadow: isTarget 
+              ? `0 0 25px ${balloonColor}80, 0 8px 25px rgba(0,0,0,0.3)` 
+              : `0 8px 20px rgba(0,0,0,0.25)`,
           }}
         >
-          {/* Shine effect */}
-          <div className="absolute top-3 left-3 w-4 h-4 bg-white/40 rounded-full blur-sm" />
+          {/* Glossy shine */}
+          <div className="absolute top-3 left-4 w-6 h-6 bg-white/40 rounded-full blur-sm" />
+          <div className="absolute top-5 left-5 w-3 h-3 bg-white/60 rounded-full" />
+          
+          {/* Face */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-3xl drop-shadow-md">{balloon.face}</span>
+          </div>
           
           {/* HP indicator for enemy balloons */}
           {side === 'enemy' && !balloon.popped && (
-            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
               {Array(balloon.maxHp).fill(null).map((_, i) => (
-                <div
+                <motion.div
                   key={i}
-                  className={`w-2 h-2 rounded-full ${
-                    i < balloon.hp ? 'bg-red-500' : 'bg-gray-600'
+                  className={`w-3 h-3 rounded-full border border-white/30 ${
+                    i < balloon.hp ? 'bg-red-500' : 'bg-gray-600/50'
                   }`}
+                  animate={i < balloon.hp ? { scale: [1, 1.1, 1] } : {}}
+                  transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
                 />
               ))}
             </div>
           )}
 
           {/* String */}
-          <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-0.5 h-6 bg-gray-400" />
+          <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-0.5 h-10" 
+               style={{ background: 'linear-gradient(to bottom, #9ca3af, #6b7280)' }} />
+          
+          {/* Knot */}
+          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full"
+               style={{ backgroundColor: balloonColor }} />
         </div>
 
-        {/* Pop particles */}
+        {/* Pop particles + coins */}
         <AnimatePresence>
           {isPopping && (
             <>
-              {[...Array(8)].map((_, i) => (
+              {[...Array(12)].map((_, i) => (
                 <motion.div
                   key={`pop-${i}`}
-                  className="absolute top-1/2 left-1/2 w-3 h-3 rounded-full"
+                  className="absolute top-1/2 left-1/2 w-4 h-4 rounded-full"
                   style={{ backgroundColor: balloon.color }}
                   initial={{ x: 0, y: 0, scale: 1, opacity: 1 }}
                   animate={{
-                    x: (Math.cos((i / 8) * Math.PI * 2) * 40),
-                    y: (Math.sin((i / 8) * Math.PI * 2) * 40),
+                    x: (Math.cos((i / 12) * Math.PI * 2) * 50),
+                    y: (Math.sin((i / 12) * Math.PI * 2) * 50),
                     scale: 0,
                     opacity: 0,
                   }}
                   transition={{ duration: 0.5 }}
                 />
+              ))}
+              {/* Coin burst on enemy pop */}
+              {side === 'enemy' && [...Array(6)].map((_, i) => (
+                <motion.div
+                  key={`coin-${i}`}
+                  className="absolute top-1/2 left-1/2 text-xl"
+                  initial={{ x: 0, y: 0, scale: 0, opacity: 1 }}
+                  animate={{
+                    x: (Math.random() - 0.5) * 100,
+                    y: -40 - Math.random() * 50,
+                    scale: [0, 1.3, 1],
+                    opacity: [1, 1, 0],
+                    rotate: [0, 360],
+                  }}
+                  transition={{ duration: 0.8, delay: i * 0.05 }}
+                >
+                  🪙
+                </motion.div>
               ))}
             </>
           )}
@@ -314,9 +393,29 @@ export const RPGBalloonBattle = ({
       {/* Header */}
       <div className="p-4 text-center relative z-10">
         <h2 className="text-2xl font-black text-white drop-shadow-lg flex items-center justify-center gap-2">
-          🎈 BALLOON BATTLE 🎈
+          🎈 BALLOON BONANZA 🎈
         </h2>
         <p className="text-white/80 text-sm drop-shadow">Pop all enemy balloons! Don't lose yours!</p>
+      </div>
+
+      {/* Rewards Display */}
+      <div className="flex justify-center gap-4 mb-2 relative z-10">
+        <motion.div 
+          className="flex items-center gap-1 bg-yellow-500/30 backdrop-blur-sm px-3 py-1 rounded-full"
+          animate={{ scale: totalGold > 0 ? [1, 1.1, 1] : 1 }}
+          key={totalGold}
+        >
+          <Coins className="h-4 w-4 text-yellow-400" />
+          <span className="text-yellow-300 font-bold">{totalGold}</span>
+        </motion.div>
+        <motion.div 
+          className="flex items-center gap-1 bg-purple-500/30 backdrop-blur-sm px-3 py-1 rounded-full"
+          animate={{ scale: totalXp > 0 ? [1, 1.1, 1] : 1 }}
+          key={totalXp}
+        >
+          <Star className="h-4 w-4 text-purple-400" />
+          <span className="text-purple-300 font-bold">{totalXp} XP</span>
+        </motion.div>
       </div>
 
       {/* Score Display */}
@@ -340,6 +439,28 @@ export const RPGBalloonBattle = ({
           </div>
         </div>
       </div>
+
+      {/* Floating Rewards */}
+      <AnimatePresence>
+        {floatingRewards.map(reward => (
+          <motion.div
+            key={reward.id}
+            className="absolute pointer-events-none z-30 flex flex-col items-center"
+            style={{ left: `${reward.x}%`, top: `${reward.y}%` }}
+            initial={{ opacity: 0, y: 0, scale: 0.5 }}
+            animate={{ opacity: 1, y: -60, scale: 1 }}
+            exit={{ opacity: 0, y: -100 }}
+            transition={{ duration: 1.2 }}
+          >
+            <div className="flex items-center gap-1 bg-yellow-500/90 px-2 py-1 rounded-full text-sm font-bold text-yellow-900 shadow-lg">
+              <Coins className="h-3 w-3" /> +{reward.gold}
+            </div>
+            <div className="flex items-center gap-1 bg-purple-500/90 px-2 py-1 rounded-full text-sm font-bold text-purple-100 mt-1 shadow-lg">
+              <Star className="h-3 w-3" /> +{reward.xp} XP
+            </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
 
       {/* Balloon Arena */}
       <div className="flex-1 relative z-10 flex items-center justify-around px-8">
