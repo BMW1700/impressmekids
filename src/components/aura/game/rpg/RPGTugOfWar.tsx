@@ -1,16 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Skull, Coins, Star, Timer, Volume2, Pause, Play } from "lucide-react";
+import { Trophy, Skull, Coins, Star, Timer, Volume2, Pause, Play, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { TugOfWarBackground } from "./TugOfWarBackground";
 import { TugOfWarRope } from "./TugOfWarRope";
 import { TugOfWarKid } from "./TugOfWarKid";
 import { TugOfWarCharacterSelect } from "./TugOfWarCharacterSelect";
-import { RPGWordReader } from "./RPGWordReader";
 import { SirValor } from "../characters/SirValor";
 import { Elara } from "../characters/Elara";
 import { GoblinGuard } from "../characters/GoblinGuard";
+import { isWordMatchLenient } from "@/lib/wordMatchingModes";
+import { speechManager } from "@/lib/speechRecognitionManager";
 
 const soundEffects = new SoundEffects();
 
@@ -75,9 +76,20 @@ export const RPGTugOfWar = ({
 
   // Game completion ref to prevent multiple calls
   const gameCompletedRef = useRef(false);
+  
+  // Speech recognition state
+  const [isListening, setIsListening] = useState(false);
+  const currentWordRef = useRef("");
+  const processedWordsRef = useRef<Set<number>>(new Set());
+  const echoRetryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Current word
   const currentWord = words[currentWordIndex] || "";
+  
+  // Keep ref updated for speech callback
+  useEffect(() => {
+    currentWordRef.current = currentWord;
+  }, [currentWord]);
 
   // Calculate the rope offset - moves the ENTIRE rig
   const ropeOffsetPercent = (ropePosition / WIN_THRESHOLD) * 15; // -15% to +15%
@@ -148,9 +160,17 @@ export const RPGTugOfWar = ({
     return () => clearInterval(interval);
   }, [gameOver, selectedCharacter, handleEnemyAutoPull, isPaused]);
 
-  // Handle word result from RPGWordReader
-  const handleWordResult = useCallback((correct: boolean, spokenWord: string, wordIndex: number) => {
+  // Process a spoken word result
+  const processWordResult = useCallback((correct: boolean, wordIdx: number) => {
     if (gameOver || gameCompletedRef.current) return;
+    if (processedWordsRef.current.has(wordIdx)) return;
+    processedWordsRef.current.add(wordIdx);
+    
+    // Clear echo retry timeout
+    if (echoRetryTimeoutRef.current) {
+      clearTimeout(echoRetryTimeoutRef.current);
+      echoRetryTimeoutRef.current = null;
+    }
     
     setWordsRead(prev => prev + 1);
     
@@ -162,8 +182,6 @@ export const RPGTugOfWar = ({
       setRopePosition(newPosition);
       soundEffects.correctWord();
       soundEffects.comboSuccess();
-      
-      // NOTE: Timer continues from where it was, does NOT reset on correct word
       
       // Award gold and XP
       const goldReward = 5;
@@ -190,7 +208,7 @@ export const RPGTugOfWar = ({
       soundEffects.rockCrumble();
     }
 
-    onWordResult?.(currentWord, correct);
+    onWordResult?.(currentWordRef.current, correct);
 
     // Clear feedback and move to next word
     setTimeout(() => {
@@ -200,7 +218,98 @@ export const RPGTugOfWar = ({
         setCurrentWordIndex(prev => prev + 1);
       }
     }, 600);
-  }, [currentWord, currentWordIndex, words.length, onWordResult, ropePosition, showFloatingReward, gameOver]);
+  }, [currentWordIndex, words.length, onWordResult, ropePosition, showFloatingReward, gameOver]);
+
+  // Handle speech result - continuous listening
+  const handleSpeechResult = useCallback((transcript: string, alternatives: string[], isFinal: boolean) => {
+    if (gameOver || gameCompletedRef.current || isPaused) return;
+    
+    const expected = currentWordRef.current.toLowerCase().trim();
+    if (!expected) return;
+    
+    // Check main transcript
+    const spoken = transcript.toLowerCase().trim();
+    if (isWordMatchLenient(spoken, expected)) {
+      processWordResult(true, currentWordIndex);
+      return;
+    }
+    
+    // Check alternatives
+    for (const alt of alternatives) {
+      if (isWordMatchLenient(alt.toLowerCase().trim(), expected)) {
+        processWordResult(true, currentWordIndex);
+        return;
+      }
+    }
+    
+    // Check if any word in transcript matches
+    const spokenWords = spoken.split(/\s+/);
+    for (const word of spokenWords) {
+      if (isWordMatchLenient(word, expected)) {
+        processWordResult(true, currentWordIndex);
+        return;
+      }
+    }
+    
+    // On final result with no match, start echo retry window
+    if (isFinal && spoken.length > 0) {
+      // Give 1.5s for echo retry
+      if (!echoRetryTimeoutRef.current) {
+        echoRetryTimeoutRef.current = setTimeout(() => {
+          // After echo retry window, mark as incorrect if still not matched
+          if (!processedWordsRef.current.has(currentWordIndex)) {
+            processWordResult(false, currentWordIndex);
+          }
+          echoRetryTimeoutRef.current = null;
+        }, 1500);
+      }
+    }
+  }, [gameOver, isPaused, currentWordIndex, processWordResult]);
+
+  // Start continuous speech recognition
+  const startRecognition = useCallback(() => {
+    const success = speechManager.start({
+      owner: 'reader',
+      continuous: true,
+      interimResults: true,
+      onResult: handleSpeechResult,
+      onStart: () => setIsListening(true),
+      onEnd: () => setIsListening(false),
+      onError: (error) => {
+        console.log('[TugOfWar] Speech error:', error);
+      }
+    });
+    return success;
+  }, [handleSpeechResult]);
+
+  // Stop speech recognition
+  const stopRecognition = useCallback(() => {
+    speechManager.stop('reader');
+    setIsListening(false);
+  }, []);
+
+  // Auto-start mic when character is selected
+  useEffect(() => {
+    if (selectedCharacter && !gameOver && !isPaused) {
+      startRecognition();
+    }
+    
+    return () => {
+      speechManager.stop('reader');
+      if (echoRetryTimeoutRef.current) {
+        clearTimeout(echoRetryTimeoutRef.current);
+      }
+    };
+  }, [selectedCharacter, gameOver]);
+
+  // Handle pause/resume for speech
+  useEffect(() => {
+    if (isPaused) {
+      stopRecognition();
+    } else if (selectedCharacter && !gameOver) {
+      startRecognition();
+    }
+  }, [isPaused, selectedCharacter, gameOver, startRecognition, stopRecognition]);
 
   // TTS to hear the word pronunciation
   const pronounceWord = useCallback(() => {
@@ -499,16 +608,31 @@ export const RPGTugOfWar = ({
             </Button>
           </div>
 
-          {/* RPGWordReader - handles speech recognition with proper matching */}
-          {/* Pass isPaused to control mic - when paused, RPGWordReader won't listen */}
-          <RPGWordReader
-            words={[currentWord]}
-            onResult={handleWordResult}
-            disabled={gameOver || isPaused}
-            streak={correctWords}
-            batchSize={1}
-            enableEchoRetry={true}
-          />
+          {/* Current Word Display with Listening Indicator */}
+          <div className="text-center">
+            <motion.div
+              key={currentWord}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="text-4xl font-black text-white mb-2 drop-shadow-lg"
+              style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}
+            >
+              {currentWord}
+            </motion.div>
+            
+            {/* Listening indicator */}
+            <div className="flex items-center justify-center gap-2 text-green-400">
+              <motion.div
+                animate={isListening ? { scale: [1, 1.2, 1] } : {}}
+                transition={{ duration: 0.8, repeat: Infinity }}
+              >
+                <Mic className={`h-5 w-5 ${isListening ? 'text-green-400' : 'text-gray-400'}`} />
+              </motion.div>
+              <span className="text-sm font-medium">
+                {isListening ? 'Listening... Say the word!' : 'Mic paused'}
+              </span>
+            </div>
+          </div>
         </div>
       )}
 
