@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 
-export type WizardState = 'idle' | 'hit' | 'casting' | 'victory' | 'defeated';
+export type WizardState = 'idle' | 'hit' | 'casting' | 'victory' | 'defeated' | 'pulling';
 
 interface ElaraProps {
   state: WizardState;
@@ -103,6 +103,13 @@ export const Elara = ({
           scale: [1, 0.5],
           y: [0, -30],
           transition: { duration: 1.2 },
+        };
+      case 'pulling':
+        return {
+          x: [0, -6, 0],
+          rotate: [0, -5, 0],
+          scale: [1, 1.03, 1],
+          transition: { duration: 0.4, repeat: Infinity },
         };
       default:
         return {};

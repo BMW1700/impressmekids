@@ -1,8 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Flag, Users, Trophy, Skull, Coins, Star } from "lucide-react";
+import { Trophy, Skull, Coins, Star, Mic, MicOff, Pause, Play, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
+import { TugOfWarBackground } from "./TugOfWarBackground";
+import { TugOfWarRope } from "./TugOfWarRope";
+import { TugOfWarKid } from "./TugOfWarKid";
+import { TugOfWarCharacterSelect } from "./TugOfWarCharacterSelect";
+import { SirValor } from "../characters/SirValor";
+import { Elara } from "../characters/Elara";
+import { GoblinGuard } from "../characters/GoblinGuard";
 
 interface RPGTugOfWarProps {
   words: string[];
@@ -25,21 +32,30 @@ interface FloatingReward {
 export const RPGTugOfWar = ({
   words,
   heroName = "Hero",
-  enemyName = "Enemy",
+  enemyName = "Goblins",
   onComplete,
   onWordResult,
 }: RPGTugOfWarProps) => {
+  // Character selection
+  const [selectedCharacter, setSelectedCharacter] = useState<'valor' | 'elara' | null>(null);
+  
   // Rope position: -10 (enemy wins) to +10 (hero wins), starts at 0
   const [ropePosition, setRopePosition] = useState(0);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [wordsRead, setWordsRead] = useState(0);
   const [correctWords, setCorrectWords] = useState(0);
   const [incorrectWords, setIncorrectWords] = useState(0);
-  const [isListening, setIsListening] = useState(false);
   const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
   const [gameOver, setGameOver] = useState(false);
   const [victory, setVictory] = useState(false);
   const [pullingAnimation, setPullingAnimation] = useState<'hero' | 'enemy' | null>(null);
+  
+  // Microphone states - continuous with pause
+  const [isMicActive, setIsMicActive] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  
+  // Auto-pull timer
+  const [autoPullTimer, setAutoPullTimer] = useState(10);
   
   // Rewards
   const [floatingRewards, setFloatingRewards] = useState<FloatingReward[]>([]);
@@ -48,6 +64,7 @@ export const RPGTugOfWar = ({
   const rewardIdRef = useRef(0);
 
   const recognitionRef = useRef<any>(null);
+  const isListeningRef = useRef(false);
 
   const currentWord = words[currentWordIndex] || "";
   const WIN_THRESHOLD = 10;
@@ -59,7 +76,7 @@ export const RPGTugOfWar = ({
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
         recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = false;
+        recognitionRef.current.continuous = true;
         recognitionRef.current.interimResults = false;
         recognitionRef.current.lang = 'en-US';
       }
@@ -74,6 +91,31 @@ export const RPGTugOfWar = ({
     };
   }, []);
 
+  // Auto-pull timer - enemies pull every 10 seconds if not reading
+  useEffect(() => {
+    if (gameOver || !selectedCharacter || isPaused || isMicActive) return;
+    
+    const interval = setInterval(() => {
+      setAutoPullTimer(prev => {
+        if (prev <= 1) {
+          // Enemy auto-pulls!
+          handleEnemyAutoPull();
+          return 10;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [gameOver, selectedCharacter, isPaused, isMicActive]);
+
+  // Reset timer when mic is active
+  useEffect(() => {
+    if (isMicActive && !isPaused) {
+      setAutoPullTimer(10);
+    }
+  }, [isMicActive, isPaused]);
+
   // Check for win/lose conditions
   useEffect(() => {
     if (gameOver) return;
@@ -82,6 +124,7 @@ export const RPGTugOfWar = ({
       setGameOver(true);
       setVictory(true);
       soundEffects.celebrationSound();
+      stopMic();
       setTimeout(() => {
         onComplete(true, { wordsRead, correctWords, incorrectWords });
       }, 2000);
@@ -89,6 +132,7 @@ export const RPGTugOfWar = ({
       setGameOver(true);
       setVictory(false);
       soundEffects.rockCrumble();
+      stopMic();
       setTimeout(() => {
         onComplete(false, { wordsRead, correctWords, incorrectWords });
       }, 2000);
@@ -97,14 +141,30 @@ export const RPGTugOfWar = ({
 
   const showFloatingReward = useCallback((gold: number, xp: number) => {
     const id = rewardIdRef.current++;
-    // Position near the center flag
     const x = 45 + Math.random() * 10;
-    const y = 40 + Math.random() * 10;
+    const y = 30 + Math.random() * 10;
     setFloatingRewards(prev => [...prev, { id, gold, xp, x, y }]);
     setTimeout(() => {
       setFloatingRewards(prev => prev.filter(r => r.id !== id));
     }, 1500);
   }, []);
+
+  const handleEnemyAutoPull = useCallback(() => {
+    if (gameOver) return;
+    
+    const newPosition = Math.max(ropePosition - 2, LOSE_THRESHOLD);
+    setIncorrectWords(prev => prev + 1);
+    setFeedback('incorrect');
+    setPullingAnimation('enemy');
+    setRopePosition(newPosition);
+    soundEffects.incorrectWord();
+    soundEffects.rockCrumble();
+    
+    setTimeout(() => {
+      setFeedback(null);
+      setPullingAnimation(null);
+    }, 800);
+  }, [gameOver, ropePosition]);
 
   const handleWordResult = useCallback((correct: boolean) => {
     setWordsRead(prev => prev + 1);
@@ -120,14 +180,17 @@ export const RPGTugOfWar = ({
       soundEffects.correctWord();
       soundEffects.comboSuccess();
       
-      // Award gold and XP on correct words
+      // Reset auto-pull timer on correct word
+      setAutoPullTimer(10);
+      
+      // Award gold and XP
       const goldReward = 5;
       const xpReward = 2;
       setTotalGold(prev => prev + goldReward);
       setTotalXp(prev => prev + xpReward);
       showFloatingReward(goldReward, xpReward);
       
-      // Bonus at milestones (3, 6, 9)
+      // Bonus at milestones
       if (newPosition === 3 || newPosition === 6 || newPosition === 9) {
         const bonusGold = 10;
         const bonusXp = 5;
@@ -156,87 +219,158 @@ export const RPGTugOfWar = ({
     }, 800);
   }, [currentWord, currentWordIndex, words.length, onWordResult, ropePosition, showFloatingReward]);
 
-  const startListening = useCallback(() => {
-    if (!recognitionRef.current || isListening || gameOver) return;
+  const startMic = useCallback(() => {
+    if (!recognitionRef.current || gameOver) return;
 
-    setIsListening(true);
+    setIsMicActive(true);
+    setIsPaused(false);
+    isListeningRef.current = true;
 
     recognitionRef.current.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript.toLowerCase().trim();
-      const targetWord = currentWord.toLowerCase().replace(/[^a-z]/g, '');
-      const spokenWord = transcript.replace(/[^a-z]/g, '');
+      if (!isListeningRef.current) return;
       
-      const isCorrect = spokenWord === targetWord || 
-                        transcript.includes(targetWord) ||
-                        targetWord.includes(spokenWord);
-      
-      handleWordResult(isCorrect);
-      setIsListening(false);
+      const lastResult = event.results[event.results.length - 1];
+      if (lastResult.isFinal) {
+        const transcript = lastResult[0].transcript.toLowerCase().trim();
+        const targetWord = currentWord.toLowerCase().replace(/[^a-z]/g, '');
+        const spokenWord = transcript.replace(/[^a-z]/g, '');
+        
+        const isCorrect = spokenWord === targetWord || 
+                          transcript.includes(targetWord) ||
+                          targetWord.includes(spokenWord);
+        
+        handleWordResult(isCorrect);
+      }
     };
 
-    recognitionRef.current.onerror = () => {
-      setIsListening(false);
+    recognitionRef.current.onerror = (e: any) => {
+      console.log('Speech error:', e.error);
+      if (e.error === 'no-speech') {
+        // Restart on no speech
+        try {
+          recognitionRef.current.stop();
+          setTimeout(() => {
+            if (isListeningRef.current && !isPaused) {
+              recognitionRef.current.start();
+            }
+          }, 100);
+        } catch (err) {}
+      }
     };
 
     recognitionRef.current.onend = () => {
-      setIsListening(false);
+      // Restart if still active and not paused
+      if (isListeningRef.current && !isPaused && !gameOver) {
+        try {
+          recognitionRef.current.start();
+        } catch (e) {}
+      }
     };
 
     try {
       recognitionRef.current.start();
     } catch (e) {
-      setIsListening(false);
+      setIsMicActive(false);
     }
-  }, [isListening, gameOver, currentWord, handleWordResult]);
+  }, [gameOver, currentWord, handleWordResult, isPaused]);
+
+  const stopMic = useCallback(() => {
+    isListeningRef.current = false;
+    setIsMicActive(false);
+    setIsPaused(false);
+    try {
+      recognitionRef.current?.stop();
+    } catch (e) {}
+  }, []);
+
+  const pauseMic = useCallback(() => {
+    setIsPaused(true);
+    isListeningRef.current = false;
+    try {
+      recognitionRef.current?.stop();
+    } catch (e) {}
+  }, []);
+
+  const resumeMic = useCallback(() => {
+    setIsPaused(false);
+    isListeningRef.current = true;
+    try {
+      recognitionRef.current?.start();
+    } catch (e) {}
+  }, []);
 
   // Calculate visual positions
-  const ropeOffset = (ropePosition / WIN_THRESHOLD) * 40; // -40% to +40%
   const progressPercent = ((ropePosition + WIN_THRESHOLD) / (WIN_THRESHOLD * 2)) * 100;
 
+  // Show character selection first
+  if (!selectedCharacter) {
+    return <TugOfWarCharacterSelect onSelect={setSelectedCharacter} />;
+  }
+
+  const LeaderComponent = selectedCharacter === 'valor' ? SirValor : Elara;
+  const leaderState = pullingAnimation === 'hero' ? 'pulling' : pullingAnimation === 'enemy' ? 'hit' : 'idle';
+
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-b from-amber-900 via-orange-800 to-amber-900 flex flex-col">
+    <div className="fixed inset-0 z-50 overflow-hidden">
+      {/* Background */}
+      <TugOfWarBackground />
+
       {/* Header */}
-      <div className="p-4 text-center">
-        <h2 className="text-2xl font-black text-white flex items-center justify-center gap-2">
-          <Users className="h-6 w-6" />
-          TUG OF WAR
+      <div className="relative z-10 p-4 text-center">
+        <h2 className="text-3xl font-black text-white drop-shadow-lg">
+          ⚔️ TUG OF WAR ⚔️
         </h2>
-        <p className="text-amber-200 text-sm">Read words correctly to pull the rope!</p>
+        <p className="text-white/90 text-sm drop-shadow">Read words to pull the rope!</p>
       </div>
 
-      {/* Rewards Display */}
-      <div className="flex justify-center gap-4 mb-2">
+      {/* Rewards & Timer Display */}
+      <div className="relative z-10 flex justify-center gap-4 mb-2">
         <motion.div 
-          className="flex items-center gap-1 bg-yellow-500/30 backdrop-blur-sm px-3 py-1 rounded-full"
+          className="flex items-center gap-1 bg-yellow-500/40 backdrop-blur-sm px-3 py-1 rounded-full"
           animate={{ scale: totalGold > 0 ? [1, 1.1, 1] : 1 }}
           key={totalGold}
         >
-          <Coins className="h-4 w-4 text-yellow-400" />
-          <span className="text-yellow-300 font-bold">{totalGold}</span>
+          <Coins className="h-4 w-4 text-yellow-300" />
+          <span className="text-yellow-200 font-bold">{totalGold}</span>
         </motion.div>
+        
+        {/* Auto-pull timer */}
         <motion.div 
-          className="flex items-center gap-1 bg-purple-500/30 backdrop-blur-sm px-3 py-1 rounded-full"
+          className={`flex items-center gap-1 backdrop-blur-sm px-3 py-1 rounded-full ${
+            autoPullTimer <= 3 ? 'bg-red-500/60' : 'bg-orange-500/40'
+          }`}
+          animate={autoPullTimer <= 3 ? { scale: [1, 1.1, 1] } : {}}
+          transition={{ duration: 0.5, repeat: autoPullTimer <= 3 ? Infinity : 0 }}
+        >
+          <Timer className="h-4 w-4 text-white" />
+          <span className="text-white font-bold">{autoPullTimer}s</span>
+        </motion.div>
+        
+        <motion.div 
+          className="flex items-center gap-1 bg-purple-500/40 backdrop-blur-sm px-3 py-1 rounded-full"
           animate={{ scale: totalXp > 0 ? [1, 1.1, 1] : 1 }}
           key={totalXp}
         >
-          <Star className="h-4 w-4 text-purple-400" />
-          <span className="text-purple-300 font-bold">{totalXp} XP</span>
+          <Star className="h-4 w-4 text-purple-300" />
+          <span className="text-purple-200 font-bold">{totalXp} XP</span>
         </motion.div>
       </div>
 
-      {/* Score Display */}
-      <div className="flex justify-between px-8 mb-4">
-        <div className="text-center">
-          <div className="text-red-400 font-bold text-lg">{enemyName}</div>
-          <div className="text-white/70 text-sm">Pull: {Math.abs(Math.min(0, ropePosition))}</div>
+      {/* Progress Bar */}
+      <div className="relative z-10 px-8 mb-4">
+        <div className="flex justify-between mb-1 text-sm">
+          <span className="text-red-400 font-bold drop-shadow">{enemyName}</span>
+          <span className="text-white font-bold drop-shadow">Score: {correctWords}/{wordsRead}</span>
+          <span className="text-green-400 font-bold drop-shadow">{heroName}</span>
         </div>
-        <div className="text-center">
-          <div className="text-yellow-300 font-bold">Words: {wordsRead}</div>
-          <div className="text-green-400 text-sm">Correct: {correctWords}</div>
-        </div>
-        <div className="text-center">
-          <div className="text-green-400 font-bold text-lg">{heroName}</div>
-          <div className="text-white/70 text-sm">Pull: {Math.max(0, ropePosition)}</div>
+        <div className="h-4 bg-black/30 rounded-full overflow-hidden backdrop-blur-sm">
+          <motion.div
+            className="h-full bg-gradient-to-r from-red-500 via-yellow-500 to-green-500"
+            animate={{ width: `${progressPercent}%` }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          />
+          {/* Center marker */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1 h-full bg-white/50" />
         </div>
       </div>
 
@@ -262,137 +396,90 @@ export const RPGTugOfWar = ({
         ))}
       </AnimatePresence>
 
-      {/* Arena */}
-      <div className="flex-1 relative overflow-hidden">
-        {/* Goal Posts */}
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col items-center">
-          <Flag className="h-12 w-12 text-red-500" />
-          <span className="text-red-400 text-xs mt-1">Enemy Goal</span>
-        </div>
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col items-center">
-          <Flag className="h-12 w-12 text-green-500" />
-          <span className="text-green-400 text-xs mt-1">Hero Goal</span>
-        </div>
-
-        {/* Progress Bar / Rope Track */}
-        <div className="absolute top-8 left-20 right-20 h-4 bg-black/30 rounded-full overflow-hidden">
-          <motion.div
-            className="h-full bg-gradient-to-r from-red-500 via-yellow-500 to-green-500"
-            animate={{ width: `${progressPercent}%` }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          />
-          {/* Center marker */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1 h-full bg-white/50" />
-        </div>
-
-        {/* Rope */}
-        <motion.div
-          className="absolute top-1/2 left-1/2 -translate-y-1/2"
-          animate={{ x: `${ropeOffset}%` }}
-          transition={{ type: "spring", stiffness: 200, damping: 25 }}
-          style={{ marginLeft: '-50%', width: '100%' }}
-        >
-          {/* Rope line */}
-          <div className="h-4 bg-gradient-to-r from-amber-700 via-amber-600 to-amber-700 rounded-full shadow-lg mx-16 relative">
-            {/* Rope texture */}
-            <div className="absolute inset-0 bg-[repeating-linear-gradient(90deg,transparent,transparent_8px,rgba(0,0,0,0.2)_8px,rgba(0,0,0,0.2)_16px)] rounded-full" />
-          </div>
-
-          {/* Center Flag */}
-          <motion.div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-            animate={{
-              scale: pullingAnimation ? [1, 1.2, 1] : 1,
-              rotate: pullingAnimation === 'hero' ? [0, 10, 0] : pullingAnimation === 'enemy' ? [0, -10, 0] : 0,
-            }}
+      {/* Teams & Arena */}
+      <div className="relative z-10 flex-1 flex items-end justify-between px-4 pb-32">
+        {/* Enemy Team (Left) */}
+        <div className="flex flex-col items-center">
+          <motion.div 
+            className="flex items-end gap-1"
+            animate={pullingAnimation === 'enemy' ? { x: [-5, 0] } : pullingAnimation === 'hero' ? { x: [5, 0] } : {}}
           >
-            <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center shadow-xl border-4 border-yellow-300">
-              <Flag className="h-8 w-8 text-amber-800" />
-            </div>
-          </motion.div>
-        </motion.div>
-
-        {/* Enemy Character (Left) */}
-        <motion.div
-          className="absolute left-20 top-1/2 -translate-y-1/2"
-          animate={{
-            x: pullingAnimation === 'enemy' ? [-10, 0] : pullingAnimation === 'hero' ? [10, 0] : 0,
-            scale: pullingAnimation === 'enemy' ? [1.1, 1] : 1,
-          }}
-        >
-          <div className="w-24 h-24 bg-gradient-to-br from-red-600 to-red-800 rounded-full flex items-center justify-center shadow-lg border-4 border-red-400">
-            <span className="text-4xl">👹</span>
-          </div>
-          <motion.div
-            className="text-center mt-2"
-            animate={{ opacity: pullingAnimation === 'enemy' ? [1, 0.5, 1] : 1 }}
-          >
-            <span className="text-red-300 font-bold">PULL!</span>
-          </motion.div>
-        </motion.div>
-
-        {/* Hero Character (Right) */}
-        <motion.div
-          className="absolute right-20 top-1/2 -translate-y-1/2"
-          animate={{
-            x: pullingAnimation === 'hero' ? [10, 0] : pullingAnimation === 'enemy' ? [-10, 0] : 0,
-            scale: pullingAnimation === 'hero' ? [1.1, 1] : 1,
-          }}
-        >
-          <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center shadow-lg border-4 border-blue-300">
-            <span className="text-4xl">⚔️</span>
-          </div>
-          <motion.div
-            className="text-center mt-2"
-            animate={{ opacity: pullingAnimation === 'hero' ? [1, 0.5, 1] : 1 }}
-          >
-            <span className="text-green-300 font-bold">PULL!</span>
-          </motion.div>
-        </motion.div>
-
-        {/* Dust Effects */}
-        <AnimatePresence>
-          {pullingAnimation && (
-            <>
-              {[...Array(6)].map((_, i) => (
-                <motion.div
-                  key={`dust-${i}`}
-                  className="absolute top-1/2 left-1/2 w-4 h-4 bg-amber-200/50 rounded-full"
-                  initial={{ 
-                    x: (Math.random() - 0.5) * 100,
-                    y: 0,
-                    scale: 0,
-                    opacity: 1,
-                  }}
-                  animate={{
-                    y: [0, -30 - Math.random() * 20],
-                    scale: [0, 1, 0.5],
-                    opacity: [1, 0.5, 0],
-                  }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.6, delay: i * 0.05 }}
+            {/* Small goblins */}
+            {[0, 1, 2].map(i => (
+              <div key={i} className="scale-50 origin-bottom">
+                <GoblinGuard 
+                  state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
+                  healthPercent={100}
+                  size="small"
                 />
-              ))}
-            </>
-          )}
-        </AnimatePresence>
+              </div>
+            ))}
+            {/* Leader goblin */}
+            <GoblinGuard 
+              state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
+              healthPercent={100}
+              size="medium"
+              flipX
+            />
+          </motion.div>
+          <div className="text-red-600 font-bold text-sm mt-2 bg-white/80 px-2 py-0.5 rounded">
+            {enemyName}
+          </div>
+        </div>
+
+        {/* Hero Team (Right) */}
+        <div className="flex flex-col items-center">
+          <motion.div 
+            className="flex items-end gap-1"
+            animate={pullingAnimation === 'hero' ? { x: [5, 0] } : pullingAnimation === 'enemy' ? { x: [-5, 0] } : {}}
+          >
+            {/* Leader character */}
+            <LeaderComponent 
+              state={leaderState as any}
+              healthPercent={100}
+              size="medium"
+              flipX
+            />
+            {/* Kids */}
+            {[0, 1, 2].map(i => (
+              <TugOfWarKid 
+                key={i}
+                index={i}
+                isPulling={pullingAnimation === 'hero'}
+                isStraining={pullingAnimation === 'enemy'}
+                side="hero"
+                size="small"
+              />
+            ))}
+          </motion.div>
+          <div className="text-blue-600 font-bold text-sm mt-2 bg-white/80 px-2 py-0.5 rounded">
+            {heroName}'s Team
+          </div>
+        </div>
       </div>
 
-      {/* Word Display & Reading Interface */}
+      {/* Rope */}
+      <TugOfWarRope 
+        ropePosition={ropePosition}
+        maxPosition={WIN_THRESHOLD}
+        isPulling={pullingAnimation}
+      />
+
+      {/* Word Display & Controls */}
       {!gameOver && (
-        <div className="p-6 bg-black/40 backdrop-blur-sm">
+        <div className="absolute bottom-0 left-0 right-0 z-20 p-6 bg-gradient-to-t from-black/80 via-black/60 to-transparent">
           {/* Feedback */}
           <AnimatePresence>
             {feedback && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
+                initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.8 }}
                 className={`text-center mb-4 text-2xl font-black ${
                   feedback === 'correct' ? 'text-green-400' : 'text-red-400'
                 }`}
               >
-                {feedback === 'correct' ? '✓ CORRECT! Pull!' : '✗ Wrong! They pulled!'}
+                {feedback === 'correct' ? '✓ HEAVE! Pull!' : '✗ They pulled back!'}
               </motion.div>
             )}
           </AnimatePresence>
@@ -405,28 +492,69 @@ export const RPGTugOfWar = ({
             className="text-center mb-6"
           >
             <div className="text-white/60 text-sm mb-2">Read this word:</div>
-            <div className="text-5xl font-black text-white tracking-wide">
+            <div className="text-5xl font-black text-white tracking-wide drop-shadow-lg">
               {currentWord}
             </div>
           </motion.div>
 
-          {/* Listen Button */}
-          <div className="flex justify-center">
-            <Button
-              size="lg"
-              onClick={startListening}
-              disabled={isListening || gameOver}
-              className={`px-8 py-6 text-xl font-bold rounded-full transition-all ${
-                isListening
-                  ? 'bg-red-500 animate-pulse'
-                  : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500'
-              }`}
-            >
-              {isListening ? '🎤 Listening...' : '🎤 Tap & Speak'}
-            </Button>
+          {/* Mic Controls */}
+          <div className="flex justify-center gap-4">
+            {!isMicActive ? (
+              <Button
+                size="lg"
+                onClick={startMic}
+                disabled={gameOver}
+                className="px-8 py-6 text-xl font-bold rounded-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500"
+              >
+                <Mic className="h-6 w-6 mr-2" />
+                Start Reading
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                {isPaused ? (
+                  <Button
+                    size="lg"
+                    onClick={resumeMic}
+                    className="px-6 py-6 text-xl font-bold rounded-full bg-gradient-to-r from-green-500 to-emerald-600"
+                  >
+                    <Play className="h-6 w-6 mr-2" />
+                    Resume
+                  </Button>
+                ) : (
+                  <Button
+                    size="lg"
+                    onClick={pauseMic}
+                    className="px-6 py-6 text-xl font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500"
+                  >
+                    <Pause className="h-6 w-6 mr-2" />
+                    Pause
+                  </Button>
+                )}
+                <Button
+                  size="lg"
+                  onClick={stopMic}
+                  variant="destructive"
+                  className="px-6 py-6 text-xl font-bold rounded-full"
+                >
+                  <MicOff className="h-6 w-6 mr-2" />
+                  Stop
+                </Button>
+              </div>
+            )}
           </div>
 
-          {/* Skip for testing */}
+          {/* Mic status indicator */}
+          {isMicActive && (
+            <motion.div 
+              className={`text-center mt-3 text-sm font-bold ${isPaused ? 'text-yellow-400' : 'text-green-400'}`}
+              animate={!isPaused ? { opacity: [1, 0.5, 1] } : {}}
+              transition={{ duration: 1, repeat: Infinity }}
+            >
+              {isPaused ? '⏸️ Paused - Timer running!' : '🎤 Listening...'}
+            </motion.div>
+          )}
+
+          {/* Testing buttons */}
           <div className="flex justify-center gap-2 mt-4">
             <Button
               variant="ghost"
@@ -434,7 +562,7 @@ export const RPGTugOfWar = ({
               onClick={() => handleWordResult(true)}
               className="text-green-400 hover:bg-green-400/20"
             >
-              ✓ Mark Correct
+              ✓ Correct
             </Button>
             <Button
               variant="ghost"
@@ -442,7 +570,7 @@ export const RPGTugOfWar = ({
               onClick={() => handleWordResult(false)}
               className="text-red-400 hover:bg-red-400/20"
             >
-              ✗ Mark Wrong
+              ✗ Wrong
             </Button>
           </div>
         </div>
@@ -455,7 +583,7 @@ export const RPGTugOfWar = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/80 flex items-center justify-center"
+            className="absolute inset-0 bg-black/80 flex items-center justify-center z-50"
           >
             <motion.div
               initial={{ scale: 0.5, opacity: 0 }}
@@ -466,13 +594,23 @@ export const RPGTugOfWar = ({
                 <>
                   <Trophy className="h-24 w-24 text-yellow-400 mx-auto mb-4" />
                   <h2 className="text-4xl font-black text-green-400 mb-2">VICTORY!</h2>
-                  <p className="text-white/80">You pulled the flag to your side!</p>
+                  <p className="text-white/80">You pulled the rope to your side!</p>
+                  <div className="mt-4 flex justify-center gap-4">
+                    <div className="flex items-center gap-1 bg-yellow-500/30 px-3 py-1 rounded-full">
+                      <Coins className="h-4 w-4 text-yellow-400" />
+                      <span className="text-yellow-300 font-bold">{totalGold} Gold</span>
+                    </div>
+                    <div className="flex items-center gap-1 bg-purple-500/30 px-3 py-1 rounded-full">
+                      <Star className="h-4 w-4 text-purple-400" />
+                      <span className="text-purple-300 font-bold">{totalXp} XP</span>
+                    </div>
+                  </div>
                 </>
               ) : (
                 <>
                   <Skull className="h-24 w-24 text-red-400 mx-auto mb-4" />
                   <h2 className="text-4xl font-black text-red-400 mb-2">DEFEAT!</h2>
-                  <p className="text-white/80">The enemy pulled the flag away!</p>
+                  <p className="text-white/80">The goblins pulled the rope to their side!</p>
                 </>
               )}
               <div className="mt-4 text-white/60">

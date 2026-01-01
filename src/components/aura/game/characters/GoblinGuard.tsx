@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 
-export type GoblinState = 'idle' | 'hit' | 'attacking' | 'defeated' | 'taunting';
+export type GoblinState = 'idle' | 'hit' | 'attacking' | 'defeated' | 'taunting' | 'pulling';
 
 interface GoblinGuardProps {
   state: GoblinState;
@@ -101,6 +101,13 @@ export const GoblinGuard = ({
           y: [0, -5, 0],
           rotate: [0, -3, 3, 0],
           transition: { duration: 0.5 },
+        };
+      case 'pulling':
+        return {
+          x: [0, 8, 0],
+          rotate: [0, 5, 0],
+          scale: [1, 1.05, 1],
+          transition: { duration: 0.4, repeat: Infinity },
         };
       default:
         return {};
