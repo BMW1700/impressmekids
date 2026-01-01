@@ -383,4 +383,165 @@ export class SoundEffects {
     setTimeout(() => this.playTone(600, 0.1, 0.15), 100);
     setTimeout(() => this.playTone(800, 0.15, 0.2), 200);
   }
+
+  // === TUG OF WAR & BALLOON BATTLE SOUNDS ===
+
+  /**
+   * Rope strain - creaking tension sound
+   */
+  ropeStrain() {
+    if (!this.ensureContext() || !this.audioContext) return;
+
+    // Low groaning sound
+    const osc = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
+    
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(80, this.audioContext.currentTime);
+    osc.frequency.linearRampToValueAtTime(120, this.audioContext.currentTime + 0.15);
+    osc.frequency.linearRampToValueAtTime(70, this.audioContext.currentTime + 0.3);
+    
+    gain.gain.setValueAtTime(0.08, this.audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
+    
+    osc.connect(gain);
+    gain.connect(this.audioContext.destination);
+    
+    osc.start();
+    osc.stop(this.audioContext.currentTime + 0.35);
+  }
+
+  /**
+   * Rope slip - sound when losing ground
+   */
+  ropeSlip() {
+    if (!this.ensureContext() || !this.audioContext) return;
+
+    // Descending whoosh
+    const osc = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(400, this.audioContext.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(150, this.audioContext.currentTime + 0.2);
+    
+    gain.gain.setValueAtTime(0.12, this.audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.2);
+    
+    osc.connect(gain);
+    gain.connect(this.audioContext.destination);
+    
+    osc.start();
+    osc.stop(this.audioContext.currentTime + 0.25);
+    
+    // Add a thud
+    setTimeout(() => this.playTone(60, 0.1, 0.15), 150);
+  }
+
+  /**
+   * Crowd cheer - ascending tones simulating cheers
+   */
+  crowdCheer() {
+    if (!this.ensureContext() || !this.audioContext) return;
+
+    // Multiple ascending tones
+    const freqs = [300, 400, 500, 600];
+    freqs.forEach((freq, i) => {
+      setTimeout(() => {
+        this.playTone(freq, 0.2, 0.08);
+        this.playTone(freq * 1.5, 0.15, 0.05);
+      }, i * 40);
+    });
+
+    // Add some noise for texture
+    this.playNoise(0.4, 0.06, 3000);
+  }
+
+  /**
+   * Balloon pop - satisfying pop sound
+   */
+  balloonPop() {
+    if (!this.ensureContext() || !this.audioContext) return;
+
+    // Sharp attack
+    const bufferSize = this.audioContext.sampleRate * 0.08;
+    const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+    
+    for (let i = 0; i < bufferSize; i++) {
+      const decay = Math.exp(-i / (bufferSize * 0.05));
+      data[i] = (Math.random() * 2 - 1) * decay;
+    }
+
+    const pop = this.audioContext.createBufferSource();
+    pop.buffer = buffer;
+
+    const bandpass = this.audioContext.createBiquadFilter();
+    bandpass.type = 'bandpass';
+    bandpass.frequency.value = 1500;
+    bandpass.Q.value = 2;
+
+    const gainNode = this.audioContext.createGain();
+    gainNode.gain.value = 0.3;
+
+    pop.connect(bandpass);
+    bandpass.connect(gainNode);
+    gainNode.connect(this.audioContext.destination);
+
+    pop.start();
+
+    // Add a resonant tone
+    this.playTone(800, 0.1, 0.1);
+  }
+
+  /**
+   * Balloon deflate - sad hissing sound
+   */
+  balloonDeflate() {
+    if (!this.ensureContext() || !this.audioContext) return;
+
+    // Descending whistle
+    const osc = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, this.audioContext.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(200, this.audioContext.currentTime + 0.4);
+    
+    gain.gain.setValueAtTime(0.1, this.audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.4);
+    
+    osc.connect(gain);
+    gain.connect(this.audioContext.destination);
+    
+    osc.start();
+    osc.stop(this.audioContext.currentTime + 0.45);
+
+    // Add hiss
+    this.playNoise(0.3, 0.08, 6000);
+  }
+
+  /**
+   * Tension build - rising suspense
+   */
+  tensionBuild() {
+    if (!this.ensureContext() || !this.audioContext) return;
+
+    const osc = this.audioContext.createOscillator();
+    const gain = this.audioContext.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(200, this.audioContext.currentTime);
+    osc.frequency.linearRampToValueAtTime(400, this.audioContext.currentTime + 0.5);
+    
+    gain.gain.setValueAtTime(0.05, this.audioContext.currentTime);
+    gain.gain.linearRampToValueAtTime(0.12, this.audioContext.currentTime + 0.4);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.5);
+    
+    osc.connect(gain);
+    gain.connect(this.audioContext.destination);
+    
+    osc.start();
+    osc.stop(this.audioContext.currentTime + 0.55);
+  }
 }
