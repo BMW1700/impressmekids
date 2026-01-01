@@ -19,6 +19,13 @@ import { RPGRollingBoulders } from "./RPGRollingBoulders";
 import { RPGEnemyTransition } from "./RPGEnemyTransition";
 import { RPGSpellEffects } from "./RPGSpellEffects";
 import { RPGCoinDrop } from "./RPGCoinDrop";
+// NEW: Import the 3 attack mini-games
+import { RPGWordShield } from "./RPGWordShield";
+import { RPGSpellCombo } from "./RPGSpellCombo";
+import { RPGDodgeWords } from "./RPGDodgeWords";
+// NEW: Import 2 new mini-games
+import { RPGRhymeChain } from "./RPGRhymeChain";
+import { RPGSpeedTypist } from "./RPGSpeedTypist";
 import { Spell } from "./RPGSpellMenu";
 import { Item } from "./RPGItemMenu";
 import { 
@@ -33,7 +40,8 @@ import { CuratedStory } from "@/data/curatedStories";
 import { calculateGoldEarned, calculateXpEarned } from "@/lib/gameEconomy";
 
 type EnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian';
-type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat';
+// UPDATED: Added new mini-game phases
+type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'word_shield' | 'spell_combo' | 'dodge_words' | 'rhyme_chain' | 'speed_typist' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat';
 type InventoryKey = 'health_potion' | 'magic_potion';
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
 
@@ -85,6 +93,13 @@ export const RPGBattleArena = ({
   const [barrageTriggered, setBarrageTriggered] = useState(false);
   const [specialBarrageTriggered, setSpecialBarrageTriggered] = useState(false);
   const [beastSwarmTriggered, setBeastSwarmTriggered] = useState(false);
+  
+  // Mini-game trigger states
+  const [wordShieldTriggered, setWordShieldTriggered] = useState(false);
+  const [spellComboTriggered, setSpellComboTriggered] = useState(false);
+  const [dodgeWordsTriggered, setDodgeWordsTriggered] = useState(false);
+  const [rhymeChainTriggered, setRhymeChainTriggered] = useState(false);
+  const [speedTypistTriggered, setSpeedTypistTriggered] = useState(false);
   
   // Combat stats
   const [playerHp, setPlayerHp] = useState(heroKnight.maxHp);
@@ -167,6 +182,158 @@ export const RPGBattleArena = ({
       triggerBeastSwarm();
     }
   }, [enemyHp, enemy.maxHp, barrageTriggered, specialBarrageTriggered, beastSwarmTriggered, phase, currentEnemyType]);
+  
+  // Trigger mini-games based on streak and HP thresholds
+  useEffect(() => {
+    if (phase !== 'reading') return;
+    
+    // Word Shield at 75% enemy HP (defensive mini-game)
+    if (!wordShieldTriggered && enemyHp <= enemy.maxHp * 0.75 && enemyHp > enemy.maxHp * 0.5) {
+      setWordShieldTriggered(true);
+      triggerWordShield();
+    }
+    
+    // Spell Combo on 5+ streak (power attack opportunity)
+    if (!spellComboTriggered && streak >= 5 && streak < 8) {
+      setSpellComboTriggered(true);
+      triggerSpellCombo();
+    }
+    
+    // Rhyme Chain on 8+ streak
+    if (!rhymeChainTriggered && streak >= 8 && streak < 12) {
+      setRhymeChainTriggered(true);
+      triggerRhymeChain();
+    }
+    
+    // Speed Typist at 40% enemy HP
+    if (!speedTypistTriggered && enemyHp <= enemy.maxHp * 0.4 && enemyHp > enemy.maxHp * 0.25) {
+      setSpeedTypistTriggered(true);
+      triggerSpeedTypist();
+    }
+  }, [phase, streak, enemyHp, enemy.maxHp, wordShieldTriggered, spellComboTriggered, rhymeChainTriggered, speedTypistTriggered]);
+  
+  // Trigger Word Shield
+  const triggerWordShield = useCallback(() => {
+    const wordCount = 5;
+    const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 5);
+    const shieldWords = availableWords.slice(0, wordCount);
+    setBarrageWords(shieldWords);
+    setEnemyAbilityMessage(`${enemy.name} charges a devastating attack!`);
+    setTimeout(() => {
+      setEnemyAbilityMessage(null);
+      setPhase('word_shield');
+    }, 1000);
+  }, [words, batchStartIndex, enemy.name]);
+  
+  // Trigger Spell Combo
+  const triggerSpellCombo = useCallback(() => {
+    const wordCount = 5;
+    const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 5);
+    const comboWords = availableWords.slice(0, wordCount);
+    setBarrageWords(comboWords);
+    setEnemyAbilityMessage(`POWER SURGE! Chain a spell combo!`);
+    setTimeout(() => {
+      setEnemyAbilityMessage(null);
+      setPhase('spell_combo');
+    }, 1000);
+  }, [words, batchStartIndex]);
+  
+  // Trigger Rhyme Chain
+  const triggerRhymeChain = useCallback(() => {
+    const wordCount = 6;
+    const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 5);
+    const rhymeWords = availableWords.slice(0, wordCount);
+    setBarrageWords(rhymeWords);
+    setEnemyAbilityMessage(`RHYME TIME! Chain rhyming words!`);
+    setTimeout(() => {
+      setEnemyAbilityMessage(null);
+      setPhase('rhyme_chain');
+    }, 1000);
+  }, [words, batchStartIndex]);
+  
+  // Trigger Speed Typist
+  const triggerSpeedTypist = useCallback(() => {
+    const wordCount = 12;
+    const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 5);
+    const speedWords = availableWords.slice(0, wordCount);
+    setBarrageWords(speedWords);
+    setEnemyAbilityMessage(`SPEED BLITZ! Read as fast as you can!`);
+    setTimeout(() => {
+      setEnemyAbilityMessage(null);
+      setPhase('speed_typist');
+    }, 1000);
+  }, [words, batchStartIndex]);
+  
+  // Handle Word Shield complete
+  const handleWordShieldComplete = useCallback((shieldStrength: number, damage: number) => {
+    // Player takes reduced damage based on shield strength
+    const reducedDamage = Math.floor(20 * (1 - shieldStrength / 100));
+    if (reducedDamage > 0) {
+      setPlayerHp(prev => Math.max(0, prev - reducedDamage));
+    }
+    // Deal bonus damage to enemy if shield was strong
+    if (shieldStrength > 50) {
+      setEnemyHp(prev => Math.max(0, prev - damage));
+      setTotalDamage(prev => prev + damage);
+    }
+    setBatchStartIndex(prev => prev + barrageWords.length);
+    setPhase('reading');
+  }, [barrageWords.length]);
+  
+  // Handle Spell Combo complete
+  const handleSpellComboComplete = useCallback((success: boolean, multiplier: number) => {
+    if (success) {
+      const damage = Math.floor(50 * multiplier);
+      setEnemyHp(prev => Math.max(0, prev - damage));
+      setTotalDamage(prev => prev + damage);
+      setCorrectWords(prev => prev + barrageWords.length);
+    }
+    setBatchStartIndex(prev => prev + barrageWords.length);
+    setPhase('reading');
+  }, [barrageWords.length]);
+  
+  // Handle Dodge Words complete
+  const handleDodgeWordsComplete = useCallback((correctHits: number, wrongHits: number, dodged: number) => {
+    const damage = correctHits * 15;
+    setEnemyHp(prev => Math.max(0, prev - damage));
+    setTotalDamage(prev => prev + damage);
+    setCorrectWords(prev => prev + correctHits);
+    setPhase('reading');
+  }, []);
+  
+  // Handle Dodge Words damage
+  const handleDodgeWordsDamage = useCallback((damage: number) => {
+    setPlayerHp(prev => Math.max(0, prev - damage));
+    triggerScreenShake();
+  }, []);
+  
+  // Handle Rhyme Chain complete
+  const handleRhymeChainComplete = useCallback((score: number, damage: number) => {
+    if (damage > 0) {
+      setEnemyHp(prev => Math.max(0, prev - damage));
+      setTotalDamage(prev => prev + damage);
+    }
+    setCorrectWords(prev => prev + score);
+    setBatchStartIndex(prev => prev + barrageWords.length);
+    setPhase('reading');
+  }, [barrageWords.length]);
+  
+  // Handle Speed Typist complete
+  const handleSpeedTypistComplete = useCallback((wordsSpoken: number, damage: number) => {
+    if (damage > 0) {
+      setEnemyHp(prev => Math.max(0, prev - damage));
+      setTotalDamage(prev => prev + damage);
+    }
+    setCorrectWords(prev => prev + wordsSpoken);
+    setBatchStartIndex(prev => prev + barrageWords.length);
+    setPhase('reading');
+  }, [barrageWords.length]);
+  
+  // Handle mini-game damage
+  const handleMiniGameDamage = useCallback((damage: number) => {
+    setPlayerHp(prev => Math.max(0, prev - damage));
+    triggerScreenShake();
+  }, []);
 
   // Trigger word barrage attack
   const triggerWordBarrage = useCallback(() => {
@@ -719,6 +886,41 @@ export const RPGBattleArena = ({
             words={barrageWords}
             onComplete={handleBarrageComplete}
             onWordHit={handleBarrageWordHit}
+          />
+        )}
+        {/* NEW MINI-GAMES */}
+        {phase === 'word_shield' && (
+          <RPGWordShield
+            words={barrageWords}
+            onComplete={handleWordShieldComplete}
+          />
+        )}
+        {phase === 'spell_combo' && (
+          <RPGSpellCombo
+            words={barrageWords}
+            onComplete={handleSpellComboComplete}
+          />
+        )}
+        {phase === 'dodge_words' && (
+          <RPGDodgeWords
+            correctWords={barrageWords}
+            wrongWords={[]}
+            onComplete={handleDodgeWordsComplete}
+            onDamage={handleDodgeWordsDamage}
+          />
+        )}
+        {phase === 'rhyme_chain' && (
+          <RPGRhymeChain
+            words={barrageWords}
+            onComplete={handleRhymeChainComplete}
+            onDamage={handleMiniGameDamage}
+          />
+        )}
+        {phase === 'speed_typist' && (
+          <RPGSpeedTypist
+            words={barrageWords}
+            onComplete={handleSpeedTypistComplete}
+            onDamage={handleMiniGameDamage}
           />
         )}
       </AnimatePresence>
