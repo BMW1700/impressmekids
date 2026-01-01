@@ -7,6 +7,7 @@ import { TugOfWarBackground } from "./TugOfWarBackground";
 import { TugOfWarRope } from "./TugOfWarRope";
 import { TugOfWarKid } from "./TugOfWarKid";
 import { TugOfWarCharacterSelect } from "./TugOfWarCharacterSelect";
+import { TugOfWarGrip } from "./TugOfWarGrip";
 import { SirValor } from "../characters/SirValor";
 import { Elara } from "../characters/Elara";
 import { GoblinGuard } from "../characters/GoblinGuard";
@@ -28,6 +29,9 @@ interface FloatingReward {
   x: number;
   y: number;
 }
+
+// Goblin auto-pull every 20 seconds
+const AUTO_PULL_SECONDS = 20;
 
 export const RPGTugOfWar = ({
   words,
@@ -54,8 +58,8 @@ export const RPGTugOfWar = ({
   const [isMicActive, setIsMicActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   
-  // Auto-pull timer
-  const [autoPullTimer, setAutoPullTimer] = useState(10);
+  // Auto-pull timer - now 20 seconds
+  const [autoPullTimer, setAutoPullTimer] = useState(AUTO_PULL_SECONDS);
   
   // Rewards
   const [floatingRewards, setFloatingRewards] = useState<FloatingReward[]>([]);
@@ -69,6 +73,9 @@ export const RPGTugOfWar = ({
   const currentWord = words[currentWordIndex] || "";
   const WIN_THRESHOLD = 10;
   const LOSE_THRESHOLD = -10;
+
+  // Calculate the rope offset - this moves the ENTIRE rig (rope + teams)
+  const ropeOffsetPercent = (ropePosition / WIN_THRESHOLD) * 12; // -12% to +12%
 
   // Initialize speech recognition
   useEffect(() => {
@@ -90,19 +97,6 @@ export const RPGTugOfWar = ({
       }
     };
   }, []);
-
-  // Log on mount to prove v2 is loaded
-  useEffect(() => {
-    console.log("[TUG-OF-WAR] v2 mounted", { 
-      selectedCharacter, 
-      ropePosition, 
-      isMicActive, 
-      isPaused,
-      wordsCount: words.length 
-    });
-  }, []);
-
-  // Auto-pull timer is set up below after handleEnemyAutoPull is defined
 
   // Check for win/lose conditions
   useEffect(() => {
@@ -154,7 +148,7 @@ export const RPGTugOfWar = ({
     }, 800);
   }, [gameOver, ropePosition]);
 
-  // Auto-pull timer - enemies pull every 10 seconds EVEN IF MIC IS ACTIVE (creates pressure)
+  // Auto-pull timer - enemies pull every 20 seconds
   useEffect(() => {
     if (gameOver || !selectedCharacter || isPaused) return;
     
@@ -162,7 +156,7 @@ export const RPGTugOfWar = ({
       setAutoPullTimer(prev => {
         if (prev <= 1) {
           handleEnemyAutoPull();
-          return 10;
+          return AUTO_PULL_SECONDS;
         }
         return prev - 1;
       });
@@ -186,7 +180,7 @@ export const RPGTugOfWar = ({
       soundEffects.comboSuccess();
       
       // Reset auto-pull timer on correct word
-      setAutoPullTimer(10);
+      setAutoPullTimer(AUTO_PULL_SECONDS);
       
       // Award gold and XP
       const goldReward = 5;
@@ -251,7 +245,6 @@ export const RPGTugOfWar = ({
     recognitionRef.current.onerror = (e: any) => {
       console.log('Speech error:', e.error);
       if (e.error === 'no-speech') {
-        // Restart on no speech
         try {
           recognitionRef.current.stop();
           setTimeout(() => {
@@ -264,7 +257,6 @@ export const RPGTugOfWar = ({
     };
 
     recognitionRef.current.onend = () => {
-      // Restart if still active and not paused
       if (isListeningRef.current && !isPaused && !gameOver) {
         try {
           recognitionRef.current.start();
@@ -301,7 +293,7 @@ export const RPGTugOfWar = ({
     if (currentWord && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(currentWord);
-      utterance.rate = 0.75; // Slower for clarity
+      utterance.rate = 0.75;
       utterance.pitch = 1;
       utterance.lang = 'en-US';
       window.speechSynthesis.speak(utterance);
@@ -327,6 +319,10 @@ export const RPGTugOfWar = ({
   const LeaderComponent = selectedCharacter === 'valor' ? SirValor : Elara;
   const leaderState = pullingAnimation === 'hero' ? 'pulling' : pullingAnimation === 'enemy' ? 'hit' : 'idle';
 
+  // Skin colors for grip overlays
+  const goblinSkinColors = ['#4a5d23', '#3d4f1c', '#526628', '#445520'];
+  const kidSkinColors = ['#f5d6c6', '#e8c4a0', '#d4a574', '#c68642', '#fcd5b8', '#8d5524'];
+
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Background */}
@@ -351,13 +347,13 @@ export const RPGTugOfWar = ({
           <span className="text-yellow-200 font-bold">{totalGold}</span>
         </motion.div>
         
-        {/* Auto-pull timer */}
+        {/* Auto-pull timer - now shows 20s */}
         <motion.div 
           className={`flex items-center gap-1 backdrop-blur-sm px-3 py-1 rounded-full ${
-            autoPullTimer <= 3 ? 'bg-red-500/60' : 'bg-orange-500/40'
+            autoPullTimer <= 5 ? 'bg-red-500/60' : 'bg-orange-500/40'
           }`}
-          animate={autoPullTimer <= 3 ? { scale: [1, 1.1, 1] } : {}}
-          transition={{ duration: 0.5, repeat: autoPullTimer <= 3 ? Infinity : 0 }}
+          animate={autoPullTimer <= 5 ? { scale: [1, 1.1, 1] } : {}}
+          transition={{ duration: 0.5, repeat: autoPullTimer <= 5 ? Infinity : 0 }}
         >
           <Timer className="h-4 w-4 text-white" />
           <span className="text-white font-bold">{autoPullTimer}s</span>
@@ -413,92 +409,152 @@ export const RPGTugOfWar = ({
         ))}
       </AnimatePresence>
 
-      {/* Rope - positioned in the middle where teams connect */}
-      <TugOfWarRope 
-        ropePosition={ropePosition}
-        maxPosition={WIN_THRESHOLD}
-        isPulling={pullingAnimation}
-      />
-
-      {/* Teams Container - positioned at rope level */}
-      <div className="absolute left-0 right-0 z-10 flex items-center justify-between px-4" style={{ bottom: '100px' }}>
-        {/* Enemy Team (Left) - Goblins pulling rope */}
-        <motion.div 
-          className="flex flex-col items-center"
-          animate={pullingAnimation === 'enemy' ? { x: [-12, 0] } : pullingAnimation === 'hero' ? { x: [12, 0] } : {}}
-          transition={{ duration: 0.3 }}
+      {/* ============ UNIFIED TUG-OF-WAR RIG ============ */}
+      {/* This container holds EVERYTHING that moves together: rope + teams + grips */}
+      <motion.div 
+        className="absolute left-0 right-0 z-[10]"
+        style={{ bottom: '80px', height: '180px' }}
+        animate={{ 
+          x: `${ropeOffsetPercent}%`,
+        }}
+        transition={{ type: 'spring', stiffness: 150, damping: 20 }}
+      >
+        {/* Rope Layer */}
+        <div 
+          className="absolute left-0 right-0 pointer-events-none"
+          style={{ 
+            top: '50%', 
+            transform: 'translateY(-50%)',
+            height: '80px',
+          }}
         >
-          <div className="flex items-end gap-0">
-            {/* Goblins in a row - all facing right toward rope */}
-            <div className="scale-[0.55] origin-bottom-right -mr-3">
-              <GoblinGuard 
-                state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
-                healthPercent={100}
-                size="small"
-              />
-            </div>
-            <div className="scale-[0.65] origin-bottom -mr-2">
-              <GoblinGuard 
-                state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
-                healthPercent={100}
-                size="small"
-              />
-            </div>
-            <div className="scale-[0.75] origin-bottom -mr-1">
-              <GoblinGuard 
-                state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
-                healthPercent={100}
-                size="small"
-              />
-            </div>
-            {/* Leader goblin - largest */}
-            <div className="scale-[0.9] origin-bottom">
-              <GoblinGuard 
-                state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
-                healthPercent={100}
-                size="medium"
-              />
-            </div>
-          </div>
-          <div className="text-red-600 font-bold text-sm mt-2 bg-white/90 px-3 py-1 rounded-full shadow">
-            {enemyName}
-          </div>
-        </motion.div>
+          <TugOfWarRope 
+            ropePosition={ropePosition}
+            maxPosition={WIN_THRESHOLD}
+            isPulling={pullingAnimation}
+          />
+        </div>
 
-        {/* Hero Team (Right) - Leader + Kids pulling rope */}
-        <motion.div 
-          className="flex flex-col items-center"
-          animate={pullingAnimation === 'hero' ? { x: [12, 0] } : pullingAnimation === 'enemy' ? { x: [-12, 0] } : {}}
-          transition={{ duration: 0.3 }}
+        {/* Grip Overlays - hands on rope */}
+        <div 
+          className="absolute left-0 right-0 pointer-events-none"
+          style={{ 
+            top: '50%', 
+            transform: 'translateY(-50%)',
+            height: '80px',
+          }}
         >
-          <div className="flex items-end gap-0">
-            {/* Leader character - facing left toward rope */}
-            <div className="scale-[0.9] origin-bottom">
-              <LeaderComponent 
-                state={leaderState as any}
-                healthPercent={100}
-                size="medium"
-                flipX
-              />
-            </div>
-            {/* Kids in a row - facing left toward rope, much larger */}
-            {[0, 1, 2].map(i => (
-              <div key={i} className="-ml-2">
-                <TugOfWarKid 
-                  index={i}
-                  isPulling={pullingAnimation === 'hero'}
-                  isStraining={pullingAnimation === 'enemy'}
-                  side="hero"
+          {/* Goblin grips (left side of rope: 8-30%) */}
+          {[8, 16, 24, 32].map((pos, i) => (
+            <TugOfWarGrip 
+              key={`goblin-grip-${i}`}
+              xPercent={pos}
+              side="enemy"
+              isPulling={pullingAnimation === 'enemy'}
+              skinColor={goblinSkinColors[i]}
+            />
+          ))}
+          
+          {/* Hero grip (around 62%) */}
+          <TugOfWarGrip 
+            xPercent={62}
+            side="hero"
+            isPulling={pullingAnimation === 'hero'}
+            skinColor="#f5d6c6"
+          />
+          
+          {/* Kid grips (right side: 70-88%) */}
+          {[70, 78, 86].map((pos, i) => (
+            <TugOfWarGrip 
+              key={`kid-grip-${i}`}
+              xPercent={pos}
+              side="hero"
+              isPulling={pullingAnimation === 'hero'}
+              skinColor={kidSkinColors[i]}
+            />
+          ))}
+        </div>
+
+        {/* Teams Container - positioned at rope level */}
+        <div className="absolute left-0 right-0 top-0 bottom-0 flex items-end justify-between px-4">
+          {/* Enemy Team (Left) - Goblins */}
+          <motion.div 
+            className="flex flex-col items-center"
+            animate={pullingAnimation === 'enemy' ? { x: [-20, 0] } : pullingAnimation === 'hero' ? { x: [20, 0] } : {}}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="flex items-end gap-0">
+              {/* Goblins in a row */}
+              <div className="scale-[0.55] origin-bottom-right -mr-3">
+                <GoblinGuard 
+                  state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
+                  healthPercent={100}
+                  size="small"
+                />
+              </div>
+              <div className="scale-[0.65] origin-bottom -mr-2">
+                <GoblinGuard 
+                  state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
+                  healthPercent={100}
+                  size="small"
+                />
+              </div>
+              <div className="scale-[0.75] origin-bottom -mr-1">
+                <GoblinGuard 
+                  state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
+                  healthPercent={100}
+                  size="small"
+                />
+              </div>
+              {/* Leader goblin */}
+              <div className="scale-[0.9] origin-bottom">
+                <GoblinGuard 
+                  state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
+                  healthPercent={100}
                   size="medium"
                 />
               </div>
-            ))}
-          </div>
-          <div className="text-blue-600 font-bold text-sm mt-2 bg-white/90 px-3 py-1 rounded-full shadow">
-            {heroName}'s Team
-          </div>
-        </motion.div>
-      </div>
+            </div>
+            <div className="text-red-600 font-bold text-sm mt-2 bg-white/90 px-3 py-1 rounded-full shadow">
+              {enemyName}
+            </div>
+          </motion.div>
+
+          {/* Hero Team (Right) - Leader + Kids */}
+          <motion.div 
+            className="flex flex-col items-center"
+            animate={pullingAnimation === 'hero' ? { x: [20, 0] } : pullingAnimation === 'enemy' ? { x: [-20, 0] } : {}}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="flex items-end gap-0">
+              {/* Leader character */}
+              <div className="scale-[0.9] origin-bottom">
+                <LeaderComponent 
+                  state={leaderState as any}
+                  healthPercent={100}
+                  size="medium"
+                  flipX
+                />
+              </div>
+              {/* Kids in a row */}
+              {[0, 1, 2].map(i => (
+                <div key={i} className="-ml-2">
+                  <TugOfWarKid 
+                    index={i}
+                    isPulling={pullingAnimation === 'hero'}
+                    isStraining={pullingAnimation === 'enemy'}
+                    side="hero"
+                    size="medium"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="text-blue-600 font-bold text-sm mt-2 bg-white/90 px-3 py-1 rounded-full shadow">
+              {heroName}'s Team
+            </div>
+          </motion.div>
+        </div>
+      </motion.div>
 
       {/* Word Display & Controls */}
       {!gameOver && (
@@ -598,26 +654,6 @@ export const RPGTugOfWar = ({
               {isPaused ? '⏸️ Paused - Timer running!' : '🎤 Listening...'}
             </motion.div>
           )}
-
-          {/* Testing buttons */}
-          <div className="flex justify-center gap-2 mt-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleWordResult(true)}
-              className="text-green-400 hover:bg-green-400/20"
-            >
-              ✓ Correct
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleWordResult(false)}
-              className="text-red-400 hover:bg-red-400/20"
-            >
-              ✗ Wrong
-            </Button>
-          </div>
         </div>
       )}
 
