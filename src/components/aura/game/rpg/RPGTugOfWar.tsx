@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Skull, Coins, Star, Mic, MicOff, Pause, Play, Timer } from "lucide-react";
+import { Trophy, Skull, Coins, Star, Mic, MicOff, Pause, Play, Timer, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { TugOfWarBackground } from "./TugOfWarBackground";
@@ -296,6 +296,18 @@ export const RPGTugOfWar = ({
     } catch (e) {}
   }, []);
 
+  // TTS to hear the word pronunciation
+  const pronounceWord = useCallback(() => {
+    if (currentWord && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(currentWord);
+      utterance.rate = 0.75; // Slower for clarity
+      utterance.pitch = 1;
+      utterance.lang = 'en-US';
+      window.speechSynthesis.speak(utterance);
+    }
+  }, [currentWord]);
+
   const resumeMic = useCallback(() => {
     setIsPaused(false);
     isListeningRef.current = true;
@@ -409,30 +421,30 @@ export const RPGTugOfWar = ({
       />
 
       {/* Teams Container - positioned at rope level */}
-      <div className="absolute left-0 right-0 z-10 flex items-end justify-between px-8" style={{ bottom: '120px' }}>
+      <div className="absolute left-0 right-0 z-10 flex items-center justify-between px-4" style={{ bottom: '100px' }}>
         {/* Enemy Team (Left) - Goblins pulling rope */}
         <motion.div 
           className="flex flex-col items-center"
-          animate={pullingAnimation === 'enemy' ? { x: [-8, 0] } : pullingAnimation === 'hero' ? { x: [8, 0] } : {}}
+          animate={pullingAnimation === 'enemy' ? { x: [-12, 0] } : pullingAnimation === 'hero' ? { x: [12, 0] } : {}}
           transition={{ duration: 0.3 }}
         >
           <div className="flex items-end gap-0">
             {/* Goblins in a row - all facing right toward rope */}
-            <div className="scale-50 origin-bottom-right -mr-2">
+            <div className="scale-[0.55] origin-bottom-right -mr-3">
               <GoblinGuard 
                 state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
                 healthPercent={100}
                 size="small"
               />
             </div>
-            <div className="scale-55 origin-bottom -mr-1">
+            <div className="scale-[0.65] origin-bottom -mr-2">
               <GoblinGuard 
                 state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
                 healthPercent={100}
                 size="small"
               />
             </div>
-            <div className="scale-60 origin-bottom -mr-1">
+            <div className="scale-[0.75] origin-bottom -mr-1">
               <GoblinGuard 
                 state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
                 healthPercent={100}
@@ -440,13 +452,15 @@ export const RPGTugOfWar = ({
               />
             </div>
             {/* Leader goblin - largest */}
-            <GoblinGuard 
-              state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
-              healthPercent={100}
-              size="medium"
-            />
+            <div className="scale-[0.9] origin-bottom">
+              <GoblinGuard 
+                state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
+                healthPercent={100}
+                size="medium"
+              />
+            </div>
           </div>
-          <div className="text-red-600 font-bold text-sm mt-1 bg-white/90 px-3 py-1 rounded-full shadow">
+          <div className="text-red-600 font-bold text-sm mt-2 bg-white/90 px-3 py-1 rounded-full shadow">
             {enemyName}
           </div>
         </motion.div>
@@ -454,31 +468,33 @@ export const RPGTugOfWar = ({
         {/* Hero Team (Right) - Leader + Kids pulling rope */}
         <motion.div 
           className="flex flex-col items-center"
-          animate={pullingAnimation === 'hero' ? { x: [8, 0] } : pullingAnimation === 'enemy' ? { x: [-8, 0] } : {}}
+          animate={pullingAnimation === 'hero' ? { x: [12, 0] } : pullingAnimation === 'enemy' ? { x: [-12, 0] } : {}}
           transition={{ duration: 0.3 }}
         >
           <div className="flex items-end gap-0">
             {/* Leader character - facing left toward rope */}
-            <LeaderComponent 
-              state={leaderState as any}
-              healthPercent={100}
-              size="medium"
-              flipX
-            />
-            {/* Kids in a row - facing left toward rope */}
+            <div className="scale-[0.9] origin-bottom">
+              <LeaderComponent 
+                state={leaderState as any}
+                healthPercent={100}
+                size="medium"
+                flipX
+              />
+            </div>
+            {/* Kids in a row - facing left toward rope, much larger */}
             {[0, 1, 2].map(i => (
-              <div key={i} className="-ml-1">
+              <div key={i} className="-ml-2">
                 <TugOfWarKid 
                   index={i}
                   isPulling={pullingAnimation === 'hero'}
                   isStraining={pullingAnimation === 'enemy'}
                   side="hero"
-                  size="small"
+                  size="medium"
                 />
               </div>
             ))}
           </div>
-          <div className="text-blue-600 font-bold text-sm mt-1 bg-white/90 px-3 py-1 rounded-full shadow">
+          <div className="text-blue-600 font-bold text-sm mt-2 bg-white/90 px-3 py-1 rounded-full shadow">
             {heroName}'s Team
           </div>
         </motion.div>
@@ -531,14 +547,24 @@ export const RPGTugOfWar = ({
             ) : (
               <div className="flex gap-2">
                 {isPaused ? (
-                  <Button
-                    size="lg"
-                    onClick={resumeMic}
-                    className="px-6 py-6 text-xl font-bold rounded-full bg-gradient-to-r from-green-500 to-emerald-600"
-                  >
-                    <Play className="h-6 w-6 mr-2" />
-                    Resume
-                  </Button>
+                  <>
+                    <Button
+                      size="lg"
+                      onClick={pronounceWord}
+                      className="px-6 py-6 text-xl font-bold rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500"
+                    >
+                      <Volume2 className="h-6 w-6 mr-2" />
+                      Hear Word
+                    </Button>
+                    <Button
+                      size="lg"
+                      onClick={resumeMic}
+                      className="px-6 py-6 text-xl font-bold rounded-full bg-gradient-to-r from-green-500 to-emerald-600"
+                    >
+                      <Play className="h-6 w-6 mr-2" />
+                      Resume
+                    </Button>
+                  </>
                 ) : (
                   <Button
                     size="lg"

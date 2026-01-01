@@ -17,8 +17,8 @@ export const TugOfWarRope = ({ ropePosition, maxPosition, isPulling }: TugOfWarR
   };
 
   return (
-    <div className="absolute left-0 right-0 flex items-center justify-center pointer-events-none"
-         style={{ bottom: '140px', height: '60px' }}>
+    <div className="absolute left-0 right-0 flex items-center justify-center pointer-events-none z-5"
+         style={{ bottom: '155px', height: '70px' }}>
       <motion.div
         className="relative w-full max-w-4xl h-full"
         animate={{ x: `${ropeOffset}%` }}
