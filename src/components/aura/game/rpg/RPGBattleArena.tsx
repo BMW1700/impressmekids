@@ -48,6 +48,7 @@ import { calculateGoldEarned, calculateXpEarned } from "@/lib/gameEconomy";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { speechManager } from "@/lib/speechRecognitionManager";
 import { supabase } from "@/integrations/supabase/client";
+import { useMLIntegration } from "@/hooks/useMLIntegration";
 
 // Sound effects singleton
 const battleSounds = new SoundEffects();
@@ -85,6 +86,8 @@ export const RPGBattleArena = ({
   onBack,
   onComplete,
 }: RPGBattleArenaProps) => {
+  // ML Integration for saving training data
+  const { saveToAuraRecords } = useMLIntegration();
   // Multi-enemy queue system
   const buildEnemyQueue = useCallback((primaryType: EnemyType): EnemyType[] => {
     // For certain levels, add Drake the Dragon after the primary enemy
@@ -1003,8 +1006,23 @@ export const RPGBattleArena = ({
         } else {
           console.log('[RPGBattle] Reading session saved for teacher visibility');
         }
+        
+        // ALSO save to aura_records for ML training pipeline
+        await saveToAuraRecords({
+          studentId,
+          sessionId: `rpg_battle_${story.title}_${Date.now()}`,
+          wpm,
+          wcpm: Math.round(correctWords / (durationSeconds / 60)),
+          accuracy: accuracyPercent,
+          wordsRead,
+          durationSeconds: Math.round(durationSeconds),
+          pauseCount: 0,
+          phonemeScores: {},
+          includeSpeakingData: true,
+        });
+        console.log('[RPGBattle] ML training data saved to aura_records');
       } catch (err) {
-        console.error('[RPGBattle] Error saving reading session:', err);
+        console.error('[RPGBattle] Error saving reading data:', err);
       }
     }
 
@@ -1015,7 +1033,7 @@ export const RPGBattleArena = ({
       damageDealt: totalDamage,
       xpEarned,
     });
-  }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete, studentId, story]);
+  }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete, studentId, story, battleMode, saveToAuraRecords]);
 
   // Get current batch of words for reading - MEMOIZED for stable reference
   // batchStartIndex only changes when we complete a full batch, keeping this stable
@@ -1190,6 +1208,8 @@ export const RPGBattleArena = ({
             words={barrageWords}
             heroName="Knight"
             enemyName={enemy.name}
+            studentId={studentId}
+            storyTitle={story.title}
             onComplete={handleBalloonBattleComplete}
           />
         )}
