@@ -345,35 +345,35 @@ export const RPGTugOfWar = ({
       if (battleStartTimeRef.current === 0) {
         battleStartTimeRef.current = Date.now();
       }
-      // Small delay to ensure state is ready
-      const timeout = setTimeout(() => {
+
+      // If we are not listening, try to start (works if mic permission already granted)
+      if (!isListening) {
         startRecognition();
-      }, 100);
-      return () => clearTimeout(timeout);
+      }
     }
-    
+
     return () => {
       speechManager.stop('reader');
       if (echoRetryTimeoutRef.current) {
         clearTimeout(echoRetryTimeoutRef.current);
       }
     };
-  }, [selectedCharacter, gameOver, isPaused, startRecognition]);
+  }, [selectedCharacter, gameOver, isPaused, isListening, startRecognition]);
 
-  // Handle pause/resume for speech - separate effect for clean restart
+  // Handle pause/resume for speech
   useEffect(() => {
     if (!selectedCharacter || gameOver) return;
-    
+
     if (isPaused) {
       stopRecognition();
-    } else {
-      // Restart recognition after unpause with small delay
-      const timeout = setTimeout(() => {
-        startRecognition();
-      }, 150);
-      return () => clearTimeout(timeout);
+      return;
     }
-  }, [isPaused, selectedCharacter, gameOver, startRecognition, stopRecognition]);
+
+  // Resume immediately (must be tied to user gesture elsewhere when permission prompts)
+    if (!isListening) {
+      startRecognition();
+    }
+  }, [isPaused, selectedCharacter, gameOver, isListening, startRecognition, stopRecognition]);
 
   // TTS to hear the word pronunciation
   const pronounceWord = useCallback(() => {
@@ -393,15 +393,27 @@ export const RPGTugOfWar = ({
   }, []);
 
   const handleResume = useCallback(() => {
+    // IMPORTANT: start mic synchronously on the user's click to preserve gesture
     setIsPaused(false);
-  }, []);
+    startRecognition();
+  }, [startRecognition]);
+
+  const handleSelectCharacter = useCallback((character: 'valor' | 'elara') => {
+    // IMPORTANT: start mic synchronously on the user's click to preserve gesture
+    if (battleStartTimeRef.current === 0) {
+      battleStartTimeRef.current = Date.now();
+    }
+
+    setSelectedCharacter(character);
+    startRecognition();
+  }, [startRecognition]);
 
   // Calculate visual positions
   const progressPercent = ((ropePosition + WIN_THRESHOLD) / (WIN_THRESHOLD * 2)) * 100;
 
   // Show character selection first
   if (!selectedCharacter) {
-    return <TugOfWarCharacterSelect onSelect={setSelectedCharacter} />;
+    return <TugOfWarCharacterSelect onSelect={handleSelectCharacter} />;
   }
 
   const LeaderComponent = selectedCharacter === 'valor' ? SirValor : Elara;
