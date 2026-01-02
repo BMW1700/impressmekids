@@ -151,6 +151,16 @@ const StudentClubDetail = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {club.profiles && (
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground">Club Leader</h4>
+                      <p>{(club.profiles as any).full_name}</p>
+                    </div>
+                  </div>
+                )}
+
                 {club.description ? (
                   <div>
                     <h4 className="text-sm font-medium text-muted-foreground mb-1">Description</h4>
