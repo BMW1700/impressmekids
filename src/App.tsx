@@ -37,6 +37,7 @@ const JeopardyGame = lazy(() => import("./pages/games/JeopardyGame"));
 const NumberMaker = lazy(() => import("./pages/games/NumberMaker"));
 const NameThatAnimalGame = lazy(() => import("./pages/games/NameThatAnimalGame"));
 const USStatesMapQuiz = lazy(() => import("./pages/games/USStatesMapQuiz"));
+const TugOfWarGame = lazy(() => import("./pages/games/TugOfWarGame"));
 const JoinClass = lazy(() => import("./pages/JoinClass"));
 const ClassroomDetail = lazy(() => import("./pages/classrooms/ClassroomDetail"));
 const QuestionsLibrary = lazy(() => import("./pages/teacher/QuestionsLibrary"));
@@ -170,6 +171,7 @@ const App = () => (
                     <Route path="/games/number-maker" element={<NumberMaker />} />
                     <Route path="/games/name-that-animal" element={<NameThatAnimalGame />} />
                     <Route path="/games/us-states-quiz" element={<USStatesMapQuiz />} />
+                    <Route path="/games/tug-of-war" element={<TugOfWarGame />} />
 
                     <Route path="/parent/dashboard" element={<ParentDashboard />} />
                     <Route path="/parent/calendar" element={<ParentCalendar />} />
