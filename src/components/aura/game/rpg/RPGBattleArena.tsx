@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Flame, Trophy, Skull, Star, AlertTriangle, Coins } from "lucide-react";
+import { ArrowLeft, Flame, Trophy, Skull, Star, AlertTriangle, Coins, Volume2, VolumeX } from "lucide-react";
 import { RPGBattleBackground } from "./RPGBattleBackground";
 import { RPGCharacter } from "./RPGCharacter";
 import { RPGDialogueBox } from "./RPGDialogueBox";
@@ -19,6 +19,19 @@ import { RPGRollingBoulders } from "./RPGRollingBoulders";
 import { RPGEnemyTransition } from "./RPGEnemyTransition";
 import { RPGSpellEffects } from "./RPGSpellEffects";
 import { RPGCoinDrop } from "./RPGCoinDrop";
+// NEW: Import the 3 attack mini-games
+import { RPGWordShield } from "./RPGWordShield";
+import { RPGSpellCombo } from "./RPGSpellCombo";
+import { RPGDodgeWords } from "./RPGDodgeWords";
+// NEW: Import 2 new mini-games
+import { RPGRhymeChain } from "./RPGRhymeChain";
+import { RPGSpeedTypist } from "./RPGSpeedTypist";
+// NEW: Import Tug of War and Balloon Battle modes
+import { RPGTugOfWar } from "./RPGTugOfWar";
+import { RPGBalloonBattle } from "./RPGBalloonBattle";
+import { RPGBalloonQuickPop } from "./RPGBalloonQuickPop";
+// NEW: Import Fireball Defense mode
+import { RPGFireballDefense } from "./RPGFireballDefense";
 import { Spell } from "./RPGSpellMenu";
 import { Item } from "./RPGItemMenu";
 import { 
@@ -31,16 +44,26 @@ import {
 } from "@/lib/rpgBattleData";
 import { CuratedStory } from "@/data/curatedStories";
 import { calculateGoldEarned, calculateXpEarned } from "@/lib/gameEconomy";
+import { SoundEffects } from "@/lib/pronunciationPlayer";
+import { speechManager } from "@/lib/speechRecognitionManager";
+import { supabase } from "@/integrations/supabase/client";
+
+// Sound effects singleton
+const battleSounds = new SoundEffects();
 
 type EnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian';
-type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat';
+// UPDATED: Added new mini-game phases including Tug of War, Balloon Battle, and Fireball Defense
+type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'word_shield' | 'spell_combo' | 'dodge_words' | 'rhyme_chain' | 'speed_typist' | 'tug_of_war' | 'balloon_battle' | 'fireball_defense' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat';
 type InventoryKey = 'health_potion' | 'magic_potion';
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
+
+export type BattleModeType = 'classic' | 'tug_of_war' | 'balloon';
 
 interface RPGBattleArenaProps {
   story: CuratedStory;
   enemyType: EnemyType;
   studentId: string;
+  battleMode?: BattleModeType;
   onBack: () => void;
   onComplete: (victory: boolean, stats: BattleStats) => void;
 }
@@ -57,6 +80,7 @@ export const RPGBattleArena = ({
   story,
   enemyType,
   studentId,
+  battleMode = 'classic',
   onBack,
   onComplete,
 }: RPGBattleArenaProps) => {
@@ -85,6 +109,16 @@ export const RPGBattleArena = ({
   const [barrageTriggered, setBarrageTriggered] = useState(false);
   const [specialBarrageTriggered, setSpecialBarrageTriggered] = useState(false);
   const [beastSwarmTriggered, setBeastSwarmTriggered] = useState(false);
+  
+  // Mini-game trigger states
+  const [wordShieldTriggered, setWordShieldTriggered] = useState(false);
+  const [spellComboTriggered, setSpellComboTriggered] = useState(false);
+  const [dodgeWordsTriggered, setDodgeWordsTriggered] = useState(false);
+  const [rhymeChainTriggered, setRhymeChainTriggered] = useState(false);
+  const [speedTypistTriggered, setSpeedTypistTriggered] = useState(false);
+  const [tugOfWarTriggered, setTugOfWarTriggered] = useState(false);
+  const [balloonBattleTriggered, setBalloonBattleTriggered] = useState(false);
+  const [fireballDefenseTriggered, setFireballDefenseTriggered] = useState(false);
   
   // Combat stats
   const [playerHp, setPlayerHp] = useState(heroKnight.maxHp);
@@ -138,6 +172,33 @@ export const RPGBattleArena = ({
   
   // Floating damage numbers
   const [floatingDamages, setFloatingDamages] = useState<{id: number; damage: number; x: number; y: number; isPlayer: boolean; isCritical?: boolean}[]>([]);
+  
+  // Sound toggle
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  
+  // Update sound effects when toggle changes
+  useEffect(() => {
+    battleSounds.setSoundEnabled(soundEnabled);
+  }, [soundEnabled]);
+  
+  // Helper function to return to reading state cleanly after any mini-game/barrage
+  const returnToReading = useCallback(() => {
+    console.log('[RPGBattle] Returning to reading state');
+    // Force stop any lingering recognition
+    speechManager.forceStop();
+    
+    // Clear any pending state immediately
+    setCurrentWordResult(null);
+    setEnemyAbilityMessage(null);
+    
+    // Small delay to ensure cleanup completes
+    setTimeout(() => {
+      setPhase('reading');
+      setCurrentCommand('read');
+      setIsPlayerTurn(true);
+      console.log('[RPGBattle] State reset complete - phase: reading, command: read');
+    }, 100);
+  }, []);
 
   // Parse story into words - memoized for stability
   const storyWords = useMemo(() => {
@@ -149,6 +210,19 @@ export const RPGBattleArena = ({
   useEffect(() => {
     setWords(storyWords);
   }, [storyWords]);
+
+  // Handle non-classic battle modes - skip intro and go directly to the selected mode
+  useEffect(() => {
+    if (battleMode === 'tug_of_war' && storyWords.length > 0) {
+      console.log('[RPGBattle] Starting in Tug of War mode with', storyWords.length, 'words');
+      setBarrageWords(storyWords);
+      setPhase('tug_of_war');
+    } else if (battleMode === 'balloon' && storyWords.length > 0) {
+      console.log('[RPGBattle] Starting in Balloon Bonanza mode with', storyWords.length, 'words');
+      setBarrageWords(storyWords);
+      setPhase('balloon_battle');
+    }
+  }, [battleMode, storyWords]);
 
   // Check for barrage triggers based on HP thresholds
   useEffect(() => {
@@ -167,6 +241,303 @@ export const RPGBattleArena = ({
       triggerBeastSwarm();
     }
   }, [enemyHp, enemy.maxHp, barrageTriggered, specialBarrageTriggered, beastSwarmTriggered, phase, currentEnemyType]);
+  
+  // Trigger mini-games based on streak and HP thresholds
+  useEffect(() => {
+    if (phase !== 'reading') return;
+    
+    // Word Shield at 75% enemy HP (defensive mini-game)
+    if (!wordShieldTriggered && enemyHp <= enemy.maxHp * 0.75 && enemyHp > enemy.maxHp * 0.5) {
+      setWordShieldTriggered(true);
+      triggerWordShield();
+    }
+    
+    // Spell Combo on 5+ streak (power attack opportunity)
+    if (!spellComboTriggered && streak >= 5 && streak < 8) {
+      setSpellComboTriggered(true);
+      triggerSpellCombo();
+    }
+    
+    // Rhyme Chain on 8+ streak
+    if (!rhymeChainTriggered && streak >= 8 && streak < 12) {
+      setRhymeChainTriggered(true);
+      triggerRhymeChain();
+    }
+    
+    // Speed Typist at 40% enemy HP
+    if (!speedTypistTriggered && enemyHp <= enemy.maxHp * 0.4 && enemyHp > enemy.maxHp * 0.25) {
+      setSpeedTypistTriggered(true);
+      triggerSpeedTypist();
+    }
+    
+    // Tug of War at 60% enemy HP for elite/boss enemies
+    if (!tugOfWarTriggered && (currentEnemyType === 'elite' || currentEnemyType === 'boss') && 
+        enemyHp <= enemy.maxHp * 0.6 && enemyHp > enemy.maxHp * 0.5) {
+      setTugOfWarTriggered(true);
+      triggerTugOfWar();
+    }
+    
+    // Balloon Battle at 35% enemy HP
+    if (!balloonBattleTriggered && enemyHp <= enemy.maxHp * 0.35 && enemyHp > enemy.maxHp * 0.2) {
+      setBalloonBattleTriggered(true);
+      triggerBalloonBattle();
+    }
+    
+    // Fireball Defense at 45% HP when facing Drake the Dragon
+    if (!fireballDefenseTriggered && currentEnemyType === 'dragon' && 
+        enemyHp <= enemy.maxHp * 0.45 && enemyHp > enemy.maxHp * 0.25) {
+      setFireballDefenseTriggered(true);
+      triggerFireballDefense();
+    }
+  }, [phase, streak, enemyHp, enemy.maxHp, wordShieldTriggered, spellComboTriggered, rhymeChainTriggered, speedTypistTriggered, tugOfWarTriggered, balloonBattleTriggered, fireballDefenseTriggered, currentEnemyType]);
+  
+  // Trigger Word Shield
+  const triggerWordShield = useCallback(() => {
+    const wordCount = 5;
+    const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 5);
+    const shieldWords = availableWords.slice(0, wordCount);
+    setBarrageWords(shieldWords);
+    setEnemyAbilityMessage(`${enemy.name} charges a devastating attack!`);
+    setTimeout(() => {
+      setEnemyAbilityMessage(null);
+      setPhase('word_shield');
+    }, 1000);
+  }, [words, batchStartIndex, enemy.name]);
+  
+  // Trigger Spell Combo
+  const triggerSpellCombo = useCallback(() => {
+    const wordCount = 5;
+    const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 5);
+    const comboWords = availableWords.slice(0, wordCount);
+    setBarrageWords(comboWords);
+    setEnemyAbilityMessage(`POWER SURGE! Chain a spell combo!`);
+    setTimeout(() => {
+      setEnemyAbilityMessage(null);
+      setPhase('spell_combo');
+    }, 1000);
+  }, [words, batchStartIndex]);
+  
+  // Trigger Rhyme Chain
+  const triggerRhymeChain = useCallback(() => {
+    const wordCount = 6;
+    const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 5);
+    const rhymeWords = availableWords.slice(0, wordCount);
+    setBarrageWords(rhymeWords);
+    setEnemyAbilityMessage(`RHYME TIME! Chain rhyming words!`);
+    setTimeout(() => {
+      setEnemyAbilityMessage(null);
+      setPhase('rhyme_chain');
+    }, 1000);
+  }, [words, batchStartIndex]);
+  
+  // Trigger Speed Typist
+  const triggerSpeedTypist = useCallback(() => {
+    const wordCount = 12;
+    const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 5);
+    const speedWords = availableWords.slice(0, wordCount);
+    setBarrageWords(speedWords);
+    setEnemyAbilityMessage(`SPEED BLITZ! Read as fast as you can!`);
+    setTimeout(() => {
+      setEnemyAbilityMessage(null);
+      setPhase('speed_typist');
+    }, 1000);
+  }, [words, batchStartIndex]);
+  
+  // Trigger Tug of War - at 60% enemy HP for elite/boss
+  const triggerTugOfWar = useCallback(() => {
+    const wordCount = 15;
+    const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 10);
+    setBarrageWords(availableWords.slice(0, wordCount));
+    setEnemyAbilityMessage(`TUG OF WAR! Pull the rope with reading power!`);
+    battleSounds.miniGameStart();
+    setTimeout(() => {
+      setEnemyAbilityMessage(null);
+      setPhase('tug_of_war');
+    }, 1000);
+  }, [words, batchStartIndex]);
+  
+  // Trigger Balloon Battle - at 35% enemy HP
+  const triggerBalloonBattle = useCallback(() => {
+    const wordCount = 30;
+    const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 10);
+    setBarrageWords(availableWords.slice(0, wordCount));
+    setEnemyAbilityMessage(`BALLOON BATTLE! Pop all enemy balloons!`);
+    battleSounds.miniGameStart();
+    setTimeout(() => {
+      setEnemyAbilityMessage(null);
+      setPhase('balloon_battle');
+    }, 1000);
+  }, [words, batchStartIndex]);
+  
+  // Trigger Fireball Defense - Drake's special attack at 45% HP
+  const triggerFireballDefense = useCallback(() => {
+    const wordCount = 8;
+    const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 5);
+    setBarrageWords(availableWords.slice(0, wordCount));
+    setEnemyAbilityMessage(`🔥 DRAKE UNLEASHES FIREBALLS! 🔥`);
+    battleSounds.fireWhoosh();
+    setTimeout(() => {
+      setEnemyAbilityMessage(null);
+      setPhase('fireball_defense');
+    }, 1000);
+  }, [words, batchStartIndex]);
+  
+  // Handle Fireball Defense complete
+  const handleFireballDefenseComplete = useCallback((blocked: number, hit: number, damage: number) => {
+    console.log('[RPGBattle] Fireball Defense complete:', { blocked, hit, damage });
+    if (damage > 0) {
+      setPlayerHp(prev => Math.max(0, prev - damage));
+    }
+    const bonusDamage = blocked * 10;
+    if (bonusDamage > 0) {
+      setEnemyHp(prev => Math.max(0, prev - bonusDamage));
+      setTotalDamage(prev => prev + bonusDamage);
+    }
+    setCorrectWords(prev => prev + blocked);
+    setBatchStartIndex(prev => prev + barrageWords.length);
+    returnToReading();
+  }, [barrageWords.length, returnToReading]);
+  
+  // Handle Word Shield complete - uses returnToReading for clean state
+  const handleWordShieldComplete = useCallback((shieldStrength: number, damage: number) => {
+    console.log('[RPGBattle] Word Shield complete:', { shieldStrength, damage });
+    // Play shield block sound
+    if (shieldStrength > 50) {
+      battleSounds.shieldBlock();
+    }
+    
+    const reducedDamage = Math.floor(20 * (1 - shieldStrength / 100));
+    if (reducedDamage > 0) {
+      setPlayerHp(prev => Math.max(0, prev - reducedDamage));
+    }
+    if (shieldStrength > 50) {
+      setEnemyHp(prev => Math.max(0, prev - damage));
+      setTotalDamage(prev => prev + damage);
+    }
+    setBatchStartIndex(prev => prev + barrageWords.length);
+    returnToReading();
+  }, [barrageWords.length, returnToReading]);
+  
+  // Handle Spell Combo complete - uses returnToReading for clean state
+  const handleSpellComboComplete = useCallback((success: boolean, multiplier: number) => {
+    console.log('[RPGBattle] Spell Combo complete:', { success, multiplier });
+    if (success) {
+      battleSounds.comboSuccess();
+      battleSounds.magicSparkle();
+      const damage = Math.floor(50 * multiplier);
+      setEnemyHp(prev => Math.max(0, prev - damage));
+      setTotalDamage(prev => prev + damage);
+      setCorrectWords(prev => prev + barrageWords.length);
+    }
+    setBatchStartIndex(prev => prev + barrageWords.length);
+    returnToReading();
+  }, [barrageWords.length, returnToReading]);
+  
+  // Handle Dodge Words complete
+  const handleDodgeWordsComplete = useCallback((correctHits: number, wrongHits: number, dodged: number) => {
+    console.log('[RPGBattle] Dodge Words complete:', { correctHits, wrongHits, dodged });
+    const damage = correctHits * 15;
+    setEnemyHp(prev => Math.max(0, prev - damage));
+    setTotalDamage(prev => prev + damage);
+    setCorrectWords(prev => prev + correctHits);
+    returnToReading();
+  }, [returnToReading]);
+  
+  // Handle Dodge Words damage
+  const handleDodgeWordsDamage = useCallback((damage: number) => {
+    setPlayerHp(prev => Math.max(0, prev - damage));
+    triggerScreenShake();
+  }, []);
+  
+  // Handle Rhyme Chain complete - uses returnToReading for clean state
+  const handleRhymeChainComplete = useCallback((score: number, damage: number) => {
+    console.log('[RPGBattle] Rhyme Chain complete:', { score, damage });
+    if (damage > 0) {
+      battleSounds.magicSparkle();
+      setEnemyHp(prev => Math.max(0, prev - damage));
+      setTotalDamage(prev => prev + damage);
+    }
+    setCorrectWords(prev => prev + score);
+    setBatchStartIndex(prev => prev + barrageWords.length);
+    returnToReading();
+  }, [barrageWords.length, returnToReading]);
+  
+  // Handle Speed Typist complete - uses returnToReading for clean state
+  const handleSpeedTypistComplete = useCallback((wordsSpoken: number, damage: number) => {
+    console.log('[RPGBattle] Speed Typist complete:', { wordsSpoken, damage });
+    if (damage > 0) {
+      battleSounds.lightningCrack();
+      setEnemyHp(prev => Math.max(0, prev - damage));
+      setTotalDamage(prev => prev + damage);
+    }
+    setCorrectWords(prev => prev + wordsSpoken);
+    setBatchStartIndex(prev => prev + barrageWords.length);
+    returnToReading();
+  }, [barrageWords.length, returnToReading]);
+  
+  // Handle Tug of War complete
+  const handleTugOfWarComplete = useCallback((victory: boolean, stats: { wordsRead: number; correctWords: number; incorrectWords: number }) => {
+    console.log('[RPGBattle] Tug of War complete:', { victory, stats, battleMode });
+    setWordsRead(prev => prev + stats.wordsRead);
+    setCorrectWords(prev => prev + stats.correctWords);
+    
+    // If this is the main battle mode (not a mini-game), trigger full victory/defeat
+    if (battleMode === 'tug_of_war') {
+      if (victory) {
+        battleSounds.celebrationSound();
+        setTotalDamage(stats.correctWords * 5);
+      }
+      setPhase(victory ? 'victory' : 'defeat');
+      return;
+    }
+    
+    // Mini-game behavior
+    if (victory) {
+      const bonusDamage = Math.floor(stats.correctWords * 5);
+      battleSounds.celebrationSound();
+      setEnemyHp(prev => Math.max(0, prev - bonusDamage));
+      setTotalDamage(prev => prev + bonusDamage);
+    } else {
+      setPlayerHp(prev => Math.max(0, prev - 20));
+    }
+    setBatchStartIndex(prev => prev + barrageWords.length);
+    returnToReading();
+  }, [barrageWords.length, returnToReading, battleMode]);
+  
+  // Handle Balloon Battle complete
+  const handleBalloonBattleComplete = useCallback((victory: boolean, stats: { wordsRead: number; correctWords: number; balloonsLost: number }) => {
+    console.log('[RPGBattle] Balloon Battle complete:', { victory, stats, battleMode });
+    setWordsRead(prev => prev + stats.wordsRead);
+    setCorrectWords(prev => prev + stats.correctWords);
+    
+    // If this is the main battle mode (not a mini-game), trigger full victory/defeat
+    if (battleMode === 'balloon') {
+      if (victory) {
+        battleSounds.celebrationSound();
+        setTotalDamage(stats.correctWords * 3 + (stats.balloonsLost === 0 ? 50 : 0));
+      }
+      setPhase(victory ? 'victory' : 'defeat');
+      return;
+    }
+    
+    // Mini-game behavior
+    if (victory) {
+      const bonusDamage = Math.floor(stats.correctWords * 3) + (stats.balloonsLost === 0 ? 50 : 0);
+      battleSounds.celebrationSound();
+      setEnemyHp(prev => Math.max(0, prev - bonusDamage));
+      setTotalDamage(prev => prev + bonusDamage);
+    } else {
+      setPlayerHp(prev => Math.max(0, prev - 30));
+    }
+    setBatchStartIndex(prev => prev + barrageWords.length);
+    returnToReading();
+  }, [barrageWords.length, returnToReading, battleMode]);
+  
+  // Handle mini-game damage
+  const handleMiniGameDamage = useCallback((damage: number) => {
+    setPlayerHp(prev => Math.max(0, prev - damage));
+    triggerScreenShake();
+  }, []);
 
   // Trigger word barrage attack
   const triggerWordBarrage = useCallback(() => {
@@ -233,15 +604,15 @@ export const RPGBattleArena = ({
 
   // Handle barrage completion - CRITICAL: advance batchStartIndex by words used in barrage
   const handleBarrageComplete = useCallback((destroyed: number, missed: number) => {
+    console.log('[RPGBattle] Barrage complete:', { destroyed, missed });
     if (destroyed > 0) {
       setCorrectWords(prev => prev + destroyed);
     }
     // Advance past the words used in the barrage so we don't repeat them
     const wordsUsedInBarrage = barrageWords.length;
     setBatchStartIndex(prev => prev + wordsUsedInBarrage);
-    console.log('[RPGBattle] Barrage complete, advancing batchStartIndex by:', wordsUsedInBarrage);
-    setPhase('reading');
-  }, [barrageWords.length]);
+    returnToReading();
+  }, [barrageWords.length, returnToReading]);
 
   // Handle barrage word hit
   const handleBarrageWordHit = useCallback((damage: number) => {
@@ -367,10 +738,15 @@ export const RPGBattleArena = ({
     }
   }, [inventory]);
 
-  // Enemy turn logic
+  // Enemy turn logic - with failsafe to prevent stuck state
   const triggerEnemyTurn = useCallback(() => {
-    if (!enemy.specialAbilities || enemy.specialAbilities.length === 0) return;
+    // FAILSAFE: If no abilities, skip enemy turn entirely
+    if (!enemy.specialAbilities || enemy.specialAbilities.length === 0) {
+      console.log('[RPGBattle] No enemy abilities, skipping enemy turn');
+      return;
+    }
     
+    console.log('[RPGBattle] Starting enemy turn');
     setPhase('enemy_turn');
     setIsPlayerTurn(false);
     
@@ -412,12 +788,28 @@ export const RPGBattleArena = ({
         setTimeout(() => {
           setHeroTakingDamage(false);
           setEnemyAbilityMessage(null);
+          console.log('[RPGBattle] Enemy turn complete, returning to reading');
           setPhase('reading');
           setIsPlayerTurn(true);
         }, 600);
       }, 400);
     }, 1000);
   }, [enemy]);
+  
+  // FAILSAFE: Force return to reading if stuck in enemy_turn for too long
+  useEffect(() => {
+    if (phase === 'enemy_turn') {
+      const failsafe = setTimeout(() => {
+        console.warn('[RPGBattle] Enemy turn failsafe triggered - forcing return to reading');
+        setEnemyAbilityMessage(null);
+        setEnemyAttacking(false);
+        setHeroTakingDamage(false);
+        setPhase('reading');
+        setIsPlayerTurn(true);
+      }, 6000); // 6 second failsafe
+      return () => clearTimeout(failsafe);
+    }
+  }, [phase]);
 
   // Handle word result from RPGWordReader
   // wordIndex is 0-4 within the current batch
@@ -491,6 +883,22 @@ export const RPGBattleArena = ({
       // Trigger spell effect based on attack type
       setActiveSpell(attackType);
       setShowSpellEffect(true);
+      
+      // Play elemental sound effect
+      switch (attackType) {
+        case 'fire':
+          battleSounds.fireWhoosh();
+          break;
+        case 'ice':
+          battleSounds.iceShimmer();
+          break;
+        case 'lightning':
+          battleSounds.lightningCrack();
+          break;
+        case 'slash':
+          battleSounds.rockCrumble();
+          break;
+      }
       
       setTimeout(() => {
         setHeroAttacking(false);
@@ -600,11 +1008,45 @@ export const RPGBattleArena = ({
     setCurrentSpeaker('enemy');
   }, [currentEnemyIndex, enemyQueue]);
 
-  // Handle battle end
-  const handleBattleEnd = useCallback((victory: boolean) => {
+  // Track battle start time for duration calculation
+  const battleStartTime = useRef(Date.now());
+  
+  // Handle battle end - also saves reading session for teacher visibility
+  const handleBattleEnd = useCallback(async (victory: boolean) => {
     const xpEarned = victory ? 
       Math.floor(100 + correctWords * 5 + longestStreak * 10 + totalDamage * 0.5) :
       Math.floor(correctWords * 2);
+    
+    // Calculate battle duration and WPM
+    const durationSeconds = Math.max(1, (Date.now() - battleStartTime.current) / 1000);
+    const wpm = Math.round((wordsRead / durationSeconds) * 60);
+    const accuracyPercent = wordsRead > 0 ? Math.round((correctWords / wordsRead) * 100) : 0;
+    
+    // Save to reading_sessions for teacher visibility
+    if (studentId && wordsRead > 0) {
+      try {
+        const { error } = await supabase.from('reading_sessions').insert({
+          student_id: studentId,
+          passage_text: story.passage_text?.slice(0, 500) || story.title,
+          words_read: wordsRead,
+          duration_seconds: Math.round(durationSeconds),
+          wpm: wpm,
+          accuracy_percent: accuracyPercent,
+          fluency_score: Math.min(100, Math.round(accuracyPercent * 0.7 + Math.min(wpm, 150) * 0.3)),
+          wcpm: Math.round(correctWords / (durationSeconds / 60)),
+          fluency_level: accuracyPercent >= 95 ? 'independent' : accuracyPercent >= 90 ? 'instructional' : 'frustration',
+          reading_mode: battleMode === 'tug_of_war' ? 'tug_of_war' : battleMode === 'balloon' ? 'balloon_battle' : 'rpg_battle',
+        });
+        
+        if (error) {
+          console.error('[RPGBattle] Failed to save reading session:', error);
+        } else {
+          console.log('[RPGBattle] Reading session saved for teacher visibility');
+        }
+      } catch (err) {
+        console.error('[RPGBattle] Error saving reading session:', err);
+      }
+    }
 
     onComplete(victory, {
       wordsRead,
@@ -613,17 +1055,29 @@ export const RPGBattleArena = ({
       damageDealt: totalDamage,
       xpEarned,
     });
-  }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete]);
+  }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete, studentId, story]);
 
   // Get current batch of words for reading - MEMOIZED for stable reference
   // batchStartIndex only changes when we complete a full batch, keeping this stable
   const currentWordBatch = useMemo(() => {
-    if (batchStartIndex >= words.length) return [];
+    // If we've read all words, show a message batch instead of empty
+    if (batchStartIndex >= words.length) {
+      // Return empty - UI will handle showing "all words read" message
+      return [];
+    }
     return words.slice(batchStartIndex, batchStartIndex + 5);
   }, [words, batchStartIndex]);
-
-  // Keep the callback for backward compat
-  const getCurrentWordBatch = useCallback(() => currentWordBatch, [currentWordBatch]);
+  
+  // Check if all words have been read
+  const allWordsRead = batchStartIndex >= words.length && words.length > 0;
+  
+  // AUTO-VICTORY: If all words read AND enemy HP is low, trigger victory
+  useEffect(() => {
+    if (allWordsRead && enemyHp <= enemy.maxHp * 0.3 && phase === 'reading') {
+      console.log('[RPGBattle] All words read + enemy weak - auto victory!');
+      setPhase('victory');
+    }
+  }, [allWordsRead, enemyHp, enemy.maxHp, phase]);
 
   return (
     <motion.div 
@@ -721,6 +1175,57 @@ export const RPGBattleArena = ({
             onWordHit={handleBarrageWordHit}
           />
         )}
+        {/* NEW MINI-GAMES */}
+        {phase === 'word_shield' && (
+          <RPGWordShield
+            words={barrageWords}
+            onComplete={handleWordShieldComplete}
+          />
+        )}
+        {phase === 'spell_combo' && (
+          <RPGSpellCombo
+            words={barrageWords}
+            onComplete={handleSpellComboComplete}
+          />
+        )}
+        {phase === 'dodge_words' && (
+          <RPGDodgeWords
+            correctWords={barrageWords}
+            wrongWords={[]}
+            onComplete={handleDodgeWordsComplete}
+            onDamage={handleDodgeWordsDamage}
+          />
+        )}
+        {phase === 'rhyme_chain' && (
+          <RPGRhymeChain
+            words={barrageWords}
+            onComplete={handleRhymeChainComplete}
+            onDamage={handleMiniGameDamage}
+          />
+        )}
+        {phase === 'speed_typist' && (
+          <RPGSpeedTypist
+            words={barrageWords}
+            onComplete={handleSpeedTypistComplete}
+            onDamage={handleMiniGameDamage}
+          />
+        )}
+        {phase === 'tug_of_war' && (
+          <RPGTugOfWar
+            words={barrageWords}
+            heroName="Knight"
+            enemyName={enemy.name}
+            onComplete={handleTugOfWarComplete}
+          />
+        )}
+        {phase === 'balloon_battle' && (
+          <RPGBalloonBattle
+            words={barrageWords}
+            heroName="Knight"
+            enemyName={enemy.name}
+            onComplete={handleBalloonBattleComplete}
+          />
+        )}
       </AnimatePresence>
 
       {/* Enemy Ability Message */}
@@ -790,6 +1295,19 @@ export const RPGBattleArena = ({
                 <span className="font-bold">x{streak}</span>
               </motion.div>
             )}
+            {/* Sound Toggle */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSoundEnabled(!soundEnabled)}
+              className="text-white/70 hover:text-white hover:bg-white/10 p-2"
+            >
+              {soundEnabled ? (
+                <Volume2 className="h-4 w-4" />
+              ) : (
+                <VolumeX className="h-4 w-4" />
+              )}
+            </Button>
           </div>
         </div>
 
@@ -916,6 +1434,15 @@ export const RPGBattleArena = ({
                         batchSize={5}
                         enableEchoRetry={true}
                       />
+                    )}
+                    
+                    {/* All words read message */}
+                    {currentCommand === 'read' && allWordsRead && currentWordResult === null && (
+                      <div className="bg-gradient-to-r from-amber-900/80 to-yellow-900/80 border-2 border-amber-500 rounded-xl p-6 text-center">
+                        <div className="text-2xl mb-2">📚✨</div>
+                        <p className="text-lg font-bold text-amber-300">All words read!</p>
+                        <p className="text-sm text-amber-200/80 mt-1">Keep attacking with spells or items!</p>
+                      </div>
                     )}
 
                     {/* Word Attack Effect */}

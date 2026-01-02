@@ -1,10 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, Bell, Plus } from "lucide-react";
+import { Users, Bell, Plus, Search } from "lucide-react";
 import { useStudentClubs } from "@/hooks/useStudentClubs";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { CreateClubPostModal } from "@/components/student/CreateClubPostModal";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -14,6 +15,7 @@ interface ClubsSectionProps {
 
 export const ClubsSection = ({ studentId }: ClubsSectionProps) => {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const { data: clubs, isLoading, refetch } = useStudentClubs(studentId);
   const [selectedClub, setSelectedClub] = useState<string | null>(null);
   const [showPostModal, setShowPostModal] = useState(false);
@@ -30,7 +32,10 @@ export const ClubsSection = ({ studentId }: ClubsSectionProps) => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-foreground">{t("student.clubs.title")}</h1>
-        <Button>{t("student.clubs.createClub")}</Button>
+        <Button onClick={() => navigate("/student/browse-clubs")}>
+          <Search className="h-4 w-4 mr-2" />
+          {t("student.clubs.browseClubs")}
+        </Button>
       </div>
 
       {clubs && clubs.length > 0 ? (
@@ -52,9 +57,14 @@ export const ClubsSection = ({ studentId }: ClubsSectionProps) => {
               <CardContent className="space-y-4">
                 {club.description && <p className="text-sm text-muted-foreground">{club.description}</p>}
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="flex-1">
-                    <Bell className="h-4 w-4 mr-2" />
-                    {t("student.clubs.viewPosts")}
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => navigate(`/student/clubs/${club.id}`)}
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    View Club
                   </Button>
                   {(club.userRole === "owner" || club.userRole === "moderator") && (
                     <Button
@@ -79,7 +89,10 @@ export const ClubsSection = ({ studentId }: ClubsSectionProps) => {
           <CardContent className="text-center py-12">
             <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground mb-4">{t("student.clubs.none")}</p>
-            <Button>{t("student.clubs.browseClubs")}</Button>
+            <Button onClick={() => navigate("/student/browse-clubs")}>
+              <Search className="h-4 w-4 mr-2" />
+              {t("student.clubs.browseClubs")}
+            </Button>
           </CardContent>
         </Card>
       )}

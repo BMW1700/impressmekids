@@ -85,9 +85,9 @@ export const ShadowWraith = ({
         };
       case 'defeated':
         return {
-          opacity: [1, 0],
-          scale: [1, 1.5],
-          y: [0, -50],
+          opacity: [1, 0.6, 0.4],
+          scale: [1, 1.2, 1.0],
+          y: [0, -20, -10],
           transition: { duration: 1.5 },
         };
       default:

@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 
-export type GoblinState = 'idle' | 'hit' | 'attacking' | 'defeated' | 'taunting';
+export type GoblinState = 'idle' | 'hit' | 'attacking' | 'defeated' | 'taunting' | 'pulling';
 
 interface GoblinGuardProps {
   state: GoblinState;
@@ -11,6 +11,7 @@ interface GoblinGuardProps {
   showDamage?: number;
   size?: 'small' | 'medium' | 'large';
   flipX?: boolean;
+  showHealthBar?: boolean;
 }
 
 const sizeConfig = {
@@ -27,6 +28,7 @@ export const GoblinGuard = ({
   showDamage,
   size = 'medium',
   flipX = false,
+  showHealthBar = true,
 }: GoblinGuardProps) => {
   const [eyeBlink, setEyeBlink] = useState(false);
   const [leftEarTwitch, setLeftEarTwitch] = useState(0);
@@ -90,9 +92,10 @@ export const GoblinGuard = ({
         };
       case 'defeated':
         return {
-          rotate: [0, 360],
-          scale: [1, 0],
-          opacity: [1, 0],
+          rotate: [0, 15],
+          y: [0, 20],
+          scale: [1, 0.9],
+          opacity: [1, 0.6],
           transition: { duration: 0.8 },
         };
       case 'taunting':
@@ -100,6 +103,13 @@ export const GoblinGuard = ({
           y: [0, -5, 0],
           rotate: [0, -3, 3, 0],
           transition: { duration: 0.5 },
+        };
+      case 'pulling':
+        return {
+          x: [0, 8, 0],
+          rotate: [0, 5, 0],
+          scale: [1, 1.05, 1],
+          transition: { duration: 0.4, repeat: Infinity },
         };
       default:
         return {};
@@ -351,30 +361,32 @@ export const GoblinGuard = ({
         )}
       </svg>
 
-      {/* Health bar */}
-      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-full max-w-[90px]">
-        {currentHp !== undefined && maxHp !== undefined && (
-          <div className="text-center text-xs font-bold text-white mb-0.5" 
-               style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>
-            {currentHp}/{maxHp}
+      {/* Health bar - conditionally rendered */}
+      {showHealthBar && (
+        <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-full max-w-[90px]">
+          {currentHp !== undefined && maxHp !== undefined && (
+            <div className="text-center text-xs font-bold text-white mb-0.5" 
+                 style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>
+              {currentHp}/{maxHp}
+            </div>
+          )}
+          <div className="h-2.5 bg-black/60 rounded-full overflow-hidden border border-black/40">
+            <motion.div
+              className="h-full rounded-full"
+              style={{
+                background: healthPercent > 50 
+                  ? 'linear-gradient(90deg, #22c55e, #4ade80)' 
+                  : healthPercent > 25 
+                    ? 'linear-gradient(90deg, #eab308, #facc15)'
+                    : 'linear-gradient(90deg, #dc2626, #ef4444)',
+              }}
+              initial={{ width: '100%' }}
+              animate={{ width: `${healthPercent}%` }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+            />
           </div>
-        )}
-        <div className="h-2.5 bg-black/60 rounded-full overflow-hidden border border-black/40">
-          <motion.div
-            className="h-full rounded-full"
-            style={{
-              background: healthPercent > 50 
-                ? 'linear-gradient(90deg, #22c55e, #4ade80)' 
-                : healthPercent > 25 
-                  ? 'linear-gradient(90deg, #eab308, #facc15)'
-                  : 'linear-gradient(90deg, #dc2626, #ef4444)',
-            }}
-            initial={{ width: '100%' }}
-            animate={{ width: `${healthPercent}%` }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-          />
         </div>
-      </div>
+      )}
 
       {/* Defeat smoke particles */}
       {state === 'defeated' && (

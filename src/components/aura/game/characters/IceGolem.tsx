@@ -75,9 +75,9 @@ export const IceGolem = ({
         };
       case 'defeated':
         return {
-          scale: [1, 1.1, 0],
-          rotate: [0, 5, -5, 0],
-          opacity: [1, 1, 0],
+          scale: [1, 1.1, 0.8],
+          rotate: [0, 5, -5, 10],
+          opacity: [1, 1, 0.5],
           transition: { duration: 0.8 },
         };
       default:

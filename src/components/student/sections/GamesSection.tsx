@@ -1,5 +1,5 @@
 import { GameTile } from "@/components/GameTile";
-import { Zap, Trophy, BookOpen, Brain, Calculator, Globe, Hash, PawPrint, Map } from "lucide-react";
+import { Zap, Trophy, BookOpen, Brain, Calculator, Globe, Hash, PawPrint, Map, Swords } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export const GamesSection = () => {
@@ -44,6 +44,13 @@ export const GamesSection = () => {
           gradeRange="Grades 2-8"
           path="/games/us-states-quiz"
           icon={<Map className="h-6 w-6 text-white" />}
+        />
+        <GameTile
+          title="Reading Tug of War"
+          description="Battle goblins by reading words aloud! Pull the rope to your side to win this speech-powered showdown."
+          gradeRange="Grades K-5"
+          path="/games/tug-of-war"
+          icon={<Swords className="h-6 w-6 text-white" />}
         />
         <GameTile
           title="Math Race"

@@ -1564,6 +1564,58 @@ export type Database = {
           },
         ]
       }
+      club_join_requests: {
+        Row: {
+          club_id: string
+          id: string
+          requested_at: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          student_id: string
+        }
+        Insert: {
+          club_id: string
+          id?: string
+          requested_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          student_id: string
+        }
+        Update: {
+          club_id?: string
+          id?: string
+          requested_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_join_requests_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_join_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_join_requests_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       club_members: {
         Row: {
           club_id: string
@@ -1658,23 +1710,41 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          end_time: string | null
           id: string
+          location: string | null
+          meeting_days: string[] | null
           name: string
           owner_id: string
+          schedule_end_date: string | null
+          schedule_start_date: string | null
+          start_time: string | null
         }
         Insert: {
           created_at?: string
           description?: string | null
+          end_time?: string | null
           id?: string
+          location?: string | null
+          meeting_days?: string[] | null
           name: string
           owner_id: string
+          schedule_end_date?: string | null
+          schedule_start_date?: string | null
+          start_time?: string | null
         }
         Update: {
           created_at?: string
           description?: string | null
+          end_time?: string | null
           id?: string
+          location?: string | null
+          meeting_days?: string[] | null
           name?: string
           owner_id?: string
+          schedule_end_date?: string | null
+          schedule_start_date?: string | null
+          start_time?: string | null
         }
         Relationships: [
           {
@@ -4270,6 +4340,7 @@ export type Database = {
           passage_text: string
           phoneme_accuracy: Json | null
           prosody_metrics: Json | null
+          reading_mode: string | null
           recommended_difficulty: number | null
           student_id: string
           wcpm: number | null
@@ -4290,6 +4361,7 @@ export type Database = {
           passage_text: string
           phoneme_accuracy?: Json | null
           prosody_metrics?: Json | null
+          reading_mode?: string | null
           recommended_difficulty?: number | null
           student_id: string
           wcpm?: number | null
@@ -4310,6 +4382,7 @@ export type Database = {
           passage_text?: string
           phoneme_accuracy?: Json | null
           prosody_metrics?: Json | null
+          reading_mode?: string | null
           recommended_difficulty?: number | null
           student_id?: string
           wcpm?: number | null
@@ -6727,6 +6800,10 @@ export type Database = {
       }
     }
     Functions: {
+      approve_club_join_request: {
+        Args: { p_request_id: string }
+        Returns: Json
+      }
       approve_student_join_request: {
         Args: { p_request_id: string }
         Returns: Json
@@ -6761,6 +6838,7 @@ export type Database = {
       check_email_exists_secure: { Args: { p_email: string }; Returns: boolean }
       cleanup_expired_safety_alerts: { Args: never; Returns: undefined }
       compute_levenshtein: { Args: { a: string; b: string }; Returns: number }
+      deny_club_join_request: { Args: { p_request_id: string }; Returns: Json }
       deny_student_join_request: {
         Args: { p_request_id: string }
         Returns: Json
@@ -6897,6 +6975,25 @@ export type Database = {
           full_name: string
           joined_at: string
           student_id: string
+        }[]
+      }
+      get_club_pending_requests: {
+        Args: { _club_id: string }
+        Returns: {
+          club_id: string
+          id: string
+          requested_at: string
+          status: string
+          student_email: string
+          student_id: string
+          student_name: string
+        }[]
+      }
+      get_club_profile_names: {
+        Args: { club_id: string }
+        Returns: {
+          full_name: string
+          profile_id: string
         }[]
       }
       get_consent_by_token: {
@@ -7070,6 +7167,23 @@ export type Database = {
           join_code: string
           name: string
           student_count: number
+        }[]
+      }
+      get_teacher_clubs: {
+        Args: { p_teacher_id: string }
+        Returns: {
+          created_at: string
+          description: string
+          end_time: string
+          id: string
+          location: string
+          meeting_days: string[]
+          member_count: number
+          name: string
+          pending_request_count: number
+          schedule_end_date: string
+          schedule_start_date: string
+          start_time: string
         }[]
       }
       get_tournament_players: {
