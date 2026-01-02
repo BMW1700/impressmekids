@@ -84,6 +84,9 @@ export const RPGTugOfWar = ({
   
   // Speech recognition state
   const [isListening, setIsListening] = useState(false);
+  const [isStartingMic, setIsStartingMic] = useState(false);
+  const [micError, setMicError] = useState<string | null>(null);
+  const micStartAttemptRef = useRef(0);
   const currentWordRef = useRef("");
   const processedWordsRef = useRef<Set<number>>(new Set());
   
@@ -318,19 +321,69 @@ export const RPGTugOfWar = ({
 
   // Start continuous speech recognition - uses ref to avoid stale closures
   const startRecognition = useCallback(() => {
+    const attemptId = ++micStartAttemptRef.current;
+    setMicError(null);
+    setIsStartingMic(true);
+
+    console.log('[TugOfWar] startRecognition() attempt:', attemptId);
+
     const success = speechManager.start({
       owner: 'reader',
       continuous: true,
       interimResults: true,
-      onResult: (transcript, alts, isFinal) => handleSpeechResultRef.current(transcript, alts, isFinal),
-      onStart: () => setIsListening(true),
-      onEnd: () => setIsListening(false),
+      onResult: (transcript, alts, isFinal) =>
+        handleSpeechResultRef.current(transcript, alts, isFinal),
+      onStart: () => {
+        console.log('[TugOfWar] mic started');
+        setIsStartingMic(false);
+        setMicError(null);
+        setIsListening(true);
+      },
+      onEnd: () => {
+        console.log('[TugOfWar] mic ended');
+        setIsStartingMic(false);
+        setIsListening(false);
+      },
       onError: (error) => {
         console.log('[TugOfWar] Speech error:', error);
-      }
+        setIsStartingMic(false);
+        setIsListening(false);
+
+        // Common errors: not-allowed, service-not-allowed, audio-capture, no-speech, network
+        const msg =
+          error === 'not-allowed' || error === 'service-not-allowed'
+            ? 'Microphone permission is blocked.'
+            : error === 'audio-capture'
+              ? 'No microphone was found or it is in use by another app.'
+              : error === 'network'
+                ? 'Network error starting speech recognition.'
+                : error === 'no-speech'
+                  ? 'No speech detected — try again.'
+                  : `Mic error: ${error}`;
+
+        setMicError(msg);
+      },
     });
-    return success;
-  }, []);
+
+    if (!success) {
+      setIsStartingMic(false);
+      setIsListening(false);
+      setMicError('Speech recognition is not available in this browser.');
+      return false;
+    }
+
+    // If the browser never fires onStart (common when mic is blocked in an iframe), show a helpful error.
+    window.setTimeout(() => {
+      if (attemptId !== micStartAttemptRef.current) return;
+      if (!speechManager.isActive() && !isListening) {
+        console.log('[TugOfWar] mic did not start (possible iframe/permission block)');
+        setIsStartingMic(false);
+        setMicError((prev) => prev ?? 'Mic did not start. This preview may be blocking microphone access.');
+      }
+    }, 900);
+
+    return true;
+  }, [isListening]);
 
   // Stop speech recognition
   const stopRecognition = useCallback(() => {
@@ -584,7 +637,7 @@ export const RPGTugOfWar = ({
                   {currentWord}
                 </motion.div>
                 
-                <div className="flex items-center justify-center gap-2">
+                <div className="flex flex-col items-center justify-center gap-2">
                   {isListening ? (
                     <>
                       <motion.div
@@ -601,11 +654,28 @@ export const RPGTugOfWar = ({
                     <Button
                       size="sm"
                       onClick={() => startRecognition()}
-                      className="bg-green-600 hover:bg-green-700 text-white"
+                      disabled={isStartingMic}
+                      className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-60"
                     >
                       <Mic className="h-4 w-4 mr-2" />
-                      Tap to Start Mic
+                      {isStartingMic ? 'Starting…' : 'Tap to Start Mic'}
                     </Button>
+                  )}
+
+                  {micError && (
+                    <div className="text-xs text-white/90 max-w-[420px] text-center">
+                      <div className="mt-1">{micError}</div>
+                      {typeof window !== 'undefined' && window.self !== window.top && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="mt-2"
+                          onClick={() => window.open(window.location.href, '_blank', 'noopener,noreferrer')}
+                        >
+                          Open in new tab to enable mic
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
