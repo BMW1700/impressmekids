@@ -26,6 +26,8 @@ import { RPGDodgeWords } from "./RPGDodgeWords";
 // NEW: Import 2 new mini-games
 import { RPGRhymeChain } from "./RPGRhymeChain";
 import { RPGSpeedTypist } from "./RPGSpeedTypist";
+// NEW: Import Quick Block for enemy attacks
+import { RPGQuickBlock } from "./RPGQuickBlock";
 // NEW: Import Tug of War and Balloon Battle modes
 import { RPGTugOfWar } from "./RPGTugOfWar";
 import { RPGBalloonBattle } from "./RPGBalloonBattle";
@@ -54,8 +56,8 @@ import { useMLIntegration } from "@/hooks/useMLIntegration";
 const battleSounds = new SoundEffects();
 
 type EnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian';
-// UPDATED: Added balloon_quickpop for Classic mode mini-game (NOT Balloon Bonanza)
-type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'word_shield' | 'spell_combo' | 'dodge_words' | 'rhyme_chain' | 'speed_typist' | 'tug_of_war' | 'balloon_battle' | 'balloon_quickpop' | 'fireball_defense' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat';
+// UPDATED: Added balloon_quickpop for Classic mode mini-game (NOT Balloon Bonanza) + quick_block for enemy attacks
+type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'word_shield' | 'spell_combo' | 'dodge_words' | 'rhyme_chain' | 'speed_typist' | 'tug_of_war' | 'balloon_battle' | 'balloon_quickpop' | 'fireball_defense' | 'quick_block' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat';
 type InventoryKey = 'health_potion' | 'magic_potion';
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
 
@@ -115,6 +117,14 @@ export const RPGBattleArena = ({
   // Mini-game trigger states - track which games have been triggered this battle
   const [triggeredMiniGames, setTriggeredMiniGames] = useState<Set<MiniGameType>>(new Set());
   const [lastMiniGameCheck, setLastMiniGameCheck] = useState(0); // Track words read since last check
+  
+  // HP-based mini-game trigger tracking
+  const [triggered50Percent, setTriggered50Percent] = useState(false);
+  const [triggered25Percent, setTriggered25Percent] = useState(false);
+  
+  // Random enemy attack tracking for quick block
+  const [lastAttackCheck, setLastAttackCheck] = useState(0);
+  const [quickBlockWords, setQuickBlockWords] = useState<string[]>([]);
   
   // Combat stats
   const [playerHp, setPlayerHp] = useState(heroKnight.maxHp);
@@ -220,11 +230,10 @@ export const RPGBattleArena = ({
     }
   }, [battleMode, storyWords]);
 
-  // REMOVED: HP-based barrage triggers - all mini-games are now triggered RANDOMLY
-  // Mini-games are now selected from enemy.miniGames array and triggered via checkRandomMiniGame()
-  
-  // RANDOM mini-game trigger system - replaces HP-based triggers
-  // Mini-games: 50% chance after 3 words, 80% chance after 6 words if not triggered
+  // HYBRID COMBAT SYSTEM:
+  // 1. HP-based mini-game triggers at 50% and 25% enemy HP (anticipation moments)
+  // 2. Random enemy attacks every 4 words (40% chance) - player must quick block
+  // This creates exciting rhythm: READ -> ATTACK -> BLOCK -> MINI-GAME -> READ...
   const triggerRandomMiniGame = useCallback((gameType: MiniGameType) => {
     const wordCount = gameType === 'speed_typist' ? 12 : 
                       gameType === 'tug_of_war' ? 15 : 
@@ -282,46 +291,77 @@ export const RPGBattleArena = ({
     }, 1000);
   }, [words, batchStartIndex, enemy.name]);
   
-  // Check for random mini-game trigger after correct words
-  const checkRandomMiniGame = useCallback(() => {
+  // HP-BASED mini-game triggers (50% and 25% enemy HP)
+  const checkHPBasedMiniGame = useCallback(() => {
     if (phase !== 'reading') return;
-    if (battleMode !== 'classic') return; // Only for Classic mode
+    if (battleMode !== 'classic') return;
     if (!enemy.miniGames || enemy.miniGames.length === 0) return;
     
-    // 50% chance after 3 words, 80% chance after 6 words
-    const wordsSinceLastCheck = correctWords - lastMiniGameCheck;
-    if (wordsSinceLastCheck < 3) return;
+    const hpPercent = (enemyHp / enemy.maxHp) * 100;
     
-    // Determine trigger chance based on words since last check
-    const triggerChance = wordsSinceLastCheck >= 6 ? 0.8 : 0.5;
-    
-    if (Math.random() > triggerChance) {
-      // Don't reset check counter - let it accumulate to 6 words for higher chance
-      if (wordsSinceLastCheck >= 6) {
-        setLastMiniGameCheck(correctWords);
+    // Check for 50% HP trigger
+    if (!triggered50Percent && hpPercent <= 50 && hpPercent > 25) {
+      setTriggered50Percent(true);
+      const availableGames = enemy.miniGames.filter(game => !triggeredMiniGames.has(game));
+      if (availableGames.length > 0) {
+        const randomGame = availableGames[Math.floor(Math.random() * availableGames.length)];
+        triggerRandomMiniGame(randomGame);
+        return;
       }
-      return;
     }
     
-    // Get available games (not yet triggered this battle)
-    const availableGames = enemy.miniGames.filter(game => !triggeredMiniGames.has(game));
-    if (availableGames.length === 0) {
-      setLastMiniGameCheck(correctWords);
-      return;
+    // Check for 25% HP trigger
+    if (!triggered25Percent && hpPercent <= 25) {
+      setTriggered25Percent(true);
+      const availableGames = enemy.miniGames.filter(game => !triggeredMiniGames.has(game));
+      if (availableGames.length > 0) {
+        const randomGame = availableGames[Math.floor(Math.random() * availableGames.length)];
+        triggerRandomMiniGame(randomGame);
+        return;
+      }
     }
-    
-    // Pick a random game
-    const randomGame = availableGames[Math.floor(Math.random() * availableGames.length)];
-    setLastMiniGameCheck(correctWords);
-    triggerRandomMiniGame(randomGame);
-  }, [phase, battleMode, enemy.miniGames, correctWords, lastMiniGameCheck, triggeredMiniGames, triggerRandomMiniGame]);
+  }, [phase, battleMode, enemy.miniGames, enemy.maxHp, enemyHp, triggered50Percent, triggered25Percent, triggeredMiniGames, triggerRandomMiniGame]);
   
-  // Call checkRandomMiniGame when correctWords changes
+  // Check for RANDOM ENEMY ATTACK (40% chance every 4 words)
+  const checkRandomEnemyAttack = useCallback(() => {
+    if (phase !== 'reading') return;
+    if (battleMode !== 'classic') return;
+    
+    const wordsSinceLastAttack = correctWords - lastAttackCheck;
+    if (wordsSinceLastAttack < 4) return;
+    
+    // 40% chance to trigger attack
+    if (Math.random() > 0.4) {
+      setLastAttackCheck(correctWords);
+      return;
+    }
+    
+    // Trigger quick block!
+    setLastAttackCheck(correctWords);
+    const blockWordSelection = words.slice(batchStartIndex, batchStartIndex + 3);
+    setQuickBlockWords(blockWordSelection);
+    setEnemyAbilityMessage(`${enemy.name} ATTACKS!`);
+    battleSounds.incorrectWord(); // Use as attack warning sound
+    
+    setTimeout(() => {
+      setEnemyAbilityMessage(null);
+      setPhase('quick_block');
+    }, 800);
+  }, [phase, battleMode, correctWords, lastAttackCheck, words, batchStartIndex, enemy.name]);
+  
+  // Call HP-based mini-game check when enemyHp changes
   useEffect(() => {
     if (battleMode === 'classic' && phase === 'reading') {
-      checkRandomMiniGame();
+      checkHPBasedMiniGame();
     }
-  }, [correctWords, battleMode, phase, checkRandomMiniGame]);
+  }, [enemyHp, battleMode, phase, checkHPBasedMiniGame]);
+  
+  // Call random enemy attack check when correctWords changes
+  useEffect(() => {
+    if (battleMode === 'classic' && phase === 'reading') {
+      checkRandomEnemyAttack();
+    }
+  }, [correctWords, battleMode, phase, checkRandomEnemyAttack]);
   
   // Trigger Tug of War - for use in tug_of_war battle mode only
   const triggerTugOfWar = useCallback(() => {
@@ -500,6 +540,40 @@ export const RPGBattleArena = ({
     setBatchStartIndex(prev => prev + barrageWords.length);
     returnToReading();
   }, [barrageWords.length, returnToReading]);
+  
+  // Handle Quick Block complete (enemy attack defense)
+  const handleQuickBlockComplete = useCallback((blocked: number, total: number, counterDamage: number) => {
+    console.log('[RPGBattle] Quick Block complete:', { blocked, total, counterDamage });
+    
+    // Calculate damage based on block success
+    const fullDamage = 15; // Base enemy attack damage
+    let damageTaken = fullDamage;
+    
+    if (blocked === total) {
+      // Perfect block - no damage + counter attack
+      damageTaken = 0;
+      if (counterDamage > 0) {
+        battleSounds.comboSuccess();
+        setEnemyHp(prev => Math.max(0, prev - counterDamage));
+        setTotalDamage(prev => prev + counterDamage);
+      }
+    } else if (blocked >= 2) {
+      // Good block - 50% damage
+      damageTaken = Math.floor(fullDamage * 0.5);
+    } else if (blocked === 1) {
+      // Weak block - 75% damage
+      damageTaken = Math.floor(fullDamage * 0.75);
+    }
+    
+    if (damageTaken > 0) {
+      setPlayerHp(prev => Math.max(0, prev - damageTaken));
+      triggerScreenShake();
+    }
+    
+    // Advance past the words used
+    setBatchStartIndex(prev => prev + 3);
+    returnToReading();
+  }, [returnToReading]);
   
   // Handle mini-game damage
   const handleMiniGameDamage = useCallback((damage: number) => {
@@ -1216,6 +1290,19 @@ export const RPGBattleArena = ({
             studentId={studentId}
             storyTitle={story.title}
             onComplete={handleBalloonBattleComplete}
+          />
+        )}
+        {phase === 'fireball_defense' && (
+          <RPGFireballDefense
+            words={barrageWords}
+            onComplete={handleFireballDefenseComplete}
+          />
+        )}
+        {/* Quick Block for random enemy attacks */}
+        {phase === 'quick_block' && (
+          <RPGQuickBlock
+            words={quickBlockWords}
+            onComplete={handleQuickBlockComplete}
           />
         )}
       </AnimatePresence>
