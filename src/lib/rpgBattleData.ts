@@ -31,6 +31,21 @@ export interface EnemyAbility {
   icon: string;
 }
 
+// Mini-game types that can be assigned to enemies
+export type MiniGameType = 
+  | 'word_shield' 
+  | 'spell_combo' 
+  | 'dodge_words' 
+  | 'rhyme_chain' 
+  | 'speed_typist' 
+  | 'tug_of_war' 
+  | 'balloon_quickpop'  // Small balloon overlay (3 balloons) - NOT Balloon Bonanza
+  | 'fireball_defense'
+  | 'beast_swarm'
+  | 'ice_crystal_barrage'
+  | 'ghostly_whispers'
+  | 'rolling_boulders';
+
 export interface RPGEnemy {
   id: string;
   name: string;
@@ -46,6 +61,7 @@ export interface RPGEnemy {
   dialogueDefeat: string[];
   specialAbilities?: EnemyAbility[];
   barrageWordCount?: number;
+  miniGames: MiniGameType[]; // Mini-games this enemy can trigger
 }
 
 // Heroes
@@ -107,6 +123,7 @@ export const goblinMinion: RPGEnemy = {
     { id: 'poison_dagger', name: 'Poison Dagger', damage: 8, effect: 'poison', description: 'Deals damage over time', icon: '🗡️' },
   ],
   barrageWordCount: 4,
+  miniGames: ['word_shield', 'balloon_quickpop'], // Simple mini-games for minion
 };
 
 export const goblinGuard: RPGEnemy = {
@@ -135,6 +152,7 @@ export const goblinGuard: RPGEnemy = {
     { id: 'poison_dagger', name: 'Poison Dagger', damage: 10, effect: 'poison', description: 'Deals damage over time', icon: '🗡️' },
   ],
   barrageWordCount: 5,
+  miniGames: ['word_shield', 'dodge_words', 'spell_combo'], // Guard has more variety
 };
 
 export const goblinElite: RPGEnemy = {
@@ -163,6 +181,7 @@ export const goblinElite: RPGEnemy = {
     { id: 'poison_dagger', name: 'Poison Dagger', damage: 12, effect: 'poison', description: 'Deals damage over time', icon: '🗡️' },
   ],
   barrageWordCount: 6,
+  miniGames: ['spell_combo', 'rhyme_chain', 'tug_of_war', 'speed_typist'], // Elite has challenging mini-games
 };
 
 // Boss Enemies - BUFFED
@@ -197,6 +216,7 @@ export const grogTheGoblinKing: RPGEnemy = {
     { id: 'word_prison', name: 'Word Prison', damage: 0, effect: 'asteroid_barrage', description: 'Summons word asteroids!', icon: '☄️' },
   ],
   barrageWordCount: 8,
+  miniGames: ['tug_of_war', 'speed_typist', 'rhyme_chain'], // Boss has intense mini-games
 };
 
 export const galairTheWickedSorcerer: RPGEnemy = {
@@ -233,6 +253,7 @@ export const galairTheWickedSorcerer: RPGEnemy = {
     { id: 'word_prison', name: 'Word Prison', damage: 0, effect: 'asteroid_barrage', description: 'Summons word asteroids!', icon: '☄️' },
   ],
   barrageWordCount: 10,
+  miniGames: ['spell_combo', 'ghostly_whispers', 'speed_typist', 'tug_of_war'], // Final boss has toughest mini-games
 };
 
 // Dragon Enemy - Drake the Dragon (renamed from Dalair)
@@ -271,6 +292,7 @@ export const drakeTheDragon: RPGEnemy = {
     { id: 'wing_gust', name: 'Wing Gust', damage: 15, effect: 'silence', description: 'Blows away your words', icon: '💨' },
   ],
   barrageWordCount: 7,
+  miniGames: ['beast_swarm', 'fireball_defense'], // Dragon's UNIQUE mini-games
 };
 
 // Mini Flying Beast Enemy (summoned by Drake)
@@ -288,6 +310,7 @@ export const miniBeast: RPGEnemy = {
   dialogueDefeat: ["*poof*"],
   specialAbilities: [],
   barrageWordCount: 1,
+  miniGames: [], // No mini-games for summoned creatures
 };
 
 // New Enemies - Ice Golem (World 2 Boss)
@@ -320,6 +343,7 @@ export const iceGolem: RPGEnemy = {
     { id: 'blizzard', name: 'Blizzard', damage: 15, effect: 'debuff', description: 'Screen fills with snow', icon: '🌨️' },
   ],
   barrageWordCount: 6,
+  miniGames: ['ice_crystal_barrage', 'word_shield', 'speed_typist'], // Ice Golem's unique games
 };
 
 // Shadow Wraith (World 3 Enemy)
@@ -352,6 +376,7 @@ export const shadowWraith: RPGEnemy = {
     { id: 'soul_drain', name: 'Soul Drain', damage: 18, effect: 'poison', description: 'Steals HP based on missed words', icon: '💀' },
   ],
   barrageWordCount: 5,
+  miniGames: ['ghostly_whispers', 'dodge_words', 'spell_combo'], // Shadow Wraith's unique games
 };
 
 // Stone Guardian (World 3 Boss)
@@ -384,6 +409,7 @@ export const stoneGuardian: RPGEnemy = {
     { id: 'stone_armor', name: 'Stone Armor', damage: 0, effect: 'debuff', description: 'Reduces damage until 5-word streak', icon: '🛡️' },
   ],
   barrageWordCount: 7,
+  miniGames: ['rolling_boulders', 'speed_typist', 'tug_of_war'], // Stone Guardian's unique games
 };
 
 // Get enemy by type for battle
