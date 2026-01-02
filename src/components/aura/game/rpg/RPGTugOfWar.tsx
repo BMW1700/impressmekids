@@ -87,8 +87,14 @@ export const RPGTugOfWar = ({
   const [isStartingMic, setIsStartingMic] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
   const micStartAttemptRef = useRef(0);
+  const isListeningRef = useRef(false); // Track listening in ref to avoid stale closures
   const currentWordRef = useRef("");
   const processedWordsRef = useRef<Set<number>>(new Set());
+  
+  // Keep isListeningRef in sync
+  useEffect(() => {
+    isListeningRef.current = isListening;
+  }, [isListening]);
   
   // Session tracking for data saving
   const battleStartTimeRef = useRef<number>(0);
@@ -319,13 +325,57 @@ export const RPGTugOfWar = ({
     handleSpeechResultRef.current = handleSpeechResult;
   }, [handleSpeechResult]);
 
+  // Request mic permission via getUserMedia (triggers browser prompt)
+  const ensureMicPermission = useCallback(async (): Promise<{ ok: boolean; message?: string }> => {
+    console.log('[TugOfWar] ensureMicPermission() called');
+    
+    // Check if getUserMedia is available
+    if (!navigator.mediaDevices?.getUserMedia) {
+      return { ok: false, message: 'Microphone access is not supported in this browser.' };
+    }
+    
+    try {
+      // This triggers the browser's mic permission prompt
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Immediately stop — we just needed the permission grant
+      stream.getTracks().forEach(track => track.stop());
+      console.log('[TugOfWar] getUserMedia succeeded, permission granted');
+      return { ok: true };
+    } catch (err: any) {
+      console.error('[TugOfWar] getUserMedia failed:', err.name, err.message);
+      
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        return { 
+          ok: false, 
+          message: 'Microphone permission denied. Click the 🔒 in your address bar → Site settings → Allow microphone, then refresh.' 
+        };
+      }
+      if (err.name === 'NotFoundError') {
+        return { ok: false, message: 'No microphone found. Please connect a mic and try again.' };
+      }
+      if (err.name === 'NotReadableError' || err.name === 'AbortError') {
+        return { ok: false, message: 'Microphone is in use by another app. Close other apps using the mic and try again.' };
+      }
+      return { ok: false, message: `Microphone error: ${err.message || err.name}` };
+    }
+  }, []);
+
   // Start continuous speech recognition - uses ref to avoid stale closures
-  const startRecognition = useCallback(() => {
+  const startRecognition = useCallback(async () => {
     const attemptId = ++micStartAttemptRef.current;
     setMicError(null);
     setIsStartingMic(true);
 
     console.log('[TugOfWar] startRecognition() attempt:', attemptId);
+
+    // PREFLIGHT: Request mic permission first (triggers browser prompt)
+    const permResult = await ensureMicPermission();
+    if (!permResult.ok) {
+      console.log('[TugOfWar] permission preflight failed:', permResult.message);
+      setIsStartingMic(false);
+      setMicError(permResult.message || 'Microphone permission denied.');
+      return false;
+    }
 
     const success = speechManager.start({
       owner: 'reader',
@@ -349,12 +399,11 @@ export const RPGTugOfWar = ({
         setIsStartingMic(false);
         setIsListening(false);
 
-        // Common errors: not-allowed, service-not-allowed, audio-capture, no-speech, network
         const msg =
           error === 'not-allowed' || error === 'service-not-allowed'
-            ? 'Microphone permission is blocked.'
+            ? 'Microphone permission denied. Click 🔒 in address bar → Allow mic → Refresh.'
             : error === 'audio-capture'
-              ? 'No microphone was found or it is in use by another app.'
+              ? 'No microphone found or it is in use by another app.'
               : error === 'network'
                 ? 'Network error starting speech recognition.'
                 : error === 'no-speech'
@@ -372,18 +421,19 @@ export const RPGTugOfWar = ({
       return false;
     }
 
-    // If the browser never fires onStart (common when mic is blocked in an iframe), show a helpful error.
+    // Timeout: if mic never fires onStart, show helpful error
     window.setTimeout(() => {
       if (attemptId !== micStartAttemptRef.current) return;
-      if (!speechManager.isActive() && !isListening) {
-        console.log('[TugOfWar] mic did not start (possible iframe/permission block)');
+      // Use ref to avoid stale state
+      if (!speechManager.isActive() && !isListeningRef.current) {
+        console.log('[TugOfWar] mic did not start within timeout');
         setIsStartingMic(false);
-        setMicError((prev) => prev ?? 'Mic did not start. This preview may be blocking microphone access.');
+        setMicError((prev) => prev ?? 'Mic did not start. Try refreshing the page.');
       }
-    }, 900);
+    }, 1200);
 
     return true;
-  }, [isListening]);
+  }, [ensureMicPermission]);
 
   // Stop speech recognition
   const stopRecognition = useCallback(() => {
