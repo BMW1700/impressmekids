@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Skull, Heart, Coins, Star, Mic, MicOff, Pause, Play } from "lucide-react";
+import { Trophy, Skull, Heart, Coins, Star, Mic, MicOff, Pause, Play, AlertCircle, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
+import { ensureMicrophoneAccess } from "@/lib/micDiagnostics";
+import { MicTroubleshooterModal } from "@/components/mic/MicTroubleshooterModal";
 
 interface RPGBalloonBattleProps {
   words: string[];
@@ -93,6 +95,8 @@ export const RPGBalloonBattle = ({
 
   const recognitionRef = useRef<any>(null);
   const isListeningRef = useRef(false);
+  const [micError, setMicError] = useState<string | null>(null);
+  const [showTroubleshooter, setShowTroubleshooter] = useState(false);
 
   const currentWord = words[currentWordIndex] || "";
   const activeHeroBalloons = heroBalloons.filter(b => !b.popped);
@@ -108,18 +112,11 @@ export const RPGBalloonBattle = ({
     });
   }, []);
 
-  // Initialize speech recognition
+  // REMOVED: Auto-init of speech recognition in useEffect
+  // Speech recognition must now be started via user gesture (startMic button)
+  // This is required by browsers for microphone access
+  
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = true;
-        recognitionRef.current.interimResults = false;
-        recognitionRef.current.lang = 'en-US';
-      }
-    }
-    
     return () => {
       if (recognitionRef.current) {
         try {
@@ -236,9 +233,32 @@ export const RPGBalloonBattle = ({
     }, 800);
   }, [currentWord, currentWordIndex, words.length, currentEnemyBalloon, heroBalloons, onWordResult, showFloatingReward]);
 
-  // Mic control functions - matches Classic/TugOfWar pattern
-  const startMic = useCallback(() => {
-    if (!recognitionRef.current || gameOver) return;
+  // Mic control functions - FIXED: Ensure mic access before starting recognition
+  const startMic = useCallback(async () => {
+    if (gameOver) return;
+    
+    setMicError(null);
+    
+    // STEP 1: Ensure we have mic permission first
+    const micResult = await ensureMicrophoneAccess(false);
+    
+    if (!micResult.success) {
+      console.error('[BalloonBattle] Microphone access failed:', micResult.error);
+      setMicError(micResult.error?.userMessage || 'Microphone access failed');
+      return;
+    }
+    
+    // STEP 2: Create and start speech recognition
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setMicError('Speech recognition not supported in this browser');
+      return;
+    }
+    
+    recognitionRef.current = new SpeechRecognition();
+    recognitionRef.current.continuous = true;
+    recognitionRef.current.interimResults = false;
+    recognitionRef.current.lang = 'en-US';
 
     setIsMicActive(true);
     setIsPaused(false);
@@ -262,7 +282,12 @@ export const RPGBalloonBattle = ({
     };
 
     recognitionRef.current.onerror = (e: any) => {
-      console.log('Speech error:', e.error);
+      console.log('[BalloonBattle] Speech error:', e.error);
+      if (e.error === 'not-allowed') {
+        setMicError('Microphone access was denied.');
+        setIsMicActive(false);
+        return;
+      }
       if (e.error === 'no-speech') {
         try {
           recognitionRef.current.stop();
@@ -287,6 +312,7 @@ export const RPGBalloonBattle = ({
       recognitionRef.current.start();
     } catch (e) {
       setIsMicActive(false);
+      setMicError('Failed to start speech recognition');
     }
   }, [gameOver, currentWord, handleWordResult, isPaused]);
 
@@ -655,8 +681,27 @@ export const RPGBalloonBattle = ({
             )}
           </div>
 
+          {/* Mic Error Display */}
+          {micError && (
+            <div className="flex items-center justify-center gap-2 mt-3">
+              <div className="flex items-center gap-2 bg-red-100 text-red-800 px-4 py-2 rounded-lg text-sm">
+                <AlertCircle className="h-4 w-4" />
+                <span>{micError}</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowTroubleshooter(true)}
+                className="text-red-600 border-red-300"
+              >
+                <HelpCircle className="h-4 w-4 mr-1" />
+                Fix
+              </Button>
+            </div>
+          )}
+
           {/* Mic status indicator */}
-          {isMicActive && (
+          {isMicActive && !micError && (
             <motion.div 
               className={`text-center mt-3 text-sm font-bold ${isPaused ? 'text-yellow-600' : 'text-green-600'}`}
               animate={!isPaused ? { opacity: [1, 0.5, 1] } : {}}
@@ -731,6 +776,14 @@ export const RPGBalloonBattle = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Mic Troubleshooter Modal */}
+      <MicTroubleshooterModal
+        open={showTroubleshooter}
+        onOpenChange={setShowTroubleshooter}
+        lastError={micError || undefined}
+        onRetry={startMic}
+      />
     </div>
   );
 };
