@@ -30,6 +30,7 @@ import {
   X,
   UserPlus,
   Save,
+  Pencil,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -87,6 +88,10 @@ const ClubDetail = () => {
   const [announcementTitle, setAnnouncementTitle] = useState("");
   const [announcementContent, setAnnouncementContent] = useState("");
   const [isPostingAnnouncement, setIsPostingAnnouncement] = useState(false);
+  const [editingAnnouncementId, setEditingAnnouncementId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+  const [editingContent, setEditingContent] = useState("");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   useEffect(() => {
     if (club) {
@@ -170,6 +175,61 @@ const ClubDetail = () => {
       });
     } finally {
       setIsPostingAnnouncement(false);
+    }
+  };
+
+  const handleStartEdit = (announcement: any) => {
+    setEditingAnnouncementId(announcement.id);
+    setEditingTitle(announcement.title);
+    setEditingContent(announcement.content || "");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingAnnouncementId(null);
+    setEditingTitle("");
+    setEditingContent("");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingAnnouncementId || !editingTitle.trim()) {
+      toast({
+        title: "Error",
+        description: "Announcement title is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSavingEdit(true);
+
+    try {
+      const { error } = await supabase
+        .from("club_posts")
+        .update({
+          title: editingTitle.trim(),
+          content: editingContent.trim() || null,
+        })
+        .eq("id", editingAnnouncementId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Announcement updated successfully!",
+      });
+
+      setEditingAnnouncementId(null);
+      setEditingTitle("");
+      setEditingContent("");
+      queryClient.invalidateQueries({ queryKey: ["club-announcements", clubId] });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update announcement",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -425,16 +485,67 @@ const ClubDetail = () => {
                           key={announcement.id}
                           className="p-4 bg-muted/50 rounded-lg"
                         >
-                          <div className="flex items-start justify-between mb-2">
-                            <h4 className="font-semibold">{announcement.title}</h4>
-                            <span className="text-xs text-muted-foreground">
-                              {format(new Date(announcement.created_at), "MMM d, yyyy 'at' h:mm a")}
-                            </span>
-                          </div>
-                          {announcement.content && (
-                            <p className="text-sm text-muted-foreground">
-                              {announcement.content}
-                            </p>
+                          {editingAnnouncementId === announcement.id ? (
+                            <div className="space-y-3">
+                              <Input
+                                value={editingTitle}
+                                onChange={(e) => setEditingTitle(e.target.value)}
+                                placeholder="Announcement title..."
+                              />
+                              <Textarea
+                                value={editingContent}
+                                onChange={(e) => setEditingContent(e.target.value)}
+                                placeholder="Announcement content..."
+                                rows={3}
+                              />
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={handleSaveEdit}
+                                  disabled={isSavingEdit}
+                                >
+                                  {isSavingEdit ? (
+                                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                  ) : (
+                                    <Save className="h-4 w-4 mr-1" />
+                                  )}
+                                  Save
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={handleCancelEdit}
+                                  disabled={isSavingEdit}
+                                >
+                                  <X className="h-4 w-4 mr-1" />
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex items-start justify-between mb-2">
+                                <h4 className="font-semibold">{announcement.title}</h4>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleStartEdit(announcement)}
+                                    className="h-7 w-7 p-0"
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <span className="text-xs text-muted-foreground">
+                                    {format(new Date(announcement.created_at), "MMM d, yyyy 'at' h:mm a")}
+                                  </span>
+                                </div>
+                              </div>
+                              {announcement.content && (
+                                <p className="text-sm text-muted-foreground">
+                                  {announcement.content}
+                                </p>
+                              )}
+                            </>
                           )}
                         </div>
                       ))}
