@@ -12,6 +12,7 @@ import { Elara } from "../characters/Elara";
 import { GoblinGuard } from "../characters/GoblinGuard";
 import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { speechManager } from "@/lib/speechRecognitionManager";
+import { supabase } from "@/integrations/supabase/client";
 
 const soundEffects = new SoundEffects();
 
@@ -19,6 +20,8 @@ interface RPGTugOfWarProps {
   words: string[];
   heroName?: string;
   enemyName?: string;
+  studentId?: string;
+  storyTitle?: string;
   onComplete: (victory: boolean, stats: { wordsRead: number; correctWords: number; incorrectWords: number }) => void;
   onWordResult?: (word: string, correct: boolean) => void;
 }
@@ -45,6 +48,8 @@ export const RPGTugOfWar = ({
   words,
   heroName = "Hero",
   enemyName = "Goblins",
+  studentId,
+  storyTitle,
   onComplete,
   onWordResult,
 }: RPGTugOfWarProps) => {
@@ -81,6 +86,9 @@ export const RPGTugOfWar = ({
   const [isListening, setIsListening] = useState(false);
   const currentWordRef = useRef("");
   const processedWordsRef = useRef<Set<number>>(new Set());
+  
+  // Session tracking for data saving
+  const battleStartTimeRef = useRef<number>(0);
   const echoRetryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Current word
@@ -94,6 +102,39 @@ export const RPGTugOfWar = ({
   // Calculate the rope offset - moves the ENTIRE rig
   const ropeOffsetPercent = (ropePosition / WIN_THRESHOLD) * 15; // -15% to +15%
 
+  // Save reading session to database
+  const saveReadingSession = useCallback(async (isVictory: boolean) => {
+    if (!studentId || wordsRead === 0) return;
+    
+    const durationSeconds = Math.max(1, (Date.now() - battleStartTimeRef.current) / 1000);
+    const wpm = Math.round((wordsRead / durationSeconds) * 60);
+    const wcpm = Math.round((correctWords / durationSeconds) * 60);
+    const accuracyPercent = Math.round((correctWords / wordsRead) * 100);
+    
+    try {
+      const { error } = await supabase.from('reading_sessions').insert({
+        student_id: studentId,
+        passage_text: words.slice(0, 50).join(' '),
+        words_read: wordsRead,
+        duration_seconds: Math.round(durationSeconds),
+        wpm,
+        wcpm,
+        accuracy_percent: accuracyPercent,
+        fluency_score: Math.min(100, Math.round(accuracyPercent * 0.7 + Math.min(wpm, 150) * 0.3)),
+        fluency_level: accuracyPercent >= 95 ? 'independent' : accuracyPercent >= 90 ? 'instructional' : 'frustration',
+        reading_mode: 'tug_of_war',
+      });
+      
+      if (error) {
+        console.error('[TugOfWar] Failed to save reading session:', error);
+      } else {
+        console.log('[TugOfWar] Reading session saved successfully');
+      }
+    } catch (err) {
+      console.error('[TugOfWar] Error saving session:', err);
+    }
+  }, [studentId, wordsRead, correctWords, words]);
+
   // Check for win/lose conditions
   useEffect(() => {
     if (gameOver || gameCompletedRef.current) return;
@@ -103,6 +144,7 @@ export const RPGTugOfWar = ({
       setGameOver(true);
       setVictory(true);
       soundEffects.celebrationSound();
+      saveReadingSession(true);
       setTimeout(() => {
         onComplete(true, { wordsRead, correctWords, incorrectWords });
       }, 2000);
@@ -111,11 +153,12 @@ export const RPGTugOfWar = ({
       setGameOver(true);
       setVictory(false);
       soundEffects.rockCrumble();
+      saveReadingSession(false);
       setTimeout(() => {
         onComplete(false, { wordsRead, correctWords, incorrectWords });
       }, 2000);
     }
-  }, [ropePosition, gameOver, wordsRead, correctWords, incorrectWords, onComplete]);
+  }, [ropePosition, gameOver, wordsRead, correctWords, incorrectWords, onComplete, saveReadingSession]);
 
   const showFloatingReward = useCallback((gold: number, xp: number) => {
     const id = rewardIdRef.current++;
@@ -289,10 +332,18 @@ export const RPGTugOfWar = ({
     setIsListening(false);
   }, []);
 
-  // Auto-start mic when character is selected
+  // Auto-start mic when character is selected and track start time
   useEffect(() => {
     if (selectedCharacter && !gameOver && !isPaused) {
-      startRecognition();
+      // Track when battle actually starts (character selected)
+      if (battleStartTimeRef.current === 0) {
+        battleStartTimeRef.current = Date.now();
+      }
+      // Small delay to ensure state is ready
+      const timeout = setTimeout(() => {
+        startRecognition();
+      }, 100);
+      return () => clearTimeout(timeout);
     }
     
     return () => {
@@ -301,14 +352,20 @@ export const RPGTugOfWar = ({
         clearTimeout(echoRetryTimeoutRef.current);
       }
     };
-  }, [selectedCharacter, gameOver]);
+  }, [selectedCharacter, gameOver, isPaused, startRecognition]);
 
-  // Handle pause/resume for speech
+  // Handle pause/resume for speech - separate effect for clean restart
   useEffect(() => {
+    if (!selectedCharacter || gameOver) return;
+    
     if (isPaused) {
       stopRecognition();
-    } else if (selectedCharacter && !gameOver) {
-      startRecognition();
+    } else {
+      // Restart recognition after unpause with small delay
+      const timeout = setTimeout(() => {
+        startRecognition();
+      }, 150);
+      return () => clearTimeout(timeout);
     }
   }, [isPaused, selectedCharacter, gameOver, startRecognition, stopRecognition]);
 
