@@ -112,7 +112,7 @@ export const ClubCard = ({
         </div>
 
         <div className="mt-auto pt-3">
-          <Button variant="outline" className="w-full" onClick={onClick}>
+          <Button variant="gradient" className="w-full shadow-glow-purple group-hover:shadow-glow-purple-lg" onClick={onClick}>
             View Club
           </Button>
         </div>
