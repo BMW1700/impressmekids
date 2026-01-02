@@ -23,10 +23,7 @@ const StudentClubDetail = () => {
 
       const { data, error } = await supabase
         .from("clubs")
-        .select(`
-          *,
-          profiles:owner_id (full_name, email)
-        `)
+        .select("*")
         .eq("id", clubId)
         .single();
 
@@ -36,6 +33,29 @@ const StudentClubDetail = () => {
     enabled: !!clubId,
   });
 
+  // Fetch profile names for club owner and post authors via security definer function
+  const { data: profileNames } = useQuery({
+    queryKey: ["club-profile-names", clubId],
+    queryFn: async () => {
+      if (!clubId) return [];
+
+      const { data, error } = await supabase.rpc("get_club_profile_names", {
+        club_id: clubId,
+      });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!clubId,
+  });
+
+  // Helper to get name by profile id
+  const getProfileName = (profileId: string | null | undefined): string => {
+    if (!profileId || !profileNames) return "Unknown";
+    const profile = profileNames.find((p: any) => p.profile_id === profileId);
+    return profile?.full_name || "Unknown";
+  };
+
   // Fetch club announcements
   const { data: announcements, isLoading: announcementsLoading } = useQuery({
     queryKey: ["student-club-announcements", clubId],
@@ -44,10 +64,7 @@ const StudentClubDetail = () => {
 
       const { data, error } = await supabase
         .from("club_posts")
-        .select(`
-          *,
-          profiles:created_by (full_name)
-        `)
+        .select("*")
         .eq("club_id", clubId)
         .eq("post_type", "announcement")
         .order("created_at", { ascending: false });
@@ -132,11 +149,9 @@ const StudentClubDetail = () => {
               </div>
               <div>
                 <h1 className="text-3xl font-bold">{club.name}</h1>
-                {club.profiles && (
-                  <p className="text-muted-foreground">
-                    Led by {(club.profiles as any).full_name}
-                  </p>
-                )}
+                <p className="text-muted-foreground">
+                  Led by {getProfileName(club.owner_id)}
+                </p>
               </div>
             </div>
           </div>
@@ -151,12 +166,12 @@ const StudentClubDetail = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {club.profiles && (
+                {club.owner_id && (
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-muted-foreground" />
                     <div>
                       <h4 className="text-sm font-medium text-muted-foreground">Club Leader</h4>
-                      <p>{(club.profiles as any).full_name}</p>
+                      <p>{getProfileName(club.owner_id)}</p>
                     </div>
                   </div>
                 )}
@@ -247,7 +262,7 @@ const StudentClubDetail = () => {
                           </p>
                         )}
                         <p className="text-xs text-muted-foreground mt-2">
-                          Posted by {announcement.profiles?.full_name || "Unknown"}
+                          Posted by {getProfileName(announcement.created_by)}
                         </p>
                       </div>
                     ))}
