@@ -15,7 +15,10 @@ import {
   CheckCircle2,
   AlertCircle,
   Lightbulb,
-  BarChart3
+  BarChart3,
+  Gamepad2,
+  Clock,
+  Trophy
 } from "lucide-react";
 import { useWeeklyProgress } from "@/hooks/useWeeklyProgress";
 import { Loader2 } from "lucide-react";
@@ -174,7 +177,32 @@ export const ParentWeeklyReport = ({ studentId, studentName }: ParentWeeklyRepor
     );
   }
 
-  const { currentWeek, previousWeek, wcpmChange, accuracyChange, topStrengths, areasForPractice, phonemeSubstitutions, isImproving } = progress;
+  const { currentWeek, previousWeek, wcpmChange, accuracyChange, topStrengths, areasForPractice, phonemeSubstitutions, isImproving, modeBreakdown, bestPerformingMode, totalReadingTimeMinutes } = progress;
+
+  // Helper to get friendly mode names
+  const getModeDisplayName = (mode: string) => {
+    const modeNames: Record<string, string> = {
+      'word_by_word': 'Reading Practice',
+      'rpg_battle': 'RPG Battle Mode',
+      'tug_of_war': 'Tug of War',
+      'balloon_battle': 'Balloon Battle',
+      'screening': 'Reading Assessment',
+      'assignment': 'Class Assignment',
+      'speaking_practice': 'Speaking Practice',
+      'story_mode': 'Story Mode',
+    };
+    return modeNames[mode] || mode.replace(/_/g, ' ');
+  };
+
+  const getModeIcon = (mode: string) => {
+    if (mode.includes('rpg') || mode.includes('battle') || mode.includes('tug') || mode.includes('balloon')) {
+      return <Gamepad2 className="h-4 w-4" />;
+    }
+    if (mode.includes('speaking')) {
+      return <Mic className="h-4 w-4" />;
+    }
+    return <BookOpen className="h-4 w-4" />;
+  };
 
   return (
     <div className="space-y-6">
@@ -316,6 +344,49 @@ export const ParentWeeklyReport = ({ studentId, studentName }: ParentWeeklyRepor
               </CardContent>
             </Card>
           </div>
+
+          {/* Reading Mode Breakdown */}
+          {modeBreakdown && modeBreakdown.length > 0 && (
+            <Card className="border-0 bg-gradient-to-br from-purple-500/5 to-indigo-500/5 shadow-md">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2 text-purple-700">
+                  <Clock className="h-5 w-5" />
+                  Where {studentName} Practiced
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {modeBreakdown.slice(0, 4).map((mode, i) => (
+                    <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-background/60">
+                      <div className="flex items-center gap-2">
+                        {getModeIcon(mode.mode)}
+                        <span className="text-sm font-medium">{getModeDisplayName(mode.mode)}</span>
+                        {bestPerformingMode === mode.mode && (
+                          <Badge variant="secondary" className="text-xs bg-yellow-500/20 text-yellow-700">
+                            <Trophy className="h-3 w-3 mr-1" />
+                            Best
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold">{mode.totalWordsRead} words</p>
+                        <p className="text-xs text-muted-foreground">
+                          {mode.totalDurationMinutes} min • {mode.avgAccuracy}% accuracy
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {totalReadingTimeMinutes > 0 && (
+                  <div className="mt-4 p-3 rounded-lg bg-purple-500/10">
+                    <p className="text-sm">
+                      ⏱️ Total reading time: <strong>{totalReadingTimeMinutes} minutes</strong> this week
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Simple Progress Chart */}
           <ImprovementTracker 
