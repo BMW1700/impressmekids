@@ -102,43 +102,73 @@ student3@school.edu,Mike Johnson,XYZ456,10`;
         }
       });
 
-      if (validRows.length === 0) {
-        setResult({
-          success: 0,
-          failed: errors.length,
-          errors
-        });
-        return;
+      let successCount = 0;
+      let failCount = 0;
+
+      // Process valid rows
+      for (const row of validRows) {
+        try {
+          // Generate random password (school will use password reset)
+          const tempPassword = Math.random().toString(36).slice(-12) + 'Aa1!';
+          
+          // Create auth user
+          const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+            email: row.email,
+            password: tempPassword,
+            email_confirm: true,
+            user_metadata: {
+              full_name: row.full_name,
+              role: 'student',
+            }
+          });
+
+          if (authError) {
+            errors.push(`${row.email}: ${authError.message}`);
+            failCount++;
+            continue;
+          }
+
+          // Join classroom if code provided
+          if (row.classroom_code && authData.user) {
+            const { data: classroom } = await supabase
+              .from('classrooms')
+              .select('id')
+              .eq('join_code', row.classroom_code.toUpperCase())
+              .single();
+
+            if (classroom) {
+              await supabase
+                .from('classroom_students')
+                .insert({
+                  classroom_id: classroom.id,
+                  student_id: authData.user.id
+                });
+            }
+          }
+
+          // Update grade if provided
+          if (row.grade && authData.user) {
+            await supabase
+              .from('public_profiles')
+              .update({ grade: parseInt(row.grade) })
+              .eq('id', authData.user.id);
+          }
+
+          successCount++;
+        } catch (error: any) {
+          errors.push(`${row.email}: ${error.message}`);
+          failCount++;
+        }
       }
-
-      // Call the secure edge function to create students
-      const { data, error } = await supabase.functions.invoke('bulk-create-students', {
-        body: { students: validRows }
-      });
-
-      if (error) {
-        toast.error(`Import failed: ${error.message}`);
-        setResult({
-          success: 0,
-          failed: validRows.length,
-          errors: [...errors, error.message]
-        });
-        return;
-      }
-
-      // Process results from the edge function
-      const functionErrors = data.results
-        ?.filter((r: { success: boolean; email: string; error?: string }) => !r.success)
-        .map((r: { email: string; error?: string }) => `${r.email}: ${r.error}`) || [];
 
       setResult({
-        success: data.successCount || 0,
-        failed: data.failedCount + errors.length,
-        errors: [...errors, ...functionErrors]
+        success: successCount,
+        failed: failCount + errors.length,
+        errors
       });
 
-      if (data.successCount > 0) {
-        toast.success(`Successfully imported ${data.successCount} students`);
+      if (successCount > 0) {
+        toast.success(`Successfully imported ${successCount} students`);
       }
     } catch (error: any) {
       toast.error(`Import failed: ${error.message}`);

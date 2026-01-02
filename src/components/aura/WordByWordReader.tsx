@@ -1371,7 +1371,6 @@ export const WordByWordReader = ({
           } : null,
         }, // ML OUTPUT: Per-phoneme accuracy scores + inference
         audio_url: audioUrl, // NEW: Path to audio recording for teacher playback
-        reading_mode: battleMode ? 'rpg_battle' : screeningPeriodId ? 'screening' : assignmentId ? 'assignment' : 'word_by_word',
       } as any)
       .select()
       .single();

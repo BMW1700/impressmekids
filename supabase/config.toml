@@ -112,6 +112,3 @@ verify_jwt = true
 
 [functions.send-phoneme-report]
 verify_jwt = true
-
-[functions.bulk-create-students]
-verify_jwt = true

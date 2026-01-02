@@ -129,9 +129,9 @@ export const TugOfWarStandalone = ({
     }, 800);
   }, [gameOver]);
 
-  // Auto-pull timer - always counts down unless game is over or not started
+  // Auto-pull timer
   useEffect(() => {
-    if (gameOver || !selectedCharacter) return;
+    if (gameOver || !selectedCharacter || isListening) return;
     
     const interval = setInterval(() => {
       setAutoPullTimer(prev => {
@@ -144,7 +144,7 @@ export const TugOfWarStandalone = ({
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [gameOver, selectedCharacter, handleEnemyAutoPull]);
+  }, [gameOver, selectedCharacter, handleEnemyAutoPull, isListening]);
 
   const processWordResult = useCallback((correct: boolean, wordIdx: number) => {
     if (gameOver || gameCompletedRef.current) return;
@@ -387,102 +387,45 @@ export const TugOfWarStandalone = ({
         ))}
       </AnimatePresence>
 
-      {/* WORD DISPLAY - In the blue sky area */}
-      <div className="absolute left-0 right-0 z-20" style={{ top: '200px' }}>
-        <div className="text-center px-4">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentWord}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="mb-3"
-            >
-              <div className={`text-6xl md:text-7xl font-black tracking-wide ${
-                feedback === 'correct' ? 'text-green-400' :
-                feedback === 'incorrect' ? 'text-red-400' :
-                'text-white'
-              }`} style={{ textShadow: '4px 4px 8px rgba(0,0,0,0.6)' }}>
-                {currentWord}
-              </div>
-              
-              {feedback && (
-                <motion.div
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className={`text-2xl font-bold mt-2 ${
-                    feedback === 'correct' ? 'text-green-300' : 'text-red-300'
-                  }`}
-                  style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}
-                >
-                  {feedback === 'correct' ? '✓ Correct!' : '✗ Try again!'}
-                </motion.div>
-              )}
-            </motion.div>
-          </AnimatePresence>
-
-          <div className="flex justify-center items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={pronounceWord}
-              className="bg-white/30 hover:bg-white/40 text-white rounded-full h-12 w-12 backdrop-blur-sm"
-            >
-              <Volume2 className="h-5 w-5" />
-            </Button>
-            
-            <div className={`flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-sm ${
-              isListening ? 'bg-green-500/70' : 'bg-white/30'
-            }`}>
-              <Mic className={`h-5 w-5 ${isListening ? 'text-white animate-pulse' : 'text-white/80'}`} />
-              <span className="text-white text-sm font-medium">
-                {isListening ? 'Listening...' : 'Speak now'}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* TUG-OF-WAR SCENE - Characters much larger */}
+      {/* TUG-OF-WAR SCENE */}
       <motion.div 
         className="absolute left-0 right-0 z-[10]"
-        style={{ bottom: '40px', height: '320px' }}
+        style={{ bottom: '180px', height: '220px' }}
         animate={{ x: `${ropeOffsetPercent}%` }}
         transition={{ type: 'spring', stiffness: 150, damping: 20 }}
       >
         <div className="relative w-full h-full flex items-end justify-center">
           
-          {/* Enemy Team - LARGER */}
+          {/* Enemy Team */}
           <motion.div 
-            className="absolute left-[3%] bottom-0 flex flex-col items-center z-[15]"
+            className="absolute left-[5%] bottom-0 flex flex-col items-center z-[15]"
             animate={pullingAnimation === 'enemy' ? { x: [-10, 0] } : pullingAnimation === 'hero' ? { x: [10, 0] } : {}}
             transition={{ duration: 0.3 }}
           >
             <div className="flex items-end">
-              <div className="origin-bottom -mr-4">
+              <div className="scale-[0.5] origin-bottom-right -mr-2">
+                <GoblinGuard 
+                  state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
+                  healthPercent={100}
+                  size="small"
+                />
+              </div>
+              <div className="scale-[0.6] origin-bottom -mr-1">
+                <GoblinGuard 
+                  state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
+                  healthPercent={100}
+                  size="small"
+                />
+              </div>
+              <div className="scale-[0.7] origin-bottom">
                 <GoblinGuard 
                   state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
                   healthPercent={100}
                   size="medium"
                 />
               </div>
-              <div className="origin-bottom -mr-2">
-                <GoblinGuard 
-                  state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
-                  healthPercent={100}
-                  size="large"
-                />
-              </div>
-              <div className="origin-bottom">
-                <GoblinGuard 
-                  state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
-                  healthPercent={100}
-                  size="large"
-                />
-              </div>
             </div>
-            <div className="text-red-600 font-bold text-sm mt-2 bg-white/90 px-3 py-1 rounded-full shadow">
+            <div className="text-red-600 font-bold text-xs mt-1 bg-white/90 px-2 py-0.5 rounded-full shadow">
               Goblins
             </div>
           </motion.div>
@@ -493,8 +436,8 @@ export const TugOfWarStandalone = ({
             style={{ 
               left: '50%', 
               transform: 'translateX(-50%)',
-              bottom: '60px',
-              width: '55%'
+              bottom: '30px',
+              width: '60%'
             }}
           >
             <TugOfWarRope
@@ -504,37 +447,94 @@ export const TugOfWarStandalone = ({
             />
           </div>
 
-          {/* Hero Team - LARGER */}
+          {/* Hero Team */}
           <motion.div 
-            className="absolute right-[3%] bottom-0 flex flex-col items-center z-[15]"
+            className="absolute right-[5%] bottom-0 flex flex-col items-center z-[15]"
             animate={pullingAnimation === 'hero' ? { x: [10, 0] } : pullingAnimation === 'enemy' ? { x: [-10, 0] } : {}}
             transition={{ duration: 0.3 }}
           >
             <div className="flex items-end">
-              <div className="origin-bottom">
-                <LeaderComponent state={leaderState} size="large" healthPercent={100} />
+              <div className="scale-[0.7] origin-bottom">
+                <LeaderComponent state={leaderState} size="medium" healthPercent={100} />
               </div>
-              <div className="flex -ml-4">
+              <div className="flex -ml-2">
                 {[0, 1, 2].map((index) => (
-                  <div key={index} className="-ml-4 first:ml-0">
+                  <div key={index} className="-ml-3 first:ml-0">
                     <TugOfWarKid
                       index={index}
                       isPulling={pullingAnimation === 'hero'}
                       isStraining={pullingAnimation === 'enemy'}
                       side="hero"
-                      size="large"
+                      size="medium"
                     />
                   </div>
                 ))}
               </div>
             </div>
-            <div className="text-green-600 font-bold text-sm mt-2 bg-white/90 px-3 py-1 rounded-full shadow">
+            <div className="text-green-600 font-bold text-xs mt-1 bg-white/90 px-2 py-0.5 rounded-full shadow">
               Hero
             </div>
           </motion.div>
         </div>
       </motion.div>
 
+      {/* Word Display */}
+      <div className="absolute bottom-0 left-0 right-0 z-20">
+        <div className="bg-gradient-to-t from-black/80 via-black/60 to-transparent pt-16 pb-6 px-4">
+          <div className="text-center">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentWord}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="mb-4"
+              >
+                <div className={`text-5xl md:text-6xl font-black tracking-wide ${
+                  feedback === 'correct' ? 'text-green-400' :
+                  feedback === 'incorrect' ? 'text-red-400' :
+                  'text-white'
+                }`} style={{ textShadow: '3px 3px 6px rgba(0,0,0,0.5)' }}>
+                  {currentWord}
+                </div>
+                
+                {feedback && (
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className={`text-2xl font-bold mt-2 ${
+                      feedback === 'correct' ? 'text-green-300' : 'text-red-300'
+                    }`}
+                  >
+                    {feedback === 'correct' ? '✓ Correct!' : '✗ Try again!'}
+                  </motion.div>
+                )}
+              </motion.div>
+            </AnimatePresence>
+
+            <div className="flex justify-center items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={pronounceWord}
+                className="bg-white/20 hover:bg-white/30 text-white rounded-full h-12 w-12"
+              >
+                <Volume2 className="h-5 w-5" />
+              </Button>
+              
+              <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${
+                isListening ? 'bg-green-500/60' : 'bg-white/20'
+              }`}>
+                <Mic className={`h-5 w-5 ${isListening ? 'text-white animate-pulse' : 'text-white/70'}`} />
+                <span className="text-white text-sm">
+                  {isListening ? 'Listening...' : 'Speak now'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Game Over Overlay */}
       <AnimatePresence>
