@@ -13,6 +13,7 @@ import { GoblinGuard } from "../characters/GoblinGuard";
 import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { speechManager } from "@/lib/speechRecognitionManager";
 import { supabase } from "@/integrations/supabase/client";
+import { useMLIntegration } from "@/hooks/useMLIntegration";
 
 const soundEffects = new SoundEffects();
 
@@ -53,6 +54,9 @@ export const RPGTugOfWar = ({
   onComplete,
   onWordResult,
 }: RPGTugOfWarProps) => {
+  // ML Integration for training data
+  const { saveToAuraRecords } = useMLIntegration();
+  
   // Character selection
   const [selectedCharacter, setSelectedCharacter] = useState<'valor' | 'elara' | null>(null);
   
@@ -102,7 +106,7 @@ export const RPGTugOfWar = ({
   // Calculate the rope offset - moves the ENTIRE rig
   const ropeOffsetPercent = (ropePosition / WIN_THRESHOLD) * 15; // -15% to +15%
 
-  // Save reading session to database
+  // Save reading session to database AND ML training data
   const saveReadingSession = useCallback(async (isVictory: boolean) => {
     if (!studentId || wordsRead === 0) return;
     
@@ -110,8 +114,10 @@ export const RPGTugOfWar = ({
     const wpm = Math.round((wordsRead / durationSeconds) * 60);
     const wcpm = Math.round((correctWords / durationSeconds) * 60);
     const accuracyPercent = Math.round((correctWords / wordsRead) * 100);
+    const fluencyScore = Math.min(100, Math.round(accuracyPercent * 0.7 + Math.min(wpm, 150) * 0.3));
     
     try {
+      // Save to reading_sessions table
       const { error } = await supabase.from('reading_sessions').insert({
         student_id: studentId,
         passage_text: words.slice(0, 50).join(' '),
@@ -120,7 +126,7 @@ export const RPGTugOfWar = ({
         wpm,
         wcpm,
         accuracy_percent: accuracyPercent,
-        fluency_score: Math.min(100, Math.round(accuracyPercent * 0.7 + Math.min(wpm, 150) * 0.3)),
+        fluency_score: fluencyScore,
         fluency_level: accuracyPercent >= 95 ? 'independent' : accuracyPercent >= 90 ? 'instructional' : 'frustration',
         reading_mode: 'tug_of_war',
       });
@@ -130,10 +136,28 @@ export const RPGTugOfWar = ({
       } else {
         console.log('[TugOfWar] Reading session saved successfully');
       }
+      
+      // ALSO save to ML training pipeline (aura_records)
+      await saveToAuraRecords({
+        studentId,
+        sessionId: `tug_of_war_${Date.now()}`,
+        wpm,
+        wcpm,
+        accuracy: accuracyPercent,
+        wordsRead,
+        durationSeconds: Math.round(durationSeconds),
+        pauseCount: 0,
+        phonemeScores: {},
+        transcript: `Tug of War game: ${correctWords}/${wordsRead} correct`,
+        audioUrl: null,
+        includeSpeakingData: true,
+      });
+      console.log('[TugOfWar] ML training data saved');
+      
     } catch (err) {
       console.error('[TugOfWar] Error saving session:', err);
     }
-  }, [studentId, wordsRead, correctWords, words]);
+  }, [studentId, wordsRead, correctWords, words, saveToAuraRecords]);
 
   // Check for win/lose conditions
   useEffect(() => {
@@ -317,63 +341,65 @@ export const RPGTugOfWar = ({
   }, [handleSpeechResult]);
 
   // Start continuous speech recognition - uses ref to avoid stale closures
+  // CRITICAL: This must only be called from a user gesture (button click)
   const startRecognition = useCallback(() => {
+    console.log('[TugOfWar] Starting speech recognition (user gesture)');
     const success = speechManager.start({
-      owner: 'reader',
+      owner: 'tug_of_war',
       continuous: true,
       interimResults: true,
       onResult: (transcript, alts, isFinal) => handleSpeechResultRef.current(transcript, alts, isFinal),
-      onStart: () => setIsListening(true),
-      onEnd: () => setIsListening(false),
+      onStart: () => {
+        console.log('[TugOfWar] Speech recognition started successfully');
+        setIsListening(true);
+      },
+      onEnd: () => {
+        console.log('[TugOfWar] Speech recognition ended');
+        setIsListening(false);
+      },
       onError: (error) => {
         console.log('[TugOfWar] Speech error:', error);
+        setIsListening(false);
       }
     });
+    if (!success) {
+      console.error('[TugOfWar] Failed to start speech recognition');
+    }
     return success;
   }, []);
 
   // Stop speech recognition
   const stopRecognition = useCallback(() => {
-    speechManager.stop('reader');
+    speechManager.stop('tug_of_war');
     setIsListening(false);
   }, []);
 
-  // Auto-start mic when character is selected and track start time
+  // Track battle start time when character is selected
+  // NOTE: We do NOT auto-start mic here - browsers require user gesture
+  // The user must click "Tap to Start Mic" button
   useEffect(() => {
-    if (selectedCharacter && !gameOver && !isPaused) {
+    if (selectedCharacter && !gameOver) {
       // Track when battle actually starts (character selected)
       if (battleStartTimeRef.current === 0) {
         battleStartTimeRef.current = Date.now();
+        console.log('[TugOfWar] Battle started, waiting for user to tap mic button');
       }
-      // Small delay to ensure state is ready
-      const timeout = setTimeout(() => {
-        startRecognition();
-      }, 100);
-      return () => clearTimeout(timeout);
     }
     
     return () => {
-      speechManager.stop('reader');
+      speechManager.stop('tug_of_war');
       if (echoRetryTimeoutRef.current) {
         clearTimeout(echoRetryTimeoutRef.current);
       }
     };
-  }, [selectedCharacter, gameOver, isPaused, startRecognition]);
+  }, [selectedCharacter, gameOver]);
 
-  // Handle pause/resume for speech - separate effect for clean restart
+  // Handle pause for speech - ONLY stop, don't auto-restart (user must tap button)
   useEffect(() => {
-    if (!selectedCharacter || gameOver) return;
-    
     if (isPaused) {
       stopRecognition();
-    } else {
-      // Restart recognition after unpause with small delay
-      const timeout = setTimeout(() => {
-        startRecognition();
-      }, 150);
-      return () => clearTimeout(timeout);
     }
-  }, [isPaused, selectedCharacter, gameOver, startRecognition, stopRecognition]);
+  }, [isPaused, stopRecognition]);
 
   // TTS to hear the word pronunciation
   const pronounceWord = useCallback(() => {
