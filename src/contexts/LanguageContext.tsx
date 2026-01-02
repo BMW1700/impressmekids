@@ -218,7 +218,7 @@ const translations: Record<Language, Translations> = {
     'teacherDashboard.stats.enrolledLabel': 'Enrolled',
     'teacherDashboard.stats.mlPowered': 'ML-Powered',
 
-    'teacherDashboard.tabs.classrooms': 'Classrooms & Clubs',
+    'teacherDashboard.tabs.classrooms': 'Courses & Clubs',
     'teacherDashboard.tabs.leaderboard': 'Leaderboard',
     'teacherDashboard.tabs.calendar': 'Calendar',
     'teacherDashboard.tabs.directory': 'Directory',
