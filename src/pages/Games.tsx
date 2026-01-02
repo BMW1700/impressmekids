@@ -3,7 +3,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { GameTile } from "@/components/GameTile";
 import { Button } from "@/components/ui/button";
-import { Zap, Trophy, BookOpen, Brain, Calculator, Globe, Hash, PawPrint, Map, Home } from "lucide-react";
+import { Zap, Trophy, BookOpen, Brain, Calculator, Globe, Hash, PawPrint, Map, Home, Swords } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -92,6 +92,13 @@ const Games = () => {
               gradeRange="Grades 2-8"
               path="/games/us-states-quiz"
               icon={<Map className="h-6 w-6 text-white" />}
+            />
+            <GameTile
+              title="Reading Tug of War"
+              description="Battle goblins by reading words aloud! Pull the rope to your side to win this speech-powered showdown."
+              gradeRange="Grades K-5"
+              path="/games/tug-of-war"
+              icon={<Swords className="h-6 w-6 text-white" />}
             />
             <GameTile
               title="Math Race"
