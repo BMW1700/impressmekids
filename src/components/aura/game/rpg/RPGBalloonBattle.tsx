@@ -5,11 +5,15 @@ import { Button } from "@/components/ui/button";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { ensureMicrophoneAccess } from "@/lib/micDiagnostics";
 import { MicTroubleshooterModal } from "@/components/mic/MicTroubleshooterModal";
+import { supabase } from "@/integrations/supabase/client";
+import { useMLIntegration } from "@/hooks/useMLIntegration";
 
 interface RPGBalloonBattleProps {
   words: string[];
   heroName?: string;
   enemyName?: string;
+  studentId?: string;
+  storyTitle?: string;
   onComplete: (victory: boolean, stats: { wordsRead: number; correctWords: number; balloonsLost: number }) => void;
   onWordResult?: (word: string, correct: boolean) => void;
 }
@@ -45,9 +49,14 @@ export const RPGBalloonBattle = ({
   words,
   heroName = "Hero",
   enemyName = "Enemy",
+  studentId,
+  storyTitle,
   onComplete,
   onWordResult,
 }: RPGBalloonBattleProps) => {
+  // ML Integration for saving training data
+  const { saveToAuraRecords } = useMLIntegration();
+  const battleStartTime = useRef(Date.now());
   // Hero has 5 balloons with 1 HP each
   const [heroBalloons, setHeroBalloons] = useState<Balloon[]>(
     HERO_BALLOON_COLORS.map((color, i) => ({
@@ -126,6 +135,55 @@ export const RPGBalloonBattle = ({
     };
   }, []);
 
+  // Save reading data on game end
+  const saveReadingData = useCallback(async (isVictory: boolean, finalWordsRead: number, finalCorrectWords: number) => {
+    if (!studentId || finalWordsRead === 0) return;
+    
+    const durationSeconds = Math.max(1, (Date.now() - battleStartTime.current) / 1000);
+    const wpm = Math.round((finalWordsRead / durationSeconds) * 60);
+    const accuracyPercent = finalWordsRead > 0 ? Math.round((finalCorrectWords / finalWordsRead) * 100) : 0;
+    const wcpm = Math.round(finalCorrectWords / (durationSeconds / 60));
+    
+    try {
+      // Save to reading_sessions for teacher visibility
+      const { error } = await supabase.from('reading_sessions').insert({
+        student_id: studentId,
+        passage_text: words.slice(0, 50).join(' '),
+        words_read: finalWordsRead,
+        duration_seconds: Math.round(durationSeconds),
+        wpm: wpm,
+        accuracy_percent: accuracyPercent,
+        fluency_score: Math.min(100, Math.round(accuracyPercent * 0.7 + Math.min(wpm, 150) * 0.3)),
+        wcpm: wcpm,
+        fluency_level: accuracyPercent >= 95 ? 'independent' : accuracyPercent >= 90 ? 'instructional' : 'frustration',
+        reading_mode: 'balloon_battle',
+      });
+      
+      if (error) {
+        console.error('[BalloonBattle] Failed to save reading session:', error);
+      } else {
+        console.log('[BalloonBattle] Reading session saved');
+      }
+      
+      // Save to aura_records for ML training
+      await saveToAuraRecords({
+        studentId,
+        sessionId: `balloon_battle_${Date.now()}`,
+        wpm,
+        wcpm,
+        accuracy: accuracyPercent,
+        wordsRead: finalWordsRead,
+        durationSeconds: Math.round(durationSeconds),
+        pauseCount: 0,
+        phonemeScores: {},
+        includeSpeakingData: true,
+      });
+      console.log('[BalloonBattle] ML training data saved to aura_records');
+    } catch (err) {
+      console.error('[BalloonBattle] Error saving reading data:', err);
+    }
+  }, [studentId, words, saveToAuraRecords]);
+
   // Check for win/lose conditions
   useEffect(() => {
     if (gameOver) return;
@@ -138,6 +196,8 @@ export const RPGBalloonBattle = ({
       setVictory(true);
       soundEffects.celebrationSound();
       stopMic();
+      // Save data before calling onComplete
+      saveReadingData(true, wordsRead, correctWords);
       setTimeout(() => {
         onComplete(true, { wordsRead, correctWords, balloonsLost });
       }, 2000);
@@ -146,11 +206,13 @@ export const RPGBalloonBattle = ({
       setVictory(false);
       soundEffects.rockCrumble();
       stopMic();
+      // Save data before calling onComplete
+      saveReadingData(false, wordsRead, correctWords);
       setTimeout(() => {
         onComplete(false, { wordsRead, correctWords, balloonsLost });
       }, 2000);
     }
-  }, [heroBalloons, enemyBalloons, gameOver, wordsRead, correctWords, balloonsLost, onComplete]);
+  }, [heroBalloons, enemyBalloons, gameOver, wordsRead, correctWords, balloonsLost, onComplete, saveReadingData]);
 
   const showFloatingReward = useCallback((gold: number, xp: number, isEnemy: boolean, balloonId: number) => {
     const id = rewardIdRef.current++;
