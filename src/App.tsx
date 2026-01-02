@@ -155,6 +155,7 @@ const App = () => (
                     <Route path="/teacher/student/:studentId" element={<StudentProfile />} />
                     <Route path="/teacher/reading-calibration" element={<ReadingAnalyticsCalibration />} />
                     <Route path="/teacher/story-library" element={<StoryManagement />} />
+                    <Route path="/teacher/clubs/:clubId" element={<ClubDetail />} />
                     <Route path="/teacher/review-submission/:submissionId" element={<ReviewSubmission />} />
                     <Route path="/teacher/assignment/review/:submissionId" element={<ReviewMultiQuestionSubmission />} />
 
