@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useClubDetail,
   useClubMembers,
@@ -48,6 +49,29 @@ const ClubDetail = () => {
     isDenying,
   } = useClubJoinRequests(clubId);
   const updateClub = useUpdateClub();
+  const queryClient = useQueryClient();
+
+  // Fetch announcements
+  const { data: announcements, isLoading: announcementsLoading } = useQuery({
+    queryKey: ["club-announcements", clubId],
+    queryFn: async () => {
+      if (!clubId) return [];
+
+      const { data, error } = await supabase
+        .from("club_posts")
+        .select(`
+          *,
+          profiles:created_by (full_name)
+        `)
+        .eq("club_id", clubId)
+        .eq("post_type", "announcement")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!clubId,
+  });
 
   // Settings form state
   const [name, setName] = useState("");
@@ -135,6 +159,7 @@ const ClubDetail = () => {
 
       setAnnouncementTitle("");
       setAnnouncementContent("");
+      queryClient.invalidateQueries({ queryKey: ["club-announcements", clubId] });
     } catch (error: any) {
       toast({
         title: "Error",
@@ -348,6 +373,46 @@ const ClubDetail = () => {
                     )}
                     Post Announcement
                   </Button>
+                </CardContent>
+              </Card>
+
+              {/* Posted Announcements */}
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle>Posted Announcements</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {announcementsLoading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  ) : announcements && announcements.length > 0 ? (
+                    <div className="space-y-4">
+                      {announcements.map((announcement: any) => (
+                        <div
+                          key={announcement.id}
+                          className="p-4 bg-muted/50 rounded-lg"
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <h4 className="font-semibold">{announcement.title}</h4>
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(announcement.created_at), "MMM d, yyyy 'at' h:mm a")}
+                            </span>
+                          </div>
+                          {announcement.content && (
+                            <p className="text-sm text-muted-foreground">
+                              {announcement.content}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No announcements posted yet</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
