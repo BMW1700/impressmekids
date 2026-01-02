@@ -40,6 +40,8 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
   const [editingCharacter, setEditingCharacter] = useState<'ella' | 'grog' | null>(null);
   const [avatarUrlInput, setAvatarUrlInput] = useState('');
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [ellaAvatarError, setEllaAvatarError] = useState(false);
+  const [grogAvatarError, setGrogAvatarError] = useState(false);
   const ellaFileInputRef = useRef<HTMLInputElement>(null);
   const grogFileInputRef = useRef<HTMLInputElement>(null);
   
@@ -299,15 +301,12 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
                   <div className="text-center space-y-3">
                     <div className="relative w-24 h-24 mx-auto group">
                       <div className="w-full h-full rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-5xl shadow-lg overflow-hidden">
-                        {assets.ellaAvatarUrl ? (
+                        {assets.ellaAvatarUrl && !ellaAvatarError ? (
                           <img
                             src={assets.ellaAvatarUrl}
                             alt="Princess Ella"
                             className="w-full h-full object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display = 'none';
-                              (e.target as HTMLImageElement).parentElement!.innerHTML = '👸';
-                            }}
+                            onError={() => setEllaAvatarError(true)}
                           />
                         ) : (
                           '👸'
@@ -375,15 +374,12 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
                         transition={{ repeat: Infinity, duration: 2 }}
                         className="w-full h-full rounded-full bg-gradient-to-br from-green-600 to-emerald-800 flex items-center justify-center text-5xl shadow-lg overflow-hidden"
                       >
-                        {assets.grogAvatarUrl ? (
+                        {assets.grogAvatarUrl && !grogAvatarError ? (
                           <img
                             src={assets.grogAvatarUrl}
                             alt="Grog the Goblin King"
                             className="w-full h-full object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display = 'none';
-                              (e.target as HTMLImageElement).parentElement!.innerHTML = '👹';
-                            }}
+                            onError={() => setGrogAvatarError(true)}
                           />
                         ) : (
                           '👹'
