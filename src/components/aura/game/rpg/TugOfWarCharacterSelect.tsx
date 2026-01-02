@@ -1,47 +1,14 @@
-import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { SirValor } from '../characters/SirValor';
 import { Elara } from '../characters/Elara';
-import { Shield, Sparkles, Mic, Loader2 } from 'lucide-react';
-import { requestMicrophonePermission } from '@/lib/speechRecognitionManager';
-import { useToast } from '@/hooks/use-toast';
+import { Shield, Sparkles } from 'lucide-react';
 
 interface TugOfWarCharacterSelectProps {
   onSelect: (character: 'valor' | 'elara') => void;
 }
 
 export const TugOfWarCharacterSelect = ({ onSelect }: TugOfWarCharacterSelectProps) => {
-  const [isRequestingMic, setIsRequestingMic] = useState(false);
-  const { toast } = useToast();
-
-  const handleSelect = async (character: 'valor' | 'elara') => {
-    setIsRequestingMic(true);
-    
-    try {
-      const granted = await requestMicrophonePermission();
-      
-      if (granted) {
-        onSelect(character);
-      } else {
-        toast({
-          title: 'Microphone Required',
-          description: 'Please allow microphone access to play this reading game.',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error('Error requesting mic permission:', error);
-      toast({
-        title: 'Microphone Error',
-        description: 'Could not access microphone. Please check your browser settings.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsRequestingMic(false);
-    }
-  };
-
   return (
     <motion.div
       className="fixed inset-0 z-50 bg-gradient-to-b from-sky-400 via-sky-300 to-green-400 flex flex-col items-center justify-center p-4"
@@ -60,20 +27,6 @@ export const TugOfWarCharacterSelect = ({ onSelect }: TugOfWarCharacterSelectPro
         <p className="text-white/90 text-lg drop-shadow">Choose your team leader!</p>
       </motion.div>
 
-      {isRequestingMic && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="absolute inset-0 bg-black/50 backdrop-blur-sm z-60 flex flex-col items-center justify-center"
-        >
-          <Loader2 className="h-12 w-12 text-white animate-spin mb-4" />
-          <div className="flex items-center gap-2 text-white text-lg">
-            <Mic className="h-6 w-6" />
-            <span>Requesting microphone access...</span>
-          </div>
-        </motion.div>
-      )}
-
       <div className="flex gap-8 items-center">
         {/* Sir Valor Option */}
         <motion.div
@@ -84,7 +37,7 @@ export const TugOfWarCharacterSelect = ({ onSelect }: TugOfWarCharacterSelectPro
           whileHover={{ scale: 1.05 }}
         >
           <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 border-4 border-transparent hover:border-blue-400 transition-all cursor-pointer"
-               onClick={() => handleSelect('valor')}>
+               onClick={() => onSelect('valor')}>
             <SirValor state="idle" healthPercent={100} size="medium" />
             
             <div className="mt-4 text-center">
@@ -97,8 +50,7 @@ export const TugOfWarCharacterSelect = ({ onSelect }: TugOfWarCharacterSelectPro
           </div>
           
           <Button
-            onClick={() => handleSelect('valor')}
-            disabled={isRequestingMic}
+            onClick={() => onSelect('valor')}
             className="mt-4 bg-blue-600 hover:bg-blue-500 text-white font-bold px-8"
           >
             Choose Valor
@@ -124,7 +76,7 @@ export const TugOfWarCharacterSelect = ({ onSelect }: TugOfWarCharacterSelectPro
           whileHover={{ scale: 1.05 }}
         >
           <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 border-4 border-transparent hover:border-purple-400 transition-all cursor-pointer"
-               onClick={() => handleSelect('elara')}>
+               onClick={() => onSelect('elara')}>
             <Elara state="idle" healthPercent={100} size="medium" />
             
             <div className="mt-4 text-center">
@@ -137,8 +89,7 @@ export const TugOfWarCharacterSelect = ({ onSelect }: TugOfWarCharacterSelectPro
           </div>
           
           <Button
-            onClick={() => handleSelect('elara')}
-            disabled={isRequestingMic}
+            onClick={() => onSelect('elara')}
             className="mt-4 bg-purple-600 hover:bg-purple-500 text-white font-bold px-8"
           >
             Choose Elara

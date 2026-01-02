@@ -6,24 +6,6 @@
 
 type RecognitionOwner = 'reader' | 'shield' | 'spell_combo' | 'rhyme_chain' | 'speed_typist' | 'dodge_words' | null;
 
-/**
- * Request microphone permission. Call this before starting speech recognition.
- * Returns true if permission is granted, false otherwise.
- */
-export const requestMicrophonePermission = async (): Promise<boolean> => {
-  try {
-    console.log('[SpeechManager] Requesting microphone permission...');
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    // Stop all tracks immediately - we just needed to trigger the permission
-    stream.getTracks().forEach(track => track.stop());
-    console.log('[SpeechManager] Microphone permission granted');
-    return true;
-  } catch (error) {
-    console.error('[SpeechManager] Microphone permission denied:', error);
-    return false;
-  }
-};
-
 interface RecognitionConfig {
   owner: RecognitionOwner;
   continuous?: boolean;

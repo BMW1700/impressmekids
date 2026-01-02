@@ -12,7 +12,6 @@ import { Elara } from "../characters/Elara";
 import { GoblinGuard } from "../characters/GoblinGuard";
 import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { speechManager } from "@/lib/speechRecognitionManager";
-import { supabase } from "@/integrations/supabase/client";
 
 const soundEffects = new SoundEffects();
 
@@ -20,8 +19,6 @@ interface RPGTugOfWarProps {
   words: string[];
   heroName?: string;
   enemyName?: string;
-  studentId?: string;
-  storyTitle?: string;
   onComplete: (victory: boolean, stats: { wordsRead: number; correctWords: number; incorrectWords: number }) => void;
   onWordResult?: (word: string, correct: boolean) => void;
 }
@@ -48,8 +45,6 @@ export const RPGTugOfWar = ({
   words,
   heroName = "Hero",
   enemyName = "Goblins",
-  studentId,
-  storyTitle,
   onComplete,
   onWordResult,
 }: RPGTugOfWarProps) => {
@@ -86,9 +81,6 @@ export const RPGTugOfWar = ({
   const [isListening, setIsListening] = useState(false);
   const currentWordRef = useRef("");
   const processedWordsRef = useRef<Set<number>>(new Set());
-  
-  // Session tracking for data saving
-  const battleStartTimeRef = useRef<number>(0);
   const echoRetryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Current word
@@ -102,39 +94,6 @@ export const RPGTugOfWar = ({
   // Calculate the rope offset - moves the ENTIRE rig
   const ropeOffsetPercent = (ropePosition / WIN_THRESHOLD) * 15; // -15% to +15%
 
-  // Save reading session to database
-  const saveReadingSession = useCallback(async (isVictory: boolean) => {
-    if (!studentId || wordsRead === 0) return;
-    
-    const durationSeconds = Math.max(1, (Date.now() - battleStartTimeRef.current) / 1000);
-    const wpm = Math.round((wordsRead / durationSeconds) * 60);
-    const wcpm = Math.round((correctWords / durationSeconds) * 60);
-    const accuracyPercent = Math.round((correctWords / wordsRead) * 100);
-    
-    try {
-      const { error } = await supabase.from('reading_sessions').insert({
-        student_id: studentId,
-        passage_text: words.slice(0, 50).join(' '),
-        words_read: wordsRead,
-        duration_seconds: Math.round(durationSeconds),
-        wpm,
-        wcpm,
-        accuracy_percent: accuracyPercent,
-        fluency_score: Math.min(100, Math.round(accuracyPercent * 0.7 + Math.min(wpm, 150) * 0.3)),
-        fluency_level: accuracyPercent >= 95 ? 'independent' : accuracyPercent >= 90 ? 'instructional' : 'frustration',
-        reading_mode: 'tug_of_war',
-      });
-      
-      if (error) {
-        console.error('[TugOfWar] Failed to save reading session:', error);
-      } else {
-        console.log('[TugOfWar] Reading session saved successfully');
-      }
-    } catch (err) {
-      console.error('[TugOfWar] Error saving session:', err);
-    }
-  }, [studentId, wordsRead, correctWords, words]);
-
   // Check for win/lose conditions
   useEffect(() => {
     if (gameOver || gameCompletedRef.current) return;
@@ -144,7 +103,6 @@ export const RPGTugOfWar = ({
       setGameOver(true);
       setVictory(true);
       soundEffects.celebrationSound();
-      saveReadingSession(true);
       setTimeout(() => {
         onComplete(true, { wordsRead, correctWords, incorrectWords });
       }, 2000);
@@ -153,12 +111,11 @@ export const RPGTugOfWar = ({
       setGameOver(true);
       setVictory(false);
       soundEffects.rockCrumble();
-      saveReadingSession(false);
       setTimeout(() => {
         onComplete(false, { wordsRead, correctWords, incorrectWords });
       }, 2000);
     }
-  }, [ropePosition, gameOver, wordsRead, correctWords, incorrectWords, onComplete, saveReadingSession]);
+  }, [ropePosition, gameOver, wordsRead, correctWords, incorrectWords, onComplete]);
 
   const showFloatingReward = useCallback((gold: number, xp: number) => {
     const id = rewardIdRef.current++;
@@ -310,19 +267,13 @@ export const RPGTugOfWar = ({
     }
   }, [gameOver, isPaused, currentWordIndex, processWordResult]);
 
-  // Store speech result handler in ref to avoid stale closures
-  const handleSpeechResultRef = useRef(handleSpeechResult);
-  useEffect(() => {
-    handleSpeechResultRef.current = handleSpeechResult;
-  }, [handleSpeechResult]);
-
-  // Start continuous speech recognition - uses ref to avoid stale closures
+  // Start continuous speech recognition
   const startRecognition = useCallback(() => {
     const success = speechManager.start({
       owner: 'reader',
       continuous: true,
       interimResults: true,
-      onResult: (transcript, alts, isFinal) => handleSpeechResultRef.current(transcript, alts, isFinal),
+      onResult: handleSpeechResult,
       onStart: () => setIsListening(true),
       onEnd: () => setIsListening(false),
       onError: (error) => {
@@ -330,7 +281,7 @@ export const RPGTugOfWar = ({
       }
     });
     return success;
-  }, []);
+  }, [handleSpeechResult]);
 
   // Stop speech recognition
   const stopRecognition = useCallback(() => {
@@ -338,18 +289,10 @@ export const RPGTugOfWar = ({
     setIsListening(false);
   }, []);
 
-  // Auto-start mic when character is selected and track start time
+  // Auto-start mic when character is selected
   useEffect(() => {
     if (selectedCharacter && !gameOver && !isPaused) {
-      // Track when battle actually starts (character selected)
-      if (battleStartTimeRef.current === 0) {
-        battleStartTimeRef.current = Date.now();
-      }
-      // Small delay to ensure state is ready
-      const timeout = setTimeout(() => {
-        startRecognition();
-      }, 100);
-      return () => clearTimeout(timeout);
+      startRecognition();
     }
     
     return () => {
@@ -358,20 +301,14 @@ export const RPGTugOfWar = ({
         clearTimeout(echoRetryTimeoutRef.current);
       }
     };
-  }, [selectedCharacter, gameOver, isPaused, startRecognition]);
+  }, [selectedCharacter, gameOver]);
 
-  // Handle pause/resume for speech - separate effect for clean restart
+  // Handle pause/resume for speech
   useEffect(() => {
-    if (!selectedCharacter || gameOver) return;
-    
     if (isPaused) {
       stopRecognition();
-    } else {
-      // Restart recognition after unpause with small delay
-      const timeout = setTimeout(() => {
-        startRecognition();
-      }, 150);
-      return () => clearTimeout(timeout);
+    } else if (selectedCharacter && !gameOver) {
+      startRecognition();
     }
   }, [isPaused, selectedCharacter, gameOver, startRecognition, stopRecognition]);
 
@@ -415,7 +352,7 @@ export const RPGTugOfWar = ({
       {/* Header */}
       <div className="relative z-10 p-4 text-center">
         <h2 className="text-3xl font-black text-white drop-shadow-lg" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
-          TUG OF WAR
+          ⚔️ TUG OF WAR ⚔️
         </h2>
         <p className="text-white/90 text-sm drop-shadow">Read words to pull the rope!</p>
       </div>
@@ -584,29 +521,16 @@ export const RPGTugOfWar = ({
                   {currentWord}
                 </motion.div>
                 
-                <div className="flex items-center justify-center gap-2">
-                  {isListening ? (
-                    <>
-                      <motion.div
-                        animate={{ scale: [1, 1.2, 1] }}
-                        transition={{ duration: 0.8, repeat: Infinity }}
-                      >
-                        <Mic className="h-5 w-5 text-green-400" />
-                      </motion.div>
-                      <span className="text-sm font-medium text-green-400">
-                        Listening... Say the word!
-                      </span>
-                    </>
-                  ) : (
-                    <Button
-                      size="sm"
-                      onClick={() => startRecognition()}
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      <Mic className="h-4 w-4 mr-2" />
-                      Tap to Start Mic
-                    </Button>
-                  )}
+                <div className="flex items-center justify-center gap-2 text-green-400">
+                  <motion.div
+                    animate={isListening ? { scale: [1, 1.2, 1] } : {}}
+                    transition={{ duration: 0.8, repeat: Infinity }}
+                  >
+                    <Mic className={`h-5 w-5 ${isListening ? 'text-green-400' : 'text-gray-400'}`} />
+                  </motion.div>
+                  <span className="text-sm font-medium">
+                    {isListening ? 'Listening... Say the word!' : 'Mic paused'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -631,11 +555,10 @@ export const RPGTugOfWar = ({
           >
             <div className="flex items-end">
               <div className="origin-bottom -mr-4">
-              <GoblinGuard 
+                <GoblinGuard 
                   state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
                   healthPercent={100}
                   size="medium"
-                  showHealthBar={false}
                 />
               </div>
               <div className="origin-bottom -mr-2">
@@ -643,7 +566,6 @@ export const RPGTugOfWar = ({
                   state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
                   healthPercent={100}
                   size="large"
-                  showHealthBar={false}
                 />
               </div>
               <div className="origin-bottom">
@@ -651,7 +573,6 @@ export const RPGTugOfWar = ({
                   state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
                   healthPercent={100}
                   size="large"
-                  showHealthBar={false}
                 />
               </div>
             </div>
@@ -692,7 +613,6 @@ export const RPGTugOfWar = ({
                   healthPercent={100}
                   size="large"
                   flipX
-                  showHealthBar={false}
                 />
               </div>
               {[0, 1, 2].map(i => (

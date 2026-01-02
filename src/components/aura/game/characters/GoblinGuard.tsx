@@ -11,7 +11,6 @@ interface GoblinGuardProps {
   showDamage?: number;
   size?: 'small' | 'medium' | 'large';
   flipX?: boolean;
-  showHealthBar?: boolean;
 }
 
 const sizeConfig = {
@@ -28,7 +27,6 @@ export const GoblinGuard = ({
   showDamage,
   size = 'medium',
   flipX = false,
-  showHealthBar = true,
 }: GoblinGuardProps) => {
   const [eyeBlink, setEyeBlink] = useState(false);
   const [leftEarTwitch, setLeftEarTwitch] = useState(0);
@@ -361,32 +359,30 @@ export const GoblinGuard = ({
         )}
       </svg>
 
-      {/* Health bar - conditionally rendered */}
-      {showHealthBar && (
-        <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-full max-w-[90px]">
-          {currentHp !== undefined && maxHp !== undefined && (
-            <div className="text-center text-xs font-bold text-white mb-0.5" 
-                 style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>
-              {currentHp}/{maxHp}
-            </div>
-          )}
-          <div className="h-2.5 bg-black/60 rounded-full overflow-hidden border border-black/40">
-            <motion.div
-              className="h-full rounded-full"
-              style={{
-                background: healthPercent > 50 
-                  ? 'linear-gradient(90deg, #22c55e, #4ade80)' 
-                  : healthPercent > 25 
-                    ? 'linear-gradient(90deg, #eab308, #facc15)'
-                    : 'linear-gradient(90deg, #dc2626, #ef4444)',
-              }}
-              initial={{ width: '100%' }}
-              animate={{ width: `${healthPercent}%` }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-            />
+      {/* Health bar */}
+      <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-full max-w-[90px]">
+        {currentHp !== undefined && maxHp !== undefined && (
+          <div className="text-center text-xs font-bold text-white mb-0.5" 
+               style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>
+            {currentHp}/{maxHp}
           </div>
+        )}
+        <div className="h-2.5 bg-black/60 rounded-full overflow-hidden border border-black/40">
+          <motion.div
+            className="h-full rounded-full"
+            style={{
+              background: healthPercent > 50 
+                ? 'linear-gradient(90deg, #22c55e, #4ade80)' 
+                : healthPercent > 25 
+                  ? 'linear-gradient(90deg, #eab308, #facc15)'
+                  : 'linear-gradient(90deg, #dc2626, #ef4444)',
+            }}
+            initial={{ width: '100%' }}
+            animate={{ width: `${healthPercent}%` }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+          />
         </div>
-      )}
+      </div>
 
       {/* Defeat smoke particles */}
       {state === 'defeated' && (
