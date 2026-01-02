@@ -1,10 +1,12 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, MicOff, Volume2, Check, X, Pause, Play, RotateCcw } from "lucide-react";
+import { Mic, MicOff, Volume2, Check, X, Pause, Play, RotateCcw, AlertCircle, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { playCorrectPronunciation, SoundEffects } from "@/lib/pronunciationPlayer";
 import { unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
+import { ensureMicrophoneAccess } from "@/lib/micDiagnostics";
+import { MicTroubleshooterModal } from "@/components/mic/MicTroubleshooterModal";
 
 interface RPGWordReaderProps {
   words: string[];
@@ -33,6 +35,8 @@ export const RPGWordReader = ({
   const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
   const [spokenText, setSpokenText] = useState<string>("");
   const [completedWords, setCompletedWords] = useState<Set<number>>(new Set());
+  const [micError, setMicError] = useState<string | null>(null);
+  const [showTroubleshooter, setShowTroubleshooter] = useState(false);
   
   // Echo retry state
   const [echoCountdown, setEchoCountdown] = useState(0);
@@ -341,13 +345,26 @@ export const RPGWordReader = ({
   }, [getTargetWord, enableEchoRetry, handleCorrect, handleIncorrectFinal, startEchoRetry]);
 
   // Create and start the recognition session (ONE instance, kept alive)
-  const startRecognitionSession = useCallback(() => {
+  // FIXED: Now requires mic access before starting
+  const startRecognitionSession = useCallback(async () => {
     if (disabled) return;
     if (isRecognitionRunningRef.current) return;
     
+    setMicError(null);
+    
+    // STEP 1: Ensure mic access first
+    const micResult = await ensureMicrophoneAccess(false);
+    if (!micResult.success) {
+      console.error('[RPGWordReader] Mic access failed:', micResult.error);
+      setMicError(micResult.error?.userMessage || 'Microphone access failed');
+      setRecognitionState('idle');
+      return;
+    }
+    
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
     if (!SpeechRecognition) {
-      console.error('Speech recognition not supported');
+      console.error('[RPGWordReader] Speech recognition not supported');
+      setMicError('Speech recognition not supported in this browser');
       return;
     }
     
@@ -412,6 +429,14 @@ export const RPGWordReader = ({
       
       if (event.error === 'aborted') {
         isRecognitionRunningRef.current = false;
+        return;
+      }
+      
+      // Handle permission errors
+      if (event.error === 'not-allowed') {
+        setMicError('Microphone access was denied.');
+        isRecognitionRunningRef.current = false;
+        setRecognitionState('idle');
         return;
       }
       
@@ -726,6 +751,33 @@ export const RPGWordReader = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Mic Error Display */}
+      {micError && (
+        <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-2 bg-red-500/20 text-red-300 px-4 py-2 rounded-lg text-sm">
+            <AlertCircle className="h-4 w-4" />
+            <span>{micError}</span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowTroubleshooter(true)}
+            className="text-red-300 border-red-400/50"
+          >
+            <HelpCircle className="h-4 w-4 mr-1" />
+            Fix
+          </Button>
+        </div>
+      )}
+
+      {/* Mic Troubleshooter Modal */}
+      <MicTroubleshooterModal
+        open={showTroubleshooter}
+        onOpenChange={setShowTroubleshooter}
+        lastError={micError || undefined}
+        onRetry={startReading}
+      />
     </div>
   );
 };
