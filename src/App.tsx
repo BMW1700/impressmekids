@@ -46,6 +46,7 @@ const TournamentControl = lazy(() => import("./pages/teacher/TournamentControl")
 const AuraAnalytics = lazy(() => import("./pages/teacher/AuraAnalytics"));
 const ReadingAssignment = lazy(() => import("./pages/student/ReadingAssignment"));
 const CompleteAssignment = lazy(() => import("./pages/student/CompleteAssignment"));
+const StudentClubDetail = lazy(() => import("./pages/student/StudentClubDetail"));
 const ReviewSubmission = lazy(() => import("./pages/teacher/ReviewSubmission"));
 const ReviewMultiQuestionSubmission = lazy(() => import("./pages/teacher/ReviewMultiQuestionSubmission"));
 const ReviewMySubmission = lazy(() => import("./pages/student/ReviewMySubmission"));
@@ -165,7 +166,7 @@ const App = () => (
                     <Route path="/student/review-submission/:submissionId" element={<ReviewMySubmission />} />
                     <Route path="/student/review-annotations/:submissionId" element={<ReviewMyAnnotations />} />
                     <Route path="/student/browse-clubs" element={<BrowseClubs />} />
-                    <Route path="/student/browse-clubs" element={<BrowseClubs />} />
+                    <Route path="/student/clubs/:clubId" element={<StudentClubDetail />} />
 
                     <Route path="/calendar" element={<Calendar />} />
                     <Route path="/classrooms/:id" element={<ClassroomDetail />} />

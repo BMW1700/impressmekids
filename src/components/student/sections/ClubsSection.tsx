@@ -57,9 +57,14 @@ export const ClubsSection = ({ studentId }: ClubsSectionProps) => {
               <CardContent className="space-y-4">
                 {club.description && <p className="text-sm text-muted-foreground">{club.description}</p>}
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="flex-1">
-                    <Bell className="h-4 w-4 mr-2" />
-                    {t("student.clubs.viewPosts")}
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => navigate(`/student/clubs/${club.id}`)}
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    View Club
                   </Button>
                   {(club.userRole === "owner" || club.userRole === "moderator") && (
                     <Button
