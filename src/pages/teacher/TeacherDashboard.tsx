@@ -4,8 +4,6 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ClassroomCard } from "@/components/ClassroomCard";
 import { CreateClassroomModal } from "@/components/CreateClassroomModal";
-import { CreateClubModal } from "@/components/CreateClubModal";
-import { ClubCard } from "@/components/ClubCard";
 import { MLModelTraining } from "@/components/teacher/MLModelTraining";
 import { AllStudentsDialog } from "@/components/teacher/AllStudentsDialog";
 import { CalendarWidget } from "@/components/calendar/CalendarWidget";
@@ -32,7 +30,6 @@ import { Directory } from "@/components/Directory";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTeacherDashboardData, useTeacherAllStudents } from "@/hooks/useTeacherDashboardData";
-import { useTeacherClubs } from "@/hooks/useTeacherClubs";
 
 const TeacherDashboard = () => {
   const { user, profile, isLoading: authLoading, signOut } = useAuth();
@@ -45,14 +42,10 @@ const TeacherDashboard = () => {
   } = useTeacherDashboardData();
   
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showCreateClubModal, setShowCreateClubModal] = useState(false);
   const [showStudentsDialog, setShowStudentsDialog] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useLanguage();
-
-  // Load teacher clubs
-  const { data: teacherClubs = [], refetch: refetchClubs } = useTeacherClubs();
 
   // Lazy load all students only when dialog opens
   const { data: classroomsWithStudents = [], refetch: loadAllStudents } = useTeacherAllStudents(classrooms);
@@ -260,117 +253,58 @@ const TeacherDashboard = () => {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="classrooms" className="mt-6 space-y-8">
-              {/* My Classrooms Section */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold">{t("teacherDashboard.classrooms.title")}</h2>
-                  <Button
-                    className="bg-gradient-primary hover:opacity-90"
-                    onClick={() => setShowCreateModal(true)}
-                  >
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    {t("teacherDashboard.classrooms.create")}
-                  </Button>
-                </div>
-
-                {classrooms.length === 0 ? (
-                  <Card className="p-12 text-center">
-                    <div className="max-w-md mx-auto">
-                      <div className="h-24 w-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center">
-                        <Users className="h-12 w-12 text-white" />
-                      </div>
-                      <h3 className="text-xl font-bold mb-2">
-                        {t("teacherDashboard.classrooms.emptyTitle")}
-                      </h3>
-                      <p className="text-muted-foreground mb-4">
-                        {t("teacherDashboard.classrooms.emptyDescription")}
-                      </p>
-                      <Button
-                        className="bg-gradient-primary hover:opacity-90"
-                        onClick={() => setShowCreateModal(true)}
-                      >
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        {t("teacherDashboard.classrooms.emptyCTA")}
-                      </Button>
-                    </div>
-                  </Card>
-                ) : (
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-                    {classrooms.map((classroom: any) => (
-                      <div
-                        key={classroom.id}
-                        onClick={() => navigate(`/classrooms/${classroom.id}`)}
-                        className="cursor-pointer h-full"
-                      >
-                        <ClassroomCard
-                          id={classroom.id}
-                          name={classroom.name}
-                          joinCode={classroom.join_code}
-                          studentCount={classroom.student_count || 0}
-                          createdAt={classroom.created_at}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
+            <TabsContent value="classrooms" className="mt-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">{t("teacherDashboard.classrooms.title")}</h2>
+                <Button
+                  className="bg-gradient-primary hover:opacity-90"
+                  onClick={() => setShowCreateModal(true)}
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  {t("teacherDashboard.classrooms.create")}
+                </Button>
               </div>
 
-              {/* My Clubs Section */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold">{t("teacherDashboard.clubs.title")}</h2>
-                  <Button
-                    className="bg-gradient-primary hover:opacity-90"
-                    onClick={() => setShowCreateClubModal(true)}
-                  >
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    {t("teacherDashboard.clubs.create")}
-                  </Button>
-                </div>
-
-                {teacherClubs.length === 0 ? (
-                  <Card className="p-12 text-center">
-                    <div className="max-w-md mx-auto">
-                      <div className="h-24 w-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-green-400 to-teal-500 flex items-center justify-center">
-                        <Users className="h-12 w-12 text-white" />
-                      </div>
-                      <h3 className="text-xl font-bold mb-2">
-                        {t("teacherDashboard.clubs.emptyTitle")}
-                      </h3>
-                      <p className="text-muted-foreground mb-4">
-                        {t("teacherDashboard.clubs.emptyDescription")}
-                      </p>
-                      <Button
-                        className="bg-gradient-primary hover:opacity-90"
-                        onClick={() => setShowCreateClubModal(true)}
-                      >
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        {t("teacherDashboard.clubs.emptyCTA")}
-                      </Button>
+              {classrooms.length === 0 ? (
+                <Card className="p-12 text-center">
+                  <div className="max-w-md mx-auto">
+                    <div className="h-24 w-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center">
+                      <Users className="h-12 w-12 text-white" />
                     </div>
-                  </Card>
-                ) : (
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-                    {teacherClubs.map((club: any) => (
-                      <ClubCard
-                        key={club.id}
-                        id={club.id}
-                        name={club.name}
-                        description={club.description}
-                        location={club.location}
-                        memberCount={club.member_count}
-                        pendingRequestCount={club.pending_request_count}
-                        meetingDays={club.meeting_days}
-                        startTime={club.start_time}
-                        endTime={club.end_time}
-                        createdAt={club.created_at}
-                        onClick={() => navigate(`/teacher/clubs/${club.id}`)}
+                    <h3 className="text-xl font-bold mb-2">
+                      {t("teacherDashboard.classrooms.emptyTitle")}
+                    </h3>
+                    <p className="text-muted-foreground mb-4">
+                      {t("teacherDashboard.classrooms.emptyDescription")}
+                    </p>
+                    <Button
+                      className="bg-gradient-primary hover:opacity-90"
+                      onClick={() => setShowCreateModal(true)}
+                    >
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      {t("teacherDashboard.classrooms.emptyCTA")}
+                    </Button>
+                  </div>
+                </Card>
+              ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+                  {classrooms.map((classroom: any) => (
+                    <div
+                      key={classroom.id}
+                      onClick={() => navigate(`/classrooms/${classroom.id}`)}
+                      className="cursor-pointer h-full"
+                    >
+                      <ClassroomCard
+                        id={classroom.id}
+                        name={classroom.name}
+                        joinCode={classroom.join_code}
+                        studentCount={classroom.student_count || 0}
+                        createdAt={classroom.created_at}
                       />
-                    ))}
-                  </div>
-                )}
-              </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="links-resources" className="mt-6">
@@ -504,12 +438,6 @@ const TeacherDashboard = () => {
         open={showCreateModal}
         onOpenChange={setShowCreateModal}
         onSuccess={refetchDashboard}
-      />
-
-      <CreateClubModal
-        open={showCreateClubModal}
-        onOpenChange={setShowCreateClubModal}
-        onSuccess={refetchClubs}
       />
 
       <AllStudentsDialog

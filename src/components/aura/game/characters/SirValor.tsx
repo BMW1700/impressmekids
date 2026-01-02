@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 
-export type KnightState = 'idle' | 'hit' | 'attacking' | 'victory' | 'defeated' | 'blocking' | 'pulling';
+export type KnightState = 'idle' | 'hit' | 'attacking' | 'victory' | 'defeated' | 'blocking';
 
 interface SirValorProps {
   state: KnightState;
@@ -95,20 +95,13 @@ export const SirValor = ({
         return {
           y: [0, 20],
           rotate: [0, -15],
-          opacity: [1, 0.5],
+          opacity: [1, 0],
           transition: { duration: 1 },
         };
       case 'blocking':
         return {
           x: [-5],
           transition: { duration: 0.15 },
-        };
-      case 'pulling':
-        return {
-          x: [0, -8, 0],
-          rotate: [0, -8, 0],
-          scale: [1, 1.05, 1],
-          transition: { duration: 0.4, repeat: Infinity },
         };
       default:
         return {};

@@ -75,10 +75,10 @@ export const StoneGuardian = ({
         };
       case 'defeated':
         return {
-          y: [0, 5, 15],
-          scale: [1, 0.9, 0.8],
-          rotate: [0, -3, 8],
-          opacity: [1, 0.8, 0.5],
+          y: [0, 5, 10],
+          scale: [1, 0.9, 0.7],
+          rotate: [0, -3, 5],
+          opacity: [1, 0.8, 0],
           transition: { duration: 1.2 },
         };
       default:

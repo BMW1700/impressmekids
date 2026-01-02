@@ -335,7 +335,6 @@ export const RPGBeastSwarm = ({
               exit={{ 
                 scale: 1.5,
                 opacity: 0,
-                transition: { duration: 0.15 } // INSTANT disappear on correct word
               }}
               transition={{
                 y: { repeat: Infinity, duration: 0.5 },

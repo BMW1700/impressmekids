@@ -116,7 +116,6 @@ export const playCorrectPronunciation = (word: string, retryCount = 0) => {
  */
 export class SoundEffects {
   private audioContext: AudioContext | null = null;
-  private soundEnabled: boolean = true;
 
   constructor() {
     if (typeof window !== 'undefined' && ('AudioContext' in window || 'webkitAudioContext' in window)) {
@@ -124,24 +123,13 @@ export class SoundEffects {
     }
   }
 
-  setSoundEnabled(enabled: boolean) {
-    this.soundEnabled = enabled;
-  }
+  private playTone(frequency: number, duration: number, volume: number = 0.3) {
+    if (!this.audioContext) return;
 
-  isSoundEnabled(): boolean {
-    return this.soundEnabled;
-  }
-
-  private ensureContext() {
-    if (!this.audioContext) return false;
+    // Resume audio context if suspended (required after user gesture)
     if (this.audioContext.state === 'suspended') {
       this.audioContext.resume();
     }
-    return this.soundEnabled;
-  }
-
-  private playTone(frequency: number, duration: number, volume: number = 0.3) {
-    if (!this.ensureContext() || !this.audioContext) return;
 
     const oscillator = this.audioContext.createOscillator();
     const gainNode = this.audioContext.createGain();
@@ -159,389 +147,26 @@ export class SoundEffects {
     oscillator.stop(this.audioContext.currentTime + duration);
   }
 
-  private playNoise(duration: number, volume: number = 0.2, filterFreq: number = 1000) {
-    if (!this.ensureContext() || !this.audioContext) return;
-
-    const bufferSize = this.audioContext.sampleRate * duration;
-    const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
-    const data = buffer.getChannelData(0);
-    
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * 0.5;
-    }
-
-    const noise = this.audioContext.createBufferSource();
-    noise.buffer = buffer;
-
-    const filter = this.audioContext.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = filterFreq;
-
-    const gainNode = this.audioContext.createGain();
-    gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
-
-    noise.connect(filter);
-    filter.connect(gainNode);
-    gainNode.connect(this.audioContext.destination);
-
-    noise.start();
-    noise.stop(this.audioContext.currentTime + duration);
-  }
-
   correctWord() {
-    this.playTone(800, 0.1, 0.2); // Higher pitch, short, softer
+    this.playTone(800, 0.1); // Higher pitch, short
   }
 
   incorrectWord() {
-    this.playTone(200, 0.15, 0.2); // Lower pitch, slightly longer, softer
+    this.playTone(200, 0.15); // Lower pitch, slightly longer
   }
 
   streakAchieved() {
     // Play ascending notes
-    setTimeout(() => this.playTone(523, 0.1, 0.25), 0);    // C
-    setTimeout(() => this.playTone(659, 0.1, 0.25), 100);  // E
-    setTimeout(() => this.playTone(784, 0.2, 0.25), 200);  // G
+    setTimeout(() => this.playTone(523, 0.1), 0);    // C
+    setTimeout(() => this.playTone(659, 0.1), 100);  // E
+    setTimeout(() => this.playTone(784, 0.2), 200);  // G
   }
 
   celebrationSound() {
     // Play a celebratory chord
-    this.playTone(523, 0.3, 0.2); // C
-    this.playTone(659, 0.3, 0.2); // E
-    this.playTone(784, 0.3, 0.2); // G
-    this.playTone(1047, 0.3, 0.2); // C (octave higher)
-  }
-
-  // === ELEMENTAL SOUND EFFECTS ===
-
-  /**
-   * Fire whoosh - warm filtered noise with pitch glide
-   */
-  fireWhoosh() {
-    if (!this.ensureContext() || !this.audioContext) return;
-
-    // Crackling noise component
-    this.playNoise(0.4, 0.15, 2000);
-    
-    // Rising tone for the "whoosh"
-    const osc = this.audioContext.createOscillator();
-    const gain = this.audioContext.createGain();
-    const filter = this.audioContext.createBiquadFilter();
-    
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(150, this.audioContext.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(400, this.audioContext.currentTime + 0.2);
-    osc.frequency.exponentialRampToValueAtTime(100, this.audioContext.currentTime + 0.4);
-    
-    filter.type = 'lowpass';
-    filter.frequency.value = 800;
-    
-    gain.gain.setValueAtTime(0.15, this.audioContext.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.4);
-    
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.audioContext.destination);
-    
-    osc.start();
-    osc.stop(this.audioContext.currentTime + 0.5);
-  }
-
-  /**
-   * Ice shimmer - crystalline chime with sparkle
-   */
-  iceShimmer() {
-    if (!this.ensureContext() || !this.audioContext) return;
-
-    // High crystalline tones
-    const freqs = [1200, 1500, 1800, 2200];
-    freqs.forEach((freq, i) => {
-      setTimeout(() => {
-        const osc = this.audioContext!.createOscillator();
-        const gain = this.audioContext!.createGain();
-        
-        osc.type = 'sine';
-        osc.frequency.value = freq;
-        
-        gain.gain.setValueAtTime(0.08, this.audioContext!.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext!.currentTime + 0.3);
-        
-        osc.connect(gain);
-        gain.connect(this.audioContext!.destination);
-        
-        osc.start();
-        osc.stop(this.audioContext!.currentTime + 0.35);
-      }, i * 50);
-    });
-
-    // Add subtle shimmer noise
-    setTimeout(() => this.playNoise(0.2, 0.05, 8000), 100);
-  }
-
-  /**
-   * Lightning crack - sharp transient with rumble
-   */
-  lightningCrack() {
-    if (!this.ensureContext() || !this.audioContext) return;
-
-    // Sharp crack (white noise burst)
-    const bufferSize = this.audioContext.sampleRate * 0.05;
-    const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
-    const data = buffer.getChannelData(0);
-    
-    for (let i = 0; i < bufferSize; i++) {
-      // Exponential decay
-      const decay = Math.exp(-i / (bufferSize * 0.1));
-      data[i] = (Math.random() * 2 - 1) * decay;
-    }
-
-    const crack = this.audioContext.createBufferSource();
-    crack.buffer = buffer;
-
-    const highpass = this.audioContext.createBiquadFilter();
-    highpass.type = 'highpass';
-    highpass.frequency.value = 2000;
-
-    const gainNode = this.audioContext.createGain();
-    gainNode.gain.value = 0.25;
-
-    crack.connect(highpass);
-    highpass.connect(gainNode);
-    gainNode.connect(this.audioContext.destination);
-
-    crack.start();
-
-    // Low rumble following the crack
-    setTimeout(() => {
-      this.playTone(60, 0.3, 0.15);
-      this.playTone(80, 0.25, 0.1);
-    }, 30);
-  }
-
-  /**
-   * Rock crumble - low rumble for earth/physical attacks
-   */
-  rockCrumble() {
-    if (!this.ensureContext() || !this.audioContext) return;
-
-    // Multiple low tones for rumbling effect
-    this.playTone(50, 0.3, 0.2);
-    setTimeout(() => this.playTone(70, 0.25, 0.15), 50);
-    setTimeout(() => this.playTone(60, 0.2, 0.1), 100);
-    
-    // Gritty noise
-    this.playNoise(0.35, 0.1, 300);
-  }
-
-  /**
-   * Magic sparkle - general spell cast sound
-   */
-  magicSparkle() {
-    if (!this.ensureContext() || !this.audioContext) return;
-
-    // Ascending sparkle tones
-    const freqs = [600, 800, 1000, 1200];
-    freqs.forEach((freq, i) => {
-      setTimeout(() => {
-        this.playTone(freq, 0.15, 0.1);
-      }, i * 40);
-    });
-  }
-
-  /**
-   * Shield block - solid defensive sound
-   */
-  shieldBlock() {
-    if (!this.ensureContext() || !this.audioContext) return;
-
-    // Deep impact
-    this.playTone(100, 0.2, 0.2);
-    this.playTone(200, 0.15, 0.15);
-    
-    // Metallic ring
-    setTimeout(() => {
-      this.playTone(800, 0.1, 0.08);
-      this.playTone(1200, 0.08, 0.05);
-    }, 30);
-  }
-
-  /**
-   * Combo success - ascending triumphant sound
-   */
-  comboSuccess() {
-    const freqs = [400, 500, 600, 800, 1000];
-    freqs.forEach((freq, i) => {
-      setTimeout(() => this.playTone(freq, 0.15, 0.12), i * 60);
-    });
-  }
-
-  /**
-   * Mini-game start - attention-grabbing sound
-   */
-  miniGameStart() {
-    this.playTone(400, 0.1, 0.15);
-    setTimeout(() => this.playTone(600, 0.1, 0.15), 100);
-    setTimeout(() => this.playTone(800, 0.15, 0.2), 200);
-  }
-
-  // === TUG OF WAR & BALLOON BATTLE SOUNDS ===
-
-  /**
-   * Rope strain - creaking tension sound
-   */
-  ropeStrain() {
-    if (!this.ensureContext() || !this.audioContext) return;
-
-    // Low groaning sound
-    const osc = this.audioContext.createOscillator();
-    const gain = this.audioContext.createGain();
-    
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(80, this.audioContext.currentTime);
-    osc.frequency.linearRampToValueAtTime(120, this.audioContext.currentTime + 0.15);
-    osc.frequency.linearRampToValueAtTime(70, this.audioContext.currentTime + 0.3);
-    
-    gain.gain.setValueAtTime(0.08, this.audioContext.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
-    
-    osc.connect(gain);
-    gain.connect(this.audioContext.destination);
-    
-    osc.start();
-    osc.stop(this.audioContext.currentTime + 0.35);
-  }
-
-  /**
-   * Rope slip - sound when losing ground
-   */
-  ropeSlip() {
-    if (!this.ensureContext() || !this.audioContext) return;
-
-    // Descending whoosh
-    const osc = this.audioContext.createOscillator();
-    const gain = this.audioContext.createGain();
-    
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(400, this.audioContext.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(150, this.audioContext.currentTime + 0.2);
-    
-    gain.gain.setValueAtTime(0.12, this.audioContext.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.2);
-    
-    osc.connect(gain);
-    gain.connect(this.audioContext.destination);
-    
-    osc.start();
-    osc.stop(this.audioContext.currentTime + 0.25);
-    
-    // Add a thud
-    setTimeout(() => this.playTone(60, 0.1, 0.15), 150);
-  }
-
-  /**
-   * Crowd cheer - ascending tones simulating cheers
-   */
-  crowdCheer() {
-    if (!this.ensureContext() || !this.audioContext) return;
-
-    // Multiple ascending tones
-    const freqs = [300, 400, 500, 600];
-    freqs.forEach((freq, i) => {
-      setTimeout(() => {
-        this.playTone(freq, 0.2, 0.08);
-        this.playTone(freq * 1.5, 0.15, 0.05);
-      }, i * 40);
-    });
-
-    // Add some noise for texture
-    this.playNoise(0.4, 0.06, 3000);
-  }
-
-  /**
-   * Balloon pop - satisfying pop sound
-   */
-  balloonPop() {
-    if (!this.ensureContext() || !this.audioContext) return;
-
-    // Sharp attack
-    const bufferSize = this.audioContext.sampleRate * 0.08;
-    const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
-    const data = buffer.getChannelData(0);
-    
-    for (let i = 0; i < bufferSize; i++) {
-      const decay = Math.exp(-i / (bufferSize * 0.05));
-      data[i] = (Math.random() * 2 - 1) * decay;
-    }
-
-    const pop = this.audioContext.createBufferSource();
-    pop.buffer = buffer;
-
-    const bandpass = this.audioContext.createBiquadFilter();
-    bandpass.type = 'bandpass';
-    bandpass.frequency.value = 1500;
-    bandpass.Q.value = 2;
-
-    const gainNode = this.audioContext.createGain();
-    gainNode.gain.value = 0.3;
-
-    pop.connect(bandpass);
-    bandpass.connect(gainNode);
-    gainNode.connect(this.audioContext.destination);
-
-    pop.start();
-
-    // Add a resonant tone
-    this.playTone(800, 0.1, 0.1);
-  }
-
-  /**
-   * Balloon deflate - sad hissing sound
-   */
-  balloonDeflate() {
-    if (!this.ensureContext() || !this.audioContext) return;
-
-    // Descending whistle
-    const osc = this.audioContext.createOscillator();
-    const gain = this.audioContext.createGain();
-    
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(600, this.audioContext.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(200, this.audioContext.currentTime + 0.4);
-    
-    gain.gain.setValueAtTime(0.1, this.audioContext.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.4);
-    
-    osc.connect(gain);
-    gain.connect(this.audioContext.destination);
-    
-    osc.start();
-    osc.stop(this.audioContext.currentTime + 0.45);
-
-    // Add hiss
-    this.playNoise(0.3, 0.08, 6000);
-  }
-
-  /**
-   * Tension build - rising suspense
-   */
-  tensionBuild() {
-    if (!this.ensureContext() || !this.audioContext) return;
-
-    const osc = this.audioContext.createOscillator();
-    const gain = this.audioContext.createGain();
-    
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(200, this.audioContext.currentTime);
-    osc.frequency.linearRampToValueAtTime(400, this.audioContext.currentTime + 0.5);
-    
-    gain.gain.setValueAtTime(0.05, this.audioContext.currentTime);
-    gain.gain.linearRampToValueAtTime(0.12, this.audioContext.currentTime + 0.4);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.5);
-    
-    osc.connect(gain);
-    gain.connect(this.audioContext.destination);
-    
-    osc.start();
-    osc.stop(this.audioContext.currentTime + 0.55);
+    this.playTone(523, 0.3); // C
+    this.playTone(659, 0.3); // E
+    this.playTone(784, 0.3); // G
+    this.playTone(1047, 0.3); // C (octave higher)
   }
 }

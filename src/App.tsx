@@ -37,7 +37,6 @@ const JeopardyGame = lazy(() => import("./pages/games/JeopardyGame"));
 const NumberMaker = lazy(() => import("./pages/games/NumberMaker"));
 const NameThatAnimalGame = lazy(() => import("./pages/games/NameThatAnimalGame"));
 const USStatesMapQuiz = lazy(() => import("./pages/games/USStatesMapQuiz"));
-const TugOfWarGame = lazy(() => import("./pages/games/TugOfWarGame"));
 const JoinClass = lazy(() => import("./pages/JoinClass"));
 const ClassroomDetail = lazy(() => import("./pages/classrooms/ClassroomDetail"));
 const QuestionsLibrary = lazy(() => import("./pages/teacher/QuestionsLibrary"));
@@ -46,7 +45,6 @@ const TournamentControl = lazy(() => import("./pages/teacher/TournamentControl")
 const AuraAnalytics = lazy(() => import("./pages/teacher/AuraAnalytics"));
 const ReadingAssignment = lazy(() => import("./pages/student/ReadingAssignment"));
 const CompleteAssignment = lazy(() => import("./pages/student/CompleteAssignment"));
-const StudentClubDetail = lazy(() => import("./pages/student/StudentClubDetail"));
 const ReviewSubmission = lazy(() => import("./pages/teacher/ReviewSubmission"));
 const ReviewMultiQuestionSubmission = lazy(() => import("./pages/teacher/ReviewMultiQuestionSubmission"));
 const ReviewMySubmission = lazy(() => import("./pages/student/ReviewMySubmission"));
@@ -72,8 +70,6 @@ const ReadingAnalyticsCalibration = lazy(() => import("./components/aura/Reading
 const ConsentVerification = lazy(() => import("./pages/ConsentVerification"));
 const StoryManagement = lazy(() => import("./pages/teacher/StoryManagement"));
 const SecurityPortal = lazy(() => import("./pages/SecurityPortal"));
-const ClubDetail = lazy(() => import("./pages/teacher/ClubDetail"));
-const BrowseClubs = lazy(() => import("./pages/student/BrowseClubs"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -156,7 +152,6 @@ const App = () => (
                     <Route path="/teacher/student/:studentId" element={<StudentProfile />} />
                     <Route path="/teacher/reading-calibration" element={<ReadingAnalyticsCalibration />} />
                     <Route path="/teacher/story-library" element={<StoryManagement />} />
-                    <Route path="/teacher/clubs/:clubId" element={<ClubDetail />} />
                     <Route path="/teacher/review-submission/:submissionId" element={<ReviewSubmission />} />
                     <Route path="/teacher/assignment/review/:submissionId" element={<ReviewMultiQuestionSubmission />} />
 
@@ -165,8 +160,6 @@ const App = () => (
                     <Route path="/student/assignment/:assignmentId" element={<CompleteAssignment />} />
                     <Route path="/student/review-submission/:submissionId" element={<ReviewMySubmission />} />
                     <Route path="/student/review-annotations/:submissionId" element={<ReviewMyAnnotations />} />
-                    <Route path="/student/browse-clubs" element={<BrowseClubs />} />
-                    <Route path="/student/clubs/:clubId" element={<StudentClubDetail />} />
 
                     <Route path="/calendar" element={<Calendar />} />
                     <Route path="/classrooms/:id" element={<ClassroomDetail />} />
@@ -177,7 +170,6 @@ const App = () => (
                     <Route path="/games/number-maker" element={<NumberMaker />} />
                     <Route path="/games/name-that-animal" element={<NameThatAnimalGame />} />
                     <Route path="/games/us-states-quiz" element={<USStatesMapQuiz />} />
-                    <Route path="/games/tug-of-war" element={<TugOfWarGame />} />
 
                     <Route path="/parent/dashboard" element={<ParentDashboard />} />
                     <Route path="/parent/calendar" element={<ParentCalendar />} />

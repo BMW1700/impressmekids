@@ -1,11 +1,9 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Star, Lock, Swords, Flame, Crown, BookOpen } from "lucide-react";
 import { CampaignWorld } from "@/lib/campaignData";
 import { CuratedStory } from "@/data/curatedStories";
-import { RPGBattleModeSelector, BattleMode } from "./RPGBattleModeSelector";
 
 export interface CampaignLevel {
   id: number;
@@ -20,7 +18,7 @@ export interface CampaignLevel {
 interface RPGLevelSelectProps {
   world: CampaignWorld;
   levels: CampaignLevel[];
-  onSelectLevel: (level: CampaignLevel, battleMode: BattleMode) => void;
+  onSelectLevel: (level: CampaignLevel) => void;
   onBack: () => void;
 }
 
@@ -38,39 +36,8 @@ export const RPGLevelSelect = ({
   onSelectLevel,
   onBack,
 }: RPGLevelSelectProps) => {
-  const [pendingLevel, setPendingLevel] = useState<CampaignLevel | null>(null);
-  const [showModeSelector, setShowModeSelector] = useState(false);
-
-  const handleLevelClick = (level: CampaignLevel) => {
-    setPendingLevel(level);
-    setShowModeSelector(true);
-  };
-
-  const handleModeSelect = (mode: BattleMode) => {
-    if (pendingLevel) {
-      onSelectLevel(pendingLevel, mode);
-    }
-    setShowModeSelector(false);
-    setPendingLevel(null);
-  };
-
-  const handleCancelMode = () => {
-    setShowModeSelector(false);
-    setPendingLevel(null);
-  };
-
   return (
     <div className={`min-h-screen bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900 p-4`}>
-      {/* Mode Selector Modal */}
-      <AnimatePresence>
-        {showModeSelector && (
-          <RPGBattleModeSelector
-            onSelectMode={handleModeSelect}
-            onCancel={handleCancelMode}
-          />
-        )}
-      </AnimatePresence>
-
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <Button variant="ghost" onClick={onBack} className="text-white hover:bg-white/10">
@@ -117,7 +84,7 @@ export const RPGLevelSelect = ({
                     : 'border border-slate-700'
                   }
                   ${level.isCompleted ? 'bg-green-900/20' : 'bg-slate-800/50'}`}
-                onClick={() => isUnlocked && handleLevelClick(level)}
+                onClick={() => isUnlocked && onSelectLevel(level)}
               >
                 {/* Lock Overlay */}
                 {!isUnlocked && (
