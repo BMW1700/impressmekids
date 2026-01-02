@@ -107,9 +107,7 @@ export const RPGBattleArena = ({
   const [currentCommand, setCurrentCommand] = useState<CommandType | null>(null);
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
   const [screenShake, setScreenShake] = useState(false);
-  const [barrageTriggered, setBarrageTriggered] = useState(false);
-  const [specialBarrageTriggered, setSpecialBarrageTriggered] = useState(false);
-  const [beastSwarmTriggered, setBeastSwarmTriggered] = useState(false);
+  // REMOVED: HP-based barrage triggers - now all mini-games are random
   
   // Mini-game trigger states - track which games have been triggered this battle
   const [triggeredMiniGames, setTriggeredMiniGames] = useState<Set<MiniGameType>>(new Set());
@@ -219,23 +217,8 @@ export const RPGBattleArena = ({
     }
   }, [battleMode, storyWords]);
 
-  // Check for barrage triggers based on HP thresholds
-  useEffect(() => {
-    if (!barrageTriggered && enemyHp <= enemy.maxHp * 0.5 && enemyHp > enemy.maxHp * 0.25 && phase === 'reading') {
-      setBarrageTriggered(true);
-      triggerWordBarrage();
-    }
-    // Trigger special barrage at 25% HP based on enemy type
-    if (!specialBarrageTriggered && enemyHp <= enemy.maxHp * 0.25 && enemyHp > 0 && phase === 'reading') {
-      setSpecialBarrageTriggered(true);
-      triggerSpecialBarrage();
-    }
-    // Drake's beast swarm at 15% HP
-    if (!beastSwarmTriggered && currentEnemyType === 'dragon' && enemyHp <= enemy.maxHp * 0.15 && enemyHp > 0 && phase === 'reading') {
-      setBeastSwarmTriggered(true);
-      triggerBeastSwarm();
-    }
-  }, [enemyHp, enemy.maxHp, barrageTriggered, specialBarrageTriggered, beastSwarmTriggered, phase, currentEnemyType]);
+  // REMOVED: HP-based barrage triggers - all mini-games are now triggered RANDOMLY
+  // Mini-games are now selected from enemy.miniGames array and triggered via checkRandomMiniGame()
   
   // RANDOM mini-game trigger system - replaces HP-based triggers
   // Mini-games are randomly triggered after every 10-15 correct words with a 30% chance
@@ -261,6 +244,9 @@ export const RPGBattleArena = ({
       'ice_crystal_barrage': `${enemy.name} unleashes ICE CRYSTAL BARRAGE!`,
       'ghostly_whispers': `${enemy.name} summons GHOSTLY WHISPERS!`,
       'rolling_boulders': `${enemy.name} triggers ROLLING BOULDERS!`,
+      'word_barrage': `${enemy.name} launches WORD BARRAGE!`,
+      'fireball_barrage': `🔥 ${enemy.name} unleashes FIREBALL BARRAGE! 🔥`,
+      'asteroid_barrage': `${enemy.name} summons WORD PRISON!`,
     };
     
     setEnemyAbilityMessage(announcements[gameType] || `${enemy.name} attacks!`);
@@ -285,6 +271,9 @@ export const RPGBattleArena = ({
         'ice_crystal_barrage': 'ice_crystal_barrage',
         'ghostly_whispers': 'ghostly_whispers',
         'rolling_boulders': 'rolling_boulders',
+        'word_barrage': 'barrage',
+        'fireball_barrage': 'fireball_barrage',
+        'asteroid_barrage': 'asteroid_barrage',
       };
       setPhase(phaseMap[gameType]);
     }, 1000);
@@ -970,9 +959,9 @@ export const RPGBattleArena = ({
     setCurrentEnemyIndex(nextIndex);
     const nextEnemy = getEnemyForBattle(enemyQueue[nextIndex]);
     setEnemyHp(nextEnemy.maxHp);
-    setBarrageTriggered(false);
-    setSpecialBarrageTriggered(false);
-    setBeastSwarmTriggered(false);
+    // Reset random mini-game triggers for the new enemy
+    setTriggeredMiniGames(new Set());
+    setLastMiniGameCheck(0);
     setDefeatedEnemy(null);
     setPhase('intro');
     setDialogueIndex(0);
