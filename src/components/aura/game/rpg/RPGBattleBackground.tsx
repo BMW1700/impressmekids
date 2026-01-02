@@ -1,11 +1,11 @@
 import { motion } from "framer-motion";
 import { useMemo } from "react";
 
-type BackgroundTheme = 'castle' | 'dungeon' | 'forest' | 'throne' | 'volcano' | 'ice_cave' | 'ruins' | 'shadow_realm';
+type BackgroundTheme = 'castle' | 'dungeon' | 'forest' | 'throne' | 'volcano' | 'ice_cave' | 'ruins' | 'shadow_realm' | 'caverns' | 'sky_isles' | 'sunken_library' | 'void';
 
 interface RPGBattleBackgroundProps {
   theme?: BackgroundTheme;
-  enemyType?: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian';
+  enemyType?: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater';
 }
 
 export const RPGBattleBackground = ({ 
@@ -23,6 +23,22 @@ export const RPGBattleBackground = ({
       case 'ice_golem': return 'ice_cave';
       case 'shadow_wraith': return 'shadow_realm';
       case 'stone_guardian': return 'ruins';
+      // NEW WORLD 5 - Whispering Caverns
+      case 'cave_troll': return 'caverns';
+      case 'crystal_spider': return 'caverns';
+      case 'echo_wraith': return 'caverns';
+      // NEW WORLD 6 - Floating Isles
+      case 'storm_harpy': return 'sky_isles';
+      case 'cloud_giant': return 'sky_isles';
+      case 'zephyr': return 'sky_isles';
+      // NEW WORLD 7 - Sunken Library
+      case 'ink_kraken': return 'sunken_library';
+      case 'reef_guardian': return 'sunken_library';
+      case 'leviathan': return 'sunken_library';
+      // NEW WORLD 8 - The Void Between
+      case 'void_phantom': return 'void';
+      case 'reality_shifter': return 'void';
+      case 'word_eater': return 'void';
       default: return 'forest';
     }
   }, [enemyType]);
@@ -37,6 +53,7 @@ export const RPGBattleBackground = ({
           accent: 'bg-purple-500/20',
           particles: 'bg-purple-400',
           ambientColor: 'rgba(147, 51, 234, 0.3)',
+          specialElements: 'throne',
         };
       case 'volcano':
         return {
@@ -45,6 +62,7 @@ export const RPGBattleBackground = ({
           accent: 'bg-orange-500/30',
           particles: 'bg-orange-400',
           ambientColor: 'rgba(234, 88, 12, 0.3)',
+          specialElements: 'lava',
         };
       case 'dungeon':
         return {
@@ -53,6 +71,7 @@ export const RPGBattleBackground = ({
           accent: 'bg-amber-500/10',
           particles: 'bg-amber-300',
           ambientColor: 'rgba(217, 119, 6, 0.2)',
+          specialElements: 'torches',
         };
       case 'castle':
         return {
@@ -61,6 +80,7 @@ export const RPGBattleBackground = ({
           accent: 'bg-blue-400/20',
           particles: 'bg-blue-300',
           ambientColor: 'rgba(59, 130, 246, 0.2)',
+          specialElements: 'banners',
         };
       case 'ice_cave':
         return {
@@ -69,6 +89,7 @@ export const RPGBattleBackground = ({
           accent: 'bg-cyan-400/20',
           particles: 'bg-cyan-200',
           ambientColor: 'rgba(34, 211, 238, 0.2)',
+          specialElements: 'crystals',
         };
       case 'shadow_realm':
         return {
@@ -77,6 +98,7 @@ export const RPGBattleBackground = ({
           accent: 'bg-purple-500/30',
           particles: 'bg-purple-400',
           ambientColor: 'rgba(147, 51, 234, 0.3)',
+          specialElements: 'shadows',
         };
       case 'ruins':
         return {
@@ -85,6 +107,44 @@ export const RPGBattleBackground = ({
           accent: 'bg-amber-500/20',
           particles: 'bg-amber-300',
           ambientColor: 'rgba(217, 119, 6, 0.25)',
+          specialElements: 'pillars',
+        };
+      // NEW THEMES
+      case 'caverns':
+        return {
+          sky: 'from-slate-950 via-stone-900 to-zinc-950',
+          ground: 'from-stone-800 to-zinc-900',
+          accent: 'bg-violet-500/20',
+          particles: 'bg-violet-300',
+          ambientColor: 'rgba(139, 92, 246, 0.25)',
+          specialElements: 'crystals',
+        };
+      case 'sky_isles':
+        return {
+          sky: 'from-sky-400 via-blue-500 to-indigo-600',
+          ground: 'from-white/20 to-blue-200/30',
+          accent: 'bg-white/30',
+          particles: 'bg-white',
+          ambientColor: 'rgba(255, 255, 255, 0.3)',
+          specialElements: 'clouds',
+        };
+      case 'sunken_library':
+        return {
+          sky: 'from-teal-900 via-cyan-800 to-blue-950',
+          ground: 'from-teal-800 to-blue-900',
+          accent: 'bg-cyan-400/20',
+          particles: 'bg-cyan-300',
+          ambientColor: 'rgba(34, 211, 238, 0.25)',
+          specialElements: 'bubbles',
+        };
+      case 'void':
+        return {
+          sky: 'from-purple-950 via-violet-950 to-black',
+          ground: 'from-black to-purple-950/50',
+          accent: 'bg-violet-500/40',
+          particles: 'bg-violet-400',
+          ambientColor: 'rgba(139, 92, 246, 0.4)',
+          specialElements: 'void',
         };
       case 'forest':
       default:
@@ -94,20 +154,169 @@ export const RPGBattleBackground = ({
           accent: 'bg-emerald-500/20',
           particles: 'bg-emerald-300',
           ambientColor: 'rgba(16, 185, 129, 0.2)',
+          specialElements: 'trees',
         };
     }
   }, [selectedTheme]);
 
-  // Generate floating particles
+  // Generate floating particles - more for void theme
+  const particleCount = selectedTheme === 'void' ? 40 : selectedTheme === 'sky_isles' ? 30 : 20;
   const particles = useMemo(() => {
-    return Array.from({ length: 20 }, (_, i) => ({
+    return Array.from({ length: particleCount }, (_, i) => ({
       id: i,
       left: Math.random() * 100,
       delay: Math.random() * 5,
       duration: 8 + Math.random() * 6,
-      size: 2 + Math.random() * 4,
+      size: selectedTheme === 'void' ? 1 + Math.random() * 3 : 2 + Math.random() * 4,
     }));
-  }, []);
+  }, [particleCount, selectedTheme]);
+
+  // Special elements based on theme
+  const renderSpecialElements = () => {
+    switch (themeStyles.specialElements) {
+      case 'bubbles':
+        return (
+          <>
+            {Array.from({ length: 15 }).map((_, i) => (
+              <motion.div
+                key={`bubble-${i}`}
+                className="absolute rounded-full border border-cyan-300/50 bg-cyan-200/10"
+                style={{
+                  width: 10 + Math.random() * 20,
+                  height: 10 + Math.random() * 20,
+                  left: `${Math.random() * 100}%`,
+                  bottom: '-10%',
+                }}
+                animate={{
+                  y: [-50, -600],
+                  opacity: [0, 0.6, 0],
+                  scale: [0.5, 1, 0.5],
+                }}
+                transition={{
+                  duration: 8 + Math.random() * 4,
+                  delay: Math.random() * 5,
+                  repeat: Infinity,
+                  ease: "linear",
+                }}
+              />
+            ))}
+          </>
+        );
+      case 'clouds':
+        return (
+          <>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <motion.div
+                key={`cloud-${i}`}
+                className="absolute bg-white/40 rounded-full blur-xl"
+                style={{
+                  width: 100 + Math.random() * 150,
+                  height: 40 + Math.random() * 40,
+                  left: `${i * 20}%`,
+                  top: `${20 + Math.random() * 30}%`,
+                }}
+                animate={{
+                  x: [0, 50, 0],
+                  opacity: [0.3, 0.5, 0.3],
+                }}
+                transition={{
+                  duration: 10 + Math.random() * 5,
+                  delay: i * 2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              />
+            ))}
+          </>
+        );
+      case 'void':
+        return (
+          <>
+            {/* Reality tears */}
+            {Array.from({ length: 8 }).map((_, i) => (
+              <motion.div
+                key={`tear-${i}`}
+                className="absolute bg-gradient-to-b from-violet-500/50 via-purple-600/30 to-transparent"
+                style={{
+                  width: 2,
+                  height: 50 + Math.random() * 100,
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 60}%`,
+                  transform: `rotate(${Math.random() * 30 - 15}deg)`,
+                }}
+                animate={{
+                  opacity: [0, 0.8, 0],
+                  scaleY: [0.5, 1.5, 0.5],
+                }}
+                transition={{
+                  duration: 3 + Math.random() * 2,
+                  delay: Math.random() * 5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              />
+            ))}
+            {/* Stars/void particles */}
+            {Array.from({ length: 30 }).map((_, i) => (
+              <motion.div
+                key={`star-${i}`}
+                className="absolute rounded-full bg-white"
+                style={{
+                  width: 1 + Math.random() * 2,
+                  height: 1 + Math.random() * 2,
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                }}
+                animate={{
+                  opacity: [0.2, 1, 0.2],
+                  scale: [0.5, 1.5, 0.5],
+                }}
+                transition={{
+                  duration: 2 + Math.random() * 2,
+                  delay: Math.random() * 3,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              />
+            ))}
+          </>
+        );
+      case 'crystals':
+        return (
+          <>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <motion.div
+                key={`crystal-${i}`}
+                className="absolute"
+                style={{
+                  left: `${i * 12 + 5}%`,
+                  bottom: `${10 + Math.random() * 15}%`,
+                }}
+                animate={{
+                  opacity: [0.3, 0.8, 0.3],
+                }}
+                transition={{
+                  duration: 3 + Math.random() * 2,
+                  delay: i * 0.5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              >
+                <div 
+                  className="w-4 h-16 bg-gradient-to-t from-violet-600/60 via-purple-400/40 to-transparent"
+                  style={{ 
+                    clipPath: 'polygon(50% 0%, 100% 100%, 0% 100%)',
+                    transform: `rotate(${Math.random() * 20 - 10}deg)`,
+                  }}
+                />
+              </motion.div>
+            ))}
+          </>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="absolute inset-0 overflow-hidden">
@@ -143,6 +352,9 @@ export const RPGBattleBackground = ({
           <div className="w-full h-full bg-[repeating-linear-gradient(90deg,transparent,transparent_50px,rgba(0,0,0,0.1)_50px,rgba(0,0,0,0.1)_100px)]" />
         </div>
       </div>
+
+      {/* Special Theme Elements */}
+      {renderSpecialElements()}
 
       {/* Floor reflection/glow */}
       <div 

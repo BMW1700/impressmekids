@@ -1,6 +1,6 @@
 // Campaign data for Grog the Goblin King Story Campaign
 
-export type CampaignEnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'dragon' | 'final_boss' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian';
+export type CampaignEnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'dragon' | 'final_boss' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater';
 
 export interface CampaignLevel {
   id: number;
@@ -16,7 +16,7 @@ export interface CampaignWorld {
   description: string;
   gradient: string;
   bgColor: string;
-  enemyTypes: ('minion' | 'guard' | 'elite')[];
+  enemyTypes: CampaignEnemyType[];
   requiredGradeLevel: number;
   storyCount: number;
   unlockRequirement: number; // Books rescued in previous world to unlock
@@ -47,7 +47,7 @@ export const grogTheGoblinKing: CampaignCharacter = {
   quote: 'You\'ll never get these books back! Reading is boring! Mwahahaha!',
 };
 
-// Campaign worlds with level structure
+// Campaign worlds with level structure - 8 WORLDS TOTAL
 export const campaignWorlds: CampaignWorld[] = [
   {
     id: 1,
@@ -126,6 +126,90 @@ export const campaignWorlds: CampaignWorld[] = [
       { id: 3, storyIndex: 20, enemies: ['boss', 'boss'], isBossLevel: false, starThresholds: [40, 60, 75] },
       { id: 4, storyIndex: 21, enemies: ['boss', 'dragon'], isBossLevel: false, starThresholds: [40, 60, 75] },
       { id: 5, storyIndex: 22, enemies: ['final_boss', 'dragon'], isBossLevel: true, starThresholds: [35, 55, 70] },
+    ],
+  },
+  // NEW WORLD 5: The Whispering Caverns
+  {
+    id: 5,
+    name: 'The Whispering Caverns',
+    description: 'Underground caves where echoes carry ancient secrets',
+    gradient: 'from-slate-600 via-stone-700 to-zinc-800',
+    bgColor: 'bg-slate-900/30',
+    enemyTypes: ['cave_troll', 'crystal_spider'],
+    requiredGradeLevel: 2,
+    storyCount: 6,
+    unlockRequirement: 4,
+    lore: 'Deep beneath the mountains, the Whispering Caverns echo with forgotten words. The Echo Wraith feeds on silence, trapping knowledge in crystal prisons. Cave Trolls guard every passage.',
+    levels: [
+      { id: 1, storyIndex: 23, enemies: ['cave_troll'], isBossLevel: false, starThresholds: [55, 75, 90] },
+      { id: 2, storyIndex: 24, enemies: ['crystal_spider', 'crystal_spider'], isBossLevel: false, starThresholds: [55, 75, 90] },
+      { id: 3, storyIndex: 25, enemies: ['cave_troll', 'crystal_spider'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 4, storyIndex: 26, enemies: ['cave_troll', 'cave_troll'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 5, storyIndex: 27, enemies: ['elite', 'cave_troll'], isBossLevel: false, starThresholds: [45, 65, 80] },
+      { id: 6, storyIndex: 28, enemies: ['echo_wraith'], isBossLevel: true, starThresholds: [45, 65, 80] },
+    ],
+  },
+  // NEW WORLD 6: The Floating Isles
+  {
+    id: 6,
+    name: 'The Floating Isles',
+    description: 'Sky islands where words dance on the wind',
+    gradient: 'from-sky-400 via-blue-400 to-indigo-500',
+    bgColor: 'bg-sky-900/20',
+    enemyTypes: ['storm_harpy', 'cloud_giant'],
+    requiredGradeLevel: 3,
+    storyCount: 6,
+    unlockRequirement: 5,
+    lore: 'High above the clouds, the Floating Isles drift on magical currents. Storm Harpies snatch books from travelers, while Cloud Giants slumber on word-clouds. Zephyr the Wind Lord rules these skies.',
+    levels: [
+      { id: 1, storyIndex: 29, enemies: ['storm_harpy'], isBossLevel: false, starThresholds: [55, 75, 90] },
+      { id: 2, storyIndex: 30, enemies: ['storm_harpy', 'storm_harpy'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 3, storyIndex: 31, enemies: ['cloud_giant'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 4, storyIndex: 32, enemies: ['storm_harpy', 'cloud_giant'], isBossLevel: false, starThresholds: [45, 65, 80] },
+      { id: 5, storyIndex: 33, enemies: ['cloud_giant', 'cloud_giant'], isBossLevel: false, starThresholds: [45, 65, 80] },
+      { id: 6, storyIndex: 34, enemies: ['zephyr'], isBossLevel: true, starThresholds: [40, 60, 75] },
+    ],
+  },
+  // NEW WORLD 7: The Sunken Library
+  {
+    id: 7,
+    name: 'The Sunken Library',
+    description: 'An underwater realm of forgotten knowledge',
+    gradient: 'from-teal-600 via-cyan-700 to-blue-900',
+    bgColor: 'bg-teal-900/30',
+    enemyTypes: ['ink_kraken', 'reef_guardian'],
+    requiredGradeLevel: 4,
+    storyCount: 7,
+    unlockRequirement: 5,
+    lore: 'Beneath the waves lies a sunken library, its books protected by waterproof magic. The Ink Kraken obscures words with its dark ink, while Reef Guardians have grown coral armor over centuries. The mighty Leviathan guards the deepest texts.',
+    levels: [
+      { id: 1, storyIndex: 35, enemies: ['reef_guardian'], isBossLevel: false, starThresholds: [55, 75, 90] },
+      { id: 2, storyIndex: 36, enemies: ['ink_kraken'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 3, storyIndex: 37, enemies: ['reef_guardian', 'reef_guardian'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 4, storyIndex: 38, enemies: ['ink_kraken', 'reef_guardian'], isBossLevel: false, starThresholds: [45, 65, 80] },
+      { id: 5, storyIndex: 39, enemies: ['ink_kraken', 'ink_kraken'], isBossLevel: false, starThresholds: [45, 65, 80] },
+      { id: 6, storyIndex: 40, enemies: ['elite', 'ink_kraken'], isBossLevel: false, starThresholds: [40, 60, 75] },
+      { id: 7, storyIndex: 41, enemies: ['leviathan'], isBossLevel: true, starThresholds: [35, 55, 70] },
+    ],
+  },
+  // NEW WORLD 8: The Void Between
+  {
+    id: 8,
+    name: 'The Void Between',
+    description: 'The final dimension where words become reality',
+    gradient: 'from-purple-900 via-violet-950 to-black',
+    bgColor: 'bg-purple-950/40',
+    enemyTypes: ['void_phantom', 'reality_shifter'],
+    requiredGradeLevel: 5,
+    storyCount: 5,
+    unlockRequirement: 6,
+    lore: 'Beyond reality itself lies The Void Between - a dimension where words have ultimate power. Void Phantoms flicker in and out of existence, Reality Shifters warp the very nature of language, and The Word Eater consumes all knowledge. This is the ultimate challenge for a Master Reader.',
+    levels: [
+      { id: 1, storyIndex: 42, enemies: ['void_phantom', 'void_phantom'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 2, storyIndex: 43, enemies: ['reality_shifter'], isBossLevel: false, starThresholds: [45, 65, 80] },
+      { id: 3, storyIndex: 44, enemies: ['void_phantom', 'reality_shifter'], isBossLevel: false, starThresholds: [45, 65, 80] },
+      { id: 4, storyIndex: 45, enemies: ['reality_shifter', 'reality_shifter'], isBossLevel: false, starThresholds: [40, 60, 75] },
+      { id: 5, storyIndex: 46, enemies: ['word_eater'], isBossLevel: true, starThresholds: [35, 55, 70] },
     ],
   },
 ];
