@@ -224,7 +224,7 @@ export const RPGBattleArena = ({
   // Mini-games are now selected from enemy.miniGames array and triggered via checkRandomMiniGame()
   
   // RANDOM mini-game trigger system - replaces HP-based triggers
-  // Mini-games are randomly triggered after every 10-15 correct words with a 30% chance
+  // Mini-games are randomly triggered after every 3 correct words with a 30% chance
   const triggerRandomMiniGame = useCallback((gameType: MiniGameType) => {
     const wordCount = gameType === 'speed_typist' ? 12 : 
                       gameType === 'tug_of_war' ? 15 : 
@@ -288,9 +288,9 @@ export const RPGBattleArena = ({
     if (battleMode !== 'classic') return; // Only for Classic mode
     if (!enemy.miniGames || enemy.miniGames.length === 0) return;
     
-    // Check every 10-15 words (use modulo on correct words count)
+    // Check every 3 words with 30% chance
     const wordsSinceLastCheck = correctWords - lastMiniGameCheck;
-    if (wordsSinceLastCheck < 10) return;
+    if (wordsSinceLastCheck < 3) return;
     
     // 30% chance to trigger
     if (Math.random() > 0.3) {
