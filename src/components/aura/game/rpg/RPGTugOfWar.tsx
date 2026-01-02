@@ -310,13 +310,19 @@ export const RPGTugOfWar = ({
     }
   }, [gameOver, isPaused, currentWordIndex, processWordResult]);
 
-  // Start continuous speech recognition
+  // Store speech result handler in ref to avoid stale closures
+  const handleSpeechResultRef = useRef(handleSpeechResult);
+  useEffect(() => {
+    handleSpeechResultRef.current = handleSpeechResult;
+  }, [handleSpeechResult]);
+
+  // Start continuous speech recognition - uses ref to avoid stale closures
   const startRecognition = useCallback(() => {
     const success = speechManager.start({
       owner: 'reader',
       continuous: true,
       interimResults: true,
-      onResult: handleSpeechResult,
+      onResult: (transcript, alts, isFinal) => handleSpeechResultRef.current(transcript, alts, isFinal),
       onStart: () => setIsListening(true),
       onEnd: () => setIsListening(false),
       onError: (error) => {
@@ -324,7 +330,7 @@ export const RPGTugOfWar = ({
       }
     });
     return success;
-  }, [handleSpeechResult]);
+  }, []);
 
   // Stop speech recognition
   const stopRecognition = useCallback(() => {
@@ -409,7 +415,7 @@ export const RPGTugOfWar = ({
       {/* Header */}
       <div className="relative z-10 p-4 text-center">
         <h2 className="text-3xl font-black text-white drop-shadow-lg" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
-          ⚔️ TUG OF WAR ⚔️
+          TUG OF WAR
         </h2>
         <p className="text-white/90 text-sm drop-shadow">Read words to pull the rope!</p>
       </div>
@@ -578,16 +584,29 @@ export const RPGTugOfWar = ({
                   {currentWord}
                 </motion.div>
                 
-                <div className="flex items-center justify-center gap-2 text-green-400">
-                  <motion.div
-                    animate={isListening ? { scale: [1, 1.2, 1] } : {}}
-                    transition={{ duration: 0.8, repeat: Infinity }}
-                  >
-                    <Mic className={`h-5 w-5 ${isListening ? 'text-green-400' : 'text-gray-400'}`} />
-                  </motion.div>
-                  <span className="text-sm font-medium">
-                    {isListening ? 'Listening... Say the word!' : 'Mic paused'}
-                  </span>
+                <div className="flex items-center justify-center gap-2">
+                  {isListening ? (
+                    <>
+                      <motion.div
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 0.8, repeat: Infinity }}
+                      >
+                        <Mic className="h-5 w-5 text-green-400" />
+                      </motion.div>
+                      <span className="text-sm font-medium text-green-400">
+                        Listening... Say the word!
+                      </span>
+                    </>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={() => startRecognition()}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <Mic className="h-4 w-4 mr-2" />
+                      Tap to Start Mic
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
@@ -612,10 +631,11 @@ export const RPGTugOfWar = ({
           >
             <div className="flex items-end">
               <div className="origin-bottom -mr-4">
-                <GoblinGuard 
+              <GoblinGuard 
                   state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
                   healthPercent={100}
                   size="medium"
+                  showHealthBar={false}
                 />
               </div>
               <div className="origin-bottom -mr-2">
@@ -623,6 +643,7 @@ export const RPGTugOfWar = ({
                   state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
                   healthPercent={100}
                   size="large"
+                  showHealthBar={false}
                 />
               </div>
               <div className="origin-bottom">
@@ -630,6 +651,7 @@ export const RPGTugOfWar = ({
                   state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
                   healthPercent={100}
                   size="large"
+                  showHealthBar={false}
                 />
               </div>
             </div>
@@ -670,6 +692,7 @@ export const RPGTugOfWar = ({
                   healthPercent={100}
                   size="large"
                   flipX
+                  showHealthBar={false}
                 />
               </div>
               {[0, 1, 2].map(i => (
