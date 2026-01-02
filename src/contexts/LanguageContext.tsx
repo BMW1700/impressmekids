@@ -218,7 +218,7 @@ const translations: Record<Language, Translations> = {
     'teacherDashboard.stats.enrolledLabel': 'Enrolled',
     'teacherDashboard.stats.mlPowered': 'ML-Powered',
 
-    'teacherDashboard.tabs.classrooms': 'Classrooms',
+    'teacherDashboard.tabs.classrooms': 'Classrooms & Clubs',
     'teacherDashboard.tabs.leaderboard': 'Leaderboard',
     'teacherDashboard.tabs.calendar': 'Calendar',
     'teacherDashboard.tabs.directory': 'Directory',
@@ -543,7 +543,7 @@ const translations: Record<Language, Translations> = {
     'teacherDashboard.stats.enrolledLabel': 'Inscritos',
     'teacherDashboard.stats.mlPowered': 'Impulsado por ML',
 
-    'teacherDashboard.tabs.classrooms': 'Clases',
+    'teacherDashboard.tabs.classrooms': 'Clases y Clubes',
     'teacherDashboard.tabs.leaderboard': 'Clasificación',
     'teacherDashboard.tabs.calendar': 'Calendario',
     'teacherDashboard.tabs.directory': 'Directorio',
@@ -870,7 +870,7 @@ const translations: Record<Language, Translations> = {
     'teacherDashboard.stats.enrolledLabel': 'Inscrits',
     'teacherDashboard.stats.mlPowered': 'Propulsé par ML',
 
-    'teacherDashboard.tabs.classrooms': 'Classes',
+    'teacherDashboard.tabs.classrooms': 'Classes et Clubs',
     'teacherDashboard.tabs.leaderboard': 'Classement',
     'teacherDashboard.tabs.calendar': 'Calendrier',
     'teacherDashboard.tabs.directory': 'Répertoire',
