@@ -1035,6 +1035,7 @@ export const RPGBattleArena = ({
           fluency_score: Math.min(100, Math.round(accuracyPercent * 0.7 + Math.min(wpm, 150) * 0.3)),
           wcpm: Math.round(correctWords / (durationSeconds / 60)),
           fluency_level: accuracyPercent >= 95 ? 'independent' : accuracyPercent >= 90 ? 'instructional' : 'frustration',
+          reading_mode: battleMode === 'tug_of_war' ? 'tug_of_war' : battleMode === 'balloon' ? 'balloon_battle' : 'rpg_battle',
         });
         
         if (error) {

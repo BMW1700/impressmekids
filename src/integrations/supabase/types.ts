@@ -4340,6 +4340,7 @@ export type Database = {
           passage_text: string
           phoneme_accuracy: Json | null
           prosody_metrics: Json | null
+          reading_mode: string | null
           recommended_difficulty: number | null
           student_id: string
           wcpm: number | null
@@ -4360,6 +4361,7 @@ export type Database = {
           passage_text: string
           phoneme_accuracy?: Json | null
           prosody_metrics?: Json | null
+          reading_mode?: string | null
           recommended_difficulty?: number | null
           student_id: string
           wcpm?: number | null
@@ -4380,6 +4382,7 @@ export type Database = {
           passage_text?: string
           phoneme_accuracy?: Json | null
           prosody_metrics?: Json | null
+          reading_mode?: string | null
           recommended_difficulty?: number | null
           student_id?: string
           wcpm?: number | null
