@@ -41,6 +41,7 @@ import {
   heroDialogue,
   wizardDialogue,
   RPGEnemy,
+  MiniGameType,
 } from "@/lib/rpgBattleData";
 import { CuratedStory } from "@/data/curatedStories";
 import { calculateGoldEarned, calculateXpEarned } from "@/lib/gameEconomy";
@@ -52,8 +53,8 @@ import { supabase } from "@/integrations/supabase/client";
 const battleSounds = new SoundEffects();
 
 type EnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian';
-// UPDATED: Added new mini-game phases including Tug of War, Balloon Battle, and Fireball Defense
-type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'word_shield' | 'spell_combo' | 'dodge_words' | 'rhyme_chain' | 'speed_typist' | 'tug_of_war' | 'balloon_battle' | 'fireball_defense' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat';
+// UPDATED: Added balloon_quickpop for Classic mode mini-game (NOT Balloon Bonanza)
+type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'word_shield' | 'spell_combo' | 'dodge_words' | 'rhyme_chain' | 'speed_typist' | 'tug_of_war' | 'balloon_battle' | 'balloon_quickpop' | 'fireball_defense' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat';
 type InventoryKey = 'health_potion' | 'magic_potion';
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
 
@@ -110,15 +111,9 @@ export const RPGBattleArena = ({
   const [specialBarrageTriggered, setSpecialBarrageTriggered] = useState(false);
   const [beastSwarmTriggered, setBeastSwarmTriggered] = useState(false);
   
-  // Mini-game trigger states
-  const [wordShieldTriggered, setWordShieldTriggered] = useState(false);
-  const [spellComboTriggered, setSpellComboTriggered] = useState(false);
-  const [dodgeWordsTriggered, setDodgeWordsTriggered] = useState(false);
-  const [rhymeChainTriggered, setRhymeChainTriggered] = useState(false);
-  const [speedTypistTriggered, setSpeedTypistTriggered] = useState(false);
-  const [tugOfWarTriggered, setTugOfWarTriggered] = useState(false);
-  const [balloonBattleTriggered, setBalloonBattleTriggered] = useState(false);
-  const [fireballDefenseTriggered, setFireballDefenseTriggered] = useState(false);
+  // Mini-game trigger states - track which games have been triggered this battle
+  const [triggeredMiniGames, setTriggeredMiniGames] = useState<Set<MiniGameType>>(new Set());
+  const [lastMiniGameCheck, setLastMiniGameCheck] = useState(0); // Track words read since last check
   
   // Combat stats
   const [playerHp, setPlayerHp] = useState(heroKnight.maxHp);
@@ -242,108 +237,96 @@ export const RPGBattleArena = ({
     }
   }, [enemyHp, enemy.maxHp, barrageTriggered, specialBarrageTriggered, beastSwarmTriggered, phase, currentEnemyType]);
   
-  // Trigger mini-games based on streak and HP thresholds
-  useEffect(() => {
-    if (phase !== 'reading') return;
+  // RANDOM mini-game trigger system - replaces HP-based triggers
+  // Mini-games are randomly triggered after every 10-15 correct words with a 30% chance
+  const triggerRandomMiniGame = useCallback((gameType: MiniGameType) => {
+    const wordCount = gameType === 'speed_typist' ? 12 : 
+                      gameType === 'tug_of_war' ? 15 : 
+                      gameType === 'balloon_quickpop' ? 5 :
+                      gameType === 'rhyme_chain' ? 6 : 5;
+    const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 10);
+    setBarrageWords(availableWords.slice(0, wordCount));
     
-    // Word Shield at 75% enemy HP (defensive mini-game)
-    if (!wordShieldTriggered && enemyHp <= enemy.maxHp * 0.75 && enemyHp > enemy.maxHp * 0.5) {
-      setWordShieldTriggered(true);
-      triggerWordShield();
-    }
+    // Different announcements per mini-game
+    const announcements: Record<MiniGameType, string> = {
+      'word_shield': `${enemy.name} charges a devastating attack!`,
+      'spell_combo': `POWER SURGE! Chain a spell combo!`,
+      'dodge_words': `INCOMING ATTACK! Dodge the wrong words!`,
+      'rhyme_chain': `RHYME TIME! Chain rhyming words!`,
+      'speed_typist': `SPEED BLITZ! Read as fast as you can!`,
+      'tug_of_war': `TUG OF WAR! Pull the rope with reading power!`,
+      'balloon_quickpop': `BALLOON ATTACK! Pop the balloons!`,
+      'fireball_defense': `🔥 ${enemy.name} UNLEASHES FIREBALLS! 🔥`,
+      'beast_swarm': `${enemy.name} summons BEAST SWARM!`,
+      'ice_crystal_barrage': `${enemy.name} unleashes ICE CRYSTAL BARRAGE!`,
+      'ghostly_whispers': `${enemy.name} summons GHOSTLY WHISPERS!`,
+      'rolling_boulders': `${enemy.name} triggers ROLLING BOULDERS!`,
+    };
     
-    // Spell Combo on 5+ streak (power attack opportunity)
-    if (!spellComboTriggered && streak >= 5 && streak < 8) {
-      setSpellComboTriggered(true);
-      triggerSpellCombo();
-    }
+    setEnemyAbilityMessage(announcements[gameType] || `${enemy.name} attacks!`);
+    battleSounds.miniGameStart();
     
-    // Rhyme Chain on 8+ streak
-    if (!rhymeChainTriggered && streak >= 8 && streak < 12) {
-      setRhymeChainTriggered(true);
-      triggerRhymeChain();
-    }
+    // Mark this mini-game as triggered
+    setTriggeredMiniGames(prev => new Set([...prev, gameType]));
     
-    // Speed Typist at 40% enemy HP
-    if (!speedTypistTriggered && enemyHp <= enemy.maxHp * 0.4 && enemyHp > enemy.maxHp * 0.25) {
-      setSpeedTypistTriggered(true);
-      triggerSpeedTypist();
-    }
-    
-    // Tug of War at 60% enemy HP for elite/boss enemies
-    if (!tugOfWarTriggered && (currentEnemyType === 'elite' || currentEnemyType === 'boss') && 
-        enemyHp <= enemy.maxHp * 0.6 && enemyHp > enemy.maxHp * 0.5) {
-      setTugOfWarTriggered(true);
-      triggerTugOfWar();
-    }
-    
-    // Balloon Battle at 35% enemy HP
-    if (!balloonBattleTriggered && enemyHp <= enemy.maxHp * 0.35 && enemyHp > enemy.maxHp * 0.2) {
-      setBalloonBattleTriggered(true);
-      triggerBalloonBattle();
-    }
-    
-    // Fireball Defense at 45% HP when facing Drake the Dragon
-    if (!fireballDefenseTriggered && currentEnemyType === 'dragon' && 
-        enemyHp <= enemy.maxHp * 0.45 && enemyHp > enemy.maxHp * 0.25) {
-      setFireballDefenseTriggered(true);
-      triggerFireballDefense();
-    }
-  }, [phase, streak, enemyHp, enemy.maxHp, wordShieldTriggered, spellComboTriggered, rhymeChainTriggered, speedTypistTriggered, tugOfWarTriggered, balloonBattleTriggered, fireballDefenseTriggered, currentEnemyType]);
-  
-  // Trigger Word Shield
-  const triggerWordShield = useCallback(() => {
-    const wordCount = 5;
-    const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 5);
-    const shieldWords = availableWords.slice(0, wordCount);
-    setBarrageWords(shieldWords);
-    setEnemyAbilityMessage(`${enemy.name} charges a devastating attack!`);
     setTimeout(() => {
       setEnemyAbilityMessage(null);
-      setPhase('word_shield');
+      // Map game type to phase
+      const phaseMap: Record<MiniGameType, BattlePhase> = {
+        'word_shield': 'word_shield',
+        'spell_combo': 'spell_combo',
+        'dodge_words': 'dodge_words',
+        'rhyme_chain': 'rhyme_chain',
+        'speed_typist': 'speed_typist',
+        'tug_of_war': 'tug_of_war',
+        'balloon_quickpop': 'balloon_quickpop',
+        'fireball_defense': 'fireball_defense',
+        'beast_swarm': 'beast_swarm',
+        'ice_crystal_barrage': 'ice_crystal_barrage',
+        'ghostly_whispers': 'ghostly_whispers',
+        'rolling_boulders': 'rolling_boulders',
+      };
+      setPhase(phaseMap[gameType]);
     }, 1000);
   }, [words, batchStartIndex, enemy.name]);
   
-  // Trigger Spell Combo
-  const triggerSpellCombo = useCallback(() => {
-    const wordCount = 5;
-    const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 5);
-    const comboWords = availableWords.slice(0, wordCount);
-    setBarrageWords(comboWords);
-    setEnemyAbilityMessage(`POWER SURGE! Chain a spell combo!`);
-    setTimeout(() => {
-      setEnemyAbilityMessage(null);
-      setPhase('spell_combo');
-    }, 1000);
-  }, [words, batchStartIndex]);
+  // Check for random mini-game trigger after correct words
+  const checkRandomMiniGame = useCallback(() => {
+    if (phase !== 'reading') return;
+    if (battleMode !== 'classic') return; // Only for Classic mode
+    if (!enemy.miniGames || enemy.miniGames.length === 0) return;
+    
+    // Check every 10-15 words (use modulo on correct words count)
+    const wordsSinceLastCheck = correctWords - lastMiniGameCheck;
+    if (wordsSinceLastCheck < 10) return;
+    
+    // 30% chance to trigger
+    if (Math.random() > 0.3) {
+      setLastMiniGameCheck(correctWords);
+      return;
+    }
+    
+    // Get available games (not yet triggered this battle)
+    const availableGames = enemy.miniGames.filter(game => !triggeredMiniGames.has(game));
+    if (availableGames.length === 0) {
+      setLastMiniGameCheck(correctWords);
+      return;
+    }
+    
+    // Pick a random game
+    const randomGame = availableGames[Math.floor(Math.random() * availableGames.length)];
+    setLastMiniGameCheck(correctWords);
+    triggerRandomMiniGame(randomGame);
+  }, [phase, battleMode, enemy.miniGames, correctWords, lastMiniGameCheck, triggeredMiniGames, triggerRandomMiniGame]);
   
-  // Trigger Rhyme Chain
-  const triggerRhymeChain = useCallback(() => {
-    const wordCount = 6;
-    const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 5);
-    const rhymeWords = availableWords.slice(0, wordCount);
-    setBarrageWords(rhymeWords);
-    setEnemyAbilityMessage(`RHYME TIME! Chain rhyming words!`);
-    setTimeout(() => {
-      setEnemyAbilityMessage(null);
-      setPhase('rhyme_chain');
-    }, 1000);
-  }, [words, batchStartIndex]);
+  // Call checkRandomMiniGame when correctWords changes
+  useEffect(() => {
+    if (battleMode === 'classic' && phase === 'reading') {
+      checkRandomMiniGame();
+    }
+  }, [correctWords, battleMode, phase, checkRandomMiniGame]);
   
-  // Trigger Speed Typist
-  const triggerSpeedTypist = useCallback(() => {
-    const wordCount = 12;
-    const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 5);
-    const speedWords = availableWords.slice(0, wordCount);
-    setBarrageWords(speedWords);
-    setEnemyAbilityMessage(`SPEED BLITZ! Read as fast as you can!`);
-    setTimeout(() => {
-      setEnemyAbilityMessage(null);
-      setPhase('speed_typist');
-    }, 1000);
-  }, [words, batchStartIndex]);
-  
-  // Trigger Tug of War - at 60% enemy HP for elite/boss
+  // Trigger Tug of War - for use in tug_of_war battle mode only
   const triggerTugOfWar = useCallback(() => {
     const wordCount = 15;
     const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 10);
@@ -353,32 +336,6 @@ export const RPGBattleArena = ({
     setTimeout(() => {
       setEnemyAbilityMessage(null);
       setPhase('tug_of_war');
-    }, 1000);
-  }, [words, batchStartIndex]);
-  
-  // Trigger Balloon Battle - at 35% enemy HP
-  const triggerBalloonBattle = useCallback(() => {
-    const wordCount = 30;
-    const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 10);
-    setBarrageWords(availableWords.slice(0, wordCount));
-    setEnemyAbilityMessage(`BALLOON BATTLE! Pop all enemy balloons!`);
-    battleSounds.miniGameStart();
-    setTimeout(() => {
-      setEnemyAbilityMessage(null);
-      setPhase('balloon_battle');
-    }, 1000);
-  }, [words, batchStartIndex]);
-  
-  // Trigger Fireball Defense - Drake's special attack at 45% HP
-  const triggerFireballDefense = useCallback(() => {
-    const wordCount = 8;
-    const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 5);
-    setBarrageWords(availableWords.slice(0, wordCount));
-    setEnemyAbilityMessage(`🔥 DRAKE UNLEASHES FIREBALLS! 🔥`);
-    battleSounds.fireWhoosh();
-    setTimeout(() => {
-      setEnemyAbilityMessage(null);
-      setPhase('fireball_defense');
     }, 1000);
   }, [words, batchStartIndex]);
   
@@ -532,6 +489,20 @@ export const RPGBattleArena = ({
     setBatchStartIndex(prev => prev + barrageWords.length);
     returnToReading();
   }, [barrageWords.length, returnToReading, battleMode]);
+  
+  // Handle Balloon QuickPop complete (small balloon mini-game in Classic mode)
+  const handleBalloonQuickPopComplete = useCallback((popped: number, missed: number) => {
+    console.log('[RPGBattle] Balloon QuickPop complete:', { popped, missed });
+    const bonusDamage = popped * 8;
+    if (bonusDamage > 0) {
+      battleSounds.celebrationSound();
+      setEnemyHp(prev => Math.max(0, prev - bonusDamage));
+      setTotalDamage(prev => prev + bonusDamage);
+    }
+    setCorrectWords(prev => prev + popped);
+    setBatchStartIndex(prev => prev + barrageWords.length);
+    returnToReading();
+  }, [barrageWords.length, returnToReading]);
   
   // Handle mini-game damage
   const handleMiniGameDamage = useCallback((damage: number) => {
@@ -1218,7 +1189,14 @@ export const RPGBattleArena = ({
             onComplete={handleTugOfWarComplete}
           />
         )}
-        {phase === 'balloon_battle' && (
+        {phase === 'balloon_quickpop' && (
+          <RPGBalloonQuickPop
+            words={barrageWords}
+            enemyName={enemy.name}
+            onComplete={handleBalloonQuickPopComplete}
+          />
+        )}
+        {phase === 'balloon_battle' && battleMode === 'balloon' && (
           <RPGBalloonBattle
             words={barrageWords}
             heroName="Knight"
