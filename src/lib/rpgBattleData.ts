@@ -44,7 +44,10 @@ export type MiniGameType =
   | 'beast_swarm'
   | 'ice_crystal_barrage'
   | 'ghostly_whispers'
-  | 'rolling_boulders';
+  | 'rolling_boulders'
+  | 'word_barrage'       // Regular word attack barrage
+  | 'fireball_barrage'   // Dragon's fireball attack
+  | 'asteroid_barrage';  // Word prison - asteroids with words
 
 export interface RPGEnemy {
   id: string;
@@ -123,7 +126,7 @@ export const goblinMinion: RPGEnemy = {
     { id: 'poison_dagger', name: 'Poison Dagger', damage: 8, effect: 'poison', description: 'Deals damage over time', icon: '🗡️' },
   ],
   barrageWordCount: 4,
-  miniGames: ['word_shield', 'balloon_quickpop'], // Simple mini-games for minion
+  miniGames: ['word_shield', 'balloon_quickpop', 'word_barrage'], // Simple mini-games for minion
 };
 
 export const goblinGuard: RPGEnemy = {
@@ -152,7 +155,7 @@ export const goblinGuard: RPGEnemy = {
     { id: 'poison_dagger', name: 'Poison Dagger', damage: 10, effect: 'poison', description: 'Deals damage over time', icon: '🗡️' },
   ],
   barrageWordCount: 5,
-  miniGames: ['word_shield', 'dodge_words', 'spell_combo'], // Guard has more variety
+  miniGames: ['word_shield', 'dodge_words', 'spell_combo', 'word_barrage'], // Guard has more variety
 };
 
 export const goblinElite: RPGEnemy = {
@@ -181,7 +184,7 @@ export const goblinElite: RPGEnemy = {
     { id: 'poison_dagger', name: 'Poison Dagger', damage: 12, effect: 'poison', description: 'Deals damage over time', icon: '🗡️' },
   ],
   barrageWordCount: 6,
-  miniGames: ['spell_combo', 'rhyme_chain', 'tug_of_war', 'speed_typist'], // Elite has challenging mini-games
+  miniGames: ['spell_combo', 'rhyme_chain', 'tug_of_war', 'speed_typist', 'asteroid_barrage'], // Elite has challenging mini-games
 };
 
 // Boss Enemies - BUFFED
@@ -216,7 +219,7 @@ export const grogTheGoblinKing: RPGEnemy = {
     { id: 'word_prison', name: 'Word Prison', damage: 0, effect: 'asteroid_barrage', description: 'Summons word asteroids!', icon: '☄️' },
   ],
   barrageWordCount: 8,
-  miniGames: ['tug_of_war', 'speed_typist', 'rhyme_chain'], // Boss has intense mini-games
+  miniGames: ['tug_of_war', 'speed_typist', 'rhyme_chain', 'asteroid_barrage'], // Boss has intense mini-games
 };
 
 export const galairTheWickedSorcerer: RPGEnemy = {
@@ -253,7 +256,7 @@ export const galairTheWickedSorcerer: RPGEnemy = {
     { id: 'word_prison', name: 'Word Prison', damage: 0, effect: 'asteroid_barrage', description: 'Summons word asteroids!', icon: '☄️' },
   ],
   barrageWordCount: 10,
-  miniGames: ['spell_combo', 'ghostly_whispers', 'speed_typist', 'tug_of_war'], // Final boss has toughest mini-games
+  miniGames: ['spell_combo', 'ghostly_whispers', 'speed_typist', 'tug_of_war', 'asteroid_barrage'], // Final boss has toughest mini-games
 };
 
 // Dragon Enemy - Drake the Dragon (renamed from Dalair)
@@ -292,7 +295,7 @@ export const drakeTheDragon: RPGEnemy = {
     { id: 'wing_gust', name: 'Wing Gust', damage: 15, effect: 'silence', description: 'Blows away your words', icon: '💨' },
   ],
   barrageWordCount: 7,
-  miniGames: ['beast_swarm', 'fireball_defense'], // Dragon's UNIQUE mini-games
+  miniGames: ['beast_swarm', 'fireball_defense', 'fireball_barrage'], // Dragon's UNIQUE mini-games
 };
 
 // Mini Flying Beast Enemy (summoned by Drake)
