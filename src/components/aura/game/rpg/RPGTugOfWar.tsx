@@ -144,9 +144,9 @@ export const RPGTugOfWar = ({
   }, [gameOver]);
 
   // Auto-pull timer - enemies pull every 20 seconds
-  // ONLY pauses when the game is paused (not while the mic is listening)
+  // PAUSES when game is paused OR when user is actively listening/speaking!
   useEffect(() => {
-    if (gameOver || !selectedCharacter || isPaused) return;
+    if (gameOver || !selectedCharacter || isPaused || isListening) return;
     
     const interval = setInterval(() => {
       setAutoPullTimer(prev => {
@@ -159,7 +159,7 @@ export const RPGTugOfWar = ({
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [gameOver, selectedCharacter, handleEnemyAutoPull, isPaused]);
+  }, [gameOver, selectedCharacter, handleEnemyAutoPull, isPaused, isListening]);
 
   // Process a spoken word result
   const processWordResult = useCallback((correct: boolean, wordIdx: number) => {
@@ -430,153 +430,48 @@ export const RPGTugOfWar = ({
         ))}
       </AnimatePresence>
 
-      {/* ============ WORD + CONTROLS (CENTER SKY) ============ */}
-      {!gameOver && (
-        <div className="absolute left-0 right-0 z-20" style={{ top: '200px' }}>
-          <div className="mx-auto w-full max-w-3xl px-4">
-            {/* Paused Overlay */}
-            <AnimatePresence>
-              {isPaused && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center z-30 rounded-2xl"
-                >
-                  <div className="text-center">
-                    <Pause className="h-12 w-12 text-yellow-400 mx-auto mb-2" />
-                    <h3 className="text-2xl font-bold text-white mb-2">PAUSED</h3>
-                    <p className="text-white/70 mb-4">Timer frozen at {autoPullTimer}s</p>
-                    
-                    <Button
-                      size="lg"
-                      onClick={pronounceWord}
-                      className="bg-blue-600 hover:bg-blue-700 text-white mb-4"
-                    >
-                      <Volume2 className="h-5 w-5 mr-2" />
-                      Hear "{currentWord}"
-                    </Button>
-                    
-                    <Button
-                      size="lg"
-                      onClick={handleResume}
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      <Play className="h-5 w-5 mr-2" />
-                      Resume
-                    </Button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <div className="rounded-2xl bg-black/20 backdrop-blur-sm border border-white/10 p-4">
-              {/* Feedback */}
-              <AnimatePresence>
-                {feedback && !isPaused && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    className={`text-center mb-2 text-2xl font-black ${
-                      feedback === 'correct' ? 'text-green-400' : 'text-red-400'
-                    }`}
-                  >
-                    {feedback === 'correct' ? '✓ HEAVE! Pull!' : '✗ They pulled back!'}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Pause Button & Hear Word */}
-              <div className="flex justify-center gap-3 mb-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handlePause}
-                  className="bg-yellow-500/20 border-yellow-400/50 text-yellow-200 hover:bg-yellow-500/30"
-                >
-                  <Pause className="h-4 w-4 mr-1" />
-                  Pause
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={pronounceWord}
-                  className="bg-blue-500/20 border-blue-400/50 text-blue-200 hover:bg-blue-500/30"
-                >
-                  <Volume2 className="h-4 w-4 mr-1" />
-                  Hear Word
-                </Button>
-              </div>
-
-              {/* Current Word Display with Listening Indicator */}
-              <div className="text-center">
-                <motion.div
-                  key={currentWord}
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="text-6xl md:text-7xl font-black text-white mb-2 drop-shadow-lg"
-                  style={{ textShadow: '4px 4px 8px rgba(0,0,0,0.6)' }}
-                >
-                  {currentWord}
-                </motion.div>
-                
-                <div className="flex items-center justify-center gap-2 text-green-400">
-                  <motion.div
-                    animate={isListening ? { scale: [1, 1.2, 1] } : {}}
-                    transition={{ duration: 0.8, repeat: Infinity }}
-                  >
-                    <Mic className={`h-5 w-5 ${isListening ? 'text-green-400' : 'text-gray-400'}`} />
-                  </motion.div>
-                  <span className="text-sm font-medium">
-                    {isListening ? 'Listening... Say the word!' : 'Mic paused'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ============ TUG-OF-WAR SCENE (LARGER CHARACTERS) ============ */}
+      {/* ============ TUG-OF-WAR SCENE ============ */}
+      {/* This is the main game area with rope and teams */}
       <motion.div 
         className="absolute left-0 right-0 z-[10]"
-        style={{ bottom: '40px', height: '320px' }}
+        style={{ bottom: '180px', height: '220px' }}
         animate={{ x: `${ropeOffsetPercent}%` }}
         transition={{ type: 'spring', stiffness: 150, damping: 20 }}
       >
+        {/* Full-width container for the tug of war scene */}
         <div className="relative w-full h-full flex items-end justify-center">
           
           {/* Enemy Team (Left Side) - Goblins */}
           <motion.div 
-            className="absolute left-[3%] bottom-0 flex flex-col items-center z-[15]"
+            className="absolute left-[5%] bottom-0 flex flex-col items-center z-[15]"
             animate={pullingAnimation === 'enemy' ? { x: [-10, 0] } : pullingAnimation === 'hero' ? { x: [10, 0] } : {}}
             transition={{ duration: 0.3 }}
           >
             <div className="flex items-end">
-              <div className="origin-bottom -mr-4">
+              {/* Goblins in a row - facing right toward rope */}
+              <div className="scale-[0.5] origin-bottom-right -mr-2">
+                <GoblinGuard 
+                  state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
+                  healthPercent={100}
+                  size="small"
+                />
+              </div>
+              <div className="scale-[0.6] origin-bottom -mr-1">
+                <GoblinGuard 
+                  state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
+                  healthPercent={100}
+                  size="small"
+                />
+              </div>
+              <div className="scale-[0.7] origin-bottom">
                 <GoblinGuard 
                   state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
                   healthPercent={100}
                   size="medium"
                 />
               </div>
-              <div className="origin-bottom -mr-2">
-                <GoblinGuard 
-                  state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
-                  healthPercent={100}
-                  size="large"
-                />
-              </div>
-              <div className="origin-bottom">
-                <GoblinGuard 
-                  state={pullingAnimation === 'enemy' ? 'pulling' : pullingAnimation === 'hero' ? 'hit' : 'idle'}
-                  healthPercent={100}
-                  size="large"
-                />
-              </div>
             </div>
-            <div className="text-red-600 font-bold text-sm mt-2 bg-white/90 px-3 py-1 rounded-full shadow">
+            <div className="text-red-600 font-bold text-xs mt-1 bg-white/90 px-2 py-0.5 rounded-full shadow">
               {enemyName}
             </div>
           </motion.div>
@@ -587,7 +482,7 @@ export const RPGTugOfWar = ({
             style={{ 
               top: '50%', 
               transform: 'translateY(-50%)',
-              height: '90px',
+              height: '80px',
               left: '15%',
               right: '15%',
               width: '70%',
@@ -602,37 +497,145 @@ export const RPGTugOfWar = ({
 
           {/* Hero Team (Right Side) - Leader + Kids */}
           <motion.div 
-            className="absolute right-[3%] bottom-0 flex flex-col items-center z-[15]"
+            className="absolute right-[5%] bottom-0 flex flex-col items-center z-[15]"
             animate={pullingAnimation === 'hero' ? { x: [10, 0] } : pullingAnimation === 'enemy' ? { x: [-10, 0] } : {}}
             transition={{ duration: 0.3 }}
           >
             <div className="flex items-end">
-              <div className="origin-bottom mr-2">
+              {/* Leader character at the back */}
+              <div className="scale-[0.7] origin-bottom mr-1">
                 <LeaderComponent 
                   state={leaderState as any}
                   healthPercent={100}
-                  size="large"
+                  size="medium"
                   flipX
                 />
               </div>
+              {/* Kids pulling */}
               {[0, 1, 2].map(i => (
-                <div key={i} className="origin-bottom -ml-4">
+                <div key={i} className="scale-[0.55] origin-bottom -ml-4">
                   <TugOfWarKid 
                     index={i}
                     isPulling={pullingAnimation === 'hero'}
                     isStraining={pullingAnimation === 'enemy'}
                     side="hero"
-                    size="large"
+                    size="small"
                   />
                 </div>
               ))}
             </div>
-            <div className="text-blue-600 font-bold text-sm mt-2 bg-white/90 px-3 py-1 rounded-full shadow">
+            <div className="text-blue-600 font-bold text-xs mt-1 bg-white/90 px-2 py-0.5 rounded-full shadow">
               {heroName}'s Team
             </div>
           </motion.div>
         </div>
       </motion.div>
+
+      {/* Word Display & Controls - Uses RPGWordReader for proper matching */}
+      {!gameOver && (
+        <div className="absolute bottom-0 left-0 right-0 z-20 p-4 bg-gradient-to-t from-black/80 via-black/60 to-transparent">
+          {/* Paused Overlay */}
+          <AnimatePresence>
+            {isPaused && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center z-30"
+              >
+                <div className="text-center">
+                  <Pause className="h-12 w-12 text-yellow-400 mx-auto mb-2" />
+                  <h3 className="text-2xl font-bold text-white mb-2">PAUSED</h3>
+                  <p className="text-white/70 mb-4">Timer frozen at {autoPullTimer}s</p>
+                  
+                  {/* Large Hear Word button when paused */}
+                  <Button
+                    size="lg"
+                    onClick={pronounceWord}
+                    className="bg-blue-600 hover:bg-blue-700 text-white mb-4"
+                  >
+                    <Volume2 className="h-5 w-5 mr-2" />
+                    Hear "{currentWord}"
+                  </Button>
+                  
+                  <Button
+                    size="lg"
+                    onClick={handleResume}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <Play className="h-5 w-5 mr-2" />
+                    Resume
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Feedback */}
+          <AnimatePresence>
+            {feedback && !isPaused && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                className={`text-center mb-2 text-2xl font-black ${
+                  feedback === 'correct' ? 'text-green-400' : 'text-red-400'
+                }`}
+              >
+                {feedback === 'correct' ? '✓ HEAVE! Pull!' : '✗ They pulled back!'}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Pause Button & Hear Word */}
+          <div className="flex justify-center gap-3 mb-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handlePause}
+              className="bg-yellow-500/20 border-yellow-400/50 text-yellow-200 hover:bg-yellow-500/30"
+            >
+              <Pause className="h-4 w-4 mr-1" />
+              Pause
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={pronounceWord}
+              className="bg-blue-500/20 border-blue-400/50 text-blue-200 hover:bg-blue-500/30"
+            >
+              <Volume2 className="h-4 w-4 mr-1" />
+              Hear Word
+            </Button>
+          </div>
+
+          {/* Current Word Display with Listening Indicator */}
+          <div className="text-center">
+            <motion.div
+              key={currentWord}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="text-4xl font-black text-white mb-2 drop-shadow-lg"
+              style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}
+            >
+              {currentWord}
+            </motion.div>
+            
+            {/* Listening indicator */}
+            <div className="flex items-center justify-center gap-2 text-green-400">
+              <motion.div
+                animate={isListening ? { scale: [1, 1.2, 1] } : {}}
+                transition={{ duration: 0.8, repeat: Infinity }}
+              >
+                <Mic className={`h-5 w-5 ${isListening ? 'text-green-400' : 'text-gray-400'}`} />
+              </motion.div>
+              <span className="text-sm font-medium">
+                {isListening ? 'Listening... Say the word!' : 'Mic paused'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Game Over Overlay */}
       <AnimatePresence>
