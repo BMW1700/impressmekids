@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useParams, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -50,6 +51,7 @@ const ClubDetail = () => {
   } = useClubJoinRequests(clubId);
   const updateClub = useUpdateClub();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
 
   // Fetch announcements
   const { data: announcements, isLoading: announcementsLoading } = useQuery({
@@ -222,29 +224,59 @@ const ClubDetail = () => {
           </div>
 
           <Tabs defaultValue="settings" className="space-y-6">
-            <TabsList>
-              <TabsTrigger value="settings">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </TabsTrigger>
-              <TabsTrigger value="announcements">
-                <Bell className="h-4 w-4 mr-2" />
-                Announcements
-              </TabsTrigger>
-              <TabsTrigger value="roster">
-                <Users className="h-4 w-4 mr-2" />
-                Roster ({members?.length || 0})
-              </TabsTrigger>
-              <TabsTrigger value="requests">
-                <UserPlus className="h-4 w-4 mr-2" />
-                Requests
-                {requests.length > 0 && (
-                  <Badge variant="destructive" className="ml-2">
-                    {requests.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            </TabsList>
+            {isMobile ? (
+              <div className="flex flex-col gap-1">
+                <TabsList className="w-full grid grid-cols-2">
+                  <TabsTrigger value="settings">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Settings
+                  </TabsTrigger>
+                  <TabsTrigger value="requests">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Requests
+                    {requests.length > 0 && (
+                      <Badge variant="destructive" className="ml-2">
+                        {requests.length}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                </TabsList>
+                <TabsList className="w-full grid grid-cols-2">
+                  <TabsTrigger value="announcements">
+                    <Bell className="h-4 w-4 mr-2" />
+                    Announcements
+                  </TabsTrigger>
+                  <TabsTrigger value="roster">
+                    <Users className="h-4 w-4 mr-2" />
+                    Roster ({members?.length || 0})
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+            ) : (
+              <TabsList>
+                <TabsTrigger value="settings">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
+                </TabsTrigger>
+                <TabsTrigger value="announcements">
+                  <Bell className="h-4 w-4 mr-2" />
+                  Announcements
+                </TabsTrigger>
+                <TabsTrigger value="roster">
+                  <Users className="h-4 w-4 mr-2" />
+                  Roster ({members?.length || 0})
+                </TabsTrigger>
+                <TabsTrigger value="requests">
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Requests
+                  {requests.length > 0 && (
+                    <Badge variant="destructive" className="ml-2">
+                      {requests.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+            )}
 
             <TabsContent value="settings">
               <Card>
