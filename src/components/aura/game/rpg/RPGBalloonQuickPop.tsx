@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
-import { Coins, Star, Mic, MicOff, Pause, Play } from "lucide-react";
+import { Coins, Star, Mic, MicOff } from "lucide-react";
 
 interface RPGBalloonQuickPopProps {
   words: string[];
@@ -30,6 +30,7 @@ export const RPGBalloonQuickPop = ({
   onComplete,
   onWordResult,
 }: RPGBalloonQuickPopProps) => {
+  // Always show exactly 5 balloons (or less if fewer words)
   const balloonCount = Math.min(5, Math.max(3, words.length));
   
   const [balloons, setBalloons] = useState<QuickBalloon[]>(() =>
@@ -44,9 +45,9 @@ export const RPGBalloonQuickPop = ({
 
   const [currentBalloonIndex, setCurrentBalloonIndex] = useState(0);
   
-  // Mic states - continuous with pause/resume (like Classic)
+  // Simplified mic state - stop/start per word for reliability
   const [isMicActive, setIsMicActive] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   
   const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
   const [poppedCount, setPoppedCount] = useState(0);
@@ -59,26 +60,28 @@ export const RPGBalloonQuickPop = ({
   const recognitionRef = useRef<any>(null);
   const isListeningRef = useRef(false);
   const rewardIdRef = useRef(0);
+  const processingRef = useRef(false);
 
   const currentBalloon = balloons[currentBalloonIndex];
-  const activeBalloons = balloons.filter(b => !b.popped);
 
   // Log on mount
   useEffect(() => {
-    console.log("[BALLOON-QUICKPOP] v2 mounted with pause/resume mic", {
+    console.log("[BALLOON-QUICKPOP] v3 - Static 5 balloons, per-word recognition", {
       balloonCount,
       wordsCount: words.length,
     });
   }, []);
 
+  // Initialize speech recognition once
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
         recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = true;
+        recognitionRef.current.continuous = false; // One result at a time
         recognitionRef.current.interimResults = false;
         recognitionRef.current.lang = 'en-US';
+        recognitionRef.current.maxAlternatives = 3;
       }
     }
     return () => {
@@ -111,7 +114,15 @@ export const RPGBalloonQuickPop = ({
   }, []);
 
   const handleWordResult = useCallback((correct: boolean) => {
-    if (!currentBalloon) return;
+    if (!currentBalloon || processingRef.current) return;
+    processingRef.current = true;
+    setIsProcessing(true);
+
+    // Stop recognition immediately
+    try {
+      recognitionRef.current?.stop();
+    } catch (e) {}
+    isListeningRef.current = false;
 
     if (correct) {
       setFeedback('correct');
@@ -137,88 +148,104 @@ export const RPGBalloonQuickPop = ({
 
     onWordResult?.(currentBalloon.word, correct);
 
+    // Move to next balloon after delay
     setTimeout(() => {
       setFeedback(null);
       setCurrentBalloonIndex(prev => prev + 1);
+      processingRef.current = false;
+      setIsProcessing(false);
+      
+      // Auto-restart for next word if mic was active
+      if (isMicActive && currentBalloonIndex + 1 < balloons.length) {
+        setTimeout(() => {
+          startListeningForWord();
+        }, 200);
+      }
     }, 600);
-  }, [currentBalloon, onWordResult, showFloatingReward]);
+  }, [currentBalloon, onWordResult, showFloatingReward, isMicActive, currentBalloonIndex, balloons.length]);
 
-  // Mic control functions - matches Classic pattern
-  const startMic = useCallback(() => {
-    if (!recognitionRef.current || gameOver || !currentBalloon) return;
+  // Start listening for a single word
+  const startListeningForWord = useCallback(() => {
+    if (!recognitionRef.current || gameOver || !currentBalloon || processingRef.current) return;
 
-    setIsMicActive(true);
-    setIsPaused(false);
     isListeningRef.current = true;
 
     recognitionRef.current.onresult = (event: any) => {
-      if (!isListeningRef.current) return;
+      if (!isListeningRef.current || processingRef.current) return;
       
-      const lastResult = event.results[event.results.length - 1];
-      if (lastResult.isFinal) {
-        const transcript = lastResult[0].transcript.toLowerCase().trim();
+      // Check all alternatives for a match
+      for (let i = 0; i < event.results[0].length; i++) {
+        const transcript = event.results[0][i].transcript.toLowerCase().trim();
         const targetWord = currentBalloon.word.toLowerCase().replace(/[^a-z]/g, '');
-        const spokenWord = transcript.replace(/[^a-z]/g, '');
+        const spokenWords = transcript.replace(/[^a-z\s]/g, '').split(/\s+/);
         
-        const isCorrect = spokenWord === targetWord || 
-                          transcript.includes(targetWord) ||
-                          targetWord.includes(spokenWord);
+        // Check if any spoken word matches the target
+        const isCorrect = spokenWords.some(w => 
+          w === targetWord || 
+          targetWord.includes(w) || 
+          w.includes(targetWord)
+        );
         
-        handleWordResult(isCorrect);
+        if (isCorrect) {
+          handleWordResult(true);
+          return;
+        }
       }
+      
+      // No match found - restart listening
+      try {
+        setTimeout(() => {
+          if (isListeningRef.current && !processingRef.current && !gameOver) {
+            recognitionRef.current.start();
+          }
+        }, 100);
+      } catch (e) {}
     };
 
     recognitionRef.current.onerror = (e: any) => {
-      console.log('Speech error:', e.error);
-      if (e.error === 'no-speech') {
-        try {
-          recognitionRef.current.stop();
-          setTimeout(() => {
-            if (isListeningRef.current && !isPaused) {
+      console.log('[BalloonQuickPop] Speech error:', e.error);
+      if (e.error === 'no-speech' || e.error === 'aborted') {
+        // Restart on no-speech
+        setTimeout(() => {
+          if (isListeningRef.current && !processingRef.current && !gameOver) {
+            try {
               recognitionRef.current.start();
-            }
-          }, 100);
-        } catch (err) {}
+            } catch (err) {}
+          }
+        }, 100);
       }
     };
 
     recognitionRef.current.onend = () => {
-      if (isListeningRef.current && !isPaused && !gameOver) {
-        try {
-          recognitionRef.current.start();
-        } catch (e) {}
+      // Auto-restart if still listening
+      if (isListeningRef.current && !processingRef.current && !gameOver) {
+        setTimeout(() => {
+          try {
+            recognitionRef.current.start();
+          } catch (e) {}
+        }, 100);
       }
     };
 
     try {
       recognitionRef.current.start();
     } catch (e) {
-      setIsMicActive(false);
+      console.log('[BalloonQuickPop] Failed to start recognition:', e);
     }
-  }, [gameOver, currentBalloon, handleWordResult, isPaused]);
+  }, [gameOver, currentBalloon, handleWordResult]);
+
+  // Mic control functions
+  const startMic = useCallback(() => {
+    if (gameOver || !currentBalloon) return;
+    setIsMicActive(true);
+    startListeningForWord();
+  }, [gameOver, currentBalloon, startListeningForWord]);
 
   const stopMic = useCallback(() => {
     isListeningRef.current = false;
     setIsMicActive(false);
-    setIsPaused(false);
     try {
       recognitionRef.current?.stop();
-    } catch (e) {}
-  }, []);
-
-  const pauseMic = useCallback(() => {
-    setIsPaused(true);
-    isListeningRef.current = false;
-    try {
-      recognitionRef.current?.stop();
-    } catch (e) {}
-  }, []);
-
-  const resumeMic = useCallback(() => {
-    setIsPaused(false);
-    isListeningRef.current = true;
-    try {
-      recognitionRef.current?.start();
     } catch (e) {}
   }, []);
 
@@ -229,22 +256,24 @@ export const RPGBalloonQuickPop = ({
     return (
       <motion.div
         key={balloon.id}
-        className="relative"
+        className="relative flex-shrink-0"
         initial={{ scale: 0, y: 50 }}
         animate={
           isPopped
             ? { scale: [1, 1.5, 0], opacity: [1, 1, 0], rotate: [0, 20, -20, 0] }
-            : { scale: 1, y: [0, -8, 0], opacity: 1 }
+            : { scale: 1, opacity: 1 }
         }
         transition={
           isPopped
             ? { duration: 0.4 }
-            : { duration: 1.5 + index * 0.2, repeat: Infinity, delay: index * 0.1 }
+            : { duration: 0.5 }
         }
       >
         <div
-          className={`w-20 h-24 rounded-[50%] relative cursor-pointer transition-all ${
-            isActive ? 'ring-4 ring-yellow-400 ring-opacity-80 scale-110' : ''
+          className={`w-16 h-20 sm:w-20 sm:h-24 rounded-[50%] relative transition-all duration-300 ${
+            isActive 
+              ? 'ring-4 ring-yellow-400 ring-opacity-80 scale-110 shadow-[0_0_30px_rgba(234,179,8,0.6)]' 
+              : 'opacity-60'
           }`}
           style={{
             background: `radial-gradient(ellipse at 30% 25%, ${balloon.color}ee, ${balloon.color}aa, ${balloon.color})`,
@@ -259,7 +288,7 @@ export const RPGBalloonQuickPop = ({
           
           {/* Enemy face */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-3xl drop-shadow-lg">{balloon.emoji}</span>
+            <span className="text-2xl sm:text-3xl drop-shadow-lg">{balloon.emoji}</span>
           </div>
 
           {/* String */}
@@ -319,11 +348,6 @@ export const RPGBalloonQuickPop = ({
       {/* Semi-transparent overlay - keeps battle visible behind */}
       <div className="absolute inset-0 bg-gradient-to-b from-purple-900/80 via-indigo-900/80 to-purple-900/80 backdrop-blur-sm" />
 
-      {/* V2 Badge */}
-      <div className="absolute top-2 left-2 z-50 bg-purple-500 text-white text-xs font-bold px-2 py-1 rounded shadow-lg">
-        QuickPop v2 • Pause/Resume Mic
-      </div>
-
       {/* Content */}
       <div className="relative z-10 flex flex-col h-full p-4">
         {/* Header */}
@@ -350,9 +374,9 @@ export const RPGBalloonQuickPop = ({
           </div>
         </div>
 
-        {/* Balloons */}
+        {/* Static 5 Balloons in a Row */}
         <div className="flex-1 flex items-center justify-center">
-          <div className="flex gap-6 flex-wrap justify-center">
+          <div className="flex gap-4 sm:gap-6 justify-center items-end px-4">
             {balloons.map((balloon, i) => renderBalloon(balloon, i))}
           </div>
         </div>
@@ -393,7 +417,7 @@ export const RPGBalloonQuickPop = ({
                     feedback === 'correct' ? 'text-green-400' : 'text-red-400'
                   }`}
                 >
-                  {feedback === 'correct' ? '🎉 POP!' : '✗ Miss!'}
+                  {feedback === 'correct' ? '🎉 POP!' : '✗ Try again!'}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -405,68 +429,53 @@ export const RPGBalloonQuickPop = ({
               animate={{ opacity: 1, y: 0 }}
               className="text-center mb-4"
             >
-              <div className="text-white/60 text-sm mb-1">Read to pop:</div>
+              <div className="text-white/60 text-sm mb-1">Read to pop balloon {currentBalloonIndex + 1} of {balloons.length}:</div>
               <div className="text-4xl font-black text-white">{currentBalloon.word}</div>
             </motion.div>
 
-            {/* Mic Controls - Same pattern as Classic */}
+            {/* Mic Controls */}
             <div className="flex justify-center gap-4">
               {!isMicActive ? (
                 <Button
                   size="lg"
                   onClick={startMic}
-                  disabled={gameOver}
+                  disabled={gameOver || isProcessing}
                   className="px-8 py-4 text-lg font-bold rounded-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500"
                 >
                   <Mic className="h-5 w-5 mr-2" />
                   Start Reading
                 </Button>
               ) : (
-                <div className="flex gap-2">
-                  {isPaused ? (
-                    <Button
-                      size="lg"
-                      onClick={resumeMic}
-                      className="px-6 py-4 text-lg font-bold rounded-full bg-gradient-to-r from-green-500 to-emerald-600"
-                    >
-                      <Play className="h-5 w-5 mr-2" />
-                      Resume
-                    </Button>
-                  ) : (
-                    <Button
-                      size="lg"
-                      onClick={pauseMic}
-                      className="px-6 py-4 text-lg font-bold rounded-full bg-gradient-to-r from-yellow-500 to-orange-500"
-                    >
-                      <Pause className="h-5 w-5 mr-2" />
-                      Pause
-                    </Button>
-                  )}
-                  <Button
-                    size="lg"
-                    onClick={stopMic}
-                    variant="destructive"
-                    className="px-6 py-4 text-lg font-bold rounded-full"
-                  >
-                    <MicOff className="h-5 w-5 mr-2" />
-                    Stop
-                  </Button>
-                </div>
+                <Button
+                  size="lg"
+                  onClick={stopMic}
+                  variant="destructive"
+                  className="px-8 py-4 text-lg font-bold rounded-full"
+                >
+                  <MicOff className="h-5 w-5 mr-2" />
+                  Stop
+                </Button>
               )}
             </div>
 
             {/* Mic status indicator */}
-            {isMicActive && (
+            {isMicActive && !isProcessing && (
               <motion.div 
-                className={`text-center mt-3 text-sm font-bold ${isPaused ? 'text-yellow-400' : 'text-green-400'}`}
-                animate={!isPaused ? { opacity: [1, 0.5, 1] } : {}}
+                className="text-center mt-3 text-sm font-bold text-green-400"
+                animate={{ opacity: [1, 0.5, 1] }}
                 transition={{ duration: 1, repeat: Infinity }}
               >
-                {isPaused ? '⏸️ Paused' : '🎤 Listening...'}
+                🎤 Listening... Say "{currentBalloon.word}"
               </motion.div>
             )}
+            
+            {isProcessing && (
+              <div className="text-center mt-3 text-sm font-bold text-yellow-400">
+                ⏳ Processing...
+              </div>
+            )}
 
-            {/* Test buttons */}
+            {/* Test buttons for dev */}
             <div className="flex justify-center gap-2 mt-3">
               <Button variant="ghost" size="sm" onClick={() => handleWordResult(true)} className="text-green-400">
                 ✓ Correct
@@ -485,19 +494,27 @@ export const RPGBalloonQuickPop = ({
             animate={{ opacity: 1, scale: 1 }}
             className="bg-black/60 backdrop-blur-sm rounded-2xl p-6 text-center"
           >
-            <div className="text-3xl mb-2">🎈</div>
-            <h3 className="text-2xl font-black text-white mb-2">
-              {poppedCount === balloons.length ? 'Perfect Pop!' : 'Nice Try!'}
+            <h3 className="text-2xl font-black text-white mb-4">
+              {poppedCount >= balloons.length / 2 ? '🎉 Great Job!' : '💪 Keep Practicing!'}
             </h3>
-            <p className="text-purple-200">
-              Popped {poppedCount} / {balloons.length} balloons
-            </p>
-            <div className="flex justify-center gap-4 mt-3">
-              <div className="flex items-center gap-1 text-yellow-300">
-                <Coins className="h-5 w-5" /> +{totalGold} Gold
+            <div className="flex justify-center gap-6 mb-4">
+              <div className="text-center">
+                <div className="text-3xl font-black text-green-400">{poppedCount}</div>
+                <div className="text-sm text-green-200">Popped</div>
               </div>
-              <div className="flex items-center gap-1 text-purple-300">
-                <Star className="h-5 w-5" /> +{totalXp} XP
+              <div className="text-center">
+                <div className="text-3xl font-black text-red-400">{missedCount}</div>
+                <div className="text-sm text-red-200">Missed</div>
+              </div>
+            </div>
+            <div className="flex justify-center gap-4">
+              <div className="flex items-center gap-1 bg-yellow-500/30 px-4 py-2 rounded-full">
+                <Coins className="h-5 w-5 text-yellow-400" />
+                <span className="text-yellow-300 font-bold text-lg">+{totalGold}</span>
+              </div>
+              <div className="flex items-center gap-1 bg-purple-500/30 px-4 py-2 rounded-full">
+                <Star className="h-5 w-5 text-purple-400" />
+                <span className="text-purple-300 font-bold text-lg">+{totalXp} XP</span>
               </div>
             </div>
           </motion.div>

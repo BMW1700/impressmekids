@@ -52,7 +52,7 @@ export type MiniGameType =
 export interface RPGEnemy {
   id: string;
   name: string;
-  type: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian';
+  type: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater';
   maxHp: number;
   attack: number;
   defense: number;
@@ -184,7 +184,8 @@ export const goblinElite: RPGEnemy = {
     { id: 'poison_dagger', name: 'Poison Dagger', damage: 12, effect: 'poison', description: 'Deals damage over time', icon: '🗡️' },
   ],
   barrageWordCount: 6,
-  miniGames: ['spell_combo', 'rhyme_chain', 'tug_of_war', 'speed_typist', 'asteroid_barrage'], // Elite has challenging mini-games
+  // Elite has challenging mini-games including Word Prison (asteroid_barrage)
+  miniGames: ['spell_combo', 'rhyme_chain', 'tug_of_war', 'speed_typist', 'asteroid_barrage', 'asteroid_barrage'], // Word prison appears twice for higher chance
 };
 
 // Boss Enemies - BUFFED
@@ -219,7 +220,8 @@ export const grogTheGoblinKing: RPGEnemy = {
     { id: 'word_prison', name: 'Word Prison', damage: 0, effect: 'asteroid_barrage', description: 'Summons word asteroids!', icon: '☄️' },
   ],
   barrageWordCount: 8,
-  miniGames: ['tug_of_war', 'speed_typist', 'rhyme_chain', 'asteroid_barrage'], // Boss has intense mini-games
+  // Grog's Word Prison (asteroid_barrage) is his signature attack
+  miniGames: ['tug_of_war', 'speed_typist', 'rhyme_chain', 'asteroid_barrage', 'asteroid_barrage'], // Word prison appears twice
 };
 
 export const galairTheWickedSorcerer: RPGEnemy = {
@@ -256,7 +258,8 @@ export const galairTheWickedSorcerer: RPGEnemy = {
     { id: 'word_prison', name: 'Word Prison', damage: 0, effect: 'asteroid_barrage', description: 'Summons word asteroids!', icon: '☄️' },
   ],
   barrageWordCount: 10,
-  miniGames: ['spell_combo', 'ghostly_whispers', 'speed_typist', 'tug_of_war', 'asteroid_barrage'], // Final boss has toughest mini-games
+  // Final boss has all the toughest mini-games including Word Prison
+  miniGames: ['spell_combo', 'ghostly_whispers', 'speed_typist', 'tug_of_war', 'asteroid_barrage', 'asteroid_barrage'], // Word prison appears twice
 };
 
 // Dragon Enemy - Drake the Dragon (renamed from Dalair)
@@ -295,7 +298,8 @@ export const drakeTheDragon: RPGEnemy = {
     { id: 'wing_gust', name: 'Wing Gust', damage: 15, effect: 'silence', description: 'Blows away your words', icon: '💨' },
   ],
   barrageWordCount: 7,
-  miniGames: ['beast_swarm', 'fireball_defense', 'fireball_barrage'], // Dragon's UNIQUE mini-games
+  // Drake's mini-games - MUST include beast_swarm as a primary attack
+  miniGames: ['beast_swarm', 'fireball_defense', 'fireball_barrage', 'beast_swarm'], // Beast swarm appears twice for higher chance
 };
 
 // Mini Flying Beast Enemy (summoned by Drake)
@@ -415,8 +419,422 @@ export const stoneGuardian: RPGEnemy = {
   miniGames: ['rolling_boulders', 'speed_typist', 'tug_of_war'], // Stone Guardian's unique games
 };
 
-// Get enemy by type for battle
-export const getEnemyForBattle = (enemyType: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian'): RPGEnemy => {
+// ========== NEW WORLD 5 ENEMIES: The Whispering Caverns ==========
+
+// Cave Troll - Slow but powerful
+export const caveTroll: RPGEnemy = {
+  id: 'cave_troll',
+  name: 'Grumbold the Cave Troll',
+  type: 'minion', // Uses minion type for compatibility
+  maxHp: 200,
+  attack: 30,
+  defense: 25,
+  wordDamageMultiplier: 0.5,
+  color: 'from-stone-600 to-slate-800',
+  dialogueIntro: [
+    "GRRRR... WHO DISTURBS MY CAVE...",
+    "ME CRUSH TINY READER...",
+    "WORDS MAKE HEAD HURT...",
+  ],
+  dialogueAttack: [
+    "*massive club swing*",
+    "SMASH!",
+    "*ground-shaking stomp*",
+  ],
+  dialogueDefeat: [
+    "Ugh... me go sleep now...",
+    "Words... too... powerful...",
+  ],
+  specialAbilities: [
+    { id: 'cave_smash', name: 'Cave Smash', damage: 20, effect: 'earthquake', description: 'Shakes the screen', icon: '🪨' },
+    { id: 'boulder_throw', name: 'Boulder Throw', damage: 15, effect: 'debuff', description: 'Reduces accuracy', icon: '⚫' },
+  ],
+  barrageWordCount: 5,
+  miniGames: ['rolling_boulders', 'word_shield', 'speed_typist'],
+};
+
+// Crystal Spider - Fast, multiple attacks
+export const crystalSpider: RPGEnemy = {
+  id: 'crystal_spider',
+  name: 'Prism the Crystal Spider',
+  type: 'minion',
+  maxHp: 100,
+  attack: 18,
+  defense: 8,
+  wordDamageMultiplier: 0.8,
+  color: 'from-violet-400 to-pink-600',
+  dialogueIntro: [
+    "*crystalline clicking sounds*",
+    "My webs trap words in crystal...",
+    "You cannot escape my prismatic prison!",
+  ],
+  dialogueAttack: [
+    "*rapid leg strikes*",
+    "CRYSTAL VENOM!",
+    "*web shot*",
+  ],
+  dialogueDefeat: [
+    "*shatters into fragments*",
+    "My crystals... broken...",
+  ],
+  specialAbilities: [
+    { id: 'crystal_web', name: 'Crystal Web', damage: 0, effect: 'silence', description: 'Traps next word in crystal', icon: '🕸️' },
+    { id: 'prism_beam', name: 'Prism Beam', damage: 12, effect: 'debuff', description: 'Dazzling light attack', icon: '💎' },
+  ],
+  barrageWordCount: 4,
+  miniGames: ['dodge_words', 'spell_combo', 'balloon_quickpop'],
+};
+
+// Echo Wraith - Boss of World 5 (words must be repeated)
+export const echoWraith: RPGEnemy = {
+  id: 'echo_wraith',
+  name: 'Echo the Wraith of Whispers',
+  type: 'boss',
+  maxHp: 280,
+  attack: 28,
+  defense: 15,
+  wordDamageMultiplier: 0.4,
+  color: 'from-slate-400 to-zinc-700',
+  dialogueIntro: [
+    "Echo... echo... echo...",
+    "Your words return to me... empty...",
+    "In the caverns, all sounds belong to ME!",
+    "Repeat after me... if you dare...",
+  ],
+  dialogueAttack: [
+    "*voice echoes painfully*",
+    "HEAR YOUR OWN FAILURE!",
+    "*sonic waves*",
+  ],
+  dialogueDefeat: [
+    "The echoes... fade...",
+    "Your voice... stronger than mine...",
+    "Silence... at last...",
+  ],
+  specialAbilities: [
+    { id: 'echo_chamber', name: 'Echo Chamber', damage: 0, effect: 'ghostly_whisper', description: 'Words echo and fade!', icon: '🗣️' },
+    { id: 'sonic_scream', name: 'Sonic Scream', damage: 22, effect: 'debuff', description: 'Deafening attack', icon: '📢' },
+    { id: 'whisper_trap', name: 'Whisper Trap', damage: 0, effect: 'silence', description: 'Silences magic', icon: '🤫' },
+  ],
+  barrageWordCount: 8,
+  miniGames: ['ghostly_whispers', 'rhyme_chain', 'speed_typist', 'tug_of_war'],
+};
+
+// ========== NEW WORLD 6 ENEMIES: The Floating Isles ==========
+
+// Storm Harpy - Flying attacks
+export const stormHarpy: RPGEnemy = {
+  id: 'storm_harpy',
+  name: 'Tempest the Storm Harpy',
+  type: 'guard',
+  maxHp: 120,
+  attack: 22,
+  defense: 10,
+  wordDamageMultiplier: 0.7,
+  color: 'from-sky-400 to-indigo-600',
+  dialogueIntro: [
+    "*fierce wind sounds*",
+    "The winds carry your words AWAY!",
+    "You cannot read what flies past you!",
+  ],
+  dialogueAttack: [
+    "*diving talon strike*",
+    "WINDS OF FURY!",
+    "*feather storm*",
+  ],
+  dialogueDefeat: [
+    "My wings... grounded...",
+    "The storm... passes...",
+  ],
+  specialAbilities: [
+    { id: 'wind_gust', name: 'Wind Gust', damage: 10, effect: 'debuff', description: 'Words blow across screen', icon: '💨' },
+    { id: 'talon_dive', name: 'Talon Dive', damage: 18, effect: 'poison', description: 'Bleeding damage', icon: '🦅' },
+  ],
+  barrageWordCount: 5,
+  miniGames: ['dodge_words', 'balloon_quickpop', 'word_shield'],
+};
+
+// Cloud Giant - Massive HP
+export const cloudGiant: RPGEnemy = {
+  id: 'cloud_giant',
+  name: 'Cumulus the Cloud Giant',
+  type: 'elite',
+  maxHp: 320,
+  attack: 25,
+  defense: 20,
+  wordDamageMultiplier: 0.35,
+  color: 'from-gray-300 to-slate-500',
+  dialogueIntro: [
+    "WHO DISTURBS MY SLUMBER...",
+    "I DREAM OF ENDLESS SKIES...",
+    "YOUR WORDS ARE BUT WHISPERS TO ME...",
+  ],
+  dialogueAttack: [
+    "*thunderous fist slam*",
+    "CLOUD CRUSH!",
+    "*lightning breath*",
+  ],
+  dialogueDefeat: [
+    "I return... to the clouds...",
+    "Sleep... calls me...",
+  ],
+  specialAbilities: [
+    { id: 'thunder_clap', name: 'Thunder Clap', damage: 18, effect: 'earthquake', description: 'Shakes everything', icon: '⚡' },
+    { id: 'cloud_cover', name: 'Cloud Cover', damage: 0, effect: 'shadow_veil', description: 'Words become foggy', icon: '☁️' },
+  ],
+  barrageWordCount: 6,
+  miniGames: ['tug_of_war', 'speed_typist', 'rolling_boulders'],
+};
+
+// Zephyr the Wind Lord - Boss of World 6
+export const zephyr: RPGEnemy = {
+  id: 'zephyr',
+  name: 'Zephyr the Wind Lord',
+  type: 'boss',
+  maxHp: 350,
+  attack: 32,
+  defense: 18,
+  wordDamageMultiplier: 0.38,
+  color: 'from-cyan-300 to-blue-600',
+  dialogueIntro: [
+    "I AM THE WIND ITSELF!",
+    "Words blow away before you can speak them!",
+    "The sky belongs to ME, mortal!",
+    "Try to catch my STORM!",
+  ],
+  dialogueAttack: [
+    "*hurricane blast*",
+    "CYCLONE OF CHAOS!",
+    "*tornado spin*",
+  ],
+  dialogueDefeat: [
+    "The wind... dies down...",
+    "Your voice... cuts through the storm...",
+    "I shall drift away...",
+  ],
+  specialAbilities: [
+    { id: 'hurricane', name: 'Hurricane', damage: 25, effect: 'debuff', description: 'Massive wind damage', icon: '🌀' },
+    { id: 'wind_chase', name: 'Wind Chase', damage: 0, effect: 'word_barrage', description: 'Words fly across screen', icon: '💨' },
+    { id: 'sky_barrier', name: 'Sky Barrier', damage: 0, effect: 'debuff', description: 'Reduces damage temporarily', icon: '🛡️' },
+  ],
+  barrageWordCount: 9,
+  miniGames: ['speed_typist', 'tug_of_war', 'dodge_words', 'fireball_defense'],
+};
+
+// ========== NEW WORLD 7 ENEMIES: The Sunken Library ==========
+
+// Ink Kraken - Obscures words
+export const inkKraken: RPGEnemy = {
+  id: 'ink_kraken',
+  name: 'Inkling the Ink Kraken',
+  type: 'guard',
+  maxHp: 180,
+  attack: 24,
+  defense: 14,
+  wordDamageMultiplier: 0.55,
+  color: 'from-slate-800 to-purple-900',
+  dialogueIntro: [
+    "*bubbling sounds*",
+    "My ink clouds ALL knowledge...",
+    "You cannot read what you cannot SEE!",
+  ],
+  dialogueAttack: [
+    "*tentacle whip*",
+    "INK BLAST!",
+    "*crushing grip*",
+  ],
+  dialogueDefeat: [
+    "My ink... washes away...",
+    "The words... shine through...",
+  ],
+  specialAbilities: [
+    { id: 'ink_cloud', name: 'Ink Cloud', damage: 0, effect: 'shadow_veil', description: 'Words become obscured', icon: '🦑' },
+    { id: 'tentacle_slam', name: 'Tentacle Slam', damage: 16, effect: 'poison', description: 'Crushing damage', icon: '🐙' },
+  ],
+  barrageWordCount: 5,
+  miniGames: ['ghostly_whispers', 'word_shield', 'dodge_words'],
+};
+
+// Reef Guardian - Coral armor
+export const reefGuardian: RPGEnemy = {
+  id: 'reef_guardian',
+  name: 'Coral the Reef Guardian',
+  type: 'guard',
+  maxHp: 160,
+  attack: 20,
+  defense: 28,
+  wordDamageMultiplier: 0.45,
+  color: 'from-pink-400 to-orange-500',
+  dialogueIntro: [
+    "The reef protects all knowledge...",
+    "My coral armor is unbreakable!",
+    "You shall not pass to the depths!",
+  ],
+  dialogueAttack: [
+    "*coral spike attack*",
+    "REEF RUSH!",
+    "*shell shield bash*",
+  ],
+  dialogueDefeat: [
+    "The coral... crumbles...",
+    "The depths... are open...",
+  ],
+  specialAbilities: [
+    { id: 'coral_shield', name: 'Coral Shield', damage: 0, effect: 'debuff', description: 'Reduces incoming damage', icon: '🐚' },
+    { id: 'reef_thorns', name: 'Reef Thorns', damage: 12, effect: 'poison', description: 'Poison damage over time', icon: '🪸' },
+  ],
+  barrageWordCount: 5,
+  miniGames: ['word_shield', 'rolling_boulders', 'balloon_quickpop'],
+};
+
+// Leviathan - Boss of World 7 (epic multi-phase battle)
+export const leviathan: RPGEnemy = {
+  id: 'leviathan',
+  name: 'Leviathan the Ancient',
+  type: 'boss',
+  maxHp: 450,
+  attack: 38,
+  defense: 22,
+  wordDamageMultiplier: 0.28,
+  color: 'from-teal-600 to-blue-900',
+  dialogueIntro: [
+    "*the ocean trembles*",
+    "I AM THE LEVIATHAN!",
+    "I have guarded these books for a THOUSAND years!",
+    "None have ever defeated me... NONE!",
+    "Prepare for the ULTIMATE CHALLENGE!",
+  ],
+  dialogueAttack: [
+    "*massive tail sweep*",
+    "TIDAL WAVE!",
+    "*crushing jaws*",
+    "THE DEPTHS CONSUME YOU!",
+  ],
+  dialogueDefeat: [
+    "After a thousand years... I rest...",
+    "Your words... reach the deepest ocean...",
+    "The library... is yours...",
+  ],
+  specialAbilities: [
+    { id: 'tidal_wave', name: 'Tidal Wave', damage: 30, effect: 'earthquake', description: 'Massive water attack', icon: '🌊' },
+    { id: 'abyssal_gaze', name: 'Abyssal Gaze', damage: 0, effect: 'silence', description: 'Paralyzes with fear', icon: '👁️' },
+    { id: 'whirlpool', name: 'Whirlpool', damage: 20, effect: 'debuff', description: 'Words spin around', icon: '🌀' },
+  ],
+  barrageWordCount: 10,
+  miniGames: ['tug_of_war', 'speed_typist', 'asteroid_barrage', 'fireball_defense'],
+};
+
+// ========== NEW WORLD 8 ENEMIES: The Void Between ==========
+
+// Void Phantom - Flickers in and out
+export const voidPhantom: RPGEnemy = {
+  id: 'void_phantom',
+  name: 'Nihil the Void Phantom',
+  type: 'guard',
+  maxHp: 140,
+  attack: 26,
+  defense: 8,
+  wordDamageMultiplier: 0.6,
+  color: 'from-purple-900 to-black',
+  dialogueIntro: [
+    "*flickers in and out of existence*",
+    "I am... nothing... and everything...",
+    "Your words... have no meaning here...",
+  ],
+  dialogueAttack: [
+    "*phases through reality*",
+    "VOID TOUCH!",
+    "*reality tears*",
+  ],
+  dialogueDefeat: [
+    "I return... to nothing...",
+    "The void... releases me...",
+  ],
+  specialAbilities: [
+    { id: 'void_phase', name: 'Void Phase', damage: 0, effect: 'shadow_veil', description: 'Becomes invisible briefly', icon: '👻' },
+    { id: 'null_strike', name: 'Null Strike', damage: 18, effect: 'silence', description: 'Erases words', icon: '🕳️' },
+  ],
+  barrageWordCount: 5,
+  miniGames: ['ghostly_whispers', 'dodge_words', 'spell_combo'],
+};
+
+// Reality Shifter - Words change mid-reading
+export const realityShifter: RPGEnemy = {
+  id: 'reality_shifter',
+  name: 'Paradox the Reality Shifter',
+  type: 'elite',
+  maxHp: 220,
+  attack: 28,
+  defense: 16,
+  wordDamageMultiplier: 0.42,
+  color: 'from-violet-600 to-pink-900',
+  dialogueIntro: [
+    "Reality is... flexible...",
+    "What you read... may not be what you see...",
+    "I SHIFT the very nature of words!",
+  ],
+  dialogueAttack: [
+    "*bends reality*",
+    "PARADOX PULSE!",
+    "*time distortion*",
+  ],
+  dialogueDefeat: [
+    "Reality... stabilizes...",
+    "Your truth... is stronger...",
+  ],
+  specialAbilities: [
+    { id: 'reality_warp', name: 'Reality Warp', damage: 0, effect: 'debuff', description: 'Words shift positions', icon: '🔮' },
+    { id: 'temporal_blast', name: 'Temporal Blast', damage: 22, effect: 'earthquake', description: 'Time-distorting attack', icon: '⏰' },
+  ],
+  barrageWordCount: 7,
+  miniGames: ['speed_typist', 'rhyme_chain', 'tug_of_war', 'asteroid_barrage'],
+};
+
+// Word Eater - Final Boss of the entire campaign
+export const wordEater: RPGEnemy = {
+  id: 'word_eater',
+  name: 'The Word Eater',
+  type: 'final_boss',
+  maxHp: 600,
+  attack: 45,
+  defense: 25,
+  wordDamageMultiplier: 0.22,
+  color: 'from-black via-purple-950 to-violet-900',
+  dialogueIntro: [
+    "*an abyss opens before you*",
+    "I... AM... THE WORD EATER...",
+    "I consume ALL knowledge... ALL language...",
+    "Every word you've ever read... I will DEVOUR!",
+    "This is the END of your journey, little reader...",
+    "NO ONE has EVER defeated me!",
+  ],
+  dialogueAttack: [
+    "*reality tears apart*",
+    "YOUR WORDS ARE MINE!",
+    "*devours language itself*",
+    "NOTHING ESCAPES THE VOID!",
+  ],
+  dialogueDefeat: [
+    "IMPOSSIBLE!",
+    "Your words... they BURN...",
+    "Knowledge... is... ETERNAL...",
+    "You have proven... reading conquers ALL...",
+    "The books... are finally... SAFE...",
+  ],
+  specialAbilities: [
+    { id: 'word_devour', name: 'Word Devour', damage: 0, effect: 'asteroid_barrage', description: 'Consumes words from screen!', icon: '🕳️' },
+    { id: 'void_scream', name: 'Void Scream', damage: 35, effect: 'debuff', description: 'Devastating void attack', icon: '💀' },
+    { id: 'language_drain', name: 'Language Drain', damage: 0, effect: 'silence', description: 'Silences all abilities', icon: '🔇' },
+    { id: 'reality_end', name: 'Reality End', damage: 40, effect: 'earthquake', description: 'Cataclysmic damage', icon: '🌑' },
+  ],
+  barrageWordCount: 12,
+  miniGames: ['asteroid_barrage', 'tug_of_war', 'speed_typist', 'ghostly_whispers', 'fireball_defense'],
+};
+
+// Get enemy by type for battle - UPDATED with all new enemies
+export type EnemyTypeKey = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater';
+
+export const getEnemyForBattle = (enemyType: EnemyTypeKey): RPGEnemy => {
   switch (enemyType) {
     case 'minion':
       return goblinMinion;
@@ -438,6 +856,31 @@ export const getEnemyForBattle = (enemyType: 'minion' | 'guard' | 'elite' | 'bos
       return shadowWraith;
     case 'stone_guardian':
       return stoneGuardian;
+    // NEW enemies
+    case 'cave_troll':
+      return caveTroll;
+    case 'crystal_spider':
+      return crystalSpider;
+    case 'echo_wraith':
+      return echoWraith;
+    case 'storm_harpy':
+      return stormHarpy;
+    case 'cloud_giant':
+      return cloudGiant;
+    case 'zephyr':
+      return zephyr;
+    case 'ink_kraken':
+      return inkKraken;
+    case 'reef_guardian':
+      return reefGuardian;
+    case 'leviathan':
+      return leviathan;
+    case 'void_phantom':
+      return voidPhantom;
+    case 'reality_shifter':
+      return realityShifter;
+    case 'word_eater':
+      return wordEater;
     default:
       return goblinMinion;
   }

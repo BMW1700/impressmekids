@@ -55,7 +55,7 @@ import { useMLIntegration } from "@/hooks/useMLIntegration";
 // Sound effects singleton
 const battleSounds = new SoundEffects();
 
-type EnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian';
+type EnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater';
 // UPDATED: Added balloon_quickpop for Classic mode mini-game (NOT Balloon Bonanza) + quick_block for enemy attacks
 type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'word_shield' | 'spell_combo' | 'dodge_words' | 'rhyme_chain' | 'speed_typist' | 'tug_of_war' | 'balloon_battle' | 'balloon_quickpop' | 'fireball_defense' | 'quick_block' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat';
 type InventoryKey = 'health_potion' | 'magic_potion';
@@ -737,7 +737,7 @@ export const RPGBattleArena = ({
     }
   };
 
-  // Handle spell casting
+  // Handle spell casting - spells are powerful and DON'T trigger enemy counter-attack
   const handleCastSpell = useCallback((spell: Spell) => {
     if (wizardMp < spell.mpCost) return;
     
@@ -746,21 +746,58 @@ export const RPGBattleArena = ({
     setDamageAmount(spell.damage);
     setHeroAttacking(true);
     
+    // Play appropriate spell sound
+    switch (spell.effect) {
+      case 'fire':
+        battleSounds.fireWhoosh();
+        break;
+      case 'ice':
+        battleSounds.iceShimmer();
+        break;
+      case 'lightning':
+        battleSounds.lightningCrack();
+        break;
+    }
+    
+    // Trigger spell visual effect
+    setActiveSpell(spell.effect);
+    setShowSpellEffect(true);
+    
     setTimeout(() => {
       setHeroAttacking(false);
       setEnemyTakingDamage(true);
       setShowDamageNumber(true);
-      setEnemyHp(prev => Math.max(0, prev - spell.damage));
-      setTotalDamage(prev => prev + spell.damage);
+      
+      // Apply spell damage with bonus effects
+      let finalDamage = spell.damage;
+      
+      // Ice spell has freeze effect - reduce enemy's next attack
+      if (spell.effect === 'ice') {
+        setIsDebuffed(false); // Clear any debuffs on player as bonus
+      }
+      
+      setEnemyHp(prev => Math.max(0, prev - finalDamage));
+      setTotalDamage(prev => prev + finalDamage);
       triggerScreenShake();
+      
+      // Add floating damage number for spell
+      setFloatingDamages(prev => [...prev, {
+        id: Date.now(),
+        damage: finalDamage,
+        x: 30 + Math.random() * 10,
+        y: 30 + Math.random() * 10,
+        isPlayer: false,
+        isCritical: true
+      }]);
       
       setTimeout(() => {
         setEnemyTakingDamage(false);
         setShowDamageNumber(false);
-        // Trigger enemy turn after spell
-        triggerEnemyTurn();
+        // IMPORTANT: Spells are FREE ACTIONS - no enemy counter-attack!
+        // This makes magic strategic and powerful
+        setCurrentCommand(null); // Return to command menu
       }, 600);
-    }, 300);
+    }, 400);
   }, [wizardMp]);
 
   // Handle item usage
