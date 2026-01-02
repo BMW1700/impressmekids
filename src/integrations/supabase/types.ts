@@ -6986,6 +6986,13 @@ export type Database = {
           student_name: string
         }[]
       }
+      get_club_profile_names: {
+        Args: { club_id: string }
+        Returns: {
+          full_name: string
+          profile_id: string
+        }[]
+      }
       get_consent_by_token: {
         Args: { p_token: string }
         Returns: {
