@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Skull, Coins, Star, Timer, Volume2, Pause, Play, Mic } from "lucide-react";
+import { Trophy, Skull, Coins, Star, Timer, Volume2, Pause, Play, Mic, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { TugOfWarBackground } from "./TugOfWarBackground";
@@ -14,6 +14,8 @@ import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { speechManager } from "@/lib/speechRecognitionManager";
 import { supabase } from "@/integrations/supabase/client";
 import { useMLIntegration } from "@/hooks/useMLIntegration";
+import { ensureMicrophoneAccess, type MicAccessResult } from "@/lib/micDiagnostics";
+import { useToast } from "@/hooks/use-toast";
 
 const soundEffects = new SoundEffects();
 
@@ -56,8 +58,10 @@ export const RPGTugOfWar = ({
 }: RPGTugOfWarProps) => {
   // ML Integration for training data
   const { saveToAuraRecords } = useMLIntegration();
+  const { toast } = useToast();
   
   // Character selection
+  const [micError, setMicError] = useState<string | null>(null);
   const [selectedCharacter, setSelectedCharacter] = useState<'valor' | 'elara' | null>(null);
   
   // Rope position: -10 (enemy wins) to +10 (hero wins), starts at 0
@@ -342,8 +346,28 @@ export const RPGTugOfWar = ({
 
   // Start continuous speech recognition - uses ref to avoid stale closures
   // CRITICAL: This must only be called from a user gesture (button click)
-  const startRecognition = useCallback(() => {
+  // PHASE 1 FIX: First ensure mic access, then start speech recognition
+  const startRecognition = useCallback(async () => {
     console.log('[TugOfWar] Starting speech recognition (user gesture)');
+    setMicError(null);
+    
+    // STEP 1: Ensure we have mic permission first
+    const micResult = await ensureMicrophoneAccess(false); // Don't keep stream, just get permission
+    
+    if (!micResult.success) {
+      console.error('[TugOfWar] Microphone access failed:', micResult.error);
+      setMicError(micResult.error?.userMessage || 'Microphone access failed');
+      
+      toast({
+        title: micResult.error?.actionRequired === 'unblock' ? 'Microphone Blocked' : 'Microphone Error',
+        description: micResult.error?.userMessage || 'Please allow microphone access.',
+        variant: 'destructive',
+      });
+      
+      return false;
+    }
+    
+    // STEP 2: Now start speech recognition
     const success = speechManager.start({
       owner: 'tug_of_war',
       continuous: true,
@@ -352,6 +376,7 @@ export const RPGTugOfWar = ({
       onStart: () => {
         console.log('[TugOfWar] Speech recognition started successfully');
         setIsListening(true);
+        setMicError(null);
       },
       onEnd: () => {
         console.log('[TugOfWar] Speech recognition ended');
@@ -360,13 +385,19 @@ export const RPGTugOfWar = ({
       onError: (error) => {
         console.log('[TugOfWar] Speech error:', error);
         setIsListening(false);
+        if (error === 'not-allowed') {
+          setMicError('Microphone access was denied. Please allow mic access.');
+        }
       }
     });
+    
     if (!success) {
       console.error('[TugOfWar] Failed to start speech recognition');
+      setMicError('Failed to start speech recognition. Please try again.');
     }
+    
     return success;
-  }, []);
+  }, [toast]);
 
   // Stop speech recognition
   const stopRecognition = useCallback(() => {
@@ -610,18 +641,30 @@ export const RPGTugOfWar = ({
                   {currentWord}
                 </motion.div>
                 
-                <div className="flex items-center justify-center gap-2">
+                <div className="flex flex-col items-center justify-center gap-2">
+                  {micError && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-2 text-sm text-red-400 bg-red-500/20 px-3 py-1.5 rounded-lg border border-red-500/30"
+                    >
+                      <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                      <span className="text-left">{micError}</span>
+                    </motion.div>
+                  )}
+                  
                   {isListening ? (
                     <>
                       <motion.div
                         animate={{ scale: [1, 1.2, 1] }}
                         transition={{ duration: 0.8, repeat: Infinity }}
+                        className="flex items-center gap-2"
                       >
                         <Mic className="h-5 w-5 text-green-400" />
+                        <span className="text-sm font-medium text-green-400">
+                          Listening... Say the word!
+                        </span>
                       </motion.div>
-                      <span className="text-sm font-medium text-green-400">
-                        Listening... Say the word!
-                      </span>
                     </>
                   ) : (
                     <Button

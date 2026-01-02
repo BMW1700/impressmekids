@@ -10,6 +10,7 @@ import { cognitiveLoadEstimator, detectHesitationMarkers, calculatePauseDuration
 import LiveFeedbackDisplay from "./LiveFeedbackDisplay";
 import FeedbackTimeline from "./FeedbackTimeline";
 import AudioWaveform from "./AudioWaveform";
+import { ensureMicrophoneAccess } from "@/lib/micDiagnostics";
 
 interface VoiceRecorderProps {
   onTranscriptionComplete: (
@@ -83,7 +84,20 @@ export const VoiceRecorder = ({ onTranscriptionComplete, isAnalyzing = false, fr
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // PHASE 1 FIX: Use centralized mic access with detailed error handling
+      const micResult = await ensureMicrophoneAccess(true);
+      
+      if (!micResult.success || !micResult.stream) {
+        console.error('[VoiceRecorder] Microphone access failed:', micResult.error);
+        toast({
+          title: micResult.error?.actionRequired === 'unblock' ? 'Microphone Blocked' : 'Microphone Error',
+          description: micResult.error?.userMessage || 'Please allow microphone access.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      const stream = micResult.stream;
       setCurrentStream(stream);
       
       const mediaRecorder = new MediaRecorder(stream, {
