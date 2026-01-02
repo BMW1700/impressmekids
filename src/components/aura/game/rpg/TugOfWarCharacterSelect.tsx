@@ -38,7 +38,7 @@ export const TugOfWarCharacterSelect = ({ onSelect }: TugOfWarCharacterSelectPro
         >
           <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 border-4 border-transparent hover:border-blue-400 transition-all cursor-pointer"
                onClick={() => onSelect('valor')}>
-            <SirValor state="idle" healthPercent={100} size="medium" />
+            <SirValor state="idle" healthPercent={100} size="medium" showHealthBar={false} />
             
             <div className="mt-4 text-center">
               <h3 className="text-xl font-bold text-white drop-shadow">Sir Valor</h3>
@@ -77,7 +77,7 @@ export const TugOfWarCharacterSelect = ({ onSelect }: TugOfWarCharacterSelectPro
         >
           <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 border-4 border-transparent hover:border-purple-400 transition-all cursor-pointer"
                onClick={() => onSelect('elara')}>
-            <Elara state="idle" healthPercent={100} size="medium" />
+            <Elara state="idle" healthPercent={100} size="medium" showHealthBar={false} />
             
             <div className="mt-4 text-center">
               <h3 className="text-xl font-bold text-white drop-shadow">Princess Elara</h3>
