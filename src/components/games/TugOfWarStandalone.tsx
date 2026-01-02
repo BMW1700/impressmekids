@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Skull, Coins, Star, Timer, Volume2, Mic, RotateCcw, ArrowLeft } from "lucide-react";
+import { Trophy, Skull, Coins, Star, Timer, Volume2, Mic, RotateCcw, ArrowLeft, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { TugOfWarBackground } from "@/components/aura/game/rpg/TugOfWarBackground";
@@ -13,6 +13,8 @@ import { GoblinGuard } from "@/components/aura/game/characters/GoblinGuard";
 import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { speechManager } from "@/lib/speechRecognitionManager";
 import { DifficultyLevel, DIFFICULTY_LABELS } from "@/data/sightWords";
+import { ensureMicrophoneAccess } from "@/lib/micDiagnostics";
+import { useToast } from "@/hooks/use-toast";
 
 const soundEffects = new SoundEffects();
 
@@ -51,6 +53,7 @@ export const TugOfWarStandalone = ({
   onChangeDifficulty,
   onExit,
 }: TugOfWarStandaloneProps) => {
+  const { toast } = useToast();
   const [selectedCharacter, setSelectedCharacter] = useState<'valor' | 'elara' | null>(null);
   const [ropePosition, setRopePosition] = useState(0);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
@@ -68,6 +71,7 @@ export const TugOfWarStandalone = ({
   const rewardIdRef = useRef(0);
   const gameCompletedRef = useRef(false);
   const [isListening, setIsListening] = useState(false);
+  const [micError, setMicError] = useState<string | null>(null);
   const currentWordRef = useRef("");
   const processedWordsRef = useRef<Set<number>>(new Set());
   const echoRetryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -238,33 +242,55 @@ export const TugOfWarStandalone = ({
     }
   }, [gameOver, currentWordIndex, processWordResult]);
 
-  const startRecognition = useCallback(() => {
+  // Start recognition - MUST be called from user gesture
+  const startRecognition = useCallback(async () => {
+    setMicError(null);
+    
+    // STEP 1: Ensure we have mic permission first
+    const micResult = await ensureMicrophoneAccess(false);
+    
+    if (!micResult.success) {
+      console.error('[TugOfWarStandalone] Microphone access failed:', micResult.error);
+      setMicError(micResult.error?.userMessage || 'Microphone access failed');
+      toast({
+        title: micResult.error?.actionRequired === 'unblock' ? 'Microphone Blocked' : 'Microphone Error',
+        description: micResult.error?.userMessage || 'Please allow microphone access.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+    
+    // STEP 2: Now start speech recognition
     const success = speechManager.start({
       owner: 'reader',
       continuous: true,
       interimResults: true,
       onResult: handleSpeechResult,
-      onStart: () => setIsListening(true),
+      onStart: () => {
+        setIsListening(true);
+        setMicError(null);
+      },
       onEnd: () => setIsListening(false),
       onError: (error) => {
         console.log('[TugOfWarStandalone] Speech error:', error);
+        if (error === 'not-allowed') {
+          setMicError('Microphone access was denied.');
+        }
       }
     });
-    return success;
-  }, [handleSpeechResult]);
-
-  useEffect(() => {
-    if (selectedCharacter && !gameOver) {
-      startRecognition();
-    }
     
+    return success;
+  }, [handleSpeechResult, toast]);
+
+  // NOTE: We do NOT auto-start mic on character select - user must tap button
+  useEffect(() => {
     return () => {
       speechManager.stop('reader');
       if (echoRetryTimeoutRef.current) {
         clearTimeout(echoRetryTimeoutRef.current);
       }
     };
-  }, [selectedCharacter, gameOver]);
+  }, []);
 
   const pronounceWord = useCallback(() => {
     if (currentWord && 'speechSynthesis' in window) {
@@ -432,14 +458,28 @@ export const TugOfWarStandalone = ({
               <Volume2 className="h-5 w-5" />
             </Button>
             
-            <div className={`flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-sm ${
-              isListening ? 'bg-green-500/70' : 'bg-white/30'
-            }`}>
-              <Mic className={`h-5 w-5 ${isListening ? 'text-white animate-pulse' : 'text-white/80'}`} />
-              <span className="text-white text-sm font-medium">
-                {isListening ? 'Listening...' : 'Speak now'}
-              </span>
-            </div>
+            {/* Mic Error Display */}
+            {micError && (
+              <div className="flex items-center gap-2 text-sm text-red-400 bg-red-500/20 px-3 py-1.5 rounded-lg border border-red-500/30 mb-2">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <span>{micError}</span>
+              </div>
+            )}
+            
+            {isListening ? (
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-sm bg-green-500/70">
+                <Mic className="h-5 w-5 text-white animate-pulse" />
+                <span className="text-white text-sm font-medium">Listening...</span>
+              </div>
+            ) : (
+              <Button
+                onClick={() => startRecognition()}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <Mic className="h-4 w-4 mr-2" />
+                Tap to Start Mic
+              </Button>
+            )}
           </div>
         </div>
       </div>

@@ -49,6 +49,8 @@ import { usePhonemePatterns } from '@/hooks/usePhonemePatterns';
 import { compareWordPhonemes, analyzePhonemePatterns, getPhonemeDisplayName } from '@/lib/phonemeInference';
 // REAL PHONEME ANALYSIS: Whisper-based audio phoneme detection
 import { preloadPhonemeModel, analyzeRealPhonemes, getModelState, type RealPhonemeAnalysisResult } from '@/lib/realPhonemeAnalysis';
+// MIC DIAGNOSTICS: Detailed error handling for microphone access
+import { ensureMicrophoneAccess, getMicDiagnostics, type MicAccessResult } from '@/lib/micDiagnostics';
 
 // Browser compatibility check
 const checkBrowserSupport = () => {
@@ -451,47 +453,68 @@ export const WordByWordReader = ({
 
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+    // PHASE 1 FIX: Use centralized mic access with detailed error handling
+    const micResult = await ensureMicrophoneAccess(true);
+    
+    if (!micResult.success || !micResult.stream) {
+      console.error('[WordByWordReader] Microphone access failed:', micResult.error);
       
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          audioChunksRef.current.push(e.data);
-        }
-      };
+      // Show specific error message based on the error type
+      const errorInfo = micResult.error;
+      const errorTitle = errorInfo?.actionRequired === 'unblock' 
+        ? 'Microphone Blocked' 
+        : errorInfo?.actionRequired === 'open-new-tab'
+        ? 'Microphone Not Available'
+        : errorInfo?.actionRequired === 'connect-device'
+        ? 'No Microphone Found'
+        : 'Microphone Error';
       
-      recorder.start(100);
-      mediaRecorderRef.current = recorder;
-      
-      // Start real-time audio analysis for pitch/energy (prosody expression)
-      pitchHistoryRef.current = [];
-      energyHistoryRef.current = [];
-      
-      const analyzer = new RealtimeAudioAnalyzer(
-        (metrics: LiveMetrics) => {
-          // Collect pitch and energy data for prosody expression scoring
-          if (metrics.avgPitch > 0) {
-            pitchHistoryRef.current.push(metrics.avgPitch);
-          }
-          energyHistoryRef.current.push(metrics.energyLevel);
-        },
-        (feedback) => {
-          // Real-time feedback is handled elsewhere, but we can log
-          console.log('Audio feedback:', feedback.message);
-        }
-      );
-      
-      await analyzer.start(stream);
-      audioAnalyzerRef.current = analyzer;
-    } catch (error) {
-      console.error('Microphone access error:', error);
       toast({
-        title: 'Microphone Error',
-        description: 'Please allow microphone access to use this feature.',
+        title: errorTitle,
+        description: errorInfo?.userMessage || 'Please allow microphone access to use this feature.',
         variant: 'destructive',
       });
+      
+      // Log diagnostics for debugging
+      console.log('[WordByWordReader] Mic diagnostics:', micResult.diagnostics);
       return;
+    }
+    
+    const stream = micResult.stream;
+    const recorder = new MediaRecorder(stream);
+    
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) {
+        audioChunksRef.current.push(e.data);
+      }
+    };
+    
+    recorder.start(100);
+    mediaRecorderRef.current = recorder;
+    
+    // Start real-time audio analysis for pitch/energy (prosody expression)
+    pitchHistoryRef.current = [];
+    energyHistoryRef.current = [];
+    
+    const analyzer = new RealtimeAudioAnalyzer(
+      (metrics: LiveMetrics) => {
+        // Collect pitch and energy data for prosody expression scoring
+        if (metrics.avgPitch > 0) {
+          pitchHistoryRef.current.push(metrics.avgPitch);
+        }
+        energyHistoryRef.current.push(metrics.energyLevel);
+      },
+      (feedback) => {
+        // Real-time feedback is handled elsewhere, but we can log
+        console.log('Audio feedback:', feedback.message);
+      }
+    );
+    
+    try {
+      await analyzer.start(stream);
+      audioAnalyzerRef.current = analyzer;
+    } catch (analyzerError) {
+      console.error('[WordByWordReader] Audio analyzer error (non-fatal):', analyzerError);
     }
 
     const recognition = new SpeechRecognition();
