@@ -45,8 +45,9 @@ import {
 import { CuratedStory } from "@/data/curatedStories";
 import { calculateGoldEarned, calculateXpEarned } from "@/lib/gameEconomy";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
-import { speechManager } from "@/lib/speechRecognitionManager";
+import { speechManager, requestMicrophonePermission } from "@/lib/speechRecognitionManager";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 // Sound effects singleton
 const battleSounds = new SoundEffects();
@@ -84,6 +85,8 @@ export const RPGBattleArena = ({
   onBack,
   onComplete,
 }: RPGBattleArenaProps) => {
+  const { toast } = useToast();
+  
   // Multi-enemy queue system
   const buildEnemyQueue = useCallback((primaryType: EnemyType): EnemyType[] => {
     // For certain levels, add Drake the Dragon after the primary enemy
@@ -98,6 +101,10 @@ export const RPGBattleArena = ({
   const currentEnemyType = enemyQueue[currentEnemyIndex];
   const enemy = getEnemyForBattle(currentEnemyType);
   const [defeatedEnemy, setDefeatedEnemy] = useState<RPGEnemy | null>(null);
+  
+  // Mic permission state
+  const [micPermissionGranted, setMicPermissionGranted] = useState(false);
+  const [requestingMic, setRequestingMic] = useState(false);
   
   // Battle state
   const [phase, setPhase] = useState<BattlePhase>('intro');
@@ -180,6 +187,31 @@ export const RPGBattleArena = ({
   useEffect(() => {
     battleSounds.setSoundEnabled(soundEnabled);
   }, [soundEnabled]);
+  
+  // Request microphone permission on mount for classic mode
+  useEffect(() => {
+    if (battleMode === 'classic' && !micPermissionGranted && !requestingMic) {
+      setRequestingMic(true);
+      requestMicrophonePermission().then(granted => {
+        setMicPermissionGranted(granted);
+        setRequestingMic(false);
+        if (!granted) {
+          toast({
+            title: 'Microphone Required',
+            description: 'Please allow microphone access to play reading battles.',
+            variant: 'destructive',
+          });
+        }
+      }).catch(() => {
+        setRequestingMic(false);
+        toast({
+          title: 'Microphone Error',
+          description: 'Could not access microphone. Please check your browser settings.',
+          variant: 'destructive',
+        });
+      });
+    }
+  }, [battleMode, micPermissionGranted, requestingMic, toast]);
   
   // Helper function to return to reading state cleanly after any mini-game/barrage
   const returnToReading = useCallback(() => {
