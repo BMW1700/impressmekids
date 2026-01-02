@@ -71,6 +71,8 @@ const ReadingAnalyticsCalibration = lazy(() => import("./components/aura/Reading
 const ConsentVerification = lazy(() => import("./pages/ConsentVerification"));
 const StoryManagement = lazy(() => import("./pages/teacher/StoryManagement"));
 const SecurityPortal = lazy(() => import("./pages/SecurityPortal"));
+const ClubDetail = lazy(() => import("./pages/teacher/ClubDetail"));
+const BrowseClubs = lazy(() => import("./pages/student/BrowseClubs"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -161,6 +163,8 @@ const App = () => (
                     <Route path="/student/assignment/:assignmentId" element={<CompleteAssignment />} />
                     <Route path="/student/review-submission/:submissionId" element={<ReviewMySubmission />} />
                     <Route path="/student/review-annotations/:submissionId" element={<ReviewMyAnnotations />} />
+                    <Route path="/student/browse-clubs" element={<BrowseClubs />} />
+                    <Route path="/student/browse-clubs" element={<BrowseClubs />} />
 
                     <Route path="/calendar" element={<Calendar />} />
                     <Route path="/classrooms/:id" element={<ClassroomDetail />} />

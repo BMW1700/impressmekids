@@ -232,6 +232,12 @@ const translations: Record<Language, Translations> = {
       'Create your first classroom to start inviting students and playing games!',
     'teacherDashboard.classrooms.emptyCTA': 'Create Your First Classroom',
 
+    'teacherDashboard.clubs.title': 'My Clubs',
+    'teacherDashboard.clubs.create': 'Create Club',
+    'teacherDashboard.clubs.emptyTitle': 'No Clubs Yet',
+    'teacherDashboard.clubs.emptyDescription': 'Create your first club to organize student activities and events!',
+    'teacherDashboard.clubs.emptyCTA': 'Create Your First Club',
+
     'teacherDashboard.leaderboard.empty': 'Create a classroom to view leaderboards',
     'teacherDashboard.leaderboard.viewFull': 'View Full Leaderboard →',
 
