@@ -317,12 +317,23 @@ export const TugOfWarStandalone = ({
       <TugOfWarBackground />
 
       {/* Header */}
+      {/* Back Button - Top Left */}
+      <Button
+        variant="ghost"
+        onClick={onExit}
+        className="absolute top-4 left-4 z-30 bg-black/30 hover:bg-black/50 text-white backdrop-blur-sm"
+        size="sm"
+      >
+        <ArrowLeft className="h-4 w-4 mr-1" />
+        Back
+      </Button>
+
       <div className="relative z-10 p-4 text-center">
         <h2 className="text-3xl font-black text-white drop-shadow-lg" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
-          ⚔️ TUG OF WAR ⚔️
+          TUG OF WAR
         </h2>
         <p className="text-white/90 text-sm drop-shadow">
-          {DIFFICULTY_LABELS[difficulty]} • Read words to pull the rope!
+          Read words to pull the rope!
         </p>
       </div>
 
