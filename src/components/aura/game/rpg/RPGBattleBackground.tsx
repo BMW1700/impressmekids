@@ -1,17 +1,63 @@
 import { motion } from "framer-motion";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 type BackgroundTheme = 'castle' | 'dungeon' | 'forest' | 'throne' | 'volcano' | 'ice_cave' | 'ruins' | 'shadow_realm' | 'caverns' | 'sky_isles' | 'sunken_library' | 'void';
 
 interface RPGBattleBackgroundProps {
   theme?: BackgroundTheme;
   enemyType?: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater';
+  worldNumber?: number;
 }
+
+// Map world numbers to world_id in database
+const worldToDbId: Record<number, number> = {
+  1: 1, // Enchanted Forest
+  2: 2, // Frozen Depths
+  3: 3, // Ancient Ruins
+  4: 4, // Throne Room
+  5: 5, // Whispering Caverns
+  6: 6, // Floating Isles
+  7: 7, // Sunken Library
+  8: 8, // The Void Between
+};
 
 export const RPGBattleBackground = ({ 
   theme,
-  enemyType = 'minion' 
+  enemyType = 'minion',
+  worldNumber = 1
 }: RPGBattleBackgroundProps) => {
+  const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  // Fetch AI-generated background from database
+  useEffect(() => {
+    const fetchBackground = async () => {
+      const dbWorldId = worldToDbId[worldNumber] || 1;
+      
+      const { data, error } = await supabase
+        .from('world_backgrounds')
+        .select('image_url')
+        .eq('world_id', dbWorldId)
+        .single();
+
+      if (!error && data?.image_url) {
+        setBackgroundImage(data.image_url);
+      }
+    };
+
+    fetchBackground();
+  }, [worldNumber]);
+
+  // Preload image
+  useEffect(() => {
+    if (backgroundImage) {
+      const img = new Image();
+      img.onload = () => setImageLoaded(true);
+      img.src = backgroundImage;
+    }
+  }, [backgroundImage]);
+
   // Auto-select theme based on enemy type if not specified
   const selectedTheme: BackgroundTheme = theme || useMemo(() => {
     switch (enemyType) {
@@ -23,19 +69,15 @@ export const RPGBattleBackground = ({
       case 'ice_golem': return 'ice_cave';
       case 'shadow_wraith': return 'shadow_realm';
       case 'stone_guardian': return 'ruins';
-      // NEW WORLD 5 - Whispering Caverns
       case 'cave_troll': return 'caverns';
       case 'crystal_spider': return 'caverns';
       case 'echo_wraith': return 'caverns';
-      // NEW WORLD 6 - Floating Isles
       case 'storm_harpy': return 'sky_isles';
       case 'cloud_giant': return 'sky_isles';
       case 'zephyr': return 'sky_isles';
-      // NEW WORLD 7 - Sunken Library
       case 'ink_kraken': return 'sunken_library';
       case 'reef_guardian': return 'sunken_library';
       case 'leviathan': return 'sunken_library';
-      // NEW WORLD 8 - The Void Between
       case 'void_phantom': return 'void';
       case 'reality_shifter': return 'void';
       case 'word_eater': return 'void';
@@ -43,7 +85,7 @@ export const RPGBattleBackground = ({
     }
   }, [enemyType]);
 
-  // Theme-specific gradients and colors
+  // Theme-specific gradients and colors (fallback when no image)
   const themeStyles = useMemo(() => {
     switch (selectedTheme) {
       case 'throne':
@@ -109,7 +151,6 @@ export const RPGBattleBackground = ({
           ambientColor: 'rgba(217, 119, 6, 0.25)',
           specialElements: 'pillars',
         };
-      // NEW THEMES
       case 'caverns':
         return {
           sky: 'from-slate-950 via-stone-900 to-zinc-950',
@@ -159,7 +200,7 @@ export const RPGBattleBackground = ({
     }
   }, [selectedTheme]);
 
-  // Generate floating particles - more for void theme
+  // Generate floating particles
   const particleCount = selectedTheme === 'void' ? 40 : selectedTheme === 'sky_isles' ? 30 : 20;
   const particles = useMemo(() => {
     return Array.from({ length: particleCount }, (_, i) => ({
@@ -320,40 +361,64 @@ export const RPGBattleBackground = ({
 
   return (
     <div className="absolute inset-0 overflow-hidden">
-      {/* Sky Layer */}
-      <div className={`absolute inset-0 bg-gradient-to-b ${themeStyles.sky}`} />
-      
-      {/* Parallax Mountain/Structure Layer - Back */}
-      <div className="absolute bottom-[30%] left-0 right-0 h-[40%]">
-        <svg viewBox="0 0 1200 200" className="w-full h-full opacity-30" preserveAspectRatio="xMidYMax slice">
-          <path 
-            d="M0,200 L0,120 Q100,80 200,100 T400,90 T600,110 T800,85 T1000,100 T1200,95 L1200,200 Z" 
-            fill="currentColor" 
-            className="text-black/40"
+      {/* AI-Generated Background Image (if available) */}
+      {backgroundImage && imageLoaded && (
+        <motion.div
+          className="absolute inset-0"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <img
+            src={backgroundImage}
+            alt="Battle Background"
+            className="w-full h-full object-cover"
           />
-        </svg>
-      </div>
-      
-      {/* Parallax Mountain/Structure Layer - Mid */}
-      <div className="absolute bottom-[20%] left-0 right-0 h-[40%]">
-        <svg viewBox="0 0 1200 200" className="w-full h-full opacity-50" preserveAspectRatio="xMidYMax slice">
-          <path 
-            d="M0,200 L0,140 Q150,100 300,120 T600,100 T900,115 T1200,105 L1200,200 Z" 
-            fill="currentColor" 
-            className="text-black/50"
-          />
-        </svg>
-      </div>
+          {/* Overlay for readability */}
+          <div className="absolute inset-0 bg-black/20" />
+        </motion.div>
+      )}
 
-      {/* Ground Layer */}
-      <div className={`absolute bottom-0 left-0 right-0 h-[25%] bg-gradient-to-t ${themeStyles.ground}`}>
-        {/* Ground texture */}
-        <div className="absolute inset-0 opacity-20">
-          <div className="w-full h-full bg-[repeating-linear-gradient(90deg,transparent,transparent_50px,rgba(0,0,0,0.1)_50px,rgba(0,0,0,0.1)_100px)]" />
+      {/* Fallback gradient background (always visible, fades when image loads) */}
+      <motion.div
+        className="absolute inset-0"
+        animate={{ opacity: backgroundImage && imageLoaded ? 0 : 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        {/* Sky Layer */}
+        <div className={`absolute inset-0 bg-gradient-to-b ${themeStyles.sky}`} />
+        
+        {/* Parallax Mountain/Structure Layer - Back */}
+        <div className="absolute bottom-[30%] left-0 right-0 h-[40%]">
+          <svg viewBox="0 0 1200 200" className="w-full h-full opacity-30" preserveAspectRatio="xMidYMax slice">
+            <path 
+              d="M0,200 L0,120 Q100,80 200,100 T400,90 T600,110 T800,85 T1000,100 T1200,95 L1200,200 Z" 
+              fill="currentColor" 
+              className="text-black/40"
+            />
+          </svg>
         </div>
-      </div>
+        
+        {/* Parallax Mountain/Structure Layer - Mid */}
+        <div className="absolute bottom-[20%] left-0 right-0 h-[40%]">
+          <svg viewBox="0 0 1200 200" className="w-full h-full opacity-50" preserveAspectRatio="xMidYMax slice">
+            <path 
+              d="M0,200 L0,140 Q150,100 300,120 T600,100 T900,115 T1200,105 L1200,200 Z" 
+              fill="currentColor" 
+              className="text-black/50"
+            />
+          </svg>
+        </div>
 
-      {/* Special Theme Elements */}
+        {/* Ground Layer */}
+        <div className={`absolute bottom-0 left-0 right-0 h-[25%] bg-gradient-to-t ${themeStyles.ground}`}>
+          <div className="absolute inset-0 opacity-20">
+            <div className="w-full h-full bg-[repeating-linear-gradient(90deg,transparent,transparent_50px,rgba(0,0,0,0.1)_50px,rgba(0,0,0,0.1)_100px)]" />
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Special Theme Elements (always visible for atmosphere) */}
       {renderSpecialElements()}
 
       {/* Floor reflection/glow */}

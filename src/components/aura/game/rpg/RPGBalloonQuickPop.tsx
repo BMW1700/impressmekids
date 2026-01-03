@@ -148,20 +148,20 @@ export const RPGBalloonQuickPop = ({
 
     onWordResult?.(currentBalloon.word, correct);
 
-    // Move to next balloon after delay
+    // Move to next balloon after delay - INCREASED to 800ms for smoother transition
     setTimeout(() => {
       setFeedback(null);
       setCurrentBalloonIndex(prev => prev + 1);
       processingRef.current = false;
       setIsProcessing(false);
       
-      // Auto-restart for next word if mic was active
+      // Auto-restart for next word if mic was active - INCREASED delay to 500ms
       if (isMicActive && currentBalloonIndex + 1 < balloons.length) {
         setTimeout(() => {
           startListeningForWord();
-        }, 200);
+        }, 500);
       }
-    }, 600);
+    }, 800);
   }, [currentBalloon, onWordResult, showFloatingReward, isMicActive, currentBalloonIndex, balloons.length]);
 
   // Start listening for a single word
@@ -453,6 +453,37 @@ export const RPGBalloonQuickPop = ({
               <div className="text-white/60 text-sm mb-1">Read to pop balloon {currentBalloonIndex + 1} of {balloons.length}:</div>
               <div className="text-4xl font-black text-white">{currentBalloon.word}</div>
             </motion.div>
+
+            {/* Mic status indicator */}
+            {isMicActive && !isProcessing && (
+              <motion.div
+                className="flex items-center justify-center gap-2 mb-3"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <motion.div
+                  className="w-3 h-3 bg-green-400 rounded-full"
+                  animate={{ scale: [1, 1.3, 1], opacity: [0.7, 1, 0.7] }}
+                  transition={{ repeat: Infinity, duration: 1 }}
+                />
+                <span className="text-green-400 font-bold">Ready to listen!</span>
+              </motion.div>
+            )}
+
+            {isProcessing && (
+              <motion.div
+                className="flex items-center justify-center gap-2 mb-3"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <motion.div
+                  className="w-3 h-3 bg-yellow-400 rounded-full"
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ repeat: Infinity, duration: 0.5 }}
+                />
+                <span className="text-yellow-400 font-bold">Processing...</span>
+              </motion.div>
+            )}
 
             {/* Mic Controls */}
             <div className="flex justify-center gap-4">
