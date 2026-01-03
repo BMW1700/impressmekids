@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Lock, Star, Swords, Crown, TreePine, Mountain, Castle, Flame, Sparkles, Gem, Cloud, Waves, Eclipse } from "lucide-react";
+import { ArrowLeft, Lock, Star, Swords, Crown, TreePine, Mountain, Castle, Flame, Sparkles, Gem, Cloud, Waves, Eclipse, GraduationCap } from "lucide-react";
 import { campaignWorlds, CampaignWorld } from "@/lib/campaignData";
 import { 
   DrakeSilhouette, 
@@ -30,6 +30,7 @@ interface RPGWorldMapProps {
 }
 
 const worldIcons: Record<number, React.ReactNode> = {
+  0: <GraduationCap className="h-8 w-8" />, // Tutorial
   1: <TreePine className="h-8 w-8" />,
   2: <Mountain className="h-8 w-8" />,
   3: <Flame className="h-8 w-8" />,
@@ -186,6 +187,7 @@ export const RPGWorldMap = ({
   };
 
   const isWorldUnlocked = (world: CampaignWorld): boolean => {
+    if (world.id === 0) return true; // Tutorial always unlocked
     if (world.id === 1) return true;
     const prevWorld = getWorldProgress(world.id - 1);
     return prevWorld.levelsCompleted >= world.unlockRequirement;

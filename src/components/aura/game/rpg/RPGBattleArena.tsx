@@ -31,7 +31,7 @@ import { RPGQuickBlock } from "./RPGQuickBlock";
 // NEW: Import Tug of War and Balloon Battle modes
 import { RPGTugOfWar } from "./RPGTugOfWar";
 import { RPGBalloonBattle } from "./RPGBalloonBattle";
-import { RPGBalloonQuickPop } from "./RPGBalloonQuickPop";
+import { RPGGoblinHorde } from "./RPGGoblinHorde";
 // NEW: Import Fireball Defense mode
 import { RPGFireballDefense } from "./RPGFireballDefense";
 // NEW: Import 6 new world mini-games
@@ -63,8 +63,8 @@ import { useMLIntegration } from "@/hooks/useMLIntegration";
 const battleSounds = new SoundEffects();
 
 type EnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater';
-// UPDATED: Added balloon_quickpop for Classic mode mini-game (NOT Balloon Bonanza) + quick_block for enemy attacks
-type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'word_shield' | 'spell_combo' | 'dodge_words' | 'rhyme_chain' | 'speed_typist' | 'tug_of_war' | 'balloon_battle' | 'balloon_quickpop' | 'fireball_defense' | 'quick_block' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat' | 'word_echo' | 'wind_chase' | 'ink_splash' | 'crystal_prison' | 'lightning_storm' | 'void_pull';
+// UPDATED: Added goblin_horde for Classic mode mini-game + quick_block for enemy attacks
+type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'word_shield' | 'spell_combo' | 'dodge_words' | 'rhyme_chain' | 'speed_typist' | 'tug_of_war' | 'balloon_battle' | 'goblin_horde' | 'fireball_defense' | 'quick_block' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat' | 'word_echo' | 'wind_chase' | 'ink_splash' | 'crystal_prison' | 'lightning_storm' | 'void_pull';
 type InventoryKey = 'health_potion' | 'magic_potion';
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
 
@@ -164,7 +164,7 @@ export const RPGBattleArena = ({
   const [batchStartIndex, setBatchStartIndex] = useState(0); // Start of current 5-word batch (0, 5, 10, ...)
   const [lastSpokenGlobalIndex, setLastSpokenGlobalIndex] = useState(-1); // For attack display
   const [currentWordResult, setCurrentWordResult] = useState<boolean | null>(null);
-  const [attackType, setAttackType] = useState<'fire' | 'ice' | 'lightning' | 'slash'>('fire');
+  const [attackType, setAttackType] = useState<'fire' | 'ice' | 'lightning' | 'slash'>('lightning');
   const [barrageWords, setBarrageWords] = useState<string[]>([]);
 
   // Animation states
@@ -252,7 +252,7 @@ export const RPGBattleArena = ({
   const triggerRandomMiniGame = useCallback((gameType: MiniGameType) => {
     const wordCount = gameType === 'speed_typist' ? 12 : 
                       gameType === 'tug_of_war' ? 15 : 
-                      gameType === 'balloon_quickpop' ? 5 :
+                      gameType === 'goblin_horde' ? 6 :
                       gameType === 'rhyme_chain' ? 6 : 5;
     const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 10);
     setBarrageWords(availableWords.slice(0, wordCount));
@@ -265,7 +265,7 @@ export const RPGBattleArena = ({
       'rhyme_chain': `RHYME TIME! Chain rhyming words!`,
       'speed_typist': `SPEED BLITZ! Read as fast as you can!`,
       'tug_of_war': `TUG OF WAR! Pull the rope with reading power!`,
-      'balloon_quickpop': `BALLOON ATTACK! Pop the balloons!`,
+      'goblin_horde': `⚔️ GOBLIN HORDE! Speak words to defeat them! ⚔️`,
       'fireball_defense': `🔥 ${enemy.name} UNLEASHES FIREBALLS! 🔥`,
       'beast_swarm': `${enemy.name} summons BEAST SWARM!`,
       'ice_crystal_barrage': `${enemy.name} unleashes ICE CRYSTAL BARRAGE!`,
@@ -299,7 +299,7 @@ export const RPGBattleArena = ({
         'rhyme_chain': 'rhyme_chain',
         'speed_typist': 'speed_typist',
         'tug_of_war': 'tug_of_war',
-        'balloon_quickpop': 'balloon_quickpop',
+        'goblin_horde': 'goblin_horde',
         'fireball_defense': 'fireball_defense',
         'beast_swarm': 'beast_swarm',
         'ice_crystal_barrage': 'ice_crystal_barrage',
@@ -574,16 +574,16 @@ export const RPGBattleArena = ({
     returnToReading();
   }, [barrageWords.length, returnToReading, battleMode]);
   
-  // Handle Balloon QuickPop complete (small balloon mini-game in Classic mode)
-  const handleBalloonQuickPopComplete = useCallback((popped: number, missed: number) => {
-    console.log('[RPGBattle] Balloon QuickPop complete:', { popped, missed });
-    const bonusDamage = popped * 8;
+  // Handle Goblin Horde complete (mini goblin attack mini-game in Classic mode)
+  const handleGoblinHordeComplete = useCallback((result: { success: boolean; wordsSpoken: number; totalWords: number }) => {
+    console.log('[RPGBattle] Goblin Horde complete:', result);
+    const bonusDamage = result.wordsSpoken * 8;
     if (bonusDamage > 0) {
       battleSounds.celebrationSound();
       setEnemyHp(prev => Math.max(0, prev - bonusDamage));
       setTotalDamage(prev => prev + bonusDamage);
     }
-    setCorrectWords(prev => prev + popped);
+    setCorrectWords(prev => prev + result.wordsSpoken);
     setBatchStartIndex(prev => prev + barrageWords.length);
     returnToReading();
   }, [barrageWords.length, returnToReading]);
@@ -1361,11 +1361,11 @@ export const RPGBattleArena = ({
             onComplete={handleTugOfWarComplete}
           />
         )}
-        {phase === 'balloon_quickpop' && (
-          <RPGBalloonQuickPop
+        {phase === 'goblin_horde' && (
+          <RPGGoblinHorde
             words={barrageWords}
             enemyName={enemy.name}
-            onComplete={handleBalloonQuickPopComplete}
+            onComplete={handleGoblinHordeComplete}
           />
         )}
         {phase === 'balloon_battle' && battleMode === 'balloon' && (

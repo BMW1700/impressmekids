@@ -160,7 +160,7 @@ export const RPGGoblinHorde = ({
     
     setDefeatedCount(c => c + 1);
     setFeedback({ text: "Got 'em!", type: 'success' });
-    battleSounds.playCorrect();
+    battleSounds.correctWord();
     
     const goldReward = 5 + Math.floor(Math.random() * 5);
     const xpReward = 8 + Math.floor(Math.random() * 7);

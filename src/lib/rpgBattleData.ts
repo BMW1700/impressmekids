@@ -506,7 +506,7 @@ export const crystalSpider: RPGEnemy = {
   ],
   barrageWordCount: 4,
   // 100 HP = 2 triggers
-  miniGames: ['dodge_words', 'spell_combo', 'balloon_quickpop', 'crystal_prison'],
+  miniGames: ['dodge_words', 'spell_combo', 'goblin_horde', 'crystal_prison'],
   signatureMiniGame: 'crystal_prison', // Signature CRYSTAL PRISON at 50%
 };
 
@@ -579,7 +579,7 @@ export const stormHarpy: RPGEnemy = {
   ],
   barrageWordCount: 5,
   // 120 HP = 3 triggers
-  miniGames: ['dodge_words', 'balloon_quickpop', 'word_shield', 'wind_chase', 'lightning_storm'],
+  miniGames: ['dodge_words', 'goblin_horde', 'word_shield', 'wind_chase', 'lightning_storm'],
   signatureMiniGame: 'wind_chase', // Signature WIND CHASE at 50%
 };
 
@@ -720,7 +720,7 @@ export const reefGuardian: RPGEnemy = {
   ],
   barrageWordCount: 5,
   // 160 HP = 3 triggers
-  miniGames: ['word_shield', 'rolling_boulders', 'balloon_quickpop', 'crystal_prison'],
+  miniGames: ['word_shield', 'rolling_boulders', 'goblin_horde', 'crystal_prison'],
   signatureMiniGame: 'crystal_prison', // Signature CRYSTAL PRISON at 50%
 };
 
