@@ -186,7 +186,7 @@ export const RPGBattleArena = ({
   const [batchStartIndex, setBatchStartIndex] = useState(0); // Start of current 5-word batch (0, 5, 10, ...)
   const [lastSpokenGlobalIndex, setLastSpokenGlobalIndex] = useState(-1); // For attack display
   const [currentWordResult, setCurrentWordResult] = useState<boolean | null>(null);
-  const [attackType, setAttackType] = useState<'fire' | 'ice' | 'lightning' | 'slash'>('lightning');
+  const [attackType, setAttackType] = useState<'fire' | 'ice' | 'lightning' | 'slash' | 'nature' | 'heal' | 'wind'>('lightning');
   const [barrageWords, setBarrageWords] = useState<string[]>([]);
 
   // Animation states
@@ -199,7 +199,7 @@ export const RPGBattleArena = ({
   const [enemyAbilityMessage, setEnemyAbilityMessage] = useState<string | null>(null);
   
   // Spell effects state
-  const [activeSpell, setActiveSpell] = useState<'fire' | 'ice' | 'lightning' | 'slash' | null>(null);
+  const [activeSpell, setActiveSpell] = useState<'fire' | 'ice' | 'lightning' | 'slash' | 'nature' | 'heal' | 'wind' | null>(null);
   const [showSpellEffect, setShowSpellEffect] = useState(false);
   
   // Currency/rewards state
@@ -834,9 +834,40 @@ export const RPGBattleArena = ({
     setWizardMp(prev => prev - spell.mpCost);
     setAttackType(spell.effect);
     setDamageAmount(spell.damage);
+    
+    // Handle healing spells differently - they target the player
+    if (spell.effect === 'heal') {
+      battleSounds.magicSparkle();
+      battleSounds.healingChime();
+      setActiveSpell('heal');
+      setShowSpellEffect(true);
+      
+      // Heal the player
+      setPlayerHp(prev => Math.min(playerCharacter.maxHp, prev + 25));
+      
+      // Clear poison on healing
+      setIsPoisoned(false);
+      setPoisonDamage(0);
+      
+      // Add floating heal number
+      setFloatingDamages(prev => [...prev, {
+        id: Date.now(),
+        damage: 25,
+        x: 70 + Math.random() * 10,
+        y: 30 + Math.random() * 10,
+        isPlayer: true,
+        isCritical: true
+      }]);
+      
+      setTimeout(() => {
+        setCurrentCommand(null);
+      }, 600);
+      return;
+    }
+    
     setHeroAttacking(true);
     
-    // Play appropriate spell sound
+    // Play appropriate spell sound based on effect
     switch (spell.effect) {
       case 'fire':
         battleSounds.fireWhoosh();
@@ -846,6 +877,15 @@ export const RPGBattleArena = ({
         break;
       case 'lightning':
         battleSounds.lightningCrack();
+        break;
+      case 'slash':
+        battleSounds.rockCrumble();
+        break;
+      case 'nature':
+        battleSounds.petalBurst();
+        break;
+      case 'wind':
+        battleSounds.windGust();
         break;
     }
     
@@ -888,7 +928,7 @@ export const RPGBattleArena = ({
         setCurrentCommand(null); // Return to command menu
       }, 600);
     }, 400);
-  }, [wizardMp]);
+  }, [wizardMp, playerCharacter.maxHp]);
 
   // Handle item usage
   const handleUseItem = useCallback((item: Item) => {
@@ -1726,6 +1766,7 @@ export const RPGBattleArena = ({
                       disabled={currentWordResult !== null}
                       currentMp={wizardMp}
                       inventory={inventory}
+                      selectedCharacter={selectedCharacter}
                     />
                   </div>
 

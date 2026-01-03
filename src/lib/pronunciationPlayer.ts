@@ -384,6 +384,114 @@ export class SoundEffects {
     setTimeout(() => this.playTone(800, 0.15, 0.2), 200);
   }
 
+  // === NATURE/PRINCESS SPELL SOUNDS ===
+
+  /**
+   * Petal burst - soft magical nature sound
+   */
+  petalBurst() {
+    if (!this.ensureContext() || !this.audioContext) return;
+
+    // Soft ascending twinkle tones
+    const freqs = [800, 1000, 1200, 1400, 1600];
+    freqs.forEach((freq, i) => {
+      setTimeout(() => {
+        const osc = this.audioContext!.createOscillator();
+        const gain = this.audioContext!.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        
+        gain.gain.setValueAtTime(0.1, this.audioContext!.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext!.currentTime + 0.25);
+        
+        osc.connect(gain);
+        gain.connect(this.audioContext!.destination);
+        
+        osc.start();
+        osc.stop(this.audioContext!.currentTime + 0.3);
+      }, i * 60);
+    });
+
+    // Add a soft shimmer
+    setTimeout(() => this.playNoise(0.2, 0.04, 5000), 100);
+  }
+
+  /**
+   * Wind gust - whooshing wind sound
+   */
+  windGust() {
+    if (!this.ensureContext() || !this.audioContext) return;
+
+    // Filtered noise for wind
+    const bufferSize = this.audioContext.sampleRate * 0.4;
+    const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+    
+    for (let i = 0; i < bufferSize; i++) {
+      // Envelope for rising then falling
+      const envelope = Math.sin((i / bufferSize) * Math.PI);
+      data[i] = (Math.random() * 2 - 1) * envelope * 0.4;
+    }
+
+    const wind = this.audioContext.createBufferSource();
+    wind.buffer = buffer;
+
+    const bandpass = this.audioContext.createBiquadFilter();
+    bandpass.type = 'bandpass';
+    bandpass.frequency.value = 1200;
+    bandpass.Q.value = 0.5;
+
+    const gainNode = this.audioContext.createGain();
+    gainNode.gain.value = 0.15;
+
+    wind.connect(bandpass);
+    bandpass.connect(gainNode);
+    gainNode.connect(this.audioContext.destination);
+
+    wind.start();
+
+    // Add a soft whistle
+    setTimeout(() => {
+      this.playTone(1500, 0.15, 0.06);
+      this.playTone(1800, 0.12, 0.05);
+    }, 100);
+  }
+
+  /**
+   * Healing chime - gentle restorative sound
+   */
+  healingChime() {
+    if (!this.ensureContext() || !this.audioContext) return;
+
+    // Ascending healing tones with harmonics
+    const freqs = [523, 659, 784, 1047]; // C, E, G, C (major chord ascending)
+    freqs.forEach((freq, i) => {
+      setTimeout(() => {
+        const osc = this.audioContext!.createOscillator();
+        const gain = this.audioContext!.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        
+        gain.gain.setValueAtTime(0.12, this.audioContext!.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext!.currentTime + 0.4);
+        
+        osc.connect(gain);
+        gain.connect(this.audioContext!.destination);
+        
+        osc.start();
+        osc.stop(this.audioContext!.currentTime + 0.45);
+      }, i * 80);
+    });
+
+    // Add a shimmering overtone
+    setTimeout(() => {
+      this.playTone(1568, 0.3, 0.05); // G high
+      this.playTone(2093, 0.25, 0.04); // C very high
+    }, 200);
+  }
+
   // === TUG OF WAR & BALLOON BATTLE SOUNDS ===
 
   /**

@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BookOpen, Shield, Sparkles, Package } from "lucide-react";
-import { RPGSpellMenu, Spell } from "./RPGSpellMenu";
+import { RPGSpellMenu, Spell, valorSpells, elaraSpells, ellaSpells } from "./RPGSpellMenu";
 import { RPGItemMenu, Item } from "./RPGItemMenu";
 
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
+type CharacterId = 'valor' | 'elara' | 'ella';
 
 interface RPGCommandMenuProps {
   onSelectCommand: (command: CommandType) => void;
@@ -15,6 +16,7 @@ interface RPGCommandMenuProps {
   currentCommand?: CommandType | null;
   currentMp?: number;
   inventory?: { [itemId: string]: number };
+  selectedCharacter?: CharacterId | null; // New prop for character-specific spells
 }
 
 const commands: { id: CommandType; label: string; icon: typeof BookOpen; color: string }[] = [
@@ -33,11 +35,31 @@ export const RPGCommandMenu = ({
   currentCommand = null,
   currentMp = 0,
   inventory = { health_potion: 2, magic_potion: 1 },
+  selectedCharacter = null,
 }: RPGCommandMenuProps) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [showSpellMenu, setShowSpellMenu] = useState(false);
   const [showItemMenu, setShowItemMenu] = useState(false);
+
+  // Get character-specific spells
+  const getCharacterSpells = (): Spell[] => {
+    switch (selectedCharacter) {
+      case 'valor': return valorSpells;
+      case 'elara': return elaraSpells;
+      case 'ella': return ellaSpells;
+      default: return elaraSpells; // Default to wizard spells
+    }
+  };
+
+  const getCharacterName = (): string => {
+    switch (selectedCharacter) {
+      case 'valor': return 'Combat Arts';
+      case 'elara': return 'Magic';
+      case 'ella': return 'Nature Magic';
+      default: return 'Magic';
+    }
+  };
 
   const handleSelect = (command: CommandType, index: number) => {
     if (disabled || !isPlayerTurn) return;
@@ -76,6 +98,8 @@ export const RPGCommandMenu = ({
               currentMp={currentMp}
               onSelectSpell={handleSpellSelect}
               onClose={() => setShowSpellMenu(false)}
+              spells={getCharacterSpells()}
+              characterName={getCharacterName()}
             />
           </div>
         )}

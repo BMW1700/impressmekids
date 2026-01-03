@@ -1,8 +1,10 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 
+export type SpellEffectType = 'fire' | 'ice' | 'lightning' | 'slash' | 'nature' | 'heal' | 'wind' | null;
+
 interface RPGSpellEffectsProps {
-  spellType: 'fire' | 'ice' | 'lightning' | 'slash' | null;
+  spellType: SpellEffectType;
   isActive: boolean;
   onComplete?: () => void;
 }
@@ -368,6 +370,220 @@ export const RPGSpellEffects = ({ spellType, isActive, onComplete }: RPGSpellEff
                 }}
               />
             ))}
+          </>
+        )}
+
+        {/* NATURE Effect - Petal Storm / Sunbeam */}
+        {spellType === 'nature' && (
+          <>
+            {/* Central Sunburst */}
+            <motion.div
+              className="absolute top-1/2 left-1/4 -translate-x-1/2 -translate-y-1/2"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: [0, 1.5, 2], opacity: [0, 1, 0] }}
+              transition={{ duration: 0.6 }}
+            >
+              <div 
+                className="w-40 h-40 rounded-full"
+                style={{
+                  background: 'radial-gradient(circle, rgba(255,223,186,1) 0%, rgba(255,182,193,0.6) 40%, transparent 70%)',
+                  boxShadow: '0 0 60px 30px rgba(255,182,193,0.5)',
+                }}
+              />
+            </motion.div>
+
+            {/* Flying Petals */}
+            {particles.map((p) => (
+              <motion.div
+                key={p.id}
+                className="absolute"
+                style={{
+                  left: `${70 + (p.x - 50) * 0.3}%`,
+                  top: `${40 + (p.y - 50) * 0.3}%`,
+                }}
+                initial={{ opacity: 0, scale: 0, rotate: 0, x: 100 }}
+                animate={{ 
+                  opacity: [0, 1, 0.8, 0],
+                  scale: [0, 1.2, 1, 0.5],
+                  rotate: [0, 180, 360, 540],
+                  x: [100, 0, -150, -300],
+                  y: [0, (p.y - 50) * 0.5, (p.y - 50)],
+                }}
+                transition={{ 
+                  duration: 0.8,
+                  delay: p.delay * 0.5,
+                }}
+              >
+                <div 
+                  className="w-4 h-4"
+                  style={{ 
+                    background: `linear-gradient(135deg, ${p.id % 2 === 0 ? '#ffc0cb' : '#ffb6c1'}, ${p.id % 2 === 0 ? '#ff69b4' : '#ff1493'})`,
+                    borderRadius: '50% 0 50% 50%',
+                    transform: 'rotate(45deg)',
+                  }}
+                />
+              </motion.div>
+            ))}
+
+            {/* Golden Rays */}
+            {[...Array(8)].map((_, i) => (
+              <motion.div
+                key={i}
+                className="absolute left-1/4 top-1/2"
+                style={{
+                  width: '200px',
+                  height: '3px',
+                  background: 'linear-gradient(90deg, rgba(255,215,0,0.8), rgba(255,182,193,0.4), transparent)',
+                  transformOrigin: 'left center',
+                  rotate: `${i * 45}deg`,
+                }}
+                initial={{ scaleX: 0, opacity: 0 }}
+                animate={{ scaleX: [0, 1, 0.8], opacity: [0, 1, 0] }}
+                transition={{ 
+                  duration: 0.5,
+                  delay: i * 0.05,
+                }}
+              />
+            ))}
+          </>
+        )}
+
+        {/* HEAL Effect - Healing Bloom */}
+        {spellType === 'heal' && (
+          <>
+            {/* Green Healing Aura */}
+            <motion.div
+              className="absolute top-1/2 right-1/4 translate-x-1/2 -translate-y-1/2"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: [0, 1.5, 2.5], opacity: [0, 0.8, 0] }}
+              transition={{ duration: 0.8 }}
+            >
+              <div 
+                className="w-48 h-48 rounded-full"
+                style={{
+                  background: 'radial-gradient(circle, rgba(144,238,144,0.9) 0%, rgba(34,139,34,0.5) 50%, transparent 70%)',
+                  boxShadow: '0 0 80px 40px rgba(50,205,50,0.4)',
+                }}
+              />
+            </motion.div>
+
+            {/* Rising Hearts/Sparkles */}
+            {particles.slice(0, 12).map((p) => (
+              <motion.div
+                key={p.id}
+                className="absolute text-2xl"
+                style={{
+                  right: `${20 + p.x * 0.2}%`,
+                  top: `${50 + (p.y - 50) * 0.2}%`,
+                }}
+                initial={{ opacity: 0, scale: 0, y: 0 }}
+                animate={{ 
+                  opacity: [0, 1, 0],
+                  scale: [0, 1.5, 1],
+                  y: [0, -100, -200],
+                }}
+                transition={{ 
+                  duration: 1,
+                  delay: p.delay * 0.8,
+                }}
+              >
+                {p.id % 3 === 0 ? '💚' : p.id % 3 === 1 ? '✨' : '🌸'}
+              </motion.div>
+            ))}
+
+            {/* Blooming Flower Center */}
+            <motion.div
+              className="absolute top-1/2 right-1/4 translate-x-1/2 -translate-y-1/2 text-5xl"
+              initial={{ scale: 0, opacity: 0, rotate: 0 }}
+              animate={{ 
+                scale: [0, 1.5, 1.2],
+                opacity: [0, 1, 0],
+                rotate: [0, 180, 360],
+              }}
+              transition={{ duration: 0.6 }}
+            >
+              🌸
+            </motion.div>
+          </>
+        )}
+
+        {/* WIND Effect - Fairy Wind */}
+        {spellType === 'wind' && (
+          <>
+            {/* Wind Streaks */}
+            {[...Array(6)].map((_, i) => (
+              <motion.div
+                key={i}
+                className="absolute"
+                style={{
+                  right: '20%',
+                  top: `${30 + i * 8}%`,
+                  width: '300px',
+                  height: '2px',
+                  background: 'linear-gradient(90deg, transparent, rgba(127,255,212,0.6), rgba(64,224,208,0.8), rgba(127,255,212,0.4), transparent)',
+                }}
+                initial={{ x: 200, opacity: 0 }}
+                animate={{ x: [-100, -400], opacity: [0, 1, 0] }}
+                transition={{ 
+                  duration: 0.4,
+                  delay: i * 0.08,
+                }}
+              />
+            ))}
+
+            {/* Swirling Leaves/Sparkles */}
+            {particles.slice(0, 15).map((p) => (
+              <motion.div
+                key={p.id}
+                className="absolute"
+                style={{
+                  right: `${30 + p.x * 0.3}%`,
+                  top: `${40 + (p.y - 50) * 0.3}%`,
+                }}
+                initial={{ opacity: 0, scale: 0, rotate: 0, x: 100 }}
+                animate={{ 
+                  opacity: [0, 1, 0],
+                  scale: [0.5, 1, 0.5],
+                  rotate: [0, 360, 720],
+                  x: [100, -100, -300],
+                  y: [0, (p.y - 50) * 0.5, (p.y - 50)],
+                }}
+                transition={{ 
+                  duration: 0.6,
+                  delay: p.delay * 0.4,
+                }}
+              >
+                <div 
+                  className="w-3 h-3 rounded-full"
+                  style={{ 
+                    background: p.id % 2 === 0 
+                      ? 'radial-gradient(circle, #7fffd4, #40e0d0)' 
+                      : 'radial-gradient(circle, #98fb98, #32cd32)',
+                    boxShadow: '0 0 8px rgba(127,255,212,0.6)',
+                  }}
+                />
+              </motion.div>
+            ))}
+
+            {/* Central Gust */}
+            <motion.div
+              className="absolute top-1/2 left-1/4 -translate-y-1/2"
+              initial={{ scale: 0, opacity: 0, rotate: 0 }}
+              animate={{ 
+                scale: [0, 1.5, 2],
+                opacity: [0, 0.6, 0],
+                rotate: [0, 180],
+              }}
+              transition={{ duration: 0.5 }}
+            >
+              <div 
+                className="w-32 h-32"
+                style={{
+                  background: 'conic-gradient(from 0deg, transparent, rgba(127,255,212,0.3), transparent, rgba(64,224,208,0.3), transparent)',
+                  borderRadius: '50%',
+                }}
+              />
+            </motion.div>
           </>
         )}
       </div>

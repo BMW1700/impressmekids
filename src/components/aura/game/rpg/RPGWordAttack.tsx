@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Flame, Zap, Snowflake, Sword } from "lucide-react";
+import { Flame, Zap, Snowflake, Sword, Flower2, Heart, Wind } from "lucide-react";
+import { LucideIcon } from "lucide-react";
+
+export type AttackType = 'fire' | 'ice' | 'lightning' | 'slash' | 'nature' | 'heal' | 'wind';
 
 interface RPGWordAttackProps {
   word: string;
   isCorrect: boolean | null;
   streak: number;
   damage: number;
-  attackType?: 'fire' | 'ice' | 'lightning' | 'slash';
+  attackType?: AttackType;
   onAnimationComplete?: () => void;
 }
 
@@ -46,6 +49,12 @@ export const RPGWordAttack = ({
         return <Zap className={`${iconClass} text-yellow-300`} />;
       case 'slash':
         return <Sword className={`${iconClass} text-slate-200`} />;
+      case 'nature':
+        return <Flower2 className={`${iconClass} text-pink-400`} />;
+      case 'heal':
+        return <Heart className={`${iconClass} text-green-400`} />;
+      case 'wind':
+        return <Wind className={`${iconClass} text-teal-300`} />;
       default:
         return <Flame className={`${iconClass} text-orange-400`} />;
     }
@@ -57,6 +66,9 @@ export const RPGWordAttack = ({
       case 'ice': return 'from-cyan-400 via-blue-500 to-indigo-500';
       case 'lightning': return 'from-yellow-300 via-amber-400 to-orange-400';
       case 'slash': return 'from-slate-300 via-slate-400 to-slate-500';
+      case 'nature': return 'from-pink-400 via-rose-500 to-fuchsia-500';
+      case 'heal': return 'from-green-400 via-emerald-500 to-teal-500';
+      case 'wind': return 'from-teal-300 via-cyan-400 to-sky-500';
       default: return 'from-orange-500 via-red-500 to-yellow-500';
     }
   };
@@ -67,6 +79,9 @@ export const RPGWordAttack = ({
       case 'ice': return 'rgba(34, 211, 238, 0.6)';
       case 'lightning': return 'rgba(250, 204, 21, 0.6)';
       case 'slash': return 'rgba(148, 163, 184, 0.6)';
+      case 'nature': return 'rgba(244, 114, 182, 0.6)';
+      case 'heal': return 'rgba(74, 222, 128, 0.6)';
+      case 'wind': return 'rgba(45, 212, 191, 0.6)';
       default: return 'rgba(249, 115, 22, 0.6)';
     }
   };

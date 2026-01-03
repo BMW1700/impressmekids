@@ -1,32 +1,147 @@
 import { motion } from "framer-motion";
-import { Flame, Snowflake, Zap, X } from "lucide-react";
+import { Flame, Snowflake, Zap, X, Sparkles, Flower2, Heart, Shield, Sword, Wind, Sun } from "lucide-react";
+import { LucideIcon } from "lucide-react";
 
-interface Spell {
+export interface Spell {
   id: string;
   name: string;
   damage: number;
   mpCost: number;
-  icon: typeof Flame;
+  icon: LucideIcon;
   color: string;
-  effect: 'fire' | 'ice' | 'lightning';
+  effect: 'fire' | 'ice' | 'lightning' | 'slash' | 'nature' | 'heal' | 'wind';
+  description?: string;
 }
 
-const spells: Spell[] = [
-  { id: 'lightning', name: 'Lightning', damage: 35, mpCost: 25, icon: Zap, color: 'from-yellow-400 to-amber-500', effect: 'lightning' },
-  { id: 'ice_shard', name: 'Ice Shard', damage: 20, mpCost: 15, icon: Snowflake, color: 'from-cyan-400 to-blue-500', effect: 'ice' },
-  { id: 'fireball', name: 'Fireball', damage: 30, mpCost: 20, icon: Flame, color: 'from-orange-500 to-red-600', effect: 'fire' },
+// Sir Valor's warrior abilities - physical attacks
+export const valorSpells: Spell[] = [
+  { 
+    id: 'power_slash', 
+    name: 'Power Slash', 
+    damage: 30, 
+    mpCost: 15, 
+    icon: Sword, 
+    color: 'from-red-500 to-orange-600', 
+    effect: 'slash',
+    description: 'A mighty sword strike!'
+  },
+  { 
+    id: 'shield_bash', 
+    name: 'Shield Bash', 
+    damage: 20, 
+    mpCost: 10, 
+    icon: Shield, 
+    color: 'from-blue-500 to-slate-600', 
+    effect: 'slash',
+    description: 'Stuns and damages the foe'
+  },
+  { 
+    id: 'heroes_fury', 
+    name: "Hero's Fury", 
+    damage: 45, 
+    mpCost: 25, 
+    icon: Flame, 
+    color: 'from-amber-400 to-red-600', 
+    effect: 'fire',
+    description: 'Unleash burning rage!'
+  },
 ];
+
+// Elara's wizard spells - elemental magic
+export const elaraSpells: Spell[] = [
+  { 
+    id: 'lightning', 
+    name: 'Lightning Bolt', 
+    damage: 35, 
+    mpCost: 25, 
+    icon: Zap, 
+    color: 'from-yellow-400 to-amber-500', 
+    effect: 'lightning',
+    description: 'Call down the thunder!'
+  },
+  { 
+    id: 'ice_shard', 
+    name: 'Ice Shard', 
+    damage: 20, 
+    mpCost: 15, 
+    icon: Snowflake, 
+    color: 'from-cyan-400 to-blue-500', 
+    effect: 'ice',
+    description: 'Freeze your enemies!'
+  },
+  { 
+    id: 'fireball', 
+    name: 'Fireball', 
+    damage: 30, 
+    mpCost: 20, 
+    icon: Flame, 
+    color: 'from-orange-500 to-red-600', 
+    effect: 'fire',
+    description: 'A blazing sphere of flames!'
+  },
+];
+
+// Princess Ella's nature magic - healing and nature attacks
+export const ellaSpells: Spell[] = [
+  { 
+    id: 'petal_storm', 
+    name: 'Petal Storm', 
+    damage: 25, 
+    mpCost: 15, 
+    icon: Flower2, 
+    color: 'from-pink-400 to-rose-500', 
+    effect: 'nature',
+    description: 'A swirl of magical petals!'
+  },
+  { 
+    id: 'healing_bloom', 
+    name: 'Healing Bloom', 
+    damage: 0, 
+    mpCost: 20, 
+    icon: Heart, 
+    color: 'from-green-400 to-emerald-500', 
+    effect: 'heal',
+    description: 'Restore 25 HP with flower magic!'
+  },
+  { 
+    id: 'sunbeam', 
+    name: 'Sunbeam', 
+    damage: 35, 
+    mpCost: 25, 
+    icon: Sun, 
+    color: 'from-yellow-300 to-amber-400', 
+    effect: 'nature',
+    description: 'Channel the sun\'s radiance!'
+  },
+  { 
+    id: 'fairy_wind', 
+    name: 'Fairy Wind', 
+    damage: 20, 
+    mpCost: 12, 
+    icon: Wind, 
+    color: 'from-teal-300 to-cyan-400', 
+    effect: 'wind',
+    description: 'A magical gust of wind!'
+  },
+];
+
+// Legacy spells for backwards compatibility
+export const defaultSpells: Spell[] = elaraSpells;
 
 interface RPGSpellMenuProps {
   currentMp: number;
   onSelectSpell: (spell: Spell) => void;
   onClose: () => void;
+  spells?: Spell[]; // Optional - defaults to Elara's spells
+  characterName?: string; // For the header
 }
 
 export const RPGSpellMenu = ({
   currentMp,
   onSelectSpell,
   onClose,
+  spells = defaultSpells,
+  characterName = 'Magic',
 }: RPGSpellMenuProps) => {
   return (
     <motion.div
@@ -40,8 +155,8 @@ export const RPGSpellMenu = ({
       {/* Header */}
       <div className="flex items-center justify-between mb-3 px-2">
         <h3 className="text-sm font-bold text-purple-200 tracking-wider uppercase flex items-center gap-2">
-          <Zap className="h-4 w-4" />
-          Magic
+          <Sparkles className="h-4 w-4" />
+          {characterName}
         </h3>
         <button 
           onClick={onClose}
@@ -56,6 +171,7 @@ export const RPGSpellMenu = ({
         {spells.map((spell) => {
           const Icon = spell.icon;
           const canAfford = currentMp >= spell.mpCost;
+          const isHeal = spell.effect === 'heal';
           
           return (
             <motion.button
@@ -81,7 +197,11 @@ export const RPGSpellMenu = ({
               <div className="flex-1 text-left">
                 <p className="font-semibold text-white text-sm">{spell.name}</p>
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="text-red-400">{spell.damage} DMG</span>
+                  {isHeal ? (
+                    <span className="text-green-400">+25 HP</span>
+                  ) : (
+                    <span className="text-red-400">{spell.damage} DMG</span>
+                  )}
                   <span className="text-purple-400">{spell.mpCost} MP</span>
                 </div>
               </div>
@@ -105,5 +225,3 @@ export const RPGSpellMenu = ({
     </motion.div>
   );
 };
-
-export type { Spell };
