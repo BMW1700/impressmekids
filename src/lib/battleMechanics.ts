@@ -1,6 +1,17 @@
 // Battle mechanics for Grog the Goblin King Story Campaign
 
-export type EnemyType = 'minion' | 'guard' | 'elite' | 'boss';
+export type EnemyType = 
+  | 'minion' | 'guard' | 'elite' | 'boss'
+  | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian'
+  // World 5 - Whispering Caverns
+  | 'cave_troll' | 'crystal_spider' | 'echo_wraith'
+  // World 6 - Floating Isles
+  | 'storm_harpy' | 'cloud_giant' | 'zephyr'
+  // World 7 - Sunken Library
+  | 'ink_kraken' | 'reef_guardian' | 'leviathan'
+  // World 8 - The Void
+  | 'void_phantom' | 'reality_shifter' | 'word_eater';
+
 export type BattleStatus = 'in_progress' | 'victory' | 'defeat';
 
 export interface BattleState {
@@ -31,17 +42,50 @@ export interface EnemyAttackResult {
   message: string;
 }
 
+// Map enemy types to their tier for stat calculations
+const getEnemyTier = (enemyType: EnemyType): 'minion' | 'guard' | 'elite' | 'boss' => {
+  const tierMap: Record<EnemyType, 'minion' | 'guard' | 'elite' | 'boss'> = {
+    minion: 'minion',
+    guard: 'guard',
+    elite: 'elite',
+    boss: 'boss',
+    dragon: 'boss',
+    ice_golem: 'elite',
+    shadow_wraith: 'guard',
+    stone_guardian: 'boss',
+    cave_troll: 'guard',
+    crystal_spider: 'minion',
+    echo_wraith: 'elite',
+    storm_harpy: 'minion',
+    cloud_giant: 'elite',
+    zephyr: 'boss',
+    ink_kraken: 'guard',
+    reef_guardian: 'elite',
+    leviathan: 'boss',
+    void_phantom: 'guard',
+    reality_shifter: 'elite',
+    word_eater: 'boss',
+  };
+  return tierMap[enemyType] || 'minion';
+};
+
 // Get enemy HP based on world and difficulty
 export const getEnemyStats = (worldNumber: number, enemyType: EnemyType): { hp: number; attackPower: number } => {
-  // DOUBLED HP: Makes battles harder - goblins survive longer
+  // DOUBLED HP: Makes battles harder - enemies survive longer
   const baseHpByWorld: Record<number, number> = {
-    1: 200,  // Enchanted Forest - Easy (was 100)
-    2: 400,  // Dark Caves - Medium (was 200)
-    3: 700,  // Goblin Mountain - Hard (was 350)
-    4: 1000, // Throne Room - Boss (was 500)
+    1: 200,  // Enchanted Forest - Easy
+    2: 400,  // Dark Caves - Medium
+    3: 700,  // Goblin Mountain - Hard
+    4: 1000, // Throne Room - Boss
+    5: 500,  // Whispering Caverns
+    6: 600,  // Floating Isles
+    7: 750,  // Sunken Library
+    8: 1200, // The Void - Hardest
   };
 
-  const hpMultiplierByType: Record<EnemyType, number> = {
+  const tier = getEnemyTier(enemyType);
+  
+  const hpMultiplierByType: Record<'minion' | 'guard' | 'elite' | 'boss', number> = {
     minion: 0.5,
     guard: 0.75,
     elite: 1.0,
@@ -49,16 +93,16 @@ export const getEnemyStats = (worldNumber: number, enemyType: EnemyType): { hp: 
   };
 
   // BALANCED: Reduced attack power for kid-friendly gameplay
-  const attackPowerByType: Record<EnemyType, number> = {
+  const attackPowerByType: Record<'minion' | 'guard' | 'elite' | 'boss', number> = {
     minion: 2,
     guard: 4,
     elite: 6,
     boss: 8,
   };
 
-  const baseHp = baseHpByWorld[worldNumber] || 100;
-  const hp = Math.floor(baseHp * hpMultiplierByType[enemyType]);
-  const attackPower = attackPowerByType[enemyType];
+  const baseHp = baseHpByWorld[worldNumber] || 200;
+  const hp = Math.floor(baseHp * hpMultiplierByType[tier]);
+  const attackPower = attackPowerByType[tier];
 
   return { hp, attackPower };
 };
@@ -118,22 +162,24 @@ export const calculateDamage = (
 // Calculate damage taken when word is read incorrectly
 // BALANCED: Reduced damage so readers don't die too quickly
 export const calculateEnemyAttack = (enemyType: EnemyType): EnemyAttackResult => {
-  const attackPower: Record<EnemyType, number> = {
+  const tier = getEnemyTier(enemyType);
+  
+  const attackPower: Record<'minion' | 'guard' | 'elite' | 'boss', number> = {
     minion: 2,   // Reduced from 5
     guard: 4,    // Reduced from 10
     elite: 6,    // Reduced from 15
     boss: 8,     // Reduced from 20
   };
 
-  const messages: Record<EnemyType, string[]> = {
-    minion: ['Ouch! The goblin poked you!', 'A tiny scratch!'],
-    guard: ['The guard strikes back!', 'That one hurt!'],
+  const messages: Record<'minion' | 'guard' | 'elite' | 'boss', string[]> = {
+    minion: ['Ouch! The creature poked you!', 'A tiny scratch!'],
+    guard: ['The enemy strikes back!', 'That one hurt!'],
     elite: ['Powerful blow!', 'The elite hits hard!'],
-    boss: ['Grog smashes you!', 'The Goblin King attacks!'],
+    boss: ['MASSIVE ATTACK!', 'The boss crushes you!'],
   };
 
-  const damage = attackPower[enemyType];
-  const message = messages[enemyType][Math.floor(Math.random() * messages[enemyType].length)];
+  const damage = attackPower[tier];
+  const message = messages[tier][Math.floor(Math.random() * messages[tier].length)];
 
   return { damage, message };
 };
@@ -188,34 +234,45 @@ export const calculatePowerDamage = (streak: number): { damage: number; tier: 'n
 
 // Get enemy name based on type
 export const getEnemyName = (enemyType: EnemyType, worldNumber: number): string => {
-  const names: Record<number, Record<EnemyType, string>> = {
-    1: {
-      minion: 'Forest Imp',
-      guard: 'Goblin Scout',
-      elite: 'Forest Guardian',
-      boss: 'Grog the Goblin King',
-    },
-    2: {
-      minion: 'Cave Gremlin',
-      guard: 'Stone Troll',
-      elite: 'Shadow Lurker',
-      boss: 'Grog the Goblin King',
-    },
-    3: {
-      minion: 'Mountain Gnome',
-      guard: 'Boulder Brute',
-      elite: 'Peak Guardian',
-      boss: 'Grog the Goblin King',
-    },
-    4: {
-      minion: 'Throne Guard',
-      guard: 'Royal Defender',
-      elite: 'Dark Knight',
-      boss: 'Grog the Goblin King',
-    },
+  // Named enemies have specific names
+  const namedEnemies: Partial<Record<EnemyType, string>> = {
+    boss: 'Grog the Goblin King',
+    dragon: 'Drake the Dragon',
+    ice_golem: 'Frostfang the Ice Golem',
+    shadow_wraith: 'Whisper the Shadow Wraith',
+    stone_guardian: 'Granite the Stone Guardian',
+    cave_troll: 'Grumbold the Cave Troll',
+    crystal_spider: 'Prism the Crystal Spider',
+    echo_wraith: 'Echo the Phantom',
+    storm_harpy: 'Tempest the Storm Harpy',
+    cloud_giant: 'Nimbus the Cloud Giant',
+    zephyr: 'Zephyr the Wind Lord',
+    ink_kraken: 'Inkwell the Kraken',
+    reef_guardian: 'Coral the Reef Guardian',
+    leviathan: 'Abyss the Leviathan',
+    void_phantom: 'Shade the Void Phantom',
+    reality_shifter: 'Flux the Reality Shifter',
+    word_eater: 'Terminus the Word Eater',
   };
 
-  return names[worldNumber]?.[enemyType] || 'Goblin Minion';
+  if (namedEnemies[enemyType]) {
+    return namedEnemies[enemyType]!;
+  }
+
+  // Generic tier-based names by world
+  const tier = getEnemyTier(enemyType);
+  const names: Record<number, Record<'minion' | 'guard' | 'elite' | 'boss', string>> = {
+    1: { minion: 'Forest Imp', guard: 'Goblin Scout', elite: 'Forest Guardian', boss: 'Grog the Goblin King' },
+    2: { minion: 'Cave Gremlin', guard: 'Stone Troll', elite: 'Shadow Lurker', boss: 'Grog the Goblin King' },
+    3: { minion: 'Mountain Gnome', guard: 'Boulder Brute', elite: 'Peak Guardian', boss: 'Grog the Goblin King' },
+    4: { minion: 'Throne Guard', guard: 'Royal Defender', elite: 'Dark Knight', boss: 'Grog the Goblin King' },
+    5: { minion: 'Cavern Creeper', guard: 'Crystal Guard', elite: 'Echo Hunter', boss: 'Echo Master' },
+    6: { minion: 'Cloud Sprite', guard: 'Sky Sentinel', elite: 'Storm Rider', boss: 'Zephyr' },
+    7: { minion: 'Ink Blob', guard: 'Reef Warden', elite: 'Deep Diver', boss: 'Leviathan' },
+    8: { minion: 'Void Wisp', guard: 'Reality Guard', elite: 'Word Hunter', boss: 'Terminus' },
+  };
+
+  return names[worldNumber]?.[tier] || 'Goblin Minion';
 };
 
 // Get victory message based on performance

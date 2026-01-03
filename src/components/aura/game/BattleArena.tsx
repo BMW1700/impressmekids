@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import { GrogCharacter, GrogState, EnemyType } from "./GrogCharacter";
+import { GrogCharacter, GrogState } from "./GrogCharacter";
+import { type EnemyType } from "@/lib/battleMechanics";
 import { PlayerCharacter, PlayerState, PlayerGender } from "./PlayerCharacter";
 import { EnergyBeamEffect } from "./EnergyBeamEffect";
 import { useState, useEffect } from "react";

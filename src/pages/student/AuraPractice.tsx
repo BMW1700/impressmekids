@@ -406,7 +406,7 @@ const AuraPractice = () => {
       return {
         id: levelData.id,
         story,
-        enemies: levelData.enemies as ('minion' | 'guard' | 'elite' | 'boss' | 'dragon')[],
+        enemies: levelData.enemies as CampaignLevel['enemies'],
         isBossLevel: levelData.isBossLevel,
         starsEarned: isCompleted ? 2 : 0, // Default 2 stars for completed
         isCompleted,
@@ -421,11 +421,32 @@ const AuraPractice = () => {
       
       // Set enemy type based on level
       const primaryEnemy = level.enemies[0];
+      // Map all campaign enemy types to battle enemy types
       const enemyMap: Record<string, EnemyType> = {
         minion: 'minion',
         guard: 'guard',
         elite: 'elite',
         boss: 'boss',
+        dragon: 'dragon',
+        ice_golem: 'ice_golem',
+        shadow_wraith: 'shadow_wraith',
+        stone_guardian: 'stone_guardian',
+        // World 5 - Whispering Caverns
+        cave_troll: 'cave_troll',
+        crystal_spider: 'crystal_spider',
+        echo_wraith: 'echo_wraith',
+        // World 6 - Floating Isles
+        storm_harpy: 'storm_harpy',
+        cloud_giant: 'cloud_giant',
+        zephyr: 'zephyr',
+        // World 7 - Sunken Library
+        ink_kraken: 'ink_kraken',
+        reef_guardian: 'reef_guardian',
+        leviathan: 'leviathan',
+        // World 8 - The Void
+        void_phantom: 'void_phantom',
+        reality_shifter: 'reality_shifter',
+        word_eater: 'word_eater',
       };
       setRpgEnemyType(enemyMap[primaryEnemy] || 'minion');
       

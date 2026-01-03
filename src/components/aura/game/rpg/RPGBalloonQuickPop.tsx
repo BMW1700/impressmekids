@@ -192,38 +192,59 @@ export const RPGBalloonQuickPop = ({
         }
       }
       
-      // No match found - restart listening
+      // No match found - restart listening with proper delay
       try {
         setTimeout(() => {
           if (isListeningRef.current && !processingRef.current && !gameOver) {
-            recognitionRef.current.start();
+            try {
+              recognitionRef.current.start();
+            } catch (err) {
+              console.log('[BalloonQuickPop] Restart failed, retrying:', err);
+              // Retry once more after additional delay
+              setTimeout(() => {
+                if (isListeningRef.current && !processingRef.current && !gameOver) {
+                  try { recognitionRef.current.start(); } catch (e) {}
+                }
+              }, 300);
+            }
           }
-        }, 100);
+        }, 350); // Increased delay for browser to be ready
       } catch (e) {}
     };
 
     recognitionRef.current.onerror = (e: any) => {
       console.log('[BalloonQuickPop] Speech error:', e.error);
       if (e.error === 'no-speech' || e.error === 'aborted') {
-        // Restart on no-speech
+        // Restart on no-speech with proper delay
         setTimeout(() => {
           if (isListeningRef.current && !processingRef.current && !gameOver) {
             try {
               recognitionRef.current.start();
-            } catch (err) {}
+            } catch (err) {
+              // Final retry
+              setTimeout(() => {
+                if (isListeningRef.current && !processingRef.current && !gameOver) {
+                  try { recognitionRef.current.start(); } catch (e) {}
+                }
+              }, 300);
+            }
           }
-        }, 100);
+        }, 400); // Increased delay
       }
     };
 
     recognitionRef.current.onend = () => {
-      // Auto-restart if still listening
+      // Auto-restart if still listening - with delay to prevent rapid restarts
       if (isListeningRef.current && !processingRef.current && !gameOver) {
         setTimeout(() => {
-          try {
-            recognitionRef.current.start();
-          } catch (e) {}
-        }, 100);
+          if (isListeningRef.current && !processingRef.current && !gameOver) {
+            try {
+              recognitionRef.current.start();
+            } catch (e) {
+              console.log('[BalloonQuickPop] onend restart failed:', e);
+            }
+          }
+        }, 350); // Key fix: delay prevents "already started" errors
       }
     };
 

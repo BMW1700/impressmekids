@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Lock, Star, Swords, Crown, TreePine, Mountain, Castle, Flame, Sparkles } from "lucide-react";
+import { ArrowLeft, Lock, Star, Swords, Crown, TreePine, Mountain, Castle, Flame, Sparkles, Gem, Cloud, Waves, Eclipse } from "lucide-react";
 import { campaignWorlds, CampaignWorld } from "@/lib/campaignData";
 import { 
   DrakeSilhouette, 
@@ -34,6 +34,10 @@ const worldIcons: Record<number, React.ReactNode> = {
   2: <Mountain className="h-8 w-8" />,
   3: <Flame className="h-8 w-8" />,
   4: <Crown className="h-8 w-8" />,
+  5: <Gem className="h-8 w-8" />,        // Whispering Caverns
+  6: <Cloud className="h-8 w-8" />,       // Floating Isles
+  7: <Waves className="h-8 w-8" />,       // Sunken Library
+  8: <Eclipse className="h-8 w-8" />,     // The Void
 };
 
 // Enhanced SVG connecting path with dotted line and particle flow
