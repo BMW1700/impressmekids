@@ -12,9 +12,9 @@ interface Spell {
 }
 
 const spells: Spell[] = [
-  { id: 'fireball', name: 'Fireball', damage: 30, mpCost: 20, icon: Flame, color: 'from-orange-500 to-red-600', effect: 'fire' },
-  { id: 'ice_shard', name: 'Ice Shard', damage: 20, mpCost: 15, icon: Snowflake, color: 'from-cyan-400 to-blue-500', effect: 'ice' },
   { id: 'lightning', name: 'Lightning', damage: 35, mpCost: 25, icon: Zap, color: 'from-yellow-400 to-amber-500', effect: 'lightning' },
+  { id: 'ice_shard', name: 'Ice Shard', damage: 20, mpCost: 15, icon: Snowflake, color: 'from-cyan-400 to-blue-500', effect: 'ice' },
+  { id: 'fireball', name: 'Fireball', damage: 30, mpCost: 20, icon: Flame, color: 'from-orange-500 to-red-600', effect: 'fire' },
 ];
 
 interface RPGSpellMenuProps {

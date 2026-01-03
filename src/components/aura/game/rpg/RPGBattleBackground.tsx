@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useMemo, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { ImageIcon, Palette } from "lucide-react";
 
 type BackgroundTheme = 'castle' | 'dungeon' | 'forest' | 'throne' | 'volcano' | 'ice_cave' | 'ruins' | 'shadow_realm' | 'caverns' | 'sky_isles' | 'sunken_library' | 'void';
 
@@ -12,6 +13,7 @@ interface RPGBattleBackgroundProps {
 
 // Map world numbers to world_id in database
 const worldToDbId: Record<number, number> = {
+  0: 0, // Tutorial Island
   1: 1, // Enchanted Forest
   2: 2, // Frozen Depths
   3: 3, // Ancient Ruins
@@ -29,6 +31,21 @@ export const RPGBattleBackground = ({
 }: RPGBattleBackgroundProps) => {
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
+  
+  // Toggle between AI and gradient backgrounds - default to gradient (more reliable)
+  const [useAiBackground, setUseAiBackground] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('rpg_use_ai_bg') === 'true';
+    }
+    return false;
+  });
+
+  // Save preference
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('rpg_use_ai_bg', useAiBackground.toString());
+    }
+  }, [useAiBackground]);
 
   // Fetch AI-generated background from database
   useEffect(() => {
@@ -359,10 +376,34 @@ export const RPGBattleBackground = ({
     }
   };
 
+  const showAiImage = useAiBackground && backgroundImage && imageLoaded;
+
   return (
     <div className="absolute inset-0 overflow-hidden">
-      {/* AI-Generated Background Image (if available) */}
-      {backgroundImage && imageLoaded && (
+      {/* Background Toggle Button - Top Right */}
+      <motion.button
+        className="absolute top-3 right-3 z-50 p-2 rounded-lg bg-slate-900/70 border border-slate-600/50 
+          hover:bg-slate-800/80 transition-colors flex items-center gap-2"
+        onClick={() => setUseAiBackground(!useAiBackground)}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        title={useAiBackground ? "Switch to Classic" : "Switch to AI Art"}
+      >
+        {useAiBackground ? (
+          <>
+            <Palette className="h-4 w-4 text-purple-400" />
+            <span className="text-xs text-purple-300 hidden sm:inline">Classic</span>
+          </>
+        ) : (
+          <>
+            <ImageIcon className="h-4 w-4 text-cyan-400" />
+            <span className="text-xs text-cyan-300 hidden sm:inline">AI Art</span>
+          </>
+        )}
+      </motion.button>
+
+      {/* AI-Generated Background Image (if available and enabled) */}
+      {showAiImage && (
         <motion.div
           className="absolute inset-0"
           initial={{ opacity: 0 }}
@@ -379,10 +420,10 @@ export const RPGBattleBackground = ({
         </motion.div>
       )}
 
-      {/* Fallback gradient background (always visible, fades when image loads) */}
+      {/* Gradient background (shows when AI is disabled or not loaded) */}
       <motion.div
         className="absolute inset-0"
-        animate={{ opacity: backgroundImage && imageLoaded ? 0 : 1 }}
+        animate={{ opacity: showAiImage ? 0 : 1 }}
         transition={{ duration: 0.5 }}
       >
         {/* Sky Layer */}

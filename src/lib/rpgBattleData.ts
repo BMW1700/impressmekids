@@ -39,7 +39,7 @@ export type MiniGameType =
   | 'rhyme_chain' 
   | 'speed_typist' 
   | 'tug_of_war' 
-  | 'balloon_quickpop'  // Small balloon overlay (3 balloons) - NOT Balloon Bonanza
+  | 'goblin_horde'       // Mini goblins run at player - speak words to defeat
   | 'fireball_defense'
   | 'beast_swarm'
   | 'ice_crystal_barrage'
@@ -134,8 +134,8 @@ export const goblinMinion: RPGEnemy = {
     { id: 'poison_dagger', name: 'Poison Dagger', damage: 8, effect: 'poison', description: 'Deals damage over time', icon: '🗡️' },
   ],
   barrageWordCount: 4,
-  miniGames: ['word_shield', 'balloon_quickpop', 'word_barrage', 'dodge_words'], // 80 HP = 2 triggers
-  signatureMiniGame: 'balloon_quickpop', // Signature at 50%
+  miniGames: ['word_shield', 'goblin_horde', 'word_barrage', 'dodge_words'], // 80 HP = 2 triggers
+  signatureMiniGame: 'goblin_horde', // Signature at 50%
 };
 
 export const goblinGuard: RPGEnemy = {
@@ -164,7 +164,7 @@ export const goblinGuard: RPGEnemy = {
     { id: 'poison_dagger', name: 'Poison Dagger', damage: 10, effect: 'poison', description: 'Deals damage over time', icon: '🗡️' },
   ],
   barrageWordCount: 5,
-  miniGames: ['word_shield', 'dodge_words', 'spell_combo', 'word_barrage', 'balloon_quickpop'], // 120 HP = 3 triggers
+  miniGames: ['word_shield', 'dodge_words', 'spell_combo', 'word_barrage', 'goblin_horde'], // 120 HP = 3 triggers
   signatureMiniGame: 'word_shield', // Signature at 50%
 };
 
@@ -401,7 +401,7 @@ export const shadowWraith: RPGEnemy = {
   ],
   barrageWordCount: 5,
   // 180 HP = 4 triggers
-  miniGames: ['ghostly_whispers', 'dodge_words', 'spell_combo', 'void_pull', 'balloon_quickpop'],
+  miniGames: ['ghostly_whispers', 'dodge_words', 'spell_combo', 'void_pull', 'goblin_horde'],
   signatureMiniGame: 'ghostly_whispers', // Signature GHOSTLY WHISPERS at 50%
 };
 
