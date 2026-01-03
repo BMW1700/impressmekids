@@ -52,19 +52,17 @@ export const campaignWorlds: CampaignWorld[] = [
   // TUTORIAL WORLD - Always first, always unlocked
   {
     id: 0,
-    name: 'Tutorial Island',
-    description: 'Learn how to read and battle! Your adventure begins here!',
+    name: 'Tutorial',
+    description: 'Learn how to play! Your adventure begins here!',
     gradient: 'from-green-300 via-emerald-400 to-teal-400',
     bgColor: 'bg-green-900/20',
     enemyTypes: ['minion'],
     requiredGradeLevel: 0,
-    storyCount: 3,
+    storyCount: 1,
     unlockRequirement: 0,
-    lore: 'Welcome to Impress Me Kids! This is where every great reader begins their journey. Practice reading words to attack enemies, learn about mini-games, and discover the magic of reading! Princess Ella herself will guide you!',
+    lore: 'Welcome to Impress Me Kids! This interactive tutorial will teach you everything you need to know. Learn how reading is your weapon, discover mini-games, and see how your progress helps you become an incredible reader!',
     levels: [
-      { id: 1, storyIndex: 0, enemies: ['minion'], isBossLevel: false, starThresholds: [40, 60, 80] },
-      { id: 2, storyIndex: 1, enemies: ['minion'], isBossLevel: false, starThresholds: [40, 60, 80] },
-      { id: 3, storyIndex: 2, enemies: ['minion'], isBossLevel: false, starThresholds: [40, 60, 80] },
+      { id: 1, storyIndex: -1, enemies: ['minion'], isBossLevel: false, starThresholds: [30, 50, 70] },
     ],
   },
   {

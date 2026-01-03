@@ -2,10 +2,11 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Star, Lock, Swords, Flame, Crown, BookOpen } from "lucide-react";
+import { ArrowLeft, Star, Lock, Swords, Flame, Crown, BookOpen, HelpCircle, GraduationCap } from "lucide-react";
 import { CampaignWorld } from "@/lib/campaignData";
 import { CuratedStory } from "@/data/curatedStories";
 import { RPGBattleModeSelector, BattleMode } from "./RPGBattleModeSelector";
+import { RPGTutorial } from "./RPGTutorial";
 
 // All possible enemy types in the campaign
 export type CampaignEnemyType = 
@@ -24,6 +25,7 @@ export interface CampaignLevel {
   starsEarned: number;
   isCompleted: boolean;
   isUnlocked: boolean;
+  isTutorial?: boolean;
 }
 
 interface RPGLevelSelectProps {
@@ -68,10 +70,28 @@ export const RPGLevelSelect = ({
 }: RPGLevelSelectProps) => {
   const [pendingLevel, setPendingLevel] = useState<CampaignLevel | null>(null);
   const [showModeSelector, setShowModeSelector] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  const isTutorialWorld = world.id === 0;
 
   const handleLevelClick = (level: CampaignLevel) => {
+    // For tutorial world, show the tutorial overlay instead of battle mode selector
+    if (isTutorialWorld) {
+      setShowTutorial(true);
+      setPendingLevel(level);
+      return;
+    }
     setPendingLevel(level);
     setShowModeSelector(true);
+  };
+
+  const handleTutorialComplete = () => {
+    setShowTutorial(false);
+    // After tutorial, go directly to classic battle
+    if (pendingLevel) {
+      onSelectLevel(pendingLevel, 'classic');
+    }
+    setPendingLevel(null);
   };
 
   const handleModeSelect = (mode: BattleMode) => {
@@ -89,6 +109,16 @@ export const RPGLevelSelect = ({
 
   return (
     <div className={`min-h-screen bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900 p-4`}>
+      {/* Tutorial Overlay */}
+      <RPGTutorial
+        isOpen={showTutorial}
+        onComplete={handleTutorialComplete}
+        onBack={() => {
+          setShowTutorial(false);
+          setPendingLevel(null);
+        }}
+      />
+
       {/* Mode Selector Modal */}
       <AnimatePresence>
         {showModeSelector && (
@@ -113,9 +143,16 @@ export const RPGLevelSelect = ({
         animate={{ opacity: 1, y: 0 }}
         className="text-center mb-8"
       >
-        <div className={`inline-block px-4 py-1 rounded-full bg-gradient-to-r ${world.gradient} text-white text-sm font-bold mb-2`}>
-          World {world.id}
-        </div>
+        {isTutorialWorld ? (
+          <div className="inline-block px-4 py-1 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 text-white text-sm font-bold mb-2 flex items-center gap-2">
+            <GraduationCap className="h-4 w-4" />
+            Learn How to Play
+          </div>
+        ) : (
+          <div className={`inline-block px-4 py-1 rounded-full bg-gradient-to-r ${world.gradient} text-white text-sm font-bold mb-2`}>
+            World {world.id}
+          </div>
+        )}
         <h1 className={`text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r ${world.gradient} mb-2`}>
           {world.name}
         </h1>
@@ -126,6 +163,7 @@ export const RPGLevelSelect = ({
       <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {levels.map((level, index) => {
           const isUnlocked = level.isUnlocked;
+          const isTutorialLevel = isTutorialWorld;
           
           return (
             <motion.div
@@ -140,11 +178,13 @@ export const RPGLevelSelect = ({
                     ? 'hover:scale-105 hover:shadow-xl' 
                     : 'opacity-50 cursor-not-allowed'
                   }
-                  ${level.isBossLevel 
-                    ? 'border-2 border-red-500/50 shadow-red-500/20' 
-                    : 'border border-slate-700'
+                  ${isTutorialLevel
+                    ? 'border-2 border-green-500/50 shadow-green-500/20 bg-green-900/20'
+                    : level.isBossLevel 
+                      ? 'border-2 border-red-500/50 shadow-red-500/20' 
+                      : 'border border-slate-700'
                   }
-                  ${level.isCompleted ? 'bg-green-900/20' : 'bg-slate-800/50'}`}
+                  ${level.isCompleted && !isTutorialLevel ? 'bg-green-900/20' : !isTutorialLevel ? 'bg-slate-800/50' : ''}`}
                 onClick={() => isUnlocked && handleLevelClick(level)}
               >
                 {/* Lock Overlay */}
@@ -169,15 +209,21 @@ export const RPGLevelSelect = ({
                 )}
 
                 <div className="p-4">
-                  {/* Level Number */}
+                  {/* Level Number / Tutorial Badge */}
                   <div className="flex items-center justify-between mb-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-lg
-                      ${level.isCompleted 
-                        ? 'bg-green-600 text-white' 
-                        : `bg-gradient-to-br ${world.gradient} text-white`
-                      }`}>
-                      {level.isCompleted ? '✓' : level.id}
-                    </div>
+                    {isTutorialLevel ? (
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center font-black text-lg bg-gradient-to-br from-green-400 to-emerald-500 text-white">
+                        <HelpCircle className="h-5 w-5" />
+                      </div>
+                    ) : (
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-lg
+                        ${level.isCompleted 
+                          ? 'bg-green-600 text-white' 
+                          : `bg-gradient-to-br ${world.gradient} text-white`
+                        }`}>
+                        {level.isCompleted ? '✓' : level.id}
+                      </div>
+                    )}
                     
                     {/* Stars */}
                     <div className="flex gap-0.5">
@@ -196,20 +242,29 @@ export const RPGLevelSelect = ({
 
                   {/* Story Title */}
                   <h3 className="font-bold text-white mb-1 line-clamp-1">
-                    {level.story.title}
+                    {isTutorialLevel ? 'Tutorial: Learn to Play!' : level.story.title}
                   </h3>
                   
                   {/* Story Info */}
                   <div className="flex items-center gap-2 text-xs text-slate-400 mb-3">
-                    <BookOpen className="h-3 w-3" />
-                    <span>{level.story.word_count} words</span>
-                    <span>•</span>
-                    <span>Grade {level.story.grade_level}</span>
+                    {isTutorialLevel ? (
+                      <>
+                        <GraduationCap className="h-3 w-3" />
+                        <span>Interactive Guide</span>
+                      </>
+                    ) : (
+                      <>
+                        <BookOpen className="h-3 w-3" />
+                        <span>{level.story.word_count} words</span>
+                        <span>•</span>
+                        <span>Grade {level.story.grade_level}</span>
+                      </>
+                    )}
                   </div>
 
                   {/* Enemies */}
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-500">Enemies:</span>
+                    <span className="text-xs text-slate-500">{isTutorialLevel ? 'Practice:' : 'Enemies:'}</span>
                     <div className="flex gap-1">
                       {level.enemies.map((enemy, i) => (
                         <div
@@ -221,7 +276,7 @@ export const RPGLevelSelect = ({
                         </div>
                       ))}
                     </div>
-                    {level.enemies.length > 1 && (
+                    {level.enemies.length > 1 && !isTutorialLevel && (
                       <span className="text-xs text-orange-400 font-bold">MULTI!</span>
                     )}
                   </div>
