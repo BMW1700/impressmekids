@@ -150,7 +150,7 @@ export const TeacherSyllabusView = ({ classroomId }: TeacherSyllabusViewProps) =
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!syllabus ? (
+          {!syllabus?.file_url ? (
             <div
               onDrop={handleDrop}
               onDragOver={handleDragOver}
@@ -324,7 +324,7 @@ export const TeacherSyllabusView = ({ classroomId }: TeacherSyllabusViewProps) =
       />
 
       {/* Publish Controls */}
-      {syllabus && (
+      {syllabus?.file_url && (
         <Card>
           <CardHeader>
             <CardTitle>Publish Status</CardTitle>
