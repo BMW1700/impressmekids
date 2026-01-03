@@ -1,9 +1,9 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
-import { Skull, Crown, Shield, Sword } from "lucide-react";
+import { Skull, Crown, Shield, Sword, Snowflake, Ghost, Mountain, Bug, Bird, Cloud, Waves, Anchor, Eye, Sparkles } from "lucide-react";
+import { type EnemyType } from "@/lib/battleMechanics";
 
 export type GrogState = 'idle' | 'hit' | 'attacking' | 'defeated' | 'taunting';
-export type EnemyType = 'minion' | 'guard' | 'elite' | 'boss';
 
 interface GrogCharacterProps {
   state: GrogState;
@@ -15,36 +15,49 @@ interface GrogCharacterProps {
   avatarUrl?: string;
 }
 
-const enemyConfigs: Record<EnemyType, { 
-  icon: React.ElementType; 
-  gradient: string; 
-  size: string;
-  name: string;
-}> = {
-  minion: {
-    icon: Skull,
-    gradient: 'from-green-500 to-emerald-600',
-    size: 'w-16 h-16',
-    name: 'Goblin Minion',
-  },
-  guard: {
-    icon: Shield,
-    gradient: 'from-purple-500 to-indigo-600',
-    size: 'w-20 h-20',
-    name: 'Goblin Guard',
-  },
-  elite: {
-    icon: Sword,
-    gradient: 'from-red-500 to-rose-600',
-    size: 'w-24 h-24',
-    name: 'Elite Warrior',
-  },
-  boss: {
-    icon: Crown,
-    gradient: 'from-yellow-400 via-amber-500 to-orange-600',
-    size: 'w-28 h-28',
-    name: 'Grog the Goblin King',
-  },
+// Get tier for sizing
+const getEnemyTier = (enemyType: EnemyType): 'minion' | 'guard' | 'elite' | 'boss' => {
+  const tierMap: Partial<Record<EnemyType, 'minion' | 'guard' | 'elite' | 'boss'>> = {
+    boss: 'boss', dragon: 'boss', stone_guardian: 'boss', zephyr: 'boss', leviathan: 'boss', word_eater: 'boss',
+    elite: 'elite', ice_golem: 'elite', echo_wraith: 'elite', cloud_giant: 'elite', reef_guardian: 'elite', reality_shifter: 'elite',
+    guard: 'guard', shadow_wraith: 'guard', cave_troll: 'guard', ink_kraken: 'guard', void_phantom: 'guard',
+    minion: 'minion', crystal_spider: 'minion', storm_harpy: 'minion',
+  };
+  return tierMap[enemyType] || 'minion';
+};
+
+// Get icon and colors for enemy
+const getEnemyConfig = (enemyType: EnemyType): { icon: React.ElementType; gradient: string; name: string } => {
+  const configs: Partial<Record<EnemyType, { icon: React.ElementType; gradient: string; name: string }>> = {
+    minion: { icon: Skull, gradient: 'from-green-500 to-emerald-600', name: 'Goblin Minion' },
+    guard: { icon: Shield, gradient: 'from-purple-500 to-indigo-600', name: 'Goblin Guard' },
+    elite: { icon: Sword, gradient: 'from-red-500 to-rose-600', name: 'Elite Warrior' },
+    boss: { icon: Crown, gradient: 'from-yellow-400 via-amber-500 to-orange-600', name: 'Grog the Goblin King' },
+    dragon: { icon: Sparkles, gradient: 'from-orange-500 to-red-600', name: 'Drake the Dragon' },
+    ice_golem: { icon: Snowflake, gradient: 'from-cyan-400 to-blue-600', name: 'Frostfang' },
+    shadow_wraith: { icon: Ghost, gradient: 'from-purple-800 to-slate-900', name: 'Shadow Wraith' },
+    stone_guardian: { icon: Mountain, gradient: 'from-stone-500 to-stone-700', name: 'Stone Guardian' },
+    cave_troll: { icon: Mountain, gradient: 'from-stone-600 to-slate-700', name: 'Cave Troll' },
+    crystal_spider: { icon: Bug, gradient: 'from-violet-400 to-pink-500', name: 'Crystal Spider' },
+    echo_wraith: { icon: Ghost, gradient: 'from-violet-600 to-purple-800', name: 'Echo Wraith' },
+    storm_harpy: { icon: Bird, gradient: 'from-sky-400 to-blue-600', name: 'Storm Harpy' },
+    cloud_giant: { icon: Cloud, gradient: 'from-blue-300 to-indigo-500', name: 'Cloud Giant' },
+    zephyr: { icon: Sparkles, gradient: 'from-cyan-400 to-teal-600', name: 'Zephyr' },
+    ink_kraken: { icon: Waves, gradient: 'from-teal-700 to-blue-900', name: 'Ink Kraken' },
+    reef_guardian: { icon: Anchor, gradient: 'from-cyan-500 to-teal-700', name: 'Reef Guardian' },
+    leviathan: { icon: Waves, gradient: 'from-blue-800 to-slate-900', name: 'Leviathan' },
+    void_phantom: { icon: Ghost, gradient: 'from-purple-900 to-black', name: 'Void Phantom' },
+    reality_shifter: { icon: Sparkles, gradient: 'from-violet-600 to-purple-900', name: 'Reality Shifter' },
+    word_eater: { icon: Eye, gradient: 'from-black via-purple-900 to-black', name: 'Word Eater' },
+  };
+  return configs[enemyType] || { icon: Skull, gradient: 'from-green-500 to-emerald-600', name: 'Unknown Enemy' };
+};
+
+const tierSizes: Record<'minion' | 'guard' | 'elite' | 'boss', string> = {
+  minion: 'w-16 h-16',
+  guard: 'w-20 h-20', 
+  elite: 'w-24 h-24',
+  boss: 'w-28 h-28',
 };
 
 export const GrogCharacter = ({
@@ -57,7 +70,8 @@ export const GrogCharacter = ({
   avatarUrl,
 }: GrogCharacterProps) => {
   const [damageNumbers, setDamageNumbers] = useState<{ id: number; value: number }[]>([]);
-  const config = enemyConfigs[enemyType];
+  const tier = getEnemyTier(enemyType);
+  const config = getEnemyConfig(enemyType);
   const Icon = config.icon;
 
   // Add damage number when showDamage changes
@@ -113,7 +127,7 @@ export const GrogCharacter = ({
 
         {/* Character Circle */}
         <div
-          className={`relative ${config.size} rounded-full bg-gradient-to-br ${config.gradient} flex items-center justify-center shadow-lg border-4 border-background overflow-hidden`}
+          className={`relative ${tierSizes[tier]} rounded-full bg-gradient-to-br ${config.gradient} flex items-center justify-center shadow-lg border-4 border-background overflow-hidden`}
         >
           {avatarUrl ? (
             <img
@@ -126,7 +140,7 @@ export const GrogCharacter = ({
             />
           ) : (
             <>
-              <Icon className={`${enemyType === 'boss' ? 'w-14 h-14' : enemyType === 'elite' ? 'w-12 h-12' : enemyType === 'guard' ? 'w-10 h-10' : 'w-8 h-8'} text-white`} />
+              <Icon className={`${tier === 'boss' ? 'w-14 h-14' : tier === 'elite' ? 'w-12 h-12' : tier === 'guard' ? 'w-10 h-10' : 'w-8 h-8'} text-white`} />
               
               {/* Eyes for character */}
               <div className="absolute top-1/4 left-1/4 flex gap-1">

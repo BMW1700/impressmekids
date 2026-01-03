@@ -7,10 +7,19 @@ import { CampaignWorld } from "@/lib/campaignData";
 import { CuratedStory } from "@/data/curatedStories";
 import { RPGBattleModeSelector, BattleMode } from "./RPGBattleModeSelector";
 
+// All possible enemy types in the campaign
+export type CampaignEnemyType = 
+  | 'minion' | 'guard' | 'elite' | 'boss' | 'dragon'
+  | 'ice_golem' | 'shadow_wraith' | 'stone_guardian'
+  | 'cave_troll' | 'crystal_spider' | 'echo_wraith'
+  | 'storm_harpy' | 'cloud_giant' | 'zephyr'
+  | 'ink_kraken' | 'reef_guardian' | 'leviathan'
+  | 'void_phantom' | 'reality_shifter' | 'word_eater';
+
 export interface CampaignLevel {
   id: number;
   story: CuratedStory;
-  enemies: ('minion' | 'guard' | 'elite' | 'boss' | 'dragon')[];
+  enemies: CampaignEnemyType[];
   isBossLevel: boolean;
   starsEarned: number;
   isCompleted: boolean;
@@ -30,6 +39,25 @@ const enemyIcons: Record<string, React.ReactNode> = {
   elite: <span className="text-lg">🛡️</span>,
   boss: <span className="text-lg">👑</span>,
   dragon: <span className="text-lg">🐉</span>,
+  ice_golem: <span className="text-lg">🧊</span>,
+  shadow_wraith: <span className="text-lg">👻</span>,
+  stone_guardian: <span className="text-lg">🗿</span>,
+  // World 5 - Caverns
+  cave_troll: <span className="text-lg">🧌</span>,
+  crystal_spider: <span className="text-lg">🕷️</span>,
+  echo_wraith: <span className="text-lg">🔮</span>,
+  // World 6 - Sky
+  storm_harpy: <span className="text-lg">🦅</span>,
+  cloud_giant: <span className="text-lg">☁️</span>,
+  zephyr: <span className="text-lg">🌪️</span>,
+  // World 7 - Ocean
+  ink_kraken: <span className="text-lg">🦑</span>,
+  reef_guardian: <span className="text-lg">🐚</span>,
+  leviathan: <span className="text-lg">🐋</span>,
+  // World 8 - Void
+  void_phantom: <span className="text-lg">💀</span>,
+  reality_shifter: <span className="text-lg">🌀</span>,
+  word_eater: <span className="text-lg">👁️</span>,
 };
 
 export const RPGLevelSelect = ({
