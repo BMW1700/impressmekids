@@ -47,7 +47,14 @@ export type MiniGameType =
   | 'rolling_boulders'
   | 'word_barrage'       // Regular word attack barrage
   | 'fireball_barrage'   // Dragon's fireball attack
-  | 'asteroid_barrage';  // Word prison - asteroids with words
+  | 'asteroid_barrage'   // Word prison - asteroids with words
+  // NEW MINI-GAMES for new worlds
+  | 'word_echo'          // Caverns - say each word twice (echo)
+  | 'wind_chase'         // Floating Isles - catch words blowing across screen
+  | 'ink_splash'         // Sunken Library - read obscured words
+  | 'crystal_prison'     // Frozen variant - break ice with repeated words
+  | 'lightning_storm'    // Quick succession single-word lightning strikes
+  | 'void_pull';         // The Void - save words from being consumed
 
 export interface RPGEnemy {
   id: string;
@@ -450,7 +457,7 @@ export const caveTroll: RPGEnemy = {
     { id: 'boulder_throw', name: 'Boulder Throw', damage: 15, effect: 'debuff', description: 'Reduces accuracy', icon: '⚫' },
   ],
   barrageWordCount: 5,
-  miniGames: ['rolling_boulders', 'word_shield', 'speed_typist'],
+  miniGames: ['rolling_boulders', 'word_shield', 'speed_typist', 'word_echo'],
 };
 
 // Crystal Spider - Fast, multiple attacks
@@ -482,7 +489,7 @@ export const crystalSpider: RPGEnemy = {
     { id: 'prism_beam', name: 'Prism Beam', damage: 12, effect: 'debuff', description: 'Dazzling light attack', icon: '💎' },
   ],
   barrageWordCount: 4,
-  miniGames: ['dodge_words', 'spell_combo', 'balloon_quickpop'],
+  miniGames: ['dodge_words', 'spell_combo', 'balloon_quickpop', 'crystal_prison'],
 };
 
 // Echo Wraith - Boss of World 5 (words must be repeated)
@@ -517,7 +524,7 @@ export const echoWraith: RPGEnemy = {
     { id: 'whisper_trap', name: 'Whisper Trap', damage: 0, effect: 'silence', description: 'Silences magic', icon: '🤫' },
   ],
   barrageWordCount: 8,
-  miniGames: ['ghostly_whispers', 'rhyme_chain', 'speed_typist', 'tug_of_war'],
+  miniGames: ['ghostly_whispers', 'rhyme_chain', 'speed_typist', 'tug_of_war', 'word_echo'],
 };
 
 // ========== NEW WORLD 6 ENEMIES: The Floating Isles ==========
@@ -551,7 +558,7 @@ export const stormHarpy: RPGEnemy = {
     { id: 'talon_dive', name: 'Talon Dive', damage: 18, effect: 'poison', description: 'Bleeding damage', icon: '🦅' },
   ],
   barrageWordCount: 5,
-  miniGames: ['dodge_words', 'balloon_quickpop', 'word_shield'],
+  miniGames: ['dodge_words', 'balloon_quickpop', 'word_shield', 'wind_chase'],
 };
 
 // Cloud Giant - Massive HP
@@ -618,7 +625,7 @@ export const zephyr: RPGEnemy = {
     { id: 'sky_barrier', name: 'Sky Barrier', damage: 0, effect: 'debuff', description: 'Reduces damage temporarily', icon: '🛡️' },
   ],
   barrageWordCount: 9,
-  miniGames: ['speed_typist', 'tug_of_war', 'dodge_words', 'fireball_defense'],
+  miniGames: ['speed_typist', 'tug_of_war', 'dodge_words', 'fireball_defense', 'wind_chase', 'lightning_storm'],
 };
 
 // ========== NEW WORLD 7 ENEMIES: The Sunken Library ==========
@@ -652,7 +659,7 @@ export const inkKraken: RPGEnemy = {
     { id: 'tentacle_slam', name: 'Tentacle Slam', damage: 16, effect: 'poison', description: 'Crushing damage', icon: '🐙' },
   ],
   barrageWordCount: 5,
-  miniGames: ['ghostly_whispers', 'word_shield', 'dodge_words'],
+  miniGames: ['ghostly_whispers', 'word_shield', 'dodge_words', 'ink_splash'],
 };
 
 // Reef Guardian - Coral armor
@@ -721,7 +728,7 @@ export const leviathan: RPGEnemy = {
     { id: 'whirlpool', name: 'Whirlpool', damage: 20, effect: 'debuff', description: 'Words spin around', icon: '🌀' },
   ],
   barrageWordCount: 10,
-  miniGames: ['tug_of_war', 'speed_typist', 'asteroid_barrage', 'fireball_defense'],
+  miniGames: ['tug_of_war', 'speed_typist', 'asteroid_barrage', 'fireball_defense', 'ink_splash'],
 };
 
 // ========== NEW WORLD 8 ENEMIES: The Void Between ==========
@@ -755,7 +762,7 @@ export const voidPhantom: RPGEnemy = {
     { id: 'null_strike', name: 'Null Strike', damage: 18, effect: 'silence', description: 'Erases words', icon: '🕳️' },
   ],
   barrageWordCount: 5,
-  miniGames: ['ghostly_whispers', 'dodge_words', 'spell_combo'],
+  miniGames: ['ghostly_whispers', 'dodge_words', 'spell_combo', 'void_pull'],
 };
 
 // Reality Shifter - Words change mid-reading
@@ -787,7 +794,7 @@ export const realityShifter: RPGEnemy = {
     { id: 'temporal_blast', name: 'Temporal Blast', damage: 22, effect: 'earthquake', description: 'Time-distorting attack', icon: '⏰' },
   ],
   barrageWordCount: 7,
-  miniGames: ['speed_typist', 'rhyme_chain', 'tug_of_war', 'asteroid_barrage'],
+  miniGames: ['speed_typist', 'rhyme_chain', 'tug_of_war', 'asteroid_barrage', 'void_pull'],
 };
 
 // Word Eater - Final Boss of the entire campaign

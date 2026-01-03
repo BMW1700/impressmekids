@@ -34,6 +34,13 @@ import { RPGBalloonBattle } from "./RPGBalloonBattle";
 import { RPGBalloonQuickPop } from "./RPGBalloonQuickPop";
 // NEW: Import Fireball Defense mode
 import { RPGFireballDefense } from "./RPGFireballDefense";
+// NEW: Import 6 new world mini-games
+import { RPGWordEcho } from "./RPGWordEcho";
+import { RPGWindChase } from "./RPGWindChase";
+import { RPGInkSplash } from "./RPGInkSplash";
+import { RPGCrystalPrison } from "./RPGCrystalPrison";
+import { RPGLightningStorm } from "./RPGLightningStorm";
+import { RPGVoidPull } from "./RPGVoidPull";
 import { Spell } from "./RPGSpellMenu";
 import { Item } from "./RPGItemMenu";
 import { 
@@ -57,7 +64,7 @@ const battleSounds = new SoundEffects();
 
 type EnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater';
 // UPDATED: Added balloon_quickpop for Classic mode mini-game (NOT Balloon Bonanza) + quick_block for enemy attacks
-type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'word_shield' | 'spell_combo' | 'dodge_words' | 'rhyme_chain' | 'speed_typist' | 'tug_of_war' | 'balloon_battle' | 'balloon_quickpop' | 'fireball_defense' | 'quick_block' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat';
+type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'word_shield' | 'spell_combo' | 'dodge_words' | 'rhyme_chain' | 'speed_typist' | 'tug_of_war' | 'balloon_battle' | 'balloon_quickpop' | 'fireball_defense' | 'quick_block' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat' | 'word_echo' | 'wind_chase' | 'ink_splash' | 'crystal_prison' | 'lightning_storm' | 'void_pull';
 type InventoryKey = 'health_potion' | 'magic_potion';
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
 
@@ -259,6 +266,13 @@ export const RPGBattleArena = ({
       'word_barrage': `${enemy.name} launches WORD BARRAGE!`,
       'fireball_barrage': `🔥 ${enemy.name} unleashes FIREBALL BARRAGE! 🔥`,
       'asteroid_barrage': `${enemy.name} summons WORD PRISON!`,
+      // NEW mini-games
+      'word_echo': `🗣️ WORD ECHO! Say each word TWICE! 🗣️`,
+      'wind_chase': `💨 WIND CHASE! Catch the words! 💨`,
+      'ink_splash': `🦑 INK SPLASH! Read through the ink! 🦑`,
+      'crystal_prison': `❄️ CRYSTAL PRISON! Break the ice! ❄️`,
+      'lightning_storm': `⚡ LIGHTNING STORM! Speak FAST! ⚡`,
+      'void_pull': `🕳️ VOID PULL! Save words from the void! 🕳️`,
     };
     
     setEnemyAbilityMessage(announcements[gameType] || `${enemy.name} attacks!`);
@@ -286,6 +300,13 @@ export const RPGBattleArena = ({
         'word_barrage': 'barrage',
         'fireball_barrage': 'fireball_barrage',
         'asteroid_barrage': 'asteroid_barrage',
+        // NEW mini-games
+        'word_echo': 'word_echo',
+        'wind_chase': 'wind_chase',
+        'ink_splash': 'ink_splash',
+        'crystal_prison': 'crystal_prison',
+        'lightning_storm': 'lightning_storm',
+        'void_pull': 'void_pull',
       };
       setPhase(phaseMap[gameType]);
     }, 1000);
@@ -1340,6 +1361,85 @@ export const RPGBattleArena = ({
           <RPGQuickBlock
             words={quickBlockWords}
             onComplete={handleQuickBlockComplete}
+          />
+        )}
+        {/* NEW 6 MINI-GAMES */}
+        {phase === 'word_echo' && (
+          <RPGWordEcho
+            words={barrageWords}
+            onComplete={(completed, failed) => {
+              setCorrectWords(prev => prev + completed);
+              setTotalDamage(prev => prev + completed * 12);
+              setEnemyHp(prev => Math.max(0, prev - completed * 12));
+              setBatchStartIndex(prev => prev + barrageWords.length);
+              returnToReading();
+            }}
+            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
+          />
+        )}
+        {phase === 'wind_chase' && (
+          <RPGWindChase
+            words={barrageWords}
+            onComplete={(caught, missed) => {
+              setCorrectWords(prev => prev + caught);
+              setTotalDamage(prev => prev + caught * 10);
+              setEnemyHp(prev => Math.max(0, prev - caught * 10));
+              setBatchStartIndex(prev => prev + barrageWords.length);
+              returnToReading();
+            }}
+            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
+          />
+        )}
+        {phase === 'ink_splash' && (
+          <RPGInkSplash
+            words={barrageWords}
+            onComplete={(revealed, failed) => {
+              setCorrectWords(prev => prev + revealed);
+              setTotalDamage(prev => prev + revealed * 15);
+              setEnemyHp(prev => Math.max(0, prev - revealed * 15));
+              setBatchStartIndex(prev => prev + barrageWords.length);
+              returnToReading();
+            }}
+            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
+          />
+        )}
+        {phase === 'crystal_prison' && (
+          <RPGCrystalPrison
+            words={barrageWords}
+            onComplete={(freed, frozen) => {
+              setCorrectWords(prev => prev + freed);
+              setTotalDamage(prev => prev + freed * 14);
+              setEnemyHp(prev => Math.max(0, prev - freed * 14));
+              setBatchStartIndex(prev => prev + barrageWords.length);
+              returnToReading();
+            }}
+            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
+          />
+        )}
+        {phase === 'lightning_storm' && (
+          <RPGLightningStorm
+            words={barrageWords}
+            onComplete={(struck, missed) => {
+              setCorrectWords(prev => prev + struck);
+              setTotalDamage(prev => prev + struck * 12);
+              setEnemyHp(prev => Math.max(0, prev - struck * 12));
+              setBatchStartIndex(prev => prev + barrageWords.length);
+              returnToReading();
+            }}
+            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
+          />
+        )}
+        {phase === 'void_pull' && (
+          <RPGVoidPull
+            words={barrageWords}
+            onComplete={(saved, consumed) => {
+              setCorrectWords(prev => prev + saved);
+              setTotalDamage(prev => prev + saved * 16);
+              setEnemyHp(prev => Math.max(0, prev - saved * 16));
+              setBatchStartIndex(prev => prev + barrageWords.length);
+              returnToReading();
+            }}
+            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
           />
         )}
       </AnimatePresence>
