@@ -209,7 +209,7 @@ export const useUpdateGradeWeights = () => {
         data = result.data;
         error = result.error;
       } else {
-        // Create new record with empty file fields
+        // Create new record with null file fields (weights only)
         const result = await supabase
           .from("classroom_syllabus")
           .insert({
@@ -217,10 +217,6 @@ export const useUpdateGradeWeights = () => {
             grade_weights: weights as any,
             updated_at: new Date().toISOString(),
             uploaded_by: user.id,
-            file_url: '',
-            file_name: '',
-            file_size: 0,
-            mime_type: '',
             is_posted: false,
           })
           .select()

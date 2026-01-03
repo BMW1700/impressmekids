@@ -1413,39 +1413,39 @@ export type Database = {
         Row: {
           classroom_id: string
           created_at: string
-          file_name: string
-          file_size: number
-          file_url: string
+          file_name: string | null
+          file_size: number | null
+          file_url: string | null
           grade_weights: Json
           id: string
           is_posted: boolean
-          mime_type: string
+          mime_type: string | null
           updated_at: string
           uploaded_by: string
         }
         Insert: {
           classroom_id: string
           created_at?: string
-          file_name: string
-          file_size: number
-          file_url: string
+          file_name?: string | null
+          file_size?: number | null
+          file_url?: string | null
           grade_weights?: Json
           id?: string
           is_posted?: boolean
-          mime_type: string
+          mime_type?: string | null
           updated_at?: string
           uploaded_by: string
         }
         Update: {
           classroom_id?: string
           created_at?: string
-          file_name?: string
-          file_size?: number
-          file_url?: string
+          file_name?: string | null
+          file_size?: number | null
+          file_url?: string | null
           grade_weights?: Json
           id?: string
           is_posted?: boolean
-          mime_type?: string
+          mime_type?: string | null
           updated_at?: string
           uploaded_by?: string
         }
