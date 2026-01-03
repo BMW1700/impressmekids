@@ -6767,6 +6767,39 @@ export type Database = {
           },
         ]
       }
+      world_backgrounds: {
+        Row: {
+          created_at: string | null
+          generated_at: string | null
+          id: string
+          image_url: string | null
+          prompt: string
+          updated_at: string | null
+          world_id: number
+          world_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          generated_at?: string | null
+          id?: string
+          image_url?: string | null
+          prompt: string
+          updated_at?: string | null
+          world_id: number
+          world_name: string
+        }
+        Update: {
+          created_at?: string | null
+          generated_at?: string | null
+          id?: string
+          image_url?: string | null
+          prompt?: string
+          updated_at?: string | null
+          world_id?: number
+          world_name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       districts_public: {

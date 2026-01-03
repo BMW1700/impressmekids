@@ -11,6 +11,7 @@ interface FlyingWord {
   speed: number;
   destroyed: boolean;
   hitHero: boolean;
+  visible: boolean; // NEW: words start invisible and appear one at a time
 }
 
 interface RPGDodgeWordsProps {
@@ -38,30 +39,31 @@ export const RPGDodgeWords = ({
   const [correctHits, setCorrectHits] = useState(0);
   const [wrongHits, setWrongHits] = useState(0);
   const [dodged, setDodged] = useState(0);
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const recognitionRef = useRef<any>(null);
   const spawnedRef = useRef(false);
 
-  // Initialize flying words
+  // Initialize flying words - all start INVISIBLE
   useEffect(() => {
     if (spawnedRef.current) return;
     spawnedRef.current = true;
 
-    // Mix correct and wrong words
     const allWords: FlyingWord[] = [];
     const numCorrect = Math.min(correctWords.length, 5);
     const numWrong = Math.min(wrongWords.length, 3);
     
-    // Add correct words
+    // Add correct words - start at right side (x: 100+)
     for (let i = 0; i < numCorrect; i++) {
       allWords.push({
         id: i,
         word: correctWords[i],
         isCorrect: true,
-        x: 100 + i * 20,
-        y: 20 + Math.random() * 60,
-        speed: 0.6 + Math.random() * 0.3,
+        x: 105, // Start off-screen right
+        y: 25 + Math.random() * 50, // Random vertical position
+        speed: 0.15 + Math.random() * 0.1, // MUCH SLOWER: 0.15-0.25 instead of 0.6-0.9
         destroyed: false,
         hitHero: false,
+        visible: false, // Start invisible
       });
     }
     
@@ -71,11 +73,12 @@ export const RPGDodgeWords = ({
         id: numCorrect + i,
         word: wrongWords[i],
         isCorrect: false,
-        x: 100 + (numCorrect + i) * 20,
-        y: 20 + Math.random() * 60,
-        speed: 0.5 + Math.random() * 0.3,
+        x: 105,
+        y: 25 + Math.random() * 50,
+        speed: 0.12 + Math.random() * 0.1, // Slightly slower for wrong words
         destroyed: false,
         hitHero: false,
+        visible: false,
       });
     }
 
@@ -83,12 +86,30 @@ export const RPGDodgeWords = ({
     setFlyingWords(allWords.sort(() => Math.random() - 0.5));
   }, [correctWords, wrongWords]);
 
-  // Animation loop
+  // Staggered word spawning - one at a time with 2.5 second delays
+  useEffect(() => {
+    if (flyingWords.length === 0) return;
+    if (currentWordIndex >= flyingWords.length) return;
+
+    // Make the current word visible
+    setFlyingWords(prev => prev.map((word, idx) => 
+      idx === currentWordIndex ? { ...word, visible: true } : word
+    ));
+
+    // Schedule next word spawn after 2.5 seconds
+    const timer = setTimeout(() => {
+      setCurrentWordIndex(prev => prev + 1);
+    }, 2500);
+
+    return () => clearTimeout(timer);
+  }, [currentWordIndex, flyingWords.length]);
+
+  // Animation loop - SLOWER interval (100ms instead of 50ms)
   useEffect(() => {
     const interval = setInterval(() => {
       setFlyingWords(prev => {
         const updated = prev.map(word => {
-          if (word.destroyed || word.hitHero) return word;
+          if (word.destroyed || word.hitHero || !word.visible) return word;
           
           const newX = word.x - word.speed;
           
@@ -107,27 +128,26 @@ export const RPGDodgeWords = ({
           return { ...word, x: newX };
         });
         
-        // Check completion
-        const allDone = updated.every(w => w.destroyed || w.hitHero);
-        if (allDone) {
+        // Check completion - all visible words are done
+        const visibleWords = updated.filter(w => w.visible);
+        const allDone = visibleWords.length > 0 && visibleWords.every(w => w.destroyed || w.hitHero);
+        const allSpawned = currentWordIndex >= prev.length;
+        
+        if (allDone && allSpawned) {
           setTimeout(() => onComplete(correctHits, wrongHits, dodged), 1000);
         }
         
         return updated;
       });
-    }, 50);
+    }, 100); // SLOWER: 100ms instead of 50ms
 
     return () => clearInterval(interval);
-  }, [correctHits, wrongHits, dodged, onComplete]);
+  }, [correctHits, wrongHits, dodged, onComplete, currentWordIndex]);
 
   // Handle word selection
   const handleSelectWord = useCallback((word: FlyingWord) => {
-    if (word.destroyed || word.hitHero || isListening) return;
+    if (word.destroyed || word.hitHero || isListening || !word.visible) return;
     
-    setFlyingWords(prev => prev.map(w => ({
-      ...w,
-      // Mark this word as selected in UI if needed
-    })));
     setSelectedWord(word);
     startListening(word);
   }, [isListening]);
@@ -144,7 +164,7 @@ export const RPGDodgeWords = ({
     recognitionRef.current.onstart = () => setIsListening(true);
     recognitionRef.current.onend = () => setIsListening(false);
 
-    recognitionRef.current.onresult = (event) => {
+    recognitionRef.current.onresult = (event: any) => {
       const spoken = event.results[0][0].transcript.toLowerCase().trim();
       const expected = word.word.toLowerCase().replace(/[^a-z]/g, '');
       
@@ -208,6 +228,15 @@ export const RPGDodgeWords = ({
         </div>
       </div>
 
+      {/* Upcoming word indicator */}
+      <div className="absolute top-28 left-1/2 -translate-x-1/2 z-50">
+        <div className="px-4 py-2 bg-slate-800/80 rounded-lg border border-slate-600">
+          <span className="text-slate-300 text-sm">
+            Word {Math.min(currentWordIndex + 1, flyingWords.length)} of {flyingWords.length}
+          </span>
+        </div>
+      </div>
+
       {/* Hero zone indicator */}
       <div className="absolute left-[12%] top-[20%] bottom-[20%] w-2 bg-blue-500/50 rounded-full">
         <motion.div
@@ -217,21 +246,25 @@ export const RPGDodgeWords = ({
         />
       </div>
 
-      {/* Flying words */}
+      {/* Flying words - only render visible ones */}
       <AnimatePresence>
         {flyingWords.map((word) => (
-          !word.destroyed && !word.hitHero && (
+          word.visible && !word.destroyed && !word.hitHero && (
             <motion.button
               key={word.id}
               className="absolute pointer-events-auto cursor-pointer z-20"
               style={{ left: `${word.x}%`, top: `${word.y}%` }}
-              initial={{ scale: 0, rotate: -10 }}
-              animate={{ scale: 1, rotate: [0, 5, -5, 0] }}
+              initial={{ scale: 0, rotate: -10, x: 50 }}
+              animate={{ scale: 1, rotate: [0, 3, -3, 0], x: 0 }}
               exit={word.isCorrect 
                 ? { scale: 1.5, opacity: 0, y: -30 } 
                 : { scale: 0, opacity: 0, rotate: 180 }
               }
-              transition={{ rotate: { repeat: Infinity, duration: 2 } }}
+              transition={{ 
+                rotate: { repeat: Infinity, duration: 3 },
+                scale: { duration: 0.3 },
+                x: { duration: 0.3 }
+              }}
               onClick={() => handleSelectWord(word)}
             >
               <div className={`relative px-5 py-3 rounded-xl border-2 shadow-lg
