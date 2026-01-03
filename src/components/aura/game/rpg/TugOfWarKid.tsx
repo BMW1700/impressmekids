@@ -136,9 +136,9 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
     }
   };
 
-  // Arm positions for extended arms holding rope - LIKE PIC 2!
-  const armEndX = isPulling ? -25 : isStraining ? -10 : -18;
-  const armEndY = isPulling ? 52 : isStraining ? 56 : 54;
+  // Arm positions - shorter arms with hands always at rope level (Y=55 is rope center)
+  const ROPE_Y = 55; // Fixed Y position where rope sits
+  const handX = isPulling ? -8 : isStraining ? 2 : -4; // Closer to body = shorter arms
 
   return (
     <motion.div
@@ -228,72 +228,43 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
           {/* Collar */}
           <path d="M42 48 L50 55 L58 48" fill="none" stroke="#c4c4c4" strokeWidth="2" />
           
-          {/* === ARMS - STRAIGHT SEGMENTS WITH UPWARD ELBOW BEND === */}
+          {/* === ARMS - Upper arm angles DOWN, forearm angles UP to hands on rope === */}
           
-          {/* Back arm - straight upper arm + straight forearm meeting at elbow */}
+          {/* Back arm - shoulder to elbow (going down), then elbow to hand (going up to rope) */}
           <motion.path
-            d={`M38 54 L14 ${armEndY + 12} L${armEndX + 5} ${armEndY - 4}`}
+            d={`M38 54 L22 68 L${handX + 5} ${ROPE_Y}`}
             stroke={variant.skin}
             strokeWidth="7"
             strokeLinecap="round"
             strokeLinejoin="round"
             fill="none"
           />
-          {/* Back hand - realistic with curved palm and fingers */}
-          <g>
-            {/* Palm */}
-            <ellipse cx={armEndX} cy={armEndY - 4} rx="6" ry="5" fill={variant.skin} />
-            {/* Fingers wrapping - curved lines */}
-            <path 
-              d={`M${armEndX - 6} ${armEndY - 7} Q${armEndX - 8} ${armEndY - 4} ${armEndX - 6} ${armEndY - 1}`} 
-              stroke={variant.skin} strokeWidth="2.5" strokeLinecap="round" fill="none" 
-            />
-            <path 
-              d={`M${armEndX - 5} ${armEndY - 8} Q${armEndX - 7} ${armEndY - 4} ${armEndX - 5} ${armEndY}`} 
-              stroke={variant.skin} strokeWidth="2.5" strokeLinecap="round" fill="none" 
-            />
-            <path 
-              d={`M${armEndX - 3} ${armEndY - 8} Q${armEndX - 5} ${armEndY - 4} ${armEndX - 3} ${armEndY + 1}`} 
-              stroke={variant.skin} strokeWidth="2.5" strokeLinecap="round" fill="none" 
-            />
-            {/* Finger definition lines */}
-            <line x1={armEndX - 7} y1={armEndY - 5} x2={armEndX - 2} y2={armEndY - 5} stroke="black" strokeWidth="0.8" opacity="0.4" />
-            <line x1={armEndX - 7} y1={armEndY - 2} x2={armEndX - 2} y2={armEndY - 2} stroke="black" strokeWidth="0.8" opacity="0.4" />
+          {/* Back hand on rope */}
+          <g transform={`translate(${handX + 5}, ${ROPE_Y}) rotate(-10)`}>
+            <ellipse cx="0" cy="0" rx="5" ry="4" fill={variant.skin} />
+            {/* Fingers wrapping around rope */}
+            <path d="M-4 -5 Q-6 0 -4 5" stroke={variant.skin} strokeWidth="2.5" strokeLinecap="round" fill="none" />
+            <path d="M-2 -6 Q-4 0 -2 6" stroke={variant.skin} strokeWidth="2.5" strokeLinecap="round" fill="none" />
+            <path d="M1 -6 Q-1 0 1 6" stroke={variant.skin} strokeWidth="2.5" strokeLinecap="round" fill="none" />
           </g>
           
-          {/* Front arm - straight upper arm + straight forearm meeting at elbow */}
+          {/* Front arm - shoulder to elbow (going down), then elbow to hand (going up to rope) */}
           <motion.path
-            d={`M38 58 L10 ${armEndY + 16} L${armEndX} ${armEndY + 2}`}
+            d={`M38 58 L20 72 L${handX} ${ROPE_Y + 3}`}
             stroke={variant.skin}
             strokeWidth="8"
             strokeLinecap="round"
             strokeLinejoin="round"
             fill="none"
           />
-          {/* Front hand - more realistic */}
-          <g>
-            {/* Palm */}
-            <ellipse cx={armEndX - 4} cy={armEndY + 2} rx="7" ry="6" fill={variant.skin} />
+          {/* Front hand on rope */}
+          <g transform={`translate(${handX}, ${ROPE_Y + 3}) rotate(-15)`}>
+            <ellipse cx="0" cy="0" rx="6" ry="5" fill={variant.skin} />
             {/* Fingers wrapping around rope */}
-            <path 
-              d={`M${armEndX - 11} ${armEndY - 2} Q${armEndX - 14} ${armEndY + 2} ${armEndX - 11} ${armEndY + 6}`} 
-              stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" 
-            />
-            <path 
-              d={`M${armEndX - 9} ${armEndY - 3} Q${armEndX - 12} ${armEndY + 2} ${armEndX - 9} ${armEndY + 7}`} 
-              stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" 
-            />
-            <path 
-              d={`M${armEndX - 7} ${armEndY - 3} Q${armEndX - 10} ${armEndY + 2} ${armEndX - 7} ${armEndY + 8}`} 
-              stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" 
-            />
-            <path 
-              d={`M${armEndX - 4} ${armEndY - 3} Q${armEndX - 7} ${armEndY + 2} ${armEndX - 4} ${armEndY + 8}`} 
-              stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" 
-            />
-            {/* Finger definition lines */}
-            <line x1={armEndX - 12} y1={armEndY} x2={armEndX - 4} y2={armEndY} stroke="black" strokeWidth="0.8" opacity="0.4" />
-            <line x1={armEndX - 12} y1={armEndY + 4} x2={armEndX - 4} y2={armEndY + 4} stroke="black" strokeWidth="0.8" opacity="0.4" />
+            <path d="M-5 -6 Q-8 0 -5 6" stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" />
+            <path d="M-3 -7 Q-6 0 -3 7" stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" />
+            <path d="M0 -7 Q-3 0 0 7" stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" />
+            <path d="M3 -6 Q0 0 3 6" stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" />
           </g>
         </g>
 
