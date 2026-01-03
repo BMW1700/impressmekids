@@ -81,7 +81,7 @@ export const heroKnight: RPGCharacter = {
   name: 'Sir Valor',
   title: 'The Brave Knight',
   type: 'hero',
-  maxHp: 100,
+  maxHp: 100, // Tank - high HP
   attack: 15,
   defense: 10,
   color: 'from-blue-500 to-indigo-600',
@@ -92,19 +92,38 @@ export const heroKnight: RPGCharacter = {
   ],
 };
 
+// Princess Ella - Flower powers
+export const princessElla: RPGCharacter = {
+  id: 'ella',
+  name: 'Princess Ella',
+  title: 'The Flower Princess',
+  type: 'hero',
+  maxHp: 100, // Same as Valor
+  attack: 18,
+  defense: 8,
+  color: 'from-pink-500 to-rose-600',
+  abilities: [
+    { id: 'thorn_strike', name: 'Thorn Strike', description: 'Sharp thorns pierce the enemy', damage: 22, effect: 'slash', animationType: 'projectile' },
+    { id: 'petal_shield', name: 'Petal Shield', description: 'Flower petals form a protective barrier', damage: 0, effect: 'block', animationType: 'buff' },
+    { id: 'bloom_burst', name: 'Bloom Burst', description: 'Flowers explode with nature magic', damage: 35, effect: 'fire', animationType: 'aoe' },
+    { id: 'natures_embrace', name: "Nature's Embrace", description: 'Healing vines restore HP', damage: -20, effect: 'heal', animationType: 'buff' },
+  ],
+};
+
 export const allyWizard: RPGCharacter = {
   id: 'wizard',
   name: 'Elara',
   title: 'The Wise Wizard',
-  type: 'ally',
-  maxHp: 60,
-  attack: 25,
+  type: 'hero', // Changed to hero - now playable
+  maxHp: 60, // Glass cannon - lower HP but higher damage
+  attack: 35, // Higher attack
   defense: 5,
   color: 'from-purple-500 to-pink-500',
   abilities: [
     { id: 'fireball', name: 'Fireball', description: 'Hurl a ball of fire', damage: 30, effect: 'fire', animationType: 'projectile' },
     { id: 'ice_shard', name: 'Ice Shard', description: 'Freeze your enemy', damage: 20, effect: 'ice', animationType: 'projectile' },
     { id: 'lightning', name: 'Lightning Bolt', description: 'Strike with lightning', damage: 35, effect: 'lightning', animationType: 'projectile' },
+    { id: 'plasma_barrage', name: 'Plasma Barrage', description: 'Fast Mode: Say 5 words quickly for 3x damage!', damage: 100, effect: 'lightning', animationType: 'projectile' },
   ],
 };
 

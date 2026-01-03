@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, MicOff, Volume2, Coins, Sparkles } from "lucide-react";
+import { Mic, MicOff, Coins, Sparkles } from "lucide-react";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
+import { MiniGoblin } from "./MiniGoblin";
 
 interface GoblinWord {
   id: number;
@@ -303,17 +304,11 @@ export const RPGGoblinHorde = ({
         
         {/* Mini goblin sprite */}
         <div className="relative">
-          <motion.div
-            className="text-4xl"
-            animate={{ scaleX: [-1, -1] }}
-            style={{ transform: 'scaleX(-1)' }}
-          >
-            👺
-          </motion.div>
+          <MiniGoblin size={48} flipX />
           {/* Running animation dust */}
           <motion.div
-            className="absolute -bottom-1 -left-2 text-lg opacity-60"
-            animate={{ opacity: [0.3, 0.6, 0.3], x: [-5, 5, -5] }}
+            className="absolute -bottom-1 left-0 text-lg opacity-60"
+            animate={{ opacity: [0.3, 0.6, 0.3], x: [0, 8, 0] }}
             transition={{ duration: 0.3, repeat: Infinity }}
           >
             💨

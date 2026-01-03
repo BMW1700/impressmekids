@@ -22,7 +22,7 @@ import { RPGCoinDrop } from "./RPGCoinDrop";
 // NEW: Import the 3 attack mini-games
 import { RPGWordShield } from "./RPGWordShield";
 import { RPGSpellCombo } from "./RPGSpellCombo";
-import { RPGDodgeWords } from "./RPGDodgeWords";
+import { RPGWordBlitz } from "./RPGWordBlitz";
 // NEW: Import 2 new mini-games
 import { RPGRhymeChain } from "./RPGRhymeChain";
 import { RPGSpeedTypist } from "./RPGSpeedTypist";
@@ -45,7 +45,8 @@ import { Spell } from "./RPGSpellMenu";
 import { Item } from "./RPGItemMenu";
 import { 
   heroKnight, 
-  allyWizard, 
+  allyWizard,
+  princessElla,
   getEnemyForBattle,
   heroDialogue,
   wizardDialogue,
@@ -1334,10 +1335,15 @@ export const RPGBattleArena = ({
           />
         )}
         {phase === 'dodge_words' && (
-          <RPGDodgeWords
-            correctWords={barrageWords}
-            wrongWords={[]}
-            onComplete={handleDodgeWordsComplete}
+          <RPGWordBlitz
+            words={barrageWords}
+            onComplete={(correctHits, missed, damage) => {
+              setCorrectWords(prev => prev + correctHits);
+              setTotalDamage(prev => prev + damage);
+              setEnemyHp(prev => Math.max(0, prev - damage));
+              setBatchStartIndex(prev => prev + barrageWords.length);
+              returnToReading();
+            }}
             onDamage={handleDodgeWordsDamage}
           />
         )}

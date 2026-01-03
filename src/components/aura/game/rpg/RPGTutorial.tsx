@@ -24,9 +24,9 @@ const tutorialSteps: TutorialStep[] = [
     icon: <Sparkles className="h-8 w-8 text-yellow-400" />,
   },
   {
-    id: 'words_weapon',
-    title: 'Words Are Your Weapon!',
-    message: "In this game, reading words is your WEAPON! Every word you read correctly deals DAMAGE to the enemy. The more you read, the stronger you become!",
+    id: 'words_offense',
+    title: 'Words Are Your Offense!',
+    message: "In this game, reading words is your OFFENSE! Every word you read correctly deals DAMAGE to the enemy. The more you read, the stronger you become!",
     highlight: 'none',
     icon: <Sword className="h-8 w-8 text-red-400" />,
   },
