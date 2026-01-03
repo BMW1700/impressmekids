@@ -228,26 +228,18 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
           {/* Collar */}
           <path d="M42 48 L50 55 L58 48" fill="none" stroke="#c4c4c4" strokeWidth="2" />
           
-          {/* === ARMS - THINNER WITH ELBOW BEND (bending upward) === */}
+          {/* === ARMS - STRAIGHT SEGMENTS WITH UPWARD ELBOW BEND === */}
           
-          {/* Back arm - upper arm + forearm with elbow bend */}
-          {/* Upper arm: shoulder to elbow (elbow bends UP) */}
+          {/* Back arm - straight upper arm + straight forearm meeting at elbow */}
           <motion.path
-            d={`M38 54 Q25 42 12 ${armEndY - 8}`}
+            d={`M38 54 L12 42 L${armEndX + 5} ${armEndY - 4}`}
             stroke={variant.skin}
             strokeWidth="7"
             strokeLinecap="round"
+            strokeLinejoin="round"
             fill="none"
           />
-          {/* Forearm: elbow to wrist (curves down to hand) */}
-          <motion.path
-            d={`M12 ${armEndY - 8} Q0 ${armEndY - 12} ${armEndX + 5} ${armEndY - 4}`}
-            stroke={variant.skin}
-            strokeWidth="6"
-            strokeLinecap="round"
-            fill="none"
-          />
-          {/* Back hand - more realistic with curved palm and fingers */}
+          {/* Back hand - realistic with curved palm and fingers */}
           <g>
             {/* Palm */}
             <ellipse cx={armEndX} cy={armEndY - 4} rx="6" ry="5" fill={variant.skin} />
@@ -269,21 +261,13 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
             <line x1={armEndX - 7} y1={armEndY - 2} x2={armEndX - 2} y2={armEndY - 2} stroke="black" strokeWidth="0.8" opacity="0.4" />
           </g>
           
-          {/* Front arm - upper arm + forearm with elbow bend */}
-          {/* Upper arm: shoulder to elbow (elbow bends UP) */}
+          {/* Front arm - straight upper arm + straight forearm meeting at elbow */}
           <motion.path
-            d={`M38 58 Q22 44 8 ${armEndY}`}
+            d={`M38 58 L8 44 L${armEndX} ${armEndY + 2}`}
             stroke={variant.skin}
             strokeWidth="8"
             strokeLinecap="round"
-            fill="none"
-          />
-          {/* Forearm: elbow to wrist (curves down to hand) */}
-          <motion.path
-            d={`M8 ${armEndY} Q-5 ${armEndY - 6} ${armEndX} ${armEndY + 2}`}
-            stroke={variant.skin}
-            strokeWidth="7"
-            strokeLinecap="round"
+            strokeLinejoin="round"
             fill="none"
           />
           {/* Front hand - more realistic */}
