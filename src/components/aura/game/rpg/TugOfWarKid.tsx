@@ -239,13 +239,28 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
             strokeLinejoin="round"
             fill="none"
           />
-          {/* Back hand on rope */}
+          {/* Back hand - realistic gripping hand */}
           <g transform={`translate(${handX + 5}, ${ROPE_Y}) rotate(-10)`}>
-            <ellipse cx="0" cy="0" rx="5" ry="4" fill={variant.skin} />
-            {/* Fingers wrapping around rope */}
-            <path d="M-4 -5 Q-6 0 -4 5" stroke={variant.skin} strokeWidth="2.5" strokeLinecap="round" fill="none" />
-            <path d="M-2 -6 Q-4 0 -2 6" stroke={variant.skin} strokeWidth="2.5" strokeLinecap="round" fill="none" />
-            <path d="M1 -6 Q-1 0 1 6" stroke={variant.skin} strokeWidth="2.5" strokeLinecap="round" fill="none" />
+            {/* Palm */}
+            <ellipse cx="0" cy="0" rx="7" ry="6" fill={variant.skin} />
+            {/* Palm highlight */}
+            <ellipse cx="-1" cy="-1" rx="4" ry="3" fill={variant.skin} opacity="0.7" />
+            {/* Thumb (on top side of rope) */}
+            <ellipse cx="5" cy="-6" rx="3" ry="4" fill={variant.skin} />
+            <ellipse cx="5" cy="-8" rx="2.5" ry="2.5" fill={variant.skin} />
+            {/* Four fingers wrapping around (below rope) */}
+            <g>
+              {/* Index finger */}
+              <path d="M-6 2 Q-8 6 -6 10 Q-5 11 -4 10 Q-3 7 -5 3" fill={variant.skin} />
+              {/* Middle finger */}
+              <path d="M-3 2 Q-5 7 -3 12 Q-2 13 -1 12 Q0 7 -2 3" fill={variant.skin} />
+              {/* Ring finger */}
+              <path d="M0 2 Q-2 7 0 11 Q1 12 2 11 Q3 7 1 3" fill={variant.skin} />
+              {/* Pinky finger */}
+              <path d="M3 2 Q1 6 3 9 Q4 10 5 9 Q6 6 4 3" fill={variant.skin} />
+            </g>
+            {/* Knuckle creases */}
+            <path d="M-5 1 Q0 2 4 1" stroke={variant.skin} strokeWidth="0.5" opacity="0.4" fill="none" />
           </g>
           
           {/* Front arm - shoulder to elbow (going down), then elbow to hand (going up to rope) */}
@@ -257,14 +272,30 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
             strokeLinejoin="round"
             fill="none"
           />
-          {/* Front hand on rope */}
+          {/* Front hand - realistic gripping hand (larger, closer to viewer) */}
           <g transform={`translate(${handX}, ${ROPE_Y + 3}) rotate(-15)`}>
-            <ellipse cx="0" cy="0" rx="6" ry="5" fill={variant.skin} />
-            {/* Fingers wrapping around rope */}
-            <path d="M-5 -6 Q-8 0 -5 6" stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" />
-            <path d="M-3 -7 Q-6 0 -3 7" stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" />
-            <path d="M0 -7 Q-3 0 0 7" stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" />
-            <path d="M3 -6 Q0 0 3 6" stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" />
+            {/* Palm */}
+            <ellipse cx="0" cy="0" rx="8" ry="7" fill={variant.skin} />
+            {/* Palm shading */}
+            <ellipse cx="-1" cy="-1" rx="5" ry="4" fill={variant.skin} opacity="0.8" />
+            {/* Thumb (on top side of rope, more visible) */}
+            <ellipse cx="6" cy="-7" rx="3.5" ry="5" fill={variant.skin} />
+            <ellipse cx="6" cy="-10" rx="3" ry="3" fill={variant.skin} />
+            {/* Four fingers wrapping around (below rope, more detailed) */}
+            <g>
+              {/* Index finger */}
+              <path d="M-7 2 Q-10 7 -7 13 Q-6 14 -5 13 Q-3 8 -6 3" fill={variant.skin} />
+              {/* Middle finger */}
+              <path d="M-4 2 Q-7 8 -4 14 Q-3 15 -2 14 Q0 8 -3 3" fill={variant.skin} />
+              {/* Ring finger */}
+              <path d="M-1 2 Q-3 8 -1 13 Q0 14 1 13 Q3 8 0 3" fill={variant.skin} />
+              {/* Pinky finger */}
+              <path d="M2 2 Q0 6 2 11 Q3 12 4 11 Q5 6 3 3" fill={variant.skin} />
+            </g>
+            {/* Knuckle definition */}
+            <path d="M-6 1 Q0 2 5 1" stroke={variant.skin} strokeWidth="0.8" opacity="0.3" fill="none" />
+            {/* Wrist crease */}
+            <path d="M-6 6 Q0 7 6 6" stroke={variant.skin} strokeWidth="0.5" opacity="0.3" fill="none" />
           </g>
         </g>
 
