@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Skull, Coins, Star, Timer, Volume2, Pause, Play, Mic, AlertCircle } from "lucide-react";
+import { Trophy, Skull, Coins, Star, Timer, Volume2, Pause, Play, Mic, AlertCircle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { TugOfWarBackground } from "./TugOfWarBackground";
@@ -27,6 +27,7 @@ interface RPGTugOfWarProps {
   storyTitle?: string;
   onComplete: (victory: boolean, stats: { wordsRead: number; correctWords: number; incorrectWords: number }) => void;
   onWordResult?: (word: string, correct: boolean) => void;
+  onExit?: () => void;
 }
 
 interface FloatingReward {
@@ -55,6 +56,7 @@ export const RPGTugOfWar = ({
   storyTitle,
   onComplete,
   onWordResult,
+  onExit,
 }: RPGTugOfWarProps) => {
   // ML Integration for training data
   const { saveToAuraRecords } = useMLIntegration();
@@ -468,6 +470,19 @@ export const RPGTugOfWar = ({
     <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Background */}
       <TugOfWarBackground />
+
+      {/* Back Button - Top Left */}
+      {onExit && (
+        <Button
+          variant="ghost"
+          onClick={onExit}
+          className="absolute top-3 left-3 z-30 bg-black/30 hover:bg-black/50 text-white backdrop-blur-sm"
+          size="sm"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back
+        </Button>
+      )}
 
       {/* Header */}
       <div className="relative z-10 p-4 text-center">

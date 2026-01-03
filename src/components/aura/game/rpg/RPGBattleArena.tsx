@@ -1361,6 +1361,7 @@ export const RPGBattleArena = ({
             heroName="Knight"
             enemyName={enemy.name}
             onComplete={handleTugOfWarComplete}
+            onExit={onBack}
           />
         )}
         {phase === 'goblin_horde' && (
