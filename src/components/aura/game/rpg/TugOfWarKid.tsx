@@ -228,20 +228,20 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
           {/* Collar */}
           <path d="M42 48 L50 55 L58 48" fill="none" stroke="#c4c4c4" strokeWidth="2" />
           
-          {/* === ARMS - THINNER WITH ELBOW BEND === */}
+          {/* === ARMS - THINNER WITH ELBOW BEND (bending upward) === */}
           
           {/* Back arm - upper arm + forearm with elbow bend */}
-          {/* Upper arm: shoulder to elbow */}
+          {/* Upper arm: shoulder to elbow (elbow bends UP) */}
           <motion.path
-            d={`M38 54 Q25 50 12 ${armEndY - 8}`}
+            d={`M38 54 Q25 42 12 ${armEndY - 8}`}
             stroke={variant.skin}
             strokeWidth="7"
             strokeLinecap="round"
             fill="none"
           />
-          {/* Forearm: elbow to wrist */}
+          {/* Forearm: elbow to wrist (curves down to hand) */}
           <motion.path
-            d={`M12 ${armEndY - 8} Q0 ${armEndY - 6} ${armEndX + 5} ${armEndY - 4}`}
+            d={`M12 ${armEndY - 8} Q0 ${armEndY - 12} ${armEndX + 5} ${armEndY - 4}`}
             stroke={variant.skin}
             strokeWidth="6"
             strokeLinecap="round"
@@ -270,17 +270,17 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
           </g>
           
           {/* Front arm - upper arm + forearm with elbow bend */}
-          {/* Upper arm: shoulder to elbow */}
+          {/* Upper arm: shoulder to elbow (elbow bends UP) */}
           <motion.path
-            d={`M38 58 Q22 56 8 ${armEndY}`}
+            d={`M38 58 Q22 44 8 ${armEndY}`}
             stroke={variant.skin}
             strokeWidth="8"
             strokeLinecap="round"
             fill="none"
           />
-          {/* Forearm: elbow to wrist */}
+          {/* Forearm: elbow to wrist (curves down to hand) */}
           <motion.path
-            d={`M8 ${armEndY} Q-5 ${armEndY + 2} ${armEndX} ${armEndY + 2}`}
+            d={`M8 ${armEndY} Q-5 ${armEndY - 6} ${armEndX} ${armEndY + 2}`}
             stroke={variant.skin}
             strokeWidth="7"
             strokeLinecap="round"
