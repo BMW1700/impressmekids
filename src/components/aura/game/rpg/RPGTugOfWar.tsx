@@ -744,16 +744,16 @@ export const RPGTugOfWar = ({
             </div>
           </motion.div>
 
-          {/* THE ROPE - spans across the middle */}
+          {/* THE ROPE - spans across entire width, always visible */}
           <div 
-            className="absolute inset-x-0 pointer-events-none z-[12]"
+            className="absolute inset-x-0 pointer-events-none z-[20]"
             style={{ 
-              top: '50%', 
+              top: '45%', 
               transform: 'translateY(-50%)',
-              height: '90px',
-              left: '15%',
-              right: '15%',
-              width: '70%',
+              height: '80px',
+              left: '0',
+              right: '0',
+              width: '100%',
             }}
           >
             <TugOfWarRope 
