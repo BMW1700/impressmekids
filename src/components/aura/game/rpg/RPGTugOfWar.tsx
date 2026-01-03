@@ -707,9 +707,9 @@ export const RPGTugOfWar = ({
       >
         <div className="relative w-full h-full flex items-end justify-center">
           
-          {/* Enemy Team (Left Side) - Goblins */}
+          {/* Enemy Team (Left Side) - Goblins - BEHIND rope */}
           <motion.div 
-            className="absolute left-[3%] bottom-0 flex flex-col items-center z-[15]"
+            className="absolute left-[3%] bottom-0 flex flex-col items-center z-[10]"
             animate={pullingAnimation === 'enemy' ? { x: [-10, 0] } : pullingAnimation === 'hero' ? { x: [10, 0] } : {}}
             transition={{ duration: 0.3 }}
           >
@@ -744,12 +744,11 @@ export const RPGTugOfWar = ({
             </div>
           </motion.div>
 
-          {/* THE ROPE - spans across entire width, always visible */}
+          {/* THE ROPE - spans across, BEHIND heroes but IN FRONT of goblins */}
           <div 
-            className="absolute inset-x-0 pointer-events-none z-[20]"
+            className="absolute inset-x-0 pointer-events-none z-[12]"
             style={{ 
-              top: '45%', 
-              transform: 'translateY(-50%)',
+              bottom: '130px',
               height: '80px',
               left: '0',
               right: '0',
@@ -763,7 +762,7 @@ export const RPGTugOfWar = ({
             />
           </div>
 
-          {/* Hero Team (Right Side) - Leader + Kids */}
+          {/* Hero Team (Right Side) - Leader + Kids - IN FRONT of rope */}
           <motion.div 
             className="absolute right-[3%] bottom-0 flex flex-col items-center z-[15]"
             animate={pullingAnimation === 'hero' ? { x: [10, 0] } : pullingAnimation === 'enemy' ? { x: [-10, 0] } : {}}
