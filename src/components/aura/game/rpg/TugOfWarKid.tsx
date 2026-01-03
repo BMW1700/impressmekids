@@ -228,43 +228,88 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
           {/* Collar */}
           <path d="M42 48 L50 55 L58 48" fill="none" stroke="#c4c4c4" strokeWidth="2" />
           
-          {/* === ARMS - EXTENDED HORIZONTALLY toward rope like pic 2! === */}
-          {/* These arms reach WAY out to the left where the rope would be */}
+          {/* === ARMS - THINNER WITH ELBOW BEND === */}
           
-          {/* Back arm - reaching out */}
+          {/* Back arm - upper arm + forearm with elbow bend */}
+          {/* Upper arm: shoulder to elbow */}
           <motion.path
-            d={`M36 54 L10 ${armEndY - 2} L${armEndX} ${armEndY - 3}`}
+            d={`M38 54 Q25 50 12 ${armEndY - 8}`}
             stroke={variant.skin}
-            strokeWidth="12"
+            strokeWidth="7"
             strokeLinecap="round"
-            strokeLinejoin="round"
             fill="none"
           />
-          {/* Back hand gripping */}
+          {/* Forearm: elbow to wrist */}
+          <motion.path
+            d={`M12 ${armEndY - 8} Q0 ${armEndY - 6} ${armEndX + 5} ${armEndY - 4}`}
+            stroke={variant.skin}
+            strokeWidth="6"
+            strokeLinecap="round"
+            fill="none"
+          />
+          {/* Back hand - more realistic with curved palm and fingers */}
           <g>
-            <ellipse cx={armEndX - 2} cy={armEndY - 4} rx="9" ry="7" fill={variant.skin} />
-            {/* Horizontal finger definition lines - start at left edge of hand, 25% shorter */}
-            <line x1={armEndX - 11} y1={armEndY - 6} x2={armEndX} y2={armEndY - 6} stroke="black" strokeWidth="1" opacity="0.5" />
-            <line x1={armEndX - 11} y1={armEndY - 3} x2={armEndX} y2={armEndY - 3} stroke="black" strokeWidth="1" opacity="0.5" />
-            <line x1={armEndX - 10} y1={armEndY} x2={armEndX - 1} y2={armEndY} stroke="black" strokeWidth="1" opacity="0.5" />
+            {/* Palm */}
+            <ellipse cx={armEndX} cy={armEndY - 4} rx="6" ry="5" fill={variant.skin} />
+            {/* Fingers wrapping - curved lines */}
+            <path 
+              d={`M${armEndX - 6} ${armEndY - 7} Q${armEndX - 8} ${armEndY - 4} ${armEndX - 6} ${armEndY - 1}`} 
+              stroke={variant.skin} strokeWidth="2.5" strokeLinecap="round" fill="none" 
+            />
+            <path 
+              d={`M${armEndX - 5} ${armEndY - 8} Q${armEndX - 7} ${armEndY - 4} ${armEndX - 5} ${armEndY}`} 
+              stroke={variant.skin} strokeWidth="2.5" strokeLinecap="round" fill="none" 
+            />
+            <path 
+              d={`M${armEndX - 3} ${armEndY - 8} Q${armEndX - 5} ${armEndY - 4} ${armEndX - 3} ${armEndY + 1}`} 
+              stroke={variant.skin} strokeWidth="2.5" strokeLinecap="round" fill="none" 
+            />
+            {/* Finger definition lines */}
+            <line x1={armEndX - 7} y1={armEndY - 5} x2={armEndX - 2} y2={armEndY - 5} stroke="black" strokeWidth="0.8" opacity="0.4" />
+            <line x1={armEndX - 7} y1={armEndY - 2} x2={armEndX - 2} y2={armEndY - 2} stroke="black" strokeWidth="0.8" opacity="0.4" />
           </g>
           
-          {/* Front arm - reaching out */}
+          {/* Front arm - upper arm + forearm with elbow bend */}
+          {/* Upper arm: shoulder to elbow */}
           <motion.path
-            d={`M36 60 L5 ${armEndY + 4} L${armEndX - 5} ${armEndY + 2}`}
+            d={`M38 58 Q22 56 8 ${armEndY}`}
             stroke={variant.skin}
-            strokeWidth="13"
+            strokeWidth="8"
             strokeLinecap="round"
-            strokeLinejoin="round"
             fill="none"
           />
-          {/* Front hand gripping */}
+          {/* Forearm: elbow to wrist */}
+          <motion.path
+            d={`M8 ${armEndY} Q-5 ${armEndY + 2} ${armEndX} ${armEndY + 2}`}
+            stroke={variant.skin}
+            strokeWidth="7"
+            strokeLinecap="round"
+            fill="none"
+          />
+          {/* Front hand - more realistic */}
           <g>
-            <ellipse cx={armEndX - 7} cy={armEndY + 1} rx="10" ry="8" fill={variant.skin} />
-            {/* Horizontal finger definition lines - start at left edge of hand, 25% shorter */}
-            <line x1={armEndX - 17} y1={armEndY - 2} x2={armEndX - 5} y2={armEndY - 2} stroke="black" strokeWidth="1.2" opacity="0.5" />
-            <line x1={armEndX - 17} y1={armEndY + 2} x2={armEndX - 5} y2={armEndY + 2} stroke="black" strokeWidth="1.2" opacity="0.5" />
-            <line x1={armEndX - 16} y1={armEndY + 6} x2={armEndX - 5} y2={armEndY + 6} stroke="black" strokeWidth="1.2" opacity="0.5" />
+            {/* Palm */}
+            <ellipse cx={armEndX - 4} cy={armEndY + 2} rx="7" ry="6" fill={variant.skin} />
+            {/* Fingers wrapping around rope */}
+            <path 
+              d={`M${armEndX - 11} ${armEndY - 2} Q${armEndX - 14} ${armEndY + 2} ${armEndX - 11} ${armEndY + 6}`} 
+              stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" 
+            />
+            <path 
+              d={`M${armEndX - 9} ${armEndY - 3} Q${armEndX - 12} ${armEndY + 2} ${armEndX - 9} ${armEndY + 7}`} 
+              stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" 
+            />
+            <path 
+              d={`M${armEndX - 7} ${armEndY - 3} Q${armEndX - 10} ${armEndY + 2} ${armEndX - 7} ${armEndY + 8}`} 
+              stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" 
+            />
+            <path 
+              d={`M${armEndX - 4} ${armEndY - 3} Q${armEndX - 7} ${armEndY + 2} ${armEndX - 4} ${armEndY + 8}`} 
+              stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" 
+            />
+            {/* Finger definition lines */}
+            <line x1={armEndX - 12} y1={armEndY} x2={armEndX - 4} y2={armEndY} stroke="black" strokeWidth="0.8" opacity="0.4" />
+            <line x1={armEndX - 12} y1={armEndY + 4} x2={armEndX - 4} y2={armEndY + 4} stroke="black" strokeWidth="0.8" opacity="0.4" />
           </g>
         </g>
 
