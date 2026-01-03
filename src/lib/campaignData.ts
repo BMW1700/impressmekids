@@ -47,8 +47,26 @@ export const grogTheGoblinKing: CampaignCharacter = {
   quote: 'You\'ll never get these books back! Reading is boring! Mwahahaha!',
 };
 
-// Campaign worlds with level structure - 8 WORLDS TOTAL
+// Campaign worlds with level structure - 9 WORLDS TOTAL (including Tutorial)
 export const campaignWorlds: CampaignWorld[] = [
+  // TUTORIAL WORLD - Always first, always unlocked
+  {
+    id: 0,
+    name: 'Tutorial Island',
+    description: 'Learn how to read and battle! Your adventure begins here!',
+    gradient: 'from-green-300 via-emerald-400 to-teal-400',
+    bgColor: 'bg-green-900/20',
+    enemyTypes: ['minion'],
+    requiredGradeLevel: 0,
+    storyCount: 3,
+    unlockRequirement: 0,
+    lore: 'Welcome to Impress Me Kids! This is where every great reader begins their journey. Practice reading words to attack enemies, learn about mini-games, and discover the magic of reading! Princess Ella herself will guide you!',
+    levels: [
+      { id: 1, storyIndex: 0, enemies: ['minion'], isBossLevel: false, starThresholds: [40, 60, 80] },
+      { id: 2, storyIndex: 1, enemies: ['minion'], isBossLevel: false, starThresholds: [40, 60, 80] },
+      { id: 3, storyIndex: 2, enemies: ['minion'], isBossLevel: false, starThresholds: [40, 60, 80] },
+    ],
+  },
   {
     id: 1,
     name: 'The Enchanted Forest',
@@ -306,6 +324,7 @@ export const isWorldUnlocked = (
 ): boolean => {
   const world = getWorldById(worldId);
   if (!world) return false;
+  if (worldId === 0) return true; // Tutorial always unlocked
   if (worldId === 1) return true;
   return previousWorldBooksRescued >= world.unlockRequirement;
 };
