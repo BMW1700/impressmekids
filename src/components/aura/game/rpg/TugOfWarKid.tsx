@@ -243,10 +243,10 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
           {/* Back hand gripping */}
           <g>
             <ellipse cx={armEndX - 2} cy={armEndY - 4} rx="9" ry="7" fill={variant.skin} />
-            {/* Finger definition lines */}
-            <path d={`M${armEndX - 7} ${armEndY - 7} Q${armEndX - 6} ${armEndY - 4} ${armEndX - 7} ${armEndY - 1}`} stroke="black" strokeWidth="1" fill="none" opacity="0.6" />
-            <path d={`M${armEndX - 3} ${armEndY - 8} Q${armEndX - 2} ${armEndY - 4} ${armEndX - 3} ${armEndY}`} stroke="black" strokeWidth="1" fill="none" opacity="0.6" />
-            <path d={`M${armEndX + 2} ${armEndY - 7} Q${armEndX + 3} ${armEndY - 4} ${armEndX + 2} ${armEndY - 1}`} stroke="black" strokeWidth="1" fill="none" opacity="0.6" />
+            {/* Horizontal finger definition lines */}
+            <line x1={armEndX - 9} y1={armEndY - 6} x2={armEndX + 5} y2={armEndY - 6} stroke="black" strokeWidth="1" opacity="0.5" />
+            <line x1={armEndX - 9} y1={armEndY - 3} x2={armEndX + 5} y2={armEndY - 3} stroke="black" strokeWidth="1" opacity="0.5" />
+            <line x1={armEndX - 8} y1={armEndY} x2={armEndX + 4} y2={armEndY} stroke="black" strokeWidth="1" opacity="0.5" />
           </g>
           
           {/* Front arm - reaching out */}
@@ -261,10 +261,10 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
           {/* Front hand gripping */}
           <g>
             <ellipse cx={armEndX - 7} cy={armEndY + 1} rx="10" ry="8" fill={variant.skin} />
-            {/* Finger definition lines */}
-            <path d={`M${armEndX - 13} ${armEndY - 3} Q${armEndX - 12} ${armEndY + 1} ${armEndX - 13} ${armEndY + 5}`} stroke="black" strokeWidth="1.2" fill="none" opacity="0.6" />
-            <path d={`M${armEndX - 8} ${armEndY - 4} Q${armEndX - 7} ${armEndY + 1} ${armEndX - 8} ${armEndY + 6}`} stroke="black" strokeWidth="1.2" fill="none" opacity="0.6" />
-            <path d={`M${armEndX - 3} ${armEndY - 3} Q${armEndX - 2} ${armEndY + 1} ${armEndX - 3} ${armEndY + 5}`} stroke="black" strokeWidth="1.2" fill="none" opacity="0.6" />
+            {/* Horizontal finger definition lines */}
+            <line x1={armEndX - 15} y1={armEndY - 2} x2={armEndX + 1} y2={armEndY - 2} stroke="black" strokeWidth="1.2" opacity="0.5" />
+            <line x1={armEndX - 15} y1={armEndY + 2} x2={armEndX + 1} y2={armEndY + 2} stroke="black" strokeWidth="1.2" opacity="0.5" />
+            <line x1={armEndX - 14} y1={armEndY + 6} x2={armEndX} y2={armEndY + 6} stroke="black" strokeWidth="1.2" opacity="0.5" />
           </g>
         </g>
 
