@@ -41,6 +41,8 @@ import { RPGInkSplash } from "./RPGInkSplash";
 import { RPGCrystalPrison } from "./RPGCrystalPrison";
 import { RPGLightningStorm } from "./RPGLightningStorm";
 import { RPGVoidPull } from "./RPGVoidPull";
+// NEW: Import character selection
+import { RPGCharacterSelect, PlayableCharacter } from "./RPGCharacterSelect";
 import { Spell } from "./RPGSpellMenu";
 import { Item } from "./RPGItemMenu";
 import { 
@@ -52,6 +54,7 @@ import {
   wizardDialogue,
   RPGEnemy,
   MiniGameType,
+  RPGCharacter as RPGCharacterType,
 } from "@/lib/rpgBattleData";
 import { CuratedStory } from "@/data/curatedStories";
 import { calculateGoldEarned, calculateXpEarned } from "@/lib/gameEconomy";
@@ -124,6 +127,23 @@ export const RPGBattleArena = ({
   const [screenShake, setScreenShake] = useState(false);
   // REMOVED: HP-based barrage triggers - now all mini-games are random
   
+  // Character selection state for Classic mode
+  const [showCharacterSelect, setShowCharacterSelect] = useState(battleMode === 'classic');
+  const [selectedCharacter, setSelectedCharacter] = useState<PlayableCharacter | null>(null);
+  const [companionCharacter, setCompanionCharacter] = useState<PlayableCharacter | null>(null);
+  
+  // Get character data from selection
+  const getCharacterData = useCallback((charId: PlayableCharacter | null): RPGCharacterType => {
+    switch (charId) {
+      case 'elara': return allyWizard;
+      case 'ella': return princessElla;
+      default: return heroKnight;
+    }
+  }, []);
+  
+  const playerCharacter = getCharacterData(selectedCharacter);
+  const companion = getCharacterData(companionCharacter);
+  
   // Mini-game trigger states - track which games have been triggered this battle
   const [triggeredMiniGames, setTriggeredMiniGames] = useState<Set<MiniGameType>>(new Set());
   const [lastMiniGameCheck, setLastMiniGameCheck] = useState(0); // Track words read since last check
@@ -144,9 +164,8 @@ export const RPGBattleArena = ({
   const [lastAttackCheck, setLastAttackCheck] = useState(0);
   const [quickBlockWords, setQuickBlockWords] = useState<string[]>([]);
   
-  // Combat stats
+  // Combat stats - player HP initialized based on selected character
   const [playerHp, setPlayerHp] = useState(heroKnight.maxHp);
-  const [wizardHp, setWizardHp] = useState(allyWizard.maxHp);
   const [wizardMp, setWizardMp] = useState(50);
   const [enemyHp, setEnemyHp] = useState(enemy.maxHp);
   const [streak, setStreak] = useState(0);
@@ -241,12 +260,33 @@ export const RPGBattleArena = ({
       console.log('[RPGBattle] Starting in Tug of War mode with', storyWords.length, 'words');
       setBarrageWords(storyWords);
       setPhase('tug_of_war');
+      setShowCharacterSelect(false);
     } else if (battleMode === 'balloon' && storyWords.length > 0) {
       console.log('[RPGBattle] Starting in Balloon Bonanza mode with', storyWords.length, 'words');
       setBarrageWords(storyWords);
       setPhase('balloon_battle');
+      setShowCharacterSelect(false);
     }
   }, [battleMode, storyWords]);
+
+  // Handle character selection for Classic mode
+  const handleCharacterSelect = useCallback((character: PlayableCharacter) => {
+    console.log('[RPGBattle] Character selected:', character);
+    setSelectedCharacter(character);
+    
+    // Pick random companion from remaining 2 characters
+    const allCharacters: PlayableCharacter[] = ['valor', 'elara', 'ella'];
+    const remaining = allCharacters.filter(c => c !== character);
+    const randomCompanion = remaining[Math.floor(Math.random() * remaining.length)];
+    setCompanionCharacter(randomCompanion);
+    
+    // Set player HP based on selected character
+    const charData = getCharacterData(character);
+    setPlayerHp(charData.maxHp);
+    
+    // Hide selection and start battle
+    setShowCharacterSelect(false);
+  }, [getCharacterData]);
 
   // HYBRID COMBAT SYSTEM:
   // 1. HP-based mini-game triggers at 50% and 25% enemy HP (anticipation moments)
@@ -1225,6 +1265,13 @@ export const RPGBattleArena = ({
     }
   }, [allWordsRead, enemyHp, enemy.maxHp, phase]);
 
+  // If character select is shown for Classic mode, render it instead of battle
+  if (showCharacterSelect && battleMode === 'classic') {
+    return (
+      <RPGCharacterSelect onSelect={handleCharacterSelect} />
+    );
+  }
+
   return (
     <motion.div 
       className="fixed inset-0 z-50 overflow-hidden"
@@ -1364,7 +1411,7 @@ export const RPGBattleArena = ({
         {phase === 'tug_of_war' && (
           <RPGTugOfWar
             words={barrageWords}
-            heroName="Knight"
+            heroName={playerCharacter.name}
             enemyName={enemy.name}
             onComplete={handleTugOfWarComplete}
             onExit={onBack}
@@ -1380,7 +1427,7 @@ export const RPGBattleArena = ({
         {phase === 'balloon_battle' && battleMode === 'balloon' && (
           <RPGBalloonBattle
             words={barrageWords}
-            heroName="Knight"
+            heroName={playerCharacter.name}
             enemyName={enemy.name}
             studentId={studentId}
             storyTitle={story.title}
@@ -1605,20 +1652,26 @@ export const RPGBattleArena = ({
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: 0.3 }}
             >
+              {/* Main player character - with health bar */}
               <RPGCharacter
-                character={heroKnight}
+                character={playerCharacter}
                 currentHp={playerHp}
                 isAttacking={heroAttacking}
                 isTakingDamage={heroTakingDamage}
                 isDefending={currentCommand === 'defend'}
                 currentStreak={streak}
                 usePremiumSprites={true}
+                showHealthBar={true}
               />
-              <RPGCharacter
-                character={allyWizard}
-                currentHp={wizardHp}
-                usePremiumSprites={true}
-              />
+              {/* Companion - NO health bar */}
+              {companionCharacter && (
+                <RPGCharacter
+                  character={companion}
+                  currentHp={companion.maxHp}
+                  usePremiumSprites={true}
+                  showHealthBar={false}
+                />
+              )}
             </motion.div>
           </div>
         </div>
@@ -1638,13 +1691,13 @@ export const RPGBattleArena = ({
                 >
                   <RPGDialogueBox
                     speakerName={
-                      currentSpeaker === 'hero' ? heroKnight.name :
-                      currentSpeaker === 'wizard' ? allyWizard.name :
+                      currentSpeaker === 'hero' ? playerCharacter.name :
+                      currentSpeaker === 'wizard' ? companion.name :
                       enemy.name
                     }
                     speakerColor={
-                      currentSpeaker === 'hero' ? heroKnight.color :
-                      currentSpeaker === 'wizard' ? allyWizard.color :
+                      currentSpeaker === 'hero' ? playerCharacter.color :
+                      currentSpeaker === 'wizard' ? companion.color :
                       enemy.color
                     }
                     dialogue={getCurrentDialogue()}
@@ -1714,8 +1767,14 @@ export const RPGBattleArena = ({
                   <div className="hidden md:block">
                     <RPGPartyStats
                       members={[
-                        { name: heroKnight.name, currentHp: playerHp, maxHp: heroKnight.maxHp, isDefending: currentCommand === 'defend' },
-                        { name: allyWizard.name, currentHp: wizardHp, maxHp: allyWizard.maxHp, currentMp: wizardMp, maxMp: 50 },
+                        { 
+                          name: playerCharacter.name, 
+                          currentHp: playerHp, 
+                          maxHp: playerCharacter.maxHp, 
+                          isDefending: currentCommand === 'defend',
+                          currentMp: selectedCharacter === 'elara' ? wizardMp : undefined,
+                          maxMp: selectedCharacter === 'elara' ? 50 : undefined,
+                        },
                       ]}
                       streak={streak}
                       longestStreak={longestStreak}

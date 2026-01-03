@@ -5,6 +5,7 @@ import { RPGCharacterSprite } from "./RPGCharacterSprite";
 import { GoblinGuard, GoblinState } from "../characters/GoblinGuard";
 import { SirValor, KnightState } from "../characters/SirValor";
 import { Elara, WizardState } from "../characters/Elara";
+import { PrincessElla, PrincessState } from "../characters/PrincessElla";
 import { DrakeTheDragon, DragonState } from "../characters/DrakeTheDragon";
 import { IceGolem, IceGolemState } from "../characters/IceGolem";
 import { ShadowWraith, WraithState } from "../characters/ShadowWraith";
@@ -22,10 +23,11 @@ interface RPGCharacterProps {
   showSprite?: boolean;
   usePremiumSprites?: boolean;
   currentStreak?: number;
+  showHealthBar?: boolean; // New prop to control health bar visibility
 }
 
 // Map character/enemy types to sprite types
-type SpriteType = 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian';
+type SpriteType = 'knight' | 'wizard' | 'princess' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian';
 
 const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean): SpriteType => {
   if (isEnemy) {
@@ -40,8 +42,11 @@ const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean)
       default: return 'goblin';
     }
   }
+  // Check by character ID for heroes
   const hero = character as RPGCharacterType;
-  return hero.type === 'ally' ? 'wizard' : 'knight';
+  if (hero.id === 'wizard') return 'wizard';
+  if (hero.id === 'ella') return 'princess';
+  return 'knight';
 };
 
 // Get state for premium characters
@@ -67,6 +72,14 @@ const getWizardState = (isAttacking: boolean, isTakingDamage: boolean, currentHp
   return 'idle';
 };
 
+const getPrincessState = (isAttacking: boolean, isTakingDamage: boolean, isDefending: boolean, currentHp: number, maxHp: number): PrincessState => {
+  if (currentHp <= 0) return 'defeated';
+  if (isTakingDamage) return 'hit';
+  if (isDefending) return 'casting'; // Use casting for defend stance
+  if (isAttacking) return 'attacking';
+  return 'idle';
+};
+
 export const RPGCharacter = ({
   character,
   currentHp,
@@ -79,6 +92,7 @@ export const RPGCharacter = ({
   showSprite = true,
   usePremiumSprites = true,
   currentStreak = 0,
+  showHealthBar = true, // Default to showing health bar
 }: RPGCharacterProps) => {
   const hpPercentage = (currentHp / character.maxHp) * 100;
   const hpColor = hpPercentage > 50 ? 'from-emerald-400 to-green-500' : 
@@ -158,6 +172,7 @@ export const RPGCharacter = ({
           maxHp={character.maxHp}
           size="medium"
           currentStreak={currentStreak}
+          showHealthBar={showHealthBar}
         />
       );
     }
@@ -170,14 +185,29 @@ export const RPGCharacter = ({
           currentHp={currentHp}
           maxHp={character.maxHp}
           size="medium"
+          showHealthBar={showHealthBar}
+        />
+      );
+    }
+    
+    if (spriteType === 'princess') {
+      return (
+        <PrincessElla
+          state={getPrincessState(isAttacking, isTakingDamage, isDefending, currentHp, character.maxHp)}
+          healthPercent={hpPercentage}
+          currentHp={currentHp}
+          maxHp={character.maxHp}
+          size="medium"
+          showHealthBar={showHealthBar}
         />
       );
     }
 
-    // Fallback
+    // Fallback - use knight for any unhandled hero types (princess is always handled above)
+    const fallbackType = (spriteType as string) === 'princess' ? 'knight' : spriteType as 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian';
     return (
       <RPGCharacterSprite
-        type={spriteType}
+        type={fallbackType}
         isEnemy={isEnemy}
         isAttacking={isAttacking}
         isTakingDamage={isTakingDamage}
@@ -271,7 +301,7 @@ export const RPGCharacter = ({
       {showSprite && (
         usePremiumSprites ? renderPremiumSprite() : (
           <RPGCharacterSprite
-            type={spriteType}
+            type={(spriteType as string) === 'princess' ? 'knight' : spriteType as 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian'}
             isEnemy={isEnemy}
             isAttacking={isAttacking}
             isTakingDamage={isTakingDamage}
