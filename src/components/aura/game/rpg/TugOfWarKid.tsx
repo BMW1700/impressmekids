@@ -232,7 +232,7 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
           
           {/* Back arm - straight upper arm + straight forearm meeting at elbow */}
           <motion.path
-            d={`M38 54 L12 42 L${armEndX + 5} ${armEndY - 4}`}
+            d={`M38 54 L14 ${armEndY + 12} L${armEndX + 5} ${armEndY - 4}`}
             stroke={variant.skin}
             strokeWidth="7"
             strokeLinecap="round"
@@ -263,7 +263,7 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
           
           {/* Front arm - straight upper arm + straight forearm meeting at elbow */}
           <motion.path
-            d={`M38 58 L8 44 L${armEndX} ${armEndY + 2}`}
+            d={`M38 58 L10 ${armEndY + 16} L${armEndX} ${armEndY + 2}`}
             stroke={variant.skin}
             strokeWidth="8"
             strokeLinecap="round"
