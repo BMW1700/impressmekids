@@ -33,14 +33,14 @@ export const RPGIceCrystalBarrage = ({
   const recognitionRef = useRef<any>(null);
   const freezeStartRef = useRef<number>(Date.now());
 
-  // Initialize crystals - but only show one at a time
+  // Initialize crystals - each with random positions
   useEffect(() => {
     const initialCrystals: IceCrystal[] = words.map((word, i) => ({
       id: i,
       word,
-      x: 50, // Center position for the active crystal
-      y: 40,
-      rotation: 0,
+      x: 20 + Math.random() * 60, // Random X position: 20% to 80%
+      y: 25 + Math.random() * 30, // Random Y position: 25% to 55%
+      rotation: Math.random() * 30 - 15, // Random rotation -15 to 15
       freezeProgress: 0,
       destroyed: false,
       selected: false,
@@ -73,6 +73,15 @@ export const RPGIceCrystalBarrage = ({
     } else {
       setCurrentCrystalIndex(nextIndex);
       freezeStartRef.current = Date.now();
+      // Randomize position for the next crystal
+      setCrystals(prev => prev.map((c, idx) => 
+        idx === nextIndex ? { 
+          ...c, 
+          x: 20 + Math.random() * 60,
+          y: 25 + Math.random() * 30,
+          rotation: Math.random() * 30 - 15
+        } : c
+      ));
     }
   }, [currentCrystalIndex, crystals.length, onWordHit]);
 
@@ -212,8 +221,8 @@ export const RPGIceCrystalBarrage = ({
           <motion.button
             key={currentCrystal.id}
             className="absolute pointer-events-auto cursor-pointer z-30"
-            style={{ left: '50%', top: '40%', transform: 'translate(-50%, -50%)' }}
-            initial={{ scale: 0, rotate: -15 }}
+            style={{ left: `${currentCrystal.x}%`, top: `${currentCrystal.y}%`, transform: 'translate(-50%, -50%)' }}
+            initial={{ scale: 0, rotate: currentCrystal.rotation }}
             animate={{ 
               scale: 1, 
               rotate: [0, 3, -3, 0],
