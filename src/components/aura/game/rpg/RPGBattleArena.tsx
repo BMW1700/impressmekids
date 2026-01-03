@@ -125,9 +125,17 @@ export const RPGBattleArena = ({
   const [triggeredMiniGames, setTriggeredMiniGames] = useState<Set<MiniGameType>>(new Set());
   const [lastMiniGameCheck, setLastMiniGameCheck] = useState(0); // Track words read since last check
   
-  // HP-based mini-game trigger tracking
-  const [triggered50Percent, setTriggered50Percent] = useState(false);
-  const [triggered25Percent, setTriggered25Percent] = useState(false);
+  // Dynamic HP-based mini-game trigger tracking - thresholds based on enemy maxHp
+  const [triggeredThresholds, setTriggeredThresholds] = useState<Set<number>>(new Set());
+  
+  // Calculate HP thresholds based on enemy max HP
+  const getHPThresholds = useCallback((maxHp: number): number[] => {
+    if (maxHp >= 500) return [90, 80, 65, 50, 35, 25, 10]; // 7 triggers
+    if (maxHp >= 300) return [85, 70, 55, 50, 40, 25, 10]; // 6-7 triggers
+    if (maxHp >= 200) return [80, 60, 50, 40, 25]; // 4-5 triggers
+    if (maxHp >= 120) return [75, 50, 25]; // 3 triggers
+    return [50, 25]; // 2 triggers for 80-120 HP enemies
+  }, []);
   
   // Random enemy attack tracking for quick block
   const [lastAttackCheck, setLastAttackCheck] = useState(0);
@@ -312,47 +320,65 @@ export const RPGBattleArena = ({
     }, 1000);
   }, [words, batchStartIndex, enemy.name]);
   
-  // HP-BASED mini-game triggers (50% and 25% enemy HP)
+  // HP-BASED mini-game triggers - DYNAMIC based on enemy maxHp
+  // Uses signatureMiniGame at 50% HP, random from miniGames at other thresholds
   const checkHPBasedMiniGame = useCallback(() => {
     if (phase !== 'reading') return;
     if (battleMode !== 'classic') return;
     if (!enemy.miniGames || enemy.miniGames.length === 0) return;
     
     const hpPercent = (enemyHp / enemy.maxHp) * 100;
+    const thresholds = getHPThresholds(enemy.maxHp);
     
-    // Check for 50% HP trigger
-    if (!triggered50Percent && hpPercent <= 50 && hpPercent > 25) {
-      setTriggered50Percent(true);
+    // Check each threshold in order (highest to lowest)
+    for (const threshold of thresholds) {
+      if (triggeredThresholds.has(threshold)) continue;
+      if (hpPercent > threshold) continue;
+      
+      // This threshold has been crossed and not yet triggered
+      setTriggeredThresholds(prev => new Set([...prev, threshold]));
+      
+      // At 50% HP - ALWAYS use the signature mini-game!
+      if (threshold === 50 && enemy.signatureMiniGame) {
+        console.log(`[RPGBattle] Triggering SIGNATURE mini-game: ${enemy.signatureMiniGame} at ${threshold}% HP`);
+        triggerRandomMiniGame(enemy.signatureMiniGame);
+        return;
+      }
+      
+      // At other thresholds - random selection from available games
       const availableGames = enemy.miniGames.filter(game => !triggeredMiniGames.has(game));
       if (availableGames.length > 0) {
         const randomGame = availableGames[Math.floor(Math.random() * availableGames.length)];
+        console.log(`[RPGBattle] Triggering random mini-game: ${randomGame} at ${threshold}% HP`);
+        triggerRandomMiniGame(randomGame);
+        return;
+      } else {
+        // All games used, pick from full list
+        const randomGame = enemy.miniGames[Math.floor(Math.random() * enemy.miniGames.length)];
+        console.log(`[RPGBattle] All mini-games used, repeating: ${randomGame} at ${threshold}% HP`);
         triggerRandomMiniGame(randomGame);
         return;
       }
     }
-    
-    // Check for 25% HP trigger
-    if (!triggered25Percent && hpPercent <= 25) {
-      setTriggered25Percent(true);
-      const availableGames = enemy.miniGames.filter(game => !triggeredMiniGames.has(game));
-      if (availableGames.length > 0) {
-        const randomGame = availableGames[Math.floor(Math.random() * availableGames.length)];
-        triggerRandomMiniGame(randomGame);
-        return;
-      }
-    }
-  }, [phase, battleMode, enemy.miniGames, enemy.maxHp, enemyHp, triggered50Percent, triggered25Percent, triggeredMiniGames, triggerRandomMiniGame]);
+  }, [phase, battleMode, enemy.miniGames, enemy.signatureMiniGame, enemy.maxHp, enemyHp, triggeredThresholds, triggeredMiniGames, triggerRandomMiniGame, getHPThresholds]);
   
-  // Check for RANDOM ENEMY ATTACK (40% chance every 4 words)
+  // Check for RANDOM ENEMY ATTACK - Bosses attack more frequently!
+  // Bosses: 50% chance every 3 words
+  // Regular enemies: 40% chance every 4 words
   const checkRandomEnemyAttack = useCallback(() => {
     if (phase !== 'reading') return;
     if (battleMode !== 'classic') return;
     
-    const wordsSinceLastAttack = correctWords - lastAttackCheck;
-    if (wordsSinceLastAttack < 4) return;
+    // Bosses and final bosses attack more frequently
+    const isBoss = enemy.type === 'boss' || enemy.type === 'final_boss';
+    const attackInterval = isBoss ? 3 : 4;
+    const attackChance = isBoss ? 0.5 : 0.4;
     
-    // 40% chance to trigger attack
-    if (Math.random() > 0.4) {
+    const wordsSinceLastAttack = correctWords - lastAttackCheck;
+    if (wordsSinceLastAttack < attackInterval) return;
+    
+    // Chance to trigger attack
+    if (Math.random() > attackChance) {
       setLastAttackCheck(correctWords);
       return;
     }
@@ -368,7 +394,7 @@ export const RPGBattleArena = ({
       setEnemyAbilityMessage(null);
       setPhase('quick_block');
     }, 800);
-  }, [phase, battleMode, correctWords, lastAttackCheck, words, batchStartIndex, enemy.name]);
+  }, [phase, battleMode, correctWords, lastAttackCheck, words, batchStartIndex, enemy.name, enemy.type]);
   
   // Call HP-based mini-game check when enemyHp changes
   useEffect(() => {
@@ -1101,7 +1127,9 @@ export const RPGBattleArena = ({
     setEnemyHp(nextEnemy.maxHp);
     // Reset random mini-game triggers for the new enemy
     setTriggeredMiniGames(new Set());
+    setTriggeredThresholds(new Set()); // Reset HP-based thresholds for new enemy
     setLastMiniGameCheck(0);
+    setLastAttackCheck(0); // Reset attack check for new enemy
     setDefeatedEnemy(null);
     setPhase('intro');
     setDialogueIndex(0);

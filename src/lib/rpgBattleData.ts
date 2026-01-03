@@ -72,6 +72,7 @@ export interface RPGEnemy {
   specialAbilities?: EnemyAbility[];
   barrageWordCount?: number;
   miniGames: MiniGameType[]; // Mini-games this enemy can trigger
+  signatureMiniGame: MiniGameType; // Signature attack at 50% HP - ALWAYS triggers
 }
 
 // Heroes
@@ -133,7 +134,8 @@ export const goblinMinion: RPGEnemy = {
     { id: 'poison_dagger', name: 'Poison Dagger', damage: 8, effect: 'poison', description: 'Deals damage over time', icon: '🗡️' },
   ],
   barrageWordCount: 4,
-  miniGames: ['word_shield', 'balloon_quickpop', 'word_barrage'], // Simple mini-games for minion
+  miniGames: ['word_shield', 'balloon_quickpop', 'word_barrage', 'dodge_words'], // 80 HP = 2 triggers
+  signatureMiniGame: 'balloon_quickpop', // Signature at 50%
 };
 
 export const goblinGuard: RPGEnemy = {
@@ -162,7 +164,8 @@ export const goblinGuard: RPGEnemy = {
     { id: 'poison_dagger', name: 'Poison Dagger', damage: 10, effect: 'poison', description: 'Deals damage over time', icon: '🗡️' },
   ],
   barrageWordCount: 5,
-  miniGames: ['word_shield', 'dodge_words', 'spell_combo', 'word_barrage'], // Guard has more variety
+  miniGames: ['word_shield', 'dodge_words', 'spell_combo', 'word_barrage', 'balloon_quickpop'], // 120 HP = 3 triggers
+  signatureMiniGame: 'word_shield', // Signature at 50%
 };
 
 export const goblinElite: RPGEnemy = {
@@ -191,8 +194,9 @@ export const goblinElite: RPGEnemy = {
     { id: 'poison_dagger', name: 'Poison Dagger', damage: 12, effect: 'poison', description: 'Deals damage over time', icon: '🗡️' },
   ],
   barrageWordCount: 6,
-  // Elite has challenging mini-games including Word Prison (asteroid_barrage)
-  miniGames: ['spell_combo', 'rhyme_chain', 'tug_of_war', 'speed_typist', 'asteroid_barrage', 'asteroid_barrage'], // Word prison appears twice for higher chance
+  // 180 HP = 4 triggers - Elite has challenging mini-games including Word Prison
+  miniGames: ['spell_combo', 'rhyme_chain', 'tug_of_war', 'speed_typist', 'asteroid_barrage', 'dodge_words'],
+  signatureMiniGame: 'spell_combo', // Signature at 50%
 };
 
 // Boss Enemies - BUFFED
@@ -227,8 +231,9 @@ export const grogTheGoblinKing: RPGEnemy = {
     { id: 'word_prison', name: 'Word Prison', damage: 0, effect: 'asteroid_barrage', description: 'Summons word asteroids!', icon: '☄️' },
   ],
   barrageWordCount: 8,
-  // Grog's Word Prison (asteroid_barrage) is his signature attack
-  miniGames: ['tug_of_war', 'speed_typist', 'rhyme_chain', 'asteroid_barrage', 'asteroid_barrage'], // Word prison appears twice
+  // 300 HP = 6 triggers - Grog's Word Prison is his signature attack
+  miniGames: ['tug_of_war', 'speed_typist', 'rhyme_chain', 'asteroid_barrage', 'word_shield', 'spell_combo', 'fireball_defense'],
+  signatureMiniGame: 'asteroid_barrage', // Signature WORD PRISON at 50%
 };
 
 export const galairTheWickedSorcerer: RPGEnemy = {
@@ -265,8 +270,9 @@ export const galairTheWickedSorcerer: RPGEnemy = {
     { id: 'word_prison', name: 'Word Prison', damage: 0, effect: 'asteroid_barrage', description: 'Summons word asteroids!', icon: '☄️' },
   ],
   barrageWordCount: 10,
-  // Final boss has all the toughest mini-games including Word Prison
-  miniGames: ['spell_combo', 'ghostly_whispers', 'speed_typist', 'tug_of_war', 'asteroid_barrage', 'asteroid_barrage'], // Word prison appears twice
+  // 500 HP = 7 triggers - Final boss has all the toughest mini-games
+  miniGames: ['spell_combo', 'ghostly_whispers', 'speed_typist', 'tug_of_war', 'asteroid_barrage', 'fireball_defense', 'rhyme_chain', 'void_pull'],
+  signatureMiniGame: 'void_pull', // Signature VOID PULL at 50%
 };
 
 // Dragon Enemy - Drake the Dragon (renamed from Dalair)
@@ -305,8 +311,9 @@ export const drakeTheDragon: RPGEnemy = {
     { id: 'wing_gust', name: 'Wing Gust', damage: 15, effect: 'silence', description: 'Blows away your words', icon: '💨' },
   ],
   barrageWordCount: 7,
-  // Drake's mini-games - MUST include beast_swarm as a primary attack
-  miniGames: ['beast_swarm', 'fireball_defense', 'fireball_barrage', 'beast_swarm'], // Beast swarm appears twice for higher chance
+  // 280 HP = 5 triggers - Drake's mini-games
+  miniGames: ['beast_swarm', 'fireball_defense', 'fireball_barrage', 'speed_typist', 'tug_of_war', 'dodge_words'],
+  signatureMiniGame: 'beast_swarm', // Signature BEAST SWARM at 50%
 };
 
 // Mini Flying Beast Enemy (summoned by Drake)
@@ -325,6 +332,7 @@ export const miniBeast: RPGEnemy = {
   specialAbilities: [],
   barrageWordCount: 1,
   miniGames: [], // No mini-games for summoned creatures
+  signatureMiniGame: 'word_barrage', // Fallback
 };
 
 // New Enemies - Ice Golem (World 2 Boss)
@@ -357,7 +365,9 @@ export const iceGolem: RPGEnemy = {
     { id: 'blizzard', name: 'Blizzard', damage: 15, effect: 'debuff', description: 'Screen fills with snow', icon: '🌨️' },
   ],
   barrageWordCount: 6,
-  miniGames: ['ice_crystal_barrage', 'word_shield', 'speed_typist'], // Ice Golem's unique games
+  // 220 HP = 4 triggers
+  miniGames: ['ice_crystal_barrage', 'word_shield', 'speed_typist', 'crystal_prison', 'dodge_words'],
+  signatureMiniGame: 'ice_crystal_barrage', // Signature ICE CRYSTAL at 50%
 };
 
 // Shadow Wraith (World 3 Enemy)
@@ -390,7 +400,9 @@ export const shadowWraith: RPGEnemy = {
     { id: 'soul_drain', name: 'Soul Drain', damage: 18, effect: 'poison', description: 'Steals HP based on missed words', icon: '💀' },
   ],
   barrageWordCount: 5,
-  miniGames: ['ghostly_whispers', 'dodge_words', 'spell_combo'], // Shadow Wraith's unique games
+  // 180 HP = 4 triggers
+  miniGames: ['ghostly_whispers', 'dodge_words', 'spell_combo', 'void_pull', 'balloon_quickpop'],
+  signatureMiniGame: 'ghostly_whispers', // Signature GHOSTLY WHISPERS at 50%
 };
 
 // Stone Guardian (World 3 Boss)
@@ -423,7 +435,9 @@ export const stoneGuardian: RPGEnemy = {
     { id: 'stone_armor', name: 'Stone Armor', damage: 0, effect: 'debuff', description: 'Reduces damage until 5-word streak', icon: '🛡️' },
   ],
   barrageWordCount: 7,
-  miniGames: ['rolling_boulders', 'speed_typist', 'tug_of_war'], // Stone Guardian's unique games
+  // 350 HP = 6 triggers
+  miniGames: ['rolling_boulders', 'speed_typist', 'tug_of_war', 'word_shield', 'asteroid_barrage', 'spell_combo', 'rhyme_chain'],
+  signatureMiniGame: 'rolling_boulders', // Signature ROLLING BOULDERS at 50%
 };
 
 // ========== NEW WORLD 5 ENEMIES: The Whispering Caverns ==========
@@ -457,7 +471,9 @@ export const caveTroll: RPGEnemy = {
     { id: 'boulder_throw', name: 'Boulder Throw', damage: 15, effect: 'debuff', description: 'Reduces accuracy', icon: '⚫' },
   ],
   barrageWordCount: 5,
-  miniGames: ['rolling_boulders', 'word_shield', 'speed_typist', 'word_echo'],
+  // 200 HP = 4 triggers
+  miniGames: ['rolling_boulders', 'word_shield', 'speed_typist', 'word_echo', 'tug_of_war'],
+  signatureMiniGame: 'word_echo', // Signature WORD ECHO at 50%
 };
 
 // Crystal Spider - Fast, multiple attacks
@@ -489,7 +505,9 @@ export const crystalSpider: RPGEnemy = {
     { id: 'prism_beam', name: 'Prism Beam', damage: 12, effect: 'debuff', description: 'Dazzling light attack', icon: '💎' },
   ],
   barrageWordCount: 4,
+  // 100 HP = 2 triggers
   miniGames: ['dodge_words', 'spell_combo', 'balloon_quickpop', 'crystal_prison'],
+  signatureMiniGame: 'crystal_prison', // Signature CRYSTAL PRISON at 50%
 };
 
 // Echo Wraith - Boss of World 5 (words must be repeated)
@@ -524,7 +542,9 @@ export const echoWraith: RPGEnemy = {
     { id: 'whisper_trap', name: 'Whisper Trap', damage: 0, effect: 'silence', description: 'Silences magic', icon: '🤫' },
   ],
   barrageWordCount: 8,
-  miniGames: ['ghostly_whispers', 'rhyme_chain', 'speed_typist', 'tug_of_war', 'word_echo'],
+  // 280 HP = 5 triggers - Echo Wraith boss
+  miniGames: ['ghostly_whispers', 'rhyme_chain', 'speed_typist', 'tug_of_war', 'word_echo', 'spell_combo'],
+  signatureMiniGame: 'word_echo', // Signature WORD ECHO at 50%
 };
 
 // ========== NEW WORLD 6 ENEMIES: The Floating Isles ==========
@@ -558,7 +578,9 @@ export const stormHarpy: RPGEnemy = {
     { id: 'talon_dive', name: 'Talon Dive', damage: 18, effect: 'poison', description: 'Bleeding damage', icon: '🦅' },
   ],
   barrageWordCount: 5,
-  miniGames: ['dodge_words', 'balloon_quickpop', 'word_shield', 'wind_chase'],
+  // 120 HP = 3 triggers
+  miniGames: ['dodge_words', 'balloon_quickpop', 'word_shield', 'wind_chase', 'lightning_storm'],
+  signatureMiniGame: 'wind_chase', // Signature WIND CHASE at 50%
 };
 
 // Cloud Giant - Massive HP
@@ -590,7 +612,9 @@ export const cloudGiant: RPGEnemy = {
     { id: 'cloud_cover', name: 'Cloud Cover', damage: 0, effect: 'shadow_veil', description: 'Words become foggy', icon: '☁️' },
   ],
   barrageWordCount: 6,
-  miniGames: ['tug_of_war', 'speed_typist', 'rolling_boulders'],
+  // 320 HP = 6 triggers
+  miniGames: ['tug_of_war', 'speed_typist', 'rolling_boulders', 'lightning_storm', 'asteroid_barrage', 'word_shield', 'spell_combo'],
+  signatureMiniGame: 'lightning_storm', // Signature LIGHTNING STORM at 50%
 };
 
 // Zephyr the Wind Lord - Boss of World 6
@@ -625,7 +649,9 @@ export const zephyr: RPGEnemy = {
     { id: 'sky_barrier', name: 'Sky Barrier', damage: 0, effect: 'debuff', description: 'Reduces damage temporarily', icon: '🛡️' },
   ],
   barrageWordCount: 9,
-  miniGames: ['speed_typist', 'tug_of_war', 'dodge_words', 'fireball_defense', 'wind_chase', 'lightning_storm'],
+  // 350 HP = 6 triggers - Zephyr boss
+  miniGames: ['speed_typist', 'tug_of_war', 'dodge_words', 'fireball_defense', 'wind_chase', 'lightning_storm', 'rhyme_chain'],
+  signatureMiniGame: 'wind_chase', // Signature WIND CHASE at 50%
 };
 
 // ========== NEW WORLD 7 ENEMIES: The Sunken Library ==========
@@ -659,7 +685,9 @@ export const inkKraken: RPGEnemy = {
     { id: 'tentacle_slam', name: 'Tentacle Slam', damage: 16, effect: 'poison', description: 'Crushing damage', icon: '🐙' },
   ],
   barrageWordCount: 5,
-  miniGames: ['ghostly_whispers', 'word_shield', 'dodge_words', 'ink_splash'],
+  // 180 HP = 4 triggers
+  miniGames: ['ghostly_whispers', 'word_shield', 'dodge_words', 'ink_splash', 'void_pull'],
+  signatureMiniGame: 'ink_splash', // Signature INK SPLASH at 50%
 };
 
 // Reef Guardian - Coral armor
@@ -691,7 +719,9 @@ export const reefGuardian: RPGEnemy = {
     { id: 'reef_thorns', name: 'Reef Thorns', damage: 12, effect: 'poison', description: 'Poison damage over time', icon: '🪸' },
   ],
   barrageWordCount: 5,
-  miniGames: ['word_shield', 'rolling_boulders', 'balloon_quickpop'],
+  // 160 HP = 3 triggers
+  miniGames: ['word_shield', 'rolling_boulders', 'balloon_quickpop', 'crystal_prison'],
+  signatureMiniGame: 'crystal_prison', // Signature CRYSTAL PRISON at 50%
 };
 
 // Leviathan - Boss of World 7 (epic multi-phase battle)
@@ -728,7 +758,9 @@ export const leviathan: RPGEnemy = {
     { id: 'whirlpool', name: 'Whirlpool', damage: 20, effect: 'debuff', description: 'Words spin around', icon: '🌀' },
   ],
   barrageWordCount: 10,
-  miniGames: ['tug_of_war', 'speed_typist', 'asteroid_barrage', 'fireball_defense', 'ink_splash'],
+  // 450 HP = 7 triggers - Leviathan boss
+  miniGames: ['tug_of_war', 'speed_typist', 'asteroid_barrage', 'fireball_defense', 'ink_splash', 'void_pull', 'rhyme_chain', 'spell_combo'],
+  signatureMiniGame: 'ink_splash', // Signature INK SPLASH at 50%
 };
 
 // ========== NEW WORLD 8 ENEMIES: The Void Between ==========
@@ -762,7 +794,9 @@ export const voidPhantom: RPGEnemy = {
     { id: 'null_strike', name: 'Null Strike', damage: 18, effect: 'silence', description: 'Erases words', icon: '🕳️' },
   ],
   barrageWordCount: 5,
+  // 140 HP = 3 triggers
   miniGames: ['ghostly_whispers', 'dodge_words', 'spell_combo', 'void_pull'],
+  signatureMiniGame: 'void_pull', // Signature VOID PULL at 50%
 };
 
 // Reality Shifter - Words change mid-reading
@@ -794,7 +828,9 @@ export const realityShifter: RPGEnemy = {
     { id: 'temporal_blast', name: 'Temporal Blast', damage: 22, effect: 'earthquake', description: 'Time-distorting attack', icon: '⏰' },
   ],
   barrageWordCount: 7,
-  miniGames: ['speed_typist', 'rhyme_chain', 'tug_of_war', 'asteroid_barrage', 'void_pull'],
+  // 220 HP = 4 triggers
+  miniGames: ['speed_typist', 'rhyme_chain', 'tug_of_war', 'asteroid_barrage', 'void_pull', 'lightning_storm'],
+  signatureMiniGame: 'asteroid_barrage', // Signature WORD PRISON at 50%
 };
 
 // Word Eater - Final Boss of the entire campaign
@@ -835,7 +871,9 @@ export const wordEater: RPGEnemy = {
     { id: 'reality_end', name: 'Reality End', damage: 40, effect: 'earthquake', description: 'Cataclysmic damage', icon: '🌑' },
   ],
   barrageWordCount: 12,
-  miniGames: ['asteroid_barrage', 'tug_of_war', 'speed_typist', 'ghostly_whispers', 'fireball_defense'],
+  // 600 HP = 7 triggers - THE ULTIMATE FINAL BOSS
+  miniGames: ['asteroid_barrage', 'tug_of_war', 'speed_typist', 'ghostly_whispers', 'fireball_defense', 'void_pull', 'ink_splash', 'lightning_storm'],
+  signatureMiniGame: 'void_pull', // THE ULTIMATE SIGNATURE - VOID PULL at 50%
 };
 
 // Get enemy by type for battle - UPDATED with all new enemies
