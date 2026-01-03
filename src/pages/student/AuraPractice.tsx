@@ -336,6 +336,7 @@ const AuraPractice = () => {
             enemyType={rpgEnemyType}
             studentId={user.id}
             battleMode={selectedBattleMode}
+            worldNumber={selectedWorld?.id || 1}
             onBack={() => {
               setRpgView('level_select');
               setRpgStory(null);
@@ -395,7 +396,23 @@ const AuraPractice = () => {
     
     // Generate levels from world's level data + curated stories
     const levels: CampaignLevel[] = selectedWorld.levels.map((levelData, idx) => {
-      const story = curatedStories[levelData.storyIndex] || curatedStories[idx % curatedStories.length];
+      // Tutorial world uses a special story
+      const isTutorial = selectedWorld.id === 0;
+      const story = isTutorial 
+        ? {
+            title: 'Tutorial',
+            description: 'Learn how to play!',
+            passage_text: 'Welcome to the reading adventure. You will learn how to read words and defeat enemies. Each word you say correctly attacks the enemy. Get ready to become a reading champion!',
+            grade_level: 0,
+            category: 'adventure' as const,
+            word_count: 30,
+            reading_time_minutes: 1,
+            difficulty_level: 0,
+            cover_gradient: 'from-green-400 to-emerald-500',
+            target_phonemes: [],
+          }
+        : (curatedStories[levelData.storyIndex] || curatedStories[idx % curatedStories.length]);
+      
       const isCompleted = completedStories.includes(story.title);
       
       // Unlock logic: first level always unlocked, subsequent levels unlock when previous is completed
@@ -411,6 +428,7 @@ const AuraPractice = () => {
         starsEarned: isCompleted ? 2 : 0, // Default 2 stars for completed
         isCompleted,
         isUnlocked,
+        isTutorial,
       };
     });
 

@@ -75,6 +75,7 @@ interface RPGBattleArenaProps {
   enemyType: EnemyType;
   studentId: string;
   battleMode?: BattleModeType;
+  worldNumber?: number;
   onBack: () => void;
   onComplete: (victory: boolean, stats: BattleStats) => void;
 }
@@ -92,6 +93,7 @@ export const RPGBattleArena = ({
   enemyType,
   studentId,
   battleMode = 'classic',
+  worldNumber = 1,
   onBack,
   onComplete,
 }: RPGBattleArenaProps) => {
@@ -1229,7 +1231,7 @@ export const RPGBattleArena = ({
       transition={{ duration: 0.3 }}
     >
       {/* Battle Background */}
-      <RPGBattleBackground enemyType={currentEnemyType} />
+      <RPGBattleBackground enemyType={currentEnemyType} worldNumber={worldNumber} />
 
       {/* Enemy Transition Overlay */}
       <RPGEnemyTransition

@@ -13,7 +13,7 @@ interface RPGBattleBackgroundProps {
 
 // Map world numbers to world_id in database
 const worldToDbId: Record<number, number> = {
-  0: 0, // Tutorial Island
+  0: 0, // Tutorial
   1: 1, // Enchanted Forest
   2: 2, // Frozen Depths
   3: 3, // Ancient Ruins
@@ -22,6 +22,19 @@ const worldToDbId: Record<number, number> = {
   6: 6, // Floating Isles
   7: 7, // Sunken Library
   8: 8, // The Void Between
+};
+
+// World names for the toggle button
+const worldNames: Record<number, string> = {
+  0: 'Tutorial',
+  1: 'Enchanted Forest',
+  2: 'Frozen Depths',
+  3: 'Ancient Ruins',
+  4: 'Throne Room',
+  5: 'Whispering Caverns',
+  6: 'Floating Isles',
+  7: 'Sunken Library',
+  8: 'The Void',
 };
 
 export const RPGBattleBackground = ({ 
@@ -39,6 +52,9 @@ export const RPGBattleBackground = ({
     }
     return false;
   });
+
+  // Get current world name for button display
+  const currentWorldName = worldNames[worldNumber] || 'Unknown';
 
   // Save preference
   useEffect(() => {
@@ -380,24 +396,24 @@ export const RPGBattleBackground = ({
 
   return (
     <div className="absolute inset-0 overflow-hidden">
-      {/* Background Toggle Button - Top Right */}
+      {/* Background Toggle Button - Below title area */}
       <motion.button
-        className="absolute top-3 right-3 z-50 p-2 rounded-lg bg-slate-900/70 border border-slate-600/50 
+        className="absolute top-16 right-3 z-50 p-2 rounded-lg bg-slate-900/70 border border-slate-600/50 
           hover:bg-slate-800/80 transition-colors flex items-center gap-2"
         onClick={() => setUseAiBackground(!useAiBackground)}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        title={useAiBackground ? "Switch to Classic" : "Switch to AI Art"}
+        title={useAiBackground ? `Switch to Classic ${currentWorldName}` : `Switch to ${currentWorldName}`}
       >
         {useAiBackground ? (
           <>
             <Palette className="h-4 w-4 text-purple-400" />
-            <span className="text-xs text-purple-300 hidden sm:inline">Classic</span>
+            <span className="text-xs text-purple-300 hidden sm:inline">{currentWorldName}</span>
           </>
         ) : (
           <>
             <ImageIcon className="h-4 w-4 text-cyan-400" />
-            <span className="text-xs text-cyan-300 hidden sm:inline">AI Art</span>
+            <span className="text-xs text-cyan-300 hidden sm:inline">{currentWorldName}</span>
           </>
         )}
       </motion.button>
