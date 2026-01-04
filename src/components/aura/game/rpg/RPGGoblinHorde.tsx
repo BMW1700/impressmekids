@@ -79,7 +79,7 @@ export const RPGGoblinHorde = ({
       } else {
         if (spawnIntervalRef.current) clearInterval(spawnIntervalRef.current);
       }
-    }, 2500);
+    }, 1800); // Faster spawn interval
 
     return () => {
       if (spawnIntervalRef.current) clearInterval(spawnIntervalRef.current);
@@ -95,7 +95,7 @@ export const RPGGoblinHorde = ({
       word: word.toLowerCase(),
       x: 100,
       defeated: false,
-      speed: 0.08 + Math.random() * 0.03,
+      speed: 0.18 + Math.random() * 0.07, // Faster goblins
     };
 
     setGoblins(prev => [...prev, newGoblin]);

@@ -15,6 +15,7 @@ interface RPGWordReaderProps {
   streak?: number;
   batchSize?: number;
   enableEchoRetry?: boolean;
+  mode?: 'normal' | 'fast'; // Fast mode for Elara - more lenient, quicker feedback
 }
 
 type RecognitionState = 'idle' | 'listening' | 'processing' | 'paused' | 'echo_retry';
@@ -28,6 +29,7 @@ export const RPGWordReader = ({
   streak = 0,
   batchSize = 5,
   enableEchoRetry = true,
+  mode = 'normal',
 }: RPGWordReaderProps) => {
   // Core state
   const [recognitionState, setRecognitionState] = useState<RecognitionState>('idle');
@@ -182,6 +184,8 @@ export const RPGWordReader = ({
     }
     
     // Brief pause to show feedback, then clear UI
+    // FAST MODE: shorter delays for Elara
+    const feedbackDelay = mode === 'fast' ? 150 : 300;
     feedbackTimeoutRef.current = setTimeout(() => {
       setFeedback(null);
       setSpokenText("");
@@ -196,8 +200,8 @@ export const RPGWordReader = ({
         stopRecognitionSession();
         setRecognitionState('idle');
       }
-    }, 300);
-  }, [streak, onResult, words, batchSize, stopRecognitionSession]);
+    }, feedbackDelay);
+  }, [streak, onResult, words, batchSize, stopRecognitionSession, mode]);
 
   // Handle incorrect word (after echo fails or no echo)
   const handleIncorrectFinal = useCallback((spokenWord: string, expectedWord: string, wordIndex: number) => {
@@ -227,6 +231,8 @@ export const RPGWordReader = ({
       console.log('[RPGWordReader] Advanced to word index:', nextIndex, 'target:', batch[nextIndex]);
     }
     
+    // FAST MODE: shorter delays for Elara
+    const feedbackDelay = mode === 'fast' ? 350 : 700;
     feedbackTimeoutRef.current = setTimeout(() => {
       setFeedback(null);
       setSpokenText("");
@@ -241,8 +247,8 @@ export const RPGWordReader = ({
         stopRecognitionSession();
         setRecognitionState('idle');
       }
-    }, 700);
-  }, [onResult, words, batchSize, stopRecognitionSession]);
+    }, feedbackDelay);
+  }, [onResult, words, batchSize, stopRecognitionSession, mode]);
 
   // Start echo retry mode
   const startEchoRetry = useCallback((spokenWord: string, expectedWord: string, wordIndex: number) => {
@@ -399,6 +405,23 @@ export const RPGWordReader = ({
         if (!result.isFinal) {
           if (!isProcessingRef.current && i === event.results.length - 1) {
             setSpokenText(transcript.toLowerCase());
+            
+            // FAST MODE: Process interim results for quicker matching (Elara only)
+            if (mode === 'fast' && !isProcessingRef.current) {
+              const wordIdx = currentIndexRef.current;
+              const targetWord = getTargetWord(wordIdx);
+              if (targetWord) {
+                const wordsSpoken = transcript.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+                for (const word of wordsSpoken) {
+                  if (isWordMatchLenient(word, targetWord)) {
+                    // Match found in interim - process immediately!
+                    processedResultsRef.current.add(i);
+                    handleCorrect(word, wordIdx);
+                    return;
+                  }
+                }
+              }
+            }
           }
           continue;
         }

@@ -1,30 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Volume2, VolumeX, X } from "lucide-react";
-
-// Add speech recognition types
-interface SpeechRecognitionEvent extends Event {
-  results: SpeechRecognitionResultList;
-}
-
-interface SpeechRecognitionInstance extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  start: () => void;
-  stop: () => void;
-  onstart: (() => void) | null;
-  onresult: ((event: SpeechRecognitionEvent) => void) | null;
-  onerror: ((event: Event) => void) | null;
-  onend: (() => void) | null;
-}
-
-declare global {
-  interface Window {
-    SpeechRecognition?: new () => SpeechRecognitionInstance;
-    webkitSpeechRecognition?: new () => SpeechRecognitionInstance;
-  }
-}
+import { X } from "lucide-react";
+import { speechManager } from "@/lib/speechRecognitionManager";
+import { SoundEffects } from "@/lib/pronunciationPlayer";
 
 interface Beast {
   id: string;
@@ -33,7 +11,6 @@ interface Beast {
   x: number;
   y: number;
   speed: number;
-  angle: number;
   destroyed: boolean;
   selected: boolean;
   size: number;
@@ -59,6 +36,8 @@ const beastColors: Record<Beast['type'], string> = {
   frost_sprite: 'from-cyan-400 to-blue-600',
 };
 
+const soundEffects = new SoundEffects();
+
 export const RPGBeastSwarm = ({
   words,
   onComplete,
@@ -70,20 +49,34 @@ export const RPGBeastSwarm = ({
   const [spokenWord, setSpokenWord] = useState("");
   const [destroyed, setDestroyed] = useState(0);
   const [missed, setMissed] = useState(0);
-  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const [gameComplete, setGameComplete] = useState(false);
   const animationRef = useRef<number | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const selectedBeastRef = useRef<Beast | null>(null);
+  const destroyedRef = useRef(0);
+  const missedRef = useRef(0);
+
+  // Keep refs in sync
+  useEffect(() => {
+    selectedBeastRef.current = selectedBeast;
+  }, [selectedBeast]);
+  
+  useEffect(() => {
+    destroyedRef.current = destroyed;
+  }, [destroyed]);
+  
+  useEffect(() => {
+    missedRef.current = missed;
+  }, [missed]);
 
   // Initialize beasts
   useEffect(() => {
     const initialBeasts: Beast[] = words.map((word, index) => ({
       id: `beast-${index}`,
-      word,
+      word: word.toLowerCase().replace(/[^a-z]/g, ''),
       type: beastTypes[index % beastTypes.length],
-      x: -10 - (index * 15), // Stagger spawn from left
+      x: -10 - (index * 15),
       y: 20 + Math.random() * 60,
-      speed: 0.15 + Math.random() * 0.1,
-      angle: (Math.random() - 0.5) * 0.3,
+      speed: 0.18 + Math.random() * 0.08, // Faster beasts
       destroyed: false,
       selected: false,
       size: 60 + Math.random() * 20,
@@ -93,37 +86,49 @@ export const RPGBeastSwarm = ({
 
   // Animation loop - beasts fly toward heroes (right side)
   useEffect(() => {
+    if (gameComplete) return;
+    
     const animate = () => {
       setBeasts(prev => {
+        let newMissed = 0;
         const updated = prev.map(beast => {
           if (beast.destroyed) return beast;
           
           const newX = beast.x + beast.speed;
-          const newY = beast.y + Math.sin(newX * 0.05) * 0.5; // Wave pattern
+          const newY = beast.y + Math.sin(newX * 0.05) * 0.5;
           
           // Beast reaches heroes (right side)
           if (newX > 100) {
             if (!beast.destroyed) {
-              onWordHit(10); // Damage when beast reaches
-              return { ...beast, destroyed: true };
+              newMissed++;
+              onWordHit(10);
+              return { ...beast, x: newX, destroyed: true };
             }
           }
           
           return { ...beast, x: newX, y: newY };
         });
         
+        if (newMissed > 0) {
+          setMissed(m => m + newMissed);
+        }
+        
         // Check if all beasts are done
         const remaining = updated.filter(b => !b.destroyed && b.x <= 100);
-        if (remaining.length === 0) {
+        if (remaining.length === 0 && !gameComplete) {
           const destroyedCount = updated.filter(b => b.destroyed && b.x <= 100).length;
           const missedCount = updated.filter(b => b.destroyed && b.x > 100).length;
+          setGameComplete(true);
+          speechManager.stop('beast_swarm');
           setTimeout(() => onComplete(destroyedCount, missedCount), 500);
         }
         
         return updated;
       });
       
-      animationRef.current = requestAnimationFrame(animate);
+      if (!gameComplete) {
+        animationRef.current = requestAnimationFrame(animate);
+      }
     };
     
     animationRef.current = requestAnimationFrame(animate);
@@ -133,106 +138,106 @@ export const RPGBeastSwarm = ({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [onComplete, onWordHit]);
+  }, [onComplete, onWordHit, gameComplete]);
 
-  // Handle beast selection
+  // Handle beast selection and start listening
   const handleSelectBeast = useCallback((beast: Beast) => {
-    if (beast.destroyed || isListening) return;
+    if (beast.destroyed || gameComplete) return;
+    
+    // Cancel any previous selection
+    speechManager.stop('beast_swarm');
     
     setSelectedBeast(beast);
+    setSpokenWord("");
     setBeasts(prev => prev.map(b => ({
       ...b,
       selected: b.id === beast.id,
     })));
     
-    startListening(beast.word);
-  }, [isListening]);
-
-  // Start speech recognition
-  const startListening = useCallback((targetWord: string) => {
-    const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition;
-    
-    if (!SpeechRecognitionClass) {
-      console.error('Speech recognition not supported');
-      return;
-    }
-    
-    const recognition = new SpeechRecognitionClass();
-    
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-    
-    recognition.onstart = () => {
-      setIsListening(true);
-      setSpokenWord("");
-    };
-    
-    recognition.onresult = (event) => {
-      const transcript = Array.from(event.results)
-        .map(result => result[0].transcript)
-        .join('')
-        .toLowerCase()
-        .trim();
-      
-      setSpokenWord(transcript);
-      
-      // Check if word matches
-      const cleanTarget = targetWord.toLowerCase().replace(/[^\w]/g, '');
-      const cleanSpoken = transcript.replace(/[^\w]/g, '');
-      
-      if (cleanSpoken.includes(cleanTarget) || cleanTarget.includes(cleanSpoken)) {
-        recognition.stop();
-        destroyBeast();
-      }
-    };
-    
-    recognition.onerror = () => {
-      setIsListening(false);
-      setSelectedBeast(null);
-    };
-    
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-    
-    recognitionRef.current = recognition;
-    recognition.start();
-    
-    // Auto-stop after 3 seconds
-    setTimeout(() => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-    }, 3000);
-  }, []);
-
-  // Destroy the selected beast
-  const destroyBeast = useCallback(() => {
-    if (!selectedBeast) return;
-    
-    setBeasts(prev => prev.map(b => 
-      b.id === selectedBeast.id 
-        ? { ...b, destroyed: true, selected: false }
-        : b
-    ));
-    
-    setDestroyed(prev => prev + 1);
-    setSelectedBeast(null);
-    setSpokenWord("");
-    
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-    }
-  }, [selectedBeast]);
+    // Start listening for this beast's word using speechManager
+    speechManager.start({
+      owner: 'beast_swarm',
+      continuous: true,
+      interimResults: true,
+      onResult: (transcript, alternatives, isFinal) => {
+        const currentBeast = selectedBeastRef.current;
+        if (!currentBeast) return;
+        
+        const targetWord = currentBeast.word.toLowerCase();
+        const spokenWords = transcript.toLowerCase().split(/\s+/);
+        
+        setSpokenWord(transcript.toLowerCase());
+        
+        // Check for matches - super lenient
+        for (const spoken of spokenWords) {
+          const cleanSpoken = spoken.replace(/[^a-z]/g, '');
+          if (cleanSpoken.length < 2) continue;
+          
+          const exactMatch = cleanSpoken === targetWord;
+          const startsWithMatch = targetWord.startsWith(cleanSpoken.slice(0, 2)) || 
+                                   cleanSpoken.startsWith(targetWord.slice(0, 2));
+          const containsMatch = targetWord.includes(cleanSpoken) || 
+                                cleanSpoken.includes(targetWord);
+          
+          if (exactMatch || (cleanSpoken.length >= 3 && (startsWithMatch || containsMatch))) {
+            // Destroy the beast!
+            soundEffects.correctWord();
+            setBeasts(prev => prev.map(b => 
+              b.id === currentBeast.id 
+                ? { ...b, destroyed: true, selected: false }
+                : b
+            ));
+            setDestroyed(d => d + 1);
+            setSelectedBeast(null);
+            setSpokenWord("");
+            speechManager.stop('beast_swarm');
+            return;
+          }
+        }
+        
+        // Also check alternatives
+        for (const alt of alternatives) {
+          const altWords = alt.toLowerCase().split(/\s+/);
+          for (const spoken of altWords) {
+            const cleanSpoken = spoken.replace(/[^a-z]/g, '');
+            if (cleanSpoken.length < 2) continue;
+            
+            const exactMatch = cleanSpoken === targetWord;
+            const containsMatch = targetWord.includes(cleanSpoken) || cleanSpoken.includes(targetWord);
+            
+            if (exactMatch || (cleanSpoken.length >= 3 && containsMatch)) {
+              soundEffects.correctWord();
+              setBeasts(prev => prev.map(b => 
+                b.id === currentBeast.id 
+                  ? { ...b, destroyed: true, selected: false }
+                  : b
+              ));
+              setDestroyed(d => d + 1);
+              setSelectedBeast(null);
+              setSpokenWord("");
+              speechManager.stop('beast_swarm');
+              return;
+            }
+          }
+        }
+      },
+      onStart: () => {
+        setIsListening(true);
+      },
+      onEnd: () => {
+        setIsListening(false);
+      },
+      onError: (error) => {
+        console.log('[BeastSwarm] Recognition error:', error);
+      },
+    });
+  }, [gameComplete]);
 
   // Cancel selection
   const cancelSelection = useCallback(() => {
     setSelectedBeast(null);
     setBeasts(prev => prev.map(b => ({ ...b, selected: false })));
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-    }
+    speechManager.stop('beast_swarm');
     setIsListening(false);
     setSpokenWord("");
   }, []);
@@ -240,9 +245,7 @@ export const RPGBeastSwarm = ({
   // Cleanup
   useEffect(() => {
     return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
+      speechManager.abort('beast_swarm');
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
@@ -251,7 +254,6 @@ export const RPGBeastSwarm = ({
 
   return (
     <motion.div
-      ref={containerRef}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -335,7 +337,7 @@ export const RPGBeastSwarm = ({
               exit={{ 
                 scale: 1.5,
                 opacity: 0,
-                transition: { duration: 0.15 } // INSTANT disappear on correct word
+                transition: { duration: 0.15 }
               }}
               transition={{
                 y: { repeat: Infinity, duration: 0.5 },
@@ -368,7 +370,7 @@ export const RPGBeastSwarm = ({
               {/* Beast emoji */}
               <span className="text-3xl">{beastEmojis[beast.type]}</span>
               
-              {/* Word in center - ENHANCED visibility */}
+              {/* Word in center */}
               <span 
                 className="text-white font-black text-sm px-2 py-0.5 rounded bg-black/50 text-center leading-tight mt-1"
                 style={{
@@ -434,13 +436,13 @@ export const RPGBeastSwarm = ({
                       transition={{ repeat: Infinity, duration: 0.5 }}
                       className="flex items-center gap-2 text-yellow-300"
                     >
-                      <Volume2 className="h-6 w-6" />
+                      <div className="w-4 h-4 bg-yellow-400 rounded-full animate-pulse" />
                       <span className="font-bold">Listening...</span>
                     </motion.div>
                   ) : (
                     <div className="flex items-center gap-2 text-white/50">
-                      <VolumeX className="h-6 w-6" />
-                      <span>Tap mic to start</span>
+                      <div className="w-4 h-4 bg-white/30 rounded-full" />
+                      <span>Starting...</span>
                     </div>
                   )}
                 </div>

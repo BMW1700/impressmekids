@@ -19,10 +19,9 @@ import { RPGRollingBoulders } from "./RPGRollingBoulders";
 import { RPGEnemyTransition } from "./RPGEnemyTransition";
 import { RPGSpellEffects } from "./RPGSpellEffects";
 import { RPGCoinDrop } from "./RPGCoinDrop";
-// NEW: Import the 3 attack mini-games
+// NEW: Import the attack mini-games (Word Blitz removed - caused crashes)
 import { RPGWordShield } from "./RPGWordShield";
 import { RPGSpellCombo } from "./RPGSpellCombo";
-import { RPGWordBlitz } from "./RPGWordBlitz";
 // NEW: Import 2 new mini-games
 import { RPGRhymeChain } from "./RPGRhymeChain";
 import { RPGSpeedTypist } from "./RPGSpeedTypist";
@@ -175,6 +174,15 @@ export const RPGBattleArena = ({
   const [totalDamage, setTotalDamage] = useState(0);
   const [inventory, setInventory] = useState<Record<InventoryKey, number>>({ health_potion: 2, magic_potion: 1 });
   
+  // Elara-specific: 5-word charge system for plasma barrage
+  const [elaraChargeCount, setElaraChargeCount] = useState(0);
+  const elaraChargeRef = useRef(0); // For stable reference in callbacks
+  
+  // Keep ref in sync
+  useEffect(() => {
+    elaraChargeRef.current = elaraChargeCount;
+  }, [elaraChargeCount]);
+  
   // Status effects
   const [isPoisoned, setIsPoisoned] = useState(false);
   const [poisonDamage, setPoisonDamage] = useState(0);
@@ -224,11 +232,30 @@ export const RPGBattleArena = ({
     battleSounds.setSoundEnabled(soundEnabled);
   }, [soundEnabled]);
   
+  // Helper function to check if this is the final enemy
+  const isFinalEnemy = useMemo(() => currentEnemyIndex >= enemyQueue.length - 1, [currentEnemyIndex, enemyQueue.length]);
+  
   // Helper function to return to reading state cleanly after any mini-game/barrage
+  // CRITICAL: Also checks for victory condition
   const returnToReading = useCallback(() => {
-    console.log('[RPGBattle] Returning to reading state');
+    console.log('[RPGBattle] Returning to reading state, enemyHp:', enemyHp, 'isFinalEnemy:', isFinalEnemy);
     // Force stop any lingering recognition
     speechManager.forceStop();
+    
+    // Check if we should trigger victory instead
+    if (enemyHp <= 0 && isFinalEnemy) {
+      console.log('[RPGBattle] Enemy defeated during mini-game - triggering victory');
+      setPhase('victory');
+      return;
+    }
+    
+    // Check if we should transition to next enemy
+    if (enemyHp <= 0 && !isFinalEnemy) {
+      console.log('[RPGBattle] Enemy defeated - transitioning to next enemy');
+      setDefeatedEnemy(enemy);
+      setPhase('enemy_transition');
+      return;
+    }
     
     // Clear any pending state immediately
     setCurrentWordResult(null);
@@ -241,7 +268,7 @@ export const RPGBattleArena = ({
       setIsPlayerTurn(true);
       console.log('[RPGBattle] State reset complete - phase: reading, command: read');
     }, 100);
-  }, []);
+  }, [enemyHp, isFinalEnemy, enemy]);
 
   // Parse story into words - memoized for stability
   const storyWords = useMemo(() => {
@@ -527,11 +554,7 @@ export const RPGBattleArena = ({
     returnToReading();
   }, [returnToReading]);
   
-  // Handle Dodge Words damage
-  const handleDodgeWordsDamage = useCallback((damage: number) => {
-    setPlayerHp(prev => Math.max(0, prev - damage));
-    triggerScreenShake();
-  }, []);
+  // (handleDodgeWordsDamage removed - Word Blitz replaced with Word Shield)
   
   // Handle Rhyme Chain complete - uses returnToReading for clean state
   const handleRhymeChainComplete = useCallback((score: number, damage: number) => {
@@ -1064,9 +1087,48 @@ export const RPGBattleArena = ({
         setLongestStreak(newStreak);
       }
 
-      const damage = Math.floor(calculateDamage(word.length || 5, newStreak) * enemy.wordDamageMultiplier);
-      setTotalDamage(prev => prev + damage);
-      setDamageAmount(damage);
+      // Calculate base damage
+      const baseDamage = Math.floor(calculateDamage(word.length || 5, newStreak) * enemy.wordDamageMultiplier);
+      
+      // ELARA-SPECIFIC: 5-word charge system for plasma barrage (3x damage)
+      let actualDamage = baseDamage;
+      let isElaraBarrage = false;
+      
+      if (selectedCharacter === 'elara') {
+        const newChargeCount = elaraChargeRef.current + 1;
+        elaraChargeRef.current = newChargeCount;
+        setElaraChargeCount(newChargeCount);
+        
+        if (newChargeCount < 5) {
+          // Charging - no damage yet, just count
+          actualDamage = 0;
+          setDamageAmount(0);
+          
+          // Show charging indicator
+          setComboAnnouncement(`⚡ CHARGING ${newChargeCount}/5`);
+          setComboPowerLevel('power');
+          setTimeout(() => setComboAnnouncement(null), 600);
+        } else {
+          // 5th word - PLASMA BARRAGE! 3x damage
+          actualDamage = baseDamage * 3;
+          isElaraBarrage = true;
+          elaraChargeRef.current = 0;
+          setElaraChargeCount(0);
+          setDamageAmount(actualDamage);
+          
+          // Epic announcement
+          setComboAnnouncement('⚡ PLASMA BARRAGE! ×3 ⚡');
+          setComboPowerLevel('ultra');
+          battleSounds.lightningCrack();
+          battleSounds.comboSuccess();
+          setTimeout(() => setComboAnnouncement(null), 1000);
+        }
+      } else {
+        // Normal characters - deal damage every word
+        setDamageAmount(baseDamage);
+      }
+      
+      setTotalDamage(prev => prev + actualDamage);
       
       // Calculate and trigger gold/XP rewards
       const goldAmount = calculateGoldEarned({ 
@@ -1086,45 +1148,64 @@ export const RPGBattleArena = ({
         setShowCoinDrop(true);
       }
       
-      // Attack animation sequence with spell effect
-      setHeroAttacking(true);
-      
-      // Trigger spell effect based on attack type
-      setActiveSpell(attackType);
-      setShowSpellEffect(true);
-      
-      // Play elemental sound effect
-      switch (attackType) {
-        case 'fire':
-          battleSounds.fireWhoosh();
-          break;
-        case 'ice':
-          battleSounds.iceShimmer();
-          break;
-        case 'lightning':
-          battleSounds.lightningCrack();
-          break;
-        case 'slash':
-          battleSounds.rockCrumble();
-          break;
-      }
-      
-      setTimeout(() => {
-        setHeroAttacking(false);
-        setEnemyTakingDamage(true);
-        setShowDamageNumber(true);
-        setEnemyHp(prev => Math.max(0, prev - damage));
-        triggerScreenShake();
+      // Only show attack animation if damage is dealt (Elara charges don't attack until 5th word)
+      if (actualDamage > 0) {
+        // Attack animation sequence with spell effect
+        setHeroAttacking(true);
+        
+        // Trigger spell effect based on attack type (lightning for Elara barrage)
+        setActiveSpell(isElaraBarrage ? 'lightning' : attackType);
+        setShowSpellEffect(true);
+        
+        // Play elemental sound effect
+        if (!isElaraBarrage) {
+          switch (attackType) {
+            case 'fire':
+              battleSounds.fireWhoosh();
+              break;
+            case 'ice':
+              battleSounds.iceShimmer();
+              break;
+            case 'lightning':
+              battleSounds.lightningCrack();
+              break;
+            case 'slash':
+              battleSounds.rockCrumble();
+              break;
+          }
+        }
         
         setTimeout(() => {
-          setEnemyTakingDamage(false);
-          setShowDamageNumber(false);
-        }, 600);
-      }, 300);
+          setHeroAttacking(false);
+          setEnemyTakingDamage(true);
+          setShowDamageNumber(true);
+          setEnemyHp(prev => Math.max(0, prev - actualDamage));
+          triggerScreenShake();
+          
+          // Add floating damage for big hits
+          if (isElaraBarrage) {
+            setFloatingDamages(prev => [...prev, {
+              id: Date.now(),
+              damage: actualDamage,
+              x: 30 + Math.random() * 10,
+              y: 30 + Math.random() * 10,
+              isPlayer: false,
+              isCritical: true
+            }]);
+          }
+          
+          setTimeout(() => {
+            setEnemyTakingDamage(false);
+            setShowDamageNumber(false);
+          }, 600);
+        }, 300);
+      }
 
-      // Vary attack type based on streak
-      const types: ('fire' | 'ice' | 'lightning' | 'slash')[] = ['slash', 'fire', 'ice', 'lightning'];
-      setAttackType(types[Math.min(Math.floor(newStreak / 3), types.length - 1)]);
+      // Vary attack type based on streak (for non-Elara)
+      if (selectedCharacter !== 'elara') {
+        const types: ('fire' | 'ice' | 'lightning' | 'slash')[] = ['slash', 'fire', 'ice', 'lightning'];
+        setAttackType(types[Math.min(Math.floor(newStreak / 3), types.length - 1)]);
+      }
     } else {
       setStreak(0);
       // Enemy always counter-attacks on miss
@@ -1169,7 +1250,7 @@ export const RPGBattleArena = ({
     setTimeout(() => {
       setCurrentWordResult(null);
     }, 800);
-  }, [streak, longestStreak, words, batchStartIndex, enemy, calculateDamage, isPoisoned, poisonDamage, isDebuffed, debuffTurns, attackType]);
+  }, [streak, longestStreak, words, batchStartIndex, enemy, calculateDamage, isPoisoned, poisonDamage, isDebuffed, debuffTurns, attackType, selectedCharacter]);
   
   // Handle coin collection complete
   const handleCoinCollectionComplete = useCallback(() => {
@@ -1421,17 +1502,24 @@ export const RPGBattleArena = ({
             onComplete={handleSpellComboComplete}
           />
         )}
+        {/* REPLACED: Word Blitz was causing crashes - now using Word Shield */}
         {phase === 'dodge_words' && (
-          <RPGWordBlitz
+          <RPGWordShield
             words={barrageWords}
-            onComplete={(correctHits, missed, damage) => {
-              setCorrectWords(prev => prev + correctHits);
-              setTotalDamage(prev => prev + damage);
-              setEnemyHp(prev => Math.max(0, prev - damage));
+            onComplete={(shieldStrength, damage) => {
+              // Similar handling to word shield
+              const reducedDamage = Math.floor(20 * (1 - shieldStrength / 100));
+              if (reducedDamage > 0) {
+                setPlayerHp(prev => Math.max(0, prev - reducedDamage));
+              }
+              if (shieldStrength > 50) {
+                setEnemyHp(prev => Math.max(0, prev - damage));
+                setTotalDamage(prev => prev + damage);
+              }
+              setCorrectWords(prev => prev + Math.floor(shieldStrength / 20));
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
-            onDamage={handleDodgeWordsDamage}
           />
         )}
         {phase === 'rhyme_chain' && (
@@ -1773,14 +1861,42 @@ export const RPGBattleArena = ({
                   {/* Center: Voice Reading */}
                   <div className="space-y-4">
                     {currentCommand === 'read' && currentWordBatch.length > 0 && (
-                      <RPGWordReader
-                        words={currentWordBatch}
-                        onResult={handleWordResult}
-                        disabled={currentWordResult !== null || !isPlayerTurn}
-                        streak={streak}
-                        batchSize={5}
-                        enableEchoRetry={true}
-                      />
+                      <>
+                        {/* Elara charge indicator */}
+                        {selectedCharacter === 'elara' && elaraChargeCount > 0 && elaraChargeCount < 5 && (
+                          <motion.div 
+                            className="bg-gradient-to-r from-purple-900/90 to-indigo-900/90 border-2 border-purple-400 rounded-lg px-4 py-2 mb-2"
+                            animate={{ scale: [1, 1.02, 1] }}
+                            transition={{ repeat: Infinity, duration: 0.5 }}
+                          >
+                            <div className="flex items-center justify-center gap-3">
+                              <span className="text-purple-300 font-bold">⚡ CHARGING</span>
+                              <div className="flex gap-1">
+                                {[1, 2, 3, 4, 5].map(i => (
+                                  <div 
+                                    key={i}
+                                    className={`w-6 h-6 rounded-full border-2 ${
+                                      i <= elaraChargeCount 
+                                        ? 'bg-purple-400 border-purple-300 shadow-[0_0_8px_rgba(192,132,252,0.8)]' 
+                                        : 'bg-slate-700 border-slate-500'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                              <span className="text-purple-200 text-sm">({elaraChargeCount}/5)</span>
+                            </div>
+                          </motion.div>
+                        )}
+                        <RPGWordReader
+                          words={currentWordBatch}
+                          onResult={handleWordResult}
+                          disabled={currentWordResult !== null || !isPlayerTurn}
+                          streak={streak}
+                          batchSize={5}
+                          enableEchoRetry={true}
+                          mode={selectedCharacter === 'elara' ? 'fast' : 'normal'}
+                        />
+                      </>
                     )}
                     
                     {/* All words read message */}
