@@ -115,7 +115,7 @@ export const allyWizard: RPGCharacter = {
   name: 'Elara',
   title: 'The Wise Wizard',
   type: 'hero', // Changed to hero - now playable
-  maxHp: 60, // Glass cannon - lower HP but higher damage
+  maxHp: 100, // Same HP as other heroes
   attack: 35, // Higher attack
   defense: 5,
   color: 'from-purple-500 to-pink-500',
