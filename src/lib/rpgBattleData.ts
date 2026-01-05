@@ -48,6 +48,7 @@ export type MiniGameType =
   | 'word_barrage'       // Regular word attack barrage
   | 'fireball_barrage'   // Dragon's fireball attack
   | 'asteroid_barrage'   // Word prison - asteroids with words
+  | 'ground_ripple'      // Grog's signature - mountains with words roll toward heroes
   // NEW MINI-GAMES for new worlds
   | 'word_echo'          // Caverns - say each word twice (echo)
   | 'wind_chase'         // Floating Isles - catch words blowing across screen
@@ -222,21 +223,23 @@ export const goblinElite: RPGEnemy = {
 export const grogTheGoblinKing: RPGEnemy = {
   id: 'grog',
   name: 'Grog the Goblin King',
-  type: 'boss',
-  maxHp: 300, // Was 200
-  attack: 30, // Was 25
-  defense: 15, // Was 12
-  wordDamageMultiplier: 0.4, // Was 0.5
-  color: 'from-green-800 to-black',
+  type: 'final_boss', // Changed to final_boss for menacing treatment
+  maxHp: 300,
+  attack: 30,
+  defense: 15,
+  wordDamageMultiplier: 0.4,
+  color: 'from-green-900 to-black',
   dialogueIntro: [
     "MWAHAHAHA! So you've finally reached my throne!",
     "You think your puny words can defeat the GOBLIN KING?!",
     "Those books contain too much power. They belong to ME!",
+    "FEEL THE EARTH TREMBLE BENEATH MY CLUB!",
   ],
   dialogueAttack: [
     "*MASSIVE club slam*",
     "BOW BEFORE YOUR KING!",
     "I'll crush you like the other heroes!",
+    "*GROUND RIPPLE ATTACK*",
   ],
   dialogueDefeat: [
     "NO! This cannot be! My crown... my kingdom...",
@@ -245,14 +248,14 @@ export const grogTheGoblinKing: RPGEnemy = {
   ],
   specialAbilities: [
     { id: 'royal_slam', name: 'Royal Slam', damage: 25, effect: 'debuff', description: 'Massive damage and stuns', icon: '👑' },
-    { id: 'summon_minions', name: 'Mocking Taunt', damage: 0, effect: 'debuff', description: 'Reduces word damage by 30%', icon: '🎭' },
+    { id: 'ground_ripple', name: 'Ground Ripple', damage: 0, effect: 'earthquake', description: 'Smashes ground causing word mountains!', icon: '🏔️' },
     { id: 'poison_cloud', name: 'Poison Cloud', damage: 15, effect: 'poison', description: 'Deals heavy damage over time', icon: '☠️' },
     { id: 'word_prison', name: 'Word Prison', damage: 0, effect: 'asteroid_barrage', description: 'Summons word asteroids!', icon: '☄️' },
   ],
   barrageWordCount: 8,
-  // 300 HP = 6 triggers - Grog's Word Prison is his signature attack
-  miniGames: ['tug_of_war', 'speed_typist', 'rhyme_chain', 'asteroid_barrage', 'word_shield', 'spell_combo', 'fireball_defense'],
-  signatureMiniGame: 'asteroid_barrage', // Signature WORD PRISON at 50%
+  // 300 HP = 6 triggers - Grog's Ground Ripple is his signature attack
+  miniGames: ['ground_ripple', 'tug_of_war', 'speed_typist', 'rhyme_chain', 'asteroid_barrage', 'word_shield', 'spell_combo'],
+  signatureMiniGame: 'ground_ripple', // Signature GROUND RIPPLE at 50%
 };
 
 export const galairTheWickedSorcerer: RPGEnemy = {

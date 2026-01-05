@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Mic } from "lucide-react";
+import { SoundEffects } from "@/lib/pronunciationPlayer";
 
 interface GhostWord {
   id: number;
@@ -8,7 +10,6 @@ interface GhostWord {
   y: number;
   opacity: number;
   destroyed: boolean;
-  selected: boolean;
 }
 
 interface RPGGhostlyWhispersProps {
@@ -17,42 +18,51 @@ interface RPGGhostlyWhispersProps {
   onWordHit: (damage: number) => void;
 }
 
+const soundEffects = new SoundEffects();
+
 export const RPGGhostlyWhispers = ({
   words,
   onComplete,
   onWordHit,
 }: RPGGhostlyWhispersProps) => {
   const [ghosts, setGhosts] = useState<GhostWord[]>([]);
-  const [selectedGhost, setSelectedGhost] = useState<GhostWord | null>(null);
-  const [isListening, setIsListening] = useState(false);
+  const [isMicActive, setIsMicActive] = useState(false);
   const [destroyed, setDestroyed] = useState(0);
   const [missed, setMissed] = useState(0);
+  const [gameOver, setGameOver] = useState(false);
+
   const recognitionRef = useRef<any>(null);
+  const isListeningRef = useRef(false);
+  const destroyedRef = useRef(0);
+  const missedRef = useRef(0);
 
   // Initialize ghosts
   useEffect(() => {
     const initialGhosts: GhostWord[] = words.map((word, i) => ({
       id: i,
-      word,
+      word: word.replace(/[^a-zA-Z]/g, '').toLowerCase(),
       x: 10 + Math.random() * 80,
       y: 15 + Math.random() * 60,
       opacity: 1,
       destroyed: false,
-      selected: false,
     }));
     setGhosts(initialGhosts);
   }, [words]);
 
-  // Fade animation - words fade over time
+  // Fade animation - words fade over time (MUCH SLOWER - 0.008 instead of 0.02)
   useEffect(() => {
+    if (gameOver) return;
+    
     const interval = setInterval(() => {
       setGhosts(prev => {
         const updated = prev.map(ghost => {
           if (ghost.destroyed) return ghost;
-          const newOpacity = ghost.opacity - 0.02;
+          const newOpacity = ghost.opacity - 0.008; // 2.5x slower fade
           if (newOpacity <= 0) {
-            setMissed(m => m + 1);
+            missedRef.current += 1;
+            setMissed(missedRef.current);
             onWordHit(10);
+            soundEffects.incorrectWord();
             return { ...ghost, destroyed: true, opacity: 0 };
           }
           return { ...ghost, opacity: newOpacity };
@@ -60,8 +70,9 @@ export const RPGGhostlyWhispers = ({
         
         // Check completion
         const allDone = updated.every(g => g.destroyed);
-        if (allDone) {
-          setTimeout(() => onComplete(destroyed, missed), 500);
+        if (allDone && !gameOver) {
+          setGameOver(true);
+          setTimeout(() => onComplete(destroyedRef.current, missedRef.current), 500);
         }
         
         return updated;
@@ -69,52 +80,107 @@ export const RPGGhostlyWhispers = ({
     }, 80);
 
     return () => clearInterval(interval);
-  }, [destroyed, missed, onComplete, onWordHit]);
+  }, [gameOver, onComplete, onWordHit]);
 
-  // Handle ghost selection
-  const handleSelectGhost = useCallback((ghost: GhostWord) => {
-    if (ghost.destroyed || isListening) return;
+  // Handle ghost destruction
+  const handleGhostDestroy = useCallback((ghostId: number) => {
+    setGhosts(prev => prev.map(g => 
+      g.id === ghostId ? { ...g, destroyed: true } : g
+    ));
+    destroyedRef.current += 1;
+    setDestroyed(destroyedRef.current);
+    soundEffects.correctWord();
+  }, []);
+
+  // Continuous speech recognition - like GoblinHorde
+  const startListening = useCallback(() => {
+    if (typeof window === 'undefined') return;
     
-    setGhosts(prev => prev.map(g => ({
-      ...g,
-      selected: g.id === ghost.id
-    })));
-    setSelectedGhost(ghost);
-    startListening(ghost);
-  }, [isListening]);
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
 
-  // Start speech recognition
-  const startListening = useCallback((ghost: GhostWord) => {
-    const SpeechRecognitionAPI = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    if (!SpeechRecognitionAPI) return;
-
-    recognitionRef.current = new SpeechRecognitionAPI();
-    recognitionRef.current.continuous = false;
-    recognitionRef.current.interimResults = false;
-
-    recognitionRef.current.onstart = () => setIsListening(true);
-    recognitionRef.current.onend = () => setIsListening(false);
-
-    recognitionRef.current.onresult = (event) => {
-      const spoken = event.results[0][0].transcript.toLowerCase().trim();
-      const expected = ghost.word.toLowerCase().replace(/[^a-z]/g, '');
-      
-      if (spoken.includes(expected) || expected.includes(spoken)) {
-        // Success - disperse ghost
-        setGhosts(prev => prev.map(g => 
-          g.id === ghost.id ? { ...g, destroyed: true } : g
-        ));
-        setDestroyed(d => d + 1);
+    try {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch {}
       }
-      setSelectedGhost(null);
-    };
 
-    recognitionRef.current.onerror = () => {
-      setIsListening(false);
-      setSelectedGhost(null);
-    };
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      recognitionRef.current = recognition;
 
-    recognitionRef.current.start();
+      recognition.onresult = (event: any) => {
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript.toLowerCase().trim();
+          const spokenWords = transcript.split(/\s+/);
+
+          // Check against all active ghosts - super lenient matching
+          setGhosts(prev => {
+            const activeGhosts = prev.filter(g => !g.destroyed);
+            
+            for (const ghost of activeGhosts) {
+              const targetWord = ghost.word.toLowerCase();
+              
+              for (const spoken of spokenWords) {
+                const cleanSpoken = spoken.replace(/[^a-z]/g, '');
+                
+                if (cleanSpoken.length >= 2) {
+                  const startsWithMatch = targetWord.startsWith(cleanSpoken.slice(0, 2)) || 
+                                          cleanSpoken.startsWith(targetWord.slice(0, 2));
+                  const containsMatch = targetWord.includes(cleanSpoken) || 
+                                        cleanSpoken.includes(targetWord);
+                  const exactMatch = cleanSpoken === targetWord;
+                  
+                  if (exactMatch || startsWithMatch || containsMatch) {
+                    handleGhostDestroy(ghost.id);
+                    return prev;
+                  }
+                }
+              }
+            }
+            return prev;
+          });
+        }
+      };
+
+      recognition.onerror = () => {
+        if (isListeningRef.current && !gameOver) {
+          setTimeout(() => startListening(), 200);
+        }
+      };
+
+      recognition.onend = () => {
+        if (isListeningRef.current && !gameOver) {
+          setTimeout(() => startListening(), 100);
+        }
+      };
+
+      recognition.start();
+    } catch {}
+  }, [gameOver, handleGhostDestroy]);
+
+  const startMic = useCallback(() => {
+    setIsMicActive(true);
+    isListeningRef.current = true;
+    startListening();
+  }, [startListening]);
+
+  const stopMic = useCallback(() => {
+    setIsMicActive(false);
+    isListeningRef.current = false;
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch {}
+    }
+  }, []);
+
+  // Auto-start mic on mount
+  useEffect(() => {
+    const timer = setTimeout(() => startMic(), 500);
+    return () => {
+      clearTimeout(timer);
+      stopMic();
+    };
   }, []);
 
   return (
@@ -152,7 +218,7 @@ export const RPGGhostlyWhispers = ({
         animate={{ y: 0, opacity: 1 }}
       >
         <div className="px-6 py-2 bg-purple-900/90 rounded-lg border-2 border-purple-400">
-          <span className="text-white font-black text-lg">👻 GHOSTLY WHISPERS 👻</span>
+          <span className="text-white font-black text-lg">👻 GHOSTLY WHISPERS! Speak before they fade! 👻</span>
         </div>
       </motion.div>
 
@@ -160,11 +226,9 @@ export const RPGGhostlyWhispers = ({
       <AnimatePresence>
         {ghosts.map((ghost) => (
           !ghost.destroyed && (
-            <motion.button
+            <motion.div
               key={ghost.id}
-              className={`absolute pointer-events-auto cursor-pointer ${
-                ghost.selected ? 'z-30' : 'z-20'
-              }`}
+              className="absolute z-20"
               style={{ 
                 left: `${ghost.x}%`, 
                 top: `${ghost.y}%`,
@@ -177,10 +241,9 @@ export const RPGGhostlyWhispers = ({
               }}
               exit={{ scale: 2, opacity: 0 }}
               transition={{ y: { repeat: Infinity, duration: 3 } }}
-              onClick={() => handleSelectGhost(ghost)}
             >
               {/* Ghost word container */}
-              <div className={`relative ${ghost.selected ? 'scale-110' : ''}`}>
+              <div className="relative">
                 {/* Ghostly glow */}
                 <motion.div
                   className="absolute inset-0 bg-purple-400/30 rounded-full blur-xl"
@@ -210,39 +273,35 @@ export const RPGGhostlyWhispers = ({
                   />
                 </div>
               </div>
-            </motion.button>
+            </motion.div>
           )
         ))}
       </AnimatePresence>
 
-      {/* Selected ghost speaking panel */}
-      <AnimatePresence>
-        {selectedGhost && (
-          <motion.div
-            className="absolute bottom-20 left-1/2 -translate-x-1/2 z-50"
-            initial={{ y: 50, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 50, opacity: 0 }}
+      {/* Mic control */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50">
+        <motion.div
+          className={`p-6 rounded-full cursor-pointer ${
+            isMicActive 
+              ? 'bg-purple-600 shadow-[0_0_30px_rgba(147,51,234,0.6)]' 
+              : 'bg-slate-700'
+          }`}
+          animate={isMicActive ? { scale: [1, 1.1, 1] } : {}}
+          transition={{ duration: 0.5, repeat: Infinity }}
+          onClick={() => isMicActive ? stopMic() : startMic()}
+        >
+          <Mic className={`h-10 w-10 ${isMicActive ? 'text-white' : 'text-slate-400'}`} />
+        </motion.div>
+        {isMicActive && (
+          <motion.p 
+            className="text-center text-purple-300 mt-2 font-medium"
+            animate={{ opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
           >
-            <div className="px-8 py-4 bg-purple-950/95 rounded-xl border-2 border-purple-400 shadow-2xl">
-              <p className="text-purple-300 text-sm mb-2">Speak before it fades:</p>
-              <p className="text-3xl font-black text-white drop-shadow-[0_0_15px_rgba(168,85,247,0.8)]">
-                {selectedGhost.word}
-              </p>
-              {isListening && (
-                <motion.div 
-                  className="mt-2 flex items-center justify-center gap-2"
-                  animate={{ opacity: [0.5, 1, 0.5] }}
-                  transition={{ repeat: Infinity, duration: 1 }}
-                >
-                  <div className="w-2 h-2 bg-purple-400 rounded-full" />
-                  <span className="text-purple-400 text-sm">Listening...</span>
-                </motion.div>
-              )}
-            </div>
-          </motion.div>
+            🎤 Listening...
+          </motion.p>
         )}
-      </AnimatePresence>
+      </div>
 
       {/* Score display */}
       <div className="absolute bottom-4 right-4 flex gap-4 z-50">
