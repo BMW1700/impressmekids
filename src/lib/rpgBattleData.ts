@@ -214,8 +214,8 @@ export const goblinElite: RPGEnemy = {
     { id: 'poison_dagger', name: 'Poison Dagger', damage: 12, effect: 'poison', description: 'Deals damage over time', icon: '🗡️' },
   ],
   barrageWordCount: 6,
-  // 180 HP = 4 triggers - Elite has challenging mini-games including Word Prison
-  miniGames: ['spell_combo', 'rhyme_chain', 'tug_of_war', 'speed_typist', 'asteroid_barrage', 'dodge_words'],
+  // 180 HP = 4 triggers - Elite has challenging mini-games (NO TUG OF WAR in Classic)
+  miniGames: ['spell_combo', 'rhyme_chain', 'speed_typist', 'asteroid_barrage', 'dodge_words', 'goblin_horde'],
   signatureMiniGame: 'spell_combo', // Signature at 50%
 };
 
@@ -253,8 +253,8 @@ export const grogTheGoblinKing: RPGEnemy = {
     { id: 'word_prison', name: 'Word Prison', damage: 0, effect: 'asteroid_barrage', description: 'Summons word asteroids!', icon: '☄️' },
   ],
   barrageWordCount: 8,
-  // 300 HP = 6 triggers - Grog's Ground Ripple is his signature attack
-  miniGames: ['ground_ripple', 'tug_of_war', 'speed_typist', 'rhyme_chain', 'asteroid_barrage', 'word_shield', 'spell_combo'],
+  // 300 HP = 6 triggers - Grog's Ground Ripple is his signature attack (NO TUG OF WAR in Classic)
+  miniGames: ['ground_ripple', 'speed_typist', 'rhyme_chain', 'asteroid_barrage', 'word_shield', 'spell_combo', 'goblin_horde'],
   signatureMiniGame: 'ground_ripple', // Signature GROUND RIPPLE at 50%
 };
 
@@ -292,8 +292,8 @@ export const galairTheWickedSorcerer: RPGEnemy = {
     { id: 'word_prison', name: 'Word Prison', damage: 0, effect: 'asteroid_barrage', description: 'Summons word asteroids!', icon: '☄️' },
   ],
   barrageWordCount: 10,
-  // 500 HP = 7 triggers - Final boss has all the toughest mini-games
-  miniGames: ['spell_combo', 'ghostly_whispers', 'speed_typist', 'tug_of_war', 'asteroid_barrage', 'fireball_defense', 'rhyme_chain', 'void_pull'],
+  // 500 HP = 7 triggers - Final boss has all the toughest mini-games (NO TUG OF WAR in Classic)
+  miniGames: ['spell_combo', 'ghostly_whispers', 'speed_typist', 'asteroid_barrage', 'fireball_defense', 'rhyme_chain', 'void_pull', 'ground_ripple'],
   signatureMiniGame: 'void_pull', // Signature VOID PULL at 50%
 };
 
@@ -333,8 +333,8 @@ export const drakeTheDragon: RPGEnemy = {
     { id: 'wing_gust', name: 'Wing Gust', damage: 15, effect: 'silence', description: 'Blows away your words', icon: '💨' },
   ],
   barrageWordCount: 7,
-  // 280 HP = 5 triggers - Drake's mini-games
-  miniGames: ['beast_swarm', 'fireball_defense', 'fireball_barrage', 'speed_typist', 'tug_of_war', 'dodge_words'],
+  // 280 HP = 5 triggers - Drake's mini-games (NO TUG OF WAR in Classic)
+  miniGames: ['beast_swarm', 'fireball_defense', 'fireball_barrage', 'speed_typist', 'dodge_words', 'goblin_horde'],
   signatureMiniGame: 'beast_swarm', // Signature BEAST SWARM at 50%
 };
 
