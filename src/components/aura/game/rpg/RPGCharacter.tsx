@@ -3,6 +3,7 @@ import { Heart, Shield } from "lucide-react";
 import { RPGCharacter as RPGCharacterType, RPGEnemy } from "@/lib/rpgBattleData";
 import { RPGCharacterSprite } from "./RPGCharacterSprite";
 import { GoblinGuard, GoblinState } from "../characters/GoblinGuard";
+import { GrogTheKing, GrogState } from "../characters/GrogTheKing";
 import { SirValor, KnightState } from "../characters/SirValor";
 import { Elara, WizardState } from "../characters/Elara";
 import { PrincessElla, PrincessState } from "../characters/PrincessElla";
@@ -27,11 +28,13 @@ interface RPGCharacterProps {
 }
 
 // Map character/enemy types to sprite types
-type SpriteType = 'knight' | 'wizard' | 'princess' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian';
+type SpriteType = 'knight' | 'wizard' | 'princess' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'grog_king';
 
 const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean): SpriteType => {
   if (isEnemy) {
     const enemy = character as RPGEnemy;
+    // Special case for Grog the Goblin King - render with unique GrogTheKing sprite
+    if (enemy.id === 'grog') return 'grog_king';
     switch (enemy.type) {
       case 'final_boss': return 'sorcerer';
       case 'boss': return 'boss';
@@ -47,6 +50,14 @@ const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean)
   if (hero.id === 'wizard') return 'wizard';
   if (hero.id === 'ella') return 'princess';
   return 'knight';
+};
+
+// Get Grog state
+const getGrogState = (isAttacking: boolean, isTakingDamage: boolean, currentHp: number, maxHp: number): GrogState => {
+  if (currentHp <= 0) return 'defeated';
+  if (isTakingDamage) return 'hit';
+  if (isAttacking) return 'ground_slam'; // Grog's signature attack
+  return 'idle';
 };
 
 // Get state for premium characters
@@ -106,6 +117,19 @@ export const RPGCharacter = ({
     const commonState = currentHp <= 0 ? 'defeated' : isTakingDamage ? 'hit' : isAttacking ? 'attacking' : 'idle';
     
     if (isEnemy) {
+      // GROG THE GOBLIN KING - Special menacing boss sprite
+      if (spriteType === 'grog_king') {
+        return (
+          <GrogTheKing
+            state={getGrogState(isAttacking, isTakingDamage, currentHp, character.maxHp)}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="large"
+            showHealthBar={true}
+          />
+        );
+      }
       if (spriteType === 'dragon') {
         return (
           <DrakeTheDragon

@@ -40,6 +40,7 @@ import { RPGInkSplash } from "./RPGInkSplash";
 import { RPGCrystalPrison } from "./RPGCrystalPrison";
 import { RPGLightningStorm } from "./RPGLightningStorm";
 import { RPGVoidPull } from "./RPGVoidPull";
+import { RPGGroundRipple } from "./RPGGroundRipple";
 // NEW: Import character selection
 import { RPGCharacterSelect, PlayableCharacter } from "./RPGCharacterSelect";
 import { Spell } from "./RPGSpellMenu";
@@ -652,6 +653,23 @@ export const RPGBattleArena = ({
       setTotalDamage(prev => prev + bonusDamage);
     }
     setCorrectWords(prev => prev + result.wordsSpoken);
+    setBatchStartIndex(prev => prev + barrageWords.length);
+    returnToReading();
+  }, [barrageWords.length, returnToReading]);
+  
+  // Handle Ground Ripple complete (Grog's signature mini-game)
+  const handleGroundRippleComplete = useCallback((destroyed: number, missed: number) => {
+    console.log('[RPGBattle] Ground Ripple complete:', { destroyed, missed });
+    const bonusDamage = destroyed * 12;
+    if (bonusDamage > 0) {
+      battleSounds.celebrationSound();
+      setEnemyHp(prev => Math.max(0, prev - bonusDamage));
+      setTotalDamage(prev => prev + bonusDamage);
+    }
+    if (missed > 0) {
+      setPlayerHp(prev => Math.max(0, prev - missed * 15));
+    }
+    setCorrectWords(prev => prev + destroyed);
     setBatchStartIndex(prev => prev + barrageWords.length);
     returnToReading();
   }, [barrageWords.length, returnToReading]);
@@ -1305,9 +1323,78 @@ export const RPGBattleArena = ({
   // Track battle start time for duration calculation
   const battleStartTime = useRef(Date.now());
   
+  // CRITICAL: Update student_reading_stats to sync with main ecosystem
+  const updateStudentReadingStats = useCallback(async (victory: boolean, finalWordsRead: number, finalCorrectWords: number, finalXpEarned: number) => {
+    if (!studentId || finalWordsRead === 0) return;
+    
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Fetch existing stats
+      const { data: existingStats, error: fetchError } = await supabase
+        .from('student_reading_stats')
+        .select('*')
+        .eq('student_id', studentId)
+        .maybeSingle();
+      
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('[RPGBattle] Error fetching student stats:', fetchError);
+        return;
+      }
+      
+      // Calculate streak
+      let newStreak = 1;
+      let newLongestStreak = 1;
+      
+      if (existingStats) {
+        const lastActivity = existingStats.last_activity_date;
+        if (lastActivity) {
+          const lastDate = new Date(lastActivity);
+          const todayDate = new Date(today);
+          const diffDays = Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+          
+          if (diffDays === 0) {
+            // Same day - keep streak
+            newStreak = existingStats.current_streak_days || 1;
+          } else if (diffDays === 1) {
+            // Consecutive day - increment streak
+            newStreak = (existingStats.current_streak_days || 0) + 1;
+          } else {
+            // Streak broken - reset to 1
+            newStreak = 1;
+          }
+        }
+        newLongestStreak = Math.max(existingStats.longest_streak_days || 0, newStreak);
+      }
+      
+      // Upsert stats
+      const statsUpdate = {
+        student_id: studentId,
+        total_words_read: (existingStats?.total_words_read || 0) + finalWordsRead,
+        total_sessions: (existingStats?.total_sessions || 0) + 1,
+        current_streak_days: newStreak,
+        longest_streak_days: newLongestStreak,
+        xp_points: (existingStats?.xp_points || 0) + finalXpEarned,
+        last_activity_date: today,
+      };
+      
+      const { error: upsertError } = await supabase
+        .from('student_reading_stats')
+        .upsert(statsUpdate, { onConflict: 'student_id' });
+      
+      if (upsertError) {
+        console.error('[RPGBattle] Error updating student stats:', upsertError);
+      } else {
+        console.log('[RPGBattle] ✅ Student reading stats synced to main ecosystem:', statsUpdate);
+      }
+    } catch (err) {
+      console.error('[RPGBattle] Error in updateStudentReadingStats:', err);
+    }
+  }, [studentId]);
+  
   // Handle battle end - also saves reading session for teacher visibility
   const handleBattleEnd = useCallback(async (victory: boolean) => {
-    const xpEarned = victory ? 
+    const finalXpEarned = victory ? 
       Math.floor(100 + correctWords * 5 + longestStreak * 10 + totalDamage * 0.5) :
       Math.floor(correctWords * 2);
     
@@ -1352,6 +1439,9 @@ export const RPGBattleArena = ({
           includeSpeakingData: true,
         });
         console.log('[RPGBattle] ML training data saved to aura_records');
+        
+        // CRITICAL: Sync to main student_reading_stats table
+        await updateStudentReadingStats(victory, wordsRead, correctWords, finalXpEarned);
       } catch (err) {
         console.error('[RPGBattle] Error saving reading data:', err);
       }
@@ -1362,9 +1452,9 @@ export const RPGBattleArena = ({
       correctWords,
       longestStreak,
       damageDealt: totalDamage,
-      xpEarned,
+      xpEarned: finalXpEarned,
     });
-  }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete, studentId, story, battleMode, saveToAuraRecords]);
+  }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete, studentId, story, battleMode, saveToAuraRecords, updateStudentReadingStats]);
 
   // Get current batch of words for reading - MEMOIZED for stable reference
   // batchStartIndex only changes when we complete a full batch, keeping this stable
@@ -1380,13 +1470,23 @@ export const RPGBattleArena = ({
   // Check if all words have been read
   const allWordsRead = batchStartIndex >= words.length && words.length > 0;
   
-  // AUTO-VICTORY: If all words read AND enemy HP is low, trigger victory
+  // Calculate accuracy for victory check
+  const currentAccuracy = wordsRead > 0 ? (correctWords / wordsRead) : 0;
+  
+  // VICTORY CONDITIONS:
+  // 1. Enemy HP reaches 0 at any point = Victory
+  // 2. All words read + accuracy >= 80% = Victory (regardless of enemy HP)
   useEffect(() => {
-    if (allWordsRead && enemyHp <= enemy.maxHp * 0.3 && phase === 'reading') {
-      console.log('[RPGBattle] All words read + enemy weak - auto victory!');
+    // Don't override terminal states
+    if (phase === 'victory' || phase === 'defeat' || phase === 'enemy_transition') return;
+    
+    // Check victory by enemy death (handled in phase transition effect above)
+    // Check victory by completing all words with 80%+ accuracy
+    if (allWordsRead && currentAccuracy >= 0.8 && phase === 'reading') {
+      console.log('[RPGBattle] ✅ All words read with 80%+ accuracy - VICTORY!', { accuracy: currentAccuracy });
       setPhase('victory');
     }
-  }, [allWordsRead, enemyHp, enemy.maxHp, phase]);
+  }, [allWordsRead, currentAccuracy, phase]);
 
   // If character select is shown for Classic mode, render it instead of battle
   if (showCharacterSelect && battleMode === 'classic') {
@@ -1654,6 +1754,14 @@ export const RPGBattleArena = ({
               returnToReading();
             }}
             onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
+          />
+        )}
+        {/* GROG'S SIGNATURE: Ground Ripple - word mountains roll toward heroes */}
+        {phase === 'ground_ripple' && (
+          <RPGGroundRipple
+            words={barrageWords}
+            onComplete={handleGroundRippleComplete}
+            onWordHit={handleMiniGameDamage}
           />
         )}
       </AnimatePresence>
