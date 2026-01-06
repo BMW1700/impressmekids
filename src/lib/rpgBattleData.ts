@@ -60,7 +60,7 @@ export type MiniGameType =
 export interface RPGEnemy {
   id: string;
   name: string;
-  type: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater';
+  type: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'goblin_shaman';
   maxHp: number;
   attack: number;
   defense: number;
@@ -457,9 +457,44 @@ export const stoneGuardian: RPGEnemy = {
     { id: 'stone_armor', name: 'Stone Armor', damage: 0, effect: 'debuff', description: 'Reduces damage until 5-word streak', icon: '🛡️' },
   ],
   barrageWordCount: 7,
-  // 350 HP = 6 triggers
-  miniGames: ['rolling_boulders', 'speed_typist', 'tug_of_war', 'word_shield', 'asteroid_barrage', 'spell_combo', 'rhyme_chain'],
+  // 350 HP = 6 triggers (NO TUG OF WAR in Classic)
+  miniGames: ['rolling_boulders', 'speed_typist', 'word_shield', 'asteroid_barrage', 'spell_combo', 'rhyme_chain', 'goblin_horde'],
   signatureMiniGame: 'rolling_boulders', // Signature ROLLING BOULDERS at 50%
+};
+
+// ========== NEW ENEMY: Goblin Shaman (Elite magic user) ==========
+export const goblinShaman: RPGEnemy = {
+  id: 'goblin_shaman',
+  name: 'Zix the Goblin Shaman',
+  type: 'elite',
+  maxHp: 160,
+  attack: 26,
+  defense: 10,
+  wordDamageMultiplier: 0.55,
+  color: 'from-violet-600 to-purple-900',
+  dialogueIntro: [
+    "Hehehe... the spirits speak to me...",
+    "My dark magic will confuse your words!",
+    "The shadows obey MY command!",
+  ],
+  dialogueAttack: [
+    "*casts shadow bolt*",
+    "WORD CONFUSION!",
+    "*hexing chant*",
+  ],
+  dialogueDefeat: [
+    "The spirits... abandon me...",
+    "Your reading... breaks my spells...",
+  ],
+  specialAbilities: [
+    { id: 'word_confusion', name: 'Word Confusion', damage: 0, effect: 'debuff', description: 'Spawns fake misspelled words!', icon: '🔮' },
+    { id: 'shadow_hex', name: 'Shadow Hex', damage: 14, effect: 'poison', description: 'Curses with shadow damage', icon: '💀' },
+    { id: 'spirit_drain', name: 'Spirit Drain', damage: 10, effect: 'silence', description: 'Drains magic power', icon: '👻' },
+  ],
+  barrageWordCount: 5,
+  // 160 HP = 3-4 triggers - Shaman specializes in tricky word games
+  miniGames: ['ghostly_whispers', 'dodge_words', 'spell_combo', 'void_pull', 'goblin_horde'],
+  signatureMiniGame: 'ghostly_whispers', // Signature GHOSTLY WHISPERS at 50%
 };
 
 // ========== NEW WORLD 5 ENEMIES: The Whispering Caverns ==========
@@ -493,8 +528,8 @@ export const caveTroll: RPGEnemy = {
     { id: 'boulder_throw', name: 'Boulder Throw', damage: 15, effect: 'debuff', description: 'Reduces accuracy', icon: '⚫' },
   ],
   barrageWordCount: 5,
-  // 200 HP = 4 triggers
-  miniGames: ['rolling_boulders', 'word_shield', 'speed_typist', 'word_echo', 'tug_of_war'],
+  // 200 HP = 4 triggers (NO TUG OF WAR in Classic)
+  miniGames: ['rolling_boulders', 'word_shield', 'speed_typist', 'word_echo', 'goblin_horde'],
   signatureMiniGame: 'word_echo', // Signature WORD ECHO at 50%
 };
 
@@ -893,13 +928,13 @@ export const wordEater: RPGEnemy = {
     { id: 'reality_end', name: 'Reality End', damage: 40, effect: 'earthquake', description: 'Cataclysmic damage', icon: '🌑' },
   ],
   barrageWordCount: 12,
-  // 600 HP = 7 triggers - THE ULTIMATE FINAL BOSS
-  miniGames: ['asteroid_barrage', 'tug_of_war', 'speed_typist', 'ghostly_whispers', 'fireball_defense', 'void_pull', 'ink_splash', 'lightning_storm'],
+  // 600 HP = 7 triggers - THE ULTIMATE FINAL BOSS (NO TUG OF WAR in Classic)
+  miniGames: ['asteroid_barrage', 'speed_typist', 'ghostly_whispers', 'fireball_defense', 'void_pull', 'ink_splash', 'lightning_storm', 'ground_ripple'],
   signatureMiniGame: 'void_pull', // THE ULTIMATE SIGNATURE - VOID PULL at 50%
 };
 
 // Get enemy by type for battle - UPDATED with all new enemies
-export type EnemyTypeKey = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater';
+export type EnemyTypeKey = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'goblin_shaman';
 
 export const getEnemyForBattle = (enemyType: EnemyTypeKey): RPGEnemy => {
   switch (enemyType) {
@@ -909,6 +944,8 @@ export const getEnemyForBattle = (enemyType: EnemyTypeKey): RPGEnemy => {
       return goblinGuard;
     case 'elite':
       return goblinElite;
+    case 'goblin_shaman':
+      return goblinShaman;
     case 'boss':
       return grogTheGoblinKing;
     case 'final_boss':
