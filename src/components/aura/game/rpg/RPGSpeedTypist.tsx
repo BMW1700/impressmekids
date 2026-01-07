@@ -116,12 +116,31 @@ export const RPGSpeedTypist = ({
     }
   }, [phase, score, streak, onComplete]);
 
-  // Start recognition using manager
+  // Super lenient matching for speed reading
+  const checkWordMatch = useCallback((spoken: string, target: string): boolean => {
+    const cleanSpoken = spoken.replace(/[^\w\s]/g, '').toLowerCase().trim();
+    const cleanTarget = target.replace(/[^\w\s]/g, '').toLowerCase().trim();
+    
+    // Exact match
+    if (cleanSpoken === cleanTarget) return true;
+    // Contains match
+    if (cleanSpoken.includes(cleanTarget)) return true;
+    if (cleanTarget.includes(cleanSpoken) && cleanSpoken.length >= 2) return true;
+    // First 2-3 chars match (phonetic similarity)
+    if (cleanSpoken.length >= 2 && cleanTarget.length >= 2) {
+      if (cleanSpoken.slice(0, 2) === cleanTarget.slice(0, 2)) return true;
+      if (cleanSpoken.length >= 3 && cleanTarget.length >= 3 && 
+          cleanSpoken.slice(0, 3) === cleanTarget.slice(0, 3)) return true;
+    }
+    return false;
+  }, []);
+
+  // Start recognition using manager - with interim results for speed
   const startListening = useCallback(() => {
     speechManager.start({
       owner: 'speed_typist',
       continuous: true,
-      interimResults: false,
+      interimResults: true, // Enable interim for faster feedback
       onStart: () => {
         if (isMountedRef.current) {
           setIsListening(true);
@@ -130,10 +149,18 @@ export const RPGSpeedTypist = ({
       onEnd: () => {
         if (isMountedRef.current) {
           setIsListening(false);
+          // Restart if still playing
+          if (phaseRef.current === 'playing') {
+            setTimeout(() => {
+              if (isMountedRef.current && phaseRef.current === 'playing') {
+                startListening();
+              }
+            }, 100);
+          }
         }
       },
-      onResult: (transcript, alternatives, isFinal) => {
-        if (!isFinal || !isMountedRef.current || phaseRef.current !== 'playing') return;
+      onResult: (transcript) => {
+        if (!isMountedRef.current || phaseRef.current !== 'playing') return;
         
         const currentIdx = currentIndexRef.current;
         const words = speedWordsRef.current;
@@ -141,12 +168,20 @@ export const RPGSpeedTypist = ({
         if (currentIdx >= words.length) return;
         
         const currentWord = words[currentIdx];
-        const cleanSpoken = transcript.replace(/[^\w\s]/g, '').toLowerCase();
-        const cleanTarget = currentWord.word.replace(/[^\w\s]/g, '').toLowerCase();
         
-        const isMatch = cleanSpoken.includes(cleanTarget) || cleanTarget.includes(cleanSpoken);
+        // Check each word in transcript against current target
+        const spokenWords = transcript.toLowerCase().split(/\s+/);
+        const targetClean = currentWord.word.replace(/[^\w\s]/g, '').toLowerCase();
         
-        if (isMatch) {
+        let matched = false;
+        for (const spoken of spokenWords) {
+          if (checkWordMatch(spoken, targetClean)) {
+            matched = true;
+            break;
+          }
+        }
+        
+        if (matched) {
           sounds.correctWord();
           setFeedback({ type: 'correct', word: currentWord.word });
           setScore(prev => prev + 1);
@@ -155,20 +190,18 @@ export const RPGSpeedTypist = ({
             i === currentIdx ? { ...w, spoken: true } : w
           ));
           setCurrentIndex(prev => prev + 1);
-        } else {
-          sounds.incorrectWord();
-          setFeedback({ type: 'wrong', word: transcript });
-          setStreak(0);
-          onDamage(5);
+          onDamage(10); // Deal damage on each word
+          setTimeout(() => setFeedback(null), 300);
         }
-        
-        setTimeout(() => setFeedback(null), 400);
       },
       onError: (error) => {
         console.log('[SpeedTypist] Recognition error:', error);
+        if (isMountedRef.current && phaseRef.current === 'playing') {
+          setTimeout(() => startListening(), 200);
+        }
       },
     });
-  }, [onDamage]);
+  }, [onDamage, checkWordMatch]);
 
   // Cleanup
   useEffect(() => {
