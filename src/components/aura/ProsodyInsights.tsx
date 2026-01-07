@@ -90,11 +90,11 @@ const ProsodyInsights = ({ records, skillVectors, classroomId }: ProsodyInsights
       }
     });
 
-    // From reading sessions (READ-ALONG data)
+    // From reading sessions (READ-ALONG data) - cap accuracy at 100%
     if (readingSessions) {
       readingSessions.forEach((session: any) => {
         if (session.wpm) speakingRates.push(session.wpm);
-        if (session.accuracy_percent) readingAccuracies.push(session.accuracy_percent);
+        if (session.accuracy_percent) readingAccuracies.push(Math.min(100, session.accuracy_percent));
         if (session.fluency_score) fluencyScores.push(session.fluency_score);
       });
     }

@@ -1401,7 +1401,8 @@ export const RPGBattleArena = ({
     // Calculate battle duration and WPM
     const durationSeconds = Math.max(1, (Date.now() - battleStartTime.current) / 1000);
     const wpm = Math.round((wordsRead / durationSeconds) * 60);
-    const accuracyPercent = wordsRead > 0 ? Math.round((correctWords / wordsRead) * 100) : 0;
+    // CRITICAL: Cap accuracy at 100% to fix data corruption bug
+    const accuracyPercent = wordsRead > 0 ? Math.min(100, Math.round((correctWords / wordsRead) * 100)) : 0;
     
     // Save to reading_sessions for teacher visibility
     if (studentId && wordsRead > 0) {
@@ -1480,13 +1481,19 @@ export const RPGBattleArena = ({
     // Don't override terminal states
     if (phase === 'victory' || phase === 'defeat' || phase === 'enemy_transition') return;
     
-    // Check victory by enemy death (handled in phase transition effect above)
-    // Check victory by completing all words with 80%+ accuracy
-    if (allWordsRead && currentAccuracy >= 0.8 && phase === 'reading') {
+    // Check victory by enemy death - from ANY phase
+    if (enemyHp <= 0) {
+      console.log('[RPGBattle] ✅ Enemy HP = 0 - VICTORY!');
+      setPhase(isFinalEnemy ? 'victory' : 'enemy_transition');
+      return;
+    }
+    
+    // Check victory by completing all words with 80%+ accuracy - from ANY non-mini-game phase
+    if (allWordsRead && currentAccuracy >= 0.8) {
       console.log('[RPGBattle] ✅ All words read with 80%+ accuracy - VICTORY!', { accuracy: currentAccuracy });
       setPhase('victory');
     }
-  }, [allWordsRead, currentAccuracy, phase]);
+  }, [allWordsRead, currentAccuracy, phase, enemyHp, isFinalEnemy]);
 
   // If character select is shown for Classic mode, render it instead of battle
   if (showCharacterSelect && battleMode === 'classic') {
