@@ -11,6 +11,8 @@ import { DrakeTheDragon, DragonState } from "../characters/DrakeTheDragon";
 import { IceGolem, IceGolemState } from "../characters/IceGolem";
 import { ShadowWraith, WraithState } from "../characters/ShadowWraith";
 import { StoneGuardian, GuardianState } from "../characters/StoneGuardian";
+import { CaveTroll, CaveTrollState } from "../characters/CaveTroll";
+import { CrystalSpider, CrystalSpiderState } from "../characters/CrystalSpider";
 
 interface RPGCharacterProps {
   character: RPGCharacterType | RPGEnemy;
@@ -28,13 +30,15 @@ interface RPGCharacterProps {
 }
 
 // Map character/enemy types to sprite types
-type SpriteType = 'knight' | 'wizard' | 'princess' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'grog_king';
+type SpriteType = 'knight' | 'wizard' | 'princess' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'grog_king' | 'cave_troll' | 'crystal_spider';
 
 const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean): SpriteType => {
   if (isEnemy) {
     const enemy = character as RPGEnemy;
     // Special case for Grog the Goblin King - render with unique GrogTheKing sprite
     if (enemy.id === 'grog') return 'grog_king';
+    if (enemy.id === 'cave_troll') return 'cave_troll';
+    if (enemy.id === 'crystal_spider') return 'crystal_spider';
     switch (enemy.type) {
       case 'final_boss': return 'sorcerer';
       case 'boss': return 'boss';
@@ -42,6 +46,8 @@ const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean)
       case 'ice_golem': return 'ice_golem';
       case 'shadow_wraith': return 'shadow_wraith';
       case 'stone_guardian': return 'stone_guardian';
+      case 'cave_troll': return 'cave_troll';
+      case 'crystal_spider': return 'crystal_spider';
       default: return 'goblin';
     }
   }
@@ -167,6 +173,28 @@ export const RPGCharacter = ({
         return (
           <StoneGuardian
             state={commonState as GuardianState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      if (spriteType === 'cave_troll') {
+        return (
+          <CaveTroll
+            state={commonState as CaveTrollState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      if (spriteType === 'crystal_spider') {
+        return (
+          <CrystalSpider
+            state={commonState as CrystalSpiderState}
             healthPercent={hpPercentage}
             currentHp={currentHp}
             maxHp={character.maxHp}
