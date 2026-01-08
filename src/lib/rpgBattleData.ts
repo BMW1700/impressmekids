@@ -38,7 +38,7 @@ export type MiniGameType =
   | 'dodge_words' 
   | 'rhyme_chain' 
   | 'speed_typist' 
-  | 'tug_of_war' 
+  | 'tug_of_war'         // Only used in dedicated Tug of War battle mode, NOT in Classic
   | 'goblin_horde'       // Mini goblins run at player - speak words to defeat
   | 'fireball_defense'
   | 'beast_swarm'
@@ -49,6 +49,7 @@ export type MiniGameType =
   | 'fireball_barrage'   // Dragon's fireball attack
   | 'asteroid_barrage'   // Word prison - asteroids with words
   | 'ground_ripple'      // Grog's signature - mountains with words roll toward heroes
+  | 'web_trap'           // Crystal Spider's signature - words trapped in web
   // NEW MINI-GAMES for new worlds
   | 'word_echo'          // Caverns - say each word twice (echo)
   | 'wind_chase'         // Floating Isles - catch words blowing across screen
@@ -563,8 +564,8 @@ export const crystalSpider: RPGEnemy = {
   ],
   barrageWordCount: 4,
   // 100 HP = 2 triggers
-  miniGames: ['dodge_words', 'spell_combo', 'goblin_horde', 'crystal_prison'],
-  signatureMiniGame: 'crystal_prison', // Signature CRYSTAL PRISON at 50%
+  miniGames: ['dodge_words', 'spell_combo', 'goblin_horde', 'web_trap'],
+  signatureMiniGame: 'web_trap', // Signature WEB TRAP at 50%
 };
 
 // Echo Wraith - Boss of World 5 (words must be repeated)
@@ -600,7 +601,7 @@ export const echoWraith: RPGEnemy = {
   ],
   barrageWordCount: 8,
   // 280 HP = 5 triggers - Echo Wraith boss
-  miniGames: ['ghostly_whispers', 'rhyme_chain', 'speed_typist', 'tug_of_war', 'word_echo', 'spell_combo'],
+  miniGames: ['ghostly_whispers', 'rhyme_chain', 'speed_typist', 'void_pull', 'word_echo', 'spell_combo'],
   signatureMiniGame: 'word_echo', // Signature WORD ECHO at 50%
 };
 
@@ -670,7 +671,7 @@ export const cloudGiant: RPGEnemy = {
   ],
   barrageWordCount: 6,
   // 320 HP = 6 triggers
-  miniGames: ['tug_of_war', 'speed_typist', 'rolling_boulders', 'lightning_storm', 'asteroid_barrage', 'word_shield', 'spell_combo'],
+  miniGames: ['goblin_horde', 'speed_typist', 'rolling_boulders', 'lightning_storm', 'asteroid_barrage', 'word_shield', 'spell_combo'],
   signatureMiniGame: 'lightning_storm', // Signature LIGHTNING STORM at 50%
 };
 
@@ -707,7 +708,7 @@ export const zephyr: RPGEnemy = {
   ],
   barrageWordCount: 9,
   // 350 HP = 6 triggers - Zephyr boss
-  miniGames: ['speed_typist', 'tug_of_war', 'dodge_words', 'fireball_defense', 'wind_chase', 'lightning_storm', 'rhyme_chain'],
+  miniGames: ['speed_typist', 'goblin_horde', 'dodge_words', 'fireball_defense', 'wind_chase', 'lightning_storm', 'rhyme_chain'],
   signatureMiniGame: 'wind_chase', // Signature WIND CHASE at 50%
 };
 
@@ -816,7 +817,7 @@ export const leviathan: RPGEnemy = {
   ],
   barrageWordCount: 10,
   // 450 HP = 7 triggers - Leviathan boss
-  miniGames: ['tug_of_war', 'speed_typist', 'asteroid_barrage', 'fireball_defense', 'ink_splash', 'void_pull', 'rhyme_chain', 'spell_combo'],
+  miniGames: ['goblin_horde', 'speed_typist', 'asteroid_barrage', 'fireball_defense', 'ink_splash', 'void_pull', 'rhyme_chain', 'spell_combo'],
   signatureMiniGame: 'ink_splash', // Signature INK SPLASH at 50%
 };
 
@@ -886,7 +887,7 @@ export const realityShifter: RPGEnemy = {
   ],
   barrageWordCount: 7,
   // 220 HP = 4 triggers
-  miniGames: ['speed_typist', 'rhyme_chain', 'tug_of_war', 'asteroid_barrage', 'void_pull', 'lightning_storm'],
+  miniGames: ['speed_typist', 'rhyme_chain', 'goblin_horde', 'asteroid_barrage', 'void_pull', 'lightning_storm'],
   signatureMiniGame: 'asteroid_barrage', // Signature WORD PRISON at 50%
 };
 

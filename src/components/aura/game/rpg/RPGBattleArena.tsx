@@ -41,6 +41,7 @@ import { RPGCrystalPrison } from "./RPGCrystalPrison";
 import { RPGLightningStorm } from "./RPGLightningStorm";
 import { RPGVoidPull } from "./RPGVoidPull";
 import { RPGGroundRipple } from "./RPGGroundRipple";
+import { RPGWebTrap } from "./RPGWebTrap";
 // NEW: Import character selection
 import { RPGCharacterSelect, PlayableCharacter } from "./RPGCharacterSelect";
 import { Spell } from "./RPGSpellMenu";
@@ -68,7 +69,7 @@ const battleSounds = new SoundEffects();
 
 type EnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'goblin_shaman';
 // UPDATED: Added goblin_horde for Classic mode mini-game + quick_block for enemy attacks
-type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'word_shield' | 'spell_combo' | 'dodge_words' | 'rhyme_chain' | 'speed_typist' | 'tug_of_war' | 'balloon_battle' | 'goblin_horde' | 'fireball_defense' | 'quick_block' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat' | 'word_echo' | 'wind_chase' | 'ink_splash' | 'crystal_prison' | 'lightning_storm' | 'void_pull' | 'ground_ripple';
+type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'word_shield' | 'spell_combo' | 'dodge_words' | 'rhyme_chain' | 'speed_typist' | 'tug_of_war' | 'balloon_battle' | 'goblin_horde' | 'fireball_defense' | 'quick_block' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat' | 'word_echo' | 'wind_chase' | 'ink_splash' | 'crystal_prison' | 'lightning_storm' | 'void_pull' | 'ground_ripple' | 'web_trap';
 type InventoryKey = 'health_potion' | 'magic_potion';
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
 
@@ -346,6 +347,7 @@ export const RPGBattleArena = ({
       'fireball_barrage': `🔥 ${enemy.name} unleashes FIREBALL BARRAGE! 🔥`,
       'asteroid_barrage': `${enemy.name} summons WORD PRISON!`,
       'ground_ripple': `🏔️ ${enemy.name} SMASHES THE GROUND! 🏔️`,
+      'web_trap': `🕸️ ${enemy.name} TRAPS YOU IN A WEB! 🕸️`,
       // NEW mini-games
       'word_echo': `🗣️ WORD ECHO! Say each word TWICE! 🗣️`,
       'wind_chase': `💨 WIND CHASE! Catch the words! 💨`,
@@ -381,6 +383,7 @@ export const RPGBattleArena = ({
         'fireball_barrage': 'fireball_barrage',
         'asteroid_barrage': 'asteroid_barrage',
         'ground_ripple': 'ground_ripple',
+        'web_trap': 'web_trap',
         // NEW mini-games
         'word_echo': 'word_echo',
         'wind_chase': 'wind_chase',
@@ -670,6 +673,23 @@ export const RPGBattleArena = ({
       setPlayerHp(prev => Math.max(0, prev - missed * 15));
     }
     setCorrectWords(prev => prev + destroyed);
+    setBatchStartIndex(prev => prev + barrageWords.length);
+    returnToReading();
+  }, [barrageWords.length, returnToReading]);
+  
+  // Handle Web Trap complete (Crystal Spider's signature mini-game)
+  const handleWebTrapComplete = useCallback((wordsFreed: number, damage: number) => {
+    console.log('[RPGBattle] Web Trap complete:', { wordsFreed, damage });
+    const bonusDamage = wordsFreed * 10;
+    if (bonusDamage > 0) {
+      battleSounds.celebrationSound();
+      setEnemyHp(prev => Math.max(0, prev - bonusDamage));
+      setTotalDamage(prev => prev + bonusDamage);
+    }
+    if (damage > 0) {
+      setPlayerHp(prev => Math.max(0, prev - damage));
+    }
+    setCorrectWords(prev => prev + wordsFreed);
     setBatchStartIndex(prev => prev + barrageWords.length);
     returnToReading();
   }, [barrageWords.length, returnToReading]);
@@ -1769,6 +1789,14 @@ export const RPGBattleArena = ({
             words={barrageWords}
             onComplete={handleGroundRippleComplete}
             onWordHit={handleMiniGameDamage}
+          />
+        )}
+        {/* CRYSTAL SPIDER'S SIGNATURE: Web Trap - speak words to free them */}
+        {phase === 'web_trap' && (
+          <RPGWebTrap
+            words={barrageWords}
+            onComplete={handleWebTrapComplete}
+            onDamage={handleMiniGameDamage}
           />
         )}
       </AnimatePresence>
