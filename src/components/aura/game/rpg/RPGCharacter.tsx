@@ -13,6 +13,16 @@ import { ShadowWraith, WraithState } from "../characters/ShadowWraith";
 import { StoneGuardian, GuardianState } from "../characters/StoneGuardian";
 import { CaveTroll, CaveTrollState } from "../characters/CaveTroll";
 import { CrystalSpider, CrystalSpiderState } from "../characters/CrystalSpider";
+import { StormHarpy, StormHarpyState } from "../characters/StormHarpy";
+import { CloudGiant, CloudGiantState } from "../characters/CloudGiant";
+import { WindLord, WindLordState } from "../characters/WindLord";
+import { InkKraken, InkKrakenState } from "../characters/InkKraken";
+import { ReefGuardian, ReefGuardianState } from "../characters/ReefGuardian";
+import { Leviathan, LeviathanState } from "../characters/Leviathan";
+import { VoidPhantom, VoidPhantomState } from "../characters/VoidPhantom";
+import { RealityShifter, RealityShifterState } from "../characters/RealityShifter";
+import { WordEater, WordEaterState } from "../characters/WordEater";
+import { EchoWraith, EchoWraithState } from "../characters/EchoWraith";
 
 interface RPGCharacterProps {
   character: RPGCharacterType | RPGEnemy;
@@ -26,30 +36,51 @@ interface RPGCharacterProps {
   showSprite?: boolean;
   usePremiumSprites?: boolean;
   currentStreak?: number;
-  showHealthBar?: boolean; // New prop to control health bar visibility
+  showHealthBar?: boolean;
 }
 
-// Map character/enemy types to sprite types
-type SpriteType = 'knight' | 'wizard' | 'princess' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'grog_king' | 'cave_troll' | 'crystal_spider';
+// Map character/enemy types to sprite types - EXTENDED with all new enemies
+type SpriteType = 'knight' | 'wizard' | 'princess' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'grog_king' | 'cave_troll' | 'crystal_spider' | 'storm_harpy' | 'cloud_giant' | 'wind_lord' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'echo_wraith';
 
 const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean): SpriteType => {
   if (isEnemy) {
     const enemy = character as RPGEnemy;
-    // Special case for Grog the Goblin King - render with unique GrogTheKing sprite
-    if (enemy.id === 'grog') return 'grog_king';
-    if (enemy.id === 'cave_troll') return 'cave_troll';
-    if (enemy.id === 'crystal_spider') return 'crystal_spider';
-    switch (enemy.type) {
-      case 'final_boss': return 'sorcerer';
-      case 'boss': return 'boss';
-      case 'dragon': return 'dragon';
-      case 'ice_golem': return 'ice_golem';
-      case 'shadow_wraith': return 'shadow_wraith';
-      case 'stone_guardian': return 'stone_guardian';
-      case 'cave_troll': return 'cave_troll';
-      case 'crystal_spider': return 'crystal_spider';
-      default: return 'goblin';
-    }
+    // Map by enemy ID first (most specific)
+    const idMap: Record<string, SpriteType> = {
+      'grog': 'grog_king',
+      'cave_troll': 'cave_troll',
+      'crystal_spider': 'crystal_spider',
+      'storm_harpy': 'storm_harpy',
+      'cloud_giant': 'cloud_giant',
+      'zephyr': 'wind_lord',
+      'ink_kraken': 'ink_kraken',
+      'reef_guardian': 'reef_guardian',
+      'leviathan': 'leviathan',
+      'void_phantom': 'void_phantom',
+      'reality_shifter': 'reality_shifter',
+      'word_eater': 'word_eater',
+      'echo_wraith': 'echo_wraith',
+    };
+    if (idMap[enemy.id]) return idMap[enemy.id];
+    
+    // Then by type - match to closest sprite
+    const typeStr = enemy.type as string;
+    if (typeStr.includes('dragon')) return 'dragon';
+    if (typeStr.includes('golem')) return 'ice_golem';
+    if (typeStr.includes('wraith')) return 'shadow_wraith';
+    if (typeStr.includes('guardian')) return 'stone_guardian';
+    if (typeStr.includes('troll')) return 'cave_troll';
+    if (typeStr.includes('spider')) return 'crystal_spider';
+    if (typeStr.includes('harpy')) return 'storm_harpy';
+    if (typeStr.includes('giant')) return 'cloud_giant';
+    if (typeStr.includes('kraken')) return 'ink_kraken';
+    if (typeStr.includes('leviathan')) return 'leviathan';
+    if (typeStr.includes('phantom')) return 'void_phantom';
+    if (typeStr.includes('shifter')) return 'reality_shifter';
+    if (typeStr.includes('eater')) return 'word_eater';
+    if (typeStr === 'final_boss') return 'word_eater';
+    if (typeStr === 'boss') return 'grog_king';
+    return 'goblin';
   }
   // Check by character ID for heroes
   const hero = character as RPGCharacterType;
@@ -202,7 +233,117 @@ export const RPGCharacter = ({
           />
         );
       }
-      // Goblin types
+      if (spriteType === 'storm_harpy') {
+        return (
+          <StormHarpy
+            state={commonState as StormHarpyState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      if (spriteType === 'cloud_giant') {
+        return (
+          <CloudGiant
+            state={commonState as CloudGiantState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      if (spriteType === 'wind_lord') {
+        return (
+          <WindLord
+            state={commonState as WindLordState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      if (spriteType === 'ink_kraken') {
+        return (
+          <InkKraken
+            state={commonState as InkKrakenState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      if (spriteType === 'reef_guardian') {
+        return (
+          <ReefGuardian
+            state={commonState as ReefGuardianState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      if (spriteType === 'leviathan') {
+        return (
+          <Leviathan
+            state={commonState as LeviathanState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      if (spriteType === 'void_phantom') {
+        return (
+          <VoidPhantom
+            state={commonState as VoidPhantomState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      if (spriteType === 'reality_shifter') {
+        return (
+          <RealityShifter
+            state={commonState as RealityShifterState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      if (spriteType === 'word_eater') {
+        return (
+          <WordEater
+            state={commonState as WordEaterState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      if (spriteType === 'echo_wraith') {
+        return (
+          <EchoWraith
+            state={commonState as EchoWraithState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      // Goblin types - fallback
       return (
         <GoblinGuard
           state={getGoblinState(isAttacking, isTakingDamage, currentHp, character.maxHp)}

@@ -12,7 +12,6 @@ interface WindWord {
   speed: number;
   caught: boolean;
   missed: boolean;
-  selected: boolean;
 }
 
 interface RPGWindChaseProps {
@@ -29,7 +28,6 @@ export const RPGWindChase = ({
   onWordHit,
 }: RPGWindChaseProps) => {
   const [windWords, setWindWords] = useState<WindWord[]>([]);
-  const [selectedWord, setSelectedWord] = useState<WindWord | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [spokenText, setSpokenText] = useState("");
   const [wordsCaught, setWordsCaught] = useState(0);
@@ -39,23 +37,27 @@ export const RPGWindChase = ({
   const animationRef = useRef<number | null>(null);
   const caughtRef = useRef(0);
   const missedRef = useRef(0);
-  const selectedWordRef = useRef<WindWord | null>(null);
-  const isListeningRef = useRef(false);
+  const windWordsRef = useRef<WindWord[]>([]);
 
   // Initialize wind words - start from right, blow left
   useEffect(() => {
     const initialWords: WindWord[] = words.slice(0, 8).map((word, index) => ({
       id: `wind-${index}`,
       word: word.replace(/[^a-zA-Z']/g, ''),
-      x: 110 + (index * 12), // Start off-screen right, staggered
-      y: 20 + (index % 5) * 15, // Spread vertically
-      speed: 0.12 + Math.random() * 0.08, // Wind speed
+      x: 110 + (index * 12),
+      y: 20 + (index % 5) * 15,
+      speed: 0.12 + Math.random() * 0.08,
       caught: false,
       missed: false,
-      selected: false,
     }));
     setWindWords(initialWords);
+    windWordsRef.current = initialWords;
   }, [words]);
+
+  // Keep ref in sync
+  useEffect(() => {
+    windWordsRef.current = windWords;
+  }, [windWords]);
 
   // Animation loop - words blow from right to left
   useEffect(() => {
@@ -95,6 +97,7 @@ export const RPGWindChase = ({
           }, 500);
         }
         
+        windWordsRef.current = updated;
         return updated;
       });
       
@@ -111,110 +114,92 @@ export const RPGWindChase = ({
     };
   }, [isActive, onComplete, onWordHit]);
 
-  const resetListeningState = useCallback(() => {
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch (e) {}
-      recognitionRef.current = null;
-    }
-    setIsListening(false);
-    isListeningRef.current = false;
-    setSelectedWord(null);
-    selectedWordRef.current = null;
-    setSpokenText("");
-    setWindWords(prev => prev.map(w => ({ ...w, selected: false })));
-  }, []);
-
-  const handleSelectWord = useCallback((windWord: WindWord) => {
-    if (windWord.caught || windWord.missed) return;
-    
-    if (isListeningRef.current) {
-      resetListeningState();
-    }
-    
-    setWindWords(prev => prev.map(w => ({ ...w, selected: w.id === windWord.id })));
-    setSelectedWord(windWord);
-    selectedWordRef.current = windWord;
-    startListening(windWord);
-  }, [resetListeningState]);
-
-  const startListening = useCallback((windWord: WindWord) => {
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch (e) {}
-      recognitionRef.current = null;
-    }
+  // Start CONTINUOUS listening immediately
+  useEffect(() => {
+    if (!isActive) return;
     
     unlockSpeechSynthesis();
     
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    if (!SpeechRecognition) {
-      resetListeningState();
-      return;
-    }
-
-    const lockedWord = windWord;
-    selectedWordRef.current = windWord;
+    if (!SpeechRecognition) return;
 
     const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
+    recognition.continuous = true; // CONTINUOUS listening
+    recognition.interimResults = true; // Process interim for faster matching
     recognition.lang = 'en-US';
     recognition.maxAlternatives = 5;
 
     recognition.onstart = () => {
       setIsListening(true);
-      isListeningRef.current = true;
-      setSpokenText("");
     };
 
     recognition.onresult = (event: any) => {
-      const result = event.results[0];
-      const transcript = result[0].transcript.trim().toLowerCase();
-      setSpokenText(transcript);
-
-      if (result.isFinal) {
-        const targetWord = lockedWord.word;
-        let matched = false;
+      // Process all new results
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        const transcript = result[0].transcript.trim().toLowerCase();
+        setSpokenText(transcript);
         
-        for (let i = 0; i < result.length && !matched; i++) {
-          const alt = result[i]?.transcript?.trim().toLowerCase() || '';
-          const altWords = alt.split(/\s+/);
-          for (const spoken of altWords) {
-            if (isWordMatchLenient(spoken, targetWord)) {
-              matched = true;
-              break;
+        // Check against ALL active wind words (lenient matching)
+        const wordsSpoken = transcript.split(/\s+/);
+        
+        for (const spoken of wordsSpoken) {
+          // Find matching uncaught word
+          const currentWords = windWordsRef.current;
+          for (const windWord of currentWords) {
+            if (windWord.caught || windWord.missed) continue;
+            
+            if (isWordMatchLenient(spoken, windWord.word)) {
+              // MATCH FOUND - catch the word!
+              soundEffects.correctWord();
+              caughtRef.current += 1;
+              setWordsCaught(caughtRef.current);
+              
+              setWindWords(prev => {
+                const updated = prev.map(w => 
+                  w.id === windWord.id ? { ...w, caught: true } : w
+                );
+                windWordsRef.current = updated;
+                return updated;
+              });
+              break; // Only catch one word per spoken word
             }
           }
         }
-
-        if (matched) {
-          soundEffects.correctWord();
-          caughtRef.current += 1;
-          setWordsCaught(caughtRef.current);
-          setWindWords(prev => 
-            prev.map(w => w.id === lockedWord.id ? { ...w, caught: true, selected: false } : w)
-          );
-        } else {
-          soundEffects.incorrectWord();
-          onWordHit(15);
-          missedRef.current += 1;
-          setWordsMissed(missedRef.current);
-          setWindWords(prev => 
-            prev.map(w => w.id === lockedWord.id ? { ...w, missed: true, selected: false } : w)
-          );
-        }
-
-        resetListeningState();
       }
     };
 
-    recognition.onerror = () => resetListeningState();
+    recognition.onerror = (event: any) => {
+      console.log('[WindChase] Speech error:', event.error);
+      if (event.error === 'no-speech' || event.error === 'audio-capture') {
+        // Restart on recoverable errors
+        setTimeout(() => {
+          if (isActive && recognitionRef.current) {
+            try { recognitionRef.current.start(); } catch (e) {}
+          }
+        }, 100);
+      }
+    };
+    
     recognition.onend = () => {
-      if (isListeningRef.current) resetListeningState();
+      setIsListening(false);
+      // Auto-restart if still active
+      if (isActive) {
+        setTimeout(() => {
+          try { recognition.start(); } catch (e) {}
+        }, 100);
+      }
     };
 
     recognitionRef.current = recognition;
-    try { recognition.start(); } catch (e) { resetListeningState(); }
-  }, [onWordHit, resetListeningState]);
+    try { recognition.start(); } catch (e) {}
+
+    return () => {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch (e) {}
+      }
+    };
+  }, [isActive]);
 
   useEffect(() => {
     return () => {
@@ -286,53 +271,63 @@ export const RPGWindChase = ({
           shadow-[0_0_30px_rgba(14,165,233,0.6)] border border-sky-400/50">
           <div className="flex items-center gap-3 text-white">
             <Wind className="h-6 w-6 animate-pulse" />
-            <span className="font-bold text-lg">WIND CHASE! Catch the words before they blow away!</span>
-            <Wind className="h-6 w-6 animate-pulse" />
+            <span className="font-bold text-lg">WIND CHASE! Say the words to catch them!</span>
+            <Mic className="h-6 w-6 animate-pulse" />
           </div>
         </div>
       </motion.div>
+
+      {/* Listening indicator */}
+      {isListening && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="absolute top-28 left-1/2 -translate-x-1/2"
+        >
+          <div className="flex items-center gap-2 bg-emerald-500/80 px-4 py-2 rounded-full">
+            <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ repeat: Infinity, duration: 0.5 }}>
+              <Mic className="h-5 w-5 text-white" />
+            </motion.div>
+            <span className="text-white font-medium">Listening...</span>
+          </div>
+          {spokenText && (
+            <p className="text-center text-white text-sm mt-2 bg-slate-900/70 px-3 py-1 rounded">
+              "{spokenText}"
+            </p>
+          )}
+        </motion.div>
+      )}
 
       {/* Wind Words */}
       <div className="absolute inset-0">
         <AnimatePresence>
           {windWords.map((windWord) => (
             !windWord.caught && !windWord.missed && (
-              <motion.button
+              <motion.div
                 key={windWord.id}
-                className={`absolute pointer-events-auto cursor-pointer rounded-full
-                  ${windWord.selected 
-                    ? 'z-30' 
-                    : 'z-20'
-                  }`}
+                className="absolute pointer-events-none z-20"
                 style={{
                   left: `${windWord.x}%`,
                   top: `${windWord.y}%`,
                 }}
-                onClick={() => handleSelectWord(windWord)}
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0, opacity: 0 }}
               >
                 {/* Leaf-like container */}
                 <motion.div
-                  className={`relative px-5 py-3 rounded-full flex items-center justify-center
-                    ${windWord.selected 
-                      ? 'bg-gradient-to-br from-yellow-300 via-amber-400 to-orange-400' 
-                      : 'bg-gradient-to-br from-emerald-400 via-green-500 to-teal-500'
-                    }`}
+                  className="relative px-5 py-3 rounded-full flex items-center justify-center
+                    bg-gradient-to-br from-emerald-400 via-green-500 to-teal-500"
                   animate={{
                     rotate: [0, 5, -5, 0],
-                    boxShadow: windWord.selected 
-                      ? ['0 0 30px rgba(251,191,36,0.8)', '0 0 50px rgba(251,191,36,1)', '0 0 30px rgba(251,191,36,0.8)']
-                      : ['0 0 15px rgba(16,185,129,0.5)', '0 0 25px rgba(16,185,129,0.7)', '0 0 15px rgba(16,185,129,0.5)'],
+                    boxShadow: ['0 0 15px rgba(16,185,129,0.5)', '0 0 25px rgba(16,185,129,0.7)', '0 0 15px rgba(16,185,129,0.5)'],
                   }}
                   transition={{ repeat: Infinity, duration: 0.5 }}
                 >
                   <span 
-                    className={`font-black text-lg uppercase tracking-wide
-                      ${windWord.selected ? 'text-black' : 'text-white'}`}
+                    className="font-black text-lg uppercase tracking-wide text-white"
                     style={{
-                      textShadow: windWord.selected ? 'none' : '2px 2px 0 rgba(0,0,0,0.3)',
+                      textShadow: '2px 2px 0 rgba(0,0,0,0.3)',
                     }}
                   >
                     {windWord.word}
@@ -361,46 +356,31 @@ export const RPGWindChase = ({
                     transition={{ repeat: Infinity, duration: 0.4 }}
                   />
                 )}
-              </motion.button>
+              </motion.div>
             )
           ))}
         </AnimatePresence>
+        
+        {/* Caught word effects */}
+        <AnimatePresence>
+          {windWords.filter(w => w.caught).map((windWord) => (
+            <motion.div
+              key={`caught-${windWord.id}`}
+              className="absolute z-30"
+              style={{
+                left: `${windWord.x}%`,
+                top: `${windWord.y}%`,
+              }}
+              initial={{ scale: 1, opacity: 1 }}
+              animate={{ scale: 2, opacity: 0, y: -50 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="text-4xl">✨</div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
-
-      {/* Selected Word Panel */}
-      <AnimatePresence>
-        {selectedWord && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="absolute bottom-28 left-1/2 -translate-x-1/2 pointer-events-auto"
-          >
-            <div className="bg-slate-900/95 border-2 border-sky-400 rounded-xl px-10 py-5
-              shadow-[0_0_40px_rgba(14,165,233,0.5)]">
-              <p className="text-sky-400 text-sm mb-2 text-center font-medium">
-                Say this word to catch it:
-              </p>
-              <p className="text-4xl font-black text-white text-center">{selectedWord.word}</p>
-              
-              {isListening && (
-                <div className="flex items-center justify-center gap-3 mt-4 text-emerald-400">
-                  <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ repeat: Infinity, duration: 0.6 }}>
-                    <Mic className="h-6 w-6" />
-                  </motion.div>
-                  <span className="font-medium">Listening...</span>
-                </div>
-              )}
-              
-              {spokenText && (
-                <p className="text-center text-slate-400 text-sm mt-2">
-                  Heard: "<span className="text-white">{spokenText}</span>"
-                </p>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Score */}
       <div className="absolute top-28 right-6 pointer-events-auto">

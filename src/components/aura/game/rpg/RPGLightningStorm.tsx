@@ -38,6 +38,8 @@ export const RPGLightningStorm = ({
   const struckRef = useRef(0);
   const missedRef = useRef(0);
   const wordTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const currentWordRef = useRef<LightningWord | null>(null);
+  const hasProcessedRef = useRef(false);
 
   // Initialize lightning words
   useEffect(() => {
@@ -47,14 +49,155 @@ export const RPGLightningStorm = ({
       active: false,
       struck: false,
       missed: false,
-      timeLeft: 3000, // 3 seconds per word
+      timeLeft: 3000,
     }));
     setLightningWords(initialWords);
   }, [words]);
 
+  const moveToNextWord = useCallback(() => {
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch (e) {}
+      recognitionRef.current = null;
+    }
+    setIsListening(false);
+    setSpokenText("");
+    hasProcessedRef.current = false;
+    
+    const nextIndex = currentWordIndex + 1;
+    if (nextIndex >= lightningWords.length) {
+      setIsActive(false);
+      setTimeout(() => {
+        onComplete(struckRef.current, missedRef.current);
+      }, 500);
+    } else {
+      setTimeout(() => {
+        setCurrentWordIndex(nextIndex);
+      }, 500);
+    }
+  }, [currentWordIndex, lightningWords.length, onComplete]);
+
+  const handleWordTimeout = useCallback(() => {
+    const currentWord = lightningWords[currentWordIndex];
+    if (!currentWord || currentWord.struck || currentWord.missed || hasProcessedRef.current) return;
+    
+    hasProcessedRef.current = true;
+    soundEffects.incorrectWord();
+    onWordHit(12);
+    missedRef.current += 1;
+    setWordsMissed(missedRef.current);
+    
+    setLightningWords(prev => prev.map((w, i) => 
+      i === currentWordIndex ? { ...w, missed: true, active: false } : w
+    ));
+    
+    moveToNextWord();
+  }, [currentWordIndex, lightningWords, onWordHit, moveToNextWord]);
+
+  // Start CONTINUOUS listening for current word
+  const startListening = useCallback(() => {
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch (e) {}
+      recognitionRef.current = null;
+    }
+    
+    unlockSpeechSynthesis();
+    hasProcessedRef.current = false;
+    
+    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true; // CONTINUOUS for lenient matching
+    recognition.interimResults = true; // Process interim results immediately
+    recognition.lang = 'en-US';
+    recognition.maxAlternatives = 5;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setSpokenText("");
+    };
+
+    recognition.onresult = (event: any) => {
+      if (hasProcessedRef.current) return;
+      
+      const currentWord = currentWordRef.current;
+      if (!currentWord) return;
+      
+      // Process all results including interim
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        const transcript = result[0].transcript.trim().toLowerCase();
+        setSpokenText(transcript);
+        
+        // Lenient matching - check all spoken words and alternatives
+        const targetWord = currentWord.word;
+        let matched = false;
+        
+        // Check all alternatives
+        for (let j = 0; j < result.length && !matched; j++) {
+          const alt = result[j]?.transcript?.trim().toLowerCase() || '';
+          const altWords = alt.split(/\s+/);
+          for (const spoken of altWords) {
+            if (isWordMatchLenient(spoken, targetWord)) {
+              matched = true;
+              break;
+            }
+          }
+        }
+        
+        if (matched && !hasProcessedRef.current) {
+          hasProcessedRef.current = true;
+          
+          if (wordTimerRef.current) {
+            clearTimeout(wordTimerRef.current);
+          }
+          
+          soundEffects.correctWord();
+          struckRef.current += 1;
+          setWordsStruck(struckRef.current);
+          
+          setLightningWords(prev => prev.map((w, idx) => 
+            idx === currentWordIndex ? { ...w, struck: true, active: false } : w
+          ));
+          
+          moveToNextWord();
+          return;
+        }
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      console.log('[LightningStorm] Speech error:', event.error);
+      if (event.error === 'no-speech' || event.error === 'audio-capture') {
+        // Restart on recoverable errors
+        setTimeout(() => {
+          if (isActive && !hasProcessedRef.current && recognitionRef.current) {
+            try { recognitionRef.current.start(); } catch (e) {}
+          }
+        }, 100);
+      }
+    };
+    
+    recognition.onend = () => {
+      setIsListening(false);
+      // Auto-restart if still active and not processed
+      if (isActive && !hasProcessedRef.current) {
+        setTimeout(() => {
+          try { recognition.start(); } catch (e) {}
+        }, 100);
+      }
+    };
+
+    recognitionRef.current = recognition;
+    try { recognition.start(); } catch (e) {}
+  }, [currentWordIndex, isActive, moveToNextWord]);
+
   // Start the lightning storm - words appear one at a time
   useEffect(() => {
     if (!isActive || currentWordIndex >= lightningWords.length) return;
+    
+    const currentWord = lightningWords[currentWordIndex];
+    currentWordRef.current = currentWord;
     
     // Activate current word
     setLightningWords(prev => prev.map((w, i) => ({
@@ -82,129 +225,7 @@ export const RPGLightningStorm = ({
         clearTimeout(wordTimerRef.current);
       }
     };
-  }, [currentWordIndex, isActive, lightningWords.length]);
-
-  const handleWordTimeout = useCallback(() => {
-    const currentWord = lightningWords[currentWordIndex];
-    if (!currentWord || currentWord.struck || currentWord.missed) return;
-    
-    soundEffects.incorrectWord();
-    onWordHit(12);
-    missedRef.current += 1;
-    setWordsMissed(missedRef.current);
-    
-    setLightningWords(prev => prev.map((w, i) => 
-      i === currentWordIndex ? { ...w, missed: true, active: false } : w
-    ));
-    
-    moveToNextWord();
-  }, [currentWordIndex, lightningWords, onWordHit]);
-
-  const moveToNextWord = useCallback(() => {
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch (e) {}
-      recognitionRef.current = null;
-    }
-    setIsListening(false);
-    setSpokenText("");
-    
-    const nextIndex = currentWordIndex + 1;
-    if (nextIndex >= lightningWords.length) {
-      setIsActive(false);
-      setTimeout(() => {
-        onComplete(struckRef.current, missedRef.current);
-      }, 500);
-    } else {
-      // Small delay before next word
-      setTimeout(() => {
-        setCurrentWordIndex(nextIndex);
-      }, 500);
-    }
-  }, [currentWordIndex, lightningWords.length, onComplete]);
-
-  const startListening = useCallback(() => {
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch (e) {}
-      recognitionRef.current = null;
-    }
-    
-    unlockSpeechSynthesis();
-    
-    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    if (!SpeechRecognition) return;
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-    recognition.maxAlternatives = 5;
-
-    recognition.onstart = () => {
-      setIsListening(true);
-      setSpokenText("");
-    };
-
-    recognition.onresult = (event: any) => {
-      const result = event.results[0];
-      const transcript = result[0].transcript.trim().toLowerCase();
-      setSpokenText(transcript);
-
-      if (result.isFinal) {
-        const currentWord = lightningWords[currentWordIndex];
-        if (!currentWord) return;
-        
-        const targetWord = currentWord.word;
-        let matched = false;
-        
-        for (let i = 0; i < result.length && !matched; i++) {
-          const alt = result[i]?.transcript?.trim().toLowerCase() || '';
-          const altWords = alt.split(/\s+/);
-          for (const spoken of altWords) {
-            if (isWordMatchLenient(spoken, targetWord)) {
-              matched = true;
-              break;
-            }
-          }
-        }
-
-        if (wordTimerRef.current) {
-          clearTimeout(wordTimerRef.current);
-        }
-
-        if (matched) {
-          soundEffects.correctWord();
-          struckRef.current += 1;
-          setWordsStruck(struckRef.current);
-          
-          setLightningWords(prev => prev.map((w, i) => 
-            i === currentWordIndex ? { ...w, struck: true, active: false } : w
-          ));
-        } else {
-          soundEffects.incorrectWord();
-          onWordHit(15);
-          missedRef.current += 1;
-          setWordsMissed(missedRef.current);
-          
-          setLightningWords(prev => prev.map((w, i) => 
-            i === currentWordIndex ? { ...w, missed: true, active: false } : w
-          ));
-        }
-
-        moveToNextWord();
-      }
-    };
-
-    recognition.onerror = () => {
-      setIsListening(false);
-    };
-    
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
-    recognitionRef.current = recognition;
-    try { recognition.start(); } catch (e) {}
-  }, [currentWordIndex, lightningWords, moveToNextWord, onWordHit]);
+  }, [currentWordIndex, isActive, lightningWords.length, startListening, handleWordTimeout]);
 
   useEffect(() => {
     return () => {
