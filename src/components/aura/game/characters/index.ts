@@ -10,6 +10,18 @@ export { GrogTheKing, type GrogState } from './GrogTheKing';
 export { CaveTroll, type CaveTrollState } from './CaveTroll';
 export { CrystalSpider, type CrystalSpiderState } from './CrystalSpider';
 
+// New enemy sprites
+export { StormHarpy, type StormHarpyState } from './StormHarpy';
+export { CloudGiant, type CloudGiantState } from './CloudGiant';
+export { WindLord, type WindLordState } from './WindLord';
+export { InkKraken, type InkKrakenState } from './InkKraken';
+export { ReefGuardian, type ReefGuardianState } from './ReefGuardian';
+export { Leviathan, type LeviathanState } from './Leviathan';
+export { VoidPhantom, type VoidPhantomState } from './VoidPhantom';
+export { RealityShifter, type RealityShifterState } from './RealityShifter';
+export { WordEater, type WordEaterState } from './WordEater';
+export { EchoWraith, type EchoWraithState } from './EchoWraith';
+
 // Export boss silhouettes for world map
 export { 
   DrakeSilhouette, 
