@@ -7,6 +7,14 @@ import { playCorrectPronunciation, SoundEffects } from "@/lib/pronunciationPlaye
 import { unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
 import { ensureMicrophoneAccess } from "@/lib/micDiagnostics";
 import { MicTroubleshooterModal } from "@/components/mic/MicTroubleshooterModal";
+import { getWordEmoji } from "@/lib/wordEmojiMap";
+import { RPGEmojiPop } from "./RPGEmojiPop";
+
+interface EmojiPopup {
+  id: number;
+  emoji: string;
+  word: string;
+}
 
 interface RPGWordReaderProps {
   words: string[];
@@ -21,6 +29,7 @@ interface RPGWordReaderProps {
 type RecognitionState = 'idle' | 'listening' | 'processing' | 'paused' | 'echo_retry';
 
 const soundEffects = new SoundEffects();
+let emojiPopId = 0;
 
 export const RPGWordReader = ({
   words,
@@ -39,6 +48,9 @@ export const RPGWordReader = ({
   const [completedWords, setCompletedWords] = useState<Set<number>>(new Set());
   const [micError, setMicError] = useState<string | null>(null);
   const [showTroubleshooter, setShowTroubleshooter] = useState(false);
+  
+  // Emoji pop state
+  const [emojiPopups, setEmojiPopups] = useState<EmojiPopup[]>([]);
   
   // Echo retry state
   const [echoCountdown, setEchoCountdown] = useState(0);
@@ -165,6 +177,18 @@ export const RPGWordReader = ({
     const newStreak = streak + 1;
     if (newStreak > 0 && newStreak % 5 === 0) {
       soundEffects.streakAchieved();
+    }
+    
+    // EMOJI LEARNING: Trigger emoji pop for meaningful words
+    const targetWord = currentBatch[wordIndex]?.replace(/[^a-zA-Z']/g, '') || '';
+    const emoji = getWordEmoji(targetWord);
+    if (emoji) {
+      const newPopup: EmojiPopup = {
+        id: ++emojiPopId,
+        emoji,
+        word: targetWord,
+      };
+      setEmojiPopups(prev => [...prev, newPopup]);
     }
     
     // Mark word as completed
@@ -801,6 +825,18 @@ export const RPGWordReader = ({
         lastError={micError || undefined}
         onRetry={startReading}
       />
+      
+      {/* Emoji Learning Popups */}
+      <AnimatePresence>
+        {emojiPopups.map(popup => (
+          <RPGEmojiPop
+            key={popup.id}
+            emoji={popup.emoji}
+            word={popup.word}
+            onComplete={() => setEmojiPopups(prev => prev.filter(p => p.id !== popup.id))}
+          />
+        ))}
+      </AnimatePresence>
     </div>
   );
 };
