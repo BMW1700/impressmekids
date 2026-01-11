@@ -240,7 +240,7 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
             fill="none"
           />
           {/* Back hand - smaller, rotated 90° clockwise */}
-          <g transform={`translate(${handX + 5}, ${ROPE_Y}) rotate(-45) scale(0.6)`}>
+          <g transform={`translate(${handX + 5}, ${ROPE_Y}) rotate(-45) scale(1.0)`}>
             {/* Palm base */}
             <ellipse cx="0" cy="0" rx="5" ry="6" fill={variant.skin} />
             {/* Thumb */}
@@ -265,7 +265,7 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
             fill="none"
           />
           {/* Front hand - smaller, rotated 90° clockwise */}
-          <g transform={`translate(${handX}, ${ROPE_Y + 3}) rotate(-45) scale(0.7)`}>
+          <g transform={`translate(${handX}, ${ROPE_Y + 3}) rotate(-45) scale(1.1)`}>
             {/* Palm base */}
             <ellipse cx="0" cy="0" rx="5" ry="6" fill={variant.skin} />
             {/* Thumb */}
