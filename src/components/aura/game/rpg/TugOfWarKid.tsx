@@ -239,21 +239,20 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
             strokeLinejoin="round"
             fill="none"
           />
-          {/* Back hand - fingers pointing upper-left */}
-          <g transform={`translate(${handX + 5}, ${ROPE_Y}) rotate(-135)`}>
+          {/* Back hand - smaller, rotated 90° clockwise */}
+          <g transform={`translate(${handX + 5}, ${ROPE_Y}) rotate(-45) scale(0.6)`}>
             {/* Palm base */}
-            <ellipse cx="0" cy="0" rx="6" ry="7" fill={variant.skin} />
-            {/* Fingers spreading upward (from wrist perspective) */}
-            {/* Thumb - to the side */}
-            <ellipse cx="7" cy="2" rx="3" ry="5" fill={variant.skin} transform="rotate(45)" />
+            <ellipse cx="0" cy="0" rx="5" ry="6" fill={variant.skin} />
+            {/* Thumb */}
+            <ellipse cx="6" cy="2" rx="2" ry="4" fill={variant.skin} transform="rotate(30)" />
             {/* Index finger */}
-            <path d="M-5 -5 Q-7 -12 -5 -18" stroke={variant.skin} strokeWidth="4" strokeLinecap="round" fill="none" />
+            <path d="M-4 -4 Q-5 -9 -4 -13" stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" />
             {/* Middle finger */}
-            <path d="M-1 -6 Q-1 -14 0 -20" stroke={variant.skin} strokeWidth="4" strokeLinecap="round" fill="none" />
+            <path d="M-1 -5 Q-1 -11 0 -15" stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" />
             {/* Ring finger */}
-            <path d="M3 -5 Q5 -12 5 -17" stroke={variant.skin} strokeWidth="4" strokeLinecap="round" fill="none" />
+            <path d="M2 -4 Q4 -9 4 -13" stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" />
             {/* Pinky finger */}
-            <path d="M6 -3 Q9 -8 10 -13" stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" />
+            <path d="M5 -2 Q7 -6 8 -10" stroke={variant.skin} strokeWidth="2.5" strokeLinecap="round" fill="none" />
           </g>
           
           {/* Front arm - shoulder to elbow (going down), then elbow to hand (going up to rope) */}
@@ -265,20 +264,20 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
             strokeLinejoin="round"
             fill="none"
           />
-          {/* Front hand - fingers pointing upper-left (larger, closer to viewer) */}
-          <g transform={`translate(${handX}, ${ROPE_Y + 3}) rotate(-135)`}>
+          {/* Front hand - smaller, rotated 90° clockwise */}
+          <g transform={`translate(${handX}, ${ROPE_Y + 3}) rotate(-45) scale(0.7)`}>
             {/* Palm base */}
-            <ellipse cx="0" cy="0" rx="7" ry="8" fill={variant.skin} />
-            {/* Thumb - to the side */}
-            <ellipse cx="8" cy="3" rx="3.5" ry="6" fill={variant.skin} transform="rotate(45)" />
+            <ellipse cx="0" cy="0" rx="5" ry="6" fill={variant.skin} />
+            {/* Thumb */}
+            <ellipse cx="6" cy="2" rx="2.5" ry="4.5" fill={variant.skin} transform="rotate(30)" />
             {/* Index finger */}
-            <path d="M-6 -6 Q-8 -14 -6 -22" stroke={variant.skin} strokeWidth="5" strokeLinecap="round" fill="none" />
+            <path d="M-4 -4 Q-5 -10 -4 -14" stroke={variant.skin} strokeWidth="3.5" strokeLinecap="round" fill="none" />
             {/* Middle finger */}
-            <path d="M-1 -7 Q-1 -16 0 -24" stroke={variant.skin} strokeWidth="5" strokeLinecap="round" fill="none" />
+            <path d="M-1 -5 Q-1 -12 0 -16" stroke={variant.skin} strokeWidth="3.5" strokeLinecap="round" fill="none" />
             {/* Ring finger */}
-            <path d="M4 -6 Q6 -14 6 -20" stroke={variant.skin} strokeWidth="5" strokeLinecap="round" fill="none" />
+            <path d="M2 -4 Q4 -10 4 -14" stroke={variant.skin} strokeWidth="3.5" strokeLinecap="round" fill="none" />
             {/* Pinky finger */}
-            <path d="M8 -4 Q11 -10 12 -16" stroke={variant.skin} strokeWidth="4" strokeLinecap="round" fill="none" />
+            <path d="M5 -2 Q7 -7 8 -11" stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" />
           </g>
         </g>
 
