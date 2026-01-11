@@ -264,8 +264,15 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
             strokeLinejoin="round"
             fill="none"
           />
-          {/* Front hand - smaller, rotated 90° clockwise */}
+          {/* Front hand - with dark outline for separation */}
           <g transform={`translate(${handX}, ${ROPE_Y + 3}) rotate(-45) scale(1.1)`}>
+            {/* Outline layer (drawn first, behind) */}
+            <ellipse cx="0" cy="0" rx="6.5" ry="7.5" fill="none" stroke="#2d2d2d" strokeWidth="2" />
+            <ellipse cx="6" cy="2" rx="4" ry="6" fill="none" stroke="#2d2d2d" strokeWidth="1.5" transform="rotate(30)" />
+            <path d="M-4 -4 Q-5 -10 -4 -14" stroke="#2d2d2d" strokeWidth="5.5" strokeLinecap="round" fill="none" />
+            <path d="M-1 -5 Q-1 -12 0 -16" stroke="#2d2d2d" strokeWidth="5.5" strokeLinecap="round" fill="none" />
+            <path d="M2 -4 Q4 -10 4 -14" stroke="#2d2d2d" strokeWidth="5.5" strokeLinecap="round" fill="none" />
+            <path d="M5 -2 Q7 -7 8 -11" stroke="#2d2d2d" strokeWidth="5" strokeLinecap="round" fill="none" />
             {/* Palm base */}
             <ellipse cx="0" cy="0" rx="5" ry="6" fill={variant.skin} />
             {/* Thumb */}
