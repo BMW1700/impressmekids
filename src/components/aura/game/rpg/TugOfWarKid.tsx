@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion';
-import handOpen from '@/assets/hand-open.png';
 
 interface TugOfWarKidProps {
   index: number;
@@ -240,16 +239,27 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
             strokeLinejoin="round"
             fill="none"
           />
-          {/* Back hand - open palm asset (image 2) */}
-          <g transform={`translate(${handX + 5}, ${ROPE_Y}) rotate(-45) scale(0.95)`}>
-            <image
-              href={handOpen}
-              x={-11}
-              y={-14}
-              width={22}
-              height={28}
-              preserveAspectRatio="xMidYMid meet"
+          {/* Back hand - open palm matching skin tone */}
+          <g transform={`translate(${handX + 5}, ${ROPE_Y}) rotate(-45) scale(0.55)`}>
+            {/* Wrist connection */}
+            <ellipse cx="0" cy="18" rx="10" ry="6" fill={variant.skin} />
+            {/* Palm */}
+            <path 
+              d="M-12 18 Q-14 5 -10 -5 Q-5 -12 0 -14 Q5 -12 10 -5 Q14 5 12 18 Q6 22 0 22 Q-6 22 -12 18 Z" 
+              fill={variant.skin} 
+              stroke="#1a1a1a" 
+              strokeWidth="1.5"
             />
+            {/* Thumb */}
+            <path d="M-12 8 Q-18 2 -20 -8 Q-18 -12 -14 -10 Q-10 -6 -10 2" fill={variant.skin} stroke="#1a1a1a" strokeWidth="1.5" />
+            {/* Index finger */}
+            <path d="M-8 -10 Q-8 -24 -6 -32 Q-4 -34 -2 -32 Q0 -24 0 -12" fill={variant.skin} stroke="#1a1a1a" strokeWidth="1.5" />
+            {/* Middle finger */}
+            <path d="M-2 -12 Q-1 -28 0 -38 Q2 -40 4 -38 Q5 -28 4 -14" fill={variant.skin} stroke="#1a1a1a" strokeWidth="1.5" />
+            {/* Ring finger */}
+            <path d="M4 -10 Q6 -24 7 -32 Q9 -34 11 -32 Q10 -24 8 -12" fill={variant.skin} stroke="#1a1a1a" strokeWidth="1.5" />
+            {/* Pinky finger */}
+            <path d="M10 -6 Q12 -16 13 -24 Q15 -26 17 -24 Q16 -16 14 -8" fill={variant.skin} stroke="#1a1a1a" strokeWidth="1.5" />
           </g>
           
           {/* Front arm - shoulder to elbow (going down), then elbow to hand (going up to rope) */}
@@ -261,16 +271,27 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
             strokeLinejoin="round"
             fill="none"
           />
-          {/* Front hand - open palm asset (image 2) */}
-          <g transform={`translate(${handX - 0.5}, ${ROPE_Y + 3}) rotate(-45) scale(1.05)`}>
-            <image
-              href={handOpen}
-              x={-11}
-              y={-14}
-              width={22}
-              height={28}
-              preserveAspectRatio="xMidYMid meet"
+          {/* Front hand - open palm matching skin tone */}
+          <g transform={`translate(${handX}, ${ROPE_Y + 3}) rotate(-45) scale(0.6)`}>
+            {/* Wrist connection */}
+            <ellipse cx="0" cy="18" rx="10" ry="6" fill={variant.skin} />
+            {/* Palm */}
+            <path 
+              d="M-12 18 Q-14 5 -10 -5 Q-5 -12 0 -14 Q5 -12 10 -5 Q14 5 12 18 Q6 22 0 22 Q-6 22 -12 18 Z" 
+              fill={variant.skin} 
+              stroke="#1a1a1a" 
+              strokeWidth="1.5"
             />
+            {/* Thumb */}
+            <path d="M-12 8 Q-18 2 -20 -8 Q-18 -12 -14 -10 Q-10 -6 -10 2" fill={variant.skin} stroke="#1a1a1a" strokeWidth="1.5" />
+            {/* Index finger */}
+            <path d="M-8 -10 Q-8 -24 -6 -32 Q-4 -34 -2 -32 Q0 -24 0 -12" fill={variant.skin} stroke="#1a1a1a" strokeWidth="1.5" />
+            {/* Middle finger */}
+            <path d="M-2 -12 Q-1 -28 0 -38 Q2 -40 4 -38 Q5 -28 4 -14" fill={variant.skin} stroke="#1a1a1a" strokeWidth="1.5" />
+            {/* Ring finger */}
+            <path d="M4 -10 Q6 -24 7 -32 Q9 -34 11 -32 Q10 -24 8 -12" fill={variant.skin} stroke="#1a1a1a" strokeWidth="1.5" />
+            {/* Pinky finger */}
+            <path d="M10 -6 Q12 -16 13 -24 Q15 -26 17 -24 Q16 -16 14 -8" fill={variant.skin} stroke="#1a1a1a" strokeWidth="1.5" />
           </g>
         </g>
 
