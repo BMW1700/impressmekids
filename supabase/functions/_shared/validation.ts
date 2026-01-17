@@ -78,10 +78,6 @@ export const endRoundSchema = z.object({
   round_number: z.number().int().min(0).max(20),
 });
 
-export const transcribeAudioSchema = z.object({
-  audio: z.string().min(100).max(10000000), // base64 string, reasonable size limits
-});
-
 export const extractTextSchema = z.object({
   image: z.string().min(100).max(10000000), // base64 or URL
 });
