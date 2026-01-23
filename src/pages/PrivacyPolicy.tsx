@@ -39,6 +39,7 @@ const PrivacyPolicy = () => {
                 <li>Assignment submissions and grades</li>
                 <li>Practice exercise completion data</li>
                 <li>Usage analytics (page views, time spent)</li>
+                <li>Game progress and engagement data (virtual currency, achievements, cosmetic preferences)</li>
               </ul>
             </section>
 
@@ -51,6 +52,7 @@ const PrivacyPolicy = () => {
                 <li>Processing through AI models for real-time educational insights (data not retained or used for training)</li>
                 <li>Tracking student progress and identifying learning gaps</li>
                 <li>Improving platform functionality</li>
+                <li>Providing gamified reading motivation through virtual rewards and achievements (no real money involved)</li>
               </ul>
             </section>
 
