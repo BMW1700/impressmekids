@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useDailyRewards } from "@/hooks/useDailyRewards";
 import { usePlayerAchievements } from "@/hooks/usePlayerAchievements";
 import { usePlayerPets } from "@/hooks/usePlayerPets";
+import { usePlayerInventory } from "@/hooks/usePlayerInventory";
 import { DailyRewardCalendar } from "./DailyRewardCalendar";
 import { AchievementShowcase } from "./AchievementShowcase";
 import { PetCompanionPanel } from "./PetCompanionPanel";
@@ -15,8 +16,6 @@ interface RPGPlayerHUDProps {
   gold: number;
   xp: number;
   className?: string;
-  ownedItems?: string[];
-  onPurchaseItem?: (itemId: string) => void;
 }
 
 export const RPGPlayerHUD = ({ 
@@ -24,8 +23,6 @@ export const RPGPlayerHUD = ({
   gold, 
   xp, 
   className = "",
-  ownedItems = [],
-  onPurchaseItem,
 }: RPGPlayerHUDProps) => {
   const [showDailyRewards, setShowDailyRewards] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
@@ -35,8 +32,15 @@ export const RPGPlayerHUD = ({
   const { hasClaimedToday, currentStreak } = useDailyRewards(studentId);
   const { getTotalStats } = usePlayerAchievements(studentId);
   const { equippedPet, equippedPetData } = usePlayerPets(studentId);
+  const { ownedItems, purchaseItem, equipSkin, getEquippedSkin } = usePlayerInventory(studentId);
 
   const achievementStats = getTotalStats();
+  
+  // Get equipped skins for character previews
+  const equippedSkins = {
+    valor: getEquippedSkin('valor') || undefined,
+    elara: getEquippedSkin('elara') || undefined,
+  };
 
   return (
     <>
@@ -149,9 +153,12 @@ export const RPGPlayerHUD = ({
         onClose={() => setShowStore(false)}
         currentGold={gold}
         ownedItems={ownedItems}
+        equippedSkins={equippedSkins}
         onPurchase={(item) => {
-          onPurchaseItem?.(item.id);
-          setShowStore(false);
+          purchaseItem.mutate({ item, currentGold: gold });
+        }}
+        onEquipSkin={(itemId) => {
+          equipSkin.mutate(itemId);
         }}
       />
     </>
