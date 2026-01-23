@@ -14,6 +14,7 @@ import { AnimatedStarCounter } from "../effects/StarCollectionEffect";
 import { AnimatedBookCounter } from "../effects/FlyingBookAnimation";
 import { MilestoneCelebration } from "../effects/MilestoneCelebration";
 import { RPGPlayerHUD } from "./RPGPlayerHUD";
+import { ReadingProgressPanel } from "./ReadingProgressPanel";
 
 export interface WorldProgress {
   worldId: number;
@@ -507,6 +508,20 @@ export const RPGWorldMap = ({
           })}
         </div>
       </div>
+
+      {/* Reading Progress Panel - Fixed position on left side */}
+      {studentId && (
+        <div className="fixed left-4 top-1/2 -translate-y-1/2 z-20 hidden lg:block">
+          <ReadingProgressPanel studentId={studentId} />
+        </div>
+      )}
+
+      {/* Mobile Reading Progress Panel */}
+      {studentId && (
+        <div className="lg:hidden mt-4 px-4 relative z-10">
+          <ReadingProgressPanel studentId={studentId} />
+        </div>
+      )}
 
       {/* Bottom Lore */}
       <motion.div

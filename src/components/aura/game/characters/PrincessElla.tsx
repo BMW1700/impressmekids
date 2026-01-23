@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 
 export type PrincessState = 'idle' | 'hit' | 'attacking' | 'victory' | 'defeated' | 'pulling' | 'casting';
+export type EllaSkinVariant = 'default' | 'flower_queen' | 'winter_rose' | 'sunset_bloom' | 'moonlight_garden' | 'rainbow_meadow' | 'enchanted_forest';
 
 interface PrincessEllaProps {
   state: PrincessState;
@@ -12,12 +13,66 @@ interface PrincessEllaProps {
   size?: 'small' | 'medium' | 'large';
   flipX?: boolean;
   showHealthBar?: boolean;
+  skinVariant?: EllaSkinVariant;
 }
 
 const sizeConfig = {
   small: { width: 60, height: 130 },
   medium: { width: 85, height: 185 },
   large: { width: 110, height: 240 },
+};
+
+// Skin color configurations for Princess Ella
+const skinColors: Record<EllaSkinVariant, { dress: string[]; hair: string[]; tiara: string; accent: string; magic: string }> = {
+  default: {
+    dress: ['#F9A8D4', '#EC4899', '#DB2777'],
+    hair: ['#F59E0B', '#D97706', '#92400E'],
+    tiara: '#EC4899',
+    accent: '#86EFAC',
+    magic: '#86EFAC',
+  },
+  flower_queen: {
+    dress: ['#FDE047', '#FBBF24', '#D97706'],
+    hair: ['#F9A8D4', '#EC4899', '#BE185D'],
+    tiara: '#FDE047',
+    accent: '#F472B6',
+    magic: '#FDE047',
+  },
+  winter_rose: {
+    dress: ['#E0F2FE', '#7DD3FC', '#0EA5E9'],
+    hair: ['#E2E8F0', '#CBD5E1', '#94A3B8'],
+    tiara: '#7DD3FC',
+    accent: '#FFFFFF',
+    magic: '#7DD3FC',
+  },
+  sunset_bloom: {
+    dress: ['#FDBA74', '#FB923C', '#EA580C'],
+    hair: ['#FCA5A5', '#F87171', '#DC2626'],
+    tiara: '#FDE047',
+    accent: '#FDE68A',
+    magic: '#FB923C',
+  },
+  moonlight_garden: {
+    dress: ['#C4B5FD', '#A78BFA', '#7C3AED'],
+    hair: ['#E2E8F0', '#A5B4FC', '#6366F1'],
+    tiara: '#A78BFA',
+    accent: '#E0E7FF',
+    magic: '#A78BFA',
+  },
+  rainbow_meadow: {
+    dress: ['#F9A8D4', '#C4B5FD', '#7DD3FC'],
+    hair: ['#FDE047', '#4ADE80', '#22D3EE'],
+    tiara: '#FDE047',
+    accent: '#4ADE80',
+    magic: '#FDE047',
+  },
+  enchanted_forest: {
+    dress: ['#86EFAC', '#22C55E', '#16A34A'],
+    hair: ['#92400E', '#78350F', '#451A03'],
+    tiara: '#22C55E',
+    accent: '#BBF7D0',
+    magic: '#4ADE80',
+  },
 };
 
 export const PrincessElla = ({
@@ -29,7 +84,9 @@ export const PrincessElla = ({
   size = 'medium',
   flipX = false,
   showHealthBar = true,
+  skinVariant = 'default',
 }: PrincessEllaProps) => {
+  const colors = skinColors[skinVariant] || skinColors.default;
   const [flowerPhase, setFlowerPhase] = useState(0);
   const [petalPositions, setPetalPositions] = useState<number[]>([0, 1, 2, 3, 4, 5]);
   const { width, height } = sizeConfig[size];
@@ -127,24 +184,24 @@ export const PrincessElla = ({
         className="overflow-visible"
       >
         <defs>
-          {/* Dress gradient - Pink/Rose */}
-          <linearGradient id="princessDress" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#F9A8D4" />
-            <stop offset="50%" stopColor="#EC4899" />
-            <stop offset="100%" stopColor="#DB2777" />
+          {/* Dress gradient - Dynamic based on skin */}
+          <linearGradient id={`princessDress-${skinVariant}`} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={colors.dress[0]} />
+            <stop offset="50%" stopColor={colors.dress[1]} />
+            <stop offset="100%" stopColor={colors.dress[2]} />
           </linearGradient>
 
           {/* Inner dress */}
-          <linearGradient id="dressInner" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#FBCFE8" />
-            <stop offset="100%" stopColor="#F472B6" />
+          <linearGradient id={`dressInner-${skinVariant}`} x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor={colors.dress[0]} />
+            <stop offset="100%" stopColor={colors.dress[1]} />
           </linearGradient>
 
-          {/* Flower/nature magic */}
-          <radialGradient id="flowerMagic" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#86EFAC" />
-            <stop offset="60%" stopColor="#22C55E" />
-            <stop offset="100%" stopColor="#16A34A" stopOpacity="0" />
+          {/* Flower/nature magic - Dynamic */}
+          <radialGradient id={`flowerMagic-${skinVariant}`} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor={colors.magic} />
+            <stop offset="60%" stopColor={colors.accent} />
+            <stop offset="100%" stopColor={colors.magic} stopOpacity="0" />
           </radialGradient>
 
           {/* Gold trim */}
@@ -154,11 +211,11 @@ export const PrincessElla = ({
             <stop offset="100%" stopColor="#D97706" />
           </linearGradient>
 
-          {/* Hair - Auburn */}
-          <linearGradient id="princessHair" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#F59E0B" />
-            <stop offset="50%" stopColor="#D97706" />
-            <stop offset="100%" stopColor="#92400E" />
+          {/* Hair - Dynamic based on skin */}
+          <linearGradient id={`princessHair-${skinVariant}`} x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor={colors.hair[0]} />
+            <stop offset="50%" stopColor={colors.hair[1]} />
+            <stop offset="100%" stopColor={colors.hair[2]} />
           </linearGradient>
 
           {/* Skin tone */}
@@ -187,7 +244,7 @@ export const PrincessElla = ({
         {/* Dress body */}
         <motion.path
           d={getDressPath()}
-          fill="url(#princessDress)"
+          fill={`url(#princessDress-${skinVariant})`}
           filter="url(#princessShadow)"
         />
 
@@ -202,20 +259,20 @@ export const PrincessElla = ({
 
         {/* Gold belt with flower */}
         <rect x="32" y="85" width="36" height="6" rx="2" fill="url(#princessGold)"/>
-        <circle cx="50" cy="88" r="5" fill="#EC4899" stroke="url(#princessGold)" strokeWidth="1.5"/>
+        <circle cx="50" cy="88" r="5" fill={colors.tiara} stroke="url(#princessGold)" strokeWidth="1.5"/>
         
         {/* Flower center on belt */}
-        <circle cx="50" cy="88" r="2" fill="#FDE047"/>
+        <circle cx="50" cy="88" r="2" fill={colors.accent}/>
 
         {/* Hair - flowing behind */}
         <path
           d="M30 45 Q20 60 25 90 Q35 95 40 85 L40 50 Z"
-          fill="url(#princessHair)"
+          fill={`url(#princessHair-${skinVariant})`}
           filter="url(#princessShadow)"
         />
         <path
           d="M70 45 Q80 60 75 90 Q65 95 60 85 L60 50 Z"
-          fill="url(#princessHair)"
+          fill={`url(#princessHair-${skinVariant})`}
           filter="url(#princessShadow)"
         />
 
@@ -225,7 +282,7 @@ export const PrincessElla = ({
         {/* Hair on top */}
         <path
           d="M32 45 Q35 25 50 22 Q65 25 68 45 Q60 40 50 38 Q40 40 32 45 Z"
-          fill="url(#princessHair)"
+          fill={`url(#princessHair-${skinVariant})`}
         />
 
         {/* Tiara */}
@@ -237,9 +294,9 @@ export const PrincessElla = ({
           strokeLinecap="round"
         />
         {/* Tiara gems */}
-        <circle cx="50" cy="23" r="3" fill="#EC4899"/>
-        <circle cx="40" cy="28" r="2" fill="#86EFAC"/>
-        <circle cx="60" cy="28" r="2" fill="#86EFAC"/>
+        <circle cx="50" cy="23" r="3" fill={colors.tiara}/>
+        <circle cx="40" cy="28" r="2" fill={colors.accent}/>
+        <circle cx="60" cy="28" r="2" fill={colors.accent}/>
 
         {/* Eyes */}
         <ellipse cx="43" cy="50" rx="4" ry="3" fill="#1E3A8A"/>
@@ -267,8 +324,8 @@ export const PrincessElla = ({
         />
 
         {/* Arms/Sleeves - puffy princess sleeves */}
-        <ellipse cx="22" cy="95" rx="8" ry="10" fill="url(#princessDress)" filter="url(#princessShadow)"/>
-        <ellipse cx="78" cy="95" rx="8" ry="10" fill="url(#princessDress)" filter="url(#princessShadow)"/>
+        <ellipse cx="22" cy="95" rx="8" ry="10" fill={`url(#princessDress-${skinVariant})`} filter="url(#princessShadow)"/>
+        <ellipse cx="78" cy="95" rx="8" ry="10" fill={`url(#princessDress-${skinVariant})`} filter="url(#princessShadow)"/>
         
         {/* Hands */}
         <circle cx="18" cy="105" r="5" fill="url(#princessSkin)"/>
@@ -285,20 +342,20 @@ export const PrincessElla = ({
             style={{ transformOrigin: '82px 55px' }}
           >
             {/* Petals */}
-            {[0, 60, 120, 180, 240, 300].map((angle, i) => (
-              <motion.ellipse
-                key={i}
-                cx={82 + Math.cos((angle * Math.PI) / 180) * 8}
-                cy={55 + Math.sin((angle * Math.PI) / 180) * 8}
-                rx="5"
-                ry="3"
-                fill="#F472B6"
-                transform={`rotate(${angle} 82 55)`}
-                filter="url(#flowerGlow)"
+                {[0, 60, 120, 180, 240, 300].map((angle, i) => (
+                  <motion.ellipse
+                    key={i}
+                    cx={82 + Math.cos((angle * Math.PI) / 180) * 8}
+                    cy={55 + Math.sin((angle * Math.PI) / 180) * 8}
+                    rx="5"
+                    ry="3"
+                    fill={colors.dress[1]}
+                    transform={`rotate(${angle} 82 55)`}
+                    filter="url(#flowerGlow)"
               />
             ))}
             {/* Flower center */}
-            <circle cx="82" cy="55" r="4" fill="#FDE047"/>
+            <circle cx="82" cy="55" r="4" fill={colors.accent}/>
           </motion.g>
         </motion.g>
 
@@ -315,7 +372,7 @@ export const PrincessElla = ({
               cy={y}
               rx="4"
               ry="2"
-              fill={i % 2 === 0 ? '#F472B6' : '#86EFAC'}
+              fill={i % 2 === 0 ? colors.dress[1] : colors.accent}
               opacity={0.8}
               filter="url(#flowerGlow)"
               initial={{ scale: 0 }}
@@ -338,9 +395,9 @@ export const PrincessElla = ({
             animate={{ opacity: [0, 1, 0] }}
             transition={{ duration: 0.6 }}
           >
-            <circle cx="82" cy="45" r="3" fill="#86EFAC" filter="url(#flowerGlow)"/>
-            <circle cx="75" cy="50" r="2" fill="#F472B6" filter="url(#flowerGlow)"/>
-            <circle cx="88" cy="52" r="2" fill="#FDE047" filter="url(#flowerGlow)"/>
+            <circle cx="82" cy="45" r="3" fill={colors.magic} filter="url(#flowerGlow)"/>
+            <circle cx="75" cy="50" r="2" fill={colors.dress[1]} filter="url(#flowerGlow)"/>
+            <circle cx="88" cy="52" r="2" fill={colors.accent} filter="url(#flowerGlow)"/>
           </motion.g>
         )}
       </svg>
@@ -384,7 +441,7 @@ export const PrincessElla = ({
                 top: `${20 + Math.random() * 60}%`,
                 width: 6 + Math.random() * 4,
                 height: 3 + Math.random() * 2,
-                background: i % 2 === 0 ? '#F472B6' : '#86EFAC',
+                background: i % 2 === 0 ? colors.dress[1] : colors.accent,
                 borderRadius: '50%',
               }}
               initial={{ opacity: 0, y: 0, rotate: 0 }}
