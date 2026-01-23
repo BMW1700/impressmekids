@@ -201,7 +201,7 @@ export const RPGWorldMap = ({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900 p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900 p-4 relative overflow-hidden z-0">
       {/* Milestone celebrations */}
       <MilestoneCelebration currentCount={totalBooksRescued} />
 
@@ -229,7 +229,7 @@ export const RPGWorldMap = ({
       </div>
 
       {/* Header */}
-      <div className="relative z-10 flex items-center justify-between mb-6 flex-wrap gap-3">
+      <div className="relative z-[5] flex items-center justify-between mb-6 flex-wrap gap-3">
         <Button variant="ghost" onClick={onBack} className="text-white hover:bg-white/10">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
@@ -285,7 +285,7 @@ export const RPGWorldMap = ({
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-8 relative z-10"
+        className="text-center mb-8 relative z-[5]"
       >
         <motion.div
           className="inline-block"
@@ -322,7 +322,7 @@ export const RPGWorldMap = ({
       </motion.div>
 
       {/* World Cards with Enhanced Connecting Paths */}
-      <div className="max-w-4xl mx-auto relative z-10">
+      <div className="max-w-4xl mx-auto relative z-[5]">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {campaignWorlds.map((world, index) => {
             const progress = getWorldProgress(world.id);
