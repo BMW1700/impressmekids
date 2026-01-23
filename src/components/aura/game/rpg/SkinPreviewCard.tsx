@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Check, Sparkles } from "lucide-react";
 import { SirValor } from "../characters/SirValor";
 import { Elara } from "../characters/Elara";
+import { PrincessElla } from "../characters/PrincessElla";
 import { RARITY_COLORS, type ItemRarity, type SkinCharacter } from "@/lib/gameEconomy";
 
 interface SkinPreviewCardProps {
@@ -40,6 +41,16 @@ export const SkinPreviewCard = ({
       case 'elara':
         return (
           <Elara
+            state="idle"
+            healthPercent={100}
+            size="small"
+            showHealthBar={false}
+            skinVariant={skinVariant as any}
+          />
+        );
+      case 'ella':
+        return (
+          <PrincessElla
             state="idle"
             healthPercent={100}
             size="small"
