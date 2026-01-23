@@ -1215,11 +1215,17 @@ export type Database = {
           books_rescued: number
           created_at: string
           current_world: number
+          equipped_pet_id: string | null
           grog_battles_won: number
           id: string
+          last_login_date: string | null
+          login_streak: number | null
+          longest_login_streak: number | null
           longest_streak: number
           student_id: string
+          total_achievements: number | null
           total_damage_dealt: number
+          total_gold: number | null
           total_xp_earned: number
           updated_at: string
           world_progress: Json
@@ -1228,11 +1234,17 @@ export type Database = {
           books_rescued?: number
           created_at?: string
           current_world?: number
+          equipped_pet_id?: string | null
           grog_battles_won?: number
           id?: string
+          last_login_date?: string | null
+          login_streak?: number | null
+          longest_login_streak?: number | null
           longest_streak?: number
           student_id: string
+          total_achievements?: number | null
           total_damage_dealt?: number
+          total_gold?: number | null
           total_xp_earned?: number
           updated_at?: string
           world_progress?: Json
@@ -1241,16 +1253,30 @@ export type Database = {
           books_rescued?: number
           created_at?: string
           current_world?: number
+          equipped_pet_id?: string | null
           grog_battles_won?: number
           id?: string
+          last_login_date?: string | null
+          login_streak?: number | null
+          longest_login_streak?: number | null
           longest_streak?: number
           student_id?: string
+          total_achievements?: number | null
           total_damage_dealt?: number
+          total_gold?: number | null
           total_xp_earned?: number
           updated_at?: string
           world_progress?: Json
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "campaign_progress_equipped_pet_id_fkey"
+            columns: ["equipped_pet_id"]
+            isOneToOne: false
+            referencedRelation: "player_pets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       classroom_announcements: {
         Row: {
@@ -1836,6 +1862,50 @@ export type Database = {
           word?: string
         }
         Relationships: []
+      }
+      daily_login_rewards: {
+        Row: {
+          bonus_reward: Json | null
+          claimed_at: string
+          created_at: string
+          id: string
+          login_date: string
+          reward_gold: number
+          reward_xp: number
+          streak_day: number
+          student_id: string
+        }
+        Insert: {
+          bonus_reward?: Json | null
+          claimed_at?: string
+          created_at?: string
+          id?: string
+          login_date?: string
+          reward_gold?: number
+          reward_xp?: number
+          streak_day?: number
+          student_id: string
+        }
+        Update: {
+          bonus_reward?: Json | null
+          claimed_at?: string
+          created_at?: string
+          id?: string
+          login_date?: string
+          reward_gold?: number
+          reward_xp?: number
+          streak_day?: number
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_login_rewards_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       data_restoration_requests: {
         Row: {
@@ -3856,6 +3926,120 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      player_achievements: {
+        Row: {
+          achievement_category: string
+          achievement_id: string
+          id: string
+          metadata: Json | null
+          student_id: string
+          unlocked_at: string
+        }
+        Insert: {
+          achievement_category: string
+          achievement_id: string
+          id?: string
+          metadata?: Json | null
+          student_id: string
+          unlocked_at?: string
+        }
+        Update: {
+          achievement_category?: string
+          achievement_id?: string
+          id?: string
+          metadata?: Json | null
+          student_id?: string
+          unlocked_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_achievements_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_equipped_items: {
+        Row: {
+          equipped_at: string
+          id: string
+          item_id: string
+          slot_type: string
+          student_id: string
+        }
+        Insert: {
+          equipped_at?: string
+          id?: string
+          item_id: string
+          slot_type: string
+          student_id: string
+        }
+        Update: {
+          equipped_at?: string
+          id?: string
+          item_id?: string
+          slot_type?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_equipped_items_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_pets: {
+        Row: {
+          created_at: string
+          experience: number
+          id: string
+          is_equipped: boolean
+          last_fed_at: string | null
+          level: number
+          pet_name: string | null
+          pet_type: string
+          student_id: string
+          unlocked_at: string
+        }
+        Insert: {
+          created_at?: string
+          experience?: number
+          id?: string
+          is_equipped?: boolean
+          last_fed_at?: string | null
+          level?: number
+          pet_name?: string | null
+          pet_type: string
+          student_id: string
+          unlocked_at?: string
+        }
+        Update: {
+          created_at?: string
+          experience?: number
+          id?: string
+          is_equipped?: boolean
+          last_fed_at?: string | null
+          level?: number
+          pet_name?: string | null
+          pet_type?: string
+          student_id?: string
+          unlocked_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_pets_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       practice_exercises: {
         Row: {
@@ -6711,6 +6895,59 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "districts_public"
             referencedColumns: ["district_code"]
+          },
+        ]
+      }
+      weekly_challenges: {
+        Row: {
+          challenge_type: string
+          completed_at: string | null
+          created_at: string
+          current_value: number
+          description: string | null
+          id: string
+          reward_gold: number
+          reward_xp: number
+          student_id: string
+          target_value: number
+          title: string
+          week_start: string
+        }
+        Insert: {
+          challenge_type: string
+          completed_at?: string | null
+          created_at?: string
+          current_value?: number
+          description?: string | null
+          id?: string
+          reward_gold?: number
+          reward_xp?: number
+          student_id: string
+          target_value: number
+          title: string
+          week_start: string
+        }
+        Update: {
+          challenge_type?: string
+          completed_at?: string | null
+          created_at?: string
+          current_value?: number
+          description?: string | null
+          id?: string
+          reward_gold?: number
+          reward_xp?: number
+          student_id?: string
+          target_value?: number
+          title?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_challenges_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
         ]
       }
