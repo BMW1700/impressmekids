@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { createPortal } from "react-dom";
 import { Heart, X, Coins, Star, Lock, Sparkles, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -45,23 +46,25 @@ export const PetCompanionPanel = ({ studentId, isOpen, onClose, currentGold = 0 
     setNewName("");
   };
 
-  return (
+  if (!isOpen) return null;
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <AnimatePresence>
-      {isOpen && (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        onClick={onClose}
+      >
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onClick={onClose}
+          initial={{ scale: 0.9, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.9, opacity: 0, y: 20 }}
+          onClick={(e) => e.stopPropagation()}
+          className="bg-gradient-to-br from-slate-900 via-pink-900/30 to-slate-900 rounded-2xl p-6 max-w-xl w-full max-h-[85vh] overflow-hidden border border-pink-500/30 shadow-[0_0_50px_rgba(236,72,153,0.3)] flex flex-col"
         >
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            onClick={(e) => e.stopPropagation()}
-            className="bg-gradient-to-br from-slate-900 via-pink-900/30 to-slate-900 rounded-2xl p-6 max-w-xl w-full max-h-[85vh] overflow-hidden border border-pink-500/30 shadow-[0_0_50px_rgba(236,72,153,0.3)] flex flex-col"
-          >
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -253,9 +256,9 @@ export const PetCompanionPanel = ({ studentId, isOpen, onClose, currentGold = 0 
                 </motion.div>
               )}
             </AnimatePresence>
-          </motion.div>
         </motion.div>
-      )}
-    </AnimatePresence>
+      </motion.div>
+    </AnimatePresence>,
+    document.body
   );
 };

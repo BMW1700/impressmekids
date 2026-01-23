@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
+import { createPortal } from "react-dom";
 import { Coins, Star, Gift, Flame, X, Sparkles, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DAILY_REWARDS, getRewardForDay, getNextMilestone, formatStreakMessage } from "@/lib/dailyRewardsData";
@@ -38,23 +39,25 @@ export const DailyRewardCalendar = ({ studentId, isOpen, onClose }: DailyRewardC
 
   const claimedDays = getClaimedDays();
 
-  return (
+  if (!isOpen) return null;
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <AnimatePresence>
-      {isOpen && (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        onClick={onClose}
+      >
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onClick={onClose}
+          initial={{ scale: 0.9, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.9, opacity: 0, y: 20 }}
+          onClick={(e) => e.stopPropagation()}
+          className="bg-gradient-to-br from-slate-900 via-purple-900/50 to-slate-900 rounded-2xl p-6 max-w-md w-full border border-purple-500/30 shadow-[0_0_50px_rgba(139,92,246,0.3)]"
         >
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            onClick={(e) => e.stopPropagation()}
-            className="bg-gradient-to-br from-slate-900 via-purple-900/50 to-slate-900 rounded-2xl p-6 max-w-md w-full border border-purple-500/30 shadow-[0_0_50px_rgba(139,92,246,0.3)]"
-          >
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -225,9 +228,9 @@ export const DailyRewardCalendar = ({ studentId, isOpen, onClose }: DailyRewardC
                 </div>
               </div>
             )}
-          </motion.div>
         </motion.div>
-      )}
-    </AnimatePresence>
+      </motion.div>
+    </AnimatePresence>,
+    document.body
   );
 };
