@@ -534,6 +534,9 @@ const AuraPractice = () => {
         <RPGWorldMap
           worldProgress={worldProgress}
           totalBooksRescued={totalBooksRescued}
+          studentId={user.id}
+          gold={campaignProgress?.total_gold || 0}
+          xp={campaignProgress?.total_xp_earned || 0}
           onSelectWorld={(world) => {
             setSelectedWorld(world);
             setRpgView('level_select');
