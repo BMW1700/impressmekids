@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 
 export type KnightState = 'idle' | 'hit' | 'attacking' | 'victory' | 'defeated' | 'blocking' | 'pulling';
+export type ValorSkinVariant = 'default' | 'golden' | 'crystal' | 'flame' | 'ice' | 'dragon' | 'shadow';
 
 interface SirValorProps {
   state: KnightState;
@@ -13,12 +14,59 @@ interface SirValorProps {
   flipX?: boolean;
   currentStreak?: number;
   showHealthBar?: boolean;
+  skinVariant?: ValorSkinVariant;
 }
 
 const sizeConfig = {
   small: { width: 70, height: 120 },
   medium: { width: 100, height: 170 },
   large: { width: 130, height: 220 },
+};
+
+// Skin color configurations
+const skinColors: Record<ValorSkinVariant, { armor: string[]; cape: string[]; trim: string[]; glow: string }> = {
+  default: {
+    armor: ['#2563EB', '#1E3A8A', '#1E40AF'],
+    cape: ['#DC2626', '#B91C1C', '#7F1D1D'],
+    trim: ['#FFD700', '#FFC107', '#B8860B'],
+    glow: '#60A5FA',
+  },
+  golden: {
+    armor: ['#FFD700', '#DAA520', '#B8860B'],
+    cape: ['#FFFFFF', '#F5F5DC', '#E8E8E8'],
+    trim: ['#FFFFFF', '#E8E8E8', '#C0C0C0'],
+    glow: '#FFD700',
+  },
+  crystal: {
+    armor: ['#67E8F9', '#22D3EE', '#06B6D4'],
+    cape: ['#A5F3FC', '#67E8F9', '#22D3EE'],
+    trim: ['#FFFFFF', '#E0F2FE', '#BAE6FD'],
+    glow: '#22D3EE',
+  },
+  flame: {
+    armor: ['#EF4444', '#DC2626', '#B91C1C'],
+    cape: ['#F97316', '#EA580C', '#C2410C'],
+    trim: ['#FCD34D', '#FBBF24', '#F59E0B'],
+    glow: '#F97316',
+  },
+  ice: {
+    armor: ['#A5F3FC', '#67E8F9', '#22D3EE'],
+    cape: ['#FFFFFF', '#E0F2FE', '#BAE6FD'],
+    trim: ['#93C5FD', '#60A5FA', '#3B82F6'],
+    glow: '#67E8F9',
+  },
+  dragon: {
+    armor: ['#7F1D1D', '#991B1B', '#450A0A'],
+    cape: ['#1C1917', '#292524', '#44403C'],
+    trim: ['#DC2626', '#EF4444', '#B91C1C'],
+    glow: '#EF4444',
+  },
+  shadow: {
+    armor: ['#1F2937', '#111827', '#030712'],
+    cape: ['#4C1D95', '#5B21B6', '#6D28D9'],
+    trim: ['#8B5CF6', '#A78BFA', '#7C3AED'],
+    glow: '#8B5CF6',
+  },
 };
 
 export const SirValor = ({
@@ -31,10 +79,12 @@ export const SirValor = ({
   flipX = false,
   currentStreak = 0,
   showHealthBar = true,
+  skinVariant = 'default',
 }: SirValorProps) => {
   const [coreGlow, setCoreGlow] = useState(0.8);
   const [capePhase, setCapePhase] = useState(0);
   const { width, height } = sizeConfig[size];
+  const colors = skinColors[skinVariant];
 
   // Core glow pulse
   useEffect(() => {
@@ -136,18 +186,18 @@ export const SirValor = ({
         className="overflow-visible"
       >
         <defs>
-          {/* Armor gradient - Royal Blue */}
-          <linearGradient id="knightArmor" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#2563EB" />
-            <stop offset="50%" stopColor="#1E3A8A" />
-            <stop offset="100%" stopColor="#1E40AF" />
+          {/* Armor gradient - Dynamic based on skin */}
+          <linearGradient id={`knightArmor-${skinVariant}`} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={colors.armor[0]} />
+            <stop offset="50%" stopColor={colors.armor[1]} />
+            <stop offset="100%" stopColor={colors.armor[2]} />
           </linearGradient>
 
-          {/* Gold trim gradient */}
-          <linearGradient id="goldTrim" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#FFD700" />
-            <stop offset="50%" stopColor="#FFC107" />
-            <stop offset="100%" stopColor="#B8860B" />
+          {/* Trim gradient - Dynamic */}
+          <linearGradient id={`goldTrim-${skinVariant}`} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={colors.trim[0]} />
+            <stop offset="50%" stopColor={colors.trim[1]} />
+            <stop offset="100%" stopColor={colors.trim[2]} />
           </linearGradient>
 
           {/* Silver metal */}
@@ -157,18 +207,18 @@ export const SirValor = ({
             <stop offset="100%" stopColor="#808080" />
           </linearGradient>
 
-          {/* Cape gradient */}
-          <linearGradient id="redCape" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#DC2626" />
-            <stop offset="50%" stopColor="#B91C1C" />
-            <stop offset="100%" stopColor="#7F1D1D" />
+          {/* Cape gradient - Dynamic */}
+          <linearGradient id={`redCape-${skinVariant}`} x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor={colors.cape[0]} />
+            <stop offset="50%" stopColor={colors.cape[1]} />
+            <stop offset="100%" stopColor={colors.cape[2]} />
           </linearGradient>
 
-          {/* Energy core glow */}
-          <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#60A5FA" stopOpacity={coreGlow} />
-            <stop offset="60%" stopColor="#3B82F6" stopOpacity={coreGlow * 0.6} />
-            <stop offset="100%" stopColor="#1E40AF" stopOpacity="0" />
+          {/* Energy core glow - Dynamic */}
+          <radialGradient id={`coreGlow-${skinVariant}`} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor={colors.glow} stopOpacity={coreGlow} />
+            <stop offset="60%" stopColor={colors.glow} stopOpacity={coreGlow * 0.6} />
+            <stop offset="100%" stopColor={colors.armor[2]} stopOpacity="0" />
           </radialGradient>
 
           {/* Sword rune glow */}
@@ -208,18 +258,18 @@ export const SirValor = ({
         {/* Cape (behind body) */}
         <motion.path
           d={getCapeWave()}
-          fill="url(#redCape)"
+          fill={`url(#redCape-${skinVariant})`}
           filter="url(#knightShadow)"
         />
 
         {/* Cape clasp */}
-        <circle cx="77" cy="45" r="4" fill="url(#goldTrim)" stroke="#8B6914" strokeWidth="0.5"/>
+        <circle cx="77" cy="45" r="4" fill={`url(#goldTrim-${skinVariant})`} stroke={colors.trim[2]} strokeWidth="0.5"/>
 
         {/* Body/Torso armor */}
         <path
           d="M35 50 L65 50 L70 90 Q70 110 65 120 L35 120 Q30 110 30 90 Z"
-          fill="url(#knightArmor)"
-          stroke="#1E3A8A"
+          fill={`url(#knightArmor-${skinVariant})`}
+          stroke={colors.armor[1]}
           strokeWidth="1"
           filter={currentStreak >= 3 ? "url(#streakGlow)" : "url(#knightShadow)"}
         />
@@ -227,8 +277,8 @@ export const SirValor = ({
         {/* Chest plate details */}
         <path
           d="M38 55 L62 55 L65 75 L35 75 Z"
-          fill="url(#knightArmor)"
-          stroke="url(#goldTrim)"
+          fill={`url(#knightArmor-${skinVariant})`}
+          stroke={`url(#goldTrim-${skinVariant})`}
           strokeWidth="1.5"
         />
 
@@ -237,12 +287,12 @@ export const SirValor = ({
           cx="50"
           cy="70"
           r="8"
-          fill="url(#coreGlow)"
+          fill={`url(#coreGlow-${skinVariant})`}
           filter="url(#coreGlowFilter)"
           animate={{ opacity: [0.8, 1, 0.8] }}
           transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
         />
-        <circle cx="50" cy="70" r="4" fill="#93C5FD" opacity="0.9"/>
+        <circle cx="50" cy="70" r="4" fill={colors.glow} opacity="0.9"/>
 
         {/* Helmet */}
         <path
@@ -259,27 +309,27 @@ export const SirValor = ({
           fill="#1a1a1a"
         />
 
-        {/* Helmet plume */}
-        <path
-          d="M50 5 Q55 -5 50 -10 Q60 -5 55 5"
-          fill="#DC2626"
-          stroke="#B91C1C"
-          strokeWidth="0.5"
-        />
+          {/* Helmet plume */}
+          <path
+            d="M50 5 Q55 -5 50 -10 Q60 -5 55 5"
+            fill={colors.cape[0]}
+            stroke={colors.cape[1]}
+            strokeWidth="0.5"
+          />
 
-        {/* Gold trim on helmet */}
-        <path
-          d="M35 20 L65 20"
-          stroke="url(#goldTrim)"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
+          {/* Gold trim on helmet */}
+          <path
+            d="M35 20 L65 20"
+            stroke={`url(#goldTrim-${skinVariant})`}
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
 
         {/* Left arm with shoulder plate */}
-        <ellipse cx="28" cy="55" rx="8" ry="10" fill="url(#knightArmor)" filter="url(#knightShadow)"/>
+        <ellipse cx="28" cy="55" rx="8" ry="10" fill={`url(#knightArmor-${skinVariant})`} filter="url(#knightShadow)"/>
         <path
           d="M22 55 Q20 70 22 85"
-          stroke="url(#knightArmor)"
+          stroke={`url(#knightArmor-${skinVariant})`}
           strokeWidth="10"
           strokeLinecap="round"
         />
@@ -291,24 +341,24 @@ export const SirValor = ({
         >
           <path
             d="M10 50 L30 45 L30 85 Q20 95 10 85 Z"
-            fill="url(#knightArmor)"
-            stroke="url(#goldTrim)"
+            fill={`url(#knightArmor-${skinVariant})`}
+            stroke={`url(#goldTrim-${skinVariant})`}
             strokeWidth="2"
             filter="url(#knightShadow)"
           />
           {/* Shield emblem */}
           <path
             d="M18 60 L22 55 L26 60 L22 75 Z"
-            fill="url(#goldTrim)"
+            fill={`url(#goldTrim-${skinVariant})`}
           />
-          <circle cx="20" cy="65" r="3" fill="#1E3A8A"/>
+          <circle cx="20" cy="65" r="3" fill={colors.armor[1]}/>
         </motion.g>
 
         {/* Right arm */}
-        <ellipse cx="72" cy="55" rx="8" ry="10" fill="url(#knightArmor)" filter="url(#knightShadow)"/>
+        <ellipse cx="72" cy="55" rx="8" ry="10" fill={`url(#knightArmor-${skinVariant})`} filter="url(#knightShadow)"/>
         <path
           d="M72 55 Q80 70 75 85"
-          stroke="url(#knightArmor)"
+          stroke={`url(#knightArmor-${skinVariant})`}
           strokeWidth="10"
           strokeLinecap="round"
         />
@@ -339,30 +389,30 @@ export const SirValor = ({
           />
 
           {/* Sword guard */}
-          <rect x="74" y="84" width="16" height="4" rx="1" fill="url(#goldTrim)"/>
+          <rect x="74" y="84" width="16" height="4" rx="1" fill={`url(#goldTrim-${skinVariant})`}/>
           
           {/* Sword handle */}
           <rect x="79" y="88" width="6" height="12" rx="1" fill="#4A3728"/>
           
           {/* Sword pommel */}
-          <circle cx="82" cy="102" r="4" fill="url(#goldTrim)"/>
+          <circle cx="82" cy="102" r="4" fill={`url(#goldTrim-${skinVariant})`}/>
         </motion.g>
 
         {/* Legs */}
         <path
           d="M38 120 L38 145 Q38 150 42 150 L42 120"
-          fill="url(#knightArmor)"
+          fill={`url(#knightArmor-${skinVariant})`}
           filter="url(#knightShadow)"
         />
         <path
           d="M58 120 L58 145 Q58 150 62 150 L62 120"
-          fill="url(#knightArmor)"
+          fill={`url(#knightArmor-${skinVariant})`}
           filter="url(#knightShadow)"
         />
 
         {/* Knee plates */}
-        <ellipse cx="40" cy="130" rx="6" ry="4" fill="url(#goldTrim)"/>
-        <ellipse cx="60" cy="130" rx="6" ry="4" fill="url(#goldTrim)"/>
+        <ellipse cx="40" cy="130" rx="6" ry="4" fill={`url(#goldTrim-${skinVariant})`}/>
+        <ellipse cx="60" cy="130" rx="6" ry="4" fill={`url(#goldTrim-${skinVariant})`}/>
 
         {/* Boots */}
         <path

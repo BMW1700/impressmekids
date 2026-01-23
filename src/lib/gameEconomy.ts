@@ -7,6 +7,9 @@ export interface GameCurrency {
   maxPower: number;
 }
 
+export type ItemRarity = 'common' | 'rare' | 'epic' | 'legendary';
+export type SkinCharacter = 'valor' | 'elara' | 'ella';
+
 export interface StoreItem {
   id: string;
   name: string;
@@ -17,6 +20,9 @@ export interface StoreItem {
   effect?: string;
   value?: number;
   unlocked?: boolean;
+  rarity: ItemRarity;
+  character?: SkinCharacter; // For skins - which character this is for
+  skinVariant?: string; // For skins - the variant key to use
 }
 
 export interface CoinDrop {
@@ -28,6 +34,14 @@ export interface CoinDrop {
   collected: boolean;
 }
 
+// Rarity colors for UI
+export const RARITY_COLORS: Record<ItemRarity, { border: string; bg: string; text: string }> = {
+  common: { border: 'border-slate-500', bg: 'from-slate-600/20 to-slate-700/20', text: 'text-slate-400' },
+  rare: { border: 'border-blue-500', bg: 'from-blue-600/20 to-blue-700/20', text: 'text-blue-400' },
+  epic: { border: 'border-purple-500', bg: 'from-purple-600/20 to-purple-700/20', text: 'text-purple-400' },
+  legendary: { border: 'border-amber-500', bg: 'from-amber-600/20 to-amber-700/20', text: 'text-amber-400' },
+};
+
 // Calculate gold earned from various actions
 export const calculateGoldEarned = (params: {
   wordCorrect?: boolean;
@@ -36,6 +50,7 @@ export const calculateGoldEarned = (params: {
   enemyDefeated?: boolean;
   enemyType?: string;
   isPerfect?: boolean;
+  goldBoostPercent?: number;
 }): number => {
   let gold = 0;
 
@@ -71,6 +86,11 @@ export const calculateGoldEarned = (params: {
     gold += Math.floor(10 + Math.random() * 40);
   }
 
+  // Apply gold boost from upgrades
+  if (params.goldBoostPercent && params.goldBoostPercent > 0) {
+    gold = Math.floor(gold * (1 + params.goldBoostPercent / 100));
+  }
+
   return gold;
 };
 
@@ -82,6 +102,7 @@ export const calculateXpEarned = (params: {
   enemyType?: string;
   correctWords?: number;
   longestStreak?: number;
+  xpBoostPercent?: number;
 }): number => {
   let xp = 0;
 
@@ -109,6 +130,11 @@ export const calculateXpEarned = (params: {
       case 'final_boss': xp += baseXp * 5 + wordBonus + streakBonus; break;
       default: xp += baseXp + wordBonus + streakBonus;
     }
+  }
+
+  // Apply XP boost from upgrades
+  if (params.xpBoostPercent && params.xpBoostPercent > 0) {
+    xp = Math.floor(xp * (1 + params.xpBoostPercent / 100));
   }
 
   return Math.floor(xp);
@@ -149,11 +175,18 @@ export const POWER_COSTS = {
   word_nova: 100, // Ultimate
   healing_aura: 40,
   fire_storm: 60,
+  earthquake: 50,
+  holy_light: 35,
+  shadow_bolt: 40,
+  nature_grasp: 30,
+  wind_slash: 25,
+  arcane_blast: 70,
+  time_stop: 80,
 };
 
-// Store items
+// Store items - EXPANDED with 20+ items
 export const STORE_ITEMS: StoreItem[] = [
-  // Powers
+  // =============== POWERS ===============
   {
     id: 'fire_storm',
     name: 'Fire Storm',
@@ -163,6 +196,7 @@ export const STORE_ITEMS: StoreItem[] = [
     icon: '🔥',
     effect: 'fire',
     value: 50,
+    rarity: 'epic',
   },
   {
     id: 'healing_aura',
@@ -173,6 +207,7 @@ export const STORE_ITEMS: StoreItem[] = [
     icon: '💚',
     effect: 'heal',
     value: 5,
+    rarity: 'rare',
   },
   {
     id: 'ice_storm',
@@ -183,6 +218,7 @@ export const STORE_ITEMS: StoreItem[] = [
     icon: '❄️',
     effect: 'ice',
     value: 40,
+    rarity: 'epic',
   },
   {
     id: 'thunder_god',
@@ -193,9 +229,98 @@ export const STORE_ITEMS: StoreItem[] = [
     icon: '⚡',
     effect: 'lightning',
     value: 60,
+    rarity: 'epic',
+  },
+  {
+    id: 'earthquake',
+    name: 'Earthquake',
+    description: 'Ground-shaking AoE damage',
+    price: 400,
+    category: 'power',
+    icon: '🌋',
+    effect: 'earth',
+    value: 35,
+    rarity: 'rare',
+  },
+  {
+    id: 'holy_light',
+    name: 'Holy Light',
+    description: 'Divine damage + heal self for 15 HP',
+    price: 350,
+    category: 'power',
+    icon: '✨',
+    effect: 'holy',
+    value: 25,
+    rarity: 'rare',
+  },
+  {
+    id: 'shadow_bolt',
+    name: 'Shadow Bolt',
+    description: 'Piercing dark damage that ignores armor',
+    price: 300,
+    category: 'power',
+    icon: '🌑',
+    effect: 'shadow',
+    value: 30,
+    rarity: 'rare',
+  },
+  {
+    id: 'nature_grasp',
+    name: "Nature's Grasp",
+    description: 'Vines slow enemy + deal damage over time',
+    price: 275,
+    category: 'power',
+    icon: '🌿',
+    effect: 'nature',
+    value: 20,
+    rarity: 'common',
+  },
+  {
+    id: 'wind_slash',
+    name: 'Wind Slash',
+    description: 'Fast multi-hit attack (15 damage x3)',
+    price: 350,
+    category: 'power',
+    icon: '💨',
+    effect: 'wind',
+    value: 15,
+    rarity: 'rare',
+  },
+  {
+    id: 'arcane_blast',
+    name: 'Arcane Blast',
+    description: 'Pure magic damage that ignores all defense',
+    price: 550,
+    category: 'power',
+    icon: '💜',
+    effect: 'arcane',
+    value: 55,
+    rarity: 'epic',
+  },
+  {
+    id: 'time_stop',
+    name: 'Time Warp',
+    description: 'Skip the enemy turn completely',
+    price: 700,
+    category: 'power',
+    icon: '⏱️',
+    effect: 'time',
+    value: 0,
+    rarity: 'legendary',
+  },
+  {
+    id: 'word_nova',
+    name: 'Word Nova',
+    description: 'Ultimate attack - massive 150 damage',
+    price: 1000,
+    category: 'power',
+    icon: '💫',
+    effect: 'nova',
+    value: 150,
+    rarity: 'legendary',
   },
   
-  // Skins
+  // =============== SKINS - SIR VALOR ===============
   {
     id: 'golden_knight',
     name: 'Golden Knight',
@@ -203,7 +328,67 @@ export const STORE_ITEMS: StoreItem[] = [
     price: 1000,
     category: 'skin',
     icon: '👑',
+    rarity: 'legendary',
+    character: 'valor',
+    skinVariant: 'golden',
   },
+  {
+    id: 'crystal_knight',
+    name: 'Crystal Knight',
+    description: 'Crystalline armor with particle effects',
+    price: 800,
+    category: 'skin',
+    icon: '💎',
+    rarity: 'epic',
+    character: 'valor',
+    skinVariant: 'crystal',
+  },
+  {
+    id: 'flame_knight',
+    name: 'Flame Knight',
+    description: 'Burning armor wreathed in flames',
+    price: 900,
+    category: 'skin',
+    icon: '🔥',
+    rarity: 'epic',
+    character: 'valor',
+    skinVariant: 'flame',
+  },
+  {
+    id: 'ice_knight',
+    name: 'Frost Guardian',
+    description: 'Frozen armor of the north',
+    price: 950,
+    category: 'skin',
+    icon: '🧊',
+    rarity: 'epic',
+    character: 'valor',
+    skinVariant: 'ice',
+  },
+  {
+    id: 'dragon_slayer',
+    name: 'Dragon Slayer',
+    description: 'Legendary dragon-scale armor',
+    price: 1500,
+    category: 'skin',
+    icon: '🐉',
+    rarity: 'legendary',
+    character: 'valor',
+    skinVariant: 'dragon',
+  },
+  {
+    id: 'shadow_knight',
+    name: 'Shadow Knight',
+    description: 'Dark armor from the void',
+    price: 850,
+    category: 'skin',
+    icon: '🌑',
+    rarity: 'epic',
+    character: 'valor',
+    skinVariant: 'shadow',
+  },
+
+  // =============== SKINS - ELARA ===============
   {
     id: 'shadow_wizard',
     name: 'Shadow Wizard',
@@ -211,17 +396,67 @@ export const STORE_ITEMS: StoreItem[] = [
     price: 800,
     category: 'skin',
     icon: '🌙',
+    rarity: 'epic',
+    character: 'elara',
+    skinVariant: 'shadow',
   },
   {
-    id: 'crystal_knight',
-    name: 'Crystal Knight',
-    description: 'Crystalline armor with particle effects',
-    price: 1200,
+    id: 'starlight_mage',
+    name: 'Starlight Mage',
+    description: 'Robes woven from starlight',
+    price: 850,
     category: 'skin',
-    icon: '💎',
+    icon: '⭐',
+    rarity: 'epic',
+    character: 'elara',
+    skinVariant: 'starlight',
+  },
+  {
+    id: 'phoenix_robes',
+    name: 'Phoenix Robes',
+    description: 'Fiery robes of rebirth',
+    price: 1100,
+    category: 'skin',
+    icon: '🔥',
+    rarity: 'legendary',
+    character: 'elara',
+    skinVariant: 'phoenix',
+  },
+  {
+    id: 'void_sorceress',
+    name: 'Void Sorceress',
+    description: 'Robes from the space between worlds',
+    price: 1400,
+    category: 'skin',
+    icon: '🌌',
+    rarity: 'legendary',
+    character: 'elara',
+    skinVariant: 'void',
+  },
+  {
+    id: 'nature_sage',
+    name: 'Nature Sage',
+    description: 'Living robes of the forest',
+    price: 750,
+    category: 'skin',
+    icon: '🌿',
+    rarity: 'rare',
+    character: 'elara',
+    skinVariant: 'nature',
+  },
+  {
+    id: 'frost_mage',
+    name: 'Frost Mage',
+    description: 'Icy robes of the frozen tundra',
+    price: 800,
+    category: 'skin',
+    icon: '❄️',
+    rarity: 'epic',
+    character: 'elara',
+    skinVariant: 'frost',
   },
   
-  // Potions
+  // =============== POTIONS ===============
   {
     id: 'mega_health',
     name: 'Mega Health Potion',
@@ -229,8 +464,9 @@ export const STORE_ITEMS: StoreItem[] = [
     price: 150,
     category: 'potion',
     icon: '🧪',
-    effect: 'heal_hp',
+    effect: 'heal_full',
     value: 100,
+    rarity: 'rare',
   },
   {
     id: 'mana_surge',
@@ -239,8 +475,9 @@ export const STORE_ITEMS: StoreItem[] = [
     price: 120,
     category: 'potion',
     icon: '💧',
-    effect: 'restore_mp',
+    effect: 'mp_full',
     value: 50,
+    rarity: 'rare',
   },
   {
     id: 'double_xp',
@@ -251,9 +488,87 @@ export const STORE_ITEMS: StoreItem[] = [
     icon: '⭐',
     effect: 'double_xp',
     value: 2,
+    rarity: 'epic',
+  },
+  {
+    id: 'health_potion',
+    name: 'Health Potion',
+    description: 'Restore 30 HP',
+    price: 50,
+    category: 'potion',
+    icon: '❤️',
+    effect: 'heal',
+    value: 30,
+    rarity: 'common',
+  },
+  {
+    id: 'magic_potion',
+    name: 'Magic Potion',
+    description: 'Restore 20 MP',
+    price: 40,
+    category: 'potion',
+    icon: '💙',
+    effect: 'mp',
+    value: 20,
+    rarity: 'common',
+  },
+  {
+    id: 'speed_potion',
+    name: 'Speed Elixir',
+    description: '+50% attack speed for one battle',
+    price: 180,
+    category: 'potion',
+    icon: '⚡',
+    effect: 'speed',
+    value: 50,
+    rarity: 'rare',
+  },
+  {
+    id: 'shield_potion',
+    name: 'Iron Skin',
+    description: '-50% damage taken for one battle',
+    price: 200,
+    category: 'potion',
+    icon: '🛡️',
+    effect: 'defense',
+    value: 50,
+    rarity: 'rare',
+  },
+  {
+    id: 'rage_potion',
+    name: 'Berserker Brew',
+    description: '+100% damage but -20% HP',
+    price: 250,
+    category: 'potion',
+    icon: '😤',
+    effect: 'rage',
+    value: 100,
+    rarity: 'epic',
+  },
+  {
+    id: 'lucky_coin',
+    name: 'Lucky Coin',
+    description: '+2x gold from next battle',
+    price: 150,
+    category: 'potion',
+    icon: '🪙',
+    effect: 'gold_boost',
+    value: 100,
+    rarity: 'rare',
+  },
+  {
+    id: 'revive_feather',
+    name: 'Phoenix Feather',
+    description: 'Auto-revive once if defeated',
+    price: 500,
+    category: 'potion',
+    icon: '🪶',
+    effect: 'revive',
+    value: 50,
+    rarity: 'legendary',
   },
   
-  // Upgrades
+  // =============== UPGRADES (PERMANENT) ===============
   {
     id: 'attack_boost',
     name: 'Sharpened Blade',
@@ -263,6 +578,7 @@ export const STORE_ITEMS: StoreItem[] = [
     icon: '⚔️',
     effect: 'attack_boost',
     value: 20,
+    rarity: 'epic',
   },
   {
     id: 'health_boost',
@@ -273,6 +589,7 @@ export const STORE_ITEMS: StoreItem[] = [
     icon: '❤️',
     effect: 'health_boost',
     value: 25,
+    rarity: 'rare',
   },
   {
     id: 'streak_boost',
@@ -283,8 +600,72 @@ export const STORE_ITEMS: StoreItem[] = [
     icon: '🔥',
     effect: 'streak_boost',
     value: 50,
+    rarity: 'epic',
+  },
+  {
+    id: 'mp_boost',
+    name: 'Mana Well',
+    description: '+20 max MP permanently',
+    price: 500,
+    category: 'upgrade',
+    icon: '💠',
+    effect: 'mp_boost',
+    value: 20,
+    rarity: 'rare',
+  },
+  {
+    id: 'crit_boost',
+    name: 'Sharp Eye',
+    description: '+15% critical hit chance',
+    price: 650,
+    category: 'upgrade',
+    icon: '🎯',
+    effect: 'crit_boost',
+    value: 15,
+    rarity: 'epic',
+  },
+  {
+    id: 'gold_boost',
+    name: 'Midas Touch',
+    description: '+25% gold earned permanently',
+    price: 800,
+    category: 'upgrade',
+    icon: '💰',
+    effect: 'gold_boost',
+    value: 25,
+    rarity: 'epic',
+  },
+  {
+    id: 'xp_boost',
+    name: 'Wisdom Crystal',
+    description: '+25% XP earned permanently',
+    price: 750,
+    category: 'upgrade',
+    icon: '📚',
+    effect: 'xp_boost',
+    value: 25,
+    rarity: 'epic',
+  },
+  {
+    id: 'defense_boost',
+    name: 'Adamantine Shield',
+    description: '-15% damage taken permanently',
+    price: 700,
+    category: 'upgrade',
+    icon: '🛡️',
+    effect: 'defense_boost',
+    value: 15,
+    rarity: 'epic',
   },
 ];
+
+// Get items by rarity for rarity-based display
+export const getItemsByRarity = (rarity: ItemRarity) => 
+  STORE_ITEMS.filter(item => item.rarity === rarity);
+
+// Get skins for a specific character
+export const getSkinsForCharacter = (character: SkinCharacter) =>
+  STORE_ITEMS.filter(item => item.category === 'skin' && item.character === character);
 
 // Generate coin drops from enemy
 export const generateCoinDrops = (
