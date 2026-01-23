@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Coins, Star, Flame, Trophy, Heart, Gift, Sparkles } from "lucide-react";
+import { Coins, Star, Flame, Trophy, Heart, Gift, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useDailyRewards } from "@/hooks/useDailyRewards";
 import { usePlayerAchievements } from "@/hooks/usePlayerAchievements";
@@ -8,18 +8,29 @@ import { usePlayerPets } from "@/hooks/usePlayerPets";
 import { DailyRewardCalendar } from "./DailyRewardCalendar";
 import { AchievementShowcase } from "./AchievementShowcase";
 import { PetCompanionPanel } from "./PetCompanionPanel";
+import { RPGStore } from "./RPGStore";
 
 interface RPGPlayerHUDProps {
   studentId: string;
   gold: number;
   xp: number;
   className?: string;
+  ownedItems?: string[];
+  onPurchaseItem?: (itemId: string) => void;
 }
 
-export const RPGPlayerHUD = ({ studentId, gold, xp, className = "" }: RPGPlayerHUDProps) => {
+export const RPGPlayerHUD = ({ 
+  studentId, 
+  gold, 
+  xp, 
+  className = "",
+  ownedItems = [],
+  onPurchaseItem,
+}: RPGPlayerHUDProps) => {
   const [showDailyRewards, setShowDailyRewards] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
   const [showPets, setShowPets] = useState(false);
+  const [showStore, setShowStore] = useState(false);
 
   const { hasClaimedToday, currentStreak } = useDailyRewards(studentId);
   const { getTotalStats } = usePlayerAchievements(studentId);
@@ -30,13 +41,18 @@ export const RPGPlayerHUD = ({ studentId, gold, xp, className = "" }: RPGPlayerH
   return (
     <>
       <div className={`flex items-center gap-2 ${className}`}>
-        {/* Gold Display */}
-        <motion.div
-          whileHover={{ scale: 1.05 }}
-          className="flex items-center gap-1.5 bg-gradient-to-r from-yellow-500/20 to-amber-500/20 border border-yellow-500/30 rounded-full px-3 py-1.5"
-        >
-          <Coins className="w-4 h-4 text-yellow-400" />
-          <span className="font-bold text-yellow-400">{gold.toLocaleString()}</span>
+        {/* Gold Display - Clickable to open store */}
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Button
+            onClick={() => setShowStore(true)}
+            variant="ghost"
+            size="sm"
+            className="flex items-center gap-1.5 bg-gradient-to-r from-yellow-500/20 to-amber-500/20 border border-yellow-500/30 rounded-full px-3 py-1.5"
+          >
+            <Coins className="w-4 h-4 text-yellow-400" />
+            <span className="font-bold text-yellow-400">{gold.toLocaleString()}</span>
+            <ShoppingBag className="w-3 h-3 text-yellow-400/70" />
+          </Button>
         </motion.div>
 
         {/* XP Display */}
@@ -126,6 +142,17 @@ export const RPGPlayerHUD = ({ studentId, gold, xp, className = "" }: RPGPlayerH
         isOpen={showPets}
         onClose={() => setShowPets(false)}
         currentGold={gold}
+      />
+
+      <RPGStore
+        isOpen={showStore}
+        onClose={() => setShowStore(false)}
+        currentGold={gold}
+        ownedItems={ownedItems}
+        onPurchase={(item) => {
+          onPurchaseItem?.(item.id);
+          setShowStore(false);
+        }}
       />
     </>
   );

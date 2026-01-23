@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Lock, Star, Swords, Crown, TreePine, Mountain, Castle, Flame, Sparkles, Gem, Cloud, Waves, Eclipse, GraduationCap } from "lucide-react";
+import { ArrowLeft, Lock, Star, Swords, Crown, TreePine, Mountain, Castle, Flame, Sparkles, Gem, Cloud, Waves, Eclipse, GraduationCap, ShoppingBag } from "lucide-react";
 import { campaignWorlds, CampaignWorld } from "@/lib/campaignData";
 import { 
   DrakeSilhouette, 
@@ -13,6 +13,7 @@ import {
 import { AnimatedStarCounter } from "../effects/StarCollectionEffect";
 import { AnimatedBookCounter } from "../effects/FlyingBookAnimation";
 import { MilestoneCelebration } from "../effects/MilestoneCelebration";
+import { RPGPlayerHUD } from "./RPGPlayerHUD";
 
 export interface WorldProgress {
   worldId: number;
@@ -27,6 +28,9 @@ interface RPGWorldMapProps {
   totalBooksRescued: number;
   onSelectWorld: (world: CampaignWorld) => void;
   onBack: () => void;
+  studentId?: string;
+  gold?: number;
+  xp?: number;
 }
 
 const worldIcons: Record<number, React.ReactNode> = {
@@ -173,6 +177,9 @@ export const RPGWorldMap = ({
   totalBooksRescued,
   onSelectWorld,
   onBack,
+  studentId,
+  gold = 0,
+  xp = 0,
 }: RPGWorldMapProps) => {
   const [previousBookCount] = useState(totalBooksRescued);
 
@@ -222,11 +229,22 @@ export const RPGWorldMap = ({
       </div>
 
       {/* Header */}
-      <div className="relative z-10 flex items-center justify-between mb-6">
+      <div className="relative z-10 flex items-center justify-between mb-6 flex-wrap gap-3">
         <Button variant="ghost" onClick={onBack} className="text-white hover:bg-white/10">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
         </Button>
+        
+        {/* Player HUD with Gold, XP, Streak, Achievements, Pets */}
+        {studentId && (
+          <RPGPlayerHUD 
+            studentId={studentId} 
+            gold={gold} 
+            xp={xp}
+            className="hidden sm:flex"
+          />
+        )}
+        
         <motion.div 
           className="flex items-center gap-4"
           initial={{ scale: 0.9, opacity: 0 }}
@@ -252,7 +270,17 @@ export const RPGWorldMap = ({
           </motion.div>
         </motion.div>
       </div>
-
+      
+      {/* Mobile Player HUD */}
+      {studentId && (
+        <div className="sm:hidden mb-4 flex justify-center">
+          <RPGPlayerHUD 
+            studentId={studentId} 
+            gold={gold} 
+            xp={xp}
+          />
+        </div>
+      )}
       {/* Title */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
