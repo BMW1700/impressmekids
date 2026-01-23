@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
-import { ShoppingBag, X, Coins, Star, Lock, Check, Sparkles, Zap, Shield, Palette, Beaker } from "lucide-react";
+import { ShoppingBag, X, Coins, Lock, Check, Sparkles, Zap, Shield, Palette, Beaker } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { STORE_ITEMS, type StoreItem } from "@/lib/gameEconomy";
+import { STORE_ITEMS, RARITY_COLORS, type StoreItem } from "@/lib/gameEconomy";
 import { useToast } from "@/hooks/use-toast";
+import { SkinPreviewCard } from "./SkinPreviewCard";
 
 interface RPGStoreProps {
   isOpen: boolean;
@@ -13,6 +14,8 @@ interface RPGStoreProps {
   currentGold: number;
   ownedItems: string[];
   onPurchase: (item: StoreItem) => void;
+  equippedSkins?: { valor?: string; elara?: string };
+  onEquipSkin?: (itemId: string) => void;
 }
 
 const categoryIcons: Record<string, typeof ShoppingBag> = {
@@ -29,12 +32,19 @@ const categoryLabels: Record<string, string> = {
   upgrade: 'Upgrades',
 };
 
-export const RPGStore = ({ isOpen, onClose, currentGold, ownedItems, onPurchase }: RPGStoreProps) => {
+export const RPGStore = ({ 
+  isOpen, 
+  onClose, 
+  currentGold, 
+  ownedItems, 
+  onPurchase,
+  equippedSkins = {},
+  onEquipSkin,
+}: RPGStoreProps) => {
   const { toast } = useToast();
-  const [selectedCategory, setSelectedCategory] = useState('powers');
+  const [selectedCategory, setSelectedCategory] = useState('power');
 
   const categories = [...new Set(STORE_ITEMS.map(item => item.category))];
-  const filteredItems = STORE_ITEMS.filter(item => item.category === selectedCategory);
 
   const handlePurchase = (item: StoreItem) => {
     if (currentGold < item.price) {
@@ -46,7 +56,7 @@ export const RPGStore = ({ isOpen, onClose, currentGold, ownedItems, onPurchase 
       return;
     }
 
-    if (ownedItems.includes(item.id)) {
+    if (item.category !== 'potion' && ownedItems.includes(item.id)) {
       toast({
         title: "Already owned!",
         description: "You already have this item.",
@@ -55,6 +65,12 @@ export const RPGStore = ({ isOpen, onClose, currentGold, ownedItems, onPurchase 
     }
 
     onPurchase(item);
+  };
+
+  const handleEquip = (item: StoreItem) => {
+    if (onEquipSkin && item.category === 'skin') {
+      onEquipSkin(item.id);
+    }
   };
 
   if (!isOpen) return null;
@@ -74,7 +90,7 @@ export const RPGStore = ({ isOpen, onClose, currentGold, ownedItems, onPurchase 
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-gradient-to-br from-slate-900 via-amber-900/30 to-slate-900 rounded-2xl p-6 max-w-2xl w-full max-h-[85vh] overflow-hidden border border-amber-500/30 shadow-[0_0_50px_rgba(245,158,11,0.3)] flex flex-col"
+          className="bg-gradient-to-br from-slate-900 via-amber-900/30 to-slate-900 rounded-2xl p-6 max-w-3xl w-full max-h-[85vh] overflow-hidden border border-amber-500/30 shadow-[0_0_50px_rgba(245,158,11,0.3)] flex flex-col"
         >
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
@@ -122,75 +138,137 @@ export const RPGStore = ({ isOpen, onClose, currentGold, ownedItems, onPurchase 
                   value={category} 
                   className="flex-1 overflow-y-auto pr-2 mt-0"
                 >
-                  <div className="grid grid-cols-2 gap-3">
-                    {STORE_ITEMS.filter(item => item.category === category).map((item) => {
-                      const isOwned = ownedItems.includes(item.id);
-                      const canAfford = currentGold >= item.price;
+                  {/* Special skin layout with character previews */}
+                  {category === 'skin' ? (
+                    <div className="grid grid-cols-3 gap-3">
+                      {STORE_ITEMS.filter(item => item.category === 'skin').map((item) => {
+                        const isOwned = ownedItems.includes(item.id);
+                        const canAfford = currentGold >= item.price;
+                        const isEquipped = item.skinVariant === equippedSkins[item.character || 'valor'];
 
-                      return (
-                        <motion.div
-                          key={item.id}
-                          whileHover={{ scale: 1.02 }}
-                          className={`relative rounded-xl p-4 transition-all border-2 ${
-                            isOwned
-                              ? 'bg-green-500/10 border-green-500/30'
-                              : canAfford
-                              ? 'bg-slate-800/50 border-amber-500/30 hover:border-amber-400'
-                              : 'bg-slate-800/30 border-slate-700/30 opacity-60'
-                          }`}
-                        >
-                          {/* Item Icon */}
-                          <div className="flex items-start gap-3 mb-3">
-                            <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-3xl ${
-                              isOwned ? 'bg-green-500/20' : 'bg-gradient-to-br from-amber-500/20 to-orange-500/20'
-                            }`}>
-                              {item.icon}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-bold text-white truncate">{item.name}</h3>
-                              <p className="text-xs text-slate-400 line-clamp-2">{item.description}</p>
-                            </div>
+                        return (
+                          <div key={item.id} className="space-y-2">
+                            <SkinPreviewCard
+                              skinVariant={item.skinVariant || 'default'}
+                              character={item.character || 'valor'}
+                              name={item.name}
+                              rarity={item.rarity}
+                              isOwned={isOwned}
+                              isEquipped={isEquipped}
+                              onClick={() => isOwned ? handleEquip(item) : handlePurchase(item)}
+                            />
+                            {/* Price / Equip Button */}
+                            {isOwned ? (
+                              <Button
+                                onClick={() => handleEquip(item)}
+                                disabled={isEquipped}
+                                size="sm"
+                                className={`w-full ${isEquipped ? 'bg-green-600' : 'bg-purple-600 hover:bg-purple-500'}`}
+                              >
+                                {isEquipped ? <><Check className="w-3 h-3 mr-1" /> Equipped</> : 'Equip'}
+                              </Button>
+                            ) : (
+                              <Button
+                                onClick={() => handlePurchase(item)}
+                                disabled={!canAfford}
+                                size="sm"
+                                className={`w-full ${
+                                  canAfford
+                                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400'
+                                    : 'bg-slate-700 cursor-not-allowed'
+                                }`}
+                              >
+                                <Coins className="w-3 h-3 mr-1" />
+                                {item.price.toLocaleString()}
+                                {!canAfford && <Lock className="w-3 h-3 ml-1" />}
+                              </Button>
+                            )}
                           </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    /* Standard item grid */
+                    <div className="grid grid-cols-2 gap-3">
+                      {STORE_ITEMS.filter(item => item.category === category).map((item) => {
+                        const isOwned = item.category !== 'potion' && ownedItems.includes(item.id);
+                        const canAfford = currentGold >= item.price;
+                        const rarityStyle = RARITY_COLORS[item.rarity];
 
-                          {/* Category Badge */}
-                          <div className="text-xs font-bold uppercase mb-2 text-amber-400">
-                            {item.category}
-                          </div>
+                        return (
+                          <motion.div
+                            key={item.id}
+                            whileHover={{ scale: 1.02 }}
+                            className={`relative rounded-xl p-4 transition-all border-2 ${rarityStyle.border} ${
+                              isOwned
+                                ? 'bg-green-500/10'
+                                : canAfford
+                                ? `bg-gradient-to-br ${rarityStyle.bg}`
+                                : 'bg-slate-800/30 opacity-60'
+                            }`}
+                          >
+                            {/* Rarity glow for legendary */}
+                            {item.rarity === 'legendary' && !isOwned && (
+                              <motion.div
+                                className="absolute inset-0 rounded-xl bg-amber-500/20 blur-sm"
+                                animate={{ opacity: [0.3, 0.6, 0.3] }}
+                                transition={{ duration: 2, repeat: Infinity }}
+                              />
+                            )}
 
-                          {/* Effect */}
-                          {item.effect && (
-                            <div className="text-sm text-amber-300 mb-3">
-                              {item.effect}
+                            {/* Item Icon */}
+                            <div className="flex items-start gap-3 mb-3 relative z-10">
+                              <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-3xl ${
+                                isOwned ? 'bg-green-500/20' : `bg-gradient-to-br ${rarityStyle.bg}`
+                              }`}>
+                                {item.icon}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-bold text-white truncate">{item.name}</h3>
+                                <p className="text-xs text-slate-400 line-clamp-2">{item.description}</p>
+                              </div>
                             </div>
-                          )}
 
-                          {/* Price / Buy Button */}
-                          {isOwned ? (
-                            <div className="flex items-center justify-center gap-2 bg-green-500/20 py-2 rounded-lg">
-                              <Check className="w-4 h-4 text-green-400" />
-                              <span className="text-green-400 font-bold">Owned</span>
+                            {/* Rarity Badge */}
+                            <div className={`text-xs font-bold uppercase mb-2 ${rarityStyle.text}`}>
+                              {item.rarity}
                             </div>
-                          ) : (
-                            <Button
-                              onClick={() => handlePurchase(item)}
-                              disabled={!canAfford}
-                              className={`w-full ${
-                                canAfford
-                                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400'
-                                  : 'bg-slate-700 cursor-not-allowed'
-                              }`}
-                            >
-                              <Coins className="w-4 h-4 mr-1" />
-                              {item.price.toLocaleString()}
-                              {!canAfford && (
-                                <Lock className="w-3 h-3 ml-1" />
-                              )}
-                            </Button>
-                          )}
-                        </motion.div>
-                      );
-                    })}
-                  </div>
+
+                            {/* Effect */}
+                            {item.value && (
+                              <div className="text-sm text-amber-300 mb-3">
+                                +{item.value} {item.effect}
+                              </div>
+                            )}
+
+                            {/* Price / Buy Button */}
+                            {isOwned ? (
+                              <div className="flex items-center justify-center gap-2 bg-green-500/20 py-2 rounded-lg">
+                                <Check className="w-4 h-4 text-green-400" />
+                                <span className="text-green-400 font-bold">Owned</span>
+                              </div>
+                            ) : (
+                              <Button
+                                onClick={() => handlePurchase(item)}
+                                disabled={!canAfford}
+                                className={`w-full ${
+                                  canAfford
+                                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400'
+                                    : 'bg-slate-700 cursor-not-allowed'
+                                }`}
+                              >
+                                <Coins className="w-4 h-4 mr-1" />
+                                {item.price.toLocaleString()}
+                                {!canAfford && (
+                                  <Lock className="w-3 h-3 ml-1" />
+                                )}
+                              </Button>
+                            )}
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </TabsContent>
               ))}
             </Tabs>

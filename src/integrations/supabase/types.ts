@@ -3994,6 +3994,39 @@ export type Database = {
           },
         ]
       }
+      player_inventory: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_equipped: boolean | null
+          item_category: string
+          item_id: string
+          purchased_at: string | null
+          quantity: number | null
+          student_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_equipped?: boolean | null
+          item_category: string
+          item_id: string
+          purchased_at?: string | null
+          quantity?: number | null
+          student_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_equipped?: boolean | null
+          item_category?: string
+          item_id?: string
+          purchased_at?: string | null
+          quantity?: number | null
+          student_id?: string
+        }
+        Relationships: []
+      }
       player_pets: {
         Row: {
           created_at: string
