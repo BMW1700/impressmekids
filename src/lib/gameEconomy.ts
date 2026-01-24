@@ -43,6 +43,7 @@ export const RARITY_COLORS: Record<ItemRarity, { border: string; bg: string; tex
 };
 
 // Calculate gold earned from various actions
+// UPDATED: Random 30% drop chance for word gold (instead of every word)
 export const calculateGoldEarned = (params: {
   wordCorrect?: boolean;
   streak?: number;
@@ -54,22 +55,25 @@ export const calculateGoldEarned = (params: {
 }): number => {
   let gold = 0;
 
-  // Correct word: 2-5 gold based on length
+  // RANDOM COIN DROP: 30% chance on correct word (makes coins exciting!)
   if (params.wordCorrect) {
-    gold += Math.min(5, Math.max(2, Math.floor((params.wordLength || 4) / 2)));
+    if (Math.random() < 0.30) { // 30% drop chance
+      // Bigger rewards when you DO get coins: 3-8 gold based on word length
+      gold += Math.min(8, Math.max(3, Math.floor((params.wordLength || 4) / 2) + 2));
+      
+      // Streak bonus on drops: +1-3 gold for hot streaks
+      if (params.streak && params.streak >= 5) {
+        gold += Math.min(3, Math.floor(params.streak / 4));
+      }
+    }
     
-    // Perfect word bonus (first try)
+    // Perfect word bonus (first try) - ALWAYS awarded
     if (params.isPerfect) {
       gold += 3;
     }
   }
 
-  // Streak bonus: +1 gold per streak level
-  if (params.streak && params.streak > 0) {
-    gold += Math.floor(params.streak / 2);
-  }
-
-  // Enemy defeated: 50-200 gold based on type
+  // Enemy defeated: 50-250 gold based on type (GUARANTEED)
   if (params.enemyDefeated) {
     switch (params.enemyType) {
       case 'minion': gold += 50; break;
@@ -81,9 +85,9 @@ export const calculateGoldEarned = (params: {
     }
   }
 
-  // Random bonus drop (5% chance)
-  if (Math.random() < 0.05) {
-    gold += Math.floor(10 + Math.random() * 40);
+  // Rare jackpot drop (3% chance for big bonus)
+  if (Math.random() < 0.03) {
+    gold += Math.floor(15 + Math.random() * 35);
   }
 
   // Apply gold boost from upgrades

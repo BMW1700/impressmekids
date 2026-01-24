@@ -91,6 +91,7 @@ interface BattleStats {
   longestStreak: number;
   damageDealt: number;
   xpEarned: number;
+  goldEarned?: number; // NEW: Add gold to stats
 }
 
 export const RPGBattleArena = ({
@@ -1474,8 +1475,9 @@ export const RPGBattleArena = ({
       longestStreak,
       damageDealt: totalDamage,
       xpEarned: finalXpEarned,
+      goldEarned, // NEW: Pass gold to parent for wallet sync
     });
-  }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete, studentId, story, battleMode, saveToAuraRecords, updateStudentReadingStats]);
+  }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete, studentId, story, battleMode, saveToAuraRecords, updateStudentReadingStats, goldEarned]);
 
   // Get current batch of words for reading - MEMOIZED for stable reference
   // batchStartIndex only changes when we complete a full batch, keeping this stable

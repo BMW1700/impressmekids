@@ -293,10 +293,11 @@ const AuraPractice = () => {
 
   // RPG Battle Mode takes over the whole screen
   if (isRpgMode && rpgView === 'battle' && rpgStory && user?.id) {
-    const handleBattleComplete = async (victory: boolean, stats: { wordsRead: number; correctWords: number; longestStreak: number; damageDealt: number; xpEarned: number }) => {
+    const handleBattleComplete = async (victory: boolean, stats: { wordsRead: number; correctWords: number; longestStreak: number; damageDealt: number; xpEarned: number; goldEarned?: number }) => {
       console.log('RPG Battle complete:', stats, 'victory:', victory);
       
-      const accuracy = stats.wordsRead > 0 ? Math.round((stats.correctWords / stats.wordsRead) * 100) : 0;
+      // CRITICAL: Cap accuracy at 100% to prevent display bugs
+      const accuracy = stats.wordsRead > 0 ? Math.min(100, Math.round((stats.correctWords / stats.wordsRead) * 100)) : 0;
       
       // Set victory stats for celebration modal
       setVictoryStats({
@@ -310,7 +311,7 @@ const AuraPractice = () => {
         defeatedBeforeFinish: victory && stats.correctWords < stats.wordsRead * 0.8,
       });
       
-      // Save progress to database
+      // Save progress to database - NOW INCLUDES GOLD
       if (currentBattleId && selectedWorld) {
         await completeBattle({
           battleId: currentBattleId,
@@ -320,6 +321,7 @@ const AuraPractice = () => {
           longestStreak: stats.longestStreak,
           storyTitle: rpgStory?.title || 'Unknown',
           worldNumber: selectedWorld.id,
+          goldEarned: stats.goldEarned || 0, // NEW: Pass gold to sync to wallet
         });
       }
       
