@@ -30,6 +30,7 @@ export interface WordAttempt {
 interface RPGWordReaderProps {
   words: string[];
   onResult: (correct: boolean, spokenWord: string, wordIndex: number) => void;
+  onRetried?: (wordIndex: number) => void; // NEW: Track retried words for accurate accuracy calculation
   onBatchComplete?: (results: WordAttempt[]) => void;
   disabled?: boolean;
   streak?: number;
@@ -96,6 +97,7 @@ const getWordTip = (word: string): string => {
 export const RPGWordReader = ({
   words,
   onResult,
+  onRetried,
   onBatchComplete,
   disabled = false,
   streak = 0,
@@ -367,6 +369,7 @@ export const RPGWordReader = ({
   }, [pendingIncorrectWord]);
 
   // Handle retry success - mark as retried (YELLOW), no damage/coins
+  // CRITICAL: Call onRetried to properly count this word in accuracy (as NOT correct)
   const handleRetrySuccess = useCallback((spokenWord: string, wordIndex: number) => {
     const targetWord = currentBatch[wordIndex]?.replace(/[^a-zA-Z']/g, '') || '';
     
@@ -389,7 +392,9 @@ export const RPGWordReader = ({
     setCompletedWords(prev => new Set([...prev, wordIndex]));
     
     // NO damage dealt, NO coins given - just practice
-    // Don't call onResult(true, ...) since this doesn't count as a real correct
+    // CRITICAL: Call onRetried to track this for accuracy calculation
+    // This counts as a word read, but NOT as correct (for accurate accuracy)
+    onRetried?.(wordIndex);
     
     setPendingIncorrectWord(null);
     
@@ -422,7 +427,7 @@ export const RPGWordReader = ({
         setRecognitionState('idle');
       }
     }, 300);
-  }, [currentBatch, words, batchSize, stopRecognitionSession, wordResults, onBatchComplete]);
+  }, [currentBatch, words, batchSize, stopRecognitionSession, wordResults, onBatchComplete, onRetried]);
 
   // Handle "Continue" (Skip) - accept miss and trigger enemy attack
   const handleContinueAfterMiss = useCallback(() => {
