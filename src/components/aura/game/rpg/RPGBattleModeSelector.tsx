@@ -13,7 +13,7 @@ interface RPGBattleModeSelectorProps {
 const battleModes = [
   {
     id: 'classic' as BattleMode,
-    name: 'Classic RPG Battle',
+    name: 'Classic LexiQuest Battle',
     description: 'Traditional HP-based combat with mini-games and special attacks',
     icon: Sword,
     gradient: 'from-red-600 to-orange-500',

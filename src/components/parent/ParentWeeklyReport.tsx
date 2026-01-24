@@ -183,7 +183,7 @@ export const ParentWeeklyReport = ({ studentId, studentName }: ParentWeeklyRepor
   const getModeDisplayName = (mode: string) => {
     const modeNames: Record<string, string> = {
       'word_by_word': 'Reading Practice',
-      'rpg_battle': 'RPG Battle Mode',
+      'rpg_battle': 'LexiQuest: Into the Beyond',
       'tug_of_war': 'Tug of War',
       'balloon_battle': 'Balloon Battle',
       'screening': 'Reading Assessment',

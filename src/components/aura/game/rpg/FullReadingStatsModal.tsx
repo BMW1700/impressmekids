@@ -242,7 +242,7 @@ export const FullReadingStatsModal = ({
                 <Clock className="w-4 h-4 mr-1" /> History
               </TabsTrigger>
               <TabsTrigger value="rpg" className="data-[state=active]:bg-indigo-600">
-                <Swords className="w-4 h-4 mr-1" /> RPG
+                <Swords className="w-4 h-4 mr-1" /> Quest
               </TabsTrigger>
             </TabsList>
 
