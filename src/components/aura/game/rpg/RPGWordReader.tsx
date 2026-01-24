@@ -126,6 +126,9 @@ export const RPGWordReader = ({
   // Echo retry state
   const [echoCountdown, setEchoCountdown] = useState(0);
   
+  // Navigation state - for reviewing completed words
+  const [canNavigate, setCanNavigate] = useState(false);
+  
   // Refs - the key is keeping ONE recognition instance alive
   const recognitionRef = useRef<any>(null);
   const isRecognitionRunningRef = useRef(false);
@@ -792,6 +795,39 @@ export const RPGWordReader = ({
       playCorrectPronunciation(cleanWord);
     }
   }, [cleanWord]);
+  
+  // Enable navigation after at least one word is completed
+  useEffect(() => {
+    if (completedWords.size > 0) {
+      setCanNavigate(true);
+    }
+  }, [completedWords.size]);
+  
+  // Navigation handlers for reviewing completed words
+  const handlePrevWord = useCallback(() => {
+    if (currentIndex > 0 && recognitionState === 'idle') {
+      setCurrentIndex(prev => prev - 1);
+      currentIndexRef.current = currentIndex - 1;
+      setFeedback(null);
+    }
+  }, [currentIndex, recognitionState]);
+
+  const handleNextWord = useCallback(() => {
+    if (currentIndex < currentBatch.length - 1 && recognitionState === 'idle' && completedWords.has(currentIndex)) {
+      setCurrentIndex(prev => prev + 1);
+      currentIndexRef.current = currentIndex + 1;
+      setFeedback(null);
+    }
+  }, [currentIndex, currentBatch.length, recognitionState, completedWords]);
+  
+  // Navigate to specific word by clicking dot
+  const navigateToWord = useCallback((index: number) => {
+    if (recognitionState === 'idle' && (completedWords.has(index) || index === currentIndex)) {
+      setCurrentIndex(index);
+      currentIndexRef.current = index;
+      setFeedback(null);
+    }
+  }, [recognitionState, completedWords, currentIndex]);
 
   // Safety check
   if (!currentBatch || currentBatch.length === 0) {
@@ -875,6 +911,54 @@ export const RPGWordReader = ({
           );
         })}
       </div>
+      
+      {/* Word Navigation Controls - for reviewing completed words */}
+      {canNavigate && recognitionState === 'idle' && (
+        <div className="flex items-center justify-center gap-4 mt-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handlePrevWord}
+            disabled={currentIndex === 0}
+            className="text-slate-400 hover:text-white hover:bg-slate-700/50 p-2"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
+          
+          {/* Dot Indicators */}
+          <div className="flex gap-1.5">
+            {currentBatch.map((_, idx) => {
+              const result = wordResults.get(idx);
+              const isActiveDot = idx === currentIndex;
+              const colorClass = result?.result === 'correct' ? 'bg-emerald-500' :
+                            result?.result === 'retried' ? 'bg-yellow-500' :
+                            result?.result === 'missed' ? 'bg-red-500' :
+                            'bg-slate-600';
+              return (
+                <button
+                  key={idx}
+                  onClick={() => navigateToWord(idx)}
+                  disabled={!completedWords.has(idx) && idx !== currentIndex}
+                  className={`w-2.5 h-2.5 rounded-full transition-all cursor-pointer ${colorClass}
+                    ${isActiveDot ? 'ring-2 ring-blue-400 ring-offset-1 ring-offset-slate-900 scale-125' : ''}
+                    ${(!completedWords.has(idx) && idx !== currentIndex) ? 'opacity-40 cursor-not-allowed' : 'hover:scale-110'}
+                  `}
+                />
+              );
+            })}
+          </div>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleNextWord}
+            disabled={currentIndex >= currentBatch.length - 1 || !completedWords.has(currentIndex)}
+            className="text-slate-400 hover:text-white hover:bg-slate-700/50 p-2"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </Button>
+        </div>
+      )}
 
       {/* Current Word - Large Display */}
       <motion.div
