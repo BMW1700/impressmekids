@@ -206,6 +206,7 @@ export const useCampaignProgress = (studentId?: string) => {
       longestStreak,
       storyTitle,
       worldNumber,
+      goldEarned = 0, // NEW: Accept gold from battle
     }: {
       battleId: string;
       victory: boolean;
@@ -214,6 +215,7 @@ export const useCampaignProgress = (studentId?: string) => {
       longestStreak: number;
       storyTitle: string;
       worldNumber: number;
+      goldEarned?: number; // NEW: Optional gold parameter
     }) => {
       if (!studentId) throw new Error("No student ID");
 
@@ -264,7 +266,7 @@ export const useCampaignProgress = (studentId?: string) => {
           }
         }
 
-        // Upsert campaign progress
+        // Upsert campaign progress - NOW INCLUDES GOLD
         await supabase
           .from("campaign_progress")
           .upsert({
@@ -276,6 +278,7 @@ export const useCampaignProgress = (studentId?: string) => {
             books_rescued: newBooksRescued,
             grog_battles_won: newBattlesWon,
             total_xp_earned: newXpEarned,
+            total_gold: (currentProgress?.total_gold || 0) + goldEarned, // NEW: Sync gold to wallet
           }, {
             onConflict: 'student_id',
           });
