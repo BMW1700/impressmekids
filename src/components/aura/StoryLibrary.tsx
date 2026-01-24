@@ -215,11 +215,11 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
                     <div>
                       <h3 className="font-bold text-lg flex items-center gap-2">
                         <Sparkles className="h-5 w-5 text-amber-500" />
-                        LexiQuest: Into the Beyond
+                        LexiQuest: Into the Beyond - RPG Mode
                         <Badge variant="secondary" className="text-xs">BETA</Badge>
                       </h3>
                       <p className="text-sm text-muted-foreground">
-                        Epic reading adventure! Battle goblins, rescue books, master words!
+                        Epic reading adventure! Explore the World Map, battle goblins, rescue books!
                       </p>
                     </div>
                   </div>
@@ -228,7 +228,7 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
                     className="bg-gradient-to-r from-amber-500 to-red-600 hover:from-amber-600 hover:to-red-700"
                   >
                     <Sword className="h-4 w-4 mr-2" />
-                    Enter LexiQuest
+                    Enter World Map
                   </Button>
                 </div>
               </CardContent>
