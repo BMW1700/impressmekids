@@ -31,6 +31,56 @@ type RecognitionState = 'idle' | 'listening' | 'processing' | 'paused' | 'echo_r
 const soundEffects = new SoundEffects();
 let emojiPopId = 0;
 
+// Helper: Simple phonetic breakdown for learning hints
+const getPhoneticHint = (word: string): string => {
+  const vowels = 'aeiouy';
+  let syllables: string[] = [];
+  let currentSyllable = '';
+  let prevWasVowel = false;
+  
+  for (let i = 0; i < word.length; i++) {
+    const char = word[i].toLowerCase();
+    const isVowel = vowels.includes(char);
+    currentSyllable += word[i];
+    
+    if (isVowel && !prevWasVowel && currentSyllable.length > 1) {
+      if (i + 1 < word.length && !vowels.includes(word[i + 1].toLowerCase())) {
+        syllables.push(currentSyllable);
+        currentSyllable = '';
+      }
+    }
+    prevWasVowel = isVowel;
+  }
+  
+  if (currentSyllable) {
+    syllables.push(currentSyllable);
+  }
+  
+  if (syllables.length <= 1) {
+    return word.toUpperCase();
+  }
+  
+  return syllables.join(' • ');
+};
+
+// Helper: Get a helpful tip for the word
+const getWordTip = (word: string): string => {
+  const lowerWord = word.toLowerCase();
+  
+  if (lowerWord.includes('kn')) return "The 'k' in 'kn' is silent!";
+  if (lowerWord.includes('wr')) return "The 'w' in 'wr' is silent!";
+  if (lowerWord.includes('gh') && !lowerWord.endsWith('gh')) return "The 'gh' is often silent!";
+  if (lowerWord.includes('mb') && lowerWord.endsWith('mb')) return "The 'b' at the end is silent!";
+  if (lowerWord.includes('th')) return "Make the 'th' sound with your tongue!";
+  if (lowerWord.includes('ough')) return "The 'ough' has a special sound!";
+  if (lowerWord.includes('tion')) return "The 'tion' sounds like 'shun'!";
+  if (lowerWord.includes('ight')) return "The 'ight' sounds like 'ite'!";
+  if (/(.)\1/.test(lowerWord)) return "Notice the double letters!";
+  if (word.length >= 8) return "Break it into smaller parts!";
+  
+  return "Sound it out slowly!";
+};
+
 export const RPGWordReader = ({
   words,
   onResult,
@@ -691,6 +741,17 @@ export const RPGWordReader = ({
           {cleanWord || "Ready"}
         </motion.p>
 
+        {/* Phonetic hint when incorrect */}
+        {feedback === 'incorrect' && cleanWord && (
+          <motion.p 
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-1 text-lg text-purple-300 font-medium"
+          >
+            {getPhoneticHint(cleanWord)}
+          </motion.p>
+        )}
+
         {spokenText && (
           <motion.p 
             initial={{ opacity: 0 }}
@@ -702,6 +763,18 @@ export const RPGWordReader = ({
           >
             You said: "{spokenText}"
           </motion.p>
+        )}
+
+        {/* Word tip when incorrect */}
+        {feedback === 'incorrect' && cleanWord && (
+          <motion.div
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mt-2 text-xs text-blue-300 bg-blue-500/20 px-3 py-1 rounded-full"
+          >
+            💡 {getWordTip(cleanWord)}
+          </motion.div>
         )}
       </motion.div>
 

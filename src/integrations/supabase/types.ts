@@ -4548,6 +4548,7 @@ export type Database = {
           assignment_id: string | null
           audio_url: string | null
           cognitive_load_avg: number | null
+          comprehension_score: number | null
           created_at: string | null
           duration_seconds: number
           fluency_level: string | null
@@ -4569,6 +4570,7 @@ export type Database = {
           assignment_id?: string | null
           audio_url?: string | null
           cognitive_load_avg?: number | null
+          comprehension_score?: number | null
           created_at?: string | null
           duration_seconds: number
           fluency_level?: string | null
@@ -4590,6 +4592,7 @@ export type Database = {
           assignment_id?: string | null
           audio_url?: string | null
           cognitive_load_avg?: number | null
+          comprehension_score?: number | null
           created_at?: string | null
           duration_seconds?: number
           fluency_level?: string | null
@@ -6289,6 +6292,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      student_vocabulary: {
+        Row: {
+          collected_at: string | null
+          definition: string | null
+          id: string
+          mastered: boolean | null
+          source_story_id: string | null
+          student_id: string
+          times_correct: number | null
+          times_seen: number | null
+          updated_at: string | null
+          word: string
+        }
+        Insert: {
+          collected_at?: string | null
+          definition?: string | null
+          id?: string
+          mastered?: boolean | null
+          source_story_id?: string | null
+          student_id: string
+          times_correct?: number | null
+          times_seen?: number | null
+          updated_at?: string | null
+          word: string
+        }
+        Update: {
+          collected_at?: string | null
+          definition?: string | null
+          id?: string
+          mastered?: boolean | null
+          source_story_id?: string | null
+          student_id?: string
+          times_correct?: number | null
+          times_seen?: number | null
+          updated_at?: string | null
+          word?: string
+        }
+        Relationships: []
       }
       substitute_access_links: {
         Row: {
