@@ -7,6 +7,7 @@ interface WordFeedbackOverlayProps {
   expectedWord: string;
   spokenWord?: string;
   isCorrect: boolean;
+  canRetry?: boolean;
   onContinue: () => void;
   onTryAgain?: () => void;
   onPlayAudio?: () => void;
@@ -79,6 +80,7 @@ export const WordFeedbackOverlay = ({
   expectedWord,
   spokenWord,
   isCorrect,
+  canRetry = true,
   onContinue,
   onTryAgain,
   onPlayAudio,
@@ -191,7 +193,7 @@ export const WordFeedbackOverlay = ({
                 </Button>
               )}
               
-              {!isCorrect && onTryAgain && (
+              {!isCorrect && canRetry && onTryAgain && (
                 <Button
                   variant="outline"
                   onClick={onTryAgain}
@@ -210,9 +212,21 @@ export const WordFeedbackOverlay = ({
                     : 'bg-blue-600 hover:bg-blue-700'
                 }`}
               >
-                Continue
+                {isCorrect ? 'Continue' : 'Skip & Continue'}
               </Button>
             </div>
+
+            {/* Retry hint */}
+            {!isCorrect && canRetry && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="text-xs text-center text-slate-400 mt-3"
+              >
+                Try Again won't earn coins, but helps you learn! 💪
+              </motion.p>
+            )}
           </motion.div>
         </motion.div>
       )}
