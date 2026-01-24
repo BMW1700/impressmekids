@@ -63,6 +63,9 @@ import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { speechManager } from "@/lib/speechRecognitionManager";
 import { supabase } from "@/integrations/supabase/client";
 import { useMLIntegration } from "@/hooks/useMLIntegration";
+// NEW: Import quiz and vocabulary tracker for learning reinforcement
+import { ComprehensionQuiz } from "./ComprehensionQuiz";
+import { VocabularyTracker, isPowerWord } from "./VocabularyTracker";
 
 // Sound effects singleton
 const battleSounds = new SoundEffects();
@@ -225,6 +228,13 @@ export const RPGBattleArena = ({
   const [comboAnnouncement, setComboAnnouncement] = useState<string | null>(null);
   const [comboPowerLevel, setComboPowerLevel] = useState<'normal' | 'power' | 'mega' | 'ultra'>('normal');
   
+  // NEW: Comprehension quiz and vocabulary tracker states
+  const [showComprehensionQuiz, setShowComprehensionQuiz] = useState(false);
+  const [quizBonusXp, setQuizBonusXp] = useState(0);
+  const [quizBonusGold, setQuizBonusGold] = useState(0);
+  const [collectedPowerWords, setCollectedPowerWords] = useState<string[]>([]);
+  const [powerWordsSaved, setPowerWordsSaved] = useState(false);
+  
   // Floating damage numbers
   const [floatingDamages, setFloatingDamages] = useState<{id: number; damage: number; x: number; y: number; isPlayer: boolean; isCritical?: boolean}[]>([]);
   
@@ -284,6 +294,19 @@ export const RPGBattleArena = ({
   useEffect(() => {
     setWords(storyWords);
   }, [storyWords]);
+  
+  // Extract Power Words (6+ letters) from story for vocabulary collection
+  useEffect(() => {
+    if (story?.passage_text) {
+      const words = story.passage_text.split(/\s+/);
+      const powerWords = words
+        .map(w => w.replace(/[^a-zA-Z]/g, ''))
+        .filter(w => isPowerWord(w));
+      const uniquePowerWords = [...new Set(powerWords)];
+      setCollectedPowerWords(uniquePowerWords);
+      console.log('[RPGBattle] Collected Power Words:', uniquePowerWords.length);
+    }
+  }, [story?.passage_text]);
 
   // Handle non-classic battle modes - skip intro and go directly to the selected mode
   useEffect(() => {
@@ -1321,6 +1344,7 @@ export const RPGBattleArena = ({
   }, []);
 
   // Check for phase transitions - handle multi-enemy
+  // Modified to show comprehension quiz before victory screen
   useEffect(() => {
     if (enemyHp <= 0 && phase !== 'victory' && phase !== 'enemy_transition') {
       // Check if there are more enemies
@@ -1329,12 +1353,36 @@ export const RPGBattleArena = ({
         setDefeatedEnemy(enemy);
         setPhase('enemy_transition');
       } else {
+        // Final enemy defeated - show quiz before victory screen
+        setShowComprehensionQuiz(true);
         setPhase('victory');
       }
     } else if (playerHp <= 0 && phase !== 'defeat') {
       setPhase('defeat');
     }
   }, [enemyHp, playerHp, phase, currentEnemyIndex, enemyQueue.length, enemy]);
+  
+  // Handle comprehension quiz completion - add bonus rewards
+  const handleQuizComplete = useCallback((score: number, total: number, bonusXp: number, bonusGold: number) => {
+    console.log('[RPGBattle] Quiz complete:', { score, total, bonusXp, bonusGold });
+    setQuizBonusXp(bonusXp);
+    setQuizBonusGold(bonusGold);
+    setXpEarned(prev => prev + bonusXp);
+    setGoldEarned(prev => prev + bonusGold);
+    setShowComprehensionQuiz(false);
+  }, []);
+
+  // Handle quiz skip - no bonus rewards
+  const handleQuizSkip = useCallback(() => {
+    console.log('[RPGBattle] Quiz skipped');
+    setShowComprehensionQuiz(false);
+  }, []);
+  
+  // Handle vocabulary words saved
+  const handlePowerWordsSaved = useCallback(() => {
+    console.log('[RPGBattle] Power words saved to vocabulary');
+    setPowerWordsSaved(true);
+  }, []);
 
   // Handle enemy transition complete
   const handleTransitionComplete = useCallback(() => {
@@ -2120,7 +2168,7 @@ export const RPGBattleArena = ({
               )}
 
               {/* Victory Screen */}
-              {phase === 'victory' && (
+              {phase === 'victory' && !showComprehensionQuiz && (
                 <motion.div
                   key="victory"
                   initial={{ opacity: 0, scale: 0.8 }}
@@ -2157,11 +2205,38 @@ export const RPGBattleArena = ({
                     <div className="bg-slate-800/60 rounded-lg p-4 border border-slate-700">
                       <p className="text-3xl font-bold text-yellow-400 flex items-center justify-center gap-1">
                         <Star className="h-5 w-5" />
-                        {Math.floor(100 + correctWords * 5 + longestStreak * 10)}
+                        {Math.floor(100 + correctWords * 5 + longestStreak * 10) + quizBonusXp}
                       </p>
-                      <p className="text-xs text-slate-400">XP Earned</p>
+                      <p className="text-xs text-slate-400">
+                        XP Earned {quizBonusXp > 0 && <span className="text-purple-400">(+{quizBonusXp} quiz)</span>}
+                      </p>
                     </div>
                   </div>
+                  
+                  {/* Quiz Bonus Display */}
+                  {quizBonusXp > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-gradient-to-r from-purple-900/60 to-indigo-900/60 border border-purple-500/30 rounded-lg px-4 py-2 inline-block"
+                    >
+                      <p className="text-purple-300 text-sm">
+                        📚 Story Check Bonus: <span className="font-bold text-purple-200">+{quizBonusXp} XP</span> &amp; <span className="font-bold text-amber-300">+{quizBonusGold} Gold</span>
+                      </p>
+                    </motion.div>
+                  )}
+                  
+                  {/* Power Words / Vocabulary Tracker */}
+                  {collectedPowerWords.length > 0 && studentId && (
+                    <div className="max-w-md mx-auto">
+                      <VocabularyTracker
+                        studentId={studentId}
+                        variant="inline"
+                        newWords={collectedPowerWords}
+                        onNewWordsSaved={handlePowerWordsSaved}
+                      />
+                    </div>
+                  )}
 
                   <Button 
                     onClick={() => handleBattleEnd(true)} 
@@ -2173,6 +2248,15 @@ export const RPGBattleArena = ({
                   </Button>
                 </motion.div>
               )}
+              
+              {/* Comprehension Quiz Overlay */}
+              <ComprehensionQuiz
+                isOpen={showComprehensionQuiz && phase === 'victory'}
+                storyTitle={story.title}
+                storyText={story.passage_text || ''}
+                onComplete={handleQuizComplete}
+                onSkip={handleQuizSkip}
+              />
 
               {/* Defeat Screen */}
               {phase === 'defeat' && (
