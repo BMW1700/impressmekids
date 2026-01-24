@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, MicOff, Volume2, Check, X, Pause, Play, RotateCcw, AlertCircle, HelpCircle } from "lucide-react";
+import { Mic, MicOff, Volume2, Check, X, Pause, Play, RotateCcw, AlertCircle, HelpCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { playCorrectPronunciation, SoundEffects } from "@/lib/pronunciationPlayer";
@@ -9,6 +9,7 @@ import { ensureMicrophoneAccess } from "@/lib/micDiagnostics";
 import { MicTroubleshooterModal } from "@/components/mic/MicTroubleshooterModal";
 import { getWordEmoji } from "@/lib/wordEmojiMap";
 import { RPGEmojiPop } from "./RPGEmojiPop";
+import { WordFeedbackOverlay } from "./WordFeedbackOverlay";
 
 interface EmojiPopup {
   id: number;
@@ -16,9 +17,20 @@ interface EmojiPopup {
   word: string;
 }
 
+// Track word result state for color coding
+export type WordResultState = 'pending' | 'correct' | 'missed' | 'retried';
+
+export interface WordAttempt {
+  word: string;
+  result: WordResultState;
+  spokenAs?: string;
+  attempts: number;
+}
+
 interface RPGWordReaderProps {
   words: string[];
   onResult: (correct: boolean, spokenWord: string, wordIndex: number) => void;
+  onBatchComplete?: (results: WordAttempt[]) => void;
   disabled?: boolean;
   streak?: number;
   batchSize?: number;
@@ -26,7 +38,7 @@ interface RPGWordReaderProps {
   mode?: 'normal' | 'fast'; // Fast mode for Elara - more lenient, quicker feedback
 }
 
-type RecognitionState = 'idle' | 'listening' | 'processing' | 'paused' | 'echo_retry';
+type RecognitionState = 'idle' | 'listening' | 'processing' | 'paused' | 'echo_retry' | 'waiting_action';
 
 const soundEffects = new SoundEffects();
 let emojiPopId = 0;
@@ -84,6 +96,7 @@ const getWordTip = (word: string): string => {
 export const RPGWordReader = ({
   words,
   onResult,
+  onBatchComplete,
   disabled = false,
   streak = 0,
   batchSize = 5,
@@ -98,6 +111,12 @@ export const RPGWordReader = ({
   const [completedWords, setCompletedWords] = useState<Set<number>>(new Set());
   const [micError, setMicError] = useState<string | null>(null);
   const [showTroubleshooter, setShowTroubleshooter] = useState(false);
+  
+  // Word result tracking for color states (green/yellow/red)
+  const [wordResults, setWordResults] = useState<Map<number, WordAttempt>>(new Map());
+  const [canRetry, setCanRetry] = useState(true);
+  const [showFeedbackOverlay, setShowFeedbackOverlay] = useState(false);
+  const [pendingIncorrectWord, setPendingIncorrectWord] = useState<{ word: string; spoken: string; index: number } | null>(null);
   
   // Emoji pop state
   const [emojiPopups, setEmojiPopups] = useState<EmojiPopup[]>([]);
@@ -141,6 +160,10 @@ export const RPGWordReader = ({
       setSpokenText("");
       setFeedback(null);
       setCompletedWords(new Set());
+      setWordResults(new Map());
+      setCanRetry(true);
+      setShowFeedbackOverlay(false);
+      setPendingIncorrectWord(null);
       isProcessingRef.current = false;
     }
   }, [wordsKey]);
@@ -193,21 +216,35 @@ export const RPGWordReader = ({
     if (nextIndex < currentBatch.length) {
       setCurrentIndex(nextIndex);
       currentIndexRef.current = nextIndex;
+      setCanRetry(true); // Reset retry for next word
       return true;
     } else {
-      // Batch complete
+      // Batch complete - report results
+      const results = Array.from(wordResults.values());
+      onBatchComplete?.(results);
+      
       setCurrentIndex(0);
       currentIndexRef.current = 0;
       stopRecognitionSession();
       setRecognitionState('idle');
       return false;
     }
-  }, [currentBatch.length, stopRecognitionSession]);
+  }, [currentBatch.length, stopRecognitionSession, wordResults, onBatchComplete]);
 
-  // Handle correct word
+  // Handle correct word (first try - deals damage, gives coins)
   const handleCorrect = useCallback((spokenWord: string, wordIndex: number) => {
     if (isProcessingRef.current) return;
     isProcessingRef.current = true;
+    
+    const targetWord = currentBatch[wordIndex]?.replace(/[^a-zA-Z']/g, '') || '';
+    
+    // Track as correct (GREEN)
+    setWordResults(prev => new Map(prev).set(wordIndex, {
+      word: targetWord,
+      result: 'correct',
+      spokenAs: spokenWord,
+      attempts: 1
+    }));
     
     setFeedback('correct');
     setSpokenText(spokenWord);
@@ -230,7 +267,6 @@ export const RPGWordReader = ({
     }
     
     // EMOJI LEARNING: Trigger emoji pop for meaningful words
-    const targetWord = currentBatch[wordIndex]?.replace(/[^a-zA-Z']/g, '') || '';
     const emoji = getWordEmoji(targetWord);
     if (emoji) {
       const newPopup: EmojiPopup = {
@@ -241,7 +277,7 @@ export const RPGWordReader = ({
       setEmojiPopups(prev => [...prev, newPopup]);
     }
     
-    // Mark word as completed
+    // Mark word as completed and report to parent (deals damage, gives coins)
     setCompletedWords(prev => new Set([...prev, wordIndex]));
     onResult(true, spokenWord, wordIndex);
     
@@ -254,6 +290,7 @@ export const RPGWordReader = ({
       // Update refs IMMEDIATELY before any async delays
       setCurrentIndex(nextIndex);
       currentIndexRef.current = nextIndex;
+      setCanRetry(true);
       console.log('[RPGWordReader] Advanced to word index:', nextIndex, 'target:', batch[nextIndex]);
     }
     
@@ -268,18 +305,29 @@ export const RPGWordReader = ({
       if (hasMoreWords) {
         setRecognitionState('listening');
       } else {
-        // Batch complete
+        // Batch complete - report results
+        const results = Array.from(wordResults.values());
+        onBatchComplete?.(results);
+        
         setCurrentIndex(0);
         currentIndexRef.current = 0;
         stopRecognitionSession();
         setRecognitionState('idle');
       }
     }, feedbackDelay);
-  }, [streak, onResult, words, batchSize, stopRecognitionSession, mode]);
+  }, [streak, onResult, onBatchComplete, words, batchSize, stopRecognitionSession, mode, currentBatch, wordResults]);
 
-  // Handle incorrect word (after echo fails or no echo)
+  // Handle incorrect word (after echo fails or no echo) - NOW PAUSES FOR USER ACTION
   const handleIncorrectFinal = useCallback((spokenWord: string, expectedWord: string, wordIndex: number) => {
     isProcessingRef.current = true;
+    
+    // Track as missed (RED) - can become 'retried' (YELLOW) if they try again
+    setWordResults(prev => new Map(prev).set(wordIndex, {
+      word: expectedWord,
+      result: 'missed',
+      spokenAs: spokenWord,
+      attempts: 1
+    }));
     
     setFeedback('incorrect');
     setSpokenText(spokenWord);
@@ -291,22 +339,71 @@ export const RPGWordReader = ({
       playCorrectPronunciation(expectedWord);
     }, 300);
     
-    onResult(false, spokenWord, wordIndex);
+    // PAUSE - Don't auto-advance! Wait for user action
+    stopRecognitionSession();
+    setRecognitionState('waiting_action');
+    setPendingIncorrectWord({ word: expectedWord, spoken: spokenWord, index: wordIndex });
+    setShowFeedbackOverlay(true);
     
-    // CRITICAL FIX: Advance index IMMEDIATELY so next speech results compare to next word
-    const nextIndex = wordIndex + 1;
+    // DO NOT call onResult yet - wait for user to choose Continue (which triggers enemy attack)
+  }, [stopRecognitionSession]);
+
+  // Handle "Try Again" - retry the word for practice (no game rewards)
+  // Note: Uses ref to avoid circular dependency with startRecognitionSession
+  const startRecognitionRef = useRef<(() => void) | null>(null);
+  
+  const handleTryAgain = useCallback(() => {
+    if (!pendingIncorrectWord) return;
+    
+    setShowFeedbackOverlay(false);
+    setFeedback(null);
+    setSpokenText("");
+    setCanRetry(false); // Only one retry allowed per word
+    isProcessingRef.current = false;
+    
+    // Stay on the same word index
+    setRecognitionState('listening');
+    startRecognitionRef.current?.();
+  }, [pendingIncorrectWord]);
+
+  // Handle retry success - mark as retried (YELLOW), no damage/coins
+  const handleRetrySuccess = useCallback((spokenWord: string, wordIndex: number) => {
+    const targetWord = currentBatch[wordIndex]?.replace(/[^a-zA-Z']/g, '') || '';
+    
+    // Update to retried (YELLOW)
+    setWordResults(prev => {
+      const updated = new Map(prev);
+      const existing = updated.get(wordIndex);
+      updated.set(wordIndex, {
+        word: targetWord,
+        result: 'retried',
+        spokenAs: spokenWord,
+        attempts: (existing?.attempts || 1) + 1
+      });
+      return updated;
+    });
+    
+    setFeedback('correct');
+    setSpokenText(spokenWord);
+    soundEffects.correctWord();
+    setCompletedWords(prev => new Set([...prev, wordIndex]));
+    
+    // NO damage dealt, NO coins given - just practice
+    // Don't call onResult(true, ...) since this doesn't count as a real correct
+    
+    setPendingIncorrectWord(null);
+    
+    // Advance to next word after brief pause
     const batch = words?.slice(0, Math.min(batchSize, words?.length || 0)) || [];
+    const nextIndex = wordIndex + 1;
     const hasMoreWords = nextIndex < batch.length;
     
     if (hasMoreWords) {
-      // Update refs IMMEDIATELY before any async delays
       setCurrentIndex(nextIndex);
       currentIndexRef.current = nextIndex;
-      console.log('[RPGWordReader] Advanced to word index:', nextIndex, 'target:', batch[nextIndex]);
+      setCanRetry(true);
     }
     
-    // FAST MODE: shorter delays for Elara
-    const feedbackDelay = mode === 'fast' ? 350 : 700;
     feedbackTimeoutRef.current = setTimeout(() => {
       setFeedback(null);
       setSpokenText("");
@@ -316,13 +413,57 @@ export const RPGWordReader = ({
         setRecognitionState('listening');
       } else {
         // Batch complete
+        const results = Array.from(wordResults.values());
+        onBatchComplete?.(results);
+        
         setCurrentIndex(0);
         currentIndexRef.current = 0;
         stopRecognitionSession();
         setRecognitionState('idle');
       }
-    }, feedbackDelay);
-  }, [onResult, words, batchSize, stopRecognitionSession, mode]);
+    }, 300);
+  }, [currentBatch, words, batchSize, stopRecognitionSession, wordResults, onBatchComplete]);
+
+  // Handle "Continue" (Skip) - accept miss and trigger enemy attack
+  const handleContinueAfterMiss = useCallback(() => {
+    if (!pendingIncorrectWord) return;
+    
+    const { spoken, index } = pendingIncorrectWord;
+    
+    setShowFeedbackOverlay(false);
+    
+    // NOW trigger the enemy attack via onResult(false, ...)
+    onResult(false, spoken, index);
+    
+    // Advance to next word
+    const batch = words?.slice(0, Math.min(batchSize, words?.length || 0)) || [];
+    const nextIndex = index + 1;
+    const hasMoreWords = nextIndex < batch.length;
+    
+    if (hasMoreWords) {
+      setCurrentIndex(nextIndex);
+      currentIndexRef.current = nextIndex;
+      setCanRetry(true);
+    }
+    
+    setFeedback(null);
+    setSpokenText("");
+    setPendingIncorrectWord(null);
+    isProcessingRef.current = false;
+    
+    if (hasMoreWords) {
+      setRecognitionState('listening');
+      startRecognitionRef.current?.();
+    } else {
+      // Batch complete
+      const results = Array.from(wordResults.values());
+      onBatchComplete?.(results);
+      
+      setCurrentIndex(0);
+      currentIndexRef.current = 0;
+      setRecognitionState('idle');
+    }
+  }, [pendingIncorrectWord, onResult, words, batchSize, wordResults, onBatchComplete]);
 
   // Start echo retry mode
   const startEchoRetry = useCallback((spokenWord: string, expectedWord: string, wordIndex: number) => {
@@ -366,6 +507,12 @@ export const RPGWordReader = ({
     recognitionStateRef.current = recognitionState;
   }, [recognitionState]);
 
+  // Ref for canRetry to check in processResult
+  const canRetryRef = useRef(canRetry);
+  useEffect(() => {
+    canRetryRef.current = canRetry;
+  }, [canRetry]);
+
   // Process speech result
   const processResult = useCallback((transcript: string, alternatives: string[]) => {
     if (isProcessingRef.current) return;
@@ -373,7 +520,7 @@ export const RPGWordReader = ({
     const wordIndex = currentIndexRef.current;
     const targetWord = getTargetWord(wordIndex);
     
-    console.log('[RPGWordReader] Processing:', { transcript, targetWord, wordIndex });
+    console.log('[RPGWordReader] Processing:', { transcript, targetWord, wordIndex, canRetry: canRetryRef.current });
     
     if (!targetWord) return;
     
@@ -409,11 +556,23 @@ export const RPGWordReader = ({
     console.log('[RPGWordReader] Match result:', { matched, bestSpoken, targetWord });
     
     if (matched) {
-      handleCorrect(bestSpoken, wordIndex);
+      // Check if this is a retry attempt (canRetry was set to false when Try Again was clicked)
+      if (!canRetryRef.current) {
+        // This is a retry success - use handleRetrySuccess (YELLOW, no rewards)
+        handleRetrySuccess(bestSpoken, wordIndex);
+      } else {
+        // Normal first-try success (GREEN, deals damage, gives coins)
+        handleCorrect(bestSpoken, wordIndex);
+      }
     } else {
       // Check if we should do echo retry - use ref to avoid stale state
       const currentRecState = recognitionStateRef.current;
-      if (enableEchoRetry && currentRecState !== 'echo_retry') {
+      
+      // If this is a retry attempt and they got it wrong again, show overlay
+      if (!canRetryRef.current) {
+        // Failed retry - go straight to continue (they already had their chance)
+        handleIncorrectFinal(transcript, targetWord, wordIndex);
+      } else if (enableEchoRetry && currentRecState !== 'echo_retry') {
         startEchoRetry(transcript, targetWord, wordIndex);
       } else if (currentRecState === 'echo_retry') {
         // Already in echo - this attempt also failed, but let timeout handle final
@@ -422,7 +581,7 @@ export const RPGWordReader = ({
         handleIncorrectFinal(transcript, targetWord, wordIndex);
       }
     }
-  }, [getTargetWord, enableEchoRetry, handleCorrect, handleIncorrectFinal, startEchoRetry]);
+  }, [getTargetWord, enableEchoRetry, handleCorrect, handleRetrySuccess, handleIncorrectFinal, startEchoRetry]);
 
   // Create and start the recognition session (ONE instance, kept alive)
   // FIXED: Now requires mic access before starting
@@ -585,6 +744,11 @@ export const RPGWordReader = ({
     }
   }, [disabled, processResult]);
 
+  // Set the ref for use in handlers that are defined before startRecognitionSession
+  useEffect(() => {
+    startRecognitionRef.current = startRecognitionSession;
+  }, [startRecognitionSession]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -663,28 +827,43 @@ export const RPGWordReader = ({
         </motion.div>
       )}
       
-      {/* Multi-Word Queue Display */}
+      {/* Multi-Word Queue Display with Color Coding */}
       <div className="flex flex-wrap gap-2 justify-center max-w-md">
         {currentBatch.map((word, index) => {
           const clean = word.replace(/[^a-zA-Z']/g, '');
           const isActiveWord = index === currentIndex;
-          const isCompleted = completedWords.has(index);
+          const wordResult = wordResults.get(index);
+          
+          // Determine color based on result state
+          let colorClass = 'bg-slate-700/60 text-slate-400'; // Grey - pending
+          let icon = null;
+          
+          if (wordResult?.result === 'correct') {
+            colorClass = 'bg-emerald-500/60 text-emerald-100'; // Green - first try success
+            icon = <Check className="h-3.5 w-3.5" />;
+          } else if (wordResult?.result === 'retried') {
+            colorClass = 'bg-yellow-500/60 text-yellow-100'; // Yellow - retry success
+            icon = <RotateCcw className="h-3.5 w-3.5" />;
+          } else if (wordResult?.result === 'missed') {
+            colorClass = 'bg-red-500/60 text-red-100'; // Red - missed/skipped
+            icon = <X className="h-3.5 w-3.5" />;
+          }
+          
+          // Active word overrides other styles
+          if (isActiveWord) {
+            colorClass = 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white scale-110 shadow-lg shadow-blue-500/40';
+            icon = null;
+          }
           
           return (
             <motion.div
               key={`${word}-${index}`}
-              className={`px-4 py-2 rounded-lg font-medium transition-all
-                ${isActiveWord 
-                  ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white scale-110 shadow-lg shadow-blue-500/40' 
-                  : isCompleted 
-                    ? 'bg-emerald-500/60 text-emerald-100 scale-95' 
-                    : 'bg-slate-700/60 text-slate-400'
-                }`}
+              className={`px-4 py-2 rounded-lg font-medium transition-all ${colorClass}`}
               animate={isActiveWord ? { scale: [1.1, 1.15, 1.1] } : {}}
               transition={{ repeat: isActiveWord ? Infinity : 0, duration: 1.2 }}
             >
               <div className="flex items-center gap-1.5">
-                {isCompleted && <Check className="h-3.5 w-3.5" />}
+                {icon}
                 <span className={isActiveWord ? 'text-lg' : 'text-sm'}>{clean}</span>
               </div>
             </motion.div>
@@ -910,6 +1089,18 @@ export const RPGWordReader = ({
           />
         ))}
       </AnimatePresence>
+
+      {/* Word Feedback Overlay - Pauses on incorrect for learning */}
+      <WordFeedbackOverlay
+        isVisible={showFeedbackOverlay}
+        expectedWord={pendingIncorrectWord?.word || ''}
+        spokenWord={pendingIncorrectWord?.spoken}
+        isCorrect={false}
+        canRetry={canRetry}
+        onContinue={handleContinueAfterMiss}
+        onTryAgain={handleTryAgain}
+        onPlayAudio={() => pendingIncorrectWord?.word && playCorrectPronunciation(pendingIncorrectWord.word)}
+      />
     </div>
   );
 };
