@@ -299,6 +299,41 @@ export const useCampaignProgress = (studentId?: string) => {
     },
   });
 
+  // Reset campaign progress for "Start New Game"
+  const resetCampaign = useMutation({
+    mutationFn: async () => {
+      if (!studentId) throw new Error("No student ID");
+
+      const { data, error } = await supabase
+        .from("campaign_progress")
+        .update({
+          current_world: 1,
+          world_progress: { "1": [], "2": [], "3": [], "4": [] },
+          total_damage_dealt: 0,
+          longest_streak: 0,
+          books_rescued: 0,
+          grog_battles_won: 0,
+          total_xp_earned: 0,
+          // Keep gold and pets - they earned those!
+          // total_gold: 0, // Optional: reset gold too
+        })
+        .eq("student_id", studentId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["campaign-progress", studentId] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-battles", studentId] });
+      toast({
+        title: "🔄 New Adventure Begins!",
+        description: "Your campaign has been reset. Good luck, hero!",
+      });
+    },
+  });
+
   return {
     progress,
     progressLoading,
@@ -308,5 +343,6 @@ export const useCampaignProgress = (studentId?: string) => {
     startBattle: startBattle.mutateAsync,
     updateBattle: updateBattle.mutate,
     completeBattle: completeBattle.mutateAsync,
+    resetCampaign: resetCampaign.mutateAsync,
   };
 };

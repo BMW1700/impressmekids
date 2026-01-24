@@ -174,6 +174,7 @@ export const RPGBattleArena = ({
   const [longestStreak, setLongestStreak] = useState(0);
   const [wordsRead, setWordsRead] = useState(0);
   const [correctWords, setCorrectWords] = useState(0);
+  const [retriedWords, setRetriedWords] = useState(0); // NEW: Track retried (yellow) words for accurate accuracy
   const [totalDamage, setTotalDamage] = useState(0);
   const [inventory, setInventory] = useState<Record<InventoryKey, number>>({ health_potion: 2, magic_potion: 1 });
   
@@ -1293,6 +1294,17 @@ export const RPGBattleArena = ({
     }, 800);
   }, [streak, longestStreak, words, batchStartIndex, enemy, calculateDamage, isPoisoned, poisonDamage, isDebuffed, debuffTurns, attackType, selectedCharacter]);
   
+  // Handle retried word (yellow) - counts as word read but NOT correct for accuracy
+  const handleRetriedWord = useCallback((wordIndex: number) => {
+    // Increment wordsRead (for total count)
+    setWordsRead(prev => prev + 1);
+    // Increment retriedWords (for accurate accuracy calculation)
+    setRetriedWords(prev => prev + 1);
+    // Reset streak since they needed a retry
+    setStreak(0);
+    console.log('[RPGBattle] Word retried:', { wordIndex, message: 'Counted in total but not in correct' });
+  }, []);
+  
   // Handle coin collection complete
   const handleCoinCollectionComplete = useCallback(() => {
     setGoldEarned(prev => prev + pendingGold);
@@ -2037,6 +2049,7 @@ export const RPGBattleArena = ({
                         <RPGWordReader
                           words={currentWordBatch}
                           onResult={handleWordResult}
+                          onRetried={handleRetriedWord}
                           disabled={currentWordResult !== null || !isPlayerTurn}
                           streak={streak}
                           batchSize={5}
