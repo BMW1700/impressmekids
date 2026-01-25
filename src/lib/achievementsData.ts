@@ -1,7 +1,7 @@
 // Comprehensive Achievement System for RPG Mode
 // 50+ achievements across multiple categories
 
-import { Award, Flame, BookOpen, Target, Zap, Trophy, Calendar, Clock, Star, Crown, Shield, Sword, Heart, Sparkles, Mountain, Rocket, Medal, Gift, Gem, Coins } from "lucide-react";
+import { Award, Flame, BookOpen, Target, Zap, Trophy, Calendar, Clock, Star, Crown, Shield, Sword, Heart, Sparkles, Mountain, Rocket, Medal, Gift, Gem, Coins, Swords } from "lucide-react";
 
 export interface Achievement {
   id: string;
@@ -518,6 +518,56 @@ export const ACHIEVEMENTS: Achievement[] = [
     reward: { gold: 100, xp: 200 },
     gradient: 'from-indigo-500 to-purple-400',
     shadowColor: 'rgba(99, 102, 241, 0.4)',
+  },
+
+  // ============ SOCIAL/DUEL ACHIEVEMENTS ============
+  {
+    id: 'first_duel',
+    category: 'social',
+    name: 'First Duel',
+    description: 'Complete your first reading duel',
+    icon: Swords,
+    rarity: 'common',
+    requirement: { type: 'duels_completed', value: 1 },
+    reward: { gold: 25, xp: 50 },
+    gradient: 'from-purple-500 to-pink-500',
+    shadowColor: 'rgba(168, 85, 247, 0.4)',
+  },
+  {
+    id: 'duel_champion',
+    category: 'social',
+    name: 'Duel Champion',
+    description: 'Win 10 reading duels',
+    icon: Trophy,
+    rarity: 'rare',
+    requirement: { type: 'duels_won', value: 10 },
+    reward: { gold: 100, xp: 200 },
+    gradient: 'from-amber-500 to-orange-500',
+    shadowColor: 'rgba(245, 158, 11, 0.4)',
+  },
+  {
+    id: 'undefeated',
+    category: 'social',
+    name: 'Undefeated',
+    description: 'Achieve a 5-win duel streak',
+    icon: Flame,
+    rarity: 'epic',
+    requirement: { type: 'duel_win_streak', value: 5 },
+    reward: { gold: 150, xp: 300 },
+    gradient: 'from-red-500 to-orange-500',
+    shadowColor: 'rgba(239, 68, 68, 0.4)',
+  },
+  {
+    id: 'arena_master',
+    category: 'social',
+    name: 'Arena Master',
+    description: 'Win 50 reading duels',
+    icon: Crown,
+    rarity: 'legendary',
+    requirement: { type: 'duels_won', value: 50 },
+    reward: { gold: 500, xp: 1000 },
+    gradient: 'from-yellow-400 to-amber-500',
+    shadowColor: 'rgba(250, 204, 21, 0.5)',
   },
 ];
 

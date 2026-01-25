@@ -2497,6 +2497,51 @@ export type Database = {
           },
         ]
       }
+      duel_stats: {
+        Row: {
+          best_win_streak: number | null
+          created_at: string | null
+          current_win_streak: number | null
+          draws: number | null
+          id: string
+          losses: number | null
+          student_id: string
+          total_duels: number | null
+          total_gold_from_duels: number | null
+          total_xp_from_duels: number | null
+          updated_at: string | null
+          wins: number | null
+        }
+        Insert: {
+          best_win_streak?: number | null
+          created_at?: string | null
+          current_win_streak?: number | null
+          draws?: number | null
+          id?: string
+          losses?: number | null
+          student_id: string
+          total_duels?: number | null
+          total_gold_from_duels?: number | null
+          total_xp_from_duels?: number | null
+          updated_at?: string | null
+          wins?: number | null
+        }
+        Update: {
+          best_win_streak?: number | null
+          created_at?: string | null
+          current_win_streak?: number | null
+          draws?: number | null
+          id?: string
+          losses?: number | null
+          student_id?: string
+          total_duels?: number | null
+          total_gold_from_duels?: number | null
+          total_xp_from_duels?: number | null
+          updated_at?: string | null
+          wins?: number | null
+        }
+        Relationships: []
+      }
       emergency_contacts: {
         Row: {
           created_at: string
@@ -4524,6 +4569,95 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reading_duels: {
+        Row: {
+          challenger_accuracy: number | null
+          challenger_best_streak: number | null
+          challenger_completed_at: string | null
+          challenger_id: string
+          challenger_score: number | null
+          challenger_time_seconds: number | null
+          challenger_words_read: number | null
+          classroom_id: string
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          opponent_accuracy: number | null
+          opponent_best_streak: number | null
+          opponent_completed_at: string | null
+          opponent_id: string | null
+          opponent_score: number | null
+          opponent_time_seconds: number | null
+          opponent_words_read: number | null
+          passage_text: string
+          passage_title: string
+          passage_word_count: number
+          status: string | null
+          updated_at: string | null
+          winner_id: string | null
+        }
+        Insert: {
+          challenger_accuracy?: number | null
+          challenger_best_streak?: number | null
+          challenger_completed_at?: string | null
+          challenger_id: string
+          challenger_score?: number | null
+          challenger_time_seconds?: number | null
+          challenger_words_read?: number | null
+          classroom_id: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          opponent_accuracy?: number | null
+          opponent_best_streak?: number | null
+          opponent_completed_at?: string | null
+          opponent_id?: string | null
+          opponent_score?: number | null
+          opponent_time_seconds?: number | null
+          opponent_words_read?: number | null
+          passage_text: string
+          passage_title: string
+          passage_word_count?: number
+          status?: string | null
+          updated_at?: string | null
+          winner_id?: string | null
+        }
+        Update: {
+          challenger_accuracy?: number | null
+          challenger_best_streak?: number | null
+          challenger_completed_at?: string | null
+          challenger_id?: string
+          challenger_score?: number | null
+          challenger_time_seconds?: number | null
+          challenger_words_read?: number | null
+          classroom_id?: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          opponent_accuracy?: number | null
+          opponent_best_streak?: number | null
+          opponent_completed_at?: string | null
+          opponent_id?: string | null
+          opponent_score?: number | null
+          opponent_time_seconds?: number | null
+          opponent_words_read?: number | null
+          passage_text?: string
+          passage_title?: string
+          passage_word_count?: number
+          status?: string | null
+          updated_at?: string | null
+          winner_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reading_duels_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
             referencedColumns: ["id"]
           },
         ]
