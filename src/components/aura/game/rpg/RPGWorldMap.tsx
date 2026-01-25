@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Lock, Star, Swords, Crown, TreePine, Mountain, Castle, Flame, Sparkles, Gem, Cloud, Waves, Eclipse, GraduationCap, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Lock, Star, Swords, Crown, TreePine, Mountain, Castle, Flame, Sparkles, Gem, Cloud, Waves, Eclipse, GraduationCap, ShoppingBag, Trophy } from "lucide-react";
 import { campaignWorlds, CampaignWorld } from "@/lib/campaignData";
 import { 
   DrakeSilhouette, 
@@ -33,6 +33,8 @@ interface RPGWorldMapProps {
   totalBooksRescued: number;
   onSelectWorld: (world: CampaignWorld) => void;
   onBack: () => void;
+  onOpenBossRush?: () => void;
+  bossRushUnlocked?: boolean;
   studentId?: string;
   gold?: number;
   xp?: number;
@@ -190,6 +192,8 @@ export const RPGWorldMap = ({
   totalBooksRescued,
   onSelectWorld,
   onBack,
+  onOpenBossRush,
+  bossRushUnlocked = false,
   studentId,
   gold = 0,
   xp = 0,
@@ -519,6 +523,53 @@ export const RPGWorldMap = ({
             );
           })}
         </div>
+
+        {/* Boss Rush Mode Card - Unlocks after defeating World 4 boss */}
+        {bossRushUnlocked && onOpenBossRush && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ delay: 0.8 }}
+            className="mt-8"
+          >
+            <Card
+              className="relative overflow-hidden cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-red-500/30 border-2 border-red-500/50 bg-gradient-to-br from-red-900/40 to-orange-900/40"
+              onClick={onOpenBossRush}
+            >
+              <motion.div 
+                className="absolute inset-0 bg-gradient-to-br from-red-500/10 via-orange-500/10 to-yellow-500/10"
+                animate={{ opacity: [0.3, 0.5, 0.3] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              />
+              
+              <div className="relative p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <motion.div 
+                      className="p-4 rounded-xl bg-gradient-to-br from-red-600 to-orange-600 text-white shadow-lg"
+                      animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      <Trophy className="h-10 w-10" />
+                    </motion.div>
+                    <div>
+                      <h3 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-orange-400 to-yellow-400">
+                        🔥 BOSS RUSH MODE 🔥
+                      </h3>
+                      <p className="text-orange-300">Defeat all 9 bosses in succession!</p>
+                    </div>
+                  </div>
+                  <motion.div
+                    animate={{ x: [0, 5, 0] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  >
+                    <Swords className="h-8 w-8 text-red-400" />
+                  </motion.div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        )}
       </div>
 
       {/* Reading Progress Panel - Fixed position on left side */}

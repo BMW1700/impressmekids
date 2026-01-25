@@ -14,13 +14,17 @@ interface CampaignProgress {
   total_xp_earned: number;
   created_at: string;
   updated_at: string;
-  // New addiction layer fields
+  // Addiction layer fields
   login_streak?: number;
   longest_login_streak?: number;
   last_login_date?: string;
   equipped_pet_id?: string;
   total_gold?: number;
   total_achievements?: number;
+  // Boss Rush fields
+  boss_rush_completions?: number;
+  boss_rush_best_time_seconds?: number;
+  boss_rush_unlocked?: boolean;
 }
 
 interface BattleSession {
