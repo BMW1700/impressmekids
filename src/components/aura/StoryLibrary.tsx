@@ -18,8 +18,8 @@ interface StoryLibraryProps {
   categoryFilter?: string | null;
 }
 
-const categories = ['all', 'animals', 'space', 'sports', 'fairy_tales', 'science', 'adventure', 'history'];
-const grades = ['all', 'K', '1', '2', '3', '4', '5'];
+const categories = ['all', 'animals', 'space', 'sports', 'fairy_tales', 'science', 'adventure', 'history', 'other'];
+const grades = ['all', 'K', '1', '2', '3', '4', '5', '6', '7', '8'];
 
 export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, categoryFilter }: StoryLibraryProps) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,6 +59,27 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
     }
   });
 
+  // Fetch parent-submitted stories for this student
+  const { data: parentStories } = useQuery({
+    queryKey: ['parent-stories-for-student'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from('parent_stories')
+        .select('*')
+        .eq('for_student_id', user.id)
+        .eq('is_active', true);
+
+      if (error) {
+        console.error('Error fetching parent stories:', error);
+        return [];
+      }
+      return data || [];
+    }
+  });
+
   // Create a map of story progress by story_id
   const progressMap = useMemo(() => {
     const map = new Map();
@@ -68,7 +89,7 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
     return map;
   }, [progressData]);
 
-  // Combine curated stories with community stories
+  // Combine curated stories with community stories and parent stories
   const allStories = useMemo(() => {
     const stories: (CuratedStory & { 
       storyId?: string; 
@@ -78,17 +99,40 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
       helpedNoCount?: number;
       isFeatured?: boolean;
       isFromCommunity?: boolean;
+      isFromParent?: boolean;
     })[] = [];
 
-    // Add curated stories first
+    // Add parent-submitted stories first (they appear at the top with special badge)
+    parentStories?.forEach(story => {
+      stories.push({
+        title: story.title,
+        description: story.description || '',
+        passage_text: story.passage_text,
+        grade_level: story.grade_level,
+        category: (story.category === 'other' ? 'adventure' : story.category) as CuratedStory['category'],
+        word_count: story.word_count || 0,
+        reading_time_minutes: story.reading_time_minutes || 1,
+        difficulty_level: 1,
+        cover_gradient: story.cover_gradient || 'from-purple-400 to-pink-500',
+        target_phonemes: [],
+        storyId: story.id,
+        isFromCommunity: false,
+        isFromParent: true,
+      });
+    });
+
+    // Add curated stories
     curatedStories.forEach(story => {
-      stories.push({ ...story, isFromCommunity: false });
+      stories.push({ ...story, isFromCommunity: false, isFromParent: false });
     });
 
     // Add community stories (avoid duplicates by title)
-    const curatedTitles = new Set(curatedStories.map(s => s.title.toLowerCase()));
+    const existingTitles = new Set([
+      ...curatedStories.map(s => s.title.toLowerCase()),
+      ...(parentStories || []).map((s: any) => s.title.toLowerCase())
+    ]);
     communityStories?.forEach(story => {
-      if (!curatedTitles.has(story.title.toLowerCase())) {
+      if (!existingTitles.has(story.title.toLowerCase())) {
         stories.push({
           title: story.title,
           description: story.description || '',
@@ -107,12 +151,13 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
           helpedNoCount: story.helped_no_count || 0,
           isFeatured: story.is_featured || false,
           isFromCommunity: true,
+          isFromParent: false,
         });
       }
     });
 
     return stories;
-  }, [communityStories]);
+  }, [communityStories, parentStories]);
 
   // Filter stories
   const filteredStories = useMemo(() => {
@@ -306,6 +351,7 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
                 helpedYesCount={story.helpedYesCount}
                 helpedNoCount={story.helpedNoCount}
                 isFeatured={story.isFeatured}
+                isFromParent={story.isFromParent}
                 showVoting={!!story.storyId}
                 onStartReading={() => onSelectStory(story)}
               />
@@ -329,6 +375,7 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
                 helpedYesCount={story.helpedYesCount}
                 helpedNoCount={story.helpedNoCount}
                 isFeatured={story.isFeatured}
+                isFromParent={story.isFromParent}
                 showVoting={!!story.storyId}
                 onStartReading={() => onSelectStory(story)}
               />
@@ -355,6 +402,7 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
               helpedYesCount={story.helpedYesCount}
               helpedNoCount={story.helpedNoCount}
               isFeatured={story.isFeatured}
+              isFromParent={story.isFromParent}
               showVoting={!!story.storyId}
               onStartReading={() => onSelectStory(story)}
             />

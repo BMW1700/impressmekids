@@ -3733,6 +3733,60 @@ export type Database = {
           },
         ]
       }
+      parent_stories: {
+        Row: {
+          category: string
+          cover_gradient: string | null
+          created_at: string | null
+          description: string | null
+          for_student_id: string
+          grade_level: number
+          id: string
+          is_active: boolean | null
+          passage_text: string
+          reading_time_minutes: number | null
+          source_note: string | null
+          submitted_by: string
+          title: string
+          updated_at: string | null
+          word_count: number | null
+        }
+        Insert: {
+          category: string
+          cover_gradient?: string | null
+          created_at?: string | null
+          description?: string | null
+          for_student_id: string
+          grade_level: number
+          id?: string
+          is_active?: boolean | null
+          passage_text: string
+          reading_time_minutes?: number | null
+          source_note?: string | null
+          submitted_by: string
+          title: string
+          updated_at?: string | null
+          word_count?: number | null
+        }
+        Update: {
+          category?: string
+          cover_gradient?: string | null
+          created_at?: string | null
+          description?: string | null
+          for_student_id?: string
+          grade_level?: number
+          id?: string
+          is_active?: boolean | null
+          passage_text?: string
+          reading_time_minutes?: number | null
+          source_note?: string | null
+          submitted_by?: string
+          title?: string
+          updated_at?: string | null
+          word_count?: number | null
+        }
+        Relationships: []
+      }
       parent_student_events: {
         Row: {
           created_at: string | null
