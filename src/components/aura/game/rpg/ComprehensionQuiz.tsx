@@ -162,7 +162,7 @@ export const ComprehensionQuiz = ({
           initial={{ scale: 0.9, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
-          className="bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 rounded-2xl p-6 max-w-lg w-full border border-indigo-500/30 shadow-[0_0_50px_rgba(99,102,241,0.3)]"
+          className="bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto border border-indigo-500/30 shadow-[0_0_50px_rgba(99,102,241,0.3)]"
         >
           {showFinalResults ? (
             // Final Results
