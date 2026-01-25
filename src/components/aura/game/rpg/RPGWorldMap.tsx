@@ -8,7 +8,11 @@ import {
   DrakeSilhouette, 
   IceGolemSilhouette, 
   StoneGuardianSilhouette, 
-  GrogSilhouette 
+  GrogSilhouette,
+  GalairSilhouette,
+  LeviathanSilhouette,
+  RealityShifterSilhouette,
+  WordEaterSilhouette,
 } from "../characters/BossSilhouettes";
 import { AnimatedStarCounter } from "../effects/StarCollectionEffect";
 import { AnimatedBookCounter } from "../effects/FlyingBookAnimation";
@@ -147,6 +151,14 @@ const BossSilhouette = ({ worldId, isUnlocked }: { worldId: number; isUnlocked: 
         return <StoneGuardianSilhouette isUnlocked={isUnlocked} size="small" />;
       case 4:
         return <GrogSilhouette isUnlocked={isUnlocked} size="small" />;
+      case 5:
+        return <GalairSilhouette isUnlocked={isUnlocked} size="small" />;
+      case 6:
+        return <LeviathanSilhouette isUnlocked={isUnlocked} size="small" />;
+      case 7:
+        return <RealityShifterSilhouette isUnlocked={isUnlocked} size="small" />;
+      case 8:
+        return <WordEaterSilhouette isUnlocked={isUnlocked} size="small" />;
       default:
         return <DrakeSilhouette isUnlocked={isUnlocked} size="small" />;
     }

@@ -230,8 +230,7 @@ export const CampaignVideoGate = ({
               )}
             </div>
             <div className="flex items-center gap-2">
-              {/* TODO: TEMPORARY - Remove true || to restore admin-only edit controls */}
-              {(true || isAdmin) && (
+              {isAdmin && (
                 <Button
                   variant="outline"
                   size="sm"
