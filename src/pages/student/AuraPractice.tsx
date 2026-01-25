@@ -47,6 +47,9 @@ import { analyzePresentation, type PresentationPrompt, type PresentationMetrics 
 import { crossModalNetwork, type PresentationFeatures } from "@/lib/ml/crossModalTransferNetwork";
 import { useActiveScreeningPassage, type ActiveScreening } from "@/hooks/useActiveScreeningPassage";
 import type { CuratedStory as Story } from "@/data/curatedStories";
+import { DuelLobby } from "@/components/aura/game/rpg/DuelLobby";
+import { DuelResults } from "@/components/aura/game/rpg/DuelResults";
+import { useReadingDuels, type ReadingDuel } from "@/hooks/useReadingDuels";
 
 // Helper component to get student's classroom and show leaderboard
 const ClassroomLeaderboardWrapper = ({ studentId }: { studentId: string }) => {
@@ -94,7 +97,9 @@ const AuraPractice = () => {
   const [presentationTranscript, setPresentationTranscript] = useState<string>('');
   const [isCampaignMode, setIsCampaignMode] = useState(false);
   const [isRpgMode, setIsRpgMode] = useState(false);
-  const [rpgView, setRpgView] = useState<'world_map' | 'level_select' | 'battle' | 'boss_rush'>('world_map');
+  const [rpgView, setRpgView] = useState<'world_map' | 'level_select' | 'battle' | 'boss_rush' | 'duel_lobby' | 'duel_battle' | 'duel_results'>('world_map');
+  const [activeDuel, setActiveDuel] = useState<ReadingDuel | null>(null);
+  const [studentClassroomId, setStudentClassroomId] = useState<string | null>(null);
   const [selectedWorld, setSelectedWorld] = useState<CampaignWorld | null>(null);
   const [selectedLevel, setSelectedLevel] = useState<CampaignLevel | null>(null);
   const [rpgStory, setRpgStory] = useState<Story | null>(null);
@@ -180,6 +185,28 @@ const AuraPractice = () => {
     completeBattle,
     initializeProgress 
   } = useCampaignProgress(user?.id);
+
+  // Get student's first classroom for duels
+  const { data: studentEnrollment } = useQuery({
+    queryKey: ['student-enrollment-for-duels', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('classroom_students')
+        .select('classroom_id')
+        .eq('student_id', user!.id)
+        .limit(1)
+        .maybeSingle();
+      if (error) return null;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Get pending duel challenges count
+  const { pendingChallenges: pendingDuelChallenges } = useReadingDuels(
+    user?.id || '', 
+    studentEnrollment?.classroom_id
+  );
   const { data: records, refetch } = useQuery({
     queryKey: ['aura-records', user?.id],
     queryFn: async () => {
@@ -536,6 +563,10 @@ const AuraPractice = () => {
     const world4Progress = worldProgressData["4"] || [];
     const bossRushUnlocked = world4Progress.length >= 1; // At least 1 story completed in World 4
 
+    // Arena unlocked after completing World 2
+    const world2Progress = worldProgressData["2"] || [];
+    const arenaUnlocked = world2Progress.length >= 1;
+
     return (
       <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
         <RPGWorldMap
@@ -545,7 +576,13 @@ const AuraPractice = () => {
           gold={campaignProgress?.total_gold || 0}
           xp={campaignProgress?.total_xp_earned || 0}
           bossRushUnlocked={bossRushUnlocked}
+          arenaUnlocked={arenaUnlocked}
+          pendingChallenges={pendingDuelChallenges.data?.length || 0}
           onOpenBossRush={() => setRpgView('boss_rush')}
+          onOpenArena={() => {
+            setStudentClassroomId(studentEnrollment?.classroom_id || null);
+            setRpgView('duel_lobby');
+          }}
           onSelectWorld={(world) => {
             setSelectedWorld(world);
             setRpgView('level_select');
@@ -554,6 +591,54 @@ const AuraPractice = () => {
             setIsRpgMode(false);
             setRpgView('world_map');
             setSelectedWorld(null);
+          }}
+        />
+      </div>
+    );
+  }
+
+  // RPG Mode - Duel Lobby
+  if (isRpgMode && rpgView === 'duel_lobby' && user?.id) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
+        <DuelLobby
+          studentId={user.id}
+          classroomId={studentEnrollment?.classroom_id || ''}
+          onBack={() => setRpgView('world_map')}
+          onStartDuel={(duel) => {
+            setActiveDuel(duel);
+            // Create a story from the duel passage
+            const duelStory: Story = {
+              title: duel.passage_title,
+              description: 'Reading Duel Challenge',
+              passage_text: duel.passage_text,
+              grade_level: 3,
+              category: 'adventure' as const,
+              word_count: duel.passage_word_count,
+              reading_time_minutes: 2,
+              difficulty_level: 3,
+              cover_gradient: 'from-purple-500 to-pink-600',
+              target_phonemes: [],
+            };
+            setRpgStory(duelStory);
+            setRpgEnemyType('minion');
+            setRpgView('duel_battle');
+          }}
+        />
+      </div>
+    );
+  }
+
+  // RPG Mode - Duel Results
+  if (isRpgMode && rpgView === 'duel_results' && user?.id && activeDuel) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
+        <DuelResults
+          duel={activeDuel}
+          studentId={user.id}
+          onContinue={() => {
+            setActiveDuel(null);
+            setRpgView('duel_lobby');
           }}
         />
       </div>

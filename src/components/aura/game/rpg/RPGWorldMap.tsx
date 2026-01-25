@@ -19,6 +19,7 @@ import { AnimatedBookCounter } from "../effects/FlyingBookAnimation";
 import { MilestoneCelebration } from "../effects/MilestoneCelebration";
 import { RPGPlayerHUD } from "./RPGPlayerHUD";
 import { ReadingProgressPanel } from "./ReadingProgressPanel";
+import { ArenaLocation } from "./ArenaLocation";
 
 export interface WorldProgress {
   worldId: number;
@@ -34,7 +35,10 @@ interface RPGWorldMapProps {
   onSelectWorld: (world: CampaignWorld) => void;
   onBack: () => void;
   onOpenBossRush?: () => void;
+  onOpenArena?: () => void;
   bossRushUnlocked?: boolean;
+  arenaUnlocked?: boolean;
+  pendingChallenges?: number;
   studentId?: string;
   gold?: number;
   xp?: number;
@@ -193,7 +197,10 @@ export const RPGWorldMap = ({
   onSelectWorld,
   onBack,
   onOpenBossRush,
+  onOpenArena,
   bossRushUnlocked = false,
+  arenaUnlocked = false,
+  pendingChallenges = 0,
   studentId,
   gold = 0,
   xp = 0,
@@ -569,6 +576,15 @@ export const RPGWorldMap = ({
               </div>
             </Card>
           </motion.div>
+        )}
+
+        {/* Arena Location - PvP Duels */}
+        {arenaUnlocked && onOpenArena && (
+          <ArenaLocation
+            pendingChallenges={pendingChallenges}
+            isUnlocked={arenaUnlocked}
+            onOpenArena={onOpenArena}
+          />
         )}
       </div>
 
