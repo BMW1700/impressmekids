@@ -6,6 +6,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { CampaignModeEntry } from "@/components/aura/game/CampaignModeEntry";
 import { RPGBattleArena } from "@/components/aura/game/rpg/RPGBattleArena";
 import { RPGWorldMap, type WorldProgress } from "@/components/aura/game/rpg/RPGWorldMap";
+import { BossRushMode } from "@/components/aura/game/rpg/BossRushMode";
 import { RPGLevelSelect, type CampaignLevel } from "@/components/aura/game/rpg/RPGLevelSelect";
 import { type BattleMode } from "@/components/aura/game/rpg/RPGBattleModeSelector";
 import { BookRescueCelebration } from "@/components/aura/game/BookRescueCelebration";
@@ -93,7 +94,7 @@ const AuraPractice = () => {
   const [presentationTranscript, setPresentationTranscript] = useState<string>('');
   const [isCampaignMode, setIsCampaignMode] = useState(false);
   const [isRpgMode, setIsRpgMode] = useState(false);
-  const [rpgView, setRpgView] = useState<'world_map' | 'level_select' | 'battle'>('world_map');
+  const [rpgView, setRpgView] = useState<'world_map' | 'level_select' | 'battle' | 'boss_rush'>('world_map');
   const [selectedWorld, setSelectedWorld] = useState<CampaignWorld | null>(null);
   const [selectedLevel, setSelectedLevel] = useState<CampaignLevel | null>(null);
   const [rpgStory, setRpgStory] = useState<Story | null>(null);
@@ -531,6 +532,10 @@ const AuraPractice = () => {
       };
     });
 
+    // Check if boss rush is unlocked (defeated World 4 boss = Grog)
+    const world4Progress = worldProgressData["4"] || [];
+    const bossRushUnlocked = world4Progress.length >= 1; // At least 1 story completed in World 4
+
     return (
       <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
         <RPGWorldMap
@@ -539,6 +544,8 @@ const AuraPractice = () => {
           studentId={user.id}
           gold={campaignProgress?.total_gold || 0}
           xp={campaignProgress?.total_xp_earned || 0}
+          bossRushUnlocked={bossRushUnlocked}
+          onOpenBossRush={() => setRpgView('boss_rush')}
           onSelectWorld={(world) => {
             setSelectedWorld(world);
             setRpgView('level_select');
@@ -547,6 +554,38 @@ const AuraPractice = () => {
             setIsRpgMode(false);
             setRpgView('world_map');
             setSelectedWorld(null);
+          }}
+        />
+      </div>
+    );
+  }
+
+  // RPG Mode - Boss Rush
+  if (isRpgMode && rpgView === 'boss_rush' && user?.id) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
+        <BossRushMode
+          studentId={user.id}
+          onBack={() => setRpgView('world_map')}
+          onStartBattle={(bossIndex, boss) => {
+            // Create a story for the boss fight
+            const bossStory: Story = {
+              title: `Boss Rush: ${boss.name}`,
+              description: `Defeat ${boss.name} in the Boss Rush gauntlet!`,
+              passage_text: curatedStories[bossIndex % curatedStories.length]?.passage_text || 
+                "The ancient tome glows with power as you face your challenger. Read the words clearly to unleash your attacks!",
+              grade_level: Math.min(5, Math.floor(bossIndex / 2) + 1),
+              category: "adventure" as const,
+              word_count: 150 + bossIndex * 20,
+              reading_time_minutes: 2,
+              difficulty_level: bossIndex + 1,
+              cover_gradient: "from-red-500 to-orange-600",
+              target_phonemes: [],
+            };
+            setRpgStory(bossStory);
+            setRpgEnemyType(boss.type as EnemyType);
+            setSelectedWorld({ id: boss.world } as CampaignWorld);
+            setRpgView('battle');
           }}
         />
       </div>

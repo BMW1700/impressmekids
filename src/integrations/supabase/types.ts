@@ -1114,6 +1114,57 @@ export type Database = {
           },
         ]
       }
+      boss_rush_attempts: {
+        Row: {
+          bosses_defeated: number
+          created_at: string
+          current_boss_index: number
+          ended_at: string | null
+          id: string
+          longest_streak: number
+          started_at: string
+          status: string
+          student_id: string
+          time_taken_seconds: number | null
+          total_damage_dealt: number
+          total_gold_earned: number
+          total_words_read: number
+          total_xp_earned: number
+        }
+        Insert: {
+          bosses_defeated?: number
+          created_at?: string
+          current_boss_index?: number
+          ended_at?: string | null
+          id?: string
+          longest_streak?: number
+          started_at?: string
+          status?: string
+          student_id: string
+          time_taken_seconds?: number | null
+          total_damage_dealt?: number
+          total_gold_earned?: number
+          total_words_read?: number
+          total_xp_earned?: number
+        }
+        Update: {
+          bosses_defeated?: number
+          created_at?: string
+          current_boss_index?: number
+          ended_at?: string | null
+          id?: string
+          longest_streak?: number
+          started_at?: string
+          status?: string
+          student_id?: string
+          time_taken_seconds?: number | null
+          total_damage_dealt?: number
+          total_gold_earned?: number
+          total_words_read?: number
+          total_xp_earned?: number
+        }
+        Relationships: []
+      }
       campaign_assets: {
         Row: {
           asset_key: string
@@ -1213,6 +1264,9 @@ export type Database = {
       campaign_progress: {
         Row: {
           books_rescued: number
+          boss_rush_best_time_seconds: number | null
+          boss_rush_completions: number | null
+          boss_rush_unlocked: boolean | null
           created_at: string
           current_world: number
           equipped_pet_id: string | null
@@ -1232,6 +1286,9 @@ export type Database = {
         }
         Insert: {
           books_rescued?: number
+          boss_rush_best_time_seconds?: number | null
+          boss_rush_completions?: number | null
+          boss_rush_unlocked?: boolean | null
           created_at?: string
           current_world?: number
           equipped_pet_id?: string | null
@@ -1251,6 +1308,9 @@ export type Database = {
         }
         Update: {
           books_rescued?: number
+          boss_rush_best_time_seconds?: number | null
+          boss_rush_completions?: number | null
+          boss_rush_unlocked?: boolean | null
           created_at?: string
           current_world?: number
           equipped_pet_id?: string | null
