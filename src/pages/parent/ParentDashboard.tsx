@@ -13,6 +13,7 @@ import {
   GraduationCap,
   Sparkles,
   Link,
+  BookOpen,
 } from "lucide-react";
 import { ParentNotificationBell } from "@/components/parent/ParentNotificationBell";
 import { StudentLookupModal } from "@/components/parent/StudentLookupModal";
@@ -24,6 +25,7 @@ import { ParentAnnouncementsFeed } from "@/components/parent/ParentAnnouncements
 import { ParentQuickInsights } from "@/components/parent/ParentQuickInsights";
 import { ParentGradebookSection } from "@/components/parent/ParentGradebookSection";
 import { ParentLinksResourcesModal } from "@/components/parent/ParentLinksResourcesModal";
+import { ParentStoryBank } from "@/components/parent/ParentStoryBank";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CalendarWidget } from "@/components/calendar/CalendarWidget";
@@ -306,6 +308,12 @@ const ParentDashboard = () => {
                 >
                   <GraduationCap className="h-4 w-4" /> {t("parentDashboard.tabs.gradebook")}
                 </TabsTrigger>
+                <TabsTrigger
+                  value="storybank"
+                  className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary-dark data-[state=active]:text-white rounded-lg px-6 py-2.5 transition-all"
+                >
+                  <BookOpen className="h-4 w-4" /> Story Bank
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="space-y-8">
@@ -362,6 +370,18 @@ const ParentDashboard = () => {
 
               <TabsContent value="gradebook">
                 <ParentGradebookSection studentId={activeChildId} studentName={activeChildName} />
+              </TabsContent>
+
+              <TabsContent value="storybank">
+                {user?.id && approvedChildren && (
+                  <ParentStoryBank 
+                    parentUserId={user.id} 
+                    children={approvedChildren.map((c: any) => ({ 
+                      student_id: c.student_id, 
+                      full_name: c.full_name 
+                    }))} 
+                  />
+                )}
               </TabsContent>
             </Tabs>
           </div>
