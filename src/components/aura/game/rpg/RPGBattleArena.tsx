@@ -174,6 +174,7 @@ export const RPGBattleArena = ({
   const [playerHp, setPlayerHp] = useState(heroKnight.maxHp);
   const [wizardMp, setWizardMp] = useState(50);
   const [enemyHp, setEnemyHp] = useState(enemy.maxHp);
+  const enemyHpRef = useRef(enemy.maxHp); // Ref for stable victory check
   const [streak, setStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
   const [wordsRead, setWordsRead] = useState(0);
@@ -285,12 +286,20 @@ export const RPGBattleArena = ({
     }, 100);
   }, [enemyHp, isFinalEnemy, enemy]);
 
+  // Keep enemyHpRef in sync for stable victory check
+  useEffect(() => {
+    enemyHpRef.current = enemyHp;
+  }, [enemyHp]);
+
   // FAILSAFE: Force victory/transition when enemy HP = 0 but phase didn't transition
   // This ensures the victory popup ALWAYS appears even if state transitions fail
+  // Uses ref to avoid stale closure issues
   useEffect(() => {
     const victoryCheck = setInterval(() => {
-      if (enemyHp <= 0 && phase !== 'victory' && phase !== 'defeat' && phase !== 'enemy_transition') {
-        console.log('[RPGBattle] FAILSAFE: Enemy HP = 0, forcing victory/transition. Current phase:', phase);
+      const currentHp = enemyHpRef.current;
+      if (currentHp <= 0 && phase !== 'victory' && phase !== 'defeat' && phase !== 'enemy_transition') {
+        console.log('[RPGBattle] FAILSAFE TRIGGERED: Enemy HP =', currentHp, '- forcing victory/transition. Current phase:', phase);
+        clearInterval(victoryCheck); // Stop checking once triggered
         if (isFinalEnemy) {
           setShowComprehensionQuiz(true);
           setPhase('victory');
@@ -302,7 +311,7 @@ export const RPGBattleArena = ({
     }, 500);
     
     return () => clearInterval(victoryCheck);
-  }, [enemyHp, phase, isFinalEnemy, enemy]);
+  }, [phase, isFinalEnemy, enemy]); // Removed enemyHp from deps - using ref instead
 
   // Parse story into words - memoized for stability
   const storyWords = useMemo(() => {
