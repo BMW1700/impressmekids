@@ -63,8 +63,7 @@ import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { speechManager } from "@/lib/speechRecognitionManager";
 import { supabase } from "@/integrations/supabase/client";
 import { useMLIntegration } from "@/hooks/useMLIntegration";
-// NEW: Import quiz and vocabulary tracker for learning reinforcement
-import { ComprehensionQuiz } from "./ComprehensionQuiz";
+// Quiz removed - was blocking victory screen
 import { VocabularyTracker, isPowerWord } from "./VocabularyTracker";
 
 // Sound effects singleton
@@ -231,10 +230,7 @@ export const RPGBattleArena = ({
   const [comboAnnouncement, setComboAnnouncement] = useState<string | null>(null);
   const [comboPowerLevel, setComboPowerLevel] = useState<'normal' | 'power' | 'mega' | 'ultra'>('normal');
   
-  // NEW: Comprehension quiz and vocabulary tracker states
-  const [showComprehensionQuiz, setShowComprehensionQuiz] = useState(false);
-  const [quizBonusXp, setQuizBonusXp] = useState(0);
-  const [quizBonusGold, setQuizBonusGold] = useState(0);
+  // Vocabulary tracker states (quiz removed)
   const [collectedPowerWords, setCollectedPowerWords] = useState<string[]>([]);
   const [powerWordsSaved, setPowerWordsSaved] = useState(false);
   
@@ -292,7 +288,10 @@ export const RPGBattleArena = ({
     // Trigger appropriate transition
     if (isFinalEnemy) {
       console.log('[RPGBattle] ENEMY_DEFEATED - Final enemy, triggering victory');
-      setShowComprehensionQuiz(true);
+      // Visual gold flash on victory
+      document.body.style.transition = 'background 0.15s';
+      document.body.style.background = 'linear-gradient(to bottom, #fbbf24, #f59e0b)';
+      setTimeout(() => { document.body.style.background = ''; }, 200);
       setPhase('victory');
     } else {
       console.log('[RPGBattle] ENEMY_DEFEATED - Transitioning to next enemy');
@@ -1508,39 +1507,7 @@ export const RPGBattleArena = ({
     }
   }, [playerHp, phase]);
   
-  // Handle comprehension quiz completion - add bonus rewards
-  // FIXED: Now forces HP re-check after quiz to catch deaths during quiz
-  const handleQuizComplete = useCallback((score: number, total: number, bonusXp: number, bonusGold: number) => {
-    console.log('[RPGBattle] Quiz complete:', { score, total, bonusXp, bonusGold });
-    setQuizBonusXp(bonusXp);
-    setQuizBonusGold(bonusGold);
-    setXpEarned(prev => prev + bonusXp);
-    setGoldEarned(prev => prev + bonusGold);
-    setShowComprehensionQuiz(false);
-    
-    // Force a victory sync after quiz - ensures ref is set properly
-    setTimeout(() => {
-      if (enemyHpRef.current <= 0 && !victoryTriggeredRef.current) {
-        console.log('[RPGBattle] 🔄 Post-quiz HP check: enemy dead, syncing victory state');
-        victoryTriggeredRef.current = true;
-      }
-    }, 100);
-  }, []);
-
-  // Handle quiz skip - no bonus rewards
-  // FIXED: Same post-quiz sync
-  const handleQuizSkip = useCallback(() => {
-    console.log('[RPGBattle] Quiz skipped');
-    setShowComprehensionQuiz(false);
-    
-    // Force a victory sync after skip
-    setTimeout(() => {
-      if (enemyHpRef.current <= 0 && !victoryTriggeredRef.current) {
-        console.log('[RPGBattle] 🔄 Post-quiz-skip HP check: enemy dead, syncing victory state');
-        victoryTriggeredRef.current = true;
-      }
-    }, 100);
-  }, []);
+  // Quiz handlers removed - quiz was blocking victory screen
   
   // Handle vocabulary words saved
   const handlePowerWordsSaved = useCallback(() => {
@@ -1737,9 +1704,10 @@ export const RPGBattleArena = ({
     // Check victory by completing all words with 80%+ accuracy
     if (allWordsRead && currentAccuracy >= 0.8) {
       console.log('[RPGBattle] ✅ All words read with 80%+ accuracy - VICTORY!', { accuracy: currentAccuracy });
-      // DO NOT set victoryTriggeredRef here - triggerEnemyDefeat will set it when needed
-      // This allows HP-based victory to still work if enemy dies later
-      setShowComprehensionQuiz(true);
+      // Visual gold flash on victory
+      document.body.style.transition = 'background 0.15s';
+      document.body.style.background = 'linear-gradient(to bottom, #fbbf24, #f59e0b)';
+      setTimeout(() => { document.body.style.background = ''; }, 200);
       setPhase('victory');
     }
   }, [allWordsRead, currentAccuracy, phase]);
@@ -2363,7 +2331,7 @@ export const RPGBattleArena = ({
               )}
 
               {/* Victory Screen */}
-              {phase === 'victory' && !showComprehensionQuiz && (
+              {phase === 'victory' && (
                 <motion.div
                   key="victory"
                   initial={{ opacity: 0, scale: 0.8 }}
@@ -2400,26 +2368,11 @@ export const RPGBattleArena = ({
                     <div className="bg-slate-800/60 rounded-lg p-4 border border-slate-700">
                       <p className="text-3xl font-bold text-yellow-400 flex items-center justify-center gap-1">
                         <Star className="h-5 w-5" />
-                        {Math.floor(100 + correctWords * 5 + longestStreak * 10) + quizBonusXp}
+                        {Math.floor(100 + correctWords * 5 + longestStreak * 10)}
                       </p>
-                      <p className="text-xs text-slate-400">
-                        XP Earned {quizBonusXp > 0 && <span className="text-purple-400">(+{quizBonusXp} quiz)</span>}
-                      </p>
+                      <p className="text-xs text-slate-400">XP Earned</p>
                     </div>
                   </div>
-                  
-                  {/* Quiz Bonus Display */}
-                  {quizBonusXp > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="bg-gradient-to-r from-purple-900/60 to-indigo-900/60 border border-purple-500/30 rounded-lg px-4 py-2 inline-block"
-                    >
-                      <p className="text-purple-300 text-sm">
-                        📚 Story Check Bonus: <span className="font-bold text-purple-200">+{quizBonusXp} XP</span> &amp; <span className="font-bold text-amber-300">+{quizBonusGold} Gold</span>
-                      </p>
-                    </motion.div>
-                  )}
                   
                   {/* Power Words / Vocabulary Tracker */}
                   {collectedPowerWords.length > 0 && studentId && (
@@ -2443,15 +2396,6 @@ export const RPGBattleArena = ({
                   </Button>
                 </motion.div>
               )}
-              
-              {/* Comprehension Quiz Overlay */}
-              <ComprehensionQuiz
-                isOpen={showComprehensionQuiz && phase === 'victory'}
-                storyTitle={story.title}
-                storyText={story.passage_text || ''}
-                onComplete={handleQuizComplete}
-                onSkip={handleQuizSkip}
-              />
 
               {/* Defeat Screen */}
               {phase === 'defeat' && (
