@@ -361,6 +361,7 @@ export const RPGWordReader = ({
     setFeedback(null);
     setSpokenText("");
     setCanRetry(false); // Only one retry allowed per word
+    canRetryRef.current = false; // Synchronous update to prevent race condition!
     isProcessingRef.current = false;
     
     // Stay on the same word index
