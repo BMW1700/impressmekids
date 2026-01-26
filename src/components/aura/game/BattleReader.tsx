@@ -263,14 +263,56 @@ export const BattleReader = ({
         }, 500);
       }
       
-      // Check for battle end
+      // Check for battle end - CRITICAL FIX: Trigger celebration IMMEDIATELY
       if (newState.status === 'victory') {
+        console.log('[BattleReader] 🎉 Enemy defeated mid-passage - triggering immediate victory!');
         setGrogState('defeated');
         setPlayerState('victory');
+        
+        // Calculate XP immediately
+        const accuracy = newState.wordsRead > 0 
+          ? Math.round((newState.correctWords / newState.wordsRead) * 100) 
+          : 0;
+        
+        const xpEarned = calculateXpEarned(
+          true,
+          newState.wordsRead,
+          newState.correctWords,
+          newState.longestStreak,
+          worldNumber,
+          true // defeatedBeforeFinish
+        );
+        
+        // Update XP in state
+        newState.xpEarned = xpEarned;
+        
+        // Show celebration immediately - don't wait for passage to finish
+        setTimeout(() => {
+          setShowCelebration(true);
+        }, 500);
+        
       } else if (newState.status === 'defeat') {
+        console.log('[BattleReader] 💀 Player defeated mid-passage - triggering defeat screen!');
         setPlayerState('defeated');
         setGrogState('taunting');
         setCurrentTaunt(getRandomTaunt('grogTaunts'));
+        
+        // Calculate XP for defeat
+        const xpEarned = calculateXpEarned(
+          false,
+          newState.wordsRead,
+          newState.correctWords,
+          newState.longestStreak,
+          worldNumber,
+          false
+        );
+        
+        newState.xpEarned = xpEarned;
+        
+        // Show defeat screen immediately
+        setTimeout(() => {
+          setShowCelebration(true);
+        }, 500);
       }
       
       return newState;
@@ -280,6 +322,13 @@ export const BattleReader = ({
   // Handle reading completion
   // VICTORY RULES: Win if goblin dies OR (story finished AND accuracy >= 90%)
   const handleReadingComplete = async (stats: any) => {
+    // SAFETY: If celebration is already showing (enemy died mid-passage), don't re-trigger
+    if (showCelebration) {
+      console.log('[BattleReader] Celebration already showing, skipping handleReadingComplete');
+      return;
+    }
+    
+    console.log('[BattleReader] handleReadingComplete called');
     setReadingStats(stats);
     
     // Get final battle state for victory calculation
