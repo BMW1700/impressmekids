@@ -108,7 +108,7 @@ export const RPGWordReader = ({
   // Core state
   const [recognitionState, setRecognitionState] = useState<RecognitionState>('idle');
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
+  const [feedback, setFeedback] = useState<'correct' | 'incorrect' | 'retried' | null>(null);
   const [spokenText, setSpokenText] = useState<string>("");
   const [completedWords, setCompletedWords] = useState<Set<number>>(new Set());
   const [micError, setMicError] = useState<string | null>(null);
@@ -389,7 +389,7 @@ export const RPGWordReader = ({
       return updated;
     });
     
-    setFeedback('correct');
+    setFeedback('retried');
     setSpokenText(spokenWord);
     soundEffects.correctWord();
     setCompletedWords(prev => new Set([...prev, wordIndex]));
@@ -965,6 +965,8 @@ export const RPGWordReader = ({
         className={`relative px-12 py-6 rounded-2xl border-2 text-center min-w-[280px]
           ${feedback === 'correct' 
             ? 'bg-emerald-500/20 border-emerald-400 shadow-[0_0_30px_rgba(52,211,153,0.5)]' 
+            : feedback === 'retried'
+            ? 'bg-yellow-500/20 border-yellow-400 shadow-[0_0_30px_rgba(251,191,36,0.5)]'
             : feedback === 'incorrect'
             ? 'bg-red-500/20 border-red-400 shadow-[0_0_30px_rgba(248,113,113,0.5)]'
             : isEchoRetry
@@ -986,9 +988,11 @@ export const RPGWordReader = ({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0, opacity: 0 }}
               className={`absolute -top-3 -right-3 w-10 h-10 rounded-full flex items-center justify-center
-                ${feedback === 'correct' ? 'bg-emerald-500' : 'bg-red-500'}`}
+                ${feedback === 'correct' ? 'bg-emerald-500' : feedback === 'retried' ? 'bg-yellow-500' : 'bg-red-500'}`}
             >
-              {feedback === 'correct' ? <Check className="h-6 w-6 text-white" /> : <X className="h-6 w-6 text-white" />}
+              {feedback === 'correct' ? <Check className="h-6 w-6 text-white" /> : 
+               feedback === 'retried' ? <RotateCcw className="h-6 w-6 text-white" /> : 
+               <X className="h-6 w-6 text-white" />}
             </motion.div>
           )}
         </AnimatePresence>
@@ -1026,6 +1030,7 @@ export const RPGWordReader = ({
             animate={{ opacity: 1 }}
             className={`mt-2 text-sm 
               ${feedback === 'correct' ? 'text-emerald-300' : 
+                feedback === 'retried' ? 'text-yellow-300' :
                 feedback === 'incorrect' ? 'text-red-300' :
                 isEchoRetry ? 'text-amber-300' : 'text-slate-400'}`}
           >
