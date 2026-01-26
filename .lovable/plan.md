@@ -1,81 +1,72 @@
 
-# Plan: Fix Yellow Word Retry System
+# Plan: Fix Modal and Battle UI Bottom Cutoff
 
-## Problem Summary
-When a student gets a word wrong, clicks "Try Again", and reads it correctly:
-- **CURRENT**: Word turns GREEN (wrong)
-- **EXPECTED**: Word turns YELLOW (retried success)
+## Problem
+Both the `WordFeedbackOverlay` modal and the main `RPGBattleArena` UI are being cut off at the bottom of the screen. The action buttons ("Hear It", "Try Again", "Skip & Continue") and the "Attack" button below the word reader are not visible.
 
-The root cause is a race condition where `canRetryRef.current` is not updated synchronously before recognition restarts.
+## Root Cause
+1. **WordFeedbackOverlay**: The modal uses `flex items-center justify-center` which tries to vertically center content, but when the modal content is taller than the viewport (especially on smaller screens or when browser toolbars are visible), the top and bottom get clipped because there's no scroll capability.
 
-## The Fix
+2. **RPGBattleArena**: The bottom UI section doesn't have a max-height constraint with overflow scrolling, causing content to push below the viewport edge.
 
-### File: `src/components/aura/game/rpg/RPGWordReader.tsx`
+## Solution
 
-**Change 1: Synchronously update `canRetryRef` in `handleTryAgain`**
+### Fix 1: WordFeedbackOverlay - Add Scroll Support and Safe Padding
+**File**: `src/components/aura/game/rpg/WordFeedbackOverlay.tsx`
 
-In the `handleTryAgain` function (around line 357-369), add a synchronous update to `canRetryRef.current`:
+| Line | Change |
+|------|--------|
+| 98 | Change from `flex items-center justify-center` to `flex items-start justify-center overflow-y-auto py-8` |
+| 104 | Add `max-h-[90vh]` constraint to modal content and `overflow-y-auto` |
 
 ```typescript
-const handleTryAgain = useCallback(() => {
-  if (!pendingIncorrectWord) return;
-  
-  setShowFeedbackOverlay(false);
-  setFeedback(null);
-  setSpokenText("");
-  setCanRetry(false); // Only one retry allowed per word
-  canRetryRef.current = false; // <-- ADD THIS LINE: Synchronous update!
-  isProcessingRef.current = false;
-  
-  // Stay on the same word index
-  setRecognitionState('listening');
-  startRecognitionRef.current?.();
-}, [pendingIncorrectWord]);
+// Before (line 98)
+className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+
+// After
+className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto py-8 bg-black/60 backdrop-blur-sm"
 ```
 
-This ensures that when `processResult` runs after recognition restarts, `canRetryRef.current` is already `false`, so the check on line 564 (`if (!canRetryRef.current)`) correctly routes to `handleRetrySuccess` instead of `handleCorrect`.
+```typescript
+// Before (line 104)
+className={`relative max-w-md w-full mx-4 p-6 rounded-2xl border-2 ${...}`}
 
-**Why this works**: React state updates are asynchronous and batched, but refs are synchronous. By updating the ref directly, we guarantee the value is correct when checked in `processResult`.
+// After - add max-height and my-auto for vertical centering when space allows
+className={`relative max-w-md w-full mx-4 p-6 rounded-2xl border-2 my-auto max-h-[90vh] overflow-y-auto ${...}`}
+```
 
----
+### Fix 2: RPGBattleArena Bottom UI - Add Scroll and Max Height
+**File**: `src/components/aura/game/rpg/RPGBattleArena.tsx`
 
-## Verification of Other Features
+| Line | Change |
+|------|--------|
+| 1978 | Add `max-h-[50vh]` and `overflow-y-auto` to bottom UI section |
 
-### Boss Rush Mode: ✅ Already Working
-- `RPGBossRush.tsx` exists with full 9-boss queue
-- `useBossRush.ts` hook manages state and database
-- "⚔️ BOSS RUSH" button appears in world map after World 8 completion
-- No changes needed
+```typescript
+// Before (line 1978)
+<div className="bg-black/50 backdrop-blur-sm border-t border-white/10">
 
-### Boss Silhouettes (Worlds 5-8): ✅ Already Working
-- All 4 new silhouettes (EchoWraith, Zephyr, Leviathan, WordEater) exist in `BossSilhouettes.tsx`
-- `RPGWorldMap.tsx` imports and uses them correctly in the switch statement
-- No changes needed
+// After - constrain height and enable scrolling
+<div className="bg-black/50 backdrop-blur-sm border-t border-white/10 max-h-[50vh] overflow-y-auto">
+```
 
-### Accuracy Calculation: ✅ Correctly Implemented
-- `handleBattleEnd` calculates: `accuracy = correctWords / wordsRead * 100` (capped at 100%)
-- When a word is missed, `wordsRead` increments but `correctWords` does not, correctly reducing accuracy
-- When a retry succeeds (yellow), neither `wordsRead` nor `correctWords` increments (retries don't count toward accuracy in either direction)
-- This is the intended behavior per the memory notes
+## Technical Details
 
----
+### Why `items-start` instead of `items-center`?
+When using `items-center` in a flex container with `overflow-y-auto`, the browser clips both the top and bottom equally when content overflows. By using `items-start`, we anchor content to the top and allow natural scrolling downward.
+
+### Why `my-auto`?
+Adding `my-auto` (margin-y: auto) to the inner modal content allows it to center vertically when there IS enough space, while still allowing scroll when there isn't.
+
+### Why `max-h-[90vh]` / `max-h-[50vh]`?
+- 90vh for the modal ensures it never exceeds 90% of viewport height, leaving room for the outer padding
+- 50vh for the bottom battle UI ensures the center battle arena (with characters) always has at least 50% of the screen
 
 ## Summary of Changes
 
-| File | Change |
-|------|--------|
-| `src/components/aura/game/rpg/RPGWordReader.tsx` | Add `canRetryRef.current = false;` in `handleTryAgain` function |
+| File | Lines Changed | Description |
+|------|---------------|-------------|
+| `src/components/aura/game/rpg/WordFeedbackOverlay.tsx` | 2 | Add scroll support and height constraints to modal |
+| `src/components/aura/game/rpg/RPGBattleArena.tsx` | 1 | Add max-height and scroll to bottom UI section |
 
-**Lines changed**: 1 line added
-
----
-
-## Testing Checklist
-
-After the fix:
-- [ ] Miss a word → Word turns RED → Feedback overlay appears
-- [ ] Click "Try Again" → Read word correctly → Word turns YELLOW (not green!)
-- [ ] Yellow word does NOT deal damage or give coins
-- [ ] Yellow word triggers HP healing (12.5% of enemy attack)
-- [ ] Click "Skip & Continue" → Word stays RED → Enemy attacks
-- [ ] Accuracy decreases when words are missed (not when retried)
+**Estimated Impact**: 3 lines modified
