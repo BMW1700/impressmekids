@@ -1975,7 +1975,7 @@ export const RPGBattleArena = ({
         </div>
 
         {/* Bottom UI Section */}
-        <div className="bg-black/50 backdrop-blur-sm border-t border-white/10">
+        <div className="bg-black/50 backdrop-blur-sm border-t border-white/10 max-h-[50vh] overflow-y-auto">
           <div className="max-w-5xl mx-auto p-4">
             <AnimatePresence mode="wait">
               {/* Intro Dialogue */}
