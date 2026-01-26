@@ -56,6 +56,7 @@ export const RPGInkSplash = ({
   const recognitionRef = useRef<any>(null);
   const revealedRef = useRef(0);
   const failedRef = useRef(0);
+  const completedCountRef = useRef(0); // Track completion to avoid stale closure issues
 
   // Initialize ink words with varying obscure levels
   useEffect(() => {
@@ -176,10 +177,13 @@ export const RPGInkSplash = ({
 
         resetListeningState();
         
-        // Check completion
+        // Increment completed count (using ref to avoid stale closure)
+        completedCountRef.current += 1;
+        
+        // Check completion using ref instead of stale state
         setTimeout(() => {
-          const allDone = inkWords.every(w => w.revealed || w.failed);
-          if (allDone) {
+          const totalWords = 8; // Always 8 words (line 62: words.slice(0, 8))
+          if (completedCountRef.current >= totalWords) {
             setIsActive(false);
             setTimeout(() => {
               onComplete(revealedRef.current, failedRef.current);
