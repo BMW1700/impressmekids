@@ -990,27 +990,42 @@ export const RPGWordReader = ({
           Hear
         </Button>
 
-        {isIdle && (
-          <Button
-            size="lg"
-            onClick={startReading}
-            disabled={disabled || !cleanWord}
-            className="min-w-[180px] font-bold bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700"
+        {(isIdle || isActive) && (
+          <motion.div
+            animate={isActive ? { 
+              boxShadow: ['0 0 0px rgba(251, 191, 36, 0)', '0 0 20px rgba(251, 191, 36, 0.6)', '0 0 0px rgba(251, 191, 36, 0)'] 
+            } : {}}
+            transition={isActive ? { repeat: Infinity, duration: 1 } : {}}
+            className="rounded-xl"
           >
-            <Play className="h-5 w-5 mr-2" />
-            Start Reading
-          </Button>
-        )}
-
-        {isActive && (
-          <Button
-            size="lg"
-            onClick={pauseReading}
-            className="min-w-[180px] font-bold bg-gradient-to-r from-amber-500 to-orange-600"
-          >
-            <Pause className="h-5 w-5 mr-2" />
-            Pause
-          </Button>
+            <Button
+              size="lg"
+              onClick={isActive ? pauseReading : startReading}
+              disabled={disabled || !cleanWord}
+              className={`min-w-[180px] font-bold transition-all ${
+                isActive 
+                  ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700' 
+                  : 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700'
+              }`}
+            >
+              {isActive ? (
+                <>
+                  <motion.div
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ repeat: Infinity, duration: 0.6 }}
+                  >
+                    <Mic className="h-5 w-5 mr-2" />
+                  </motion.div>
+                  Reading...
+                </>
+              ) : (
+                <>
+                  <Play className="h-5 w-5 mr-2" />
+                  Start Reading
+                </>
+              )}
+            </Button>
+          </motion.div>
         )}
 
         {isPaused && (

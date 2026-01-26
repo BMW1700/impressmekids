@@ -98,113 +98,116 @@ export const WordFeedbackOverlay = ({
           className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto pt-[calc(env(safe-area-inset-top)+1rem)] pb-[calc(env(safe-area-inset-bottom)+1rem)] bg-black/60 backdrop-blur-sm"
         >
           <motion.div
-            initial={{ scale: 0.8, y: 20 }}
+            initial={{ scale: 0.9, y: 10 }}
             animate={{ scale: 1, y: 0 }}
-            exit={{ scale: 0.8, y: 20 }}
-            className={`relative max-w-md w-full mx-4 p-6 rounded-2xl border-2 my-auto max-h-[85dvh] overflow-y-auto overscroll-contain ${
+            exit={{ scale: 0.9, y: 10 }}
+            className={`relative max-w-sm w-full mx-4 p-4 rounded-xl border-2 my-auto ${
               isCorrect 
-                ? 'bg-gradient-to-br from-green-900/90 to-emerald-900/90 border-green-500/50' 
-                : 'bg-gradient-to-br from-orange-900/90 to-red-900/90 border-orange-500/50'
+                ? 'bg-gradient-to-br from-green-900/95 to-emerald-900/95 border-green-500/50' 
+                : 'bg-gradient-to-br from-orange-900/95 to-red-900/95 border-orange-500/50'
             }`}
           >
-            {/* Header icon */}
-            <div className="text-center mb-4">
+            {/* Compact Header icon */}
+            <div className="text-center mb-2">
               {isCorrect ? (
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: [0, 1.2, 1] }}
-                  transition={{ duration: 0.4 }}
+                  transition={{ duration: 0.3 }}
                   className="inline-block"
                 >
-                  <div className="w-16 h-16 rounded-full bg-green-500/30 flex items-center justify-center mx-auto">
-                    <Check className="h-10 w-10 text-green-400" />
+                  <div className="w-10 h-10 rounded-full bg-green-500/30 flex items-center justify-center mx-auto">
+                    <Check className="h-6 w-6 text-green-400" />
                   </div>
                 </motion.div>
               ) : (
                 <motion.div
-                  animate={{ rotate: [0, -10, 10, 0] }}
-                  transition={{ duration: 0.5 }}
+                  animate={{ rotate: [0, -8, 8, 0] }}
+                  transition={{ duration: 0.4 }}
                   className="inline-block"
                 >
-                  <div className="w-16 h-16 rounded-full bg-orange-500/30 flex items-center justify-center mx-auto">
-                    <X className="h-10 w-10 text-orange-400" />
+                  <div className="w-10 h-10 rounded-full bg-orange-500/30 flex items-center justify-center mx-auto">
+                    <X className="h-6 w-6 text-orange-400" />
                   </div>
                 </motion.div>
               )}
             </div>
 
-            {/* Title */}
-            <h3 className={`text-xl font-bold text-center mb-4 ${
+            {/* Compact Title */}
+            <h3 className={`text-lg font-bold text-center mb-2 ${
               isCorrect ? 'text-green-300' : 'text-orange-300'
             }`}>
               {isCorrect ? '✨ Perfect!' : '🎯 Almost!'}
             </h3>
 
-            {/* Word display */}
-            <div className="bg-black/30 rounded-xl p-4 mb-4">
+            {/* Compact Word display */}
+            <div className="bg-black/30 rounded-lg p-3 mb-3">
               {!isCorrect && spokenWord && (
-                <div className="text-center mb-3">
-                  <span className="text-sm text-orange-300">You said:</span>
-                  <p className="text-lg text-orange-400 font-medium">"{spokenWord}"</p>
+                <div className="text-center mb-2">
+                  <span className="text-xs text-orange-300">You said:</span>
+                  <p className="text-base text-orange-400 font-medium">"{spokenWord}"</p>
                 </div>
               )}
               
               <div className="text-center">
-                <span className="text-sm text-slate-400">The word is:</span>
+                <span className="text-xs text-slate-400">The word is:</span>
                 <motion.p 
-                  className="text-3xl font-bold text-white my-2"
-                  animate={!isCorrect ? { scale: [1, 1.05, 1] } : {}}
+                  className="text-2xl font-bold text-white my-1"
+                  animate={!isCorrect ? { scale: [1, 1.03, 1] } : {}}
                   transition={{ duration: 1, repeat: Infinity }}
                 >
                   {expectedWord}
                 </motion.p>
                 
                 {/* Phonetic breakdown */}
-                <p className="text-lg text-purple-300 font-medium">
+                <p className="text-base text-purple-300 font-medium">
                   {phoneticBreakdown}
                 </p>
               </div>
             </div>
 
-            {/* Tip (only for incorrect) */}
+            {/* Compact Tip (only for incorrect) */}
             {!isCorrect && (
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="bg-blue-900/40 border border-blue-500/30 rounded-lg p-3 mb-4"
+                transition={{ delay: 0.2 }}
+                className="bg-blue-900/40 border border-blue-500/30 rounded-lg p-2 mb-3"
               >
-                <p className="text-sm text-blue-300">
+                <p className="text-xs text-blue-300">
                   💡 <span className="font-medium">Tip:</span> {tip}
                 </p>
               </motion.div>
             )}
 
-            {/* Action buttons */}
-            <div className="flex gap-3">
+            {/* Compact Action buttons */}
+            <div className="flex gap-2">
               {onPlayAudio && (
                 <Button
                   variant="outline"
+                  size="sm"
                   onClick={onPlayAudio}
                   className="flex-1 border-purple-500/50 text-purple-300 hover:bg-purple-500/20"
                 >
-                  <Volume2 className="h-4 w-4 mr-2" />
-                  Hear It
+                  <Volume2 className="h-4 w-4 mr-1" />
+                  Hear
                 </Button>
               )}
               
               {!isCorrect && canRetry && onTryAgain && (
                 <Button
                   variant="outline"
+                  size="sm"
                   onClick={onTryAgain}
                   className="flex-1 border-orange-500/50 text-orange-300 hover:bg-orange-500/20"
                 >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Try Again
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                  Retry
                 </Button>
               )}
               
               <Button
+                size="sm"
                 onClick={onContinue}
                 className={`flex-1 ${
                   isCorrect 
@@ -212,20 +215,15 @@ export const WordFeedbackOverlay = ({
                     : 'bg-blue-600 hover:bg-blue-700'
                 }`}
               >
-                {isCorrect ? 'Continue' : 'Skip & Continue'}
+                {isCorrect ? 'Continue' : 'Skip'}
               </Button>
             </div>
 
-            {/* Retry hint */}
+            {/* Compact Retry hint */}
             {!isCorrect && canRetry && (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
-                className="text-xs text-center text-slate-400 mt-3"
-              >
-                Try Again won't earn coins, but helps you learn! 💪
-              </motion.p>
+              <p className="text-[10px] text-center text-slate-400 mt-2">
+                Retry won't earn coins, but helps you learn! 💪
+              </p>
             )}
           </motion.div>
         </motion.div>
