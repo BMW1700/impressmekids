@@ -7,7 +7,7 @@ import { BattleHUD } from "./BattleHUD";
 import { BattleArena } from "./BattleArena";
 import { GrogState } from "./GrogCharacter";
 import { PlayerState } from "./PlayerCharacter";
-import { BookRescueCelebration } from "./BookRescueCelebration";
+import { VictoryOverlay } from "./VictoryOverlay";
 import { StreakPower } from "./StreakPower";
 import { PurpleFireEffect } from "./PurpleFireEffect";
 import { BattleDifficultySelector, BattleDifficulty } from "./BattleDifficultySelector";
@@ -382,9 +382,9 @@ export const BattleReader = ({
     
     // VICTORY CONDITIONS:
     // 1. Killed the goblin (enemyHp <= 0)
-    // 2. Finished story with 90%+ accuracy AND still alive
+    // 2. Finished story with 80%+ accuracy AND still alive
     const killedGoblin = finalState.enemyHp <= 0;
-    const passedAccuracyGate = accuracy >= 90 && finalState.playerHp > 0;
+    const passedAccuracyGate = accuracy >= 80 && finalState.playerHp > 0;
     const victory = killedGoblin || passedAccuracyGate;
 
     // Update final battle state - this will trigger the centralized effect
@@ -588,7 +588,7 @@ export const BattleReader = ({
 
       {/* Victory requirement hint */}
       <div className="text-center text-xs text-muted-foreground bg-muted/30 py-1 rounded">
-        🎯 Win by defeating the enemy OR finishing with 90%+ accuracy!
+        🎯 Win by defeating the enemy OR finishing with 80%+ accuracy!
       </div>
 
       {/* Reading Area - Story Text with internal scroll */}
@@ -609,9 +609,9 @@ export const BattleReader = ({
         )}
       </Card>
 
-      {/* Victory/Defeat Celebration */}
-      <BookRescueCelebration
-        open={showCelebration}
+      {/* Victory/Defeat Celebration - FULL SCREEN OVERLAY (not Dialog) */}
+      <VictoryOverlay
+        show={showCelebration}
         victory={battleState.status === 'victory'}
         storyTitle={story.title}
         stats={{
@@ -625,7 +625,6 @@ export const BattleReader = ({
         }}
         worldNumber={worldNumber}
         booksRescued={(progress?.books_rescued || 0) + (battleState.status === 'victory' ? 1 : 0)}
-        onClose={handleCelebrationClose}
         onPlayAgain={handleTryAgain}
         onNextStory={handleNextStory}
         onBackToMap={onBack}
