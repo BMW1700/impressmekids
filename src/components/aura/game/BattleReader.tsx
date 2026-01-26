@@ -141,25 +141,39 @@ export const BattleReader = ({
   }, [battleState.status, grogState]);
 
   // ============================================================
-  // CENTRALIZED BATTLE END HANDLER - SINGLE SOURCE OF TRUTH
-  // This effect catches ALL ways battle can end (word damage, power, etc.)
-  // NO setTimeout - triggers IMMEDIATELY to avoid race conditions
+  // FAILSAFE #1: Direct HP watcher - forces victory if HP=0 but status stuck
   // ============================================================
   useEffect(() => {
-    // Only act when battle transitions to victory or defeat
+    if (battleState.enemyHp <= 0 && battleState.status === 'in_progress') {
+      console.log('[BattleReader] ⚠️ FAILSAFE TRIGGERED: HP=0 but status=in_progress, forcing victory!');
+      setBattleState(prev => ({ ...prev, status: 'victory' }));
+    }
+  }, [battleState.enemyHp, battleState.status]);
+
+  // ============================================================
+  // CENTRALIZED BATTLE END HANDLER - SINGLE SOURCE OF TRUTH
+  // ============================================================
+  useEffect(() => {
     if (battleState.status === 'in_progress') return;
-    
-    // Prevent double-triggering
     if (celebrationTriggeredRef.current) return;
     
-    console.log('[BattleReader] ⚡ VICTORY/DEFEAT DETECTED:', battleState.status);
+    console.log('[BattleReader] ========== BATTLE END ==========');
+    console.log('[BattleReader] Status:', battleState.status);
+    console.log('[BattleReader] EnemyHP:', battleState.enemyHp);
+    console.log('[BattleReader] showCelebration before:', showCelebration);
     
-    // Mark as triggered IMMEDIATELY - before any async operations
     celebrationTriggeredRef.current = true;
     
     const isVictory = battleState.status === 'victory';
     
-    // Set character states synchronously
+    // VISUAL FLASH for victory - impossible to miss!
+    if (isVictory) {
+      document.body.style.transition = 'background 0.15s';
+      document.body.style.background = 'gold';
+      setTimeout(() => { document.body.style.background = ''; }, 200);
+    }
+    
+    // Set character states
     if (isVictory) {
       setGrogState('defeated');
       setPlayerState('victory');
@@ -169,7 +183,7 @@ export const BattleReader = ({
       setCurrentTaunt(getRandomTaunt('grogTaunts'));
     }
     
-    // Calculate XP synchronously
+    // Calculate XP
     const defeatedBeforeFinish = battleState.enemyHp <= 0 && battleState.wordsRead < story.word_count;
     const xpEarned = battleState.xpEarned > 0 ? battleState.xpEarned : calculateXpEarned(
       isVictory,
@@ -180,10 +194,9 @@ export const BattleReader = ({
       defeatedBeforeFinish
     );
     
-    // Update XP in state
     setBattleState(prev => ({ ...prev, xpEarned }));
     
-    // Complete battle in database (fire and forget)
+    // Save to database
     if (battleSessionId && !battleCompletedRef.current) {
       battleCompletedRef.current = true;
       completeBattle({
@@ -197,11 +210,12 @@ export const BattleReader = ({
       }).catch(console.error);
     }
     
-    // Show celebration IMMEDIATELY - no delay, no race condition
-    console.log('[BattleReader] 🎉 SHOWING CELEBRATION NOW');
+    // SHOW CELEBRATION IMMEDIATELY
+    console.log('[BattleReader] 🎉🎉🎉 SHOWING CELEBRATION NOW 🎉🎉🎉');
     setShowCelebration(true);
+    console.log('[BattleReader] showCelebration after:', true);
     
-  }, [battleState.status]); // ONLY watch status - nothing else!
+  }, [battleState.status]);
 
   // STREAK POWER: Check if power should be available
   useEffect(() => {
