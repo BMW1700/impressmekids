@@ -55,7 +55,7 @@ export type MiniGameType =
   | 'wind_chase'         // Floating Isles - catch words blowing across screen
   | 'ink_splash'         // Sunken Library - read obscured words
   | 'crystal_prison'     // Frozen variant - break ice with repeated words
-  | 'lightning_storm'    // Quick succession single-word lightning strikes
+  | 'thunder_strike'     // NEW: Click clouds, speak word to discharge safely
   | 'void_pull';         // The Void - save words from being consumed
 
 export interface RPGEnemy {
@@ -637,7 +637,7 @@ export const stormHarpy: RPGEnemy = {
   ],
   barrageWordCount: 5,
   // 120 HP = 3 triggers
-  miniGames: ['dodge_words', 'goblin_horde', 'word_shield', 'wind_chase', 'lightning_storm'],
+  miniGames: ['dodge_words', 'goblin_horde', 'word_shield', 'wind_chase', 'thunder_strike'],
   signatureMiniGame: 'wind_chase', // Signature WIND CHASE at 50%
 };
 
@@ -671,8 +671,8 @@ export const cloudGiant: RPGEnemy = {
   ],
   barrageWordCount: 6,
   // 320 HP = 6 triggers
-  miniGames: ['goblin_horde', 'speed_typist', 'rolling_boulders', 'lightning_storm', 'asteroid_barrage', 'word_shield', 'spell_combo'],
-  signatureMiniGame: 'lightning_storm', // Signature LIGHTNING STORM at 50%
+  miniGames: ['goblin_horde', 'speed_typist', 'rolling_boulders', 'thunder_strike', 'asteroid_barrage', 'word_shield', 'spell_combo'],
+  signatureMiniGame: 'thunder_strike', // Signature THUNDER STRIKE at 50%
 };
 
 // Zephyr the Wind Lord - Boss of World 6
@@ -708,7 +708,7 @@ export const zephyr: RPGEnemy = {
   ],
   barrageWordCount: 9,
   // 350 HP = 6 triggers - Zephyr boss
-  miniGames: ['speed_typist', 'goblin_horde', 'dodge_words', 'fireball_defense', 'wind_chase', 'lightning_storm', 'rhyme_chain'],
+  miniGames: ['speed_typist', 'goblin_horde', 'dodge_words', 'fireball_defense', 'wind_chase', 'thunder_strike', 'rhyme_chain'],
   signatureMiniGame: 'wind_chase', // Signature WIND CHASE at 50%
 };
 
@@ -887,7 +887,7 @@ export const realityShifter: RPGEnemy = {
   ],
   barrageWordCount: 7,
   // 220 HP = 4 triggers
-  miniGames: ['speed_typist', 'rhyme_chain', 'goblin_horde', 'asteroid_barrage', 'void_pull', 'lightning_storm'],
+  miniGames: ['speed_typist', 'rhyme_chain', 'goblin_horde', 'asteroid_barrage', 'void_pull', 'thunder_strike'],
   signatureMiniGame: 'asteroid_barrage', // Signature WORD PRISON at 50%
 };
 
@@ -930,7 +930,7 @@ export const wordEater: RPGEnemy = {
   ],
   barrageWordCount: 12,
   // 600 HP = 7 triggers - THE ULTIMATE FINAL BOSS (NO TUG OF WAR in Classic)
-  miniGames: ['asteroid_barrage', 'speed_typist', 'ghostly_whispers', 'fireball_defense', 'void_pull', 'ink_splash', 'lightning_storm', 'ground_ripple'],
+  miniGames: ['asteroid_barrage', 'speed_typist', 'ghostly_whispers', 'fireball_defense', 'void_pull', 'ink_splash', 'thunder_strike', 'ground_ripple'],
   signatureMiniGame: 'void_pull', // THE ULTIMATE SIGNATURE - VOID PULL at 50%
 };
 

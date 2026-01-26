@@ -38,7 +38,7 @@ import { RPGWordEcho } from "./RPGWordEcho";
 import { RPGWindChase } from "./RPGWindChase";
 import { RPGInkSplash } from "./RPGInkSplash";
 import { RPGCrystalPrison } from "./RPGCrystalPrison";
-import { RPGLightningStorm } from "./RPGLightningStorm";
+import { RPGThunderStrike } from "./RPGThunderStrike";
 import { RPGVoidPull } from "./RPGVoidPull";
 import { RPGGroundRipple } from "./RPGGroundRipple";
 import { RPGWebTrap } from "./RPGWebTrap";
@@ -72,7 +72,8 @@ const battleSounds = new SoundEffects();
 
 type EnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'goblin_shaman';
 // UPDATED: Added goblin_horde for Classic mode mini-game + quick_block for enemy attacks
-type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'word_shield' | 'spell_combo' | 'dodge_words' | 'rhyme_chain' | 'speed_typist' | 'tug_of_war' | 'balloon_battle' | 'goblin_horde' | 'fireball_defense' | 'quick_block' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat' | 'word_echo' | 'wind_chase' | 'ink_splash' | 'crystal_prison' | 'lightning_storm' | 'void_pull' | 'ground_ripple' | 'web_trap';
+// REPLACED: lightning_storm with thunder_strike (stable implementation)
+type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'word_shield' | 'spell_combo' | 'dodge_words' | 'rhyme_chain' | 'speed_typist' | 'tug_of_war' | 'balloon_battle' | 'goblin_horde' | 'fireball_defense' | 'quick_block' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat' | 'word_echo' | 'wind_chase' | 'ink_splash' | 'crystal_prison' | 'thunder_strike' | 'void_pull' | 'ground_ripple' | 'web_trap';
 type InventoryKey = 'health_potion' | 'magic_potion';
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
 
@@ -284,6 +285,25 @@ export const RPGBattleArena = ({
     }, 100);
   }, [enemyHp, isFinalEnemy, enemy]);
 
+  // FAILSAFE: Force victory/transition when enemy HP = 0 but phase didn't transition
+  // This ensures the victory popup ALWAYS appears even if state transitions fail
+  useEffect(() => {
+    const victoryCheck = setInterval(() => {
+      if (enemyHp <= 0 && phase !== 'victory' && phase !== 'defeat' && phase !== 'enemy_transition') {
+        console.log('[RPGBattle] FAILSAFE: Enemy HP = 0, forcing victory/transition. Current phase:', phase);
+        if (isFinalEnemy) {
+          setShowComprehensionQuiz(true);
+          setPhase('victory');
+        } else {
+          setDefeatedEnemy(enemy);
+          setPhase('enemy_transition');
+        }
+      }
+    }, 500);
+    
+    return () => clearInterval(victoryCheck);
+  }, [enemyHp, phase, isFinalEnemy, enemy]);
+
   // Parse story into words - memoized for stability
   const storyWords = useMemo(() => {
     if (!story?.passage_text) return [];
@@ -378,7 +398,7 @@ export const RPGBattleArena = ({
       'wind_chase': `💨 WIND CHASE! Catch the words! 💨`,
       'ink_splash': `🦑 INK SPLASH! Read through the ink! 🦑`,
       'crystal_prison': `❄️ CRYSTAL PRISON! Break the ice! ❄️`,
-      'lightning_storm': `⚡ LIGHTNING STORM! Speak FAST! ⚡`,
+      'thunder_strike': `⚡ THUNDER STRIKE! Discharge the clouds! ⚡`,
       'void_pull': `🕳️ VOID PULL! Save words from the void! 🕳️`,
     };
     
@@ -414,7 +434,7 @@ export const RPGBattleArena = ({
         'wind_chase': 'wind_chase',
         'ink_splash': 'ink_splash',
         'crystal_prison': 'crystal_prison',
-        'lightning_storm': 'lightning_storm',
+        'thunder_strike': 'thunder_strike',
         'void_pull': 'void_pull',
       };
       setPhase(phaseMap[gameType]);
@@ -1318,6 +1338,7 @@ export const RPGBattleArena = ({
   }, [streak, longestStreak, words, batchStartIndex, enemy, calculateDamage, isPoisoned, poisonDamage, isDebuffed, debuffTurns, attackType, selectedCharacter]);
   
   // Handle retried word (yellow) - counts as word read but NOT correct for accuracy
+  // NEW: Give back 1/4 of the HP that would have been lost
   const handleRetriedWord = useCallback((wordIndex: number) => {
     // Increment wordsRead (for total count)
     setWordsRead(prev => prev + 1);
@@ -1325,8 +1346,18 @@ export const RPGBattleArena = ({
     setRetriedWords(prev => prev + 1);
     // Reset streak since they needed a retry
     setStreak(0);
-    console.log('[RPGBattle] Word retried:', { wordIndex, message: 'Counted in total but not in correct' });
-  }, []);
+    
+    // Give back 1/4 of the damage that would have been dealt
+    // Enemy attack damage on miss is: Math.floor(enemy.attack * 0.5)
+    // So recovery is 1/4 of that = enemy.attack * 0.5 * 0.25 = enemy.attack * 0.125
+    const recoveryAmount = Math.floor(enemy.attack * 0.125);
+    if (recoveryAmount > 0) {
+      setPlayerHp(prev => Math.min(100, prev + recoveryAmount));
+      console.log('[RPGBattle] Word retried successfully - recovered HP:', recoveryAmount);
+    }
+    
+    console.log('[RPGBattle] Word retried:', { wordIndex, recoveryAmount });
+  }, [enemy.attack]);
   
   // Handle coin collection complete
   const handleCoinCollectionComplete = useCallback(() => {
@@ -1819,8 +1850,8 @@ export const RPGBattleArena = ({
             onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
           />
         )}
-        {phase === 'lightning_storm' && (
-          <RPGLightningStorm
+        {phase === 'thunder_strike' && (
+          <RPGThunderStrike
             words={barrageWords}
             onComplete={(struck, missed) => {
               setCorrectWords(prev => prev + struck);
