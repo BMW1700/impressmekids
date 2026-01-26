@@ -342,6 +342,387 @@ export const GalairSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteProp
   );
 };
 
+// Echo Wraith Silhouette (World 5 - Ghostly spectral form)
+export const EchoWraithSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteProps) => {
+  const { width, height } = sizeConfig[size];
+  
+  return (
+    <motion.div
+      className="relative"
+      animate={isUnlocked ? {
+        filter: [
+          'drop-shadow(0 0 4px rgba(139, 92, 246, 0.5))',
+          'drop-shadow(0 0 12px rgba(139, 92, 246, 0.8))',
+          'drop-shadow(0 0 4px rgba(139, 92, 246, 0.5))',
+        ],
+      } : {}}
+      transition={{ duration: 2, repeat: Infinity }}
+    >
+      <svg width={width} height={height} viewBox="0 0 80 80" fill="none">
+        <defs>
+          <linearGradient id="echoWraithGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={isUnlocked ? "#8B5CF6" : "#475569"} stopOpacity="0.8" />
+            <stop offset="100%" stopColor={isUnlocked ? "#4C1D95" : "#1E293B"} stopOpacity="0.6" />
+          </linearGradient>
+        </defs>
+        {/* Ghostly body - wispy form */}
+        <motion.path
+          d="M40 10 Q55 15 55 35 Q60 45 55 55 Q50 70 40 75 Q30 70 25 55 Q20 45 25 35 Q25 15 40 10"
+          fill="url(#echoWraithGrad)"
+          animate={isUnlocked ? { opacity: [0.6, 0.9, 0.6] } : {}}
+          transition={{ duration: 3, repeat: Infinity }}
+        />
+        {/* Ethereal wisps */}
+        <motion.path
+          d="M25 40 Q15 35 10 45 Q15 50 25 48"
+          stroke={isUnlocked ? "#A78BFA" : "#475569"}
+          strokeWidth="2"
+          fill="none"
+          animate={isUnlocked ? { opacity: [0.3, 0.7, 0.3] } : {}}
+          transition={{ duration: 2, repeat: Infinity, delay: 0.3 }}
+        />
+        <motion.path
+          d="M55 40 Q65 35 70 45 Q65 50 55 48"
+          stroke={isUnlocked ? "#A78BFA" : "#475569"}
+          strokeWidth="2"
+          fill="none"
+          animate={isUnlocked ? { opacity: [0.3, 0.7, 0.3] } : {}}
+          transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+        />
+        {/* Glowing eyes */}
+        {isUnlocked && (
+          <>
+            <motion.circle
+              cx="34"
+              cy="30"
+              r="3"
+              fill="#E879F9"
+              animate={{
+                opacity: [0.4, 1, 0.4],
+                filter: ['drop-shadow(0 0 2px #E879F9)', 'drop-shadow(0 0 8px #E879F9)', 'drop-shadow(0 0 2px #E879F9)'],
+              }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            />
+            <motion.circle
+              cx="46"
+              cy="30"
+              r="3"
+              fill="#E879F9"
+              animate={{
+                opacity: [0.4, 1, 0.4],
+                filter: ['drop-shadow(0 0 2px #E879F9)', 'drop-shadow(0 0 8px #E879F9)', 'drop-shadow(0 0 2px #E879F9)'],
+              }}
+              transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }}
+            />
+          </>
+        )}
+      </svg>
+    </motion.div>
+  );
+};
+
+// Zephyr Silhouette (World 6 - Wind lord with flowing robes)
+export const ZephyrSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteProps) => {
+  const { width, height } = sizeConfig[size];
+  
+  return (
+    <motion.div
+      className="relative"
+      animate={isUnlocked ? {
+        filter: [
+          'drop-shadow(0 0 4px rgba(56, 189, 248, 0.5))',
+          'drop-shadow(0 0 12px rgba(56, 189, 248, 0.8))',
+          'drop-shadow(0 0 4px rgba(56, 189, 248, 0.5))',
+        ],
+      } : {}}
+      transition={{ duration: 2, repeat: Infinity }}
+    >
+      <svg width={width} height={height} viewBox="0 0 80 80" fill="none">
+        <defs>
+          <linearGradient id="zephyrGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={isUnlocked ? "#38BDF8" : "#475569"} stopOpacity="0.9" />
+            <stop offset="100%" stopColor={isUnlocked ? "#0369A1" : "#1E293B"} stopOpacity="0.9" />
+          </linearGradient>
+        </defs>
+        {/* Flowing robes */}
+        <path
+          d="M40 15 L55 30 L60 55 L55 75 L40 70 L25 75 L20 55 L25 30 L40 15"
+          fill="url(#zephyrGrad)"
+        />
+        {/* Head */}
+        <circle cx="40" cy="18" r="10" fill="url(#zephyrGrad)" />
+        {/* Wind wings */}
+        <motion.path
+          d="M20 35 Q5 25 5 40 Q5 50 15 45 L20 40"
+          fill="url(#zephyrGrad)"
+          animate={isUnlocked ? { x: [-2, 2, -2], rotate: [-5, 5, -5] } : {}}
+          transition={{ duration: 1.5, repeat: Infinity }}
+        />
+        <motion.path
+          d="M60 35 Q75 25 75 40 Q75 50 65 45 L60 40"
+          fill="url(#zephyrGrad)"
+          animate={isUnlocked ? { x: [2, -2, 2], rotate: [5, -5, 5] } : {}}
+          transition={{ duration: 1.5, repeat: Infinity, delay: 0.1 }}
+        />
+        {/* Wind swirls */}
+        {isUnlocked && (
+          <>
+            <motion.circle
+              cx="12"
+              cy="60"
+              r="4"
+              stroke="#7DD3FC"
+              strokeWidth="1.5"
+              fill="none"
+              animate={{ rotate: 360, opacity: [0.3, 0.7, 0.3] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+            <motion.circle
+              cx="68"
+              cy="60"
+              r="4"
+              stroke="#7DD3FC"
+              strokeWidth="1.5"
+              fill="none"
+              animate={{ rotate: -360, opacity: [0.3, 0.7, 0.3] }}
+              transition={{ duration: 2, repeat: Infinity, delay: 0.3 }}
+            />
+          </>
+        )}
+        {/* Glowing eyes */}
+        {isUnlocked && (
+          <>
+            <motion.circle
+              cx="36"
+              cy="17"
+              r="2"
+              fill="#BAE6FD"
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 1.2, repeat: Infinity }}
+            />
+            <motion.circle
+              cx="44"
+              cy="17"
+              r="2"
+              fill="#BAE6FD"
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 1.2, repeat: Infinity, delay: 0.1 }}
+            />
+          </>
+        )}
+      </svg>
+    </motion.div>
+  );
+};
+
+// Leviathan Silhouette (World 7 - Sea serpent emerging from waves)
+export const LeviathanSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteProps) => {
+  const { width, height } = sizeConfig[size];
+  
+  return (
+    <motion.div
+      className="relative"
+      animate={isUnlocked ? {
+        filter: [
+          'drop-shadow(0 0 4px rgba(20, 184, 166, 0.5))',
+          'drop-shadow(0 0 12px rgba(20, 184, 166, 0.8))',
+          'drop-shadow(0 0 4px rgba(20, 184, 166, 0.5))',
+        ],
+      } : {}}
+      transition={{ duration: 2, repeat: Infinity }}
+    >
+      <svg width={width} height={height} viewBox="0 0 80 80" fill="none">
+        <defs>
+          <linearGradient id="leviathanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={isUnlocked ? "#14B8A6" : "#475569"} stopOpacity="0.9" />
+            <stop offset="100%" stopColor={isUnlocked ? "#0F766E" : "#1E293B"} stopOpacity="0.9" />
+          </linearGradient>
+        </defs>
+        {/* Serpent body rising from waves */}
+        <motion.path
+          d="M20 75 Q15 65 25 55 Q35 45 30 35 Q25 25 35 15 Q42 10 50 15 Q55 20 50 30"
+          stroke="url(#leviathanGrad)"
+          strokeWidth="10"
+          strokeLinecap="round"
+          fill="none"
+          animate={isUnlocked ? { d: [
+            "M20 75 Q15 65 25 55 Q35 45 30 35 Q25 25 35 15 Q42 10 50 15 Q55 20 50 30",
+            "M20 75 Q18 63 28 53 Q38 43 33 33 Q28 23 38 13 Q45 8 53 13 Q58 18 53 28",
+            "M20 75 Q15 65 25 55 Q35 45 30 35 Q25 25 35 15 Q42 10 50 15 Q55 20 50 30",
+          ]} : {}}
+          transition={{ duration: 3, repeat: Infinity }}
+        />
+        {/* Head */}
+        <motion.ellipse
+          cx="50"
+          cy="28"
+          rx="12"
+          ry="10"
+          fill="url(#leviathanGrad)"
+          animate={isUnlocked ? { cy: [28, 26, 28] } : {}}
+          transition={{ duration: 3, repeat: Infinity }}
+        />
+        {/* Waves */}
+        <motion.path
+          d="M5 70 Q15 65 25 70 Q35 75 45 70 Q55 65 65 70 Q75 75 80 70"
+          stroke={isUnlocked ? "#5EEAD4" : "#64748B"}
+          strokeWidth="3"
+          fill="none"
+          animate={isUnlocked ? { 
+            d: [
+              "M5 70 Q15 65 25 70 Q35 75 45 70 Q55 65 65 70 Q75 75 80 70",
+              "M5 70 Q15 75 25 70 Q35 65 45 70 Q55 75 65 70 Q75 65 80 70",
+              "M5 70 Q15 65 25 70 Q35 75 45 70 Q55 65 65 70 Q75 75 80 70",
+            ]
+          } : {}}
+          transition={{ duration: 2, repeat: Infinity }}
+        />
+        {/* Glowing eyes */}
+        {isUnlocked && (
+          <>
+            <motion.circle
+              cx="45"
+              cy="26"
+              r="2"
+              fill="#2DD4BF"
+              animate={{
+                opacity: [0.5, 1, 0.5],
+                filter: ['drop-shadow(0 0 2px #2DD4BF)', 'drop-shadow(0 0 6px #2DD4BF)', 'drop-shadow(0 0 2px #2DD4BF)'],
+              }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            />
+            <motion.circle
+              cx="55"
+              cy="26"
+              r="2"
+              fill="#2DD4BF"
+              animate={{
+                opacity: [0.5, 1, 0.5],
+                filter: ['drop-shadow(0 0 2px #2DD4BF)', 'drop-shadow(0 0 6px #2DD4BF)', 'drop-shadow(0 0 2px #2DD4BF)'],
+              }}
+              transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }}
+            />
+          </>
+        )}
+      </svg>
+    </motion.div>
+  );
+};
+
+// Word Eater Silhouette (World 8 - Void creature with glowing eyes)
+export const WordEaterSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteProps) => {
+  const { width, height } = sizeConfig[size];
+  
+  return (
+    <motion.div
+      className="relative"
+      animate={isUnlocked ? {
+        filter: [
+          'drop-shadow(0 0 4px rgba(168, 85, 247, 0.5))',
+          'drop-shadow(0 0 15px rgba(168, 85, 247, 0.9))',
+          'drop-shadow(0 0 4px rgba(168, 85, 247, 0.5))',
+        ],
+      } : {}}
+      transition={{ duration: 2, repeat: Infinity }}
+    >
+      <svg width={width} height={height} viewBox="0 0 80 80" fill="none">
+        <defs>
+          <radialGradient id="wordEaterGrad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor={isUnlocked ? "#1E1B4B" : "#1E293B"} stopOpacity="1" />
+            <stop offset="100%" stopColor={isUnlocked ? "#0F0A1A" : "#0F172A"} stopOpacity="1" />
+          </radialGradient>
+        </defs>
+        {/* Void mass */}
+        <motion.ellipse
+          cx="40"
+          cy="40"
+          rx="30"
+          ry="28"
+          fill="url(#wordEaterGrad)"
+          stroke={isUnlocked ? "#7C3AED" : "#475569"}
+          strokeWidth="2"
+          animate={isUnlocked ? { 
+            rx: [30, 32, 30],
+            ry: [28, 30, 28],
+          } : {}}
+          transition={{ duration: 2, repeat: Infinity }}
+        />
+        {/* Dark tendrils */}
+        <motion.path
+          d="M15 45 Q5 50 8 60 Q12 65 18 58"
+          stroke={isUnlocked ? "#6D28D9" : "#475569"}
+          strokeWidth="4"
+          strokeLinecap="round"
+          fill="none"
+          animate={isUnlocked ? { d: [
+            "M15 45 Q5 50 8 60 Q12 65 18 58",
+            "M15 45 Q3 52 6 62 Q10 68 16 60",
+            "M15 45 Q5 50 8 60 Q12 65 18 58",
+          ]} : {}}
+          transition={{ duration: 2, repeat: Infinity }}
+        />
+        <motion.path
+          d="M65 45 Q75 50 72 60 Q68 65 62 58"
+          stroke={isUnlocked ? "#6D28D9" : "#475569"}
+          strokeWidth="4"
+          strokeLinecap="round"
+          fill="none"
+          animate={isUnlocked ? { d: [
+            "M65 45 Q75 50 72 60 Q68 65 62 58",
+            "M65 45 Q77 52 74 62 Q70 68 64 60",
+            "M65 45 Q75 50 72 60 Q68 65 62 58",
+          ]} : {}}
+          transition={{ duration: 2, repeat: Infinity, delay: 0.3 }}
+        />
+        <motion.path
+          d="M35 68 Q30 75 40 78 Q50 75 45 68"
+          stroke={isUnlocked ? "#6D28D9" : "#475569"}
+          strokeWidth="4"
+          strokeLinecap="round"
+          fill="none"
+          animate={isUnlocked ? { opacity: [0.5, 0.8, 0.5] } : {}}
+          transition={{ duration: 1.5, repeat: Infinity }}
+        />
+        {/* Giant glowing eye */}
+        {isUnlocked ? (
+          <motion.g>
+            <motion.ellipse
+              cx="40"
+              cy="38"
+              rx="10"
+              ry="8"
+              fill="#1E1B4B"
+              stroke="#A855F7"
+              strokeWidth="2"
+            />
+            <motion.circle
+              cx="40"
+              cy="38"
+              r="4"
+              fill="#E879F9"
+              animate={{
+                r: [4, 5, 4],
+                filter: ['drop-shadow(0 0 4px #E879F9)', 'drop-shadow(0 0 12px #E879F9)', 'drop-shadow(0 0 4px #E879F9)'],
+              }}
+              transition={{ duration: 1, repeat: Infinity }}
+            />
+            <motion.circle
+              cx="40"
+              cy="38"
+              r="2"
+              fill="#FFFFFF"
+              animate={{ opacity: [0.8, 1, 0.8] }}
+              transition={{ duration: 0.5, repeat: Infinity }}
+            />
+          </motion.g>
+        ) : (
+          <ellipse cx="40" cy="38" rx="8" ry="6" fill="#334155" />
+        )}
+      </svg>
+    </motion.div>
+  );
+};
+
 // Combined export for convenience
 export const BossSilhouettes = {
   Drake: DrakeSilhouette,
@@ -349,4 +730,8 @@ export const BossSilhouettes = {
   StoneGuardian: StoneGuardianSilhouette,
   Grog: GrogSilhouette,
   Galair: GalairSilhouette,
+  EchoWraith: EchoWraithSilhouette,
+  Zephyr: ZephyrSilhouette,
+  Leviathan: LeviathanSilhouette,
+  WordEater: WordEaterSilhouette,
 };

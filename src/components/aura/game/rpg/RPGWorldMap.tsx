@@ -1,14 +1,18 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Lock, Star, Swords, Crown, TreePine, Mountain, Castle, Flame, Sparkles, Gem, Cloud, Waves, Eclipse, GraduationCap, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Lock, Star, Swords, Crown, TreePine, Mountain, Castle, Flame, Sparkles, Gem, Cloud, Waves, Eclipse, GraduationCap, ShoppingBag, Zap } from "lucide-react";
 import { campaignWorlds, CampaignWorld } from "@/lib/campaignData";
 import { 
   DrakeSilhouette, 
   IceGolemSilhouette, 
   StoneGuardianSilhouette, 
-  GrogSilhouette 
+  GrogSilhouette,
+  EchoWraithSilhouette,
+  ZephyrSilhouette,
+  LeviathanSilhouette,
+  WordEaterSilhouette,
 } from "../characters/BossSilhouettes";
 import { AnimatedStarCounter } from "../effects/StarCollectionEffect";
 import { AnimatedBookCounter } from "../effects/FlyingBookAnimation";
@@ -29,6 +33,7 @@ interface RPGWorldMapProps {
   totalBooksRescued: number;
   onSelectWorld: (world: CampaignWorld) => void;
   onBack: () => void;
+  onStartBossRush?: () => void;
   studentId?: string;
   gold?: number;
   xp?: number;
@@ -147,6 +152,14 @@ const BossSilhouette = ({ worldId, isUnlocked }: { worldId: number; isUnlocked: 
         return <StoneGuardianSilhouette isUnlocked={isUnlocked} size="small" />;
       case 4:
         return <GrogSilhouette isUnlocked={isUnlocked} size="small" />;
+      case 5:
+        return <EchoWraithSilhouette isUnlocked={isUnlocked} size="small" />;
+      case 6:
+        return <ZephyrSilhouette isUnlocked={isUnlocked} size="small" />;
+      case 7:
+        return <LeviathanSilhouette isUnlocked={isUnlocked} size="small" />;
+      case 8:
+        return <WordEaterSilhouette isUnlocked={isUnlocked} size="small" />;
       default:
         return <DrakeSilhouette isUnlocked={isUnlocked} size="small" />;
     }
@@ -178,11 +191,18 @@ export const RPGWorldMap = ({
   totalBooksRescued,
   onSelectWorld,
   onBack,
+  onStartBossRush,
   studentId,
   gold = 0,
   xp = 0,
 }: RPGWorldMapProps) => {
   const [previousBookCount] = useState(totalBooksRescued);
+
+  // Check if Boss Rush is unlocked (World 8 complete)
+  const isBossRushUnlocked = useMemo(() => {
+    const world8Progress = worldProgress.find(p => p.worldId === 8);
+    return world8Progress && world8Progress.levelsCompleted >= 5;
+  }, [worldProgress]);
 
   const getWorldProgress = (worldId: number): WorldProgress => {
     return worldProgress.find(p => p.worldId === worldId) || {
@@ -521,6 +541,36 @@ export const RPGWorldMap = ({
         <div className="lg:hidden mt-4 px-4 relative z-10">
           <ReadingProgressPanel studentId={studentId} />
         </div>
+      )}
+
+      {/* Boss Rush Button - Only visible after World 8 completion */}
+      {isBossRushUnlocked && onStartBossRush && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1 }}
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-20"
+        >
+          <motion.div
+            animate={{
+              boxShadow: [
+                '0 0 20px rgba(168, 85, 247, 0.4)',
+                '0 0 40px rgba(168, 85, 247, 0.7)',
+                '0 0 20px rgba(168, 85, 247, 0.4)',
+              ],
+            }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            <Button
+              onClick={onStartBossRush}
+              size="lg"
+              className="bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 hover:from-purple-500 hover:via-pink-500 hover:to-red-500 text-white font-bold text-lg px-8 py-4 rounded-xl border-2 border-purple-400/50"
+            >
+              <Zap className="h-5 w-5 mr-2" />
+              ⚔️ BOSS RUSH ⚔️
+            </Button>
+          </motion.div>
+        </motion.div>
       )}
 
       {/* Bottom Lore */}

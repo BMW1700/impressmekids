@@ -1302,6 +1302,29 @@ export const RPGBattleArena = ({
     setPendingXp(0);
   }, [pendingGold, pendingXp]);
   
+  // Handle retry success - heal player HP by 12.5% of enemy attack
+  const handleRetrySuccess = useCallback((wordIndex: number) => {
+    const healAmount = Math.floor(enemy.attack * 0.125);
+    if (healAmount > 0) {
+      setPlayerHp(prev => Math.min(playerCharacter.maxHp, prev + healAmount));
+      
+      // Show floating heal number (green with heart)
+      setFloatingDamages(prev => [...prev, {
+        id: Date.now(),
+        damage: healAmount,
+        x: 70 + Math.random() * 10,
+        y: 50 + Math.random() * 10,
+        isPlayer: true,
+        isCritical: true // Makes it green/positive
+      }]);
+      
+      // Play healing sound
+      battleSounds.healingChime();
+      
+      console.log('[RPGBattle] Retry success - healed', healAmount, 'HP');
+    }
+  }, [enemy.attack, playerCharacter.maxHp]);
+  
   // Handle spell effect complete
   const handleSpellComplete = useCallback(() => {
     setShowSpellEffect(false);
@@ -2037,6 +2060,7 @@ export const RPGBattleArena = ({
                         <RPGWordReader
                           words={currentWordBatch}
                           onResult={handleWordResult}
+                          onRetrySuccess={handleRetrySuccess}
                           disabled={currentWordResult !== null || !isPlayerTurn}
                           streak={streak}
                           batchSize={5}
