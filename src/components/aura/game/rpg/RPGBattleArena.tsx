@@ -175,6 +175,7 @@ export const RPGBattleArena = ({
   const [wizardMp, setWizardMp] = useState(50);
   const [enemyHp, setEnemyHp] = useState(enemy.maxHp);
   const enemyHpRef = useRef(enemy.maxHp); // Ref for stable victory check
+  const victoryTriggeredRef = useRef(false); // Prevents duplicate victory triggers
   const [streak, setStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
   const [wordsRead, setWordsRead] = useState(0);
@@ -254,10 +255,16 @@ export const RPGBattleArena = ({
   // Ref to track pending returnToReading timeout - allows cancellation if victory triggers
   const returnToReadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Centralized enemy defeat handler - idempotent and ref-based
+  // Centralized enemy defeat handler - idempotent and ref-based with victory lock
   const triggerEnemyDefeat = useCallback((reason: string) => {
     const currentHp = enemyHpRef.current;
-    console.log('[RPGBattle] triggerEnemyDefeat called:', { reason, currentHp, phase, isFinalEnemy });
+    console.log('[RPGBattle] triggerEnemyDefeat called:', { reason, currentHp, phase, isFinalEnemy, alreadyTriggered: victoryTriggeredRef.current });
+    
+    // Skip if already triggered (prevents duplicate calls)
+    if (victoryTriggeredRef.current) {
+      console.log('[RPGBattle] triggerEnemyDefeat: Already triggered, skipping');
+      return;
+    }
     
     // Skip if not actually dead
     if (currentHp > 0) {
@@ -270,6 +277,10 @@ export const RPGBattleArena = ({
       console.log('[RPGBattle] triggerEnemyDefeat: Already in terminal phase, skipping');
       return;
     }
+    
+    // LOCK: Mark victory as triggered
+    victoryTriggeredRef.current = true;
+    console.log('[RPGBattle] 🎉 VICTORY LOCK ACQUIRED - transitioning now');
     
     // Cancel any pending returnToReading timeout
     if (returnToReadingTimeoutRef.current) {
@@ -345,24 +356,21 @@ export const RPGBattleArena = ({
   // FAILSAFE: Force victory/transition when enemy HP = 0 but phase didn't transition
   // This ensures the victory popup ALWAYS appears even if state transitions fail
   // Uses ref to avoid stale closure issues
+  // FAILSAFE: Check every 500ms if enemy should be dead but transition didn't happen
   useEffect(() => {
     const victoryCheck = setInterval(() => {
       const currentHp = enemyHpRef.current;
-      if (currentHp <= 0 && phase !== 'victory' && phase !== 'defeat' && phase !== 'enemy_transition') {
-        console.log('[RPGBattle] FAILSAFE TRIGGERED: Enemy HP =', currentHp, '- forcing victory/transition. Current phase:', phase);
-        clearInterval(victoryCheck); // Stop checking once triggered
-        if (isFinalEnemy) {
-          setShowComprehensionQuiz(true);
-          setPhase('victory');
-        } else {
-          setDefeatedEnemy(enemy);
-          setPhase('enemy_transition');
-        }
+      const alreadyTriggered = victoryTriggeredRef.current;
+      
+      if (currentHp <= 0 && !alreadyTriggered && 
+          phase !== 'victory' && phase !== 'defeat' && phase !== 'enemy_transition') {
+        console.log('[RPGBattle] 🚨 FAILSAFE TRIGGERED: Enemy HP =', currentHp, '- forcing victory/transition. Current phase:', phase);
+        triggerEnemyDefeat('failsafe_interval');
       }
     }, 500);
     
     return () => clearInterval(victoryCheck);
-  }, [phase, isFinalEnemy, enemy]); // Removed enemyHp from deps - using ref instead
+  }, [phase, triggerEnemyDefeat]);
 
   // Parse story into words - memoized for stability
   const storyWords = useMemo(() => {
@@ -612,7 +620,11 @@ export const RPGBattleArena = ({
     }
     const bonusDamage = blocked * 10;
     if (bonusDamage > 0) {
-      setEnemyHp(prev => Math.max(0, prev - bonusDamage));
+      setEnemyHp(prev => {
+        const newHp = Math.max(0, prev - bonusDamage);
+        enemyHpRef.current = newHp; // CRITICAL: Sync ref immediately
+        return newHp;
+      });
       setTotalDamage(prev => prev + bonusDamage);
     }
     setCorrectWords(prev => prev + blocked);
@@ -633,7 +645,11 @@ export const RPGBattleArena = ({
       setPlayerHp(prev => Math.max(0, prev - reducedDamage));
     }
     if (shieldStrength > 50) {
-      setEnemyHp(prev => Math.max(0, prev - damage));
+      setEnemyHp(prev => {
+        const newHp = Math.max(0, prev - damage);
+        enemyHpRef.current = newHp;
+        return newHp;
+      });
       setTotalDamage(prev => prev + damage);
     }
     setBatchStartIndex(prev => prev + barrageWords.length);
@@ -647,7 +663,11 @@ export const RPGBattleArena = ({
       battleSounds.comboSuccess();
       battleSounds.magicSparkle();
       const damage = Math.floor(50 * multiplier);
-      setEnemyHp(prev => Math.max(0, prev - damage));
+      setEnemyHp(prev => {
+        const newHp = Math.max(0, prev - damage);
+        enemyHpRef.current = newHp;
+        return newHp;
+      });
       setTotalDamage(prev => prev + damage);
       setCorrectWords(prev => prev + barrageWords.length);
     }
@@ -659,7 +679,11 @@ export const RPGBattleArena = ({
   const handleDodgeWordsComplete = useCallback((correctHits: number, wrongHits: number, dodged: number) => {
     console.log('[RPGBattle] Dodge Words complete:', { correctHits, wrongHits, dodged });
     const damage = correctHits * 15;
-    setEnemyHp(prev => Math.max(0, prev - damage));
+    setEnemyHp(prev => {
+      const newHp = Math.max(0, prev - damage);
+      enemyHpRef.current = newHp;
+      return newHp;
+    });
     setTotalDamage(prev => prev + damage);
     setCorrectWords(prev => prev + correctHits);
     returnToReading();
@@ -672,7 +696,11 @@ export const RPGBattleArena = ({
     console.log('[RPGBattle] Rhyme Chain complete:', { score, damage });
     if (damage > 0) {
       battleSounds.magicSparkle();
-      setEnemyHp(prev => Math.max(0, prev - damage));
+      setEnemyHp(prev => {
+        const newHp = Math.max(0, prev - damage);
+        enemyHpRef.current = newHp;
+        return newHp;
+      });
       setTotalDamage(prev => prev + damage);
     }
     setCorrectWords(prev => prev + score);
@@ -685,7 +713,11 @@ export const RPGBattleArena = ({
     console.log('[RPGBattle] Speed Typist complete:', { wordsSpoken, damage });
     if (damage > 0) {
       battleSounds.lightningCrack();
-      setEnemyHp(prev => Math.max(0, prev - damage));
+      setEnemyHp(prev => {
+        const newHp = Math.max(0, prev - damage);
+        enemyHpRef.current = newHp;
+        return newHp;
+      });
       setTotalDamage(prev => prev + damage);
     }
     setCorrectWords(prev => prev + wordsSpoken);
@@ -713,7 +745,11 @@ export const RPGBattleArena = ({
     if (victory) {
       const bonusDamage = Math.floor(stats.correctWords * 5);
       battleSounds.celebrationSound();
-      setEnemyHp(prev => Math.max(0, prev - bonusDamage));
+      setEnemyHp(prev => {
+        const newHp = Math.max(0, prev - bonusDamage);
+        enemyHpRef.current = newHp;
+        return newHp;
+      });
       setTotalDamage(prev => prev + bonusDamage);
     } else {
       setPlayerHp(prev => Math.max(0, prev - 20));
@@ -742,7 +778,11 @@ export const RPGBattleArena = ({
     if (victory) {
       const bonusDamage = Math.floor(stats.correctWords * 3) + (stats.balloonsLost === 0 ? 50 : 0);
       battleSounds.celebrationSound();
-      setEnemyHp(prev => Math.max(0, prev - bonusDamage));
+      setEnemyHp(prev => {
+        const newHp = Math.max(0, prev - bonusDamage);
+        enemyHpRef.current = newHp;
+        return newHp;
+      });
       setTotalDamage(prev => prev + bonusDamage);
     } else {
       setPlayerHp(prev => Math.max(0, prev - 30));
@@ -757,7 +797,11 @@ export const RPGBattleArena = ({
     const bonusDamage = result.wordsSpoken * 8;
     if (bonusDamage > 0) {
       battleSounds.celebrationSound();
-      setEnemyHp(prev => Math.max(0, prev - bonusDamage));
+      setEnemyHp(prev => {
+        const newHp = Math.max(0, prev - bonusDamage);
+        enemyHpRef.current = newHp;
+        return newHp;
+      });
       setTotalDamage(prev => prev + bonusDamage);
     }
     setCorrectWords(prev => prev + result.wordsSpoken);
@@ -771,7 +815,11 @@ export const RPGBattleArena = ({
     const bonusDamage = destroyed * 12;
     if (bonusDamage > 0) {
       battleSounds.celebrationSound();
-      setEnemyHp(prev => Math.max(0, prev - bonusDamage));
+      setEnemyHp(prev => {
+        const newHp = Math.max(0, prev - bonusDamage);
+        enemyHpRef.current = newHp;
+        return newHp;
+      });
       setTotalDamage(prev => prev + bonusDamage);
     }
     if (missed > 0) {
@@ -788,7 +836,11 @@ export const RPGBattleArena = ({
     const bonusDamage = wordsFreed * 10;
     if (bonusDamage > 0) {
       battleSounds.celebrationSound();
-      setEnemyHp(prev => Math.max(0, prev - bonusDamage));
+      setEnemyHp(prev => {
+        const newHp = Math.max(0, prev - bonusDamage);
+        enemyHpRef.current = newHp;
+        return newHp;
+      });
       setTotalDamage(prev => prev + bonusDamage);
     }
     if (damage > 0) {
@@ -812,7 +864,11 @@ export const RPGBattleArena = ({
       damageTaken = 0;
       if (counterDamage > 0) {
         battleSounds.comboSuccess();
-        setEnemyHp(prev => Math.max(0, prev - counterDamage));
+        setEnemyHp(prev => {
+          const newHp = Math.max(0, prev - counterDamage);
+          enemyHpRef.current = newHp;
+          return newHp;
+        });
         setTotalDamage(prev => prev + counterDamage);
       }
     } else if (blocked >= 2) {
@@ -1074,7 +1130,11 @@ export const RPGBattleArena = ({
         setIsDebuffed(false); // Clear any debuffs on player as bonus
       }
       
-      setEnemyHp(prev => Math.max(0, prev - finalDamage));
+      setEnemyHp(prev => {
+        const newHp = Math.max(0, prev - finalDamage);
+        enemyHpRef.current = newHp;
+        return newHp;
+      });
       setTotalDamage(prev => prev + finalDamage);
       triggerScreenShake();
       
@@ -1324,7 +1384,11 @@ export const RPGBattleArena = ({
           setHeroAttacking(false);
           setEnemyTakingDamage(true);
           setShowDamageNumber(true);
-          setEnemyHp(prev => Math.max(0, prev - actualDamage));
+          setEnemyHp(prev => {
+            const newHp = Math.max(0, prev - actualDamage);
+            enemyHpRef.current = newHp;
+            return newHp;
+          });
           triggerScreenShake();
           
           // Add floating damage for big hits
@@ -1434,24 +1498,12 @@ export const RPGBattleArena = ({
     setActiveSpell(null);
   }, []);
 
-  // Check for phase transitions - handle multi-enemy
-  // Modified to show comprehension quiz before victory screen
+  // Check for PLAYER DEFEAT only - enemy defeat is handled by failsafe + triggerEnemyDefeat
   useEffect(() => {
-    if (enemyHp <= 0 && phase !== 'victory' && phase !== 'enemy_transition') {
-      // Check if there are more enemies
-      if (currentEnemyIndex < enemyQueue.length - 1) {
-        // Transition to next enemy
-        setDefeatedEnemy(enemy);
-        setPhase('enemy_transition');
-      } else {
-        // Final enemy defeated - show quiz before victory screen
-        setShowComprehensionQuiz(true);
-        setPhase('victory');
-      }
-    } else if (playerHp <= 0 && phase !== 'defeat') {
+    if (playerHp <= 0 && phase !== 'defeat') {
       setPhase('defeat');
     }
-  }, [enemyHp, playerHp, phase, currentEnemyIndex, enemyQueue.length, enemy]);
+  }, [playerHp, phase]);
   
   // Handle comprehension quiz completion - add bonus rewards
   const handleQuizComplete = useCallback((score: number, total: number, bonusXp: number, bonusGold: number) => {
@@ -1477,10 +1529,17 @@ export const RPGBattleArena = ({
 
   // Handle enemy transition complete
   const handleTransitionComplete = useCallback(() => {
+    // CRITICAL: Reset victory lock for next enemy
+    victoryTriggeredRef.current = false;
+    
     const nextIndex = currentEnemyIndex + 1;
     setCurrentEnemyIndex(nextIndex);
     const nextEnemy = getEnemyForBattle(enemyQueue[nextIndex]);
+    
+    // Reset enemy HP and sync ref
     setEnemyHp(nextEnemy.maxHp);
+    enemyHpRef.current = nextEnemy.maxHp;
+    
     // Reset random mini-game triggers for the new enemy
     setTriggeredMiniGames(new Set());
     setTriggeredThresholds(new Set()); // Reset HP-based thresholds for new enemy
@@ -1647,26 +1706,20 @@ export const RPGBattleArena = ({
   // Calculate accuracy for victory check
   const currentAccuracy = wordsRead > 0 ? (correctWords / wordsRead) : 0;
   
-  // VICTORY CONDITIONS:
-  // 1. Enemy HP reaches 0 at any point = Victory
-  // 2. All words read + accuracy >= 80% = Victory (regardless of enemy HP)
+  // SECONDARY VICTORY CONDITION: All words read with 80%+ accuracy
+  // Enemy HP victory is handled by failsafe + triggerEnemyDefeat
   useEffect(() => {
     // Don't override terminal states
     if (phase === 'victory' || phase === 'defeat' || phase === 'enemy_transition') return;
     
-    // Check victory by enemy death - from ANY phase
-    if (enemyHp <= 0) {
-      console.log('[RPGBattle] ✅ Enemy HP = 0 - VICTORY!');
-      setPhase(isFinalEnemy ? 'victory' : 'enemy_transition');
-      return;
-    }
-    
-    // Check victory by completing all words with 80%+ accuracy - from ANY non-mini-game phase
+    // Check victory by completing all words with 80%+ accuracy
     if (allWordsRead && currentAccuracy >= 0.8) {
       console.log('[RPGBattle] ✅ All words read with 80%+ accuracy - VICTORY!', { accuracy: currentAccuracy });
+      victoryTriggeredRef.current = true;
+      setShowComprehensionQuiz(true);
       setPhase('victory');
     }
-  }, [allWordsRead, currentAccuracy, phase, enemyHp, isFinalEnemy]);
+  }, [allWordsRead, currentAccuracy, phase]);
 
   // If character select is shown for Classic mode, render it instead of battle
   if (showCharacterSelect && battleMode === 'classic') {
@@ -1795,7 +1848,11 @@ export const RPGBattleArena = ({
                 setPlayerHp(prev => Math.max(0, prev - reducedDamage));
               }
               if (shieldStrength > 50) {
-                setEnemyHp(prev => Math.max(0, prev - damage));
+                setEnemyHp(prev => {
+                  const newHp = Math.max(0, prev - damage);
+                  enemyHpRef.current = newHp;
+                  return newHp;
+                });
                 setTotalDamage(prev => prev + damage);
               }
               setCorrectWords(prev => prev + Math.floor(shieldStrength / 20));
@@ -1864,7 +1921,11 @@ export const RPGBattleArena = ({
             onComplete={(completed, failed) => {
               setCorrectWords(prev => prev + completed);
               setTotalDamage(prev => prev + completed * 12);
-              setEnemyHp(prev => Math.max(0, prev - completed * 12));
+              setEnemyHp(prev => {
+                const newHp = Math.max(0, prev - completed * 12);
+                enemyHpRef.current = newHp;
+                return newHp;
+              });
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
@@ -1877,7 +1938,11 @@ export const RPGBattleArena = ({
             onComplete={(caught, missed) => {
               setCorrectWords(prev => prev + caught);
               setTotalDamage(prev => prev + caught * 10);
-              setEnemyHp(prev => Math.max(0, prev - caught * 10));
+              setEnemyHp(prev => {
+                const newHp = Math.max(0, prev - caught * 10);
+                enemyHpRef.current = newHp;
+                return newHp;
+              });
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
@@ -1890,7 +1955,11 @@ export const RPGBattleArena = ({
             onComplete={(revealed, failed) => {
               setCorrectWords(prev => prev + revealed);
               setTotalDamage(prev => prev + revealed * 15);
-              setEnemyHp(prev => Math.max(0, prev - revealed * 15));
+              setEnemyHp(prev => {
+                const newHp = Math.max(0, prev - revealed * 15);
+                enemyHpRef.current = newHp;
+                return newHp;
+              });
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
@@ -1903,7 +1972,11 @@ export const RPGBattleArena = ({
             onComplete={(freed, frozen) => {
               setCorrectWords(prev => prev + freed);
               setTotalDamage(prev => prev + freed * 14);
-              setEnemyHp(prev => Math.max(0, prev - freed * 14));
+              setEnemyHp(prev => {
+                const newHp = Math.max(0, prev - freed * 14);
+                enemyHpRef.current = newHp;
+                return newHp;
+              });
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
@@ -1916,7 +1989,11 @@ export const RPGBattleArena = ({
             onComplete={(struck, missed) => {
               setCorrectWords(prev => prev + struck);
               setTotalDamage(prev => prev + struck * 12);
-              setEnemyHp(prev => Math.max(0, prev - struck * 12));
+              setEnemyHp(prev => {
+                const newHp = Math.max(0, prev - struck * 12);
+                enemyHpRef.current = newHp;
+                return newHp;
+              });
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
@@ -1929,7 +2006,11 @@ export const RPGBattleArena = ({
             onComplete={(saved, consumed) => {
               setCorrectWords(prev => prev + saved);
               setTotalDamage(prev => prev + saved * 16);
-              setEnemyHp(prev => Math.max(0, prev - saved * 16));
+              setEnemyHp(prev => {
+                const newHp = Math.max(0, prev - saved * 16);
+                enemyHpRef.current = newHp;
+                return newHp;
+              });
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
