@@ -1719,381 +1719,100 @@ export const RPGBattleArena = ({
     );
   }
 
+  // DEBUG: Force victory handler for testing
+  const handleForceVictory = useCallback(() => {
+    console.log('[DEBUG] Force Victory clicked!');
+    enemyHpRef.current = 0;
+    setEnemyHp(0);
+    victoryTriggeredRef.current = true;
+    setPhase('victory');
+  }, []);
+
   return (
-    <motion.div 
-      className="fixed inset-0 z-50 overflow-hidden"
-      animate={screenShake ? { x: [-5, 5, -5, 5, 0] } : {}}
-      transition={{ duration: 0.3 }}
+    <motion.div
+      className={`fixed inset-0 bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900 overflow-hidden ${screenShake ? 'animate-shake' : ''}`}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
     >
-      {/* Battle Background */}
-      <RPGBattleBackground enemyType={currentEnemyType} worldNumber={worldNumber} />
-
-      {/* Enemy Transition Overlay */}
-      <RPGEnemyTransition
-        isActive={phase === 'enemy_transition'}
-        defeatedEnemy={defeatedEnemy}
-        nextEnemy={currentEnemyIndex < enemyQueue.length - 1 ? getEnemyForBattle(enemyQueue[currentEnemyIndex + 1]) : null}
-        onTransitionComplete={handleTransitionComplete}
-      />
-
-      {/* Spell Effects Overlay */}
-      <RPGSpellEffects
-        spellType={activeSpell}
-        isActive={showSpellEffect}
-        onComplete={handleSpellComplete}
-      />
+      <RPGBattleBackground worldNumber={worldNumber} />
       
-      {/* Coin Drop Animation */}
-      {showCoinDrop && (
-        <RPGCoinDrop
-          goldAmount={pendingGold}
-          xpAmount={pendingXp}
-          onCollectionComplete={handleCoinCollectionComplete}
-        />
-      )}
-      
-      {/* Gold/XP Display */}
-      <div className="absolute top-20 left-4 z-30 flex flex-col gap-2">
-        <div className="flex items-center gap-2 bg-amber-900/80 px-3 py-1.5 rounded-lg border border-amber-500">
-          <Coins className="h-4 w-4 text-amber-300" />
-          <span className="text-amber-300 text-sm font-bold">{goldEarned}</span>
-        </div>
-        <div className="flex items-center gap-2 bg-blue-900/80 px-3 py-1.5 rounded-lg border border-blue-500">
-          <Star className="h-4 w-4 text-blue-300" />
-          <span className="text-blue-300 text-sm font-bold">{xpEarned} XP</span>
-        </div>
+      {/* DEBUG OVERLAY - Always visible in dev */}
+      <div className="fixed top-2 left-2 z-[99999] bg-black/90 text-white text-xs p-3 rounded-lg border border-yellow-500 font-mono space-y-1 max-w-xs">
+        <div className="text-yellow-400 font-bold border-b border-yellow-600 pb-1 mb-1">🔧 DEBUG PANEL</div>
+        <div>Phase: <span className={phase === 'victory' ? 'text-green-400' : phase === 'defeat' ? 'text-red-400' : 'text-blue-400'}>{phase}</span></div>
+        <div>EnemyHP: <span className={enemyHp <= 0 ? 'text-green-400' : 'text-white'}>{enemyHp}</span> / {enemy.maxHp}</div>
+        <div>EnemyHpRef: <span className={enemyHpRef.current <= 0 ? 'text-green-400' : 'text-white'}>{enemyHpRef.current}</span></div>
+        <div>isFinalEnemy: <span className={isFinalEnemy ? 'text-green-400' : 'text-orange-400'}>{String(isFinalEnemy)}</span></div>
+        <div>victoryTriggered: <span className={victoryTriggeredRef.current ? 'text-green-400' : 'text-red-400'}>{String(victoryTriggeredRef.current)}</span></div>
+        <div>PlayerHP: <span className={playerHp <= 0 ? 'text-red-400' : 'text-white'}>{playerHp}</span></div>
+        <div>Words: {correctWords}/{wordsRead} ({wordsRead > 0 ? Math.round(correctWords/wordsRead*100) : 0}%)</div>
+        <div>Streak: {streak} (best: {longestStreak})</div>
+        <div>EnemyQ: {currentEnemyIndex+1}/{enemyQueue.length}</div>
+        <button 
+          onClick={handleForceVictory}
+          className="mt-2 w-full bg-green-600 hover:bg-green-500 text-white font-bold py-1 px-2 rounded text-xs"
+        >
+          🎯 FORCE VICTORY
+        </button>
       </div>
-
-      {/* Word Barrage Overlay */}
-      <AnimatePresence>
-        {phase === 'barrage' && (
-          <RPGWordBarrage
-            words={barrageWords}
-            onComplete={handleBarrageComplete}
-            onWordHit={handleBarrageWordHit}
-          />
-        )}
-        {phase === 'fireball_barrage' && (
-          <RPGFireballBarrage
-            words={barrageWords}
-            onComplete={handleBarrageComplete}
-            onWordHit={handleBarrageWordHit}
-          />
-        )}
-        {phase === 'asteroid_barrage' && (
-          <RPGAsteroidBarrage
-            words={barrageWords}
-            onComplete={handleBarrageComplete}
-            onWordHit={handleBarrageWordHit}
-          />
-        )}
-        {phase === 'beast_swarm' && (
-          <RPGBeastSwarm
-            words={barrageWords}
-            onComplete={handleBarrageComplete}
-            onWordHit={handleBarrageWordHit}
-          />
-        )}
-        {phase === 'ice_crystal_barrage' && (
-          <RPGIceCrystalBarrage
-            words={barrageWords}
-            onComplete={handleBarrageComplete}
-            onWordHit={handleBarrageWordHit}
-          />
-        )}
-        {phase === 'ghostly_whispers' && (
-          <RPGGhostlyWhispers
-            words={barrageWords}
-            onComplete={handleBarrageComplete}
-            onWordHit={handleBarrageWordHit}
-          />
-        )}
-        {phase === 'rolling_boulders' && (
-          <RPGRollingBoulders
-            words={barrageWords}
-            onComplete={handleBarrageComplete}
-            onWordHit={handleBarrageWordHit}
-          />
-        )}
-        {/* NEW MINI-GAMES */}
-        {phase === 'word_shield' && (
-          <RPGWordShield
-            words={barrageWords}
-            onComplete={handleWordShieldComplete}
-          />
-        )}
-        {phase === 'spell_combo' && (
-          <RPGSpellCombo
-            words={barrageWords}
-            onComplete={handleSpellComboComplete}
-          />
-        )}
-        {/* REPLACED: Word Blitz was causing crashes - now using Word Shield */}
-        {phase === 'dodge_words' && (
-          <RPGWordShield
-            words={barrageWords}
-            onComplete={(shieldStrength, damage) => {
-              // Similar handling to word shield
-              const reducedDamage = Math.floor(20 * (1 - shieldStrength / 100));
-              if (reducedDamage > 0) {
-                setPlayerHp(prev => Math.max(0, prev - reducedDamage));
-              }
-              if (shieldStrength > 50) {
-                setEnemyHp(prev => {
-                  const newHp = Math.max(0, prev - damage);
-                  enemyHpRef.current = newHp;
-                  return newHp;
-                });
-                setTotalDamage(prev => prev + damage);
-              }
-              setCorrectWords(prev => prev + Math.floor(shieldStrength / 20));
-              setBatchStartIndex(prev => prev + barrageWords.length);
-              returnToReading();
-            }}
-          />
-        )}
-        {phase === 'rhyme_chain' && (
-          <RPGRhymeChain
-            words={barrageWords}
-            onComplete={handleRhymeChainComplete}
-            onDamage={handleMiniGameDamage}
-          />
-        )}
-        {phase === 'speed_typist' && (
-          <RPGSpeedTypist
-            words={barrageWords}
-            onComplete={handleSpeedTypistComplete}
-            onDamage={handleMiniGameDamage}
-          />
-        )}
-        {phase === 'tug_of_war' && (
-          <RPGTugOfWar
-            words={barrageWords}
-            heroName={playerCharacter.name}
-            enemyName={enemy.name}
-            onComplete={handleTugOfWarComplete}
-            onExit={onBack}
-          />
-        )}
-        {phase === 'goblin_horde' && (
-          <RPGGoblinHorde
-            words={barrageWords}
-            enemyName={enemy.name}
-            onComplete={handleGoblinHordeComplete}
-          />
-        )}
-        {phase === 'balloon_battle' && battleMode === 'balloon' && (
-          <RPGBalloonBattle
-            words={barrageWords}
-            heroName={playerCharacter.name}
-            enemyName={enemy.name}
-            studentId={studentId}
-            storyTitle={story.title}
-            onComplete={handleBalloonBattleComplete}
-          />
-        )}
-        {phase === 'fireball_defense' && (
-          <RPGFireballDefense
-            words={barrageWords}
-            onComplete={handleFireballDefenseComplete}
-          />
-        )}
-        {/* Quick Block for random enemy attacks */}
-        {phase === 'quick_block' && (
-          <RPGQuickBlock
-            words={quickBlockWords}
-            onComplete={handleQuickBlockComplete}
-          />
-        )}
-        {/* NEW 6 MINI-GAMES */}
-        {phase === 'word_echo' && (
-          <RPGWordEcho
-            words={barrageWords}
-            onComplete={(completed, failed) => {
-              setCorrectWords(prev => prev + completed);
-              setTotalDamage(prev => prev + completed * 12);
-              setEnemyHp(prev => {
-                const newHp = Math.max(0, prev - completed * 12);
-                enemyHpRef.current = newHp;
-                return newHp;
-              });
-              setBatchStartIndex(prev => prev + barrageWords.length);
-              returnToReading();
-            }}
-            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
-          />
-        )}
-        {phase === 'wind_chase' && (
-          <RPGWindChase
-            words={barrageWords}
-            onComplete={(caught, missed) => {
-              setCorrectWords(prev => prev + caught);
-              setTotalDamage(prev => prev + caught * 10);
-              setEnemyHp(prev => {
-                const newHp = Math.max(0, prev - caught * 10);
-                enemyHpRef.current = newHp;
-                return newHp;
-              });
-              setBatchStartIndex(prev => prev + barrageWords.length);
-              returnToReading();
-            }}
-            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
-          />
-        )}
-        {phase === 'ink_splash' && (
-          <RPGInkSplash
-            words={barrageWords}
-            onComplete={(revealed, failed) => {
-              setCorrectWords(prev => prev + revealed);
-              setTotalDamage(prev => prev + revealed * 15);
-              setEnemyHp(prev => {
-                const newHp = Math.max(0, prev - revealed * 15);
-                enemyHpRef.current = newHp;
-                return newHp;
-              });
-              setBatchStartIndex(prev => prev + barrageWords.length);
-              returnToReading();
-            }}
-            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
-          />
-        )}
-        {phase === 'crystal_prison' && (
-          <RPGCrystalPrison
-            words={barrageWords}
-            onComplete={(freed, frozen) => {
-              setCorrectWords(prev => prev + freed);
-              setTotalDamage(prev => prev + freed * 14);
-              setEnemyHp(prev => {
-                const newHp = Math.max(0, prev - freed * 14);
-                enemyHpRef.current = newHp;
-                return newHp;
-              });
-              setBatchStartIndex(prev => prev + barrageWords.length);
-              returnToReading();
-            }}
-            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
-          />
-        )}
-        {phase === 'thunder_strike' && (
-          <RPGThunderStrike
-            words={barrageWords}
-            onComplete={(struck, missed) => {
-              setCorrectWords(prev => prev + struck);
-              setTotalDamage(prev => prev + struck * 12);
-              setEnemyHp(prev => {
-                const newHp = Math.max(0, prev - struck * 12);
-                enemyHpRef.current = newHp;
-                return newHp;
-              });
-              setBatchStartIndex(prev => prev + barrageWords.length);
-              returnToReading();
-            }}
-            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
-          />
-        )}
-        {phase === 'void_pull' && (
-          <RPGVoidPull
-            words={barrageWords}
-            onComplete={(saved, consumed) => {
-              setCorrectWords(prev => prev + saved);
-              setTotalDamage(prev => prev + saved * 16);
-              setEnemyHp(prev => {
-                const newHp = Math.max(0, prev - saved * 16);
-                enemyHpRef.current = newHp;
-                return newHp;
-              });
-              setBatchStartIndex(prev => prev + barrageWords.length);
-              returnToReading();
-            }}
-            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
-          />
-        )}
-        {/* GROG'S SIGNATURE: Ground Ripple - word mountains roll toward heroes */}
-        {phase === 'ground_ripple' && (
-          <RPGGroundRipple
-            words={barrageWords}
-            onComplete={handleGroundRippleComplete}
-            onWordHit={handleMiniGameDamage}
-          />
-        )}
-        {/* CRYSTAL SPIDER'S SIGNATURE: Web Trap - speak words to free them */}
-        {phase === 'web_trap' && (
-          <RPGWebTrap
-            words={barrageWords}
-            onComplete={handleWebTrapComplete}
-            onDamage={handleMiniGameDamage}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Enemy Ability Message */}
-      <AnimatePresence>
-        {enemyAbilityMessage && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="absolute top-1/3 left-1/2 -translate-x-1/2 z-40"
-          >
-            <div className="bg-red-900/90 border-2 border-red-500 px-6 py-3 rounded-lg
-              shadow-[0_0_30px_rgba(239,68,68,0.5)]">
-              <span className="text-white font-bold text-lg">{enemyAbilityMessage}</span>
+      
+      {/* VICTORY OVERLAY - Full screen when phase is victory */}
+      {phase === 'victory' && (
+        <div className="fixed inset-0 z-[99998] bg-black/80 flex items-center justify-center">
+          <div className="bg-gradient-to-br from-yellow-900 via-amber-800 to-yellow-900 rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl border-4 border-yellow-500">
+            <Trophy className="h-20 w-20 text-yellow-400 mx-auto mb-4" />
+            <h1 className="text-4xl font-black text-yellow-400 mb-2">VICTORY!</h1>
+            <p className="text-amber-200 mb-4">You defeated {enemy.name}!</p>
+            <div className="grid grid-cols-2 gap-2 mb-4 text-sm">
+              <div className="bg-black/30 rounded p-2">
+                <div className="text-xl font-bold text-white">{correctWords}</div>
+                <div className="text-amber-300/70">Words</div>
+              </div>
+              <div className="bg-black/30 rounded p-2">
+                <div className="text-xl font-bold text-orange-400">{longestStreak}</div>
+                <div className="text-amber-300/70">Streak</div>
+              </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <Button 
+              onClick={() => handleBattleEnd(true)}
+              className="w-full bg-gradient-to-r from-yellow-500 to-amber-600 text-black font-bold"
+            >
+              Continue
+            </Button>
+          </div>
+        </div>
+      )}
 
-      {/* Status Effects Display */}
-      <AnimatePresence>
-        {(isPoisoned || isDebuffed) && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute top-24 left-4 z-30 flex flex-col gap-2"
-          >
-            {isPoisoned && (
-              <div className="flex items-center gap-2 bg-green-900/80 px-3 py-1.5 rounded-lg border border-green-500">
-                <span className="text-lg">☠️</span>
-                <span className="text-green-300 text-sm font-medium">Poisoned</span>
-              </div>
-            )}
-            {isDebuffed && (
-              <div className="flex items-center gap-2 bg-purple-900/80 px-3 py-1.5 rounded-lg border border-purple-500">
-                <AlertTriangle className="h-4 w-4 text-purple-300" />
-                <span className="text-purple-300 text-sm font-medium">Weakened ({debuffTurns})</span>
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Main Battle Layout */}
-      <div className="relative z-10 h-full flex flex-col">
-        {/* Top Bar */}
-        <div className="flex items-center justify-between p-3 bg-black/40 backdrop-blur-sm border-b border-white/10">
-          <Button 
-            variant="ghost" 
-            size="sm" 
+      {/* Header */}
+      <div className="relative z-10 flex flex-col h-full">
+        <div className="flex items-center justify-between px-4 py-3 bg-black/40 backdrop-blur-sm">
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={onBack}
             className="text-white/70 hover:text-white hover:bg-white/10"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Retreat
           </Button>
-          <div className="flex items-center gap-4 text-white/80">
-            <span className="text-sm font-medium truncate max-w-[200px]">{story.title}</span>
-            {streak > 0 && (
-              <motion.div 
-                className="flex items-center gap-1 text-orange-400"
-                animate={{ scale: [1, 1.1, 1] }}
-                transition={{ repeat: Infinity, duration: 0.5 }}
-              >
-                <Flame className="h-4 w-4" />
-                <span className="font-bold">x{streak}</span>
-              </motion.div>
-            )}
-            {/* Sound Toggle */}
+          
+          <div className="text-center">
+            <h2 className="text-lg font-bold text-white">{story.title}</h2>
+            <p className="text-xs text-slate-400">
+              {battleMode === 'tug_of_war' ? 'Tug of War Mode' : 
+               battleMode === 'balloon' ? 'Balloon Battle Mode' : 
+               `VS ${enemy.name}`}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Gold Display */}
+            <div className="flex items-center gap-1 bg-yellow-900/60 px-3 py-1 rounded-full border border-yellow-600/40">
+              <Coins className="h-4 w-4 text-yellow-400" />
+              <span className="text-yellow-300 font-bold text-sm">{goldEarned}</span>
+            </div>
+            
             <Button
               variant="ghost"
               size="sm"
