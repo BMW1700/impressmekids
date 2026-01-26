@@ -1549,7 +1549,7 @@ export const RPGBattleArena = ({
 
   return (
     <motion.div 
-      className="fixed inset-0 z-50 overflow-hidden"
+      className="fixed inset-x-0 top-0 h-[100dvh] z-50 overflow-hidden"
       animate={screenShake ? { x: [-5, 5, -5, 5, 0] } : {}}
       transition={{ duration: 0.3 }}
     >
@@ -1975,7 +1975,7 @@ export const RPGBattleArena = ({
         </div>
 
         {/* Bottom UI Section */}
-        <div className="bg-black/50 backdrop-blur-sm border-t border-white/10 max-h-[50vh] overflow-y-auto">
+        <div className="bg-black/50 backdrop-blur-sm border-t border-white/10 max-h-[50dvh] overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+1rem)]">
           <div className="max-w-5xl mx-auto p-4">
             <AnimatePresence mode="wait">
               {/* Intro Dialogue */}

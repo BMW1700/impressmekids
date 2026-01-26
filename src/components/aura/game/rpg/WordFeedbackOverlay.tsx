@@ -95,13 +95,13 @@ export const WordFeedbackOverlay = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto py-8 bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto pt-[calc(env(safe-area-inset-top)+1rem)] pb-[calc(env(safe-area-inset-bottom)+1rem)] bg-black/60 backdrop-blur-sm"
         >
           <motion.div
             initial={{ scale: 0.8, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.8, y: 20 }}
-            className={`relative max-w-md w-full mx-4 p-6 rounded-2xl border-2 my-auto max-h-[90vh] overflow-y-auto ${
+            className={`relative max-w-md w-full mx-4 p-6 rounded-2xl border-2 my-auto max-h-[85dvh] overflow-y-auto overscroll-contain ${
               isCorrect 
                 ? 'bg-gradient-to-br from-green-900/90 to-emerald-900/90 border-green-500/50' 
                 : 'bg-gradient-to-br from-orange-900/90 to-red-900/90 border-orange-500/50'

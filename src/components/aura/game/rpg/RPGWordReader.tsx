@@ -166,6 +166,7 @@ export const RPGWordReader = ({
       setCanRetry(true);
       setShowFeedbackOverlay(false);
       setPendingIncorrectWord(null);
+      isRetryAttemptRef.current = false;
       isProcessingRef.current = false;
     }
   }, [wordsKey]);
@@ -362,6 +363,7 @@ export const RPGWordReader = ({
     setSpokenText("");
     setCanRetry(false); // Only one retry allowed per word
     canRetryRef.current = false; // Synchronous update to prevent race condition!
+    isRetryAttemptRef.current = true;
     isProcessingRef.current = false;
     
     // Stay on the same word index
@@ -395,6 +397,9 @@ export const RPGWordReader = ({
     // Don't call onResult(true, ...) since this doesn't count as a real correct
     // BUT call onRetrySuccess to trigger HP healing!
     onRetrySuccess?.(wordIndex);
+
+    // Retry is now resolved.
+    isRetryAttemptRef.current = false;
     
     setPendingIncorrectWord(null);
     
@@ -436,6 +441,9 @@ export const RPGWordReader = ({
     const { spoken, index } = pendingIncorrectWord;
     
     setShowFeedbackOverlay(false);
+
+    // If they choose to continue after a miss, any retry attempt is resolved.
+    isRetryAttemptRef.current = false;
     
     // NOW trigger the enemy attack via onResult(false, ...)
     onResult(false, spoken, index);
@@ -518,6 +526,9 @@ export const RPGWordReader = ({
     canRetryRef.current = canRetry;
   }, [canRetry]);
 
+  // Explicit ref: are we currently doing the one allowed retry attempt?
+  const isRetryAttemptRef = useRef(false);
+
   // Process speech result
   const processResult = useCallback((transcript: string, alternatives: string[]) => {
     if (isProcessingRef.current) return;
@@ -562,7 +573,7 @@ export const RPGWordReader = ({
     
     if (matched) {
       // Check if this is a retry attempt (canRetry was set to false when Try Again was clicked)
-      if (!canRetryRef.current) {
+      if (isRetryAttemptRef.current || !canRetryRef.current) {
         // This is a retry success - use handleRetrySuccess (YELLOW, no rewards)
         handleRetrySuccess(bestSpoken, wordIndex);
       } else {
@@ -574,7 +585,7 @@ export const RPGWordReader = ({
       const currentRecState = recognitionStateRef.current;
       
       // If this is a retry attempt and they got it wrong again, show overlay
-      if (!canRetryRef.current) {
+      if (isRetryAttemptRef.current || !canRetryRef.current) {
         // Failed retry - go straight to continue (they already had their chance)
         handleIncorrectFinal(transcript, targetWord, wordIndex);
       } else if (enableEchoRetry && currentRecState !== 'echo_retry') {
