@@ -1,142 +1,151 @@
 
-# Plan: Fix UI Cutoff Issues - Compact Modal & Flash Button
+<context>
+User requirement (explicit):
+- First attempt correct => word shows GREEN.
+- First attempt incorrect => word shows RED.
+- If incorrect then “Try Again” and correct => word MUST show YELLOW (never green).
+- If incorrect then “Try Again” and still incorrect => stays RED.
+- Accuracy must be correct (a word that was missed first should count as missed for accuracy even if later corrected on retry).
 
-## Problems Identified
+Current observed problem:
+- Words are turning GREEN after a retry-success instead of staying YELLOW.
+- Accuracy can be inflated because a “miss then retry-success” currently may never get counted as a miss in the battle stats.
+</context>
 
-1. **WordFeedbackOverlay ("Magic" popup)**: The modal is too tall and gets cut off on smaller/non-fullscreen displays, making the action buttons (Try Again, Skip & Continue) invisible.
+<what-i-found (verified in code)>
+1) A concrete reason retried words can become green (especially for Elara / fast mode):
+- In `RPGWordReader.tsx`, the Web Speech `onresult` handler has a “FAST MODE” path that processes interim transcripts.
+- That fast path directly calls `handleCorrect(word, wordIdx)` when it sees a match.
+- This bypasses the retry logic in `processResult()` that correctly routes retry-success to `handleRetrySuccess()` and sets `result: 'retried'`.
+- Result: during a retry attempt, an interim match can incorrectly mark the word as `correct` (green), overwriting the `retried` (yellow) state.
 
-2. **Start Reading → Pause button**: When the button changes from "Start Reading" to "Pause", it causes layout shifts that push content off-screen.
+2) A concrete reason accuracy can be wrong (too high):
+- In `RPGWordReader`, the initial miss (`handleIncorrectFinal`) does NOT call `onResult(false, ...)` immediately. It waits until the user presses “Continue”.
+- If the user presses “Try Again” and succeeds, `handleRetrySuccess` advances without ever calling `onResult(false, ...)`.
+- In `RPGBattleArena`, `wordsRead` and `correctWords` only update inside `handleWordResult` (wired to `onResult`).
+- So a “miss then retry-success” may never increment `wordsRead`, meaning the miss isn’t counted at all, inflating accuracy.
 
----
+3) UI coloring logic for retried is already present and correct:
+- The dot/word-chip rendering in `RPGWordReader.tsx` already supports `result === 'retried'` => yellow.
+- So the core issue is not display; it’s that the state is being set to `correct` (green) in the first place.
 
-## Solution Overview
+</what-i-found>
 
-### Fix 1: Make WordFeedbackOverlay Compact (No Scrolling Needed)
+<goals>
+A) Make it impossible for a retry-success to ever be recorded as `correct`.
+B) Ensure accuracy counts a “miss on first attempt” as a miss, even if the retry later succeeds.
+C) Prevent double-counting a miss (once at “miss shown”, and again on “Continue”).
+</goals>
 
-Reduce the size of everything in the modal so it fits on any screen without scrolling:
+<implementation-plan>
+<step 1 — Fix retry-success becoming green (root cause: fast interim path bypass)>
+Files:
+- `src/components/aura/game/rpg/RPGWordReader.tsx`
 
-| Element | Before | After |
-|---------|--------|-------|
-| Icon circle | `w-16 h-16` | `w-10 h-10` |
-| Icon inside | `h-10 w-10` | `h-6 w-6` |
-| Title | `text-xl mb-4` | `text-lg mb-2` |
-| Word display padding | `p-4 mb-4` | `p-3 mb-3` |
-| Expected word size | `text-3xl my-2` | `text-2xl my-1` |
-| Phonetic breakdown | `text-lg` | `text-base` |
-| "You said" section | `mb-3`, `text-lg` | `mb-2`, `text-base` |
-| Tip box padding | `p-3 mb-4` | `p-2 mb-3` |
-| Container padding | `p-6` | `p-4` |
-| Button gap | `gap-3` | `gap-2` |
-| Retry hint margin | `mt-3` | `mt-2` |
+Changes:
+1. Update the FAST MODE interim-match branch inside `recognition.onresult`:
+   - Replace the direct `handleCorrect(word, wordIdx)` call with logic that respects retry state:
+     Option A (preferred): call `processResult()` using the interim transcript as input (so retry routing stays centralized).
+     Option B: replicate the same conditional used in `processResult`:
+       - if `isRetryAttemptRef.current || !canRetryRef.current` => call `handleRetrySuccess(...)`
+       - else => call `handleCorrect(...)`
 
-This makes the entire modal ~30% shorter, ensuring it never needs scrolling.
+2. Add a processing guard to `handleRetrySuccess` similar to `handleCorrect`:
+   - At the start of `handleRetrySuccess`, do:
+     - `if (isProcessingRef.current) return;`
+     - `isProcessingRef.current = true;`
+   Reason: when we start treating interim matches as “real” actions, we must prevent duplicate executions from rapid interim updates.
 
-**File**: `src/components/aura/game/rpg/WordFeedbackOverlay.tsx`
+Expected outcome:
+- During retry attempts, even interim matches will route to `handleRetrySuccess` and set `wordResults[wordIndex].result = 'retried'`.
+- The state can no longer be overwritten to green by the fast path.
 
----
+Verification steps (in-app, concrete):
+- Run with Elara (mode = fast).
+- Intentionally miss a word, click Try Again, then say the correct word.
+- Confirm console shows `[RPGWordReader] SET RETRIED (YELLOW)` and the word chip remains yellow after moving to the next word.
 
-### Fix 2: Flash Button Instead of Swapping to "Pause"
+</step 1>
 
-Instead of replacing "Start Reading" with a "Pause" button (which can cause layout issues), keep the same button but:
+<step 2 — Fix accuracy counting for “miss then retry-success”>
+Files:
+- `src/components/aura/game/rpg/RPGWordReader.tsx`
+- `src/components/aura/game/rpg/RPGBattleArena.tsx`
 
-1. **Always show "Start Reading" button** (never swap to "Pause")
-2. **When active**: Button flashes/pulses with an amber glow to indicate "active" state
-3. **Click while active**: Pauses reading (same functionality, no text change)
-4. **When paused**: Show "Resume" button (this is fine since it's a recovery state)
+Changes:
+1. Add a new callback prop to `RPGWordReader`:
+   - `onMiss?: (spokenWord: string, wordIndex: number) => void`
+   Purpose: report “first attempt was incorrect” immediately for stats/accuracy, without triggering enemy combat.
 
-This eliminates the layout shift entirely because the button never changes size or position.
+2. Call `onMiss(...)` inside `handleIncorrectFinal` right when the overlay is shown (i.e., when the miss is finalized and the user is deciding):
+   - This ensures the miss counts toward accuracy even if the user later succeeds on retry.
 
-**Implementation**:
+3. Prevent double counting when the user presses “Continue”:
+   - In `RPGBattleArena`, introduce a `countedWordIndicesRef` (Set<number> of global indices) or similar structure.
+   - When `onMiss` fires:
+     - Compute `globalIndex = batchStartIndex + wordIndex`
+     - If not already counted:
+       - increment `wordsRead`
+       - (optional) reset `streak` to 0 for accuracy consistency (see Step 2.4)
+       - mark globalIndex counted
+   - When `handleWordResult(false, ...)` fires from “Continue”:
+     - Only perform the combat (enemy counter-attack), but do NOT increment `wordsRead` again if that word was already counted by `onMiss`.
 
-```typescript
-// Combine isIdle and isActive into one button
-{(isIdle || isActive) && (
-  <motion.div
-    animate={isActive ? { 
-      boxShadow: ['0 0 0px rgba(251, 191, 36, 0)', '0 0 15px rgba(251, 191, 36, 0.6)', '0 0 0px rgba(251, 191, 36, 0)'] 
-    } : {}}
-    transition={isActive ? { repeat: Infinity, duration: 1 } : {}}
-    className="rounded-xl"
-  >
-    <Button
-      size="lg"
-      onClick={isActive ? pauseReading : startReading}
-      disabled={disabled || !cleanWord}
-      className={`min-w-[180px] font-bold transition-all ${
-        isActive 
-          ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700' 
-          : 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700'
-      }`}
-    >
-      {isActive ? (
-        <>
-          <motion.div
-            animate={{ scale: [1, 1.2, 1] }}
-            transition={{ repeat: Infinity, duration: 0.6 }}
-          >
-            <Mic className="h-5 w-5 mr-2" />
-          </motion.div>
-          Reading...
-        </>
-      ) : (
-        <>
-          <Play className="h-5 w-5 mr-2" />
-          Start Reading
-        </>
-      )}
-    </Button>
-  </motion.div>
-)}
+4. Streak behavior decision (minimal-change default):
+   - Default plan: reset streak on first miss (when `onMiss` fires), because the first attempt was wrong.
+   - This matches “accuracy rigor” and avoids a streak staying alive through misses.
+   - If you want streak to only break when the enemy actually attacks (on Continue), we can keep streak logic in `handleWordResult(false)` only. (I can implement either; see Clarification question below.)
 
-{isPaused && (
-  <Button ... >
-    <Play /> Resume
-  </Button>
-)}
-```
+Expected outcome:
+- A miss is counted for accuracy immediately when the miss occurs.
+- A retry-success remains neutral (does not add correctWords).
+- “Continue” triggers enemy combat but doesn’t inflate wordsRead a second time.
 
-**File**: `src/components/aura/game/rpg/RPGWordReader.tsx`
+Verification steps (in-app, concrete):
+- Start a battle, miss a word, then hit Try Again and succeed.
+- Watch accuracy: it should reflect the miss (wordsRead increased, correctWords not increased) even though you advanced.
+- Then test miss + Continue: wordsRead should not jump by 2 for the same word.
 
----
+</step 2>
 
-## Technical Details
+<step 3 — Safety: ensure “green only on first attempt” is enforced>
+Files:
+- `src/components/aura/game/rpg/RPGWordReader.tsx`
 
-### Why Flash Instead of Swap?
-- **No layout shift**: Button stays the same width/position
-- **Clear visual feedback**: Pulsing glow shows "active" state
-- **Intuitive**: User can tap the same button to pause without hunting for a new button
-- **Mobile-friendly**: No content pushed off-screen
+Changes:
+- Add a “never upgrade retried to correct” rule when writing to `wordResults`:
+  - In `handleCorrect`, before setting `result: 'correct'`, check if an existing entry is already `missed` for that word index and `isRetryAttemptRef.current` is true; in that case call `handleRetrySuccess` instead (extra belt-and-suspenders).
+This is redundant with Step 1, but it protects against future regressions.
 
-### Compact Modal Math
-The current modal height breakdown:
-- Header icon: ~80px
-- Title: ~32px  
-- Word display box: ~120px
-- Tip box: ~56px
-- Buttons: ~44px
-- Retry hint: ~24px
-- Padding: ~48px
-- **Total: ~404px**
+Verification:
+- Repeat Elara fast-mode test; ensure no path leads to `result: 'correct'` during retry.
 
-After compacting:
-- Header icon: ~48px (-32)
-- Title: ~24px (-8)
-- Word display box: ~90px (-30)
-- Tip box: ~40px (-16)
-- Buttons: ~40px (-4)
-- Retry hint: ~20px (-4)
-- Padding: ~32px (-16)
-- **Total: ~294px** (~27% smaller)
+</step 3>
+</implementation-plan>
 
-This fits comfortably within any mobile viewport without scrolling.
+<clarifications-needed (only the ones that change behavior)>
+1) When a word is missed first try but then corrected on retry, should the streak reset immediately on the miss (recommended), or only if the user presses “Continue” (enemy attacks)?
+- Option A: Reset immediately on miss (more “rigorous” and consistent with accuracy).
+- Option B: Only reset on Continue (keeps streak until they “accept” the miss).
 
----
+If you don’t answer, I will implement Option A because it matches your “accuracy must be counted right” requirement and typical “first attempt matters” logic.
 
-## Summary of Changes
+</clarifications-needed>
 
-| File | Changes |
-|------|---------|
-| `src/components/aura/game/rpg/WordFeedbackOverlay.tsx` | Reduce all sizes to make modal compact |
-| `src/components/aura/game/rpg/RPGWordReader.tsx` | Replace Start/Pause button swap with unified flash button |
+<files-to-change>
+- `src/components/aura/game/rpg/RPGWordReader.tsx`
+- `src/components/aura/game/rpg/RPGBattleArena.tsx`
+</files-to-change>
 
-**Lines Changed**: ~40-50 lines modified across 2 files
+<risk-and-mitigation>
+- Risk: Double counting wordsRead if both onMiss and onResult(false) increment.
+  Mitigation: countedWordIndicesRef Set gating increments.
+- Risk: fast mode interim results causing multiple triggers.
+  Mitigation: add isProcessingRef guard to handleRetrySuccess, and ensure we mark processedResultsRef appropriately.
+</risk-and-mitigation>
+
+<success-criteria>
+- Retry-success always yields YELLOW word state and never green, including in Elara (fast) mode.
+- “Miss then retry-success” decreases accuracy appropriately (miss counted once).
+- “Miss then Continue” decreases accuracy appropriately and triggers enemy counter-attack.
+</success-criteria>
