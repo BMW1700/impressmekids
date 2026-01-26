@@ -256,15 +256,10 @@ export const RPGBattleArena = ({
   const returnToReadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Centralized enemy defeat handler - idempotent and ref-based with victory lock
+  // FIXED: Now allows re-entry if phase='victory' but ref wasn't set (word-completion path)
   const triggerEnemyDefeat = useCallback((reason: string) => {
     const currentHp = enemyHpRef.current;
     console.log('[RPGBattle] triggerEnemyDefeat called:', { reason, currentHp, phase, isFinalEnemy, alreadyTriggered: victoryTriggeredRef.current });
-    
-    // Skip if already triggered (prevents duplicate calls)
-    if (victoryTriggeredRef.current) {
-      console.log('[RPGBattle] triggerEnemyDefeat: Already triggered, skipping');
-      return;
-    }
     
     // Skip if not actually dead
     if (currentHp > 0) {
@@ -272,13 +267,18 @@ export const RPGBattleArena = ({
       return;
     }
     
-    // Skip if already in a terminal phase
-    if (phase === 'victory' || phase === 'defeat' || phase === 'enemy_transition') {
-      console.log('[RPGBattle] triggerEnemyDefeat: Already in terminal phase, skipping');
+    // Skip ONLY if already in a terminal phase AND we've already transitioned the UI
+    if ((phase === 'victory' || phase === 'defeat' || phase === 'enemy_transition') && victoryTriggeredRef.current) {
+      console.log('[RPGBattle] triggerEnemyDefeat: Already in terminal phase with UI transitioned, skipping');
       return;
     }
     
-    // LOCK: Mark victory as triggered
+    // ALLOW re-entry if phase is victory but ref is false (word-completion set phase but not ref)
+    if (phase === 'victory' && !victoryTriggeredRef.current) {
+      console.log('[RPGBattle] 🔄 Re-syncing victory state after word completion');
+    }
+    
+    // LOCK: Mark victory as triggered NOW
     victoryTriggeredRef.current = true;
     console.log('[RPGBattle] 🎉 VICTORY LOCK ACQUIRED - transitioning now');
     
@@ -362,9 +362,12 @@ export const RPGBattleArena = ({
       const currentHp = enemyHpRef.current;
       const alreadyTriggered = victoryTriggeredRef.current;
       
-      if (currentHp <= 0 && !alreadyTriggered && 
-          phase !== 'victory' && phase !== 'defeat' && phase !== 'enemy_transition') {
-        console.log('[RPGBattle] 🚨 FAILSAFE TRIGGERED: Enemy HP =', currentHp, '- forcing victory/transition. Current phase:', phase);
+      // EXPANDED: Also catch "phase=victory but ref not set" stuck state
+      if (currentHp <= 0 && (
+          (!alreadyTriggered && phase !== 'victory' && phase !== 'defeat' && phase !== 'enemy_transition') ||
+          (phase === 'victory' && !alreadyTriggered)
+      )) {
+        console.log('[RPGBattle] 🚨 FAILSAFE TRIGGERED:', { hp: currentHp, phase, triggered: alreadyTriggered });
         triggerEnemyDefeat('failsafe_interval');
       }
     }, 500);
@@ -1506,6 +1509,7 @@ export const RPGBattleArena = ({
   }, [playerHp, phase]);
   
   // Handle comprehension quiz completion - add bonus rewards
+  // FIXED: Now forces HP re-check after quiz to catch deaths during quiz
   const handleQuizComplete = useCallback((score: number, total: number, bonusXp: number, bonusGold: number) => {
     console.log('[RPGBattle] Quiz complete:', { score, total, bonusXp, bonusGold });
     setQuizBonusXp(bonusXp);
@@ -1513,12 +1517,29 @@ export const RPGBattleArena = ({
     setXpEarned(prev => prev + bonusXp);
     setGoldEarned(prev => prev + bonusGold);
     setShowComprehensionQuiz(false);
+    
+    // Force a victory sync after quiz - ensures ref is set properly
+    setTimeout(() => {
+      if (enemyHpRef.current <= 0 && !victoryTriggeredRef.current) {
+        console.log('[RPGBattle] 🔄 Post-quiz HP check: enemy dead, syncing victory state');
+        victoryTriggeredRef.current = true;
+      }
+    }, 100);
   }, []);
 
   // Handle quiz skip - no bonus rewards
+  // FIXED: Same post-quiz sync
   const handleQuizSkip = useCallback(() => {
     console.log('[RPGBattle] Quiz skipped');
     setShowComprehensionQuiz(false);
+    
+    // Force a victory sync after skip
+    setTimeout(() => {
+      if (enemyHpRef.current <= 0 && !victoryTriggeredRef.current) {
+        console.log('[RPGBattle] 🔄 Post-quiz-skip HP check: enemy dead, syncing victory state');
+        victoryTriggeredRef.current = true;
+      }
+    }, 100);
   }, []);
   
   // Handle vocabulary words saved
@@ -1708,6 +1729,7 @@ export const RPGBattleArena = ({
   
   // SECONDARY VICTORY CONDITION: All words read with 80%+ accuracy
   // Enemy HP victory is handled by failsafe + triggerEnemyDefeat
+  // FIXED: Do NOT set victoryTriggeredRef here - let HP-based victory run if needed
   useEffect(() => {
     // Don't override terminal states
     if (phase === 'victory' || phase === 'defeat' || phase === 'enemy_transition') return;
@@ -1715,7 +1737,8 @@ export const RPGBattleArena = ({
     // Check victory by completing all words with 80%+ accuracy
     if (allWordsRead && currentAccuracy >= 0.8) {
       console.log('[RPGBattle] ✅ All words read with 80%+ accuracy - VICTORY!', { accuracy: currentAccuracy });
-      victoryTriggeredRef.current = true;
+      // DO NOT set victoryTriggeredRef here - triggerEnemyDefeat will set it when needed
+      // This allows HP-based victory to still work if enemy dies later
       setShowComprehensionQuiz(true);
       setPhase('victory');
     }
