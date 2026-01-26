@@ -87,6 +87,12 @@ export const BattleReader = ({
   
   // CRITICAL FIX: Track processed word events to prevent double-applying damage
   const processedWordEventsRef = useRef<Set<string>>(new Set());
+  
+  // CRITICAL FIX: Guard to ensure completeBattle is only called once per session
+  const battleCompletedRef = useRef(false);
+  
+  // CRITICAL FIX: Guard to ensure celebration is only triggered once
+  const celebrationTriggeredRef = useRef(false);
 
   // Ref for WordByWordReader control
   const readerStartRef = useRef<(() => void) | null>(null);
@@ -133,6 +139,81 @@ export const BattleReader = ({
     const interval = setInterval(showRandomTaunt, 15000 + Math.random() * 15000);
     return () => clearInterval(interval);
   }, [battleState.status, grogState]);
+
+  // ============================================================
+  // CENTRALIZED BATTLE END HANDLER - SINGLE SOURCE OF TRUTH
+  // This effect catches ALL ways battle can end (word damage, power, etc.)
+  // ============================================================
+  useEffect(() => {
+    // Only act when battle transitions to victory or defeat
+    if (battleState.status === 'in_progress') return;
+    
+    // Prevent double-triggering
+    if (celebrationTriggeredRef.current) {
+      console.log('[BattleReader] 🛡️ Celebration already triggered, skipping');
+      return;
+    }
+    
+    console.log('[BattleReader] ⚡ CENTRALIZED BATTLE END DETECTED:', battleState.status);
+    console.log('[BattleReader] Current showCelebration:', showCelebration);
+    console.log('[BattleReader] Enemy HP:', battleState.enemyHp);
+    
+    // Mark as triggered immediately
+    celebrationTriggeredRef.current = true;
+    
+    const isVictory = battleState.status === 'victory';
+    
+    // Set character states
+    if (isVictory) {
+      setGrogState('defeated');
+      setPlayerState('victory');
+    } else {
+      setGrogState('taunting');
+      setPlayerState('defeated');
+      setCurrentTaunt(getRandomTaunt('grogTaunts'));
+    }
+    
+    // Calculate XP if not already calculated
+    const defeatedBeforeFinish = battleState.enemyHp <= 0 && battleState.wordsRead < story.word_count;
+    const xpEarned = battleState.xpEarned > 0 ? battleState.xpEarned : calculateXpEarned(
+      isVictory,
+      battleState.wordsRead,
+      battleState.correctWords,
+      battleState.longestStreak,
+      worldNumber,
+      defeatedBeforeFinish
+    );
+    
+    // Update XP in state if needed
+    if (battleState.xpEarned === 0 && xpEarned > 0) {
+      setBattleState(prev => ({ ...prev, xpEarned }));
+    }
+    
+    // Complete battle in database (once only)
+    if (battleSessionId && !battleCompletedRef.current) {
+      battleCompletedRef.current = true;
+      console.log('[BattleReader] 💾 Saving battle result to database...');
+      completeBattle({
+        battleId: battleSessionId,
+        victory: isVictory,
+        xpEarned,
+        damageDealt: battleState.totalDamageDealt,
+        longestStreak: battleState.longestStreak,
+        storyTitle: story.title,
+        worldNumber,
+      }).catch(error => {
+        console.error('[BattleReader] Failed to complete battle:', error);
+      });
+    }
+    
+    // Show celebration after a short delay for animations
+    console.log('[BattleReader] 🎉 Triggering celebration modal in 600ms...');
+    setTimeout(() => {
+      console.log('[BattleReader] 🎉 Setting showCelebration = true NOW');
+      setShowCelebration(true);
+    }, 600);
+    
+  }, [battleState.status, battleState.enemyHp, battleSessionId, completeBattle, story.title, story.word_count, worldNumber, battleState.wordsRead, battleState.correctWords, battleState.longestStreak, battleState.totalDamageDealt, battleState.xpEarned, showCelebration]);
 
   // STREAK POWER: Check if power should be available
   useEffect(() => {
@@ -263,56 +344,16 @@ export const BattleReader = ({
         }, 500);
       }
       
-      // Check for battle end - CRITICAL FIX: Trigger celebration IMMEDIATELY
+      // Battle end is handled by centralized useEffect - just update states here
       if (newState.status === 'victory') {
-        console.log('[BattleReader] 🎉 Enemy defeated mid-passage - triggering immediate victory!');
+        console.log('[BattleReader] 🎉 Victory detected in handleWordResult - centralized effect will handle');
         setGrogState('defeated');
         setPlayerState('victory');
-        
-        // Calculate XP immediately
-        const accuracy = newState.wordsRead > 0 
-          ? Math.round((newState.correctWords / newState.wordsRead) * 100) 
-          : 0;
-        
-        const xpEarned = calculateXpEarned(
-          true,
-          newState.wordsRead,
-          newState.correctWords,
-          newState.longestStreak,
-          worldNumber,
-          true // defeatedBeforeFinish
-        );
-        
-        // Update XP in state
-        newState.xpEarned = xpEarned;
-        
-        // Show celebration immediately - don't wait for passage to finish
-        setTimeout(() => {
-          setShowCelebration(true);
-        }, 500);
-        
       } else if (newState.status === 'defeat') {
-        console.log('[BattleReader] 💀 Player defeated mid-passage - triggering defeat screen!');
+        console.log('[BattleReader] 💀 Defeat detected in handleWordResult - centralized effect will handle');
         setPlayerState('defeated');
         setGrogState('taunting');
         setCurrentTaunt(getRandomTaunt('grogTaunts'));
-        
-        // Calculate XP for defeat
-        const xpEarned = calculateXpEarned(
-          false,
-          newState.wordsRead,
-          newState.correctWords,
-          newState.longestStreak,
-          worldNumber,
-          false
-        );
-        
-        newState.xpEarned = xpEarned;
-        
-        // Show defeat screen immediately
-        setTimeout(() => {
-          setShowCelebration(true);
-        }, 500);
       }
       
       return newState;
@@ -322,9 +363,9 @@ export const BattleReader = ({
   // Handle reading completion
   // VICTORY RULES: Win if goblin dies OR (story finished AND accuracy >= 90%)
   const handleReadingComplete = async (stats: any) => {
-    // SAFETY: If celebration is already showing (enemy died mid-passage), don't re-trigger
-    if (showCelebration) {
-      console.log('[BattleReader] Celebration already showing, skipping handleReadingComplete');
+    // SAFETY: If celebration is already showing/triggered, don't re-trigger
+    if (showCelebration || celebrationTriggeredRef.current) {
+      console.log('[BattleReader] Celebration already showing/triggered, skipping handleReadingComplete');
       return;
     }
     
@@ -343,51 +384,12 @@ export const BattleReader = ({
     const killedGoblin = finalState.enemyHp <= 0;
     const passedAccuracyGate = accuracy >= 90 && finalState.playerHp > 0;
     const victory = killedGoblin || passedAccuracyGate;
-    
-    const defeatedBeforeFinish = killedGoblin && finalState.wordsRead < story.word_count;
-    
-    const xpEarned = calculateXpEarned(
-      victory,
-      finalState.wordsRead,
-      finalState.correctWords,
-      finalState.longestStreak,
-      worldNumber,
-      defeatedBeforeFinish
-    );
 
-    // Update final battle state
+    // Update final battle state - this will trigger the centralized effect
     setBattleState(prev => ({
       ...prev,
       status: victory ? 'victory' : 'defeat',
-      xpEarned,
     }));
-
-    if (victory) {
-      setGrogState('defeated');
-      setPlayerState('victory');
-    } else {
-      setGrogState('taunting');
-      setPlayerState('defeated');
-    }
-
-    // Save to database
-    if (battleSessionId) {
-      try {
-        await completeBattle({
-          battleId: battleSessionId,
-          victory,
-          xpEarned,
-          damageDealt: finalState.totalDamageDealt,
-          longestStreak: finalState.longestStreak,
-          storyTitle: story.title,
-          worldNumber,
-        });
-      } catch (error) {
-        console.error('Failed to complete battle:', error);
-      }
-    }
-
-    setShowCelebration(true);
   };
 
   // Handle celebration close
@@ -402,6 +404,8 @@ export const BattleReader = ({
     // Reset everything for a fresh battle
     processedWordEventsRef.current = new Set();
     lastPowerStreakRef.current = 0;
+    battleCompletedRef.current = false;
+    celebrationTriggeredRef.current = false;
     setPowerAvailable(false);
     setPowerCooldown(false);
     setBattleState(initializeBattle(worldNumber, enemyType));
@@ -455,6 +459,14 @@ export const BattleReader = ({
 
   return (
     <div className="space-y-2 relative">
+      {/* TEMP DEBUG OVERLAY - Shows battle state for debugging */}
+      <div className="fixed top-2 left-2 z-[9999] bg-black/80 text-white text-xs p-2 rounded font-mono">
+        HP: {battleState.enemyHp}/{battleState.enemyMaxHp} | 
+        Status: {battleState.status} | 
+        Celebration: {showCelebration ? 'YES' : 'NO'} |
+        Ref: {celebrationTriggeredRef.current ? 'TRIGGERED' : 'waiting'}
+      </div>
+      
       {/* Purple Fire Effect Overlay */}
       <PurpleFireEffect
         trigger={triggerPurpleFire}
