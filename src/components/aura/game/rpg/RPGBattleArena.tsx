@@ -177,6 +177,11 @@ export const RPGBattleArena = ({
   const [totalDamage, setTotalDamage] = useState(0);
   const [inventory, setInventory] = useState<Record<InventoryKey, number>>({ health_potion: 2, magic_potion: 1 });
   
+  // Track which word indices have already been counted for accuracy (to prevent double-counting)
+  // When onMiss fires, we count the miss immediately. When handleWordResult(false) fires later via "Continue",
+  // we skip the wordsRead increment if already counted.
+  const countedWordIndicesRef = useRef<Set<number>>(new Set());
+  
   // Elara-specific: 5-word charge system for plasma barrage
   const [elaraChargeCount, setElaraChargeCount] = useState(0);
   const elaraChargeRef = useRef(0); // For stable reference in callbacks
@@ -1084,6 +1089,21 @@ export const RPGBattleArena = ({
     }
   }, [phase]);
 
+  // Handle first-attempt miss (called immediately when miss is finalized, for accuracy tracking)
+  // This counts the miss toward wordsRead immediately, before user decides Try Again or Continue
+  const handleMiss = useCallback((spokenWord: string, wordIndex: number) => {
+    const globalIndex = batchStartIndex + wordIndex;
+    
+    // Only count if not already counted
+    if (!countedWordIndicesRef.current.has(globalIndex)) {
+      countedWordIndicesRef.current.add(globalIndex);
+      setWordsRead(prev => prev + 1);
+      // Reset streak on first miss (accuracy rigor)
+      setStreak(0);
+      console.log('[RPGBattle] handleMiss: Counted miss immediately', { globalIndex, spokenWord });
+    }
+  }, [batchStartIndex]);
+
   // Handle word result from RPGWordReader
   // wordIndex is 0-4 within the current batch
   const handleWordResult = useCallback((correct: boolean, spokenWord: string, wordIndex: number) => {
@@ -1103,7 +1123,12 @@ export const RPGBattleArena = ({
     // Track this word for attack display
     setLastSpokenGlobalIndex(globalIndex);
     
-    setWordsRead(prev => prev + 1);
+    // Only increment wordsRead if NOT already counted by onMiss
+    // This prevents double-counting when user clicks "Continue" after a miss
+    if (!countedWordIndicesRef.current.has(globalIndex)) {
+      countedWordIndicesRef.current.add(globalIndex);
+      setWordsRead(prev => prev + 1);
+    }
     setCurrentWordResult(correct);
 
     // Apply poison damage if poisoned
@@ -2061,6 +2086,7 @@ export const RPGBattleArena = ({
                           words={currentWordBatch}
                           onResult={handleWordResult}
                           onRetrySuccess={handleRetrySuccess}
+                          onMiss={handleMiss}
                           disabled={currentWordResult !== null || !isPlayerTurn}
                           streak={streak}
                           batchSize={5}

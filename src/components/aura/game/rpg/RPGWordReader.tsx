@@ -32,6 +32,7 @@ interface RPGWordReaderProps {
   onResult: (correct: boolean, spokenWord: string, wordIndex: number) => void;
   onBatchComplete?: (results: WordAttempt[]) => void;
   onRetrySuccess?: (wordIndex: number) => void; // Called when a retried word is read correctly (for HP healing)
+  onMiss?: (spokenWord: string, wordIndex: number) => void; // Called immediately when first attempt is incorrect (for accuracy tracking)
   disabled?: boolean;
   streak?: number;
   batchSize?: number;
@@ -99,6 +100,7 @@ export const RPGWordReader = ({
   onResult,
   onBatchComplete,
   onRetrySuccess,
+  onMiss,
   disabled = false,
   streak = 0,
   batchSize = 5,
@@ -237,11 +239,20 @@ export const RPGWordReader = ({
   // Handle correct word (first try - deals damage, gives coins)
   const handleCorrect = useCallback((spokenWord: string, wordIndex: number) => {
     if (isProcessingRef.current) return;
-    isProcessingRef.current = true;
     
     const targetWord = currentBatch[wordIndex]?.replace(/[^a-zA-Z']/g, '') || '';
     
-    // Track as correct (GREEN)
+    // SAFETY CHECK: If this is a retry attempt, redirect to handleRetrySuccess (belt-and-suspenders)
+    // This prevents any code path from accidentally marking a retry as "correct" (green)
+    if (isRetryAttemptRef.current || !canRetryRef.current) {
+      console.log('[RPGWordReader] handleCorrect redirecting to handleRetrySuccess (isRetryAttempt or !canRetry)');
+      handleRetrySuccess(spokenWord, wordIndex);
+      return;
+    }
+    
+    isProcessingRef.current = true;
+    
+    // Track as correct (GREEN) - only reaches here on genuine first-try success
     setWordResults(prev => new Map(prev).set(wordIndex, {
       word: targetWord,
       result: 'correct',
@@ -342,6 +353,10 @@ export const RPGWordReader = ({
       playCorrectPronunciation(expectedWord);
     }, 300);
     
+    // IMMEDIATELY report miss for accuracy tracking (before user decides Try Again or Continue)
+    // This ensures the miss counts toward wordsRead even if the user later succeeds on retry
+    onMiss?.(spokenWord, wordIndex);
+    
     // PAUSE - Don't auto-advance! Wait for user action
     stopRecognitionSession();
     setRecognitionState('waiting_action');
@@ -349,7 +364,7 @@ export const RPGWordReader = ({
     setShowFeedbackOverlay(true);
     
     // DO NOT call onResult yet - wait for user to choose Continue (which triggers enemy attack)
-  }, [stopRecognitionSession]);
+  }, [stopRecognitionSession, onMiss]);
 
   // Handle "Try Again" - retry the word for practice (no game rewards)
   // Note: Uses ref to avoid circular dependency with startRecognitionSession
@@ -373,6 +388,13 @@ export const RPGWordReader = ({
 
   // Handle retry success - mark as retried (YELLOW), no damage/coins, but heal HP
   const handleRetrySuccess = useCallback((spokenWord: string, wordIndex: number) => {
+    // PROCESSING GUARD: Prevent duplicate executions from rapid interim updates
+    if (isProcessingRef.current) {
+      console.log('[RPGWordReader] handleRetrySuccess - skipping (already processing)');
+      return;
+    }
+    isProcessingRef.current = true;
+    
     const targetWord = currentBatch[wordIndex]?.replace(/[^a-zA-Z']/g, '') || '';
     
     // Update to retried (YELLOW)
@@ -658,6 +680,7 @@ export const RPGWordReader = ({
             setSpokenText(transcript.toLowerCase());
             
             // FAST MODE: Process interim results for quicker matching (Elara only)
+            // CRITICAL FIX: Must respect retry state - route through proper handlers
             if (mode === 'fast' && !isProcessingRef.current) {
               const wordIdx = currentIndexRef.current;
               const targetWord = getTargetWord(wordIdx);
@@ -665,9 +688,17 @@ export const RPGWordReader = ({
                 const wordsSpoken = transcript.toLowerCase().split(/\s+/).filter(w => w.length > 0);
                 for (const word of wordsSpoken) {
                   if (isWordMatchLenient(word, targetWord)) {
-                    // Match found in interim - process immediately!
+                    // Match found in interim - process immediately, but respect retry state!
                     processedResultsRef.current.add(i);
-                    handleCorrect(word, wordIdx);
+                    
+                    // If this is a retry attempt, route to handleRetrySuccess for YELLOW result
+                    if (isRetryAttemptRef.current || !canRetryRef.current) {
+                      console.log('[RPGWordReader] FAST MODE: Routing to handleRetrySuccess (retry attempt)');
+                      handleRetrySuccess(word, wordIdx);
+                    } else {
+                      // Normal first-try success - GREEN result
+                      handleCorrect(word, wordIdx);
+                    }
                     return;
                   }
                 }
