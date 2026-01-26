@@ -379,12 +379,14 @@ export const RPGWordReader = ({
     setWordResults(prev => {
       const updated = new Map(prev);
       const existing = updated.get(wordIndex);
-      updated.set(wordIndex, {
+      const newEntry = {
         word: targetWord,
-        result: 'retried',
+        result: 'retried' as const,
         spokenAs: spokenWord,
         attempts: (existing?.attempts || 1) + 1
-      });
+      };
+      updated.set(wordIndex, newEntry);
+      console.log('[RPGWordReader] SET RETRIED (YELLOW):', { wordIndex, targetWord, newEntry });
       return updated;
     });
     
@@ -854,6 +856,10 @@ export const RPGWordReader = ({
           let colorClass = 'bg-slate-700/60 text-slate-400'; // Grey - pending
           let icon = null;
           
+          // Completed words (correct/retried/missed) ALWAYS show their result color
+          // Active word shows blue ONLY if it has no result yet
+          const hasResult = wordResult?.result && wordResult.result !== 'pending';
+          
           if (wordResult?.result === 'correct') {
             colorClass = 'bg-emerald-500/60 text-emerald-100'; // Green - first try success
             icon = <Check className="h-3.5 w-3.5" />;
@@ -863,24 +869,24 @@ export const RPGWordReader = ({
           } else if (wordResult?.result === 'missed') {
             colorClass = 'bg-red-500/60 text-red-100'; // Red - missed/skipped
             icon = <X className="h-3.5 w-3.5" />;
-          }
-          
-          // Active word overrides other styles
-          if (isActiveWord) {
+          } else if (isActiveWord) {
+            // Active word shows blue ONLY if no result yet
             colorClass = 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white scale-110 shadow-lg shadow-blue-500/40';
             icon = null;
           }
+          
+          const shouldPulse = isActiveWord && !hasResult;
           
           return (
             <motion.div
               key={`${word}-${index}`}
               className={`px-4 py-2 rounded-lg font-medium transition-all ${colorClass}`}
-              animate={isActiveWord ? { scale: [1.1, 1.15, 1.1] } : {}}
-              transition={{ repeat: isActiveWord ? Infinity : 0, duration: 1.2 }}
+              animate={shouldPulse ? { scale: [1.1, 1.15, 1.1] } : {}}
+              transition={{ repeat: shouldPulse ? Infinity : 0, duration: 1.2 }}
             >
               <div className="flex items-center gap-1.5">
                 {icon}
-                <span className={isActiveWord ? 'text-lg' : 'text-sm'}>{clean}</span>
+                <span className={shouldPulse ? 'text-lg' : 'text-sm'}>{clean}</span>
               </div>
             </motion.div>
           );
