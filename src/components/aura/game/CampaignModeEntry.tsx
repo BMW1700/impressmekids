@@ -270,7 +270,8 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
                 </div>
                 
                 {/* Admin Settings Button */}
-                {isAdmin && (
+                {/* TODO: TEMPORARY - Remove true || to restore admin-only edit controls */}
+                {(true || isAdmin) && (
                   <div className="absolute top-4 right-4">
                     <CampaignAssetUploader isAdmin={true} />
                   </div>

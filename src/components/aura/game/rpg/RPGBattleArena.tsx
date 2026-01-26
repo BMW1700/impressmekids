@@ -38,7 +38,7 @@ import { RPGWordEcho } from "./RPGWordEcho";
 import { RPGWindChase } from "./RPGWindChase";
 import { RPGInkSplash } from "./RPGInkSplash";
 import { RPGCrystalPrison } from "./RPGCrystalPrison";
-import { RPGThunderStrike } from "./RPGThunderStrike";
+import { RPGLightningStorm } from "./RPGLightningStorm";
 import { RPGVoidPull } from "./RPGVoidPull";
 import { RPGGroundRipple } from "./RPGGroundRipple";
 import { RPGWebTrap } from "./RPGWebTrap";
@@ -63,16 +63,13 @@ import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { speechManager } from "@/lib/speechRecognitionManager";
 import { supabase } from "@/integrations/supabase/client";
 import { useMLIntegration } from "@/hooks/useMLIntegration";
-// Quiz removed - was blocking victory screen
-import { VocabularyTracker, isPowerWord } from "./VocabularyTracker";
 
 // Sound effects singleton
 const battleSounds = new SoundEffects();
 
 type EnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'goblin_shaman';
 // UPDATED: Added goblin_horde for Classic mode mini-game + quick_block for enemy attacks
-// REPLACED: lightning_storm with thunder_strike (stable implementation)
-type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'word_shield' | 'spell_combo' | 'dodge_words' | 'rhyme_chain' | 'speed_typist' | 'tug_of_war' | 'balloon_battle' | 'goblin_horde' | 'fireball_defense' | 'quick_block' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat' | 'word_echo' | 'wind_chase' | 'ink_splash' | 'crystal_prison' | 'thunder_strike' | 'void_pull' | 'ground_ripple' | 'web_trap';
+type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'word_shield' | 'spell_combo' | 'dodge_words' | 'rhyme_chain' | 'speed_typist' | 'tug_of_war' | 'balloon_battle' | 'goblin_horde' | 'fireball_defense' | 'quick_block' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat' | 'word_echo' | 'wind_chase' | 'ink_splash' | 'crystal_prison' | 'lightning_storm' | 'void_pull' | 'ground_ripple' | 'web_trap';
 type InventoryKey = 'health_potion' | 'magic_potion';
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
 
@@ -173,13 +170,10 @@ export const RPGBattleArena = ({
   const [playerHp, setPlayerHp] = useState(heroKnight.maxHp);
   const [wizardMp, setWizardMp] = useState(50);
   const [enemyHp, setEnemyHp] = useState(enemy.maxHp);
-  const enemyHpRef = useRef(enemy.maxHp); // Ref for stable victory check
-  const victoryTriggeredRef = useRef(false); // Prevents duplicate victory triggers
   const [streak, setStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
   const [wordsRead, setWordsRead] = useState(0);
   const [correctWords, setCorrectWords] = useState(0);
-  const [retriedWords, setRetriedWords] = useState(0); // NEW: Track retried (yellow) words for accurate accuracy
   const [totalDamage, setTotalDamage] = useState(0);
   const [inventory, setInventory] = useState<Record<InventoryKey, number>>({ health_potion: 2, magic_potion: 1 });
   
@@ -230,10 +224,6 @@ export const RPGBattleArena = ({
   const [comboAnnouncement, setComboAnnouncement] = useState<string | null>(null);
   const [comboPowerLevel, setComboPowerLevel] = useState<'normal' | 'power' | 'mega' | 'ultra'>('normal');
   
-  // Vocabulary tracker states (quiz removed)
-  const [collectedPowerWords, setCollectedPowerWords] = useState<string[]>([]);
-  const [powerWordsSaved, setPowerWordsSaved] = useState(false);
-  
   // Floating damage numbers
   const [floatingDamages, setFloatingDamages] = useState<{id: number; damage: number; x: number; y: number; isPlayer: boolean; isCritical?: boolean}[]>([]);
   
@@ -248,71 +238,25 @@ export const RPGBattleArena = ({
   // Helper function to check if this is the final enemy
   const isFinalEnemy = useMemo(() => currentEnemyIndex >= enemyQueue.length - 1, [currentEnemyIndex, enemyQueue.length]);
   
-  // Ref to track pending returnToReading timeout - allows cancellation if victory triggers
-  const returnToReadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Centralized enemy defeat handler - idempotent and ref-based with victory lock
-  // FIXED: Now allows re-entry if phase='victory' but ref wasn't set (word-completion path)
-  const triggerEnemyDefeat = useCallback((reason: string) => {
-    const currentHp = enemyHpRef.current;
-    console.log('[RPGBattle] triggerEnemyDefeat called:', { reason, currentHp, phase, isFinalEnemy, alreadyTriggered: victoryTriggeredRef.current });
-    
-    // Skip if not actually dead
-    if (currentHp > 0) {
-      console.log('[RPGBattle] triggerEnemyDefeat: HP > 0, skipping');
-      return;
-    }
-    
-    // Skip ONLY if already in a terminal phase AND we've already transitioned the UI
-    if ((phase === 'victory' || phase === 'defeat' || phase === 'enemy_transition') && victoryTriggeredRef.current) {
-      console.log('[RPGBattle] triggerEnemyDefeat: Already in terminal phase with UI transitioned, skipping');
-      return;
-    }
-    
-    // ALLOW re-entry if phase is victory but ref is false (word-completion set phase but not ref)
-    if (phase === 'victory' && !victoryTriggeredRef.current) {
-      console.log('[RPGBattle] 🔄 Re-syncing victory state after word completion');
-    }
-    
-    // LOCK: Mark victory as triggered NOW
-    victoryTriggeredRef.current = true;
-    console.log('[RPGBattle] 🎉 VICTORY LOCK ACQUIRED - transitioning now');
-    
-    // Cancel any pending returnToReading timeout
-    if (returnToReadingTimeoutRef.current) {
-      clearTimeout(returnToReadingTimeoutRef.current);
-      returnToReadingTimeoutRef.current = null;
-      console.log('[RPGBattle] Cancelled pending returnToReading timeout');
-    }
-    
-    // Trigger appropriate transition
-    if (isFinalEnemy) {
-      console.log('[RPGBattle] ENEMY_DEFEATED - Final enemy, triggering victory');
-      // Visual gold flash on victory
-      document.body.style.transition = 'background 0.15s';
-      document.body.style.background = 'linear-gradient(to bottom, #fbbf24, #f59e0b)';
-      setTimeout(() => { document.body.style.background = ''; }, 200);
-      setPhase('victory');
-    } else {
-      console.log('[RPGBattle] ENEMY_DEFEATED - Transitioning to next enemy');
-      setDefeatedEnemy(enemy);
-      setPhase('enemy_transition');
-    }
-  }, [phase, isFinalEnemy, enemy]);
-  
   // Helper function to return to reading state cleanly after any mini-game/barrage
-  // CRITICAL: Uses refs to avoid stale closures, guards against stomping victory
+  // CRITICAL: Also checks for victory condition
   const returnToReading = useCallback(() => {
-    const currentHp = enemyHpRef.current;
-    console.log('[RPGBattle] returnToReading called, enemyHpRef:', currentHp, 'isFinalEnemy:', isFinalEnemy, 'phase:', phase);
-    
+    console.log('[RPGBattle] Returning to reading state, enemyHp:', enemyHp, 'isFinalEnemy:', isFinalEnemy);
     // Force stop any lingering recognition
     speechManager.forceStop();
     
-    // Check if we should trigger victory instead (using ref!)
-    if (currentHp <= 0) {
-      console.log('[RPGBattle] returnToReading: Enemy dead (ref check), calling triggerEnemyDefeat');
-      triggerEnemyDefeat('returnToReading_immediate');
+    // Check if we should trigger victory instead
+    if (enemyHp <= 0 && isFinalEnemy) {
+      console.log('[RPGBattle] Enemy defeated during mini-game - triggering victory');
+      setPhase('victory');
+      return;
+    }
+    
+    // Check if we should transition to next enemy
+    if (enemyHp <= 0 && !isFinalEnemy) {
+      console.log('[RPGBattle] Enemy defeated - transitioning to next enemy');
+      setDefeatedEnemy(enemy);
+      setPhase('enemy_transition');
       return;
     }
     
@@ -320,59 +264,14 @@ export const RPGBattleArena = ({
     setCurrentWordResult(null);
     setEnemyAbilityMessage(null);
     
-    // Clear any existing timeout first
-    if (returnToReadingTimeoutRef.current) {
-      clearTimeout(returnToReadingTimeoutRef.current);
-    }
-    
-    // Small delay to ensure cleanup completes - but with guard inside
-    returnToReadingTimeoutRef.current = setTimeout(() => {
-      returnToReadingTimeoutRef.current = null;
-      
-      // RE-CHECK HP inside timeout (critical guard against race condition)
-      const hpInsideTimeout = enemyHpRef.current;
-      if (hpInsideTimeout <= 0) {
-        console.log('[RPGBattle] returnToReading timeout: HP dropped to 0 during delay, triggering defeat');
-        triggerEnemyDefeat('returnToReading_timeout_guard');
-        return;
-      }
-      
-      // Also check if phase is already terminal
-      // Note: We can't access latest phase here due to closure, so we skip to reading
-      // The failsafe interval will catch any missed transitions
+    // Small delay to ensure cleanup completes
+    setTimeout(() => {
       setPhase('reading');
       setCurrentCommand('read');
       setIsPlayerTurn(true);
       console.log('[RPGBattle] State reset complete - phase: reading, command: read');
     }, 100);
-  }, [isFinalEnemy, phase, triggerEnemyDefeat]);
-
-  // Keep enemyHpRef in sync for stable victory check
-  useEffect(() => {
-    enemyHpRef.current = enemyHp;
-  }, [enemyHp]);
-
-  // FAILSAFE: Force victory/transition when enemy HP = 0 but phase didn't transition
-  // This ensures the victory popup ALWAYS appears even if state transitions fail
-  // Uses ref to avoid stale closure issues
-  // FAILSAFE: Check every 500ms if enemy should be dead but transition didn't happen
-  useEffect(() => {
-    const victoryCheck = setInterval(() => {
-      const currentHp = enemyHpRef.current;
-      const alreadyTriggered = victoryTriggeredRef.current;
-      
-      // EXPANDED: Also catch "phase=victory but ref not set" stuck state
-      if (currentHp <= 0 && (
-          (!alreadyTriggered && phase !== 'victory' && phase !== 'defeat' && phase !== 'enemy_transition') ||
-          (phase === 'victory' && !alreadyTriggered)
-      )) {
-        console.log('[RPGBattle] 🚨 FAILSAFE TRIGGERED:', { hp: currentHp, phase, triggered: alreadyTriggered });
-        triggerEnemyDefeat('failsafe_interval');
-      }
-    }, 500);
-    
-    return () => clearInterval(victoryCheck);
-  }, [phase, triggerEnemyDefeat]);
+  }, [enemyHp, isFinalEnemy, enemy]);
 
   // Parse story into words - memoized for stability
   const storyWords = useMemo(() => {
@@ -384,19 +283,6 @@ export const RPGBattleArena = ({
   useEffect(() => {
     setWords(storyWords);
   }, [storyWords]);
-  
-  // Extract Power Words (6+ letters) from story for vocabulary collection
-  useEffect(() => {
-    if (story?.passage_text) {
-      const words = story.passage_text.split(/\s+/);
-      const powerWords = words
-        .map(w => w.replace(/[^a-zA-Z]/g, ''))
-        .filter(w => isPowerWord(w));
-      const uniquePowerWords = [...new Set(powerWords)];
-      setCollectedPowerWords(uniquePowerWords);
-      console.log('[RPGBattle] Collected Power Words:', uniquePowerWords.length);
-    }
-  }, [story?.passage_text]);
 
   // Handle non-classic battle modes - skip intro and go directly to the selected mode
   useEffect(() => {
@@ -468,7 +354,7 @@ export const RPGBattleArena = ({
       'wind_chase': `💨 WIND CHASE! Catch the words! 💨`,
       'ink_splash': `🦑 INK SPLASH! Read through the ink! 🦑`,
       'crystal_prison': `❄️ CRYSTAL PRISON! Break the ice! ❄️`,
-      'thunder_strike': `⚡ THUNDER STRIKE! Discharge the clouds! ⚡`,
+      'lightning_storm': `⚡ LIGHTNING STORM! Speak FAST! ⚡`,
       'void_pull': `🕳️ VOID PULL! Save words from the void! 🕳️`,
     };
     
@@ -504,7 +390,7 @@ export const RPGBattleArena = ({
         'wind_chase': 'wind_chase',
         'ink_splash': 'ink_splash',
         'crystal_prison': 'crystal_prison',
-        'thunder_strike': 'thunder_strike',
+        'lightning_storm': 'lightning_storm',
         'void_pull': 'void_pull',
       };
       setPhase(phaseMap[gameType]);
@@ -622,11 +508,7 @@ export const RPGBattleArena = ({
     }
     const bonusDamage = blocked * 10;
     if (bonusDamage > 0) {
-      setEnemyHp(prev => {
-        const newHp = Math.max(0, prev - bonusDamage);
-        enemyHpRef.current = newHp; // CRITICAL: Sync ref immediately
-        return newHp;
-      });
+      setEnemyHp(prev => Math.max(0, prev - bonusDamage));
       setTotalDamage(prev => prev + bonusDamage);
     }
     setCorrectWords(prev => prev + blocked);
@@ -647,11 +529,7 @@ export const RPGBattleArena = ({
       setPlayerHp(prev => Math.max(0, prev - reducedDamage));
     }
     if (shieldStrength > 50) {
-      setEnemyHp(prev => {
-        const newHp = Math.max(0, prev - damage);
-        enemyHpRef.current = newHp;
-        return newHp;
-      });
+      setEnemyHp(prev => Math.max(0, prev - damage));
       setTotalDamage(prev => prev + damage);
     }
     setBatchStartIndex(prev => prev + barrageWords.length);
@@ -665,11 +543,7 @@ export const RPGBattleArena = ({
       battleSounds.comboSuccess();
       battleSounds.magicSparkle();
       const damage = Math.floor(50 * multiplier);
-      setEnemyHp(prev => {
-        const newHp = Math.max(0, prev - damage);
-        enemyHpRef.current = newHp;
-        return newHp;
-      });
+      setEnemyHp(prev => Math.max(0, prev - damage));
       setTotalDamage(prev => prev + damage);
       setCorrectWords(prev => prev + barrageWords.length);
     }
@@ -681,11 +555,7 @@ export const RPGBattleArena = ({
   const handleDodgeWordsComplete = useCallback((correctHits: number, wrongHits: number, dodged: number) => {
     console.log('[RPGBattle] Dodge Words complete:', { correctHits, wrongHits, dodged });
     const damage = correctHits * 15;
-    setEnemyHp(prev => {
-      const newHp = Math.max(0, prev - damage);
-      enemyHpRef.current = newHp;
-      return newHp;
-    });
+    setEnemyHp(prev => Math.max(0, prev - damage));
     setTotalDamage(prev => prev + damage);
     setCorrectWords(prev => prev + correctHits);
     returnToReading();
@@ -698,11 +568,7 @@ export const RPGBattleArena = ({
     console.log('[RPGBattle] Rhyme Chain complete:', { score, damage });
     if (damage > 0) {
       battleSounds.magicSparkle();
-      setEnemyHp(prev => {
-        const newHp = Math.max(0, prev - damage);
-        enemyHpRef.current = newHp;
-        return newHp;
-      });
+      setEnemyHp(prev => Math.max(0, prev - damage));
       setTotalDamage(prev => prev + damage);
     }
     setCorrectWords(prev => prev + score);
@@ -715,11 +581,7 @@ export const RPGBattleArena = ({
     console.log('[RPGBattle] Speed Typist complete:', { wordsSpoken, damage });
     if (damage > 0) {
       battleSounds.lightningCrack();
-      setEnemyHp(prev => {
-        const newHp = Math.max(0, prev - damage);
-        enemyHpRef.current = newHp;
-        return newHp;
-      });
+      setEnemyHp(prev => Math.max(0, prev - damage));
       setTotalDamage(prev => prev + damage);
     }
     setCorrectWords(prev => prev + wordsSpoken);
@@ -747,11 +609,7 @@ export const RPGBattleArena = ({
     if (victory) {
       const bonusDamage = Math.floor(stats.correctWords * 5);
       battleSounds.celebrationSound();
-      setEnemyHp(prev => {
-        const newHp = Math.max(0, prev - bonusDamage);
-        enemyHpRef.current = newHp;
-        return newHp;
-      });
+      setEnemyHp(prev => Math.max(0, prev - bonusDamage));
       setTotalDamage(prev => prev + bonusDamage);
     } else {
       setPlayerHp(prev => Math.max(0, prev - 20));
@@ -780,11 +638,7 @@ export const RPGBattleArena = ({
     if (victory) {
       const bonusDamage = Math.floor(stats.correctWords * 3) + (stats.balloonsLost === 0 ? 50 : 0);
       battleSounds.celebrationSound();
-      setEnemyHp(prev => {
-        const newHp = Math.max(0, prev - bonusDamage);
-        enemyHpRef.current = newHp;
-        return newHp;
-      });
+      setEnemyHp(prev => Math.max(0, prev - bonusDamage));
       setTotalDamage(prev => prev + bonusDamage);
     } else {
       setPlayerHp(prev => Math.max(0, prev - 30));
@@ -799,11 +653,7 @@ export const RPGBattleArena = ({
     const bonusDamage = result.wordsSpoken * 8;
     if (bonusDamage > 0) {
       battleSounds.celebrationSound();
-      setEnemyHp(prev => {
-        const newHp = Math.max(0, prev - bonusDamage);
-        enemyHpRef.current = newHp;
-        return newHp;
-      });
+      setEnemyHp(prev => Math.max(0, prev - bonusDamage));
       setTotalDamage(prev => prev + bonusDamage);
     }
     setCorrectWords(prev => prev + result.wordsSpoken);
@@ -817,11 +667,7 @@ export const RPGBattleArena = ({
     const bonusDamage = destroyed * 12;
     if (bonusDamage > 0) {
       battleSounds.celebrationSound();
-      setEnemyHp(prev => {
-        const newHp = Math.max(0, prev - bonusDamage);
-        enemyHpRef.current = newHp;
-        return newHp;
-      });
+      setEnemyHp(prev => Math.max(0, prev - bonusDamage));
       setTotalDamage(prev => prev + bonusDamage);
     }
     if (missed > 0) {
@@ -838,11 +684,7 @@ export const RPGBattleArena = ({
     const bonusDamage = wordsFreed * 10;
     if (bonusDamage > 0) {
       battleSounds.celebrationSound();
-      setEnemyHp(prev => {
-        const newHp = Math.max(0, prev - bonusDamage);
-        enemyHpRef.current = newHp;
-        return newHp;
-      });
+      setEnemyHp(prev => Math.max(0, prev - bonusDamage));
       setTotalDamage(prev => prev + bonusDamage);
     }
     if (damage > 0) {
@@ -866,11 +708,7 @@ export const RPGBattleArena = ({
       damageTaken = 0;
       if (counterDamage > 0) {
         battleSounds.comboSuccess();
-        setEnemyHp(prev => {
-          const newHp = Math.max(0, prev - counterDamage);
-          enemyHpRef.current = newHp;
-          return newHp;
-        });
+        setEnemyHp(prev => Math.max(0, prev - counterDamage));
         setTotalDamage(prev => prev + counterDamage);
       }
     } else if (blocked >= 2) {
@@ -1132,11 +970,7 @@ export const RPGBattleArena = ({
         setIsDebuffed(false); // Clear any debuffs on player as bonus
       }
       
-      setEnemyHp(prev => {
-        const newHp = Math.max(0, prev - finalDamage);
-        enemyHpRef.current = newHp;
-        return newHp;
-      });
+      setEnemyHp(prev => Math.max(0, prev - finalDamage));
       setTotalDamage(prev => prev + finalDamage);
       triggerScreenShake();
       
@@ -1386,11 +1220,7 @@ export const RPGBattleArena = ({
           setHeroAttacking(false);
           setEnemyTakingDamage(true);
           setShowDamageNumber(true);
-          setEnemyHp(prev => {
-            const newHp = Math.max(0, prev - actualDamage);
-            enemyHpRef.current = newHp;
-            return newHp;
-          });
+          setEnemyHp(prev => Math.max(0, prev - actualDamage));
           triggerScreenShake();
           
           // Add floating damage for big hits
@@ -1463,28 +1293,6 @@ export const RPGBattleArena = ({
     }, 800);
   }, [streak, longestStreak, words, batchStartIndex, enemy, calculateDamage, isPoisoned, poisonDamage, isDebuffed, debuffTurns, attackType, selectedCharacter]);
   
-  // Handle retried word (yellow) - counts as word read but NOT correct for accuracy
-  // NEW: Give back 1/4 of the HP that would have been lost
-  const handleRetriedWord = useCallback((wordIndex: number) => {
-    // Increment wordsRead (for total count)
-    setWordsRead(prev => prev + 1);
-    // Increment retriedWords (for accurate accuracy calculation)
-    setRetriedWords(prev => prev + 1);
-    // Reset streak since they needed a retry
-    setStreak(0);
-    
-    // Give back 1/4 of the damage that would have been dealt
-    // Enemy attack damage on miss is: Math.floor(enemy.attack * 0.5)
-    // So recovery is 1/4 of that = enemy.attack * 0.5 * 0.25 = enemy.attack * 0.125
-    const recoveryAmount = Math.floor(enemy.attack * 0.125);
-    if (recoveryAmount > 0) {
-      setPlayerHp(prev => Math.min(100, prev + recoveryAmount));
-      console.log('[RPGBattle] Word retried successfully - recovered HP:', recoveryAmount);
-    }
-    
-    console.log('[RPGBattle] Word retried:', { wordIndex, recoveryAmount });
-  }, [enemy.attack]);
-  
   // Handle coin collection complete
   const handleCoinCollectionComplete = useCallback(() => {
     setGoldEarned(prev => prev + pendingGold);
@@ -1500,34 +1308,28 @@ export const RPGBattleArena = ({
     setActiveSpell(null);
   }, []);
 
-  // Check for PLAYER DEFEAT only - enemy defeat is handled by failsafe + triggerEnemyDefeat
+  // Check for phase transitions - handle multi-enemy
   useEffect(() => {
-    if (playerHp <= 0 && phase !== 'defeat') {
+    if (enemyHp <= 0 && phase !== 'victory' && phase !== 'enemy_transition') {
+      // Check if there are more enemies
+      if (currentEnemyIndex < enemyQueue.length - 1) {
+        // Transition to next enemy
+        setDefeatedEnemy(enemy);
+        setPhase('enemy_transition');
+      } else {
+        setPhase('victory');
+      }
+    } else if (playerHp <= 0 && phase !== 'defeat') {
       setPhase('defeat');
     }
-  }, [playerHp, phase]);
-  
-  // Quiz handlers removed - quiz was blocking victory screen
-  
-  // Handle vocabulary words saved
-  const handlePowerWordsSaved = useCallback(() => {
-    console.log('[RPGBattle] Power words saved to vocabulary');
-    setPowerWordsSaved(true);
-  }, []);
+  }, [enemyHp, playerHp, phase, currentEnemyIndex, enemyQueue.length, enemy]);
 
   // Handle enemy transition complete
   const handleTransitionComplete = useCallback(() => {
-    // CRITICAL: Reset victory lock for next enemy
-    victoryTriggeredRef.current = false;
-    
     const nextIndex = currentEnemyIndex + 1;
     setCurrentEnemyIndex(nextIndex);
     const nextEnemy = getEnemyForBattle(enemyQueue[nextIndex]);
-    
-    // Reset enemy HP and sync ref
     setEnemyHp(nextEnemy.maxHp);
-    enemyHpRef.current = nextEnemy.maxHp;
-    
     // Reset random mini-game triggers for the new enemy
     setTriggeredMiniGames(new Set());
     setTriggeredThresholds(new Set()); // Reset HP-based thresholds for new enemy
@@ -1694,23 +1496,26 @@ export const RPGBattleArena = ({
   // Calculate accuracy for victory check
   const currentAccuracy = wordsRead > 0 ? (correctWords / wordsRead) : 0;
   
-  // SECONDARY VICTORY CONDITION: All words read with 80%+ accuracy
-  // Enemy HP victory is handled by failsafe + triggerEnemyDefeat
-  // FIXED: Do NOT set victoryTriggeredRef here - let HP-based victory run if needed
+  // VICTORY CONDITIONS:
+  // 1. Enemy HP reaches 0 at any point = Victory
+  // 2. All words read + accuracy >= 80% = Victory (regardless of enemy HP)
   useEffect(() => {
     // Don't override terminal states
     if (phase === 'victory' || phase === 'defeat' || phase === 'enemy_transition') return;
     
-    // Check victory by completing all words with 80%+ accuracy
+    // Check victory by enemy death - from ANY phase
+    if (enemyHp <= 0) {
+      console.log('[RPGBattle] ✅ Enemy HP = 0 - VICTORY!');
+      setPhase(isFinalEnemy ? 'victory' : 'enemy_transition');
+      return;
+    }
+    
+    // Check victory by completing all words with 80%+ accuracy - from ANY non-mini-game phase
     if (allWordsRead && currentAccuracy >= 0.8) {
       console.log('[RPGBattle] ✅ All words read with 80%+ accuracy - VICTORY!', { accuracy: currentAccuracy });
-      // Visual gold flash on victory
-      document.body.style.transition = 'background 0.15s';
-      document.body.style.background = 'linear-gradient(to bottom, #fbbf24, #f59e0b)';
-      setTimeout(() => { document.body.style.background = ''; }, 200);
       setPhase('victory');
     }
-  }, [allWordsRead, currentAccuracy, phase]);
+  }, [allWordsRead, currentAccuracy, phase, enemyHp, isFinalEnemy]);
 
   // If character select is shown for Classic mode, render it instead of battle
   if (showCharacterSelect && battleMode === 'classic') {
@@ -1720,43 +1525,352 @@ export const RPGBattleArena = ({
   }
 
   return (
-    <motion.div
-      className={`fixed inset-0 bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900 overflow-hidden ${screenShake ? 'animate-shake' : ''}`}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+    <motion.div 
+      className="fixed inset-0 z-50 overflow-hidden"
+      animate={screenShake ? { x: [-5, 5, -5, 5, 0] } : {}}
+      transition={{ duration: 0.3 }}
     >
-      <RPGBattleBackground worldNumber={worldNumber} />
+      {/* Battle Background */}
+      <RPGBattleBackground enemyType={currentEnemyType} worldNumber={worldNumber} />
 
-      {/* Header */}
-      <div className="relative z-10 flex flex-col h-full">
-        <div className="flex items-center justify-between px-4 py-3 bg-black/40 backdrop-blur-sm">
-          <Button
-            variant="ghost"
-            size="sm"
+      {/* Enemy Transition Overlay */}
+      <RPGEnemyTransition
+        isActive={phase === 'enemy_transition'}
+        defeatedEnemy={defeatedEnemy}
+        nextEnemy={currentEnemyIndex < enemyQueue.length - 1 ? getEnemyForBattle(enemyQueue[currentEnemyIndex + 1]) : null}
+        onTransitionComplete={handleTransitionComplete}
+      />
+
+      {/* Spell Effects Overlay */}
+      <RPGSpellEffects
+        spellType={activeSpell}
+        isActive={showSpellEffect}
+        onComplete={handleSpellComplete}
+      />
+      
+      {/* Coin Drop Animation */}
+      {showCoinDrop && (
+        <RPGCoinDrop
+          goldAmount={pendingGold}
+          xpAmount={pendingXp}
+          onCollectionComplete={handleCoinCollectionComplete}
+        />
+      )}
+      
+      {/* Gold/XP Display */}
+      <div className="absolute top-20 left-4 z-30 flex flex-col gap-2">
+        <div className="flex items-center gap-2 bg-amber-900/80 px-3 py-1.5 rounded-lg border border-amber-500">
+          <Coins className="h-4 w-4 text-amber-300" />
+          <span className="text-amber-300 text-sm font-bold">{goldEarned}</span>
+        </div>
+        <div className="flex items-center gap-2 bg-blue-900/80 px-3 py-1.5 rounded-lg border border-blue-500">
+          <Star className="h-4 w-4 text-blue-300" />
+          <span className="text-blue-300 text-sm font-bold">{xpEarned} XP</span>
+        </div>
+      </div>
+
+      {/* Word Barrage Overlay */}
+      <AnimatePresence>
+        {phase === 'barrage' && (
+          <RPGWordBarrage
+            words={barrageWords}
+            onComplete={handleBarrageComplete}
+            onWordHit={handleBarrageWordHit}
+          />
+        )}
+        {phase === 'fireball_barrage' && (
+          <RPGFireballBarrage
+            words={barrageWords}
+            onComplete={handleBarrageComplete}
+            onWordHit={handleBarrageWordHit}
+          />
+        )}
+        {phase === 'asteroid_barrage' && (
+          <RPGAsteroidBarrage
+            words={barrageWords}
+            onComplete={handleBarrageComplete}
+            onWordHit={handleBarrageWordHit}
+          />
+        )}
+        {phase === 'beast_swarm' && (
+          <RPGBeastSwarm
+            words={barrageWords}
+            onComplete={handleBarrageComplete}
+            onWordHit={handleBarrageWordHit}
+          />
+        )}
+        {phase === 'ice_crystal_barrage' && (
+          <RPGIceCrystalBarrage
+            words={barrageWords}
+            onComplete={handleBarrageComplete}
+            onWordHit={handleBarrageWordHit}
+          />
+        )}
+        {phase === 'ghostly_whispers' && (
+          <RPGGhostlyWhispers
+            words={barrageWords}
+            onComplete={handleBarrageComplete}
+            onWordHit={handleBarrageWordHit}
+          />
+        )}
+        {phase === 'rolling_boulders' && (
+          <RPGRollingBoulders
+            words={barrageWords}
+            onComplete={handleBarrageComplete}
+            onWordHit={handleBarrageWordHit}
+          />
+        )}
+        {/* NEW MINI-GAMES */}
+        {phase === 'word_shield' && (
+          <RPGWordShield
+            words={barrageWords}
+            onComplete={handleWordShieldComplete}
+          />
+        )}
+        {phase === 'spell_combo' && (
+          <RPGSpellCombo
+            words={barrageWords}
+            onComplete={handleSpellComboComplete}
+          />
+        )}
+        {/* REPLACED: Word Blitz was causing crashes - now using Word Shield */}
+        {phase === 'dodge_words' && (
+          <RPGWordShield
+            words={barrageWords}
+            onComplete={(shieldStrength, damage) => {
+              // Similar handling to word shield
+              const reducedDamage = Math.floor(20 * (1 - shieldStrength / 100));
+              if (reducedDamage > 0) {
+                setPlayerHp(prev => Math.max(0, prev - reducedDamage));
+              }
+              if (shieldStrength > 50) {
+                setEnemyHp(prev => Math.max(0, prev - damage));
+                setTotalDamage(prev => prev + damage);
+              }
+              setCorrectWords(prev => prev + Math.floor(shieldStrength / 20));
+              setBatchStartIndex(prev => prev + barrageWords.length);
+              returnToReading();
+            }}
+          />
+        )}
+        {phase === 'rhyme_chain' && (
+          <RPGRhymeChain
+            words={barrageWords}
+            onComplete={handleRhymeChainComplete}
+            onDamage={handleMiniGameDamage}
+          />
+        )}
+        {phase === 'speed_typist' && (
+          <RPGSpeedTypist
+            words={barrageWords}
+            onComplete={handleSpeedTypistComplete}
+            onDamage={handleMiniGameDamage}
+          />
+        )}
+        {phase === 'tug_of_war' && (
+          <RPGTugOfWar
+            words={barrageWords}
+            heroName={playerCharacter.name}
+            enemyName={enemy.name}
+            onComplete={handleTugOfWarComplete}
+            onExit={onBack}
+          />
+        )}
+        {phase === 'goblin_horde' && (
+          <RPGGoblinHorde
+            words={barrageWords}
+            enemyName={enemy.name}
+            onComplete={handleGoblinHordeComplete}
+          />
+        )}
+        {phase === 'balloon_battle' && battleMode === 'balloon' && (
+          <RPGBalloonBattle
+            words={barrageWords}
+            heroName={playerCharacter.name}
+            enemyName={enemy.name}
+            studentId={studentId}
+            storyTitle={story.title}
+            onComplete={handleBalloonBattleComplete}
+          />
+        )}
+        {phase === 'fireball_defense' && (
+          <RPGFireballDefense
+            words={barrageWords}
+            onComplete={handleFireballDefenseComplete}
+          />
+        )}
+        {/* Quick Block for random enemy attacks */}
+        {phase === 'quick_block' && (
+          <RPGQuickBlock
+            words={quickBlockWords}
+            onComplete={handleQuickBlockComplete}
+          />
+        )}
+        {/* NEW 6 MINI-GAMES */}
+        {phase === 'word_echo' && (
+          <RPGWordEcho
+            words={barrageWords}
+            onComplete={(completed, failed) => {
+              setCorrectWords(prev => prev + completed);
+              setTotalDamage(prev => prev + completed * 12);
+              setEnemyHp(prev => Math.max(0, prev - completed * 12));
+              setBatchStartIndex(prev => prev + barrageWords.length);
+              returnToReading();
+            }}
+            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
+          />
+        )}
+        {phase === 'wind_chase' && (
+          <RPGWindChase
+            words={barrageWords}
+            onComplete={(caught, missed) => {
+              setCorrectWords(prev => prev + caught);
+              setTotalDamage(prev => prev + caught * 10);
+              setEnemyHp(prev => Math.max(0, prev - caught * 10));
+              setBatchStartIndex(prev => prev + barrageWords.length);
+              returnToReading();
+            }}
+            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
+          />
+        )}
+        {phase === 'ink_splash' && (
+          <RPGInkSplash
+            words={barrageWords}
+            onComplete={(revealed, failed) => {
+              setCorrectWords(prev => prev + revealed);
+              setTotalDamage(prev => prev + revealed * 15);
+              setEnemyHp(prev => Math.max(0, prev - revealed * 15));
+              setBatchStartIndex(prev => prev + barrageWords.length);
+              returnToReading();
+            }}
+            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
+          />
+        )}
+        {phase === 'crystal_prison' && (
+          <RPGCrystalPrison
+            words={barrageWords}
+            onComplete={(freed, frozen) => {
+              setCorrectWords(prev => prev + freed);
+              setTotalDamage(prev => prev + freed * 14);
+              setEnemyHp(prev => Math.max(0, prev - freed * 14));
+              setBatchStartIndex(prev => prev + barrageWords.length);
+              returnToReading();
+            }}
+            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
+          />
+        )}
+        {phase === 'lightning_storm' && (
+          <RPGLightningStorm
+            words={barrageWords}
+            onComplete={(struck, missed) => {
+              setCorrectWords(prev => prev + struck);
+              setTotalDamage(prev => prev + struck * 12);
+              setEnemyHp(prev => Math.max(0, prev - struck * 12));
+              setBatchStartIndex(prev => prev + barrageWords.length);
+              returnToReading();
+            }}
+            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
+          />
+        )}
+        {phase === 'void_pull' && (
+          <RPGVoidPull
+            words={barrageWords}
+            onComplete={(saved, consumed) => {
+              setCorrectWords(prev => prev + saved);
+              setTotalDamage(prev => prev + saved * 16);
+              setEnemyHp(prev => Math.max(0, prev - saved * 16));
+              setBatchStartIndex(prev => prev + barrageWords.length);
+              returnToReading();
+            }}
+            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
+          />
+        )}
+        {/* GROG'S SIGNATURE: Ground Ripple - word mountains roll toward heroes */}
+        {phase === 'ground_ripple' && (
+          <RPGGroundRipple
+            words={barrageWords}
+            onComplete={handleGroundRippleComplete}
+            onWordHit={handleMiniGameDamage}
+          />
+        )}
+        {/* CRYSTAL SPIDER'S SIGNATURE: Web Trap - speak words to free them */}
+        {phase === 'web_trap' && (
+          <RPGWebTrap
+            words={barrageWords}
+            onComplete={handleWebTrapComplete}
+            onDamage={handleMiniGameDamage}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Enemy Ability Message */}
+      <AnimatePresence>
+        {enemyAbilityMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-1/3 left-1/2 -translate-x-1/2 z-40"
+          >
+            <div className="bg-red-900/90 border-2 border-red-500 px-6 py-3 rounded-lg
+              shadow-[0_0_30px_rgba(239,68,68,0.5)]">
+              <span className="text-white font-bold text-lg">{enemyAbilityMessage}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Status Effects Display */}
+      <AnimatePresence>
+        {(isPoisoned || isDebuffed) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute top-24 left-4 z-30 flex flex-col gap-2"
+          >
+            {isPoisoned && (
+              <div className="flex items-center gap-2 bg-green-900/80 px-3 py-1.5 rounded-lg border border-green-500">
+                <span className="text-lg">☠️</span>
+                <span className="text-green-300 text-sm font-medium">Poisoned</span>
+              </div>
+            )}
+            {isDebuffed && (
+              <div className="flex items-center gap-2 bg-purple-900/80 px-3 py-1.5 rounded-lg border border-purple-500">
+                <AlertTriangle className="h-4 w-4 text-purple-300" />
+                <span className="text-purple-300 text-sm font-medium">Weakened ({debuffTurns})</span>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main Battle Layout */}
+      <div className="relative z-10 h-full flex flex-col">
+        {/* Top Bar */}
+        <div className="flex items-center justify-between p-3 bg-black/40 backdrop-blur-sm border-b border-white/10">
+          <Button 
+            variant="ghost" 
+            size="sm" 
             onClick={onBack}
             className="text-white/70 hover:text-white hover:bg-white/10"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Retreat
           </Button>
-          
-          <div className="text-center">
-            <h2 className="text-lg font-bold text-white">{story.title}</h2>
-            <p className="text-xs text-slate-400">
-              {battleMode === 'tug_of_war' ? 'Tug of War Mode' : 
-               battleMode === 'balloon' ? 'Balloon Battle Mode' : 
-               `VS ${enemy.name}`}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* Gold Display */}
-            <div className="flex items-center gap-1 bg-yellow-900/60 px-3 py-1 rounded-full border border-yellow-600/40">
-              <Coins className="h-4 w-4 text-yellow-400" />
-              <span className="text-yellow-300 font-bold text-sm">{goldEarned}</span>
-            </div>
-            
+          <div className="flex items-center gap-4 text-white/80">
+            <span className="text-sm font-medium truncate max-w-[200px]">{story.title}</span>
+            {streak > 0 && (
+              <motion.div 
+                className="flex items-center gap-1 text-orange-400"
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ repeat: Infinity, duration: 0.5 }}
+              >
+                <Flame className="h-4 w-4" />
+                <span className="font-bold">x{streak}</span>
+              </motion.div>
+            )}
+            {/* Sound Toggle */}
             <Button
               variant="ghost"
               size="sm"
@@ -1923,7 +2037,6 @@ export const RPGBattleArena = ({
                         <RPGWordReader
                           words={currentWordBatch}
                           onResult={handleWordResult}
-                          onRetried={handleRetriedWord}
                           disabled={currentWordResult !== null || !isPlayerTurn}
                           streak={streak}
                           batchSize={5}
@@ -2036,18 +2149,6 @@ export const RPGBattleArena = ({
                       <p className="text-xs text-slate-400">XP Earned</p>
                     </div>
                   </div>
-                  
-                  {/* Power Words / Vocabulary Tracker */}
-                  {collectedPowerWords.length > 0 && studentId && (
-                    <div className="max-w-md mx-auto">
-                      <VocabularyTracker
-                        studentId={studentId}
-                        variant="inline"
-                        newWords={collectedPowerWords}
-                        onNewWordsSaved={handlePowerWordsSaved}
-                      />
-                    </div>
-                  )}
 
                   <Button 
                     onClick={() => handleBattleEnd(true)} 

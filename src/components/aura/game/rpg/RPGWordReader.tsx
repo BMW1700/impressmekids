@@ -30,7 +30,6 @@ export interface WordAttempt {
 interface RPGWordReaderProps {
   words: string[];
   onResult: (correct: boolean, spokenWord: string, wordIndex: number) => void;
-  onRetried?: (wordIndex: number) => void; // NEW: Track retried words for accurate accuracy calculation
   onBatchComplete?: (results: WordAttempt[]) => void;
   disabled?: boolean;
   streak?: number;
@@ -97,7 +96,6 @@ const getWordTip = (word: string): string => {
 export const RPGWordReader = ({
   words,
   onResult,
-  onRetried,
   onBatchComplete,
   disabled = false,
   streak = 0,
@@ -108,7 +106,7 @@ export const RPGWordReader = ({
   // Core state
   const [recognitionState, setRecognitionState] = useState<RecognitionState>('idle');
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [feedback, setFeedback] = useState<'correct' | 'incorrect' | 'retried' | null>(null);
+  const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
   const [spokenText, setSpokenText] = useState<string>("");
   const [completedWords, setCompletedWords] = useState<Set<number>>(new Set());
   const [micError, setMicError] = useState<string | null>(null);
@@ -125,9 +123,6 @@ export const RPGWordReader = ({
   
   // Echo retry state
   const [echoCountdown, setEchoCountdown] = useState(0);
-  
-  // Navigation state - for reviewing completed words
-  const [canNavigate, setCanNavigate] = useState(false);
   
   // Refs - the key is keeping ONE recognition instance alive
   const recognitionRef = useRef<any>(null);
@@ -241,8 +236,6 @@ export const RPGWordReader = ({
     if (isProcessingRef.current) return;
     isProcessingRef.current = true;
     
-    console.log('[RPGWordReader] handleCorrect called - GREEN path');
-    
     const targetWord = currentBatch[wordIndex]?.replace(/[^a-zA-Z']/g, '') || '';
     
     // Track as correct (GREEN)
@@ -257,9 +250,6 @@ export const RPGWordReader = ({
     setSpokenText(spokenWord);
     setEchoCountdown(0);
     soundEffects.correctWord();
-    
-    // Reset retry attempt ref
-    retryAttemptRef.current = false;
     
     // Clear echo timeout if active
     if (echoTimeoutRef.current) {
@@ -301,7 +291,6 @@ export const RPGWordReader = ({
       setCurrentIndex(nextIndex);
       currentIndexRef.current = nextIndex;
       setCanRetry(true);
-      canRetryRef.current = true; // Reset ref too
       console.log('[RPGWordReader] Advanced to word index:', nextIndex, 'target:', batch[nextIndex]);
     }
     
@@ -363,20 +352,13 @@ export const RPGWordReader = ({
   // Note: Uses ref to avoid circular dependency with startRecognitionSession
   const startRecognitionRef = useRef<(() => void) | null>(null);
   
-  // CRITICAL: Track retry attempt synchronously via ref (React state can lag)
-  const retryAttemptRef = useRef(false);
-  
   const handleTryAgain = useCallback(() => {
     if (!pendingIncorrectWord) return;
-    
-    console.log('[RPGWordReader] handleTryAgain called - setting retryAttemptRef=true, canRetryRef=false');
     
     setShowFeedbackOverlay(false);
     setFeedback(null);
     setSpokenText("");
     setCanRetry(false); // Only one retry allowed per word
-    canRetryRef.current = false; // CRITICAL: Set ref immediately for sync check
-    retryAttemptRef.current = true; // CRITICAL: Mark this as a retry attempt
     isProcessingRef.current = false;
     
     // Stay on the same word index
@@ -385,13 +367,7 @@ export const RPGWordReader = ({
   }, [pendingIncorrectWord]);
 
   // Handle retry success - mark as retried (YELLOW), no damage/coins
-  // CRITICAL: Call onRetried to properly count this word in accuracy (as NOT correct)
   const handleRetrySuccess = useCallback((spokenWord: string, wordIndex: number) => {
-    if (isProcessingRef.current) return;
-    isProcessingRef.current = true;
-    
-    console.log('[RPGWordReader] handleRetrySuccess called - YELLOW path');
-    
     const targetWord = currentBatch[wordIndex]?.replace(/[^a-zA-Z']/g, '') || '';
     
     // Update to retried (YELLOW)
@@ -407,18 +383,13 @@ export const RPGWordReader = ({
       return updated;
     });
     
-    setFeedback('retried');
+    setFeedback('correct');
     setSpokenText(spokenWord);
     soundEffects.correctWord();
     setCompletedWords(prev => new Set([...prev, wordIndex]));
     
-    // Reset retry attempt ref
-    retryAttemptRef.current = false;
-    
     // NO damage dealt, NO coins given - just practice
-    // CRITICAL: Call onRetried to track this for accuracy calculation
-    // This counts as a word read, but NOT as correct (for accurate accuracy)
-    onRetried?.(wordIndex);
+    // Don't call onResult(true, ...) since this doesn't count as a real correct
     
     setPendingIncorrectWord(null);
     
@@ -431,7 +402,6 @@ export const RPGWordReader = ({
       setCurrentIndex(nextIndex);
       currentIndexRef.current = nextIndex;
       setCanRetry(true);
-      canRetryRef.current = true; // Reset ref too
     }
     
     feedbackTimeoutRef.current = setTimeout(() => {
@@ -452,7 +422,7 @@ export const RPGWordReader = ({
         setRecognitionState('idle');
       }
     }, 300);
-  }, [currentBatch, words, batchSize, stopRecognitionSession, wordResults, onBatchComplete, onRetried]);
+  }, [currentBatch, words, batchSize, stopRecognitionSession, wordResults, onBatchComplete]);
 
   // Handle "Continue" (Skip) - accept miss and trigger enemy attack
   const handleContinueAfterMiss = useCallback(() => {
@@ -679,18 +649,7 @@ export const RPGWordReader = ({
                   if (isWordMatchLenient(word, targetWord)) {
                     // Match found in interim - process immediately!
                     processedResultsRef.current.add(i);
-                    
-                    // CRITICAL FIX: Check if this is a retry attempt
-                    const isRetryAttempt = retryAttemptRef.current || !canRetryRef.current;
-                    console.log('[RPGWordReader] FAST MODE match:', { word, targetWord, isRetryAttempt, retryAttemptRef: retryAttemptRef.current, canRetryRef: canRetryRef.current });
-                    
-                    if (isRetryAttempt) {
-                      // Route to YELLOW path for retries
-                      handleRetrySuccess(word, wordIdx);
-                    } else {
-                      // Route to GREEN path for first-try
-                      handleCorrect(word, wordIdx);
-                    }
+                    handleCorrect(word, wordIdx);
                     return;
                   }
                 }
@@ -783,7 +742,7 @@ export const RPGWordReader = ({
         }, 500);
       }
     }
-  }, [disabled, processResult, mode, getTargetWord, handleCorrect, handleRetrySuccess]);
+  }, [disabled, processResult]);
 
   // Set the ref for use in handlers that are defined before startRecognitionSession
   useEffect(() => {
@@ -828,39 +787,6 @@ export const RPGWordReader = ({
       playCorrectPronunciation(cleanWord);
     }
   }, [cleanWord]);
-  
-  // Enable navigation after at least one word is completed
-  useEffect(() => {
-    if (completedWords.size > 0) {
-      setCanNavigate(true);
-    }
-  }, [completedWords.size]);
-  
-  // Navigation handlers for reviewing completed words
-  const handlePrevWord = useCallback(() => {
-    if (currentIndex > 0 && recognitionState === 'idle') {
-      setCurrentIndex(prev => prev - 1);
-      currentIndexRef.current = currentIndex - 1;
-      setFeedback(null);
-    }
-  }, [currentIndex, recognitionState]);
-
-  const handleNextWord = useCallback(() => {
-    if (currentIndex < currentBatch.length - 1 && recognitionState === 'idle' && completedWords.has(currentIndex)) {
-      setCurrentIndex(prev => prev + 1);
-      currentIndexRef.current = currentIndex + 1;
-      setFeedback(null);
-    }
-  }, [currentIndex, currentBatch.length, recognitionState, completedWords]);
-  
-  // Navigate to specific word by clicking dot
-  const navigateToWord = useCallback((index: number) => {
-    if (recognitionState === 'idle' && (completedWords.has(index) || index === currentIndex)) {
-      setCurrentIndex(index);
-      currentIndexRef.current = index;
-      setFeedback(null);
-    }
-  }, [recognitionState, completedWords, currentIndex]);
 
   // Safety check
   if (!currentBatch || currentBatch.length === 0) {
@@ -944,62 +870,12 @@ export const RPGWordReader = ({
           );
         })}
       </div>
-      
-      {/* Word Navigation Controls - for reviewing completed words */}
-      {canNavigate && recognitionState === 'idle' && (
-        <div className="flex items-center justify-center gap-4 mt-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handlePrevWord}
-            disabled={currentIndex === 0}
-            className="text-slate-400 hover:text-white hover:bg-slate-700/50 p-2"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </Button>
-          
-          {/* Dot Indicators */}
-          <div className="flex gap-1.5">
-            {currentBatch.map((_, idx) => {
-              const result = wordResults.get(idx);
-              const isActiveDot = idx === currentIndex;
-              const colorClass = result?.result === 'correct' ? 'bg-emerald-500' :
-                            result?.result === 'retried' ? 'bg-yellow-500' :
-                            result?.result === 'missed' ? 'bg-red-500' :
-                            'bg-slate-600';
-              return (
-                <button
-                  key={idx}
-                  onClick={() => navigateToWord(idx)}
-                  disabled={!completedWords.has(idx) && idx !== currentIndex}
-                  className={`w-2.5 h-2.5 rounded-full transition-all cursor-pointer ${colorClass}
-                    ${isActiveDot ? 'ring-2 ring-blue-400 ring-offset-1 ring-offset-slate-900 scale-125' : ''}
-                    ${(!completedWords.has(idx) && idx !== currentIndex) ? 'opacity-40 cursor-not-allowed' : 'hover:scale-110'}
-                  `}
-                />
-              );
-            })}
-          </div>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleNextWord}
-            disabled={currentIndex >= currentBatch.length - 1 || !completedWords.has(currentIndex)}
-            className="text-slate-400 hover:text-white hover:bg-slate-700/50 p-2"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </Button>
-        </div>
-      )}
 
       {/* Current Word - Large Display */}
       <motion.div
         className={`relative px-12 py-6 rounded-2xl border-2 text-center min-w-[280px]
           ${feedback === 'correct' 
             ? 'bg-emerald-500/20 border-emerald-400 shadow-[0_0_30px_rgba(52,211,153,0.5)]' 
-            : feedback === 'retried'
-            ? 'bg-yellow-500/20 border-yellow-400 shadow-[0_0_30px_rgba(251,191,36,0.5)]'
             : feedback === 'incorrect'
             ? 'bg-red-500/20 border-red-400 shadow-[0_0_30px_rgba(248,113,113,0.5)]'
             : isEchoRetry
@@ -1021,11 +897,9 @@ export const RPGWordReader = ({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0, opacity: 0 }}
               className={`absolute -top-3 -right-3 w-10 h-10 rounded-full flex items-center justify-center
-                ${feedback === 'correct' ? 'bg-emerald-500' : feedback === 'retried' ? 'bg-yellow-500' : 'bg-red-500'}`}
+                ${feedback === 'correct' ? 'bg-emerald-500' : 'bg-red-500'}`}
             >
-              {feedback === 'correct' ? <Check className="h-6 w-6 text-white" /> : 
-               feedback === 'retried' ? <RotateCcw className="h-6 w-6 text-white" /> : 
-               <X className="h-6 w-6 text-white" />}
+              {feedback === 'correct' ? <Check className="h-6 w-6 text-white" /> : <X className="h-6 w-6 text-white" />}
             </motion.div>
           )}
         </AnimatePresence>
@@ -1063,7 +937,6 @@ export const RPGWordReader = ({
             animate={{ opacity: 1 }}
             className={`mt-2 text-sm 
               ${feedback === 'correct' ? 'text-emerald-300' : 
-                feedback === 'retried' ? 'text-yellow-300' :
                 feedback === 'incorrect' ? 'text-red-300' :
                 isEchoRetry ? 'text-amber-300' : 'text-slate-400'}`}
           >

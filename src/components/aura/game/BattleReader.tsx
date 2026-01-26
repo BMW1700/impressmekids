@@ -7,7 +7,7 @@ import { BattleHUD } from "./BattleHUD";
 import { BattleArena } from "./BattleArena";
 import { GrogState } from "./GrogCharacter";
 import { PlayerState } from "./PlayerCharacter";
-import { VictoryOverlay } from "./VictoryOverlay";
+import { BookRescueCelebration } from "./BookRescueCelebration";
 import { StreakPower } from "./StreakPower";
 import { PurpleFireEffect } from "./PurpleFireEffect";
 import { BattleDifficultySelector, BattleDifficulty } from "./BattleDifficultySelector";
@@ -87,12 +87,6 @@ export const BattleReader = ({
   
   // CRITICAL FIX: Track processed word events to prevent double-applying damage
   const processedWordEventsRef = useRef<Set<string>>(new Set());
-  
-  // CRITICAL FIX: Guard to ensure completeBattle is only called once per session
-  const battleCompletedRef = useRef(false);
-  
-  // CRITICAL FIX: Guard to ensure celebration is only triggered once
-  const celebrationTriggeredRef = useRef(false);
 
   // Ref for WordByWordReader control
   const readerStartRef = useRef<(() => void) | null>(null);
@@ -139,83 +133,6 @@ export const BattleReader = ({
     const interval = setInterval(showRandomTaunt, 15000 + Math.random() * 15000);
     return () => clearInterval(interval);
   }, [battleState.status, grogState]);
-
-  // ============================================================
-  // FAILSAFE #1: Direct HP watcher - forces victory if HP=0 but status stuck
-  // ============================================================
-  useEffect(() => {
-    if (battleState.enemyHp <= 0 && battleState.status === 'in_progress') {
-      console.log('[BattleReader] ⚠️ FAILSAFE TRIGGERED: HP=0 but status=in_progress, forcing victory!');
-      setBattleState(prev => ({ ...prev, status: 'victory' }));
-    }
-  }, [battleState.enemyHp, battleState.status]);
-
-  // ============================================================
-  // CENTRALIZED BATTLE END HANDLER - SINGLE SOURCE OF TRUTH
-  // ============================================================
-  useEffect(() => {
-    if (battleState.status === 'in_progress') return;
-    if (celebrationTriggeredRef.current) return;
-    
-    console.log('[BattleReader] ========== BATTLE END ==========');
-    console.log('[BattleReader] Status:', battleState.status);
-    console.log('[BattleReader] EnemyHP:', battleState.enemyHp);
-    console.log('[BattleReader] showCelebration before:', showCelebration);
-    
-    celebrationTriggeredRef.current = true;
-    
-    const isVictory = battleState.status === 'victory';
-    
-    // VISUAL FLASH for victory - impossible to miss!
-    if (isVictory) {
-      document.body.style.transition = 'background 0.15s';
-      document.body.style.background = 'gold';
-      setTimeout(() => { document.body.style.background = ''; }, 200);
-    }
-    
-    // Set character states
-    if (isVictory) {
-      setGrogState('defeated');
-      setPlayerState('victory');
-    } else {
-      setGrogState('taunting');
-      setPlayerState('defeated');
-      setCurrentTaunt(getRandomTaunt('grogTaunts'));
-    }
-    
-    // Calculate XP
-    const defeatedBeforeFinish = battleState.enemyHp <= 0 && battleState.wordsRead < story.word_count;
-    const xpEarned = battleState.xpEarned > 0 ? battleState.xpEarned : calculateXpEarned(
-      isVictory,
-      battleState.wordsRead,
-      battleState.correctWords,
-      battleState.longestStreak,
-      worldNumber,
-      defeatedBeforeFinish
-    );
-    
-    setBattleState(prev => ({ ...prev, xpEarned }));
-    
-    // Save to database
-    if (battleSessionId && !battleCompletedRef.current) {
-      battleCompletedRef.current = true;
-      completeBattle({
-        battleId: battleSessionId,
-        victory: isVictory,
-        xpEarned,
-        damageDealt: battleState.totalDamageDealt,
-        longestStreak: battleState.longestStreak,
-        storyTitle: story.title,
-        worldNumber,
-      }).catch(console.error);
-    }
-    
-    // SHOW CELEBRATION IMMEDIATELY
-    console.log('[BattleReader] 🎉🎉🎉 SHOWING CELEBRATION NOW 🎉🎉🎉');
-    setShowCelebration(true);
-    console.log('[BattleReader] showCelebration after:', true);
-    
-  }, [battleState.status]);
 
   // STREAK POWER: Check if power should be available
   useEffect(() => {
@@ -346,13 +263,11 @@ export const BattleReader = ({
         }, 500);
       }
       
-      // Battle end is handled by centralized useEffect - just update states here
+      // Check for battle end
       if (newState.status === 'victory') {
-        console.log('[BattleReader] 🎉 Victory detected in handleWordResult - centralized effect will handle');
         setGrogState('defeated');
         setPlayerState('victory');
       } else if (newState.status === 'defeat') {
-        console.log('[BattleReader] 💀 Defeat detected in handleWordResult - centralized effect will handle');
         setPlayerState('defeated');
         setGrogState('taunting');
         setCurrentTaunt(getRandomTaunt('grogTaunts'));
@@ -365,13 +280,6 @@ export const BattleReader = ({
   // Handle reading completion
   // VICTORY RULES: Win if goblin dies OR (story finished AND accuracy >= 90%)
   const handleReadingComplete = async (stats: any) => {
-    // SAFETY: If celebration is already showing/triggered, don't re-trigger
-    if (showCelebration || celebrationTriggeredRef.current) {
-      console.log('[BattleReader] Celebration already showing/triggered, skipping handleReadingComplete');
-      return;
-    }
-    
-    console.log('[BattleReader] handleReadingComplete called');
     setReadingStats(stats);
     
     // Get final battle state for victory calculation
@@ -382,16 +290,55 @@ export const BattleReader = ({
     
     // VICTORY CONDITIONS:
     // 1. Killed the goblin (enemyHp <= 0)
-    // 2. Finished story with 80%+ accuracy AND still alive
+    // 2. Finished story with 90%+ accuracy AND still alive
     const killedGoblin = finalState.enemyHp <= 0;
-    const passedAccuracyGate = accuracy >= 80 && finalState.playerHp > 0;
+    const passedAccuracyGate = accuracy >= 90 && finalState.playerHp > 0;
     const victory = killedGoblin || passedAccuracyGate;
+    
+    const defeatedBeforeFinish = killedGoblin && finalState.wordsRead < story.word_count;
+    
+    const xpEarned = calculateXpEarned(
+      victory,
+      finalState.wordsRead,
+      finalState.correctWords,
+      finalState.longestStreak,
+      worldNumber,
+      defeatedBeforeFinish
+    );
 
-    // Update final battle state - this will trigger the centralized effect
+    // Update final battle state
     setBattleState(prev => ({
       ...prev,
       status: victory ? 'victory' : 'defeat',
+      xpEarned,
     }));
+
+    if (victory) {
+      setGrogState('defeated');
+      setPlayerState('victory');
+    } else {
+      setGrogState('taunting');
+      setPlayerState('defeated');
+    }
+
+    // Save to database
+    if (battleSessionId) {
+      try {
+        await completeBattle({
+          battleId: battleSessionId,
+          victory,
+          xpEarned,
+          damageDealt: finalState.totalDamageDealt,
+          longestStreak: finalState.longestStreak,
+          storyTitle: story.title,
+          worldNumber,
+        });
+      } catch (error) {
+        console.error('Failed to complete battle:', error);
+      }
+    }
+
+    setShowCelebration(true);
   };
 
   // Handle celebration close
@@ -406,8 +353,6 @@ export const BattleReader = ({
     // Reset everything for a fresh battle
     processedWordEventsRef.current = new Set();
     lastPowerStreakRef.current = 0;
-    battleCompletedRef.current = false;
-    celebrationTriggeredRef.current = false;
     setPowerAvailable(false);
     setPowerCooldown(false);
     setBattleState(initializeBattle(worldNumber, enemyType));
@@ -461,14 +406,6 @@ export const BattleReader = ({
 
   return (
     <div className="space-y-2 relative">
-      {/* TEMP DEBUG OVERLAY - Shows battle state for debugging */}
-      <div className="fixed top-2 left-2 z-[9999] bg-black/80 text-white text-xs p-2 rounded font-mono">
-        HP: {battleState.enemyHp}/{battleState.enemyMaxHp} | 
-        Status: {battleState.status} | 
-        Celebration: {showCelebration ? 'YES' : 'NO'} |
-        Ref: {celebrationTriggeredRef.current ? 'TRIGGERED' : 'waiting'}
-      </div>
-      
       {/* Purple Fire Effect Overlay */}
       <PurpleFireEffect
         trigger={triggerPurpleFire}
@@ -588,7 +525,7 @@ export const BattleReader = ({
 
       {/* Victory requirement hint */}
       <div className="text-center text-xs text-muted-foreground bg-muted/30 py-1 rounded">
-        🎯 Win by defeating the enemy OR finishing with 80%+ accuracy!
+        🎯 Win by defeating the enemy OR finishing with 90%+ accuracy!
       </div>
 
       {/* Reading Area - Story Text with internal scroll */}
@@ -609,9 +546,9 @@ export const BattleReader = ({
         )}
       </Card>
 
-      {/* Victory/Defeat Celebration - FULL SCREEN OVERLAY (not Dialog) */}
-      <VictoryOverlay
-        show={showCelebration}
+      {/* Victory/Defeat Celebration */}
+      <BookRescueCelebration
+        open={showCelebration}
         victory={battleState.status === 'victory'}
         storyTitle={story.title}
         stats={{
@@ -625,6 +562,7 @@ export const BattleReader = ({
         }}
         worldNumber={worldNumber}
         booksRescued={(progress?.books_rescued || 0) + (battleState.status === 'victory' ? 1 : 0)}
+        onClose={handleCelebrationClose}
         onPlayAgain={handleTryAgain}
         onNextStory={handleNextStory}
         onBackToMap={onBack}

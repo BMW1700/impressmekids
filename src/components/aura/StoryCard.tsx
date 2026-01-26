@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Clock, Star, Bookmark, BookmarkCheck, Award, Heart } from "lucide-react";
+import { BookOpen, Clock, Star, Bookmark, BookmarkCheck, Award } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,7 +27,6 @@ interface StoryCardProps {
   helpedYesCount?: number;
   helpedNoCount?: number;
   isFeatured?: boolean;
-  isFromParent?: boolean;
   showVoting?: boolean;
   onStartReading: () => void;
   onBookshelfChange?: () => void;
@@ -40,8 +39,7 @@ const categoryIcons: Record<string, string> = {
   fairy_tales: "✨",
   science: "🔬",
   adventure: "🗺️",
-  history: "📜",
-  other: "📖"
+  history: "📜"
 };
 
 const getCategoryColor = (category: string) => {
@@ -76,7 +74,6 @@ export const StoryCard = ({
   helpedYesCount = 0,
   helpedNoCount = 0,
   isFeatured = false,
-  isFromParent = false,
   showVoting = true,
   onStartReading,
   onBookshelfChange
@@ -173,20 +170,14 @@ export const StoryCard = ({
       whileHover={{ y: -8 }}
       transition={{ duration: 0.3 }}
     >
-      <Card className={`overflow-hidden cursor-pointer transition-all ${completed ? 'ring-2 ring-yellow-500' : ''} ${isFeatured ? 'ring-2 ring-primary' : ''} ${isFromParent ? 'ring-2 ring-pink-500' : ''}`}>
+      <Card className={`overflow-hidden cursor-pointer transition-all ${completed ? 'ring-2 ring-yellow-500' : ''} ${isFeatured ? 'ring-2 ring-primary' : ''}`}>
         {/* Cover Art */}
         <div className={`h-40 bg-gradient-to-br ${cover_gradient} relative`}>
           <div className={`absolute inset-0 bg-gradient-to-br ${getCategoryColor(category)} backdrop-blur-sm`} />
           
           {/* Top right badges */}
           <div className="absolute top-3 right-3 flex gap-2">
-            {isFromParent && (
-              <Badge className="bg-pink-500 text-white text-xs">
-                <Heart className="h-3 w-3 mr-1" />
-                From Parent
-              </Badge>
-            )}
-            {isFeatured && !isFromParent && (
+            {isFeatured && (
               <Badge className="bg-primary text-primary-foreground text-xs">
                 <Award className="h-3 w-3 mr-1" />
                 Featured

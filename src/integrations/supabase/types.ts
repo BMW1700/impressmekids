@@ -1114,57 +1114,6 @@ export type Database = {
           },
         ]
       }
-      boss_rush_attempts: {
-        Row: {
-          bosses_defeated: number
-          created_at: string
-          current_boss_index: number
-          ended_at: string | null
-          id: string
-          longest_streak: number
-          started_at: string
-          status: string
-          student_id: string
-          time_taken_seconds: number | null
-          total_damage_dealt: number
-          total_gold_earned: number
-          total_words_read: number
-          total_xp_earned: number
-        }
-        Insert: {
-          bosses_defeated?: number
-          created_at?: string
-          current_boss_index?: number
-          ended_at?: string | null
-          id?: string
-          longest_streak?: number
-          started_at?: string
-          status?: string
-          student_id: string
-          time_taken_seconds?: number | null
-          total_damage_dealt?: number
-          total_gold_earned?: number
-          total_words_read?: number
-          total_xp_earned?: number
-        }
-        Update: {
-          bosses_defeated?: number
-          created_at?: string
-          current_boss_index?: number
-          ended_at?: string | null
-          id?: string
-          longest_streak?: number
-          started_at?: string
-          status?: string
-          student_id?: string
-          time_taken_seconds?: number | null
-          total_damage_dealt?: number
-          total_gold_earned?: number
-          total_words_read?: number
-          total_xp_earned?: number
-        }
-        Relationships: []
-      }
       campaign_assets: {
         Row: {
           asset_key: string
@@ -1264,9 +1213,6 @@ export type Database = {
       campaign_progress: {
         Row: {
           books_rescued: number
-          boss_rush_best_time_seconds: number | null
-          boss_rush_completions: number | null
-          boss_rush_unlocked: boolean | null
           created_at: string
           current_world: number
           equipped_pet_id: string | null
@@ -1286,9 +1232,6 @@ export type Database = {
         }
         Insert: {
           books_rescued?: number
-          boss_rush_best_time_seconds?: number | null
-          boss_rush_completions?: number | null
-          boss_rush_unlocked?: boolean | null
           created_at?: string
           current_world?: number
           equipped_pet_id?: string | null
@@ -1308,9 +1251,6 @@ export type Database = {
         }
         Update: {
           books_rescued?: number
-          boss_rush_best_time_seconds?: number | null
-          boss_rush_completions?: number | null
-          boss_rush_unlocked?: boolean | null
           created_at?: string
           current_world?: number
           equipped_pet_id?: string | null
@@ -2496,51 +2436,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      duel_stats: {
-        Row: {
-          best_win_streak: number | null
-          created_at: string | null
-          current_win_streak: number | null
-          draws: number | null
-          id: string
-          losses: number | null
-          student_id: string
-          total_duels: number | null
-          total_gold_from_duels: number | null
-          total_xp_from_duels: number | null
-          updated_at: string | null
-          wins: number | null
-        }
-        Insert: {
-          best_win_streak?: number | null
-          created_at?: string | null
-          current_win_streak?: number | null
-          draws?: number | null
-          id?: string
-          losses?: number | null
-          student_id: string
-          total_duels?: number | null
-          total_gold_from_duels?: number | null
-          total_xp_from_duels?: number | null
-          updated_at?: string | null
-          wins?: number | null
-        }
-        Update: {
-          best_win_streak?: number | null
-          created_at?: string | null
-          current_win_streak?: number | null
-          draws?: number | null
-          id?: string
-          losses?: number | null
-          student_id?: string
-          total_duels?: number | null
-          total_gold_from_duels?: number | null
-          total_xp_from_duels?: number | null
-          updated_at?: string | null
-          wins?: number | null
-        }
-        Relationships: []
       }
       emergency_contacts: {
         Row: {
@@ -3838,60 +3733,6 @@ export type Database = {
           },
         ]
       }
-      parent_stories: {
-        Row: {
-          category: string
-          cover_gradient: string | null
-          created_at: string | null
-          description: string | null
-          for_student_id: string
-          grade_level: number
-          id: string
-          is_active: boolean | null
-          passage_text: string
-          reading_time_minutes: number | null
-          source_note: string | null
-          submitted_by: string
-          title: string
-          updated_at: string | null
-          word_count: number | null
-        }
-        Insert: {
-          category: string
-          cover_gradient?: string | null
-          created_at?: string | null
-          description?: string | null
-          for_student_id: string
-          grade_level: number
-          id?: string
-          is_active?: boolean | null
-          passage_text: string
-          reading_time_minutes?: number | null
-          source_note?: string | null
-          submitted_by: string
-          title: string
-          updated_at?: string | null
-          word_count?: number | null
-        }
-        Update: {
-          category?: string
-          cover_gradient?: string | null
-          created_at?: string | null
-          description?: string | null
-          for_student_id?: string
-          grade_level?: number
-          id?: string
-          is_active?: boolean | null
-          passage_text?: string
-          reading_time_minutes?: number | null
-          source_note?: string | null
-          submitted_by?: string
-          title?: string
-          updated_at?: string | null
-          word_count?: number | null
-        }
-        Relationships: []
-      }
       parent_student_events: {
         Row: {
           created_at: string | null
@@ -4569,95 +4410,6 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      reading_duels: {
-        Row: {
-          challenger_accuracy: number | null
-          challenger_best_streak: number | null
-          challenger_completed_at: string | null
-          challenger_id: string
-          challenger_score: number | null
-          challenger_time_seconds: number | null
-          challenger_words_read: number | null
-          classroom_id: string
-          created_at: string | null
-          expires_at: string | null
-          id: string
-          opponent_accuracy: number | null
-          opponent_best_streak: number | null
-          opponent_completed_at: string | null
-          opponent_id: string | null
-          opponent_score: number | null
-          opponent_time_seconds: number | null
-          opponent_words_read: number | null
-          passage_text: string
-          passage_title: string
-          passage_word_count: number
-          status: string | null
-          updated_at: string | null
-          winner_id: string | null
-        }
-        Insert: {
-          challenger_accuracy?: number | null
-          challenger_best_streak?: number | null
-          challenger_completed_at?: string | null
-          challenger_id: string
-          challenger_score?: number | null
-          challenger_time_seconds?: number | null
-          challenger_words_read?: number | null
-          classroom_id: string
-          created_at?: string | null
-          expires_at?: string | null
-          id?: string
-          opponent_accuracy?: number | null
-          opponent_best_streak?: number | null
-          opponent_completed_at?: string | null
-          opponent_id?: string | null
-          opponent_score?: number | null
-          opponent_time_seconds?: number | null
-          opponent_words_read?: number | null
-          passage_text: string
-          passage_title: string
-          passage_word_count?: number
-          status?: string | null
-          updated_at?: string | null
-          winner_id?: string | null
-        }
-        Update: {
-          challenger_accuracy?: number | null
-          challenger_best_streak?: number | null
-          challenger_completed_at?: string | null
-          challenger_id?: string
-          challenger_score?: number | null
-          challenger_time_seconds?: number | null
-          challenger_words_read?: number | null
-          classroom_id?: string
-          created_at?: string | null
-          expires_at?: string | null
-          id?: string
-          opponent_accuracy?: number | null
-          opponent_best_streak?: number | null
-          opponent_completed_at?: string | null
-          opponent_id?: string | null
-          opponent_score?: number | null
-          opponent_time_seconds?: number | null
-          opponent_words_read?: number | null
-          passage_text?: string
-          passage_title?: string
-          passage_word_count?: number
-          status?: string | null
-          updated_at?: string | null
-          winner_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "reading_duels_classroom_id_fkey"
-            columns: ["classroom_id"]
-            isOneToOne: false
-            referencedRelation: "classrooms"
             referencedColumns: ["id"]
           },
         ]
