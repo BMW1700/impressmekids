@@ -31,6 +31,7 @@ interface RPGWordReaderProps {
   words: string[];
   onResult: (correct: boolean, spokenWord: string, wordIndex: number) => void;
   onBatchComplete?: (results: WordAttempt[]) => void;
+  onRetrySuccess?: (wordIndex: number) => void; // Called when a retried word is read correctly (for HP healing)
   disabled?: boolean;
   streak?: number;
   batchSize?: number;
@@ -97,6 +98,7 @@ export const RPGWordReader = ({
   words,
   onResult,
   onBatchComplete,
+  onRetrySuccess,
   disabled = false,
   streak = 0,
   batchSize = 5,
@@ -366,7 +368,7 @@ export const RPGWordReader = ({
     startRecognitionRef.current?.();
   }, [pendingIncorrectWord]);
 
-  // Handle retry success - mark as retried (YELLOW), no damage/coins
+  // Handle retry success - mark as retried (YELLOW), no damage/coins, but heal HP
   const handleRetrySuccess = useCallback((spokenWord: string, wordIndex: number) => {
     const targetWord = currentBatch[wordIndex]?.replace(/[^a-zA-Z']/g, '') || '';
     
@@ -390,6 +392,8 @@ export const RPGWordReader = ({
     
     // NO damage dealt, NO coins given - just practice
     // Don't call onResult(true, ...) since this doesn't count as a real correct
+    // BUT call onRetrySuccess to trigger HP healing!
+    onRetrySuccess?.(wordIndex);
     
     setPendingIncorrectWord(null);
     
@@ -422,7 +426,7 @@ export const RPGWordReader = ({
         setRecognitionState('idle');
       }
     }, 300);
-  }, [currentBatch, words, batchSize, stopRecognitionSession, wordResults, onBatchComplete]);
+  }, [currentBatch, words, batchSize, stopRecognitionSession, wordResults, onBatchComplete, onRetrySuccess]);
 
   // Handle "Continue" (Skip) - accept miss and trigger enemy attack
   const handleContinueAfterMiss = useCallback(() => {
