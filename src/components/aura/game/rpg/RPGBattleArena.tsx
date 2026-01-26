@@ -251,25 +251,58 @@ export const RPGBattleArena = ({
   // Helper function to check if this is the final enemy
   const isFinalEnemy = useMemo(() => currentEnemyIndex >= enemyQueue.length - 1, [currentEnemyIndex, enemyQueue.length]);
   
-  // Helper function to return to reading state cleanly after any mini-game/barrage
-  // CRITICAL: Also checks for victory condition
-  const returnToReading = useCallback(() => {
-    console.log('[RPGBattle] Returning to reading state, enemyHp:', enemyHp, 'isFinalEnemy:', isFinalEnemy);
-    // Force stop any lingering recognition
-    speechManager.forceStop();
+  // Ref to track pending returnToReading timeout - allows cancellation if victory triggers
+  const returnToReadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Centralized enemy defeat handler - idempotent and ref-based
+  const triggerEnemyDefeat = useCallback((reason: string) => {
+    const currentHp = enemyHpRef.current;
+    console.log('[RPGBattle] triggerEnemyDefeat called:', { reason, currentHp, phase, isFinalEnemy });
     
-    // Check if we should trigger victory instead
-    if (enemyHp <= 0 && isFinalEnemy) {
-      console.log('[RPGBattle] Enemy defeated during mini-game - triggering victory');
-      setPhase('victory');
+    // Skip if not actually dead
+    if (currentHp > 0) {
+      console.log('[RPGBattle] triggerEnemyDefeat: HP > 0, skipping');
       return;
     }
     
-    // Check if we should transition to next enemy
-    if (enemyHp <= 0 && !isFinalEnemy) {
-      console.log('[RPGBattle] Enemy defeated - transitioning to next enemy');
+    // Skip if already in a terminal phase
+    if (phase === 'victory' || phase === 'defeat' || phase === 'enemy_transition') {
+      console.log('[RPGBattle] triggerEnemyDefeat: Already in terminal phase, skipping');
+      return;
+    }
+    
+    // Cancel any pending returnToReading timeout
+    if (returnToReadingTimeoutRef.current) {
+      clearTimeout(returnToReadingTimeoutRef.current);
+      returnToReadingTimeoutRef.current = null;
+      console.log('[RPGBattle] Cancelled pending returnToReading timeout');
+    }
+    
+    // Trigger appropriate transition
+    if (isFinalEnemy) {
+      console.log('[RPGBattle] ENEMY_DEFEATED - Final enemy, triggering victory');
+      setShowComprehensionQuiz(true);
+      setPhase('victory');
+    } else {
+      console.log('[RPGBattle] ENEMY_DEFEATED - Transitioning to next enemy');
       setDefeatedEnemy(enemy);
       setPhase('enemy_transition');
+    }
+  }, [phase, isFinalEnemy, enemy]);
+  
+  // Helper function to return to reading state cleanly after any mini-game/barrage
+  // CRITICAL: Uses refs to avoid stale closures, guards against stomping victory
+  const returnToReading = useCallback(() => {
+    const currentHp = enemyHpRef.current;
+    console.log('[RPGBattle] returnToReading called, enemyHpRef:', currentHp, 'isFinalEnemy:', isFinalEnemy, 'phase:', phase);
+    
+    // Force stop any lingering recognition
+    speechManager.forceStop();
+    
+    // Check if we should trigger victory instead (using ref!)
+    if (currentHp <= 0) {
+      console.log('[RPGBattle] returnToReading: Enemy dead (ref check), calling triggerEnemyDefeat');
+      triggerEnemyDefeat('returnToReading_immediate');
       return;
     }
     
@@ -277,14 +310,32 @@ export const RPGBattleArena = ({
     setCurrentWordResult(null);
     setEnemyAbilityMessage(null);
     
-    // Small delay to ensure cleanup completes
-    setTimeout(() => {
+    // Clear any existing timeout first
+    if (returnToReadingTimeoutRef.current) {
+      clearTimeout(returnToReadingTimeoutRef.current);
+    }
+    
+    // Small delay to ensure cleanup completes - but with guard inside
+    returnToReadingTimeoutRef.current = setTimeout(() => {
+      returnToReadingTimeoutRef.current = null;
+      
+      // RE-CHECK HP inside timeout (critical guard against race condition)
+      const hpInsideTimeout = enemyHpRef.current;
+      if (hpInsideTimeout <= 0) {
+        console.log('[RPGBattle] returnToReading timeout: HP dropped to 0 during delay, triggering defeat');
+        triggerEnemyDefeat('returnToReading_timeout_guard');
+        return;
+      }
+      
+      // Also check if phase is already terminal
+      // Note: We can't access latest phase here due to closure, so we skip to reading
+      // The failsafe interval will catch any missed transitions
       setPhase('reading');
       setCurrentCommand('read');
       setIsPlayerTurn(true);
       console.log('[RPGBattle] State reset complete - phase: reading, command: read');
     }, 100);
-  }, [enemyHp, isFinalEnemy, enemy]);
+  }, [isFinalEnemy, phase, triggerEnemyDefeat]);
 
   // Keep enemyHpRef in sync for stable victory check
   useEffect(() => {

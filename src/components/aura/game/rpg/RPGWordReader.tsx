@@ -241,6 +241,8 @@ export const RPGWordReader = ({
     if (isProcessingRef.current) return;
     isProcessingRef.current = true;
     
+    console.log('[RPGWordReader] handleCorrect called - GREEN path');
+    
     const targetWord = currentBatch[wordIndex]?.replace(/[^a-zA-Z']/g, '') || '';
     
     // Track as correct (GREEN)
@@ -255,6 +257,9 @@ export const RPGWordReader = ({
     setSpokenText(spokenWord);
     setEchoCountdown(0);
     soundEffects.correctWord();
+    
+    // Reset retry attempt ref
+    retryAttemptRef.current = false;
     
     // Clear echo timeout if active
     if (echoTimeoutRef.current) {
@@ -296,6 +301,7 @@ export const RPGWordReader = ({
       setCurrentIndex(nextIndex);
       currentIndexRef.current = nextIndex;
       setCanRetry(true);
+      canRetryRef.current = true; // Reset ref too
       console.log('[RPGWordReader] Advanced to word index:', nextIndex, 'target:', batch[nextIndex]);
     }
     
@@ -357,13 +363,20 @@ export const RPGWordReader = ({
   // Note: Uses ref to avoid circular dependency with startRecognitionSession
   const startRecognitionRef = useRef<(() => void) | null>(null);
   
+  // CRITICAL: Track retry attempt synchronously via ref (React state can lag)
+  const retryAttemptRef = useRef(false);
+  
   const handleTryAgain = useCallback(() => {
     if (!pendingIncorrectWord) return;
+    
+    console.log('[RPGWordReader] handleTryAgain called - setting retryAttemptRef=true, canRetryRef=false');
     
     setShowFeedbackOverlay(false);
     setFeedback(null);
     setSpokenText("");
     setCanRetry(false); // Only one retry allowed per word
+    canRetryRef.current = false; // CRITICAL: Set ref immediately for sync check
+    retryAttemptRef.current = true; // CRITICAL: Mark this as a retry attempt
     isProcessingRef.current = false;
     
     // Stay on the same word index
@@ -374,6 +387,11 @@ export const RPGWordReader = ({
   // Handle retry success - mark as retried (YELLOW), no damage/coins
   // CRITICAL: Call onRetried to properly count this word in accuracy (as NOT correct)
   const handleRetrySuccess = useCallback((spokenWord: string, wordIndex: number) => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    
+    console.log('[RPGWordReader] handleRetrySuccess called - YELLOW path');
+    
     const targetWord = currentBatch[wordIndex]?.replace(/[^a-zA-Z']/g, '') || '';
     
     // Update to retried (YELLOW)
@@ -394,6 +412,9 @@ export const RPGWordReader = ({
     soundEffects.correctWord();
     setCompletedWords(prev => new Set([...prev, wordIndex]));
     
+    // Reset retry attempt ref
+    retryAttemptRef.current = false;
+    
     // NO damage dealt, NO coins given - just practice
     // CRITICAL: Call onRetried to track this for accuracy calculation
     // This counts as a word read, but NOT as correct (for accurate accuracy)
@@ -410,6 +431,7 @@ export const RPGWordReader = ({
       setCurrentIndex(nextIndex);
       currentIndexRef.current = nextIndex;
       setCanRetry(true);
+      canRetryRef.current = true; // Reset ref too
     }
     
     feedbackTimeoutRef.current = setTimeout(() => {
@@ -657,7 +679,18 @@ export const RPGWordReader = ({
                   if (isWordMatchLenient(word, targetWord)) {
                     // Match found in interim - process immediately!
                     processedResultsRef.current.add(i);
-                    handleCorrect(word, wordIdx);
+                    
+                    // CRITICAL FIX: Check if this is a retry attempt
+                    const isRetryAttempt = retryAttemptRef.current || !canRetryRef.current;
+                    console.log('[RPGWordReader] FAST MODE match:', { word, targetWord, isRetryAttempt, retryAttemptRef: retryAttemptRef.current, canRetryRef: canRetryRef.current });
+                    
+                    if (isRetryAttempt) {
+                      // Route to YELLOW path for retries
+                      handleRetrySuccess(word, wordIdx);
+                    } else {
+                      // Route to GREEN path for first-try
+                      handleCorrect(word, wordIdx);
+                    }
                     return;
                   }
                 }
@@ -750,7 +783,7 @@ export const RPGWordReader = ({
         }, 500);
       }
     }
-  }, [disabled, processResult]);
+  }, [disabled, processResult, mode, getTargetWord, handleCorrect, handleRetrySuccess]);
 
   // Set the ref for use in handlers that are defined before startRecognitionSession
   useEffect(() => {
