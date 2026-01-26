@@ -156,13 +156,13 @@ export const ComprehensionQuiz = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-start justify-center p-4 pt-8 overflow-y-auto"
       >
         <motion.div
           initial={{ scale: 0.9, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
-          className="bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto border border-indigo-500/30 shadow-[0_0_50px_rgba(99,102,241,0.3)]"
+          className="bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 rounded-2xl p-6 max-w-lg w-full max-h-[85vh] overflow-y-auto border border-indigo-500/30 shadow-[0_0_50px_rgba(99,102,241,0.3)]"
         >
           {showFinalResults ? (
             // Final Results
@@ -249,6 +249,11 @@ export const ComprehensionQuiz = ({
                   animate={{ width: `${progress}%` }}
                   transition={{ duration: 0.3 }}
                 />
+              </div>
+              
+              {/* Scroll hint for mobile */}
+              <div className="text-center text-indigo-400 text-xs mb-2 md:hidden">
+                Scroll down to see all options ↓
               </div>
               
               {/* Question */}
