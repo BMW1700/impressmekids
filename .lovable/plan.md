@@ -1,72 +1,142 @@
 
-# Plan: Fix Modal and Battle UI Bottom Cutoff
+# Plan: Fix UI Cutoff Issues - Compact Modal & Flash Button
 
-## Problem
-Both the `WordFeedbackOverlay` modal and the main `RPGBattleArena` UI are being cut off at the bottom of the screen. The action buttons ("Hear It", "Try Again", "Skip & Continue") and the "Attack" button below the word reader are not visible.
+## Problems Identified
 
-## Root Cause
-1. **WordFeedbackOverlay**: The modal uses `flex items-center justify-center` which tries to vertically center content, but when the modal content is taller than the viewport (especially on smaller screens or when browser toolbars are visible), the top and bottom get clipped because there's no scroll capability.
+1. **WordFeedbackOverlay ("Magic" popup)**: The modal is too tall and gets cut off on smaller/non-fullscreen displays, making the action buttons (Try Again, Skip & Continue) invisible.
 
-2. **RPGBattleArena**: The bottom UI section doesn't have a max-height constraint with overflow scrolling, causing content to push below the viewport edge.
+2. **Start Reading → Pause button**: When the button changes from "Start Reading" to "Pause", it causes layout shifts that push content off-screen.
 
-## Solution
+---
 
-### Fix 1: WordFeedbackOverlay - Add Scroll Support and Safe Padding
+## Solution Overview
+
+### Fix 1: Make WordFeedbackOverlay Compact (No Scrolling Needed)
+
+Reduce the size of everything in the modal so it fits on any screen without scrolling:
+
+| Element | Before | After |
+|---------|--------|-------|
+| Icon circle | `w-16 h-16` | `w-10 h-10` |
+| Icon inside | `h-10 w-10` | `h-6 w-6` |
+| Title | `text-xl mb-4` | `text-lg mb-2` |
+| Word display padding | `p-4 mb-4` | `p-3 mb-3` |
+| Expected word size | `text-3xl my-2` | `text-2xl my-1` |
+| Phonetic breakdown | `text-lg` | `text-base` |
+| "You said" section | `mb-3`, `text-lg` | `mb-2`, `text-base` |
+| Tip box padding | `p-3 mb-4` | `p-2 mb-3` |
+| Container padding | `p-6` | `p-4` |
+| Button gap | `gap-3` | `gap-2` |
+| Retry hint margin | `mt-3` | `mt-2` |
+
+This makes the entire modal ~30% shorter, ensuring it never needs scrolling.
+
 **File**: `src/components/aura/game/rpg/WordFeedbackOverlay.tsx`
 
-| Line | Change |
-|------|--------|
-| 98 | Change from `flex items-center justify-center` to `flex items-start justify-center overflow-y-auto py-8` |
-| 104 | Add `max-h-[90vh]` constraint to modal content and `overflow-y-auto` |
+---
+
+### Fix 2: Flash Button Instead of Swapping to "Pause"
+
+Instead of replacing "Start Reading" with a "Pause" button (which can cause layout issues), keep the same button but:
+
+1. **Always show "Start Reading" button** (never swap to "Pause")
+2. **When active**: Button flashes/pulses with an amber glow to indicate "active" state
+3. **Click while active**: Pauses reading (same functionality, no text change)
+4. **When paused**: Show "Resume" button (this is fine since it's a recovery state)
+
+This eliminates the layout shift entirely because the button never changes size or position.
+
+**Implementation**:
 
 ```typescript
-// Before (line 98)
-className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+// Combine isIdle and isActive into one button
+{(isIdle || isActive) && (
+  <motion.div
+    animate={isActive ? { 
+      boxShadow: ['0 0 0px rgba(251, 191, 36, 0)', '0 0 15px rgba(251, 191, 36, 0.6)', '0 0 0px rgba(251, 191, 36, 0)'] 
+    } : {}}
+    transition={isActive ? { repeat: Infinity, duration: 1 } : {}}
+    className="rounded-xl"
+  >
+    <Button
+      size="lg"
+      onClick={isActive ? pauseReading : startReading}
+      disabled={disabled || !cleanWord}
+      className={`min-w-[180px] font-bold transition-all ${
+        isActive 
+          ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700' 
+          : 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700'
+      }`}
+    >
+      {isActive ? (
+        <>
+          <motion.div
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ repeat: Infinity, duration: 0.6 }}
+          >
+            <Mic className="h-5 w-5 mr-2" />
+          </motion.div>
+          Reading...
+        </>
+      ) : (
+        <>
+          <Play className="h-5 w-5 mr-2" />
+          Start Reading
+        </>
+      )}
+    </Button>
+  </motion.div>
+)}
 
-// After
-className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto py-8 bg-black/60 backdrop-blur-sm"
+{isPaused && (
+  <Button ... >
+    <Play /> Resume
+  </Button>
+)}
 ```
 
-```typescript
-// Before (line 104)
-className={`relative max-w-md w-full mx-4 p-6 rounded-2xl border-2 ${...}`}
+**File**: `src/components/aura/game/rpg/RPGWordReader.tsx`
 
-// After - add max-height and my-auto for vertical centering when space allows
-className={`relative max-w-md w-full mx-4 p-6 rounded-2xl border-2 my-auto max-h-[90vh] overflow-y-auto ${...}`}
-```
-
-### Fix 2: RPGBattleArena Bottom UI - Add Scroll and Max Height
-**File**: `src/components/aura/game/rpg/RPGBattleArena.tsx`
-
-| Line | Change |
-|------|--------|
-| 1978 | Add `max-h-[50vh]` and `overflow-y-auto` to bottom UI section |
-
-```typescript
-// Before (line 1978)
-<div className="bg-black/50 backdrop-blur-sm border-t border-white/10">
-
-// After - constrain height and enable scrolling
-<div className="bg-black/50 backdrop-blur-sm border-t border-white/10 max-h-[50vh] overflow-y-auto">
-```
+---
 
 ## Technical Details
 
-### Why `items-start` instead of `items-center`?
-When using `items-center` in a flex container with `overflow-y-auto`, the browser clips both the top and bottom equally when content overflows. By using `items-start`, we anchor content to the top and allow natural scrolling downward.
+### Why Flash Instead of Swap?
+- **No layout shift**: Button stays the same width/position
+- **Clear visual feedback**: Pulsing glow shows "active" state
+- **Intuitive**: User can tap the same button to pause without hunting for a new button
+- **Mobile-friendly**: No content pushed off-screen
 
-### Why `my-auto`?
-Adding `my-auto` (margin-y: auto) to the inner modal content allows it to center vertically when there IS enough space, while still allowing scroll when there isn't.
+### Compact Modal Math
+The current modal height breakdown:
+- Header icon: ~80px
+- Title: ~32px  
+- Word display box: ~120px
+- Tip box: ~56px
+- Buttons: ~44px
+- Retry hint: ~24px
+- Padding: ~48px
+- **Total: ~404px**
 
-### Why `max-h-[90vh]` / `max-h-[50vh]`?
-- 90vh for the modal ensures it never exceeds 90% of viewport height, leaving room for the outer padding
-- 50vh for the bottom battle UI ensures the center battle arena (with characters) always has at least 50% of the screen
+After compacting:
+- Header icon: ~48px (-32)
+- Title: ~24px (-8)
+- Word display box: ~90px (-30)
+- Tip box: ~40px (-16)
+- Buttons: ~40px (-4)
+- Retry hint: ~20px (-4)
+- Padding: ~32px (-16)
+- **Total: ~294px** (~27% smaller)
+
+This fits comfortably within any mobile viewport without scrolling.
+
+---
 
 ## Summary of Changes
 
-| File | Lines Changed | Description |
-|------|---------------|-------------|
-| `src/components/aura/game/rpg/WordFeedbackOverlay.tsx` | 2 | Add scroll support and height constraints to modal |
-| `src/components/aura/game/rpg/RPGBattleArena.tsx` | 1 | Add max-height and scroll to bottom UI section |
+| File | Changes |
+|------|---------|
+| `src/components/aura/game/rpg/WordFeedbackOverlay.tsx` | Reduce all sizes to make modal compact |
+| `src/components/aura/game/rpg/RPGWordReader.tsx` | Replace Start/Pause button swap with unified flash button |
 
-**Estimated Impact**: 3 lines modified
+**Lines Changed**: ~40-50 lines modified across 2 files
