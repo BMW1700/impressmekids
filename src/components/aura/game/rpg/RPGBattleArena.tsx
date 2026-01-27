@@ -127,6 +127,66 @@ export const RPGBattleArena = ({
   const [currentCommand, setCurrentCommand] = useState<CommandType | null>(null);
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
   const [screenShake, setScreenShake] = useState(false);
+  
+  // ========== TERMINAL STATE SAFETY INFRASTRUCTURE ==========
+  // phaseRef tracks current phase synchronously for use in callbacks
+  const phaseRef = useRef<BattlePhase>(phase);
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
+  
+  // Timeout registry - all game timeouts go through this so we can cancel on game-over
+  const timeoutsRef = useRef<number[]>([]);
+  
+  const scheduleTimeout = useCallback((fn: () => void, ms: number): number => {
+    const id = window.setTimeout(() => {
+      // Remove from registry when executed
+      timeoutsRef.current = timeoutsRef.current.filter(t => t !== id);
+      fn();
+    }, ms);
+    timeoutsRef.current.push(id);
+    return id;
+  }, []);
+  
+  const clearAllTimeouts = useCallback(() => {
+    console.log('[RPGBattle] Clearing all pending timeouts:', timeoutsRef.current.length);
+    timeoutsRef.current.forEach(id => window.clearTimeout(id));
+    timeoutsRef.current = [];
+  }, []);
+  
+  // Safe phase setter - BLOCKS changes if already in terminal state
+  const setPhaseSafe = useCallback((next: BattlePhase, reason?: string) => {
+    const current = phaseRef.current;
+    // Terminal states cannot be overwritten
+    if (current === 'victory' || current === 'defeat') {
+      console.log('[RPGBattle] BLOCKED phase change:', next, '- already in terminal state:', current);
+      return false;
+    }
+    console.log('[RPGBattle] Phase change:', current, '->', next, reason ? `(${reason})` : '');
+    setPhase(next);
+    return true;
+  }, []);
+  
+  // Centralized game-over triggers
+  const triggerVictory = useCallback((reason: string) => {
+    if (phaseRef.current === 'victory' || phaseRef.current === 'defeat') {
+      console.log('[RPGBattle] triggerVictory BLOCKED - already terminal');
+      return;
+    }
+    console.log('[RPGBattle] 🏆 TRIGGERING VICTORY:', reason);
+    clearAllTimeouts();
+    speechManager.forceStop();
+    setPhase('victory');
+  }, [clearAllTimeouts]);
+  
+  const triggerDefeat = useCallback((reason: string) => {
+    if (phaseRef.current === 'victory' || phaseRef.current === 'defeat') {
+      console.log('[RPGBattle] triggerDefeat BLOCKED - already terminal');
+      return;
+    }
+    console.log('[RPGBattle] 💀 TRIGGERING DEFEAT:', reason);
+    clearAllTimeouts();
+    speechManager.forceStop();
+    setPhase('defeat');
+  }, [clearAllTimeouts]);
   // REMOVED: HP-based barrage triggers - now all mini-games are random
   
   // Character selection state for Classic mode
@@ -248,21 +308,37 @@ export const RPGBattleArena = ({
     battleSounds.setSoundEnabled(soundEnabled);
   }, [soundEnabled]);
   
+  // Cleanup all timeouts on unmount
+  useEffect(() => {
+    return () => {
+      console.log('[RPGBattle] Component unmounting - clearing all timeouts');
+      clearAllTimeouts();
+      speechManager.forceStop();
+    };
+  }, [clearAllTimeouts]);
+  
   // Helper function to check if this is the final enemy
   const isFinalEnemy = useMemo(() => currentEnemyIndex >= enemyQueue.length - 1, [currentEnemyIndex, enemyQueue.length]);
   
   // Helper function to return to reading state cleanly after any mini-game/barrage
   // CRITICAL: Also checks for victory condition
   // CRITICAL: Uses enemyHpRef to get the LATEST HP value (prevents stale closure from mini-games)
+  // CRITICAL: Uses setPhaseSafe to prevent overwriting terminal states
   const returnToReading = useCallback(() => {
-    console.log('[RPGBattle] Returning to reading state, enemyHpRef:', enemyHpRef.current, 'isFinalEnemy:', isFinalEnemy);
+    console.log('[RPGBattle] returnToReading called, enemyHpRef:', enemyHpRef.current, 'isFinalEnemy:', isFinalEnemy, 'currentPhase:', phaseRef.current);
+    
+    // BLOCK if already in terminal state
+    if (phaseRef.current === 'victory' || phaseRef.current === 'defeat') {
+      console.log('[RPGBattle] returnToReading BLOCKED - already terminal');
+      return;
+    }
+    
     // Force stop any lingering recognition
     speechManager.forceStop();
     
     // Check if we should trigger victory instead - USE REF for latest value!
     if (enemyHpRef.current <= 0 && isFinalEnemy) {
-      console.log('[RPGBattle] ✅ Enemy defeated during mini-game - triggering VICTORY');
-      setPhase('victory');
+      triggerVictory('Enemy HP reached 0 in returnToReading');
       return;
     }
     
@@ -270,7 +346,7 @@ export const RPGBattleArena = ({
     if (enemyHpRef.current <= 0 && !isFinalEnemy) {
       console.log('[RPGBattle] Enemy defeated - transitioning to next enemy');
       setDefeatedEnemy(enemy);
-      setPhase('enemy_transition');
+      setPhaseSafe('enemy_transition', 'next enemy');
       return;
     }
     
@@ -278,14 +354,19 @@ export const RPGBattleArena = ({
     setCurrentWordResult(null);
     setEnemyAbilityMessage(null);
     
-    // Small delay to ensure cleanup completes
-    setTimeout(() => {
-      setPhase('reading');
+    // Small delay to ensure cleanup completes - USE SAFE SETTER
+    scheduleTimeout(() => {
+      // Double-check we haven't entered terminal state during the timeout
+      if (phaseRef.current === 'victory' || phaseRef.current === 'defeat') {
+        console.log('[RPGBattle] returnToReading timeout BLOCKED - terminal state reached');
+        return;
+      }
+      setPhaseSafe('reading', 'returnToReading');
       setCurrentCommand('read');
       setIsPlayerTurn(true);
       console.log('[RPGBattle] State reset complete - phase: reading, command: read');
     }, 100);
-  }, [isFinalEnemy, enemy]);
+  }, [isFinalEnemy, enemy, triggerVictory, setPhaseSafe, scheduleTimeout]);
 
   // Parse story into words - memoized for stability
   const storyWords = useMemo(() => {
@@ -515,6 +596,7 @@ export const RPGBattleArena = ({
   }, [words, batchStartIndex]);
   
   // Handle Fireball Defense complete
+  // UPDATED: Syncs enemyHpRef for terminal state detection in returnToReading
   const handleFireballDefenseComplete = useCallback((blocked: number, hit: number, damage: number) => {
     console.log('[RPGBattle] Fireball Defense complete:', { blocked, hit, damage });
     if (damage > 0) {
@@ -522,7 +604,9 @@ export const RPGBattleArena = ({
     }
     const bonusDamage = blocked * 10;
     if (bonusDamage > 0) {
-      setEnemyHp(prev => Math.max(0, prev - bonusDamage));
+      const newHp = Math.max(0, enemyHpRef.current - bonusDamage);
+      enemyHpRef.current = newHp;
+      setEnemyHp(newHp);
       setTotalDamage(prev => prev + bonusDamage);
     }
     setCorrectWords(prev => prev + blocked);
@@ -531,6 +615,7 @@ export const RPGBattleArena = ({
   }, [barrageWords.length, returnToReading]);
   
   // Handle Word Shield complete - uses returnToReading for clean state
+  // UPDATED: Syncs enemyHpRef for terminal state detection in returnToReading
   const handleWordShieldComplete = useCallback((shieldStrength: number, damage: number) => {
     console.log('[RPGBattle] Word Shield complete:', { shieldStrength, damage });
     // Play shield block sound
@@ -543,7 +628,9 @@ export const RPGBattleArena = ({
       setPlayerHp(prev => Math.max(0, prev - reducedDamage));
     }
     if (shieldStrength > 50) {
-      setEnemyHp(prev => Math.max(0, prev - damage));
+      const newHp = Math.max(0, enemyHpRef.current - damage);
+      enemyHpRef.current = newHp;
+      setEnemyHp(newHp);
       setTotalDamage(prev => prev + damage);
     }
     setBatchStartIndex(prev => prev + barrageWords.length);
@@ -551,13 +638,16 @@ export const RPGBattleArena = ({
   }, [barrageWords.length, returnToReading]);
   
   // Handle Spell Combo complete - uses returnToReading for clean state
+  // UPDATED: Syncs enemyHpRef for terminal state detection in returnToReading
   const handleSpellComboComplete = useCallback((success: boolean, multiplier: number) => {
     console.log('[RPGBattle] Spell Combo complete:', { success, multiplier });
     if (success) {
       battleSounds.comboSuccess();
       battleSounds.magicSparkle();
       const damage = Math.floor(50 * multiplier);
-      setEnemyHp(prev => Math.max(0, prev - damage));
+      const newHp = Math.max(0, enemyHpRef.current - damage);
+      enemyHpRef.current = newHp;
+      setEnemyHp(newHp);
       setTotalDamage(prev => prev + damage);
       setCorrectWords(prev => prev + barrageWords.length);
     }
@@ -566,10 +656,13 @@ export const RPGBattleArena = ({
   }, [barrageWords.length, returnToReading]);
   
   // Handle Dodge Words complete
+  // UPDATED: Syncs enemyHpRef for terminal state detection in returnToReading
   const handleDodgeWordsComplete = useCallback((correctHits: number, wrongHits: number, dodged: number) => {
     console.log('[RPGBattle] Dodge Words complete:', { correctHits, wrongHits, dodged });
     const damage = correctHits * 15;
-    setEnemyHp(prev => Math.max(0, prev - damage));
+    const newHp = Math.max(0, enemyHpRef.current - damage);
+    enemyHpRef.current = newHp;
+    setEnemyHp(newHp);
     setTotalDamage(prev => prev + damage);
     setCorrectWords(prev => prev + correctHits);
     returnToReading();
@@ -578,11 +671,14 @@ export const RPGBattleArena = ({
   // (handleDodgeWordsDamage removed - Word Blitz replaced with Word Shield)
   
   // Handle Rhyme Chain complete - uses returnToReading for clean state
+  // UPDATED: Syncs enemyHpRef for terminal state detection in returnToReading
   const handleRhymeChainComplete = useCallback((score: number, damage: number) => {
     console.log('[RPGBattle] Rhyme Chain complete:', { score, damage });
     if (damage > 0) {
       battleSounds.magicSparkle();
-      setEnemyHp(prev => Math.max(0, prev - damage));
+      const newHp = Math.max(0, enemyHpRef.current - damage);
+      enemyHpRef.current = newHp;
+      setEnemyHp(newHp);
       setTotalDamage(prev => prev + damage);
     }
     setCorrectWords(prev => prev + score);
@@ -591,11 +687,14 @@ export const RPGBattleArena = ({
   }, [barrageWords.length, returnToReading]);
   
   // Handle Speed Typist complete - uses returnToReading for clean state
+  // UPDATED: Syncs enemyHpRef for terminal state detection in returnToReading
   const handleSpeedTypistComplete = useCallback((wordsSpoken: number, damage: number) => {
     console.log('[RPGBattle] Speed Typist complete:', { wordsSpoken, damage });
     if (damage > 0) {
       battleSounds.lightningCrack();
-      setEnemyHp(prev => Math.max(0, prev - damage));
+      const newHp = Math.max(0, enemyHpRef.current - damage);
+      enemyHpRef.current = newHp;
+      setEnemyHp(newHp);
       setTotalDamage(prev => prev + damage);
     }
     setCorrectWords(prev => prev + wordsSpoken);
@@ -604,6 +703,7 @@ export const RPGBattleArena = ({
   }, [barrageWords.length, returnToReading]);
   
   // Handle Tug of War complete
+  // UPDATED: Uses triggerVictory/triggerDefeat for terminal state safety
   const handleTugOfWarComplete = useCallback((victory: boolean, stats: { wordsRead: number; correctWords: number; incorrectWords: number }) => {
     console.log('[RPGBattle] Tug of War complete:', { victory, stats, battleMode });
     setWordsRead(prev => prev + stats.wordsRead);
@@ -614,8 +714,10 @@ export const RPGBattleArena = ({
       if (victory) {
         battleSounds.celebrationSound();
         setTotalDamage(stats.correctWords * 5);
+        triggerVictory('Tug of War won');
+      } else {
+        triggerDefeat('Tug of War lost');
       }
-      setPhase(victory ? 'victory' : 'defeat');
       return;
     }
     
@@ -623,16 +725,19 @@ export const RPGBattleArena = ({
     if (victory) {
       const bonusDamage = Math.floor(stats.correctWords * 5);
       battleSounds.celebrationSound();
-      setEnemyHp(prev => Math.max(0, prev - bonusDamage));
+      const newHp = Math.max(0, enemyHpRef.current - bonusDamage);
+      enemyHpRef.current = newHp;
+      setEnemyHp(newHp);
       setTotalDamage(prev => prev + bonusDamage);
     } else {
       setPlayerHp(prev => Math.max(0, prev - 20));
     }
     setBatchStartIndex(prev => prev + barrageWords.length);
     returnToReading();
-  }, [barrageWords.length, returnToReading, battleMode]);
+  }, [barrageWords.length, returnToReading, battleMode, triggerVictory, triggerDefeat]);
   
   // Handle Balloon Battle complete
+  // UPDATED: Uses triggerVictory/triggerDefeat for terminal state safety
   const handleBalloonBattleComplete = useCallback((victory: boolean, stats: { wordsRead: number; correctWords: number; balloonsLost: number }) => {
     console.log('[RPGBattle] Balloon Battle complete:', { victory, stats, battleMode });
     setWordsRead(prev => prev + stats.wordsRead);
@@ -643,8 +748,10 @@ export const RPGBattleArena = ({
       if (victory) {
         battleSounds.celebrationSound();
         setTotalDamage(stats.correctWords * 3 + (stats.balloonsLost === 0 ? 50 : 0));
+        triggerVictory('Balloon Battle won');
+      } else {
+        triggerDefeat('Balloon Battle lost');
       }
-      setPhase(victory ? 'victory' : 'defeat');
       return;
     }
     
@@ -652,22 +759,27 @@ export const RPGBattleArena = ({
     if (victory) {
       const bonusDamage = Math.floor(stats.correctWords * 3) + (stats.balloonsLost === 0 ? 50 : 0);
       battleSounds.celebrationSound();
-      setEnemyHp(prev => Math.max(0, prev - bonusDamage));
+      const newHp = Math.max(0, enemyHpRef.current - bonusDamage);
+      enemyHpRef.current = newHp;
+      setEnemyHp(newHp);
       setTotalDamage(prev => prev + bonusDamage);
     } else {
       setPlayerHp(prev => Math.max(0, prev - 30));
     }
     setBatchStartIndex(prev => prev + barrageWords.length);
     returnToReading();
-  }, [barrageWords.length, returnToReading, battleMode]);
+  }, [barrageWords.length, returnToReading, battleMode, triggerVictory, triggerDefeat]);
   
   // Handle Goblin Horde complete (mini goblin attack mini-game in Classic mode)
+  // UPDATED: Syncs enemyHpRef for terminal state detection in returnToReading
   const handleGoblinHordeComplete = useCallback((result: { success: boolean; wordsSpoken: number; totalWords: number }) => {
     console.log('[RPGBattle] Goblin Horde complete:', result);
     const bonusDamage = result.wordsSpoken * 8;
     if (bonusDamage > 0) {
       battleSounds.celebrationSound();
-      setEnemyHp(prev => Math.max(0, prev - bonusDamage));
+      const newHp = Math.max(0, enemyHpRef.current - bonusDamage);
+      enemyHpRef.current = newHp;
+      setEnemyHp(newHp);
       setTotalDamage(prev => prev + bonusDamage);
     }
     setCorrectWords(prev => prev + result.wordsSpoken);
@@ -676,12 +788,15 @@ export const RPGBattleArena = ({
   }, [barrageWords.length, returnToReading]);
   
   // Handle Ground Ripple complete (Grog's signature mini-game)
+  // UPDATED: Syncs enemyHpRef for terminal state detection in returnToReading
   const handleGroundRippleComplete = useCallback((destroyed: number, missed: number) => {
     console.log('[RPGBattle] Ground Ripple complete:', { destroyed, missed });
     const bonusDamage = destroyed * 12;
     if (bonusDamage > 0) {
       battleSounds.celebrationSound();
-      setEnemyHp(prev => Math.max(0, prev - bonusDamage));
+      const newHp = Math.max(0, enemyHpRef.current - bonusDamage);
+      enemyHpRef.current = newHp;
+      setEnemyHp(newHp);
       setTotalDamage(prev => prev + bonusDamage);
     }
     if (missed > 0) {
@@ -693,12 +808,15 @@ export const RPGBattleArena = ({
   }, [barrageWords.length, returnToReading]);
   
   // Handle Web Trap complete (Crystal Spider's signature mini-game)
+  // UPDATED: Syncs enemyHpRef for terminal state detection in returnToReading
   const handleWebTrapComplete = useCallback((wordsFreed: number, damage: number) => {
     console.log('[RPGBattle] Web Trap complete:', { wordsFreed, damage });
     const bonusDamage = wordsFreed * 10;
     if (bonusDamage > 0) {
       battleSounds.celebrationSound();
-      setEnemyHp(prev => Math.max(0, prev - bonusDamage));
+      const newHp = Math.max(0, enemyHpRef.current - bonusDamage);
+      enemyHpRef.current = newHp;
+      setEnemyHp(newHp);
       setTotalDamage(prev => prev + bonusDamage);
     }
     if (damage > 0) {
@@ -710,6 +828,7 @@ export const RPGBattleArena = ({
   }, [barrageWords.length, returnToReading]);
   
   // Handle Quick Block complete (enemy attack defense)
+  // UPDATED: Syncs enemyHpRef for terminal state detection in returnToReading
   const handleQuickBlockComplete = useCallback((blocked: number, total: number, counterDamage: number) => {
     console.log('[RPGBattle] Quick Block complete:', { blocked, total, counterDamage });
     
@@ -722,7 +841,9 @@ export const RPGBattleArena = ({
       damageTaken = 0;
       if (counterDamage > 0) {
         battleSounds.comboSuccess();
-        setEnemyHp(prev => Math.max(0, prev - counterDamage));
+        const newHp = Math.max(0, enemyHpRef.current - counterDamage);
+        enemyHpRef.current = newHp;
+        setEnemyHp(newHp);
         setTotalDamage(prev => prev + counterDamage);
       }
     } else if (blocked >= 2) {
@@ -1026,6 +1147,7 @@ export const RPGBattleArena = ({
   }, [inventory]);
 
   // Enemy turn logic - with failsafe to prevent stuck state
+  // UPDATED: Uses setPhaseSafe and scheduleTimeout for terminal state safety
   const triggerEnemyTurn = useCallback(() => {
     // FAILSAFE: If no abilities, skip enemy turn entirely
     if (!enemy.specialAbilities || enemy.specialAbilities.length === 0) {
@@ -1033,18 +1155,30 @@ export const RPGBattleArena = ({
       return;
     }
     
+    // Don't start enemy turn if game is over
+    if (phaseRef.current === 'victory' || phaseRef.current === 'defeat') {
+      console.log('[RPGBattle] Enemy turn blocked - game already over');
+      return;
+    }
+    
     console.log('[RPGBattle] Starting enemy turn');
-    setPhase('enemy_turn');
+    setPhaseSafe('enemy_turn', 'triggerEnemyTurn');
     setIsPlayerTurn(false);
     
     // Pick a random ability
     const ability = enemy.specialAbilities[Math.floor(Math.random() * enemy.specialAbilities.length)];
     setEnemyAbilityMessage(`${enemy.name} uses ${ability.name}!`);
     
-    setTimeout(() => {
+    scheduleTimeout(() => {
+      // Check terminal state before proceeding
+      if (phaseRef.current === 'victory' || phaseRef.current === 'defeat') return;
+      
       setEnemyAttacking(true);
       
-      setTimeout(() => {
+      scheduleTimeout(() => {
+        // Check terminal state before proceeding
+        if (phaseRef.current === 'victory' || phaseRef.current === 'defeat') return;
+        
         setEnemyAttacking(false);
         
         // Apply ability effects
@@ -1072,31 +1206,40 @@ export const RPGBattleArena = ({
         setHeroTakingDamage(true);
         triggerScreenShake();
         
-        setTimeout(() => {
+        scheduleTimeout(() => {
+          // Check terminal state before returning to reading
+          if (phaseRef.current === 'victory' || phaseRef.current === 'defeat') return;
+          
           setHeroTakingDamage(false);
           setEnemyAbilityMessage(null);
           console.log('[RPGBattle] Enemy turn complete, returning to reading');
-          setPhase('reading');
+          setPhaseSafe('reading', 'enemy turn complete');
           setIsPlayerTurn(true);
         }, 600);
       }, 400);
     }, 1000);
-  }, [enemy]);
+  }, [enemy, setPhaseSafe, scheduleTimeout]);
   
   // FAILSAFE: Force return to reading if stuck in enemy_turn for too long
+  // UPDATED: Uses setPhaseSafe to respect terminal states
   useEffect(() => {
     if (phase === 'enemy_turn') {
-      const failsafe = setTimeout(() => {
+      const failsafe = scheduleTimeout(() => {
+        // Check terminal state before forcing
+        if (phaseRef.current === 'victory' || phaseRef.current === 'defeat') {
+          console.log('[RPGBattle] Failsafe skipped - game already over');
+          return;
+        }
         console.warn('[RPGBattle] Enemy turn failsafe triggered - forcing return to reading');
         setEnemyAbilityMessage(null);
         setEnemyAttacking(false);
         setHeroTakingDamage(false);
-        setPhase('reading');
+        setPhaseSafe('reading', 'failsafe');
         setIsPlayerTurn(true);
       }, 6000); // 6 second failsafe
       return () => clearTimeout(failsafe);
     }
-  }, [phase]);
+  }, [phase, scheduleTimeout, setPhaseSafe]);
 
   // Handle first-attempt miss (called immediately when miss is finalized, for accuracy tracking)
   // This counts the miss toward wordsRead immediately, before user decides Try Again or Continue
@@ -1366,20 +1509,26 @@ export const RPGBattleArena = ({
   }, []);
 
   // Check for phase transitions - handle multi-enemy
+  // CRITICAL: Uses triggerVictory/triggerDefeat for terminal states
   useEffect(() => {
-    if (enemyHp <= 0 && phase !== 'victory' && phase !== 'enemy_transition') {
+    // Enemy death check
+    if (enemyHp <= 0 && phase !== 'victory' && phase !== 'defeat' && phase !== 'enemy_transition') {
       // Check if there are more enemies
       if (currentEnemyIndex < enemyQueue.length - 1) {
         // Transition to next enemy
+        console.log('[RPGBattle] Enemy HP useEffect: transitioning to next enemy');
         setDefeatedEnemy(enemy);
-        setPhase('enemy_transition');
+        setPhaseSafe('enemy_transition', 'enemy HP useEffect');
       } else {
-        setPhase('victory');
+        triggerVictory('Enemy HP reached 0 (useEffect)');
       }
-    } else if (playerHp <= 0 && phase !== 'defeat') {
-      setPhase('defeat');
     }
-  }, [enemyHp, playerHp, phase, currentEnemyIndex, enemyQueue.length, enemy]);
+    
+    // Player death check
+    if (playerHp <= 0 && phase !== 'defeat' && phase !== 'victory') {
+      triggerDefeat('Player HP reached 0');
+    }
+  }, [enemyHp, playerHp, phase, currentEnemyIndex, enemyQueue.length, enemy, triggerVictory, triggerDefeat, setPhaseSafe]);
 
   // Handle enemy transition complete
   const handleTransitionComplete = useCallback(() => {
@@ -1556,28 +1705,37 @@ export const RPGBattleArena = ({
   // VICTORY CONDITIONS:
   // 1. Enemy HP reaches 0 at any point = Victory
   // 2. All words read + accuracy >= 80% = Victory (regardless of enemy HP)
+  // 3. All words read + accuracy < 80% = Defeat (try again)
+  // CRITICAL: Uses triggerVictory/triggerDefeat to prevent race conditions
   useEffect(() => {
-    // Don't override terminal states
-    if (phase === 'victory' || phase === 'defeat' || phase === 'enemy_transition') return;
+    // Don't do anything if already in terminal state
+    if (phaseRef.current === 'victory' || phaseRef.current === 'defeat') return;
+    
+    // Also skip if transitioning
+    if (phase === 'enemy_transition') return;
     
     // Check victory by enemy death - from ANY phase
     if (enemyHp <= 0) {
-      console.log('[RPGBattle] ✅ Enemy HP = 0 - VICTORY!');
-      setPhase(isFinalEnemy ? 'victory' : 'enemy_transition');
+      if (isFinalEnemy) {
+        triggerVictory('Enemy HP = 0 (main useEffect)');
+      } else {
+        console.log('[RPGBattle] Enemy defeated, transitioning to next enemy');
+        setDefeatedEnemy(enemy);
+        setPhaseSafe('enemy_transition', 'allWordsRead useEffect');
+      }
       return;
     }
     
     // Check victory/defeat by completing all words - 80%+ accuracy = win, <80% = defeat
     if (allWordsRead) {
+      console.log('[RPGBattle] All words read! Checking accuracy:', { correctWords, wordsRead, accuracy: currentAccuracy });
       if (currentAccuracy >= 0.8) {
-        console.log('[RPGBattle] ✅ All words read with 80%+ accuracy - VICTORY!', { accuracy: currentAccuracy });
-        setPhase('victory');
+        triggerVictory(`All words read with ${Math.round(currentAccuracy * 100)}% accuracy`);
       } else {
-        console.log('[RPGBattle] ❌ All words read but accuracy below 80% - DEFEAT!', { accuracy: currentAccuracy });
-        setPhase('defeat');
+        triggerDefeat(`All words read with only ${Math.round(currentAccuracy * 100)}% accuracy (need 80%)`);
       }
     }
-  }, [allWordsRead, currentAccuracy, phase, enemyHp, isFinalEnemy]);
+  }, [allWordsRead, currentAccuracy, phase, enemyHp, isFinalEnemy, enemy, correctWords, wordsRead, triggerVictory, triggerDefeat, setPhaseSafe]);
 
   // If character select is shown for Classic mode, render it instead of battle
   if (showCharacterSelect && battleMode === 'classic') {
