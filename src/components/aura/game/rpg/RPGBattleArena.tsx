@@ -177,6 +177,14 @@ export const RPGBattleArena = ({
   const [totalDamage, setTotalDamage] = useState(0);
   const [inventory, setInventory] = useState<Record<InventoryKey, number>>({ health_potion: 2, magic_potion: 1 });
   
+  // Ref to track latest enemyHp for use in callbacks (prevents stale closure issues in mini-games)
+  const enemyHpRef = useRef(enemyHp);
+  
+  // Keep enemyHpRef in sync with state
+  useEffect(() => {
+    enemyHpRef.current = enemyHp;
+  }, [enemyHp]);
+  
   // Track which word indices have already been counted for accuracy (to prevent double-counting)
   // When onMiss fires, we count the miss immediately. When handleWordResult(false) fires later via "Continue",
   // we skip the wordsRead increment if already counted.
@@ -245,20 +253,21 @@ export const RPGBattleArena = ({
   
   // Helper function to return to reading state cleanly after any mini-game/barrage
   // CRITICAL: Also checks for victory condition
+  // CRITICAL: Uses enemyHpRef to get the LATEST HP value (prevents stale closure from mini-games)
   const returnToReading = useCallback(() => {
-    console.log('[RPGBattle] Returning to reading state, enemyHp:', enemyHp, 'isFinalEnemy:', isFinalEnemy);
+    console.log('[RPGBattle] Returning to reading state, enemyHpRef:', enemyHpRef.current, 'isFinalEnemy:', isFinalEnemy);
     // Force stop any lingering recognition
     speechManager.forceStop();
     
-    // Check if we should trigger victory instead
-    if (enemyHp <= 0 && isFinalEnemy) {
-      console.log('[RPGBattle] Enemy defeated during mini-game - triggering victory');
+    // Check if we should trigger victory instead - USE REF for latest value!
+    if (enemyHpRef.current <= 0 && isFinalEnemy) {
+      console.log('[RPGBattle] ✅ Enemy defeated during mini-game - triggering VICTORY');
       setPhase('victory');
       return;
     }
     
-    // Check if we should transition to next enemy
-    if (enemyHp <= 0 && !isFinalEnemy) {
+    // Check if we should transition to next enemy - USE REF for latest value!
+    if (enemyHpRef.current <= 0 && !isFinalEnemy) {
       console.log('[RPGBattle] Enemy defeated - transitioning to next enemy');
       setDefeatedEnemy(enemy);
       setPhase('enemy_transition');
@@ -276,7 +285,7 @@ export const RPGBattleArena = ({
       setIsPlayerTurn(true);
       console.log('[RPGBattle] State reset complete - phase: reading, command: read');
     }, 100);
-  }, [enemyHp, isFinalEnemy, enemy]);
+  }, [isFinalEnemy, enemy]);
 
   // Parse story into words - memoized for stability
   const storyWords = useMemo(() => {
@@ -1558,10 +1567,15 @@ export const RPGBattleArena = ({
       return;
     }
     
-    // Check victory by completing all words with 80%+ accuracy - from ANY non-mini-game phase
-    if (allWordsRead && currentAccuracy >= 0.8) {
-      console.log('[RPGBattle] ✅ All words read with 80%+ accuracy - VICTORY!', { accuracy: currentAccuracy });
-      setPhase('victory');
+    // Check victory/defeat by completing all words - 80%+ accuracy = win, <80% = defeat
+    if (allWordsRead) {
+      if (currentAccuracy >= 0.8) {
+        console.log('[RPGBattle] ✅ All words read with 80%+ accuracy - VICTORY!', { accuracy: currentAccuracy });
+        setPhase('victory');
+      } else {
+        console.log('[RPGBattle] ❌ All words read but accuracy below 80% - DEFEAT!', { accuracy: currentAccuracy });
+        setPhase('defeat');
+      }
     }
   }, [allWordsRead, currentAccuracy, phase, enemyHp, isFinalEnemy]);
 
@@ -1692,7 +1706,9 @@ export const RPGBattleArena = ({
                 setPlayerHp(prev => Math.max(0, prev - reducedDamage));
               }
               if (shieldStrength > 50) {
-                setEnemyHp(prev => Math.max(0, prev - damage));
+                const newHp = Math.max(0, enemyHpRef.current - damage);
+                enemyHpRef.current = newHp; // Sync ref FIRST for returnToReading
+                setEnemyHp(newHp);
                 setTotalDamage(prev => prev + damage);
               }
               setCorrectWords(prev => prev + Math.floor(shieldStrength / 20));
@@ -1759,9 +1775,11 @@ export const RPGBattleArena = ({
           <RPGWordEcho
             words={barrageWords}
             onComplete={(completed, failed) => {
+              const newHp = Math.max(0, enemyHpRef.current - completed * 12);
+              enemyHpRef.current = newHp; // Sync ref FIRST for returnToReading
               setCorrectWords(prev => prev + completed);
               setTotalDamage(prev => prev + completed * 12);
-              setEnemyHp(prev => Math.max(0, prev - completed * 12));
+              setEnemyHp(newHp);
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
@@ -1772,9 +1790,11 @@ export const RPGBattleArena = ({
           <RPGWindChase
             words={barrageWords}
             onComplete={(caught, missed) => {
+              const newHp = Math.max(0, enemyHpRef.current - caught * 10);
+              enemyHpRef.current = newHp; // Sync ref FIRST for returnToReading
               setCorrectWords(prev => prev + caught);
               setTotalDamage(prev => prev + caught * 10);
-              setEnemyHp(prev => Math.max(0, prev - caught * 10));
+              setEnemyHp(newHp);
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
@@ -1785,9 +1805,11 @@ export const RPGBattleArena = ({
           <RPGInkSplash
             words={barrageWords}
             onComplete={(revealed, failed) => {
+              const newHp = Math.max(0, enemyHpRef.current - revealed * 15);
+              enemyHpRef.current = newHp; // Sync ref FIRST for returnToReading
               setCorrectWords(prev => prev + revealed);
               setTotalDamage(prev => prev + revealed * 15);
-              setEnemyHp(prev => Math.max(0, prev - revealed * 15));
+              setEnemyHp(newHp);
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
@@ -1798,9 +1820,11 @@ export const RPGBattleArena = ({
           <RPGCrystalPrison
             words={barrageWords}
             onComplete={(freed, frozen) => {
+              const newHp = Math.max(0, enemyHpRef.current - freed * 14);
+              enemyHpRef.current = newHp; // Sync ref FIRST for returnToReading
               setCorrectWords(prev => prev + freed);
               setTotalDamage(prev => prev + freed * 14);
-              setEnemyHp(prev => Math.max(0, prev - freed * 14));
+              setEnemyHp(newHp);
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
@@ -1811,9 +1835,11 @@ export const RPGBattleArena = ({
           <RPGLightningStorm
             words={barrageWords}
             onComplete={(struck, missed) => {
+              const newHp = Math.max(0, enemyHpRef.current - struck * 12);
+              enemyHpRef.current = newHp; // Sync ref FIRST for returnToReading
               setCorrectWords(prev => prev + struck);
               setTotalDamage(prev => prev + struck * 12);
-              setEnemyHp(prev => Math.max(0, prev - struck * 12));
+              setEnemyHp(newHp);
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
@@ -1824,9 +1850,11 @@ export const RPGBattleArena = ({
           <RPGVoidPull
             words={barrageWords}
             onComplete={(saved, consumed) => {
+              const newHp = Math.max(0, enemyHpRef.current - saved * 16);
+              enemyHpRef.current = newHp; // Sync ref FIRST for returnToReading
               setCorrectWords(prev => prev + saved);
               setTotalDamage(prev => prev + saved * 16);
-              setEnemyHp(prev => Math.max(0, prev - saved * 16));
+              setEnemyHp(newHp);
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
