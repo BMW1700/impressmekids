@@ -1,151 +1,176 @@
 
-<context>
-User requirement (explicit):
-- First attempt correct => word shows GREEN.
-- First attempt incorrect => word shows RED.
-- If incorrect then “Try Again” and correct => word MUST show YELLOW (never green).
-- If incorrect then “Try Again” and still incorrect => stays RED.
-- Accuracy must be correct (a word that was missed first should count as missed for accuracy even if later corrected on retry).
+# Plan: Fix Victory & Defeat Triggers for All Cases
 
-Current observed problem:
-- Words are turning GREEN after a retry-success instead of staying YELLOW.
-- Accuracy can be inflated because a “miss then retry-success” currently may never get counted as a miss in the battle stats.
-</context>
+## Problem Summary
 
-<what-i-found (verified in code)>
-1) A concrete reason retried words can become green (especially for Elara / fast mode):
-- In `RPGWordReader.tsx`, the Web Speech `onresult` handler has a “FAST MODE” path that processes interim transcripts.
-- That fast path directly calls `handleCorrect(word, wordIdx)` when it sees a match.
-- This bypasses the retry logic in `processResult()` that correctly routes retry-success to `handleRetrySuccess()` and sets `result: 'retried'`.
-- Result: during a retry attempt, an interim match can incorrectly mark the word as `correct` (green), overwriting the `retried` (yellow) state.
+1. **Missing Defeat Condition**: When all words are read and accuracy is below 80%, there's no code to trigger the "Try Again" (defeat) screen
+2. **Potential Race Condition**: Mini-games that deal fatal damage may not reliably trigger victory due to competing state updates
+3. **Duplicate Logic**: Victory checks exist in multiple places (useEffect, returnToReading, etc.) causing potential conflicts
 
-2) A concrete reason accuracy can be wrong (too high):
-- In `RPGWordReader`, the initial miss (`handleIncorrectFinal`) does NOT call `onResult(false, ...)` immediately. It waits until the user presses “Continue”.
-- If the user presses “Try Again” and succeeds, `handleRetrySuccess` advances without ever calling `onResult(false, ...)`.
-- In `RPGBattleArena`, `wordsRead` and `correctWords` only update inside `handleWordResult` (wired to `onResult`).
-- So a “miss then retry-success” may never increment `wordsRead`, meaning the miss isn’t counted at all, inflating accuracy.
+---
 
-3) UI coloring logic for retried is already present and correct:
-- The dot/word-chip rendering in `RPGWordReader.tsx` already supports `result === 'retried'` => yellow.
-- So the core issue is not display; it’s that the state is being set to `correct` (green) in the first place.
+## Solution Overview
 
-</what-i-found>
+### Fix 1: Add Defeat Trigger for Low Accuracy
 
-<goals>
-A) Make it impossible for a retry-success to ever be recorded as `correct`.
-B) Ensure accuracy counts a “miss on first attempt” as a miss, even if the retry later succeeds.
-C) Prevent double-counting a miss (once at “miss shown”, and again on “Continue”).
-</goals>
+In the existing useEffect (lines 1547-1566), add an `else` branch to trigger defeat when all words are read but accuracy is below 80%.
 
-<implementation-plan>
-<step 1 — Fix retry-success becoming green (root cause: fast interim path bypass)>
-Files:
-- `src/components/aura/game/rpg/RPGWordReader.tsx`
+**Current Code:**
+```javascript
+if (allWordsRead && currentAccuracy >= 0.8) {
+  console.log('[RPGBattle] ✅ All words read with 80%+ accuracy - VICTORY!');
+  setPhase('victory');
+}
+```
 
-Changes:
-1. Update the FAST MODE interim-match branch inside `recognition.onresult`:
-   - Replace the direct `handleCorrect(word, wordIdx)` call with logic that respects retry state:
-     Option A (preferred): call `processResult()` using the interim transcript as input (so retry routing stays centralized).
-     Option B: replicate the same conditional used in `processResult`:
-       - if `isRetryAttemptRef.current || !canRetryRef.current` => call `handleRetrySuccess(...)`
-       - else => call `handleCorrect(...)`
+**New Code:**
+```javascript
+if (allWordsRead) {
+  if (currentAccuracy >= 0.8) {
+    console.log('[RPGBattle] ✅ All words read with 80%+ accuracy - VICTORY!');
+    setPhase('victory');
+  } else {
+    console.log('[RPGBattle] ❌ All words read but accuracy below 80% - DEFEAT!', { accuracy: currentAccuracy });
+    setPhase('defeat');
+  }
+}
+```
 
-2. Add a processing guard to `handleRetrySuccess` similar to `handleCorrect`:
-   - At the start of `handleRetrySuccess`, do:
-     - `if (isProcessingRef.current) return;`
-     - `isProcessingRef.current = true;`
-   Reason: when we start treating interim matches as “real” actions, we must prevent duplicate executions from rapid interim updates.
+**File**: `src/components/aura/game/rpg/RPGBattleArena.tsx`
+**Lines**: ~1561-1565
 
-Expected outcome:
-- During retry attempts, even interim matches will route to `handleRetrySuccess` and set `wordResults[wordIndex].result = 'retried'`.
-- The state can no longer be overwritten to green by the fast path.
+---
 
-Verification steps (in-app, concrete):
-- Run with Elara (mode = fast).
-- Intentionally miss a word, click Try Again, then say the correct word.
-- Confirm console shows `[RPGWordReader] SET RETRIED (YELLOW)` and the word chip remains yellow after moving to the next word.
+### Fix 2: Add Failsafe Victory Check After Mini-Game HP Updates
 
-</step 1>
+The issue is that when a mini-game deals damage that kills the enemy (HP -> 0), the mini-game completion handler calls `returnToReading()`, but this can race with the useEffect that monitors `enemyHp`.
 
-<step 2 — Fix accuracy counting for “miss then retry-success”>
-Files:
-- `src/components/aura/game/rpg/RPGWordReader.tsx`
-- `src/components/aura/game/rpg/RPGBattleArena.tsx`
+**Solution**: Add a direct victory check inside each mini-game completion handler BEFORE calling `returnToReading()`, OR update `returnToReading()` to properly handle all mini-game phases.
 
-Changes:
-1. Add a new callback prop to `RPGWordReader`:
-   - `onMiss?: (spokenWord: string, wordIndex: number) => void`
-   Purpose: report “first attempt was incorrect” immediately for stats/accuracy, without triggering enemy combat.
+**Option A (Chosen - Simplest)**: The `returnToReading()` function already has victory checks at lines 254-266. However, it reads `enemyHp` from the closure, which may be stale. We need to use a ref to get the latest value.
 
-2. Call `onMiss(...)` inside `handleIncorrectFinal` right when the overlay is shown (i.e., when the miss is finalized and the user is deciding):
-   - This ensures the miss counts toward accuracy even if the user later succeeds on retry.
+**Changes:**
+1. Add `enemyHpRef = useRef(enemyHp)` that syncs with `enemyHp` state
+2. Update `returnToReading()` to check `enemyHpRef.current <= 0` instead of `enemyHp <= 0`
+3. This ensures that when mini-games call `setEnemyHp(0)` then `returnToReading()`, the victory triggers correctly
 
-3. Prevent double counting when the user presses “Continue”:
-   - In `RPGBattleArena`, introduce a `countedWordIndicesRef` (Set<number> of global indices) or similar structure.
-   - When `onMiss` fires:
-     - Compute `globalIndex = batchStartIndex + wordIndex`
-     - If not already counted:
-       - increment `wordsRead`
-       - (optional) reset `streak` to 0 for accuracy consistency (see Step 2.4)
-       - mark globalIndex counted
-   - When `handleWordResult(false, ...)` fires from “Continue”:
-     - Only perform the combat (enemy counter-attack), but do NOT increment `wordsRead` again if that word was already counted by `onMiss`.
+**File**: `src/components/aura/game/rpg/RPGBattleArena.tsx`
 
-4. Streak behavior decision (minimal-change default):
-   - Default plan: reset streak on first miss (when `onMiss` fires), because the first attempt was wrong.
-   - This matches “accuracy rigor” and avoids a streak staying alive through misses.
-   - If you want streak to only break when the enemy actually attacks (on Continue), we can keep streak logic in `handleWordResult(false)` only. (I can implement either; see Clarification question below.)
+Add after line 172:
+```javascript
+// Ref to track latest enemyHp for use in callbacks (prevents stale closure)
+const enemyHpRef = useRef(enemyHp);
+```
 
-Expected outcome:
-- A miss is counted for accuracy immediately when the miss occurs.
-- A retry-success remains neutral (does not add correctWords).
-- “Continue” triggers enemy combat but doesn’t inflate wordsRead a second time.
+Add after line 173:
+```javascript
+// Keep ref in sync
+useEffect(() => {
+  enemyHpRef.current = enemyHp;
+}, [enemyHp]);
+```
 
-Verification steps (in-app, concrete):
-- Start a battle, miss a word, then hit Try Again and succeed.
-- Watch accuracy: it should reflect the miss (wordsRead increased, correctWords not increased) even though you advanced.
-- Then test miss + Continue: wordsRead should not jump by 2 for the same word.
+Update `returnToReading()` (lines 248-279) to use `enemyHpRef.current`:
+```javascript
+const returnToReading = useCallback(() => {
+  console.log('[RPGBattle] Returning to reading state, enemyHpRef:', enemyHpRef.current, 'isFinalEnemy:', isFinalEnemy);
+  speechManager.forceStop();
+  
+  // Check if we should trigger victory instead - use REF for latest value!
+  if (enemyHpRef.current <= 0 && isFinalEnemy) {
+    console.log('[RPGBattle] Enemy defeated during mini-game - triggering victory');
+    setPhase('victory');
+    return;
+  }
+  
+  if (enemyHpRef.current <= 0 && !isFinalEnemy) {
+    console.log('[RPGBattle] Enemy defeated - transitioning to next enemy');
+    setDefeatedEnemy(enemy);
+    setPhase('enemy_transition');
+    return;
+  }
+  
+  // Clear any pending state immediately
+  setCurrentWordResult(null);
+  setEnemyAbilityMessage(null);
+  
+  setTimeout(() => {
+    setPhase('reading');
+    setCurrentCommand('read');
+    setIsPlayerTurn(true);
+  }, 100);
+}, [isFinalEnemy, enemy]);
+```
 
-</step 2>
+**Note**: Remove `enemyHp` from the dependency array since we're using the ref.
 
-<step 3 — Safety: ensure “green only on first attempt” is enforced>
-Files:
-- `src/components/aura/game/rpg/RPGWordReader.tsx`
+---
 
-Changes:
-- Add a “never upgrade retried to correct” rule when writing to `wordResults`:
-  - In `handleCorrect`, before setting `result: 'correct'`, check if an existing entry is already `missed` for that word index and `isRetryAttemptRef.current` is true; in that case call `handleRetrySuccess` instead (extra belt-and-suspenders).
-This is redundant with Step 1, but it protects against future regressions.
+### Fix 3: Ensure Mini-Game HP Updates Sync to Ref
 
-Verification:
-- Repeat Elara fast-mode test; ensure no path leads to `result: 'correct'` during retry.
+For each inline mini-game handler that sets enemyHp (like the ones at lines 1761-1834), we need to also update the ref synchronously so that `returnToReading()` sees the correct value.
 
-</step 3>
-</implementation-plan>
+**Pattern for each inline handler:**
+```javascript
+onComplete={(completed, failed) => {
+  setCorrectWords(prev => prev + completed);
+  setTotalDamage(prev => prev + completed * 12);
+  const newHp = Math.max(0, enemyHpRef.current - completed * 12);
+  enemyHpRef.current = newHp; // Sync ref FIRST
+  setEnemyHp(newHp); // Then update state
+  setBatchStartIndex(prev => prev + barrageWords.length);
+  returnToReading();
+}}
+```
 
-<clarifications-needed (only the ones that change behavior)>
-1) When a word is missed first try but then corrected on retry, should the streak reset immediately on the miss (recommended), or only if the user presses “Continue” (enemy attacks)?
-- Option A: Reset immediately on miss (more “rigorous” and consistent with accuracy).
-- Option B: Only reset on Continue (keeps streak until they “accept” the miss).
+This applies to handlers for:
+- `word_echo` (line 1761)
+- `wind_chase` (line 1774)
+- `ink_splash` (line 1787)
+- `crystal_prison` (line 1800)
+- `lightning_storm` (line 1813)
+- `void_pull` (line 1826)
+- `dodge_words` replacement (line 1695)
 
-If you don’t answer, I will implement Option A because it matches your “accuracy must be counted right” requirement and typical “first attempt matters” logic.
+---
 
-</clarifications-needed>
+## Summary of Changes
 
-<files-to-change>
-- `src/components/aura/game/rpg/RPGWordReader.tsx`
-- `src/components/aura/game/rpg/RPGBattleArena.tsx`
-</files-to-change>
+| Location | Change |
+|----------|--------|
+| Line ~172 | Add `enemyHpRef = useRef(enemyHp)` |
+| Line ~173 | Add useEffect to sync ref |
+| Lines 248-279 (`returnToReading`) | Use `enemyHpRef.current` instead of `enemyHp` |
+| Lines 1561-1565 | Add `else` branch for defeat when accuracy < 80% |
+| Inline mini-game handlers (7 locations) | Update to sync `enemyHpRef.current` before calling `returnToReading()` |
 
-<risk-and-mitigation>
-- Risk: Double counting wordsRead if both onMiss and onResult(false) increment.
-  Mitigation: countedWordIndicesRef Set gating increments.
-- Risk: fast mode interim results causing multiple triggers.
-  Mitigation: add isProcessingRef guard to handleRetrySuccess, and ensure we mark processedResultsRef appropriately.
-</risk-and-mitigation>
+---
 
-<success-criteria>
-- Retry-success always yields YELLOW word state and never green, including in Elara (fast) mode.
-- “Miss then retry-success” decreases accuracy appropriately (miss counted once).
-- “Miss then Continue” decreases accuracy appropriately and triggers enemy counter-attack.
-</success-criteria>
+## Technical Details
+
+### Why Use a Ref?
+
+React's `useCallback` captures the `enemyHp` value at the time the callback is created. When a mini-game calls `setEnemyHp(0)` and then immediately calls `returnToReading()`, the callback still sees the OLD value of `enemyHp` because React hasn't re-rendered yet.
+
+By using a ref that we update synchronously (before calling `returnToReading`), we ensure the callback always sees the latest HP value.
+
+### Victory Conditions (Final)
+
+| Condition | Outcome |
+|-----------|---------|
+| `enemyHp <= 0` (any source) | **VICTORY** (or enemy transition if not final) |
+| All words read + accuracy >= 80% | **VICTORY** (reading victory) |
+| All words read + accuracy < 80% | **DEFEAT** (try again) |
+| `playerHp <= 0` | **DEFEAT** |
+
+---
+
+## Files Modified
+
+1. `src/components/aura/game/rpg/RPGBattleArena.tsx`
+   - Add enemyHpRef and sync useEffect (~4 lines)
+   - Update returnToReading to use ref (~2 line changes)
+   - Add defeat condition for low accuracy (~4 lines)
+   - Update 7 inline mini-game handlers (~14 line changes)
+
+**Total**: ~24 lines modified/added
