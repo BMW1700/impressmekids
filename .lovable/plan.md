@@ -1,176 +1,173 @@
 
-# Plan: Fix Victory & Defeat Triggers for All Cases
+<context>
+User-reported behavior (verified via screenshot):
+- “All words read!” banner shows (so `allWordsRead === true` in the UI layer), but victory/defeat screen never appears.
+- Enemy HP visually reaches 0 (dragon shows 0/280), but victory screen never appears.
 
-## Problem Summary
+What this implies:
+- Our “trigger victory/defeat” conditions are either:
+  1) never firing, or
+  2) firing but getting immediately overwritten by another `setPhase('reading')`/`setPhase('combat')`/etc. from pending timeouts/callbacks.
 
-1. **Missing Defeat Condition**: When all words are read and accuracy is below 80%, there's no code to trigger the "Try Again" (defeat) screen
-2. **Potential Race Condition**: Mini-games that deal fatal damage may not reliably trigger victory due to competing state updates
-3. **Duplicate Logic**: Victory checks exist in multiple places (useEffect, returnToReading, etc.) causing potential conflicts
+Based on the current code in `RPGBattleArena.tsx`, #2 is the most likely cause.
+</context>
 
----
+<what-i-found (from code inspection)>
+File: `src/components/aura/game/rpg/RPGBattleArena.tsx`
 
-## Solution Overview
+1) Victory/defeat triggers exist (good), but they are not “sticky”:
+- There is a useEffect that correctly says:
+  - if `enemyHp <= 0` => victory (or enemy_transition)
+  - if `allWordsRead` => victory if accuracy>=0.8 else defeat
+- There’s also the multi-enemy transition useEffect (enemyHp<=0) that sets victory/transition.
 
-### Fix 1: Add Defeat Trigger for Low Accuracy
+2) There are multiple unguarded places that set `phase` later via timeouts:
+Examples:
+- `returnToReading()` always schedules a `setTimeout(() => setPhase('reading'), 100)` and does NOT check if phase has since become `victory/defeat`.
+- Enemy-turn logic sets phase back to reading after 600ms.
+- There is a 6-second failsafe that sets phase back to reading.
+These can override victory/defeat that was set earlier.
 
-In the existing useEffect (lines 1547-1566), add an `else` branch to trigger defeat when all words are read but accuracy is below 80%.
+This exactly matches what you’re seeing:
+- Enemy HP hits 0 → victory briefly set → a pending timeout fires → phase returns to reading, so you never see the victory popup.
+- All words read with >=80% → victory should set → another pending timeout overwrites it → you remain in the “All words read!” message state.
+</what-i-found>
 
-**Current Code:**
-```javascript
-if (allWordsRead && currentAccuracy >= 0.8) {
-  console.log('[RPGBattle] ✅ All words read with 80%+ accuracy - VICTORY!');
-  setPhase('victory');
-}
-```
+<goal>
+Make victory/defeat terminal states that cannot be overwritten by any delayed callback or timeout, and ensure BOTH game-over pathways are bulletproof:
+1) End-of-reading:
+   - all words read AND accuracy >= 0.8 → VICTORY screen must show
+   - all words read AND accuracy < 0.8 → DEFEAT (“Try Again”) must show
+2) Enemy death:
+   - enemy HP <= 0 from ANY source (normal reading attacks, powers, or mini-game damage) → VICTORY must show immediately
+   - If multi-enemy queue and not final enemy → enemy_transition, then continue
+</goal>
 
-**New Code:**
-```javascript
-if (allWordsRead) {
-  if (currentAccuracy >= 0.8) {
-    console.log('[RPGBattle] ✅ All words read with 80%+ accuracy - VICTORY!');
-    setPhase('victory');
-  } else {
-    console.log('[RPGBattle] ❌ All words read but accuracy below 80% - DEFEAT!', { accuracy: currentAccuracy });
-    setPhase('defeat');
-  }
-}
-```
+<implementation-plan>
+<step 1 — Add “terminal-state safety” infrastructure (prevents phase being overwritten)>
+File: `src/components/aura/game/rpg/RPGBattleArena.tsx`
 
-**File**: `src/components/aura/game/rpg/RPGBattleArena.tsx`
-**Lines**: ~1561-1565
+1. Add `phaseRef`:
+- `const phaseRef = useRef<BattlePhase>(phase);`
+- `useEffect(() => { phaseRef.current = phase; }, [phase]);`
 
----
+2. Create a single helper to change phases safely:
+- `const setPhaseSafe = useCallback((next: BattlePhase, reason?: string) => { ... })`
+Rules:
+- If `phaseRef.current` is `victory` or `defeat`, do nothing (terminal).
+- If `phaseRef.current` is `enemy_transition`, only allow transition-specific changes (or keep strict).
+- Otherwise set phase and optionally log.
 
-### Fix 2: Add Failsafe Victory Check After Mini-Game HP Updates
+3. Replace direct calls to `setPhase('reading')`, `setPhase('combat')`, etc. inside timeouts/callbacks with `setPhaseSafe(...)`.
 
-The issue is that when a mini-game deals damage that kills the enemy (HP -> 0), the mini-game completion handler calls `returnToReading()`, but this can race with the useEffect that monitors `enemyHp`.
+Why this matters:
+- Even if victory is correctly triggered, no delayed callback can drag the app back into reading/combat.
 
-**Solution**: Add a direct victory check inside each mini-game completion handler BEFORE calling `returnToReading()`, OR update `returnToReading()` to properly handle all mini-game phases.
+</step 1>
 
-**Option A (Chosen - Simplest)**: The `returnToReading()` function already has victory checks at lines 254-266. However, it reads `enemyHp` from the closure, which may be stale. We need to use a ref to get the latest value.
+<step 2 — Track and cancel pending timeouts on terminal transitions (hardening)>
+File: `src/components/aura/game/rpg/RPGBattleArena.tsx`
 
-**Changes:**
-1. Add `enemyHpRef = useRef(enemyHp)` that syncs with `enemyHp` state
-2. Update `returnToReading()` to check `enemyHpRef.current <= 0` instead of `enemyHp <= 0`
-3. This ensures that when mini-games call `setEnemyHp(0)` then `returnToReading()`, the victory triggers correctly
+1. Create a small timeout registry:
+- `const timeoutsRef = useRef<number[]>([]);`
+- Helper `scheduleTimeout(fn, ms)` that stores id in `timeoutsRef.current`.
+- Helper `clearAllTimeouts()` that clears and empties.
 
-**File**: `src/components/aura/game/rpg/RPGBattleArena.tsx`
+2. On entering terminal states (`victory` or `defeat`):
+- Call `clearAllTimeouts()`.
+- Force-stop speech recognition (`speechManager.forceStop()`), because lingering recognition can also retrigger logic and queue more state updates.
 
-Add after line 172:
-```javascript
-// Ref to track latest enemyHp for use in callbacks (prevents stale closure)
-const enemyHpRef = useRef(enemyHp);
-```
+3. Replace existing `setTimeout(...)` calls in the file with `scheduleTimeout(...)`.
+Key locations to convert:
+- `returnToReading()` 100ms reset
+- enemy turn completion (600ms)
+- 6-second failsafe
+- any combat animation cleanup timeouts that can set phase later
 
-Add after line 173:
-```javascript
-// Keep ref in sync
-useEffect(() => {
-  enemyHpRef.current = enemyHp;
-}, [enemyHp]);
-```
+This ensures:
+- There is no delayed “reading reset” still waiting in the event loop once victory is reached.
 
-Update `returnToReading()` (lines 248-279) to use `enemyHpRef.current`:
-```javascript
-const returnToReading = useCallback(() => {
-  console.log('[RPGBattle] Returning to reading state, enemyHpRef:', enemyHpRef.current, 'isFinalEnemy:', isFinalEnemy);
-  speechManager.forceStop();
-  
-  // Check if we should trigger victory instead - use REF for latest value!
-  if (enemyHpRef.current <= 0 && isFinalEnemy) {
-    console.log('[RPGBattle] Enemy defeated during mini-game - triggering victory');
-    setPhase('victory');
-    return;
-  }
-  
-  if (enemyHpRef.current <= 0 && !isFinalEnemy) {
-    console.log('[RPGBattle] Enemy defeated - transitioning to next enemy');
-    setDefeatedEnemy(enemy);
-    setPhase('enemy_transition');
-    return;
-  }
-  
-  // Clear any pending state immediately
-  setCurrentWordResult(null);
-  setEnemyAbilityMessage(null);
-  
-  setTimeout(() => {
-    setPhase('reading');
-    setCurrentCommand('read');
-    setIsPlayerTurn(true);
-  }, 100);
-}, [isFinalEnemy, enemy]);
-```
+</step 2>
 
-**Note**: Remove `enemyHp` from the dependency array since we're using the ref.
+<step 3 — Centralize game-over triggering in two explicit functions (single source of truth)>
+File: `src/components/aura/game/rpg/RPGBattleArena.tsx`
 
----
+Create:
+- `triggerVictory(reason: string)`:
+  - if already terminal, return
+  - `clearAllTimeouts()`
+  - `speechManager.forceStop()`
+  - `setPhaseSafe('victory', reason)`
+- `triggerDefeat(reason: string)` similarly.
 
-### Fix 3: Ensure Mini-Game HP Updates Sync to Ref
+Replace scattered `setPhase('victory')` and `setPhase('defeat')` calls with these functions where appropriate:
+- Enemy HP transition useEffect
+- allWordsRead accuracy useEffect
+- `returnToReading()` early-return branch when enemyHpRef<=0
 
-For each inline mini-game handler that sets enemyHp (like the ones at lines 1761-1834), we need to also update the ref synchronously so that `returnToReading()` sees the correct value.
+This removes “some code sets victory, other code sets reading” fights.
 
-**Pattern for each inline handler:**
-```javascript
-onComplete={(completed, failed) => {
-  setCorrectWords(prev => prev + completed);
-  setTotalDamage(prev => prev + completed * 12);
-  const newHp = Math.max(0, enemyHpRef.current - completed * 12);
-  enemyHpRef.current = newHp; // Sync ref FIRST
-  setEnemyHp(newHp); // Then update state
-  setBatchStartIndex(prev => prev + barrageWords.length);
-  returnToReading();
-}}
-```
+</step 3>
 
-This applies to handlers for:
-- `word_echo` (line 1761)
-- `wind_chase` (line 1774)
-- `ink_splash` (line 1787)
-- `crystal_prison` (line 1800)
-- `lightning_storm` (line 1813)
-- `void_pull` (line 1826)
-- `dodge_words` replacement (line 1695)
+<step 4 — Fix enemy death detection to be robust against stale closures>
+File: `src/components/aura/game/rpg/RPGBattleArena.tsx`
 
----
+You already have `enemyHpRef` which is good, but the key is to ensure:
+- All mini-game completion handlers compute new HP using `enemyHpRef.current` and update `enemyHpRef.current = newHp` before calling `returnToReading()`.
+- Then `returnToReading()` should call `triggerVictory`/`setPhaseSafe` and must NOT schedule reading reset if terminal.
 
-## Summary of Changes
+Also update the “enemyHp<=0” useEffects to call `triggerVictory`/transition using the safest available value:
+- Keep `enemyHp` in the dependency list (React state drives UI), but use `enemyHp <= 0` and/or `enemyHpRef.current <= 0` inside to protect against timing.
 
-| Location | Change |
-|----------|--------|
-| Line ~172 | Add `enemyHpRef = useRef(enemyHp)` |
-| Line ~173 | Add useEffect to sync ref |
-| Lines 248-279 (`returnToReading`) | Use `enemyHpRef.current` instead of `enemyHp` |
-| Lines 1561-1565 | Add `else` branch for defeat when accuracy < 80% |
-| Inline mini-game handlers (7 locations) | Update to sync `enemyHpRef.current` before calling `returnToReading()` |
+</step 4>
 
----
+<step 5 — Make the “all words read” condition trigger a terminal state reliably>
+File: `src/components/aura/game/rpg/RPGBattleArena.tsx`
 
-## Technical Details
+1. Ensure the all-words-read useEffect uses `triggerVictory/triggerDefeat`.
+2. Confirm accuracy calculation matches your rules:
+- `currentAccuracy = correctWords / wordsRead`
+- Since we added immediate miss counting via `onMiss`, a “miss then retry-success (yellow)” still counts as missed for accuracy (correctWords not incremented on retry).
+3. Add logging (temporarily) for verification:
+- When `allWordsRead` becomes true, log:
+  - batchStartIndex, words.length, wordsRead, correctWords, computed accuracy
+- When `triggerVictory/triggerDefeat` fires, log the reason and the same summary.
 
-### Why Use a Ref?
+This gives concrete proof in the console that the condition fired.
 
-React's `useCallback` captures the `enemyHp` value at the time the callback is created. When a mini-game calls `setEnemyHp(0)` and then immediately calls `returnToReading()`, the callback still sees the OLD value of `enemyHp` because React hasn't re-rendered yet.
+</step 5>
 
-By using a ref that we update synchronously (before calling `returnToReading`), we ensure the callback always sees the latest HP value.
+<step 6 — Verification checklist (what I will test after implementing)>
+1) All-words-read victory:
+- Finish passage with >=80% accuracy while enemy still alive.
+- Expected: immediately show VICTORY screen, no return to reading/combat.
+2) All-words-read defeat:
+- Finish passage with <80% accuracy.
+- Expected: immediately show DEFEAT / Try Again screen.
+3) Enemy death victory (normal attacks):
+- Kill enemy by reading damage.
+- Expected: VICTORY screen shows immediately.
+4) Enemy death victory (mini-game damage):
+- Reduce enemy to 0 HP inside a mini-game completion handler.
+- Expected: VICTORY screen shows immediately, no reading reset.
+5) Multi-enemy queue:
+- Kill the first enemy in a guard/elite battle.
+- Expected: enemy_transition, then next enemy, no victory.
+- Kill dragon (final).
+- Expected: VICTORY.
 
-### Victory Conditions (Final)
+</step 6>
+</implementation-plan>
 
-| Condition | Outcome |
-|-----------|---------|
-| `enemyHp <= 0` (any source) | **VICTORY** (or enemy transition if not final) |
-| All words read + accuracy >= 80% | **VICTORY** (reading victory) |
-| All words read + accuracy < 80% | **DEFEAT** (try again) |
-| `playerHp <= 0` | **DEFEAT** |
+<why-this-will-fix-your-screenshot>
+Right now, your UI can reach:
+- enemyHp = 0
+- allWordsRead = true
+but still not show victory because some other scheduled callback forces phase back to “reading”.
 
----
+By making victory/defeat terminal + canceling pending timeouts + guarding every future phase change through `setPhaseSafe`, once victory happens it cannot be undone by any stray timeout. That’s the missing piece.
+</why-this-will-fix-your-screenshot>
 
-## Files Modified
-
-1. `src/components/aura/game/rpg/RPGBattleArena.tsx`
-   - Add enemyHpRef and sync useEffect (~4 lines)
-   - Update returnToReading to use ref (~2 line changes)
-   - Add defeat condition for low accuracy (~4 lines)
-   - Update 7 inline mini-game handlers (~14 line changes)
-
-**Total**: ~24 lines modified/added
+<files-to-change>
+- `src/components/aura/game/rpg/RPGBattleArena.tsx` (primary; all fixes live here)
+</files-to-change>
