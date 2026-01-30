@@ -211,7 +211,7 @@ export function TeacherJournalTab({ classroomId }: TeacherJournalTabProps) {
           checklist: JSON.stringify(checklistItems),
         };
       }
-    }, 1500);
+    }, 500);
     return () => clearTimeout(timeout);
   }, [note, checklistItems, entry, hasUnsavedChanges]);
 
