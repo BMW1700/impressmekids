@@ -51,15 +51,7 @@ import { useClassroomFeatures } from "@/hooks/useClassroomFeatures";
 import { ClassroomTabsList } from "@/components/classroom/ClassroomTabsList";
 import { MeetingRequestsTab } from "@/components/teacher/MeetingRequestsTab";
 import { PendingStudentRequests } from "@/components/classroom/PendingStudentRequests";
-import { 
-  useClassroomDetail, 
-  useClassroomStudents, 
-  useClassroomTournaments, 
-  useClassroomAnnouncements, 
-  useClassroomParentRequests,
-  useClassroomFlashcards,
-  useUserProfile
-} from "@/hooks/useClassroomData";
+import { useClassroomDetail, useClassroomStudents, useClassroomTournaments, useClassroomAnnouncements, useClassroomParentRequests, useClassroomFlashcards, useUserProfile } from "@/hooks/useClassroomData";
 const ClassroomDetail = () => {
   const {
     id
@@ -69,7 +61,10 @@ const ClassroomDetail = () => {
   const {
     toast
   } = useToast();
-  const { session, user } = useAuth();
+  const {
+    session,
+    user
+  } = useAuth();
   const {
     isTeacher,
     isStudent,
@@ -77,13 +72,34 @@ const ClassroomDetail = () => {
   } = useClassroomPermissions(id);
 
   // React Query hooks for cached data fetching
-  const { data: classroomData, isLoading: classroomLoading, refetch: refetchClassroom } = useClassroomDetail(id);
-  const { data: studentsData = [], refetch: refetchStudents } = useClassroomStudents(id);
-  const { data: tournamentsData = [], refetch: refetchTournaments } = useClassroomTournaments(id);
-  const { data: announcementsData = [], refetch: refetchAnnouncements } = useClassroomAnnouncements(id);
-  const { data: parentRequestsData = [], refetch: refetchParentRequests } = useClassroomParentRequests(id, isTeacher);
-  const { data: flashcardSetsData = [], refetch: refetchFlashcards } = useClassroomFlashcards(id, isTeacher);
-  const { data: profileData } = useUserProfile();
+  const {
+    data: classroomData,
+    isLoading: classroomLoading,
+    refetch: refetchClassroom
+  } = useClassroomDetail(id);
+  const {
+    data: studentsData = [],
+    refetch: refetchStudents
+  } = useClassroomStudents(id);
+  const {
+    data: tournamentsData = [],
+    refetch: refetchTournaments
+  } = useClassroomTournaments(id);
+  const {
+    data: announcementsData = [],
+    refetch: refetchAnnouncements
+  } = useClassroomAnnouncements(id);
+  const {
+    data: parentRequestsData = [],
+    refetch: refetchParentRequests
+  } = useClassroomParentRequests(id, isTeacher);
+  const {
+    data: flashcardSetsData = [],
+    refetch: refetchFlashcards
+  } = useClassroomFlashcards(id, isTeacher);
+  const {
+    data: profileData
+  } = useUserProfile();
 
   // Refetch all classroom data
   const loadClassroomData = () => {
@@ -118,7 +134,7 @@ const ClassroomDetail = () => {
   const parentRequests = parentRequestsData;
   const flashcardSets = flashcardSetsData;
   const profile = profileData;
-  const isLoading = substituteAccess ? substituteLoading : (classroomLoading || permissionsLoading);
+  const isLoading = substituteAccess ? substituteLoading : classroomLoading || permissionsLoading;
 
   // UI state
   const [showCreateTournament, setShowCreateTournament] = useState(false);
@@ -157,36 +173,39 @@ const ClassroomDetail = () => {
     deleteAssignment,
     toggleAssignmentStatus
   } = useMultiQuestionAssignments(id);
-  const { isFeatureEnabled } = useClassroomFeatures(id);
+  const {
+    isFeatureEnabled
+  } = useClassroomFeatures(id);
 
   // Load classroom data for substitute teachers (no auth required)
   const loadClassroomDataForSubstitute = async (accessData: typeof substituteAccess) => {
     if (!accessData || !id) return;
-    
     setSubstituteLoading(true);
     console.log('🔍 Loading classroom data for substitute teacher...');
     try {
-      const { data: classroomResult, error: classroomError } = await supabase.rpc('get_classroom_for_substitute', {
+      const {
+        data: classroomResult,
+        error: classroomError
+      } = await supabase.rpc('get_classroom_for_substitute', {
         p_classroom_id: id,
         p_link_id: accessData.linkId
       });
-
       if (classroomError || !classroomResult || classroomResult.length === 0) {
         console.error('Failed to load classroom for substitute:', classroomError);
         sessionStorage.removeItem('substituteAccess');
         toast({
           title: "Access Error",
           description: "Unable to access classroom. Your link may have expired.",
-          variant: "destructive",
+          variant: "destructive"
         });
         navigate('/auth');
         return;
       }
-
       setSubstituteClassroom(classroomResult[0]);
-
       if (accessData.permissions.view_students) {
-        const { data: studentsResult } = await supabase.rpc('get_students_for_substitute', {
+        const {
+          data: studentsResult
+        } = await supabase.rpc('get_students_for_substitute', {
           p_classroom_id: id,
           p_link_id: accessData.linkId
         });
@@ -194,25 +213,29 @@ const ClassroomDetail = () => {
           setSubstituteStudents(studentsResult.map((student: any) => ({
             student_id: student.student_id,
             joined_at: student.joined_at,
-            profiles: { id: student.student_id, full_name: student.full_name, email: student.email },
+            profiles: {
+              id: student.student_id,
+              full_name: student.full_name,
+              email: student.email
+            },
             student_profiles: []
           })));
         }
       }
-
       if (accessData.permissions.view_assignments) {
-        const { data: assignmentsResult } = await supabase.rpc('get_assignments_for_substitute', {
+        const {
+          data: assignmentsResult
+        } = await supabase.rpc('get_assignments_for_substitute', {
           p_classroom_id: id,
           p_link_id: accessData.linkId
         });
         if (assignmentsResult) setSubstituteAssignments(assignmentsResult);
       }
-
-      const { data: announcementsResult } = await supabase
-        .from('classroom_announcements')
-        .select('*')
-        .eq('classroom_id', id)
-        .order('created_at', { ascending: false });
+      const {
+        data: announcementsResult
+      } = await supabase.from('classroom_announcements').select('*').eq('classroom_id', id).order('created_at', {
+        ascending: false
+      });
       setSubstituteAnnouncements(announcementsResult || []);
     } catch (err) {
       console.error('Error loading substitute data:', err);
@@ -224,7 +247,6 @@ const ClassroomDetail = () => {
   // Check for substitute access on mount
   useEffect(() => {
     if (!id) return;
-    
     const storedAccess = sessionStorage.getItem('substituteAccess');
     if (storedAccess) {
       try {
@@ -241,10 +263,12 @@ const ClassroomDetail = () => {
         sessionStorage.removeItem('substituteAccess');
       }
     }
-    
+
     // Redirect if no session and not substitute
     if (!permissionsLoading && !session && !substituteAccess) {
-      navigate('/auth', { replace: true });
+      navigate('/auth', {
+        replace: true
+      });
     }
   }, [id, permissionsLoading, session]);
   const copyJoinCode = () => {
@@ -326,23 +350,17 @@ const ClassroomDetail = () => {
       });
     }
   };
-  
   const handleRemoveStudent = async () => {
     if (!studentToRemove) return;
-    
     try {
-      const { error } = await supabase
-        .from('classroom_students')
-        .delete()
-        .eq('id', studentToRemove.id);
-      
+      const {
+        error
+      } = await supabase.from('classroom_students').delete().eq('id', studentToRemove.id);
       if (error) throw error;
-      
       toast({
         title: "Student Removed",
         description: `${studentToRemove.profiles?.full_name || 'Student'} has been removed from the class`
       });
-      
       setShowRemoveStudentModal(false);
       setStudentToRemove(null);
       loadClassroomData();
@@ -364,10 +382,9 @@ const ClassroomDetail = () => {
   // Substitutes should see teacher UI, not student UI
   const canViewAsTeacher = isTeacher || isSubstitute;
   const hasAccess = isTeacher || isStudent || isSubstitute;
-  
+
   // Use substitute-loaded assignments when in substitute mode, otherwise use hook assignments
-  const effectiveAssignments = isSubstitute ? substituteAssignments : (assignments || []);
-  
+  const effectiveAssignments = isSubstitute ? substituteAssignments : assignments || [];
   if (!hasAccess) {
     return <div className="min-h-screen flex flex-col bg-background">
         <Header showAuthButtons={false} />
@@ -405,7 +422,7 @@ const ClassroomDetail = () => {
     const diff = end.getTime() - now.getTime();
     if (diff <= 0) return "Expired";
     const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const minutes = Math.floor(diff % (1000 * 60 * 60) / (1000 * 60));
     if (hours > 24) {
       const days = Math.floor(hours / 24);
       return `${days} day${days > 1 ? 's' : ''} remaining`;
@@ -415,22 +432,19 @@ const ClassroomDetail = () => {
     }
     return `${minutes} minutes remaining`;
   };
-
   const handleEndSubstituteSession = () => {
     sessionStorage.removeItem('substituteAccess');
     toast({
       title: "Session Ended",
-      description: "You have been logged out of substitute access.",
+      description: "You have been logged out of substitute access."
     });
     navigate('/auth');
   };
-
   return <div className="min-h-screen flex flex-col bg-background">
       <Header showAuthButtons={false} />
       
       {/* Substitute Teacher Banner */}
-      {isSubstitute && (
-        <div className="bg-amber-500/20 border-b border-amber-500/30">
+      {isSubstitute && <div className="bg-amber-500/20 border-b border-amber-500/30">
           <div className="container mx-auto px-4 py-3">
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-3">
@@ -456,19 +470,13 @@ const ClassroomDetail = () => {
                   {substituteAccess?.permissions.take_attendance && " • Attendance"}
                   {substituteAccess?.permissions.view_assignments && " • Assignments"}
                 </Badge>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleEndSubstituteSession}
-                  className="border-amber-500/50 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20"
-                >
+                <Button variant="outline" size="sm" onClick={handleEndSubstituteSession} className="border-amber-500/50 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20">
                   End Session
                 </Button>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        </div>}
       
       <main className="flex-1 py-8">
         <div className="container mx-auto px-4">
@@ -515,11 +523,7 @@ const ClassroomDetail = () => {
                 {isTeacher && <div className="flex flex-col items-center gap-1">
                   <span className="text-sm text-muted-foreground font-medium">Join Code</span>
                   <div className="flex items-center gap-2">
-                    <button 
-                      onClick={copyJoinCode}
-                      className="p-1.5 rounded-md hover:bg-primary/10 transition-colors"
-                      title="Copy join code"
-                    >
+                    <button onClick={copyJoinCode} className="p-1.5 rounded-md hover:bg-primary/10 transition-colors" title="Copy join code">
                       <Copy className="h-4 w-4 text-muted-foreground hover:text-primary" />
                     </button>
                     <Badge variant="outline" className="font-mono text-xl px-6 py-3 border-2 border-primary/30 bg-background/80 backdrop-blur-sm">
@@ -573,18 +577,8 @@ const ClassroomDetail = () => {
               </div>
             </div>}
 
-          <Tabs 
-            value={currentTab || searchParams.get('tab') || (isStudent && !isSubstitute ? "assignments" : "students")} 
-            onValueChange={setCurrentTab}
-            className="mb-8"
-          >
-            <ClassroomTabsList 
-              classroomId={id!}
-              isTeacher={canViewAsTeacher}
-              parentRequests={parentRequests}
-              currentTab={currentTab || searchParams.get('tab') || (isStudent && !isSubstitute ? "assignments" : "students")}
-              onTabChange={setCurrentTab}
-            />
+          <Tabs value={currentTab || searchParams.get('tab') || (isStudent && !isSubstitute ? "assignments" : "students")} onValueChange={setCurrentTab} className="mb-8">
+            <ClassroomTabsList classroomId={id!} isTeacher={canViewAsTeacher} parentRequests={parentRequests} currentTab={currentTab || searchParams.get('tab') || (isStudent && !isSubstitute ? "assignments" : "students")} onTabChange={setCurrentTab} />
 
             {canViewAsTeacher && <TabsContent value="students" className="mt-6">
                 <div className="mb-6">
@@ -624,13 +618,10 @@ const ClassroomDetail = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem 
-                            className="text-destructive focus:text-destructive"
-                            onClick={() => {
-                              setStudentToRemove(student);
-                              setShowRemoveStudentModal(true);
-                            }}
-                          >
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => {
+                          setStudentToRemove(student);
+                          setShowRemoveStudentModal(true);
+                        }}>
                             <Trash2 className="h-4 w-4 mr-2" />
                             Remove from Class
                           </DropdownMenuItem>
@@ -676,13 +667,10 @@ const ClassroomDetail = () => {
                   <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">Behavior Tracking</h2>
                   <p className="text-muted-foreground mt-1">Track and reward student behavior</p>
                 </div>
-                <TeacherBehaviorTab 
-                  classroomId={id!} 
-                  students={students.map(s => ({ 
-                    id: s.student_id, 
-                    full_name: s.profiles?.full_name || 'Unknown'
-                  }))} 
-                />
+                <TeacherBehaviorTab classroomId={id!} students={students.map(s => ({
+              id: s.student_id,
+              full_name: s.profiles?.full_name || 'Unknown'
+            }))} />
               </TabsContent>}
 
             {canViewAsTeacher && isFeatureEnabled("ai-insights") && <TabsContent value="ai-insights" className="mt-6">
@@ -856,7 +844,7 @@ const ClassroomDetail = () => {
 
             <TabsContent value="announcements" className="mt-6">
               <div className="mb-4">
-                <h2 className="text-2xl font-bold">Announcements & Assignments</h2>
+                <h2 className="text-2xl font-bold">Announcements </h2>
               </div>
 
               {announcements.length === 0 ? <Card className="p-12 text-center">
@@ -1046,12 +1034,7 @@ const ClassroomDetail = () => {
                     View your current grades and performance in this class
                   </p>
                 </div>
-                {profile?.id && (
-                  <SingleClassroomGradebook 
-                    classroomId={id!} 
-                    studentId={profile.id}
-                  />
-                )}
+                {profile?.id && <SingleClassroomGradebook classroomId={id!} studentId={profile.id} />}
               </div>
             </TabsContent>
 
@@ -1065,12 +1048,10 @@ const ClassroomDetail = () => {
                       View upcoming assignments and events for this class
                     </p>
                   </div>
-                  {!canViewAsTeacher && (
-                    <Button onClick={() => navigate("/calendar")}>
+                  {!canViewAsTeacher && <Button onClick={() => navigate("/calendar")}>
                       <Calendar className="h-4 w-4 mr-2" />
                       View Full Calendar
-                    </Button>
-                  )}
+                    </Button>}
                 </div>
                 <Card className="p-6">
                   <div className="space-y-4">
@@ -1078,16 +1059,8 @@ const ClassroomDetail = () => {
                       <Calendar className="h-5 w-5 text-primary" />
                       Upcoming Deadlines
                     </h3>
-                    {effectiveAssignments.filter((a: any) => a.status === 'published' && a.due_date).length === 0 ? (
-                      <p className="text-muted-foreground text-sm">No upcoming deadlines</p>
-                    ) : (
-                      <div className="space-y-3">
-                        {effectiveAssignments
-                          .filter((a: any) => a.status === 'published' && a.due_date)
-                          .sort((a: any, b: any) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
-                          .slice(0, 10)
-                          .map((assignment: any) => (
-                            <div key={assignment.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    {effectiveAssignments.filter((a: any) => a.status === 'published' && a.due_date).length === 0 ? <p className="text-muted-foreground text-sm">No upcoming deadlines</p> : <div className="space-y-3">
+                        {effectiveAssignments.filter((a: any) => a.status === 'published' && a.due_date).sort((a: any, b: any) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime()).slice(0, 10).map((assignment: any) => <div key={assignment.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                               <div className="flex items-center gap-3">
                                 <FileText className="h-4 w-4 text-primary" />
                                 <div>
@@ -1100,10 +1073,8 @@ const ClassroomDetail = () => {
                               <Badge variant="outline">
                                 {new Date(assignment.due_date).toLocaleDateString()}
                               </Badge>
-                            </div>
-                          ))}
-                      </div>
-                    )}
+                            </div>)}
+                      </div>}
                   </div>
                 </Card>
               </div>
@@ -1166,18 +1137,10 @@ const ClassroomDetail = () => {
 
           <EditClassroomModal open={showEditClassroom} onOpenChange={setShowEditClassroom} onSuccess={loadClassroomData} classroom={classroom} />
 
-          <ConfirmModal 
-            open={showRemoveStudentModal} 
-            onOpenChange={(open) => {
-              setShowRemoveStudentModal(open);
-              if (!open) setStudentToRemove(null);
-            }} 
-            title="Remove Student" 
-            description={`Are you sure you want to remove ${studentToRemove?.profiles?.full_name || 'this student'} from the class? They will need to rejoin using the class code.`} 
-            confirmText="Remove" 
-            cancelText="Cancel" 
-            onConfirm={handleRemoveStudent} 
-          />
+          <ConfirmModal open={showRemoveStudentModal} onOpenChange={open => {
+        setShowRemoveStudentModal(open);
+        if (!open) setStudentToRemove(null);
+      }} title="Remove Student" description={`Are you sure you want to remove ${studentToRemove?.profiles?.full_name || 'this student'} from the class? They will need to rejoin using the class code.`} confirmText="Remove" cancelText="Cancel" onConfirm={handleRemoveStudent} />
         </>}
     </div>;
 };
