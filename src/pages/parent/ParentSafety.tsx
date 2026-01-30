@@ -405,7 +405,7 @@ export default function ParentSafety() {
               <div className="grid gap-4">
                 {alerts.map((alert) => (
                   <Card key={alert.id} className="p-6">
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <Badge className={getSeverityColor(alert.severity)}>
@@ -419,13 +419,6 @@ export default function ParentSafety() {
                           {new Date(alert.created_at).toLocaleString()}
                         </p>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => acknowledgeAlert(alert.id)}
-                      >
-                        Acknowledge
-                      </Button>
                     </div>
                   </Card>
                 ))}
@@ -443,7 +436,7 @@ export default function ParentSafety() {
               <div className="grid gap-4">
                 {filterAlertsByType("weather").map((alert) => (
                   <Card key={alert.id} className="p-6">
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start">
                       <div className="flex-1">
                         <Badge className={`${getSeverityColor(alert.severity)} mb-2`}>
                           {alert.severity}
@@ -451,9 +444,6 @@ export default function ParentSafety() {
                         <h3 className="text-xl font-semibold mb-2">{alert.title}</h3>
                         <p className="text-muted-foreground">{alert.message}</p>
                       </div>
-                      <Button variant="outline" size="sm" onClick={() => acknowledgeAlert(alert.id)}>
-                        Acknowledge
-                      </Button>
                     </div>
                   </Card>
                 ))}
@@ -471,7 +461,7 @@ export default function ParentSafety() {
               <div className="grid gap-4">
                 {filterAlertsByType("closure").map((alert) => (
                   <Card key={alert.id} className="p-6">
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start">
                       <div className="flex-1">
                         <Badge className={`${getSeverityColor(alert.severity)} mb-2`}>
                           {alert.severity}
@@ -479,9 +469,6 @@ export default function ParentSafety() {
                         <h3 className="text-xl font-semibold mb-2">{alert.title}</h3>
                         <p className="text-muted-foreground">{alert.message}</p>
                       </div>
-                      <Button variant="outline" size="sm" onClick={() => acknowledgeAlert(alert.id)}>
-                        Acknowledge
-                      </Button>
                     </div>
                   </Card>
                 ))}
@@ -499,7 +486,7 @@ export default function ParentSafety() {
               <div className="grid gap-4">
                 {filterAlertsByType("drill").map((alert) => (
                   <Card key={alert.id} className="p-6">
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start">
                       <div className="flex-1">
                         <Badge className={`${getSeverityColor(alert.severity)} mb-2`}>
                           {alert.severity}
@@ -507,9 +494,6 @@ export default function ParentSafety() {
                         <h3 className="text-xl font-semibold mb-2">{alert.title}</h3>
                         <p className="text-muted-foreground">{alert.message}</p>
                       </div>
-                      <Button variant="outline" size="sm" onClick={() => acknowledgeAlert(alert.id)}>
-                        Acknowledge
-                      </Button>
                     </div>
                   </Card>
                 ))}
