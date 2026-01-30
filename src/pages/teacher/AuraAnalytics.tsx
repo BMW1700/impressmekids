@@ -17,7 +17,6 @@ import { Badge } from "@/components/ui/badge";
 import { BarChart3, ArrowLeft, Sparkles, TrendingUp, Brain, Users, Activity, BookOpen, Timer, Target, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MLStatusBadge } from "@/components/ml/MLStatusBadge";
-import { MLTrainingPanel } from "@/components/ml/MLTrainingPanel";
 
 const AuraAnalytics = () => {
   const { classroomId } = useParams();
@@ -283,7 +282,7 @@ const AuraAnalytics = () => {
               <ClassroomAuraOverview records={auraRecords} students={students || []} />
 
               <Tabs defaultValue="overview" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-8">
+                <TabsList className="grid w-full grid-cols-7">
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="screening" className="gap-1">
                     <ClipboardCheck className="w-4 h-4" />
@@ -302,10 +301,6 @@ const AuraAnalytics = () => {
                   <TabsTrigger value="transfer" className="gap-1">
                     <Sparkles className="w-4 h-4" />
                     Progress
-                  </TabsTrigger>
-                  <TabsTrigger value="ml-training" className="gap-1">
-                    <Brain className="w-4 h-4" />
-                    ML Training
                   </TabsTrigger>
                 </TabsList>
 
@@ -606,9 +601,6 @@ const AuraAnalytics = () => {
                   </Card>
                 </TabsContent>
 
-                <TabsContent value="ml-training" className="space-y-6">
-                  <MLTrainingPanel />
-                </TabsContent>
               </Tabs>
             </>
           )}
