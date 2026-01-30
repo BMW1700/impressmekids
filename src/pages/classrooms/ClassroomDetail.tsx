@@ -864,7 +864,7 @@ const ClassroomDetail = () => {
                 <h2 className="text-2xl font-bold">Study Games </h2>
                 {isTeacher && <Button className="bg-gradient-primary hover:opacity-90" onClick={() => setShowSelectGame(true)}>
                     <Trophy className="mr-2 h-4 w-4" />
-                    Create Tournament
+                    Assign Game
                   </Button>}
               </div>
 
@@ -876,7 +876,7 @@ const ClassroomDetail = () => {
                   </p>
                   {isTeacher && <Button className="bg-gradient-primary hover:opacity-90" onClick={() => setShowSelectGame(true)}>
                       <Trophy className="mr-2 h-4 w-4" />
-                      Create Tournament
+                      Assign Game
                     </Button>}
                 </Card> : <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {tournaments.map(tournament => <Card key={tournament.id} className="shadow-card hover:shadow-purple transition-shadow">
