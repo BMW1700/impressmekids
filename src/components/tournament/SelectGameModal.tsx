@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Zap, Calculator, BookOpen, Brain, Globe, Trophy } from "lucide-react";
+import { Zap, Calculator, BookOpen, Brain, Globe, Trophy, Hash, PawPrint, Map, Swords } from "lucide-react";
 
 interface SelectGameModalProps {
   open: boolean;
@@ -16,6 +16,38 @@ const games = [
     description: 'Challenge students in a fast-paced multiplayer trivia battle across multiple subjects',
     gradeRange: 'Grades K-12',
     icon: Zap,
+    isAvailable: true,
+  },
+  {
+    id: 'name_that_animal',
+    title: 'Name that Animal',
+    description: 'Learn letter sounds by identifying the first letter of animal names. Perfect for early readers!',
+    gradeRange: 'Ages 3-6',
+    icon: PawPrint,
+    isAvailable: true,
+  },
+  {
+    id: 'number_maker',
+    title: 'Number Maker',
+    description: 'Combine given numbers using math operations to create the target number.',
+    gradeRange: 'Grades K-8',
+    icon: Hash,
+    isAvailable: true,
+  },
+  {
+    id: 'us_states_quiz',
+    title: 'U.S. States Map Quiz',
+    description: 'Learn U.S. geography by clicking on states! Test your knowledge of all 50 states.',
+    gradeRange: 'Grades 2-8',
+    icon: Map,
+    isAvailable: true,
+  },
+  {
+    id: 'tug_of_war',
+    title: 'Reading Tug of War',
+    description: 'Battle goblins by reading words aloud! Pull the rope to your side to win.',
+    gradeRange: 'Grades K-5',
+    icon: Swords,
     isAvailable: true,
   },
   {
@@ -108,7 +140,7 @@ export const SelectGameModal = ({ open, onOpenChange, onSelectGame }: SelectGame
                   <CardDescription>{game.description}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                {game.isAvailable && (
+                  {game.isAvailable && (
                     <p className="text-sm text-muted-foreground">
                       Click to assign this game to your class
                     </p>
