@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -175,21 +175,45 @@ export function TeacherJournalTab({ classroomId }: TeacherJournalTabProps) {
     },
   });
 
-  // Auto-save with debounce
-  const debouncedSave = useCallback(() => {
+  // Track last saved state to detect actual changes
+  const lastSavedRef = useRef<{ note: string; checklist: string }>({ note: "", checklist: "[]" });
+
+  // Update ref when entry loads
+  useEffect(() => {
+    if (entry) {
+      lastSavedRef.current = {
+        note: entry.note || "",
+        checklist: JSON.stringify(entry.checklist_items || []),
+      };
+    } else if (entry === null) {
+      lastSavedRef.current = { note: "", checklist: "[]" };
+    }
+  }, [entry]);
+
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = useCallback(() => {
+    const currentChecklist = JSON.stringify(checklistItems);
+    return note !== lastSavedRef.current.note || currentChecklist !== lastSavedRef.current.checklist;
+  }, [note, checklistItems]);
+
+  // Auto-save with debounce - only when there are actual changes
+  useEffect(() => {
+    // Don't auto-save on initial load or if no changes
+    if (entry === undefined) return;
+    if (!hasUnsavedChanges()) return;
+    
     const timeout = setTimeout(() => {
-      if (note || checklistItems.length > 0) {
+      if ((note || checklistItems.length > 0) && hasUnsavedChanges()) {
         saveMutation.mutate();
+        // Update ref after save
+        lastSavedRef.current = {
+          note,
+          checklist: JSON.stringify(checklistItems),
+        };
       }
     }, 1500);
     return () => clearTimeout(timeout);
-  }, [note, checklistItems]);
-
-  useEffect(() => {
-    // Don't auto-save on initial load
-    if (entry === undefined) return;
-    return debouncedSave();
-  }, [note, checklistItems, debouncedSave, entry]);
+  }, [note, checklistItems, entry, hasUnsavedChanges]);
 
   const goToPreviousDay = () => setSelectedDate(startOfDay(subDays(selectedDate, 1)));
   const goToNextDay = () => setSelectedDate(startOfDay(addDays(selectedDate, 1)));
