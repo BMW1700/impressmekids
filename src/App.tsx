@@ -74,6 +74,7 @@ const StoryManagement = lazy(() => import("./pages/teacher/StoryManagement"));
 const SecurityPortal = lazy(() => import("./pages/SecurityPortal"));
 const ClubDetail = lazy(() => import("./pages/teacher/ClubDetail"));
 const BrowseClubs = lazy(() => import("./pages/student/BrowseClubs"));
+const TeacherPersonalResources = lazy(() => import("./pages/teacher/TeacherPersonalResources"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -157,6 +158,7 @@ const App = () => (
                     <Route path="/teacher/reading-calibration" element={<ReadingAnalyticsCalibration />} />
                     <Route path="/teacher/story-library" element={<StoryManagement />} />
                     <Route path="/teacher/clubs/:clubId" element={<ClubDetail />} />
+                    <Route path="/teacher/resources" element={<TeacherPersonalResources />} />
                     <Route path="/teacher/review-submission/:submissionId" element={<ReviewSubmission />} />
                     <Route path="/teacher/assignment/review/:submissionId" element={<ReviewMultiQuestionSubmission />} />
 

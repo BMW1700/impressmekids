@@ -6831,6 +6831,33 @@ export type Database = {
           },
         ]
       }
+      teacher_resources: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          teacher_id: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          teacher_id: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          teacher_id?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       teacher_student_notes: {
         Row: {
           audio_url: string | null

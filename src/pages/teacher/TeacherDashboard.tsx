@@ -467,23 +467,22 @@ const TeacherDashboard = () => {
                 </Card>
 
                 {/* Resources */}
-                <Card className="p-6 hover:shadow-lg transition-all opacity-75">
+                <Card className="p-6 hover:shadow-lg transition-all">
                   <div className="flex items-start gap-4 mb-4">
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center flex-shrink-0">
                       <Sparkles className="h-6 w-6 text-white" />
                     </div>
-                    <div className="flex-1 flex items-center gap-2">
+                    <div className="flex-1">
                       <h3 className="text-lg font-bold">{t("teacherDashboard.quickActions.resources.title")}</h3>
-                      <Badge variant="secondary" className="text-xs">
-                        {t("teacherDashboard.quickActions.resources.soon")}
-                      </Badge>
                     </div>
                   </div>
                   <p className="text-muted-foreground mb-4">
-                    {t("teacherDashboard.quickActions.resources.description")}
+                    Save and organize your personal teaching resources
                   </p>
-                  <Button variant="outline" className="w-full" disabled>
-                    {t("teacherDashboard.quickActions.resources.cta")} →
+                  <Button variant="outline" className="w-full" asChild>
+                    <RouterLink to="/teacher/resources">
+                      {t("teacherDashboard.quickActions.resources.cta")} →
+                    </RouterLink>
                   </Button>
                 </Card>
               </div>
