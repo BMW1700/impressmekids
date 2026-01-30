@@ -4,11 +4,13 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface UserProfile {
   id: string;
+  email: string | null;
   full_name: string | null;
   role: string | null;
   is_verified: boolean;
   school_id: string | null;
   district_id: string | null;
+  student_id: string | null;
 }
 
 interface AuthContextType {
@@ -87,20 +89,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!error && data && data.length > 0) {
         const profileData = data[0];
         
-        // Fetch verification status and district_id separately (profile table)
+        // Fetch verification status, email, student_id, and district_id from profiles table
         const { data: verificationData } = await supabase
           .from('profiles')
-          .select('is_verified, school_id, district_id')
+          .select('is_verified, school_id, district_id, email, student_id')
           .eq('id', userId)
           .single();
         
         setProfile({
           id: profileData.id,
+          email: verificationData?.email ?? null,
           full_name: profileData.full_name,
           role: profileData.role,
           is_verified: verificationData?.is_verified ?? false,
           school_id: verificationData?.school_id ?? null,
           district_id: verificationData?.district_id ?? null,
+          student_id: verificationData?.student_id ?? null,
         });
       } else {
         setProfile(null);
