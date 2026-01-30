@@ -38,9 +38,9 @@ const StudentAuraMetrics = ({ students, records, readingSessions = [] }: Student
       ? (studentRecords.reduce((sum, r) => sum + (r.confidence || 0), 0) / studentRecords.length).toFixed(1)
       : null;
 
-    // Calculate reading stats (from WordByWordReader)
+    // Calculate reading stats (from WordByWordReader) - cap accuracy at 100%
     const readingAccuracy = studentReadingSessions.length > 0
-      ? Math.round(studentReadingSessions.reduce((sum, r) => sum + (r.accuracy_percent || 0), 0) / studentReadingSessions.length)
+      ? Math.min(100, Math.round(studentReadingSessions.reduce((sum, r) => sum + Math.min(100, r.accuracy_percent || 0), 0) / studentReadingSessions.length))
       : null;
     const readingWpm = studentReadingSessions.length > 0
       ? Math.round(studentReadingSessions.reduce((sum, r) => sum + (r.wpm || 0), 0) / studentReadingSessions.length)

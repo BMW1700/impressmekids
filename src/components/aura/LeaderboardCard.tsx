@@ -59,7 +59,7 @@ export const LeaderboardCard = ({ classroomId, currentStudentId, title = "Readin
           ? Math.round(studentSessions.reduce((sum, s) => sum + s.wpm, 0) / studentSessions.length)
           : 0;
         const avgAccuracy = studentSessions.length > 0
-          ? Math.round(studentSessions.reduce((sum, s) => sum + s.accuracy_percent, 0) / studentSessions.length)
+          ? Math.min(100, Math.round(studentSessions.reduce((sum, s) => sum + Math.min(100, s.accuracy_percent || 0), 0) / studentSessions.length))
           : 0;
         return { student_id: id, avgWpm, avgAccuracy };
       });

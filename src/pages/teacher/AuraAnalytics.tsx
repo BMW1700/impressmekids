@@ -125,11 +125,11 @@ const AuraAnalytics = () => {
     navigate(`/teacher/aura-analytics/${newClassroomId}`);
   };
 
-  // Calculate reading session stats
+  // Calculate reading session stats - cap accuracy at 100% to handle corrupted data
   const readingStats = {
     totalSessions: readingSessions?.length || 0,
     avgAccuracy: readingSessions?.length 
-      ? Math.round(readingSessions.reduce((sum, r) => sum + (r.accuracy_percent || 0), 0) / readingSessions.length)
+      ? Math.min(100, Math.round(readingSessions.reduce((sum, r) => sum + Math.min(100, r.accuracy_percent || 0), 0) / readingSessions.length))
       : 0,
     totalWordsRead: readingSessions?.reduce((sum, r) => sum + (r.words_read || 0), 0) || 0,
     avgWpm: readingSessions?.length 

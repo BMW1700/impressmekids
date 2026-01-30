@@ -11,7 +11,7 @@ const ClassroomAuraOverview = ({ records, students }: ClassroomAuraOverviewProps
   const studentStats = students.map(student => {
     const studentRecords = records.filter(r => r.profile_id === student.student_id);
     const avgGrade = studentRecords.length > 0
-      ? studentRecords.reduce((sum, r) => sum + r.grade, 0) / studentRecords.length
+      ? Math.min(100, studentRecords.reduce((sum, r) => sum + Math.min(100, r.grade || 0), 0) / studentRecords.length)
       : 0;
     
     return {
@@ -22,7 +22,7 @@ const ClassroomAuraOverview = ({ records, students }: ClassroomAuraOverviewProps
   });
 
   const classAvgGrade = studentStats.length > 0
-    ? Math.round(studentStats.reduce((sum, s) => sum + s.avgGrade, 0) / studentStats.length)
+    ? Math.min(100, Math.round(studentStats.reduce((sum, s) => sum + s.avgGrade, 0) / studentStats.length))
     : 0;
 
   const activeStudents = studentStats.filter(s => s.recordCount > 0).length;
