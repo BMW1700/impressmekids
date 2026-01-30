@@ -142,7 +142,7 @@ export const useUploadSyllabus = () => {
           mime_type: file.type,
           uploaded_by: user.id,
           updated_at: new Date().toISOString(),
-        })
+        }, { onConflict: 'classroom_id' })
         .select()
         .single();
 
