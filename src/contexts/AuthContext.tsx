@@ -7,7 +7,8 @@ interface UserProfile {
   email: string | null;
   full_name: string | null;
   role: string | null;
-  is_verified: boolean;
+  // null means "not loaded" (avoid false redirects)
+  is_verified: boolean | null;
   school_id: string | null;
   district_id: string | null;
   student_id: string | null;
@@ -90,18 +91,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const profileData = data[0];
         
         // Fetch verification status, email, student_id, and district_id from profiles table
-        const { data: verificationData } = await supabase
+        const { data: verificationData, error: verificationError } = await supabase
           .from('profiles')
           .select('is_verified, school_id, district_id, email, student_id')
           .eq('id', userId)
-          .single();
+          .maybeSingle();
+
+        if (verificationError) {
+          console.error('Error fetching verification data:', verificationError);
+        }
         
         setProfile({
           id: profileData.id,
           email: verificationData?.email ?? null,
           full_name: profileData.full_name,
           role: profileData.role,
-          is_verified: verificationData?.is_verified ?? false,
+          // If we can't read it for any reason, keep null so the UI doesn't force a pending redirect.
+          is_verified: verificationData?.is_verified ?? null,
           school_id: verificationData?.school_id ?? null,
           district_id: verificationData?.district_id ?? null,
           student_id: verificationData?.student_id ?? null,

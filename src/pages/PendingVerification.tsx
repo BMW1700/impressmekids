@@ -29,18 +29,33 @@ export default function PendingVerification() {
         }
 
         // Check if user is verified
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('is_verified, role, district_name')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
+
+        if (profileError) {
+          console.error('Error fetching profile verification status:', profileError);
+        }
 
         if (profile?.is_verified) {
-          // User is now verified, redirect to appropriate dashboard
-          const role = profile.role;
+          // User is now verified, redirect to appropriate dashboard.
+          // Use centralized role source (user_roles/parent_accounts/etc.)
+          const { data: roleData, error: roleError } = await supabase.rpc('get_user_profile', {
+            _user_id: user.id,
+          });
+          if (roleError) {
+            console.error('Error fetching user role:', roleError);
+            navigate('/student/dashboard');
+            return;
+          }
+
+          const role = roleData?.[0]?.role;
           if (role === 'teacher') navigate('/teacher/dashboard');
           else if (role === 'parent') navigate('/parent/dashboard');
           else if (role === 'admin') navigate('/admin/dashboard');
+          else if (role === 'district_manager') navigate('/district-manager/dashboard');
           else navigate('/student/dashboard');
           return;
         }
@@ -51,7 +66,7 @@ export default function PendingVerification() {
           .select('*')
           .eq('user_id', user.id)
           .eq('status', 'pending')
-          .single();
+          .maybeSingle();
 
         if (requestData) {
           setRequest(requestData as VerificationRequest);

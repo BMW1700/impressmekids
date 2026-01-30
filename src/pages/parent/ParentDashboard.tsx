@@ -112,8 +112,8 @@ const ParentDashboard = () => {
       return;
     }
 
-    // Verification check
-    if (!profile.is_verified) {
+    // Verification check (only redirect when we KNOW user is unverified)
+    if (profile.is_verified === false) {
       hasRedirected.current = true;
       navigate('/pending-verification');
       return;
