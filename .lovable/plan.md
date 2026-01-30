@@ -1,46 +1,59 @@
-# Plan: Terminal Victory/Defeat States - COMPLETED ✅
 
-## What Was Fixed
+# Fix Corrupted Data and Cap Accuracy Values
 
-### Problem
-Victory/defeat conditions were being triggered but immediately overwritten by pending `setTimeout` calls that reset the phase back to "reading".
+## Problem Summary
+The audit revealed:
+- **41 corrupted records** with `accuracy_percent` values exceeding 100% (max 738%)
+- **12 impossible WPM records** exceeding 500 WPM (max 7,643 WPM)
+- **ProsodyInsights component** doesn't cap individual student accuracy values in the table
 
-### Solution Implemented
+## Implementation
 
-1. **Terminal State Safety Infrastructure**
-   - Added `phaseRef` to track phase synchronously
-   - Created `setPhaseSafe()` helper that blocks phase changes if already in victory/defeat
-   - Created `triggerVictory(reason)` and `triggerDefeat(reason)` centralized functions
+### Step 1: Database Migration to Clean Corrupted Data
+Run a SQL migration to fix the existing corrupted records:
 
-2. **Timeout Registry**
-   - Added `timeoutsRef` to track all game timeouts
-   - Created `scheduleTimeout()` helper that registers timeouts
-   - Created `clearAllTimeouts()` to cancel all pending timeouts on game-over
-   - All game timeouts now check terminal state before executing
+```sql
+-- Cap all accuracy_percent values at 100
+UPDATE reading_sessions 
+SET accuracy_percent = 100 
+WHERE accuracy_percent > 100;
 
-3. **Updated All Mini-Game Handlers**
-   - All 15+ mini-game handlers now sync `enemyHpRef.current` before calling `returnToReading()`
-   - `returnToReading()` now uses `phaseRef` to block if terminal state reached
-   - Tug of War and Balloon Battle now use centralized triggers
+-- Set impossible WPM values (>500) to NULL since they're clearly corrupted
+-- 500 WPM is physically impossible for reading aloud
+UPDATE reading_sessions 
+SET wpm = NULL 
+WHERE wpm > 500;
+```
 
-4. **Victory Conditions Now Bulletproof**
-   - Enemy HP = 0 → VICTORY (from any source: normal attacks, streak powers, mini-games)
-   - All words read + accuracy ≥ 80% → VICTORY
-   - All words read + accuracy < 80% → DEFEAT
-   - Player HP = 0 → DEFEAT
+### Step 2: Fix ProsodyInsights Component
+**File:** `src/components/aura/ProsodyInsights.tsx`
 
-### Files Modified
-- `src/components/aura/game/rpg/RPGBattleArena.tsx`
+In the `getStudentStats()` function (lines 208-227), cap individual student accuracy values:
 
-### Key Code Changes
-- Lines 124-186: Added terminal state infrastructure (phaseRef, setPhaseSafe, timeoutsRef, triggerVictory, triggerDefeat)
-- Lines 313-358: Updated returnToReading with terminal state checks
-- Lines 589-856: Updated all mini-game completion handlers to sync enemyHpRef
-- Lines 1100-1190: Updated enemy turn logic with safe phase setters
-- Lines 1634-1680: Updated victory conditions useEffect
+```typescript
+// Current (uncapped):
+const avgAccuracy = sessions.length > 0
+  ? Math.round(sessions.reduce((sum, s) => sum + (s.accuracy_percent || 0), 0) / sessions.length)
+  : 0;
 
-### Console Logging Added
-All victory/defeat triggers now log their reason for debugging:
-- `[RPGBattle] 🏆 TRIGGERING VICTORY: <reason>`
-- `[RPGBattle] 💀 TRIGGERING DEFEAT: <reason>`
-- `[RPGBattle] BLOCKED phase change: <phase> - already in terminal state`
+// Fixed (capped at 100):
+const avgAccuracy = sessions.length > 0
+  ? Math.min(100, Math.round(sessions.reduce((sum, s) => sum + Math.min(100, s.accuracy_percent || 0), 0) / sessions.length))
+  : 0;
+```
+
+This applies the same defensive clamping pattern used in other components (LeaderboardCard, ReadingProgressDashboard, etc.).
+
+## Technical Details
+
+| Location | Issue | Fix |
+|----------|-------|-----|
+| `reading_sessions.accuracy_percent` | 41 records > 100% | UPDATE to cap at 100 |
+| `reading_sessions.wpm` | 12 records > 500 WPM | UPDATE to set NULL |
+| `ProsodyInsights.tsx` line 213-215 | Individual student avgAccuracy uncapped | Add `Math.min(100, ...)` |
+
+## Verification
+After migration:
+- Query `SELECT COUNT(*) FROM reading_sessions WHERE accuracy_percent > 100` should return 0
+- Query `SELECT COUNT(*) FROM reading_sessions WHERE wpm > 500` should return 0
+- Individual Student Performance table in ProsodyInsights will show capped values
