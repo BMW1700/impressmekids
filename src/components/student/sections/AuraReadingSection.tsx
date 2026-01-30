@@ -585,10 +585,6 @@ export const AuraReadingSection = () => {
               <TrendingUp className="h-4 w-4 mr-1 md:mr-2 shrink-0" />
               <span className="text-xs md:text-sm">Progress</span>
             </TabsTrigger>
-            <TabsTrigger value="exercises" className="hover:scale-105 transition-transform whitespace-nowrap px-3 md:px-4">
-              <Sparkles className="h-4 w-4 mr-1 md:mr-2 shrink-0" />
-              <span className="text-xs md:text-sm">Exercises</span>
-            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -674,32 +670,6 @@ export const AuraReadingSection = () => {
           ) : (
             <AuraProgressChart records={records} />
           )}
-        </TabsContent>
-
-        <TabsContent value="exercises" className="mt-6 space-y-6">
-          {user?.id && (
-            <PhonemePracticeExercises studentId={user.id} />
-          )}
-          
-          {skillVector && (
-            <DifficultyProgressCard
-              currentLevel={skillVector.current_difficulty_level || 1}
-              performanceTrend={skillVector.performance_trend || 0}
-              recentGrades={(records || []).slice(0, 5).map(r => r.grade).filter(g => g !== null)}
-              difficultyHistory={(skillVector.difficulty_history as any) || []}
-            />
-          )}
-          
-          <PhonemeMasteryPathway
-            masteredPhonemes={latestAnalysis?.masteredPhonemes || []}
-            strugglingPhonemes={latestAnalysis?.problematicPhonemes || []}
-            studentGrade={5}
-          />
-          
-          <GeneratedExercises 
-            problematicPhonemes={latestAnalysis?.problematicPhonemes || []}
-            studentGrade={5}
-          />
         </TabsContent>
       </Tabs>
     </div>
