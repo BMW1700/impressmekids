@@ -335,19 +335,25 @@ export const TeacherSyllabusView = ({ classroomId }: TeacherSyllabusViewProps) =
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <Label htmlFor="publish-toggle" className="text-base">
-                  Publish Syllabus
+                <Label className="text-base">
+                  {syllabus.is_posted ? "Syllabus is Published" : "Publish Syllabus"}
                 </Label>
                 <p className="text-sm text-muted-foreground">
-                  Make the syllabus visible to all students in this classroom
+                  {syllabus.is_posted 
+                    ? "Students can currently view the syllabus" 
+                    : "Make the syllabus visible to all students in this classroom"}
                 </p>
               </div>
-              <Switch
-                id="publish-toggle"
-                checked={syllabus.is_posted}
-                onCheckedChange={handleTogglePublish}
+              <Button
+                onClick={() => handleTogglePublish(!syllabus.is_posted)}
                 disabled={togglePublishMutation.isPending}
-              />
+                variant={syllabus.is_posted ? "outline" : "default"}
+                className={syllabus.is_posted 
+                  ? "border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground" 
+                  : "bg-primary hover:bg-primary/90"}
+              >
+                {syllabus.is_posted ? "Unpublish" : "Publish"}
+              </Button>
             </div>
 
             <div className="flex items-center gap-2">
