@@ -7393,6 +7393,18 @@ export type Database = {
       }
     }
     Functions: {
+      admin_can_access_school: {
+        Args: { _admin_id: string; _school_district_id: string }
+        Returns: boolean
+      }
+      admin_can_update_profile_in_district: {
+        Args: { _admin_id: string; _profile_district_id: string }
+        Returns: boolean
+      }
+      admin_can_view_classroom: {
+        Args: { _admin_id: string; _teacher_id: string }
+        Returns: boolean
+      }
       approve_club_join_request: {
         Args: { p_request_id: string }
         Returns: Json
@@ -7848,6 +7860,10 @@ export type Database = {
         Args: { _student_id: string; _teacher_id: string }
         Returns: boolean
       }
+      is_teacher_of_student_classroom: {
+        Args: { _student_id: string; _teacher_id: string }
+        Returns: boolean
+      }
       is_tournament_classroom_member: {
         Args: { _tournament_id: string; _user_id: string }
         Returns: boolean
@@ -7906,6 +7922,10 @@ export type Database = {
             Args: { p_district_id: string; p_user_id: string }
             Returns: undefined
           }
+      user_belongs_to_school: {
+        Args: { _school_id: string; _user_id: string }
+        Returns: boolean
+      }
       validate_substitute_access: {
         Args: { p_access_code: string; p_email: string }
         Returns: Json
