@@ -71,9 +71,9 @@ export const SelectGameModal = ({ open, onOpenChange, onSelectGame }: SelectGame
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl">Select a Game for Tournament</DialogTitle>
+          <DialogTitle className="text-2xl">Select a Game to Assign</DialogTitle>
           <DialogDescription>
-            Choose which game type you'd like to create a tournament for
+            Choose which game you'd like to assign to your classroom
           </DialogDescription>
         </DialogHeader>
 
@@ -108,9 +108,9 @@ export const SelectGameModal = ({ open, onOpenChange, onSelectGame }: SelectGame
                   <CardDescription>{game.description}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {game.isAvailable && (
+                {game.isAvailable && (
                     <p className="text-sm text-muted-foreground">
-                      Click to create a tournament with this game
+                      Click to assign this game to your class
                     </p>
                   )}
                 </CardContent>
