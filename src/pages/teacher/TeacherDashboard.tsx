@@ -233,7 +233,7 @@ const TeacherDashboard = () => {
           </div>
 
           <Tabs defaultValue="classrooms" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 h-auto p-2 bg-muted/50 rounded-xl gap-2">
+            <TabsList className="flex flex-wrap justify-center w-full h-auto p-2 bg-muted/50 rounded-xl gap-2">
               <TabsTrigger value="classrooms" className={liquidGlassTabClass}>
                 <Users className="h-4 w-4 mr-1 md:mr-2" />
                 <span className="text-xs md:text-sm">{t("teacherDashboard.tabs.classrooms")}</span>
