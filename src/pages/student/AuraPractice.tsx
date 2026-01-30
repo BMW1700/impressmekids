@@ -685,8 +685,8 @@ const AuraPractice = () => {
           )}
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
-              <TabsList className="inline-flex w-max md:grid md:w-full md:grid-cols-6 min-w-max">
+            <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 flex justify-center">
+              <TabsList className="inline-flex w-max md:w-auto">
                 <TabsTrigger value="stories" className="hover:scale-105 transition-transform whitespace-nowrap px-3 md:px-4">
                   <Library className="h-4 w-4 mr-1 md:mr-2 shrink-0" />
                   <span className="text-xs md:text-sm">Stories</span>
