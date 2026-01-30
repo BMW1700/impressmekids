@@ -539,9 +539,6 @@ const ClassroomDetail = () => {
                     <Button variant="outline" size="lg" onClick={() => setShowEditClassroom(true)} className="hover:bg-primary/5 hover:border-primary/30">
                       Edit Classroom
                     </Button>
-                    <Button variant="outline" size="lg" onClick={() => setShowEditClassroom(true)} className="hover:bg-primary/5 hover:border-primary/30">
-                      Edit Classroom
-                    </Button>
                     <ToolkitSidebar classroomId={id!} />
                     <Button size="lg" onClick={() => setShowClassGlance(true)} className="bg-gradient-primary hover:opacity-90 shadow-card text-base">
                       <BarChart3 className="mr-2 h-5 w-5" />
