@@ -211,7 +211,7 @@ const ProsodyInsights = ({ records, skillVectors, classroomId }: ProsodyInsights
         ? Math.round(sessions.reduce((sum, s) => sum + (s.wpm || 0), 0) / sessions.length)
         : 0;
       const avgAccuracy = sessions.length > 0
-        ? Math.round(sessions.reduce((sum, s) => sum + (s.accuracy_percent || 0), 0) / sessions.length)
+        ? Math.min(100, Math.round(sessions.reduce((sum, s) => sum + Math.min(100, s.accuracy_percent || 0), 0) / sessions.length))
         : 0;
       const avgFluency = sessions.length > 0
         ? Math.round(sessions.reduce((sum, s) => sum + (s.fluency_score || 0), 0) / sessions.length)
