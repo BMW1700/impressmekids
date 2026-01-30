@@ -139,7 +139,7 @@ export const useWeeklyProgress = (studentId: string | undefined, weeksToFetch = 
           : (weekAura.length ? weekAura.reduce((sum, a) => sum + (a.wpm || 0), 0) / weekAura.length : 0);
 
         const avgAccuracy = weekSessions.length
-          ? weekSessions.reduce((sum, s) => sum + (s.accuracy_percent || 0), 0) / weekSessions.length
+          ? Math.min(100, weekSessions.reduce((sum, s) => sum + Math.min(100, s.accuracy_percent || 0), 0) / weekSessions.length)
           : 0;
 
         const avgFluency = weekSessions.length

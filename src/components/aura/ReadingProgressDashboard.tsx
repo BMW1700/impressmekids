@@ -32,9 +32,9 @@ export const ReadingProgressDashboard = ({ classroomId }: ReadingProgressDashboa
     );
   }
 
-  // Calculate class averages
+  // Calculate class averages - cap accuracy at 100% to handle corrupted data
   const avgWpm = Math.round(sessions.reduce((sum, s) => sum + (s.wpm || 0), 0) / sessions.length);
-  const avgAccuracy = Math.round(sessions.reduce((sum, s) => sum + (s.accuracy_percent || 0), 0) / sessions.length);
+  const avgAccuracy = Math.min(100, Math.round(sessions.reduce((sum, s) => sum + Math.min(100, s.accuracy_percent || 0), 0) / sessions.length));
   const totalWordsRead = sessions.reduce((sum, s) => sum + (s.words_read || 0), 0);
   const avgFluency = Math.round(sessions.reduce((sum, s) => sum + (s.fluency_score || 0), 0) / sessions.length);
 
