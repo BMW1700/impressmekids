@@ -79,7 +79,9 @@ const TeacherDashboard = () => {
     return null;
   }
 
-  if (!profile.is_verified) {
+  // Only redirect when we KNOW the user is unverified.
+  // (null means verification status hasn't loaded yet)
+  if (profile.is_verified === false) {
     navigate("/pending-verification");
     return null;
   }

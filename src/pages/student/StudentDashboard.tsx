@@ -51,8 +51,8 @@ const StudentDashboard = () => {
     if (profile.role === 'admin') { navigate('/admin/dashboard'); return; }
     if (profile.role === 'parent') { navigate('/parent/dashboard'); return; }
 
-    // Verification check
-    if (!profile.is_verified) {
+    // Verification check (only redirect when we KNOW user is unverified)
+    if (profile.is_verified === false) {
       navigate('/pending-verification');
       return;
     }
