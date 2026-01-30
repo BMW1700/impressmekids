@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { format, addDays, subDays, startOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface ChecklistItem {
   id: string;
@@ -175,7 +176,12 @@ export function TeacherJournalTab({ classroomId }: TeacherJournalTabProps) {
     },
   });
 
-  // Track last saved state to detect actual changes
+  // Debounce note and checklist changes
+  const debouncedNote = useDebounce(note, 500);
+  const debouncedChecklist = useDebounce(checklistItems, 500);
+
+  // Track if this is the initial load to prevent saving on mount
+  const isInitialLoadRef = useRef(true);
   const lastSavedRef = useRef<{ note: string; checklist: string }>({ note: "", checklist: "[]" });
 
   // Update ref when entry loads
@@ -188,32 +194,36 @@ export function TeacherJournalTab({ classroomId }: TeacherJournalTabProps) {
     } else if (entry === null) {
       lastSavedRef.current = { note: "", checklist: "[]" };
     }
+    // Mark initial load as complete after entry is fetched
+    isInitialLoadRef.current = false;
   }, [entry]);
 
-  // Check if there are unsaved changes
-  const hasUnsavedChanges = useCallback(() => {
-    const currentChecklist = JSON.stringify(checklistItems);
-    return note !== lastSavedRef.current.note || currentChecklist !== lastSavedRef.current.checklist;
-  }, [note, checklistItems]);
-
-  // Auto-save with debounce - only when there are actual changes
+  // Auto-save when debounced values change
   useEffect(() => {
-    // Don't auto-save on initial load or if no changes
+    // Skip initial load
+    if (isInitialLoadRef.current) return;
+    // Skip if still loading
     if (entry === undefined) return;
-    if (!hasUnsavedChanges()) return;
     
-    const timeout = setTimeout(() => {
-      if ((note || checklistItems.length > 0) && hasUnsavedChanges()) {
-        saveMutation.mutate();
-        // Update ref after save
-        lastSavedRef.current = {
-          note,
-          checklist: JSON.stringify(checklistItems),
-        };
-      }
-    }, 500);
-    return () => clearTimeout(timeout);
-  }, [note, checklistItems, entry, hasUnsavedChanges]);
+    const currentNote = debouncedNote;
+    const currentChecklist = JSON.stringify(debouncedChecklist);
+    
+    // Check if there are actual changes
+    const hasChanges = 
+      currentNote !== lastSavedRef.current.note || 
+      currentChecklist !== lastSavedRef.current.checklist;
+    
+    if (!hasChanges) return;
+    
+    // Only save if there's content
+    if (currentNote || debouncedChecklist.length > 0) {
+      saveMutation.mutate();
+      lastSavedRef.current = {
+        note: currentNote,
+        checklist: currentChecklist,
+      };
+    }
+  }, [debouncedNote, debouncedChecklist, entry]);
 
   const goToPreviousDay = () => setSelectedDate(startOfDay(subDays(selectedDate, 1)));
   const goToNextDay = () => setSelectedDate(startOfDay(addDays(selectedDate, 1)));
