@@ -320,7 +320,7 @@ export const RPGWorldMap = ({
           transition={{ duration: 3, repeat: Infinity }}
         >
           <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-500 mb-2">
-            ⚔️ LexiQuest: Into the Beyond
+            ⚔️ RPG Mode
           </h1>
         </motion.div>
         <p className="text-purple-300 text-lg">Your reading adventure awaits, hero!</p>

@@ -215,7 +215,7 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
                     <div>
                       <h3 className="font-bold text-lg flex items-center gap-2">
                         <Sparkles className="h-5 w-5 text-amber-500" />
-                        LexiQuest: Into the Beyond - RPG Mode
+                        RPG Mode
                         <Badge variant="secondary" className="text-xs">BETA</Badge>
                       </h3>
                       <p className="text-sm text-muted-foreground">
