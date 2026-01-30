@@ -186,44 +186,21 @@ export const useUpdateGradeWeights = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Check if record exists
-      const { data: existing } = await supabase
+      // Upsert by classroom_id to avoid unique constraint errors
+      // Note: omitting file fields preserves any previously uploaded syllabus metadata.
+      const { data, error } = await supabase
         .from("classroom_syllabus")
-        .select("id")
-        .eq("classroom_id", classroomId)
-        .maybeSingle();
-
-      let data, error;
-
-      if (existing) {
-        // Update only grade_weights, preserve file data
-        const result = await supabase
-          .from("classroom_syllabus")
-          .update({
-            grade_weights: weights as any,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("classroom_id", classroomId)
-          .select()
-          .single();
-        data = result.data;
-        error = result.error;
-      } else {
-        // Create new record with null file fields (weights only)
-        const result = await supabase
-          .from("classroom_syllabus")
-          .insert({
+        .upsert(
+          {
             classroom_id: classroomId,
             grade_weights: weights as any,
-            updated_at: new Date().toISOString(),
             uploaded_by: user.id,
-            is_posted: false,
-          })
-          .select()
-          .single();
-        data = result.data;
-        error = result.error;
-      }
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "classroom_id" }
+        )
+        .select()
+        .single();
 
       if (error) throw error;
       
