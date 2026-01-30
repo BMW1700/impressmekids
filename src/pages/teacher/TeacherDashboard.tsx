@@ -254,10 +254,6 @@ const TeacherDashboard = () => {
                 <BookOpen className="h-4 w-4 mr-1 md:mr-2" />
                 <span className="text-xs md:text-sm">Actions</span>
               </TabsTrigger>
-              <TabsTrigger value="ml-training" className={liquidGlassTabClass}>
-                <Brain className="h-4 w-4 mr-1 md:mr-2" />
-                <span className="text-xs md:text-sm">ML Training</span>
-              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="classrooms" className="mt-6 space-y-8">
@@ -491,9 +487,6 @@ const TeacherDashboard = () => {
               </div>
             </TabsContent>
 
-            <TabsContent value="ml-training" className="mt-6">
-              <MLModelTraining />
-            </TabsContent>
           </Tabs>
         </div>
       </main>
