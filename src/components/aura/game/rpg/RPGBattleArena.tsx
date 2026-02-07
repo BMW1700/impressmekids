@@ -634,6 +634,10 @@ export const RPGBattleArena = ({
       setEnemyHp(newHp);
       setTotalDamage(prev => prev + damage);
     }
+    // FIX: Track accuracy for words consumed by this mini-game
+    const wordsCorrectInShield = Math.round((shieldStrength / 100) * barrageWords.length);
+    setCorrectWords(prev => prev + wordsCorrectInShield);
+    setWordsRead(prev => prev + barrageWords.length);
     setBatchStartIndex(prev => prev + barrageWords.length);
     returnToReading();
   }, [barrageWords.length, returnToReading]);
@@ -869,6 +873,9 @@ export const RPGBattleArena = ({
       triggerScreenShake();
     }
     
+    // FIX: Track accuracy for words consumed by quick block
+    setCorrectWords(prev => prev + blocked);
+    setWordsRead(prev => prev + total);
     // Advance past the words used
     setBatchStartIndex(prev => prev + 3);
     returnToReading();
@@ -1641,6 +1648,16 @@ export const RPGBattleArena = ({
     // CRITICAL: Cap accuracy at 100% to fix data corruption bug
     const accuracyPercent = wordsRead > 0 ? Math.min(100, Math.round((correctWords / wordsRead) * 100)) : 0;
     
+    // DEBUG: Log final accuracy breakdown
+    console.log('[RPGBattle] 📊 FINAL ACCURACY DEBUG:', {
+      correctWords,
+      wordsRead,
+      accuracy: accuracyPercent,
+      longestStreak,
+      totalDamage,
+      formula: `${correctWords}/${wordsRead} = ${wordsRead > 0 ? (correctWords/wordsRead*100).toFixed(1) : 0}%`,
+    });
+    
     // Save to reading_sessions for teacher visibility
     if (studentId && wordsRead > 0) {
       try {
@@ -1879,7 +1896,10 @@ export const RPGBattleArena = ({
                 setEnemyHp(newHp);
                 setTotalDamage(prev => prev + damage);
               }
-              setCorrectWords(prev => prev + Math.floor(shieldStrength / 20));
+              // FIX: Track both correctWords AND wordsRead to prevent accuracy inflation
+              const wordsCorrect = Math.round((shieldStrength / 100) * barrageWords.length);
+              setCorrectWords(prev => prev + wordsCorrect);
+              setWordsRead(prev => prev + barrageWords.length);
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
