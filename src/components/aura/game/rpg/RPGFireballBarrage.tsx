@@ -31,14 +31,17 @@ export const RPGFireballBarrage = ({
   const [wordsDestroyed, setWordsDestroyed] = useState(0);
   const [wordsMissed, setWordsMissed] = useState(0);
   const [isActive, setIsActive] = useState(true);
+  const [nextTargetWord, setNextTargetWord] = useState("");
   
   const recognitionRef = useRef<any>(null);
   const isListeningRef = useRef(false);
   const animationRef = useRef<number | null>(null);
   const destroyedRef = useRef(0);
   const missedRef = useRef(0);
+  const fireballsRef = useRef<Fireball[]>([]);
+  const isActiveRef = useRef(true);
 
-  // Initialize fireballs from dragon side (left) flying toward heroes (right)
+  // Initialize fireballs
   useEffect(() => {
     const initialFireballs: Fireball[] = words.map((word, index) => ({
       id: `fireball-${index}`,
@@ -50,48 +53,61 @@ export const RPGFireballBarrage = ({
       scale: 0.8 + Math.random() * 0.4,
     }));
     setFireballs(initialFireballs);
+    fireballsRef.current = initialFireballs;
+    
+    // Set first target word
+    if (initialFireballs.length > 0) {
+      setNextTargetWord(initialFireballs[0].word);
+    }
   }, [words]);
 
-  // Animation loop - fireballs fly left to right
+  // Animation loop
   useEffect(() => {
     if (!isActive) return;
 
     const animate = () => {
-      setFireballs(prev => {
-        let anyHit = false;
-        const updated = prev.map(f => {
-          if (f.destroyed) return f;
-          
-          const newX = f.x + f.speed;
-          
-          // Fireball reached heroes at ~72% of screen
-          if (newX >= 72) {
-            if (!anyHit) {
-              anyHit = true;
-              onWordHit(20);
-              soundEffects.incorrectWord();
-              missedRef.current += 1;
-              setWordsMissed(missedRef.current);
-            }
-            return { ...f, destroyed: true, x: newX };
-          }
-          
-          return { ...f, x: newX };
-        });
+      const current = fireballsRef.current;
+      let anyMissed = false;
+      
+      const updated = current.map(f => {
+        if (f.destroyed) return f;
         
-        // Check completion
-        const allDone = updated.every(f => f.destroyed);
-        if (allDone && isActive) {
-          setIsActive(false);
-          setTimeout(() => {
-            onComplete(destroyedRef.current, missedRef.current);
-          }, 500);
+        const newX = f.x + f.speed;
+        
+        if (newX >= 72) {
+          if (!anyMissed) {
+            anyMissed = true;
+            onWordHit(20);
+            soundEffects.incorrectWord();
+            missedRef.current += 1;
+            setWordsMissed(missedRef.current);
+          }
+          return { ...f, destroyed: true, x: newX };
         }
         
-        return updated;
+        return { ...f, x: newX };
       });
       
-      if (isActive) {
+      fireballsRef.current = updated;
+      setFireballs([...updated]);
+      
+      // Update next target word
+      const nextActive = updated.find(f => !f.destroyed);
+      if (nextActive) {
+        setNextTargetWord(nextActive.word);
+      }
+      
+      // Check completion
+      const allDone = updated.every(f => f.destroyed);
+      if (allDone && isActiveRef.current) {
+        isActiveRef.current = false;
+        setIsActive(false);
+        setTimeout(() => {
+          onComplete(destroyedRef.current, missedRef.current);
+        }, 500);
+      }
+      
+      if (isActiveRef.current) {
         animationRef.current = requestAnimationFrame(animate);
       }
     };
@@ -104,17 +120,7 @@ export const RPGFireballBarrage = ({
     };
   }, [isActive, onComplete, onWordHit]);
 
-  // Handle fireball destruction via speech
-  const handleFireballDestroy = useCallback((fireballId: string) => {
-    setFireballs(prev => prev.map(f => 
-      f.id === fireballId ? { ...f, destroyed: true } : f
-    ));
-    destroyedRef.current += 1;
-    setWordsDestroyed(destroyedRef.current);
-    soundEffects.correctWord();
-  }, []);
-
-  // Continuous speech recognition - like GoblinHorde
+  // Continuous speech recognition - FIX: match directly against ref, no nested setState
   const startListening = useCallback(() => {
     if (typeof window === 'undefined') return;
     
@@ -137,50 +143,61 @@ export const RPGFireballBarrage = ({
           const transcript = event.results[i][0].transcript.toLowerCase().trim();
           const spokenWords = transcript.split(/\s+/);
 
-          // Check against all active fireballs - super lenient matching
-          setFireballs(prev => {
-            const activeFireballs = prev.filter(f => !f.destroyed);
-            
-            for (const fireball of activeFireballs) {
-              const targetWord = fireball.word.toLowerCase();
-              
-              for (const spoken of spokenWords) {
-                const cleanSpoken = spoken.replace(/[^a-z]/g, '');
-                
-                if (cleanSpoken.length >= 2) {
-                  const startsWithMatch = targetWord.startsWith(cleanSpoken.slice(0, 2)) || 
-                                          cleanSpoken.startsWith(targetWord.slice(0, 2));
-                  const containsMatch = targetWord.includes(cleanSpoken) || 
-                                        cleanSpoken.includes(targetWord);
-                  const exactMatch = cleanSpoken === targetWord;
+          // Match against ref (not inside setState) to avoid batching issues
+          const currentFireballs = fireballsRef.current;
+          const activeFireballs = currentFireballs.filter(f => !f.destroyed);
+
+          for (const fireball of activeFireballs) {
+            const targetWord = fireball.word.toLowerCase();
+
+            for (const spoken of spokenWords) {
+              const cleanSpoken = spoken.replace(/[^a-z']/g, '');
+
+              if (cleanSpoken.length >= 2) {
+                const startsWithMatch = targetWord.startsWith(cleanSpoken.slice(0, 2)) ||
+                  cleanSpoken.startsWith(targetWord.slice(0, 2));
+                const containsMatch = targetWord.includes(cleanSpoken) ||
+                  cleanSpoken.includes(targetWord);
+                const exactMatch = cleanSpoken === targetWord;
+
+                if (exactMatch || startsWithMatch || containsMatch) {
+                  // Directly mutate ref and sync to state
+                  const updatedFireballs = fireballsRef.current.map(f =>
+                    f.id === fireball.id ? { ...f, destroyed: true } : f
+                  );
+                  fireballsRef.current = updatedFireballs;
+                  setFireballs([...updatedFireballs]);
+                  destroyedRef.current += 1;
+                  setWordsDestroyed(destroyedRef.current);
+                  soundEffects.correctWord();
                   
-                  if (exactMatch || startsWithMatch || containsMatch) {
-                    handleFireballDestroy(fireball.id);
-                    return prev;
-                  }
+                  // Update next target
+                  const nextActive = updatedFireballs.find(f => !f.destroyed);
+                  if (nextActive) setNextTargetWord(nextActive.word);
+                  
+                  break;
                 }
               }
             }
-            return prev;
-          });
+          }
         }
       };
 
       recognition.onerror = () => {
-        if (isListeningRef.current && isActive) {
+        if (isListeningRef.current && isActiveRef.current) {
           setTimeout(() => startListening(), 200);
         }
       };
 
       recognition.onend = () => {
-        if (isListeningRef.current && isActive) {
+        if (isListeningRef.current && isActiveRef.current) {
           setTimeout(() => startListening(), 100);
         }
       };
 
       recognition.start();
     } catch {}
-  }, [isActive, handleFireballDestroy]);
+  }, []);
 
   const startMic = useCallback(() => {
     setIsMicActive(true);
@@ -272,7 +289,6 @@ export const RPGFireballBarrage = ({
                   }}
                   transition={{ repeat: Infinity, duration: 0.4 }}
                 >
-                  {/* Word inside */}
                   <span 
                     className="font-black text-xl z-10 uppercase tracking-wider px-2 py-1 rounded
                       text-white bg-black/40"
@@ -335,6 +351,23 @@ export const RPGFireballBarrage = ({
           ))}
         </AnimatePresence>
       </div>
+
+      {/* Next target prompt */}
+      {nextTargetWord && isActive && (
+        <motion.div
+          className="absolute bottom-32 left-1/2 -translate-x-1/2 z-50 pointer-events-auto"
+          animate={{ y: [0, -4, 0] }}
+          transition={{ repeat: Infinity, duration: 1.5 }}
+        >
+          <div className="bg-slate-900/95 border-2 border-orange-400/60 rounded-xl px-8 py-4
+            shadow-[0_0_30px_rgba(249,115,22,0.3)]">
+            <p className="text-orange-300 text-sm mb-1 text-center font-medium">🔥 Say this word to extinguish:</p>
+            <p className="text-3xl font-black text-white text-center uppercase tracking-wider">
+              {nextTargetWord}
+            </p>
+          </div>
+        </motion.div>
+      )}
 
       {/* Mic control */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 pointer-events-auto">
