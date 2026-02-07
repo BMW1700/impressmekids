@@ -2256,7 +2256,7 @@ export const RPGBattleArena = ({
                   </div>
 
                   {/* Center: Voice Reading - Fixed height to prevent layout shifts */}
-                  <div className="min-h-[200px] space-y-4 overflow-hidden">
+                  <div className="relative min-h-[200px] space-y-4 overflow-hidden">
                     {currentCommand === 'read' && currentWordBatch.length > 0 && (
                       <>
                         {/* Elara charge indicator */}
@@ -2307,15 +2307,17 @@ export const RPGBattleArena = ({
                       </div>
                     )}
 
-                    {/* Word Attack Effect */}
+                    {/* Word Attack Effect - Positioned as overlay to prevent layout shifts */}
                     {currentWordResult !== null && (
-                      <RPGWordAttack
-                        word={words[lastSpokenGlobalIndex] || ""}
-                        isCorrect={currentWordResult}
-                        streak={streak}
-                        damage={damageAmount}
-                        attackType={attackType}
-                      />
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                        <RPGWordAttack
+                          word={words[lastSpokenGlobalIndex] || ""}
+                          isCorrect={currentWordResult}
+                          streak={streak}
+                          damage={damageAmount}
+                          attackType={attackType}
+                        />
+                      </div>
                     )}
                   </div>
 
