@@ -23,7 +23,7 @@ import { RPGCoinDrop } from "./RPGCoinDrop";
 import { RPGWordShield } from "./RPGWordShield";
 import { RPGSpellCombo } from "./RPGSpellCombo";
 // NEW: Import 2 new mini-games
-import { RPGRhymeChain } from "./RPGRhymeChain";
+import { RPGWordCannon } from "./RPGWordCannon";
 import { RPGSpeedTypist } from "./RPGSpeedTypist";
 // NEW: Import Quick Block for enemy attacks
 import { RPGQuickBlock } from "./RPGQuickBlock";
@@ -610,6 +610,7 @@ export const RPGBattleArena = ({
       setTotalDamage(prev => prev + bonusDamage);
     }
     setCorrectWords(prev => prev + blocked);
+    setWordsRead(prev => prev + blocked + hit);
     setBatchStartIndex(prev => prev + barrageWords.length);
     returnToReading();
   }, [barrageWords.length, returnToReading]);
@@ -650,6 +651,9 @@ export const RPGBattleArena = ({
       setEnemyHp(newHp);
       setTotalDamage(prev => prev + damage);
       setCorrectWords(prev => prev + barrageWords.length);
+      setWordsRead(prev => prev + barrageWords.length);
+    } else {
+      setWordsRead(prev => prev + barrageWords.length);
     }
     setBatchStartIndex(prev => prev + barrageWords.length);
     returnToReading();
@@ -665,6 +669,7 @@ export const RPGBattleArena = ({
     setEnemyHp(newHp);
     setTotalDamage(prev => prev + damage);
     setCorrectWords(prev => prev + correctHits);
+    setWordsRead(prev => prev + correctHits + wrongHits);
     returnToReading();
   }, [returnToReading]);
   
@@ -673,7 +678,7 @@ export const RPGBattleArena = ({
   // Handle Rhyme Chain complete - uses returnToReading for clean state
   // UPDATED: Syncs enemyHpRef for terminal state detection in returnToReading
   const handleRhymeChainComplete = useCallback((score: number, damage: number) => {
-    console.log('[RPGBattle] Rhyme Chain complete:', { score, damage });
+    console.log('[RPGBattle] Word Cannon complete:', { score, damage });
     if (damage > 0) {
       battleSounds.magicSparkle();
       const newHp = Math.max(0, enemyHpRef.current - damage);
@@ -682,6 +687,7 @@ export const RPGBattleArena = ({
       setTotalDamage(prev => prev + damage);
     }
     setCorrectWords(prev => prev + score);
+    setWordsRead(prev => prev + barrageWords.length);
     setBatchStartIndex(prev => prev + barrageWords.length);
     returnToReading();
   }, [barrageWords.length, returnToReading]);
@@ -698,6 +704,7 @@ export const RPGBattleArena = ({
       setTotalDamage(prev => prev + damage);
     }
     setCorrectWords(prev => prev + wordsSpoken);
+    setWordsRead(prev => prev + barrageWords.length);
     setBatchStartIndex(prev => prev + barrageWords.length);
     returnToReading();
   }, [barrageWords.length, returnToReading]);
@@ -783,6 +790,7 @@ export const RPGBattleArena = ({
       setTotalDamage(prev => prev + bonusDamage);
     }
     setCorrectWords(prev => prev + result.wordsSpoken);
+    setWordsRead(prev => prev + result.totalWords);
     setBatchStartIndex(prev => prev + barrageWords.length);
     returnToReading();
   }, [barrageWords.length, returnToReading]);
@@ -803,6 +811,7 @@ export const RPGBattleArena = ({
       setPlayerHp(prev => Math.max(0, prev - missed * 15));
     }
     setCorrectWords(prev => prev + destroyed);
+    setWordsRead(prev => prev + destroyed + missed);
     setBatchStartIndex(prev => prev + barrageWords.length);
     returnToReading();
   }, [barrageWords.length, returnToReading]);
@@ -823,6 +832,7 @@ export const RPGBattleArena = ({
       setPlayerHp(prev => Math.max(0, prev - damage));
     }
     setCorrectWords(prev => prev + wordsFreed);
+    setWordsRead(prev => prev + barrageWords.length);
     setBatchStartIndex(prev => prev + barrageWords.length);
     returnToReading();
   }, [barrageWords.length, returnToReading]);
@@ -939,7 +949,7 @@ export const RPGBattleArena = ({
     if (destroyed > 0) {
       setCorrectWords(prev => prev + destroyed);
     }
-    // Advance past the words used in the barrage so we don't repeat them
+    setWordsRead(prev => prev + destroyed + missed);
     const wordsUsedInBarrage = barrageWords.length;
     setBatchStartIndex(prev => prev + wordsUsedInBarrage);
     returnToReading();
@@ -1876,7 +1886,7 @@ export const RPGBattleArena = ({
           />
         )}
         {phase === 'rhyme_chain' && (
-          <RPGRhymeChain
+          <RPGWordCannon
             words={barrageWords}
             onComplete={handleRhymeChainComplete}
             onDamage={handleMiniGameDamage}
@@ -1934,8 +1944,9 @@ export const RPGBattleArena = ({
             words={barrageWords}
             onComplete={(completed, failed) => {
               const newHp = Math.max(0, enemyHpRef.current - completed * 12);
-              enemyHpRef.current = newHp; // Sync ref FIRST for returnToReading
+              enemyHpRef.current = newHp;
               setCorrectWords(prev => prev + completed);
+              setWordsRead(prev => prev + completed + failed);
               setTotalDamage(prev => prev + completed * 12);
               setEnemyHp(newHp);
               setBatchStartIndex(prev => prev + barrageWords.length);
@@ -1949,8 +1960,9 @@ export const RPGBattleArena = ({
             words={barrageWords}
             onComplete={(caught, missed) => {
               const newHp = Math.max(0, enemyHpRef.current - caught * 10);
-              enemyHpRef.current = newHp; // Sync ref FIRST for returnToReading
+              enemyHpRef.current = newHp;
               setCorrectWords(prev => prev + caught);
+              setWordsRead(prev => prev + caught + missed);
               setTotalDamage(prev => prev + caught * 10);
               setEnemyHp(newHp);
               setBatchStartIndex(prev => prev + barrageWords.length);
@@ -1964,8 +1976,9 @@ export const RPGBattleArena = ({
             words={barrageWords}
             onComplete={(revealed, failed) => {
               const newHp = Math.max(0, enemyHpRef.current - revealed * 15);
-              enemyHpRef.current = newHp; // Sync ref FIRST for returnToReading
+              enemyHpRef.current = newHp;
               setCorrectWords(prev => prev + revealed);
+              setWordsRead(prev => prev + revealed + failed);
               setTotalDamage(prev => prev + revealed * 15);
               setEnemyHp(newHp);
               setBatchStartIndex(prev => prev + barrageWords.length);
@@ -1979,8 +1992,9 @@ export const RPGBattleArena = ({
             words={barrageWords}
             onComplete={(freed, frozen) => {
               const newHp = Math.max(0, enemyHpRef.current - freed * 14);
-              enemyHpRef.current = newHp; // Sync ref FIRST for returnToReading
+              enemyHpRef.current = newHp;
               setCorrectWords(prev => prev + freed);
+              setWordsRead(prev => prev + freed + frozen);
               setTotalDamage(prev => prev + freed * 14);
               setEnemyHp(newHp);
               setBatchStartIndex(prev => prev + barrageWords.length);
@@ -1994,8 +2008,9 @@ export const RPGBattleArena = ({
             words={barrageWords}
             onComplete={(struck, missed) => {
               const newHp = Math.max(0, enemyHpRef.current - struck * 12);
-              enemyHpRef.current = newHp; // Sync ref FIRST for returnToReading
+              enemyHpRef.current = newHp;
               setCorrectWords(prev => prev + struck);
+              setWordsRead(prev => prev + struck + missed);
               setTotalDamage(prev => prev + struck * 12);
               setEnemyHp(newHp);
               setBatchStartIndex(prev => prev + barrageWords.length);
@@ -2009,8 +2024,9 @@ export const RPGBattleArena = ({
             words={barrageWords}
             onComplete={(saved, consumed) => {
               const newHp = Math.max(0, enemyHpRef.current - saved * 16);
-              enemyHpRef.current = newHp; // Sync ref FIRST for returnToReading
+              enemyHpRef.current = newHp;
               setCorrectWords(prev => prev + saved);
+              setWordsRead(prev => prev + saved + consumed);
               setTotalDamage(prev => prev + saved * 16);
               setEnemyHp(newHp);
               setBatchStartIndex(prev => prev + barrageWords.length);
@@ -2239,8 +2255,8 @@ export const RPGBattleArena = ({
                     />
                   </div>
 
-                  {/* Center: Voice Reading */}
-                  <div className="space-y-4">
+                  {/* Center: Voice Reading - Fixed height to prevent layout shifts */}
+                  <div className="min-h-[200px] space-y-4 overflow-hidden">
                     {currentCommand === 'read' && currentWordBatch.length > 0 && (
                       <>
                         {/* Elara charge indicator */}
@@ -2318,6 +2334,7 @@ export const RPGBattleArena = ({
                       ]}
                       streak={streak}
                       longestStreak={longestStreak}
+                      showCombo={currentWordResult === true}
                     />
                   </div>
                 </motion.div>

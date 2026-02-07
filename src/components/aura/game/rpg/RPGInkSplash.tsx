@@ -2,15 +2,15 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, Droplet, Eye } from "lucide-react";
 import { isWordMatchLenient } from "@/lib/wordMatchingModes";
-import { SoundEffects, unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
+import { SoundEffects } from "@/lib/pronunciationPlayer";
 
 interface InkWord {
   id: string;
   word: string;
-  obscureLevel: number; // 0-3, higher = more obscured
+  obscureLevel: number;
   revealed: boolean;
   failed: boolean;
-  selected: boolean;
+  active: boolean;
 }
 
 interface RPGInkSplashProps {
@@ -21,22 +21,17 @@ interface RPGInkSplashProps {
 
 const soundEffects = new SoundEffects();
 
-// Obscure word by replacing some characters with ink blots
 const obscureWord = (word: string, level: number): string => {
   if (level === 0) return word;
   const chars = word.split('');
   const indicesToObscure: number[] = [];
-  
-  // Determine how many characters to obscure
   const obscureCount = Math.min(Math.ceil(chars.length * (level * 0.25)), chars.length - 1);
-  
   while (indicesToObscure.length < obscureCount) {
     const randomIndex = Math.floor(Math.random() * chars.length);
     if (!indicesToObscure.includes(randomIndex)) {
       indicesToObscure.push(randomIndex);
     }
   }
-  
   return chars.map((char, i) => indicesToObscure.includes(i) ? '█' : char).join('');
 };
 
@@ -46,37 +41,42 @@ export const RPGInkSplash = ({
   onWordHit,
 }: RPGInkSplashProps) => {
   const [inkWords, setInkWords] = useState<InkWord[]>([]);
-  const [currentWordIndex, setCurrentWordIndex] = useState(0);
-  const [isListening, setIsListening] = useState(false);
-  const [spokenText, setSpokenText] = useState("");
+  const [isMicActive, setIsMicActive] = useState(false);
   const [wordsRevealed, setWordsRevealed] = useState(0);
   const [wordsFailed, setWordsFailed] = useState(0);
   const [isActive, setIsActive] = useState(true);
   const [timeLeft, setTimeLeft] = useState(40);
+  const [spokenText, setSpokenText] = useState("");
+
   const recognitionRef = useRef<any>(null);
+  const isListeningRef = useRef(false);
   const revealedRef = useRef(0);
   const failedRef = useRef(0);
+  const inkWordsRef = useRef<InkWord[]>([]);
+  const isActiveRef = useRef(true);
 
-  // Initialize ink words with varying obscure levels
+  // Initialize ink words
   useEffect(() => {
     const initialWords: InkWord[] = words.slice(0, 8).map((word, index) => ({
       id: `ink-${index}`,
       word: word.replace(/[^a-zA-Z']/g, ''),
-      obscureLevel: 1 + (index % 3), // Vary between 1-3
+      obscureLevel: 1 + (index % 3),
       revealed: false,
       failed: false,
-      selected: false,
+      active: index === 0, // First word auto-selected
     }));
     setInkWords(initialWords);
+    inkWordsRef.current = initialWords;
   }, [words]);
 
-  // Countdown timer
+  // Countdown timer - game ONLY ends when timer expires
   useEffect(() => {
     if (!isActive || timeLeft <= 0) return;
-    
+
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
+          isActiveRef.current = false;
           setIsActive(false);
           setTimeout(() => {
             onComplete(revealedRef.current, failedRef.current);
@@ -86,127 +86,144 @@ export const RPGInkSplash = ({
         return prev - 1;
       });
     }, 1000);
-    
+
     return () => clearInterval(timer);
   }, [isActive, timeLeft, onComplete]);
 
-  const resetListeningState = useCallback(() => {
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch (e) {}
-      recognitionRef.current = null;
+  // Auto-advance to next unprocessed word
+  const advanceToNextWord = useCallback(() => {
+    const current = inkWordsRef.current;
+    const nextIndex = current.findIndex(w => !w.revealed && !w.failed);
+    if (nextIndex >= 0) {
+      const updated = current.map((w, i) => ({ ...w, active: i === nextIndex }));
+      setInkWords(updated);
+      inkWordsRef.current = updated;
     }
-    setIsListening(false);
-    setSpokenText("");
-    setInkWords(prev => prev.map(w => ({ ...w, selected: false })));
   }, []);
 
-  const handleSelectWord = useCallback((inkWord: InkWord, index: number) => {
-    if (inkWord.revealed || inkWord.failed) return;
-    
-    resetListeningState();
-    
-    setCurrentWordIndex(index);
-    setInkWords(prev => prev.map((w, i) => ({ ...w, selected: i === index })));
-    startListening(inkWord);
-  }, [resetListeningState]);
+  // Continuous speech recognition (like Fireball Barrage pattern)
+  const startListening = useCallback(() => {
+    if (typeof window === 'undefined') return;
 
-  const startListening = useCallback((inkWord: InkWord) => {
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch (e) {}
-      recognitionRef.current = null;
-    }
-    
-    unlockSpeechSynthesis();
-    
-    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    if (!SpeechRecognition) {
-      resetListeningState();
-      return;
-    }
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
 
-    const lockedWord = inkWord;
+    try {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch {}
+      }
 
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-    recognition.maxAlternatives = 5;
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      recognition.maxAlternatives = 5;
+      recognitionRef.current = recognition;
 
-    recognition.onstart = () => {
-      setIsListening(true);
-      setSpokenText("");
-    };
+      recognition.onresult = (event: any) => {
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const result = event.results[i];
+          const transcript = result[0].transcript.toLowerCase().trim();
+          setSpokenText(transcript);
 
-    recognition.onresult = (event: any) => {
-      const result = event.results[0];
-      const transcript = result[0].transcript.trim().toLowerCase();
-      setSpokenText(transcript);
+          // Find the currently active word
+          const activeWord = inkWordsRef.current.find(w => w.active && !w.revealed && !w.failed);
+          if (!activeWord) continue;
 
-      if (result.isFinal) {
-        const targetWord = lockedWord.word;
-        let matched = false;
-        
-        for (let i = 0; i < result.length && !matched; i++) {
-          const alt = result[i]?.transcript?.trim().toLowerCase() || '';
-          const altWords = alt.split(/\s+/);
-          for (const spoken of altWords) {
-            if (isWordMatchLenient(spoken, targetWord)) {
-              matched = true;
-              break;
+          const targetWord = activeWord.word.toLowerCase();
+
+          // Check all alternatives for a match
+          let matched = false;
+          for (let alt = 0; alt < result.length && !matched; alt++) {
+            const altText = result[alt]?.transcript?.toLowerCase().trim() || '';
+            const spokenWords = altText.split(/\s+/);
+
+            for (const spoken of spokenWords) {
+              if (isWordMatchLenient(spoken, targetWord)) {
+                matched = true;
+                break;
+              }
             }
           }
-        }
 
-        if (matched) {
-          soundEffects.correctWord();
-          revealedRef.current += 1;
-          setWordsRevealed(revealedRef.current);
-          setInkWords(prev => 
-            prev.map(w => w.id === lockedWord.id ? { ...w, revealed: true, selected: false } : w)
-          );
-        } else {
-          soundEffects.incorrectWord();
-          onWordHit(18);
-          failedRef.current += 1;
-          setWordsFailed(failedRef.current);
-          setInkWords(prev => 
-            prev.map(w => w.id === lockedWord.id ? { ...w, failed: true, selected: false } : w)
-          );
-        }
-
-        resetListeningState();
-        
-        // Check completion
-        setTimeout(() => {
-          const allDone = inkWords.every(w => w.revealed || w.failed);
-          if (allDone) {
-            setIsActive(false);
-            setTimeout(() => {
-              onComplete(revealedRef.current, failedRef.current);
-            }, 500);
+          if (result.isFinal) {
+            if (matched) {
+              soundEffects.correctWord();
+              revealedRef.current += 1;
+              setWordsRevealed(revealedRef.current);
+              const updated = inkWordsRef.current.map(w =>
+                w.id === activeWord.id ? { ...w, revealed: true, active: false } : w
+              );
+              setInkWords(updated);
+              inkWordsRef.current = updated;
+              // Auto-advance to next word
+              setTimeout(() => advanceToNextWord(), 300);
+            } else {
+              soundEffects.incorrectWord();
+              onWordHit(18);
+              failedRef.current += 1;
+              setWordsFailed(failedRef.current);
+              const updated = inkWordsRef.current.map(w =>
+                w.id === activeWord.id ? { ...w, failed: true, active: false } : w
+              );
+              setInkWords(updated);
+              inkWordsRef.current = updated;
+              // Auto-advance to next word
+              setTimeout(() => advanceToNextWord(), 300);
+            }
+            setSpokenText("");
           }
-        }, 300);
-      }
-    };
+        }
+      };
 
-    recognition.onerror = () => resetListeningState();
-    recognition.onend = () => {
-      setIsListening(false);
-    };
+      recognition.onerror = () => {
+        if (isListeningRef.current && isActiveRef.current) {
+          setTimeout(() => startListening(), 200);
+        }
+      };
 
-    recognitionRef.current = recognition;
-    try { recognition.start(); } catch (e) { resetListeningState(); }
-  }, [inkWords, onComplete, onWordHit, resetListeningState]);
+      recognition.onend = () => {
+        if (isListeningRef.current && isActiveRef.current) {
+          setTimeout(() => startListening(), 100);
+        }
+      };
 
+      recognition.start();
+    } catch {}
+  }, [advanceToNextWord, onWordHit]);
+
+  const startMic = useCallback(() => {
+    setIsMicActive(true);
+    isListeningRef.current = true;
+    startListening();
+  }, [startListening]);
+
+  const stopMic = useCallback(() => {
+    setIsMicActive(false);
+    isListeningRef.current = false;
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch {}
+    }
+  }, []);
+
+  // Auto-start mic on mount
   useEffect(() => {
+    const timer = setTimeout(() => startMic(), 500);
     return () => {
-      if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch (e) {}
-      }
+      clearTimeout(timer);
+      stopMic();
     };
   }, []);
 
-  const currentWord = inkWords[currentWordIndex];
+  // Allow tapping to manually select a word
+  const handleSelectWord = useCallback((inkWord: InkWord, index: number) => {
+    if (inkWord.revealed || inkWord.failed) return;
+    const updated = inkWordsRef.current.map((w, i) => ({ ...w, active: i === index }));
+    setInkWords(updated);
+    inkWordsRef.current = updated;
+  }, []);
+
+  const activeWord = inkWords.find(w => w.active && !w.revealed && !w.failed);
 
   return (
     <div className="fixed inset-0 z-50 pointer-events-none">
@@ -216,7 +233,7 @@ export const RPGInkSplash = ({
         animate={{ opacity: 1 }}
         className="absolute inset-0 bg-gradient-to-b from-indigo-950/95 via-purple-950/90 to-slate-950/95"
       />
-      
+
       {/* Ink blot effects */}
       <div className="absolute inset-0 overflow-hidden">
         {[...Array(10)].map((_, i) => (
@@ -230,15 +247,8 @@ export const RPGInkSplash = ({
               top: `${Math.random() * 100}%`,
               filter: 'blur(20px)',
             }}
-            animate={{ 
-              scale: [1, 1.2, 1],
-              opacity: [0.3, 0.5, 0.3],
-            }}
-            transition={{ 
-              repeat: Infinity, 
-              duration: 3 + Math.random() * 2,
-              delay: Math.random() * 2,
-            }}
+            animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
+            transition={{ repeat: Infinity, duration: 3 + Math.random() * 2, delay: Math.random() * 2 }}
           />
         ))}
       </div>
@@ -273,28 +283,26 @@ export const RPGInkSplash = ({
             key={word.id}
             onClick={() => handleSelectWord(word, index)}
             initial={{ scale: 0, opacity: 0 }}
-            animate={{ 
-              scale: word.selected ? 1.1 : 1,
+            animate={{
+              scale: word.active ? 1.1 : 1,
               opacity: word.revealed ? 0.5 : word.failed ? 0.3 : 1,
             }}
             className={`relative px-6 py-4 rounded-xl border-2 cursor-pointer transition-all ${
-              word.revealed 
-                ? 'bg-emerald-900/80 border-emerald-400' 
-                : word.failed 
-                  ? 'bg-red-900/80 border-red-400' 
-                  : word.selected
+              word.revealed
+                ? 'bg-emerald-900/80 border-emerald-400'
+                : word.failed
+                  ? 'bg-red-900/80 border-red-400'
+                  : word.active
                     ? 'bg-indigo-800/80 border-yellow-400 shadow-[0_0_30px_rgba(251,191,36,0.5)]'
                     : 'bg-slate-800/80 border-indigo-600 hover:border-indigo-400'
             }`}
           >
-            {/* Obscured word */}
             <p className={`text-2xl font-bold font-mono tracking-wider ${
               word.revealed ? 'text-emerald-300' : word.failed ? 'text-red-300' : 'text-white'
             }`}>
               {word.revealed ? word.word : obscureWord(word.word, word.obscureLevel)}
             </p>
-            
-            {/* Difficulty indicator */}
+
             <div className="flex justify-center gap-1 mt-2">
               {[...Array(3)].map((_, i) => (
                 <div
@@ -305,9 +313,8 @@ export const RPGInkSplash = ({
                 />
               ))}
             </div>
-            
-            {/* Ink drip effect on unselected */}
-            {!word.revealed && !word.failed && !word.selected && (
+
+            {!word.revealed && !word.failed && !word.active && (
               <motion.div
                 className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none"
                 style={{ filter: 'blur(2px)' }}
@@ -316,17 +323,14 @@ export const RPGInkSplash = ({
                   <motion.div
                     key={i}
                     className="absolute w-4 h-8 bg-black/30 rounded-b-full"
-                    style={{
-                      left: `${20 + i * 30}%`,
-                      top: -8,
-                    }}
+                    style={{ left: `${20 + i * 30}%`, top: -8 }}
                     animate={{ y: [0, 10, 0] }}
                     transition={{ repeat: Infinity, duration: 2, delay: i * 0.5 }}
                   />
                 ))}
               </motion.div>
             )}
-            
+
             {word.revealed && (
               <motion.div
                 initial={{ scale: 0 }}
@@ -340,31 +344,22 @@ export const RPGInkSplash = ({
         ))}
       </div>
 
-      {/* Current word panel */}
-      {currentWord && currentWord.selected && !currentWord.revealed && !currentWord.failed && (
+      {/* Current active word prompt */}
+      {activeWord && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute bottom-28 left-1/2 -translate-x-1/2 pointer-events-auto"
+          className="absolute bottom-32 left-1/2 -translate-x-1/2 pointer-events-auto"
         >
           <div className="bg-slate-900/95 border-2 border-indigo-400 rounded-xl px-10 py-5
             shadow-[0_0_40px_rgba(99,102,241,0.5)]">
             <p className="text-indigo-400 text-sm mb-2 text-center font-medium">
-              What word is hidden? Look carefully:
+              🎯 Say this word:
             </p>
             <p className="text-4xl font-black text-white text-center font-mono tracking-wider">
-              {obscureWord(currentWord.word, currentWord.obscureLevel)}
+              {obscureWord(activeWord.word, activeWord.obscureLevel)}
             </p>
-            
-            {isListening && (
-              <div className="flex items-center justify-center gap-3 mt-4 text-emerald-400">
-                <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ repeat: Infinity, duration: 0.6 }}>
-                  <Mic className="h-6 w-6" />
-                </motion.div>
-                <span className="font-medium">Listening...</span>
-              </div>
-            )}
-            
+
             {spokenText && (
               <p className="text-center text-slate-400 text-sm mt-2">
                 Heard: "<span className="text-white">{spokenText}</span>"
@@ -373,6 +368,31 @@ export const RPGInkSplash = ({
           </div>
         </motion.div>
       )}
+
+      {/* Mic control */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 pointer-events-auto">
+        <motion.div
+          className={`p-5 rounded-full cursor-pointer ${
+            isMicActive
+              ? 'bg-indigo-600 shadow-[0_0_30px_rgba(99,102,241,0.6)]'
+              : 'bg-slate-700'
+          }`}
+          animate={isMicActive ? { scale: [1, 1.1, 1] } : {}}
+          transition={{ duration: 0.5, repeat: Infinity }}
+          onClick={() => isMicActive ? stopMic() : startMic()}
+        >
+          <Mic className={`h-8 w-8 ${isMicActive ? 'text-white' : 'text-slate-400'}`} />
+        </motion.div>
+        {isMicActive && (
+          <motion.p
+            className="text-center text-indigo-300 mt-2 font-medium text-sm"
+            animate={{ opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+          >
+            🎤 Listening...
+          </motion.p>
+        )}
+      </div>
 
       {/* Score */}
       <div className="absolute top-28 right-6 pointer-events-auto">

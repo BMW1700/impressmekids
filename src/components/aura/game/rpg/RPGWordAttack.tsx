@@ -204,21 +204,6 @@ export const RPGWordAttack = ({
         )}
       </AnimatePresence>
 
-      {/* Streak combo indicator */}
-      {streak >= 3 && isCorrect === true && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0 }}
-          className="absolute -bottom-2 right-0"
-        >
-          <div className="flex items-center gap-1 bg-gradient-to-r from-orange-500 to-red-500 
-            px-3 py-1 rounded-full text-white text-xs font-bold shadow-lg">
-            <Flame className="h-3 w-3" />
-            <span>x{streak} COMBO!</span>
-          </div>
-        </motion.div>
-      )}
     </div>
   );
 };

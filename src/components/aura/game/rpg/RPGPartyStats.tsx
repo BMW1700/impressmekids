@@ -14,12 +14,14 @@ interface RPGPartyStatsProps {
   members: PartyMember[];
   streak: number;
   longestStreak: number;
+  showCombo?: boolean;
 }
 
 export const RPGPartyStats = ({
   members,
   streak,
   longestStreak,
+  showCombo = false,
 }: RPGPartyStatsProps) => {
   const getHpColor = (current: number, max: number) => {
     const percentage = (current / max) * 100;
@@ -144,6 +146,24 @@ export const RPGPartyStats = ({
                   backgroundSize: '200% 100%',
                 }}
               />
+            </motion.div>
+          )}
+
+          {/* Combo Indicator - moved here from RPGWordAttack to prevent layout shifts */}
+          {showCombo && streak >= 3 && (
+            <motion.div
+              className="mt-1 px-3 py-1.5 bg-gradient-to-r from-orange-600/80 to-red-600/80 rounded-lg border border-orange-400/50"
+              initial={{ scale: 0 }}
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ repeat: Infinity, duration: 0.6 }}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <Flame className="h-4 w-4 text-yellow-300" />
+                <span className="text-sm font-black text-white tracking-wide">
+                  x{streak} COMBO!
+                </span>
+                <Flame className="h-4 w-4 text-yellow-300" />
+              </div>
             </motion.div>
           )}
         </div>
