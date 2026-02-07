@@ -7,7 +7,7 @@ import { RPGCharacter } from "./RPGCharacter";
 import { RPGDialogueBox } from "./RPGDialogueBox";
 import { RPGCommandMenu } from "./RPGCommandMenu";
 import { RPGPartyStats } from "./RPGPartyStats";
-import { RPGWordAttack } from "./RPGWordAttack";
+
 import { RPGWordReader } from "./RPGWordReader";
 import { RPGWordBarrage } from "./RPGWordBarrage";
 import { RPGFireballBarrage } from "./RPGFireballBarrage";
@@ -2307,18 +2307,6 @@ export const RPGBattleArena = ({
                       </div>
                     )}
 
-                    {/* Word Attack Effect - Positioned as overlay to prevent layout shifts */}
-                    {currentWordResult !== null && (
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                        <RPGWordAttack
-                          word={words[lastSpokenGlobalIndex] || ""}
-                          isCorrect={currentWordResult}
-                          streak={streak}
-                          damage={damageAmount}
-                          attackType={attackType}
-                        />
-                      </div>
-                    )}
                   </div>
 
                   {/* Party Stats */}
