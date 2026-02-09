@@ -276,11 +276,6 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
             <circle cx="58.5" cy="29" r="1" fill="white" />
           </motion.g>
           
-          {/* Eyebrows - determined */}
-          <motion.g animate={isPulling || isStraining ? { y: -2 } : {}}>
-            <path d="M38 25 L48 27" stroke={variant.hair} strokeWidth="2.5" strokeLinecap="round" />
-            <path d="M52 27 L62 25" stroke={variant.hair} strokeWidth="2.5" strokeLinecap="round" />
-          </motion.g>
           
           {/* Nose */}
           <ellipse cx="50" cy="35" rx="2.5" ry="2" fill={variant.skin} opacity="0.6" />
