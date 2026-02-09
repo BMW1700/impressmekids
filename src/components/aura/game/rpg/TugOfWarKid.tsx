@@ -230,7 +230,7 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
           
           {/* === ARMS - Upper arm angles DOWN, forearm angles UP to hands on rope === */}
           
-          {/* Back arm - shoulder to elbow (going down), then elbow to hand (going up to rope) */}
+          {/* Back arm */}
           <motion.path
             d={`M38 54 L22 68 L${handX + 5} ${ROPE_Y}`}
             stroke={variant.skin}
@@ -239,23 +239,8 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
             strokeLinejoin="round"
             fill="none"
           />
-          {/* Back hand - smaller, rotated 90° clockwise */}
-          <g transform={`translate(${handX + 5}, ${ROPE_Y}) rotate(-45) scale(1.0)`}>
-            {/* Palm base */}
-            <ellipse cx="0" cy="0" rx="5" ry="6" fill={variant.skin} />
-            {/* Thumb */}
-            <ellipse cx="6" cy="2" rx="2" ry="4" fill={variant.skin} transform="rotate(30)" />
-            {/* Index finger */}
-            <path d="M-4 -4 Q-5 -9 -4 -13" stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" />
-            {/* Middle finger */}
-            <path d="M-1 -5 Q-1 -11 0 -15" stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" />
-            {/* Ring finger */}
-            <path d="M2 -4 Q4 -9 4 -13" stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" />
-            {/* Pinky finger */}
-            <path d="M5 -2 Q7 -6 8 -10" stroke={variant.skin} strokeWidth="2.5" strokeLinecap="round" fill="none" />
-          </g>
           
-          {/* Front arm - shoulder to elbow (going down), then elbow to hand (going up to rope) */}
+          {/* Front arm */}
           <motion.path
             d={`M38 58 L20 72 L${handX} ${ROPE_Y + 3}`}
             stroke={variant.skin}
@@ -264,21 +249,6 @@ export const TugOfWarKid = ({ index, isPulling, isStraining, side, size = 'mediu
             strokeLinejoin="round"
             fill="none"
           />
-          {/* Front hand - smaller, rotated 90° clockwise */}
-          <g transform={`translate(${handX}, ${ROPE_Y + 3}) rotate(-45) scale(1.1)`}>
-            {/* Palm base */}
-            <ellipse cx="0" cy="0" rx="5" ry="6" fill={variant.skin} />
-            {/* Thumb */}
-            <ellipse cx="6" cy="2" rx="2.5" ry="4.5" fill={variant.skin} transform="rotate(30)" />
-            {/* Index finger */}
-            <path d="M-4 -4 Q-5 -10 -4 -14" stroke={variant.skin} strokeWidth="3.5" strokeLinecap="round" fill="none" />
-            {/* Middle finger */}
-            <path d="M-1 -5 Q-1 -12 0 -16" stroke={variant.skin} strokeWidth="3.5" strokeLinecap="round" fill="none" />
-            {/* Ring finger */}
-            <path d="M2 -4 Q4 -10 4 -14" stroke={variant.skin} strokeWidth="3.5" strokeLinecap="round" fill="none" />
-            {/* Pinky finger */}
-            <path d="M5 -2 Q7 -7 8 -11" stroke={variant.skin} strokeWidth="3" strokeLinecap="round" fill="none" />
-          </g>
         </g>
 
         {/* === HEAD === */}
