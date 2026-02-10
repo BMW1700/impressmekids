@@ -122,7 +122,6 @@ function RouteAwareProviders({ children }: { children: ReactNode }) {
 }
 
 const App = () => (
-  <DemoGate>
   <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
     <LanguageProvider>
       <QueryClientProvider client={queryClient}>
@@ -218,7 +217,6 @@ const App = () => (
       </QueryClientProvider>
     </LanguageProvider>
   </ThemeProvider>
-  </DemoGate>
 );
 
 export default App;
