@@ -8,6 +8,7 @@ import { ThemeProvider } from "next-themes";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { RequireAuth } from "@/components/auth/RequireAuth";
+import { DemoGate } from "@/components/DemoGate";
 import { PushNotificationPrompt } from "@/components/notifications/PushNotificationPrompt";
 import { OfflineIndicator } from "@/components/safety/OfflineIndicator";
 import { MLStatusProvider } from "@/components/ml/MLStatusProvider";
@@ -121,6 +122,7 @@ function RouteAwareProviders({ children }: { children: ReactNode }) {
 }
 
 const App = () => (
+  <DemoGate>
   <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
     <LanguageProvider>
       <QueryClientProvider client={queryClient}>
@@ -216,6 +218,7 @@ const App = () => (
       </QueryClientProvider>
     </LanguageProvider>
   </ThemeProvider>
+  </DemoGate>
 );
 
 export default App;
