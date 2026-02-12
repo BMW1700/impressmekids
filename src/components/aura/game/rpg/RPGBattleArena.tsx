@@ -2158,7 +2158,7 @@ export const RPGBattleArena = ({
 
         {/* Battle Arena - Center Section */}
         <div className="flex-1 flex items-center justify-center px-4 py-2">
-          <div className="w-full max-w-5xl flex items-end justify-between gap-8">
+          <div className="w-full max-w-5xl flex items-end justify-between gap-2 md:gap-8">
             {/* Enemy (Left Side) */}
             <motion.div
               className="flex-1 flex justify-center"
@@ -2180,7 +2180,7 @@ export const RPGBattleArena = ({
 
             {/* VS Indicator */}
             <motion.div
-              className="text-4xl font-black text-white/30"
+              className="text-2xl md:text-4xl font-black text-white/30 shrink-0"
               animate={{ 
                 scale: phase === 'reading' ? [1, 1.1, 1] : 1,
                 opacity: phase === 'reading' ? [0.3, 0.5, 0.3] : 0.3,
@@ -2222,8 +2222,8 @@ export const RPGBattleArena = ({
         </div>
 
         {/* Bottom UI Section */}
-        <div className="bg-black/50 backdrop-blur-sm border-t border-white/10">
-          <div className="max-w-5xl mx-auto p-4">
+        <div className="bg-black/50 backdrop-blur-sm border-t border-white/10 overflow-y-auto max-h-[60vh] md:max-h-none">
+          <div className="max-w-5xl mx-auto p-2 md:p-4">
             <AnimatePresence mode="wait">
               {/* Intro Dialogue */}
               {phase === 'intro' && (
@@ -2258,10 +2258,10 @@ export const RPGBattleArena = ({
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
-                  className="grid grid-cols-1 md:grid-cols-[200px_1fr_200px] gap-4"
+                  className="grid grid-cols-1 md:grid-cols-[200px_1fr_200px] gap-2 md:gap-4"
                 >
-                  {/* Command Menu */}
-                  <div className="hidden md:block">
+                  {/* Command Menu - compact row on mobile, full panel on desktop */}
+                  <div className="order-2 md:order-none">
                     <RPGCommandMenu
                       onSelectCommand={handleCommand}
                       onCastSpell={handleCastSpell}
@@ -2275,8 +2275,8 @@ export const RPGBattleArena = ({
                     />
                   </div>
 
-                  {/* Center: Voice Reading - Fixed height to prevent layout shifts */}
-                  <div className="relative min-h-[200px] space-y-4 overflow-hidden">
+                   {/* Center: Voice Reading - Fixed height to prevent layout shifts */}
+                    <div className="relative min-h-[120px] md:min-h-[200px] space-y-4 overflow-hidden order-1 md:order-none">
                     {currentCommand === 'read' && currentWordBatch.length > 0 && (
                       <>
                         {/* Elara charge indicator */}
@@ -2329,8 +2329,8 @@ export const RPGBattleArena = ({
 
                   </div>
 
-                  {/* Party Stats */}
-                  <div className="hidden md:block">
+                  {/* Party Stats - compact on mobile, full on desktop */}
+                  <div className="order-3 md:order-none">
                     <RPGPartyStats
                       members={[
                         { 

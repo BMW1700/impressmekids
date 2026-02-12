@@ -21,7 +21,7 @@ export const usePushNotifications = () => {
   const checkSubscriptionStatus = async () => {
     try {
       const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      const subscription = await (registration as any).pushManager?.getSubscription();
       setIsSubscribed(!!subscription);
     } catch (error) {
       console.error('Error checking subscription status:', error);
@@ -81,7 +81,7 @@ export const usePushNotifications = () => {
       await navigator.serviceWorker.ready;
 
       // Subscribe to push notifications
-      const subscription = await registration.pushManager.subscribe({
+      const subscription = await (registration as any).pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(
           'BBOQmeU-GndAJbPRu4b5Dt7mmnIjOH3AxacLwY5oznBCrF4JBVzLRkeJr_w_qoDmqu2o3gRlEjjkD7gP9snuJoI'
@@ -138,7 +138,7 @@ export const usePushNotifications = () => {
     setIsLoading(true);
     try {
       const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      const subscription = await (registration as any).pushManager?.getSubscription();
 
       if (subscription) {
         await subscription.unsubscribe();

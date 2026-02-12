@@ -227,7 +227,7 @@ export const RPGQuickBlock = ({ words, onComplete }: RPGQuickBlockProps) => {
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ repeat: Infinity, duration: 0.3 }}
             >
-              <span className="text-white font-black text-3xl">⚠️ INCOMING ATTACK! ⚠️</span>
+              <span className="text-white font-black text-xl md:text-3xl">⚠️ INCOMING ATTACK! ⚠️</span>
             </motion.div>
             
             <motion.p
@@ -296,22 +296,22 @@ export const RPGQuickBlock = ({ words, onComplete }: RPGQuickBlockProps) => {
 
           {/* Words to speak - horizontal row */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50">
-            <div className="flex gap-4">
+            <div className="flex gap-2 md:gap-4">
               {blockWords.map((word, idx) => (
                 <motion.div
                   key={word.id}
-                  className={`px-8 py-6 rounded-2xl border-4 transition-all ${
+                  className={`px-4 py-3 md:px-8 md:py-6 rounded-xl md:rounded-2xl border-2 md:border-4 transition-all ${
                     word.spoken 
                       ? 'bg-emerald-600/90 border-emerald-300 scale-95' 
                       : idx === currentWordIndex
-                        ? 'bg-orange-600/90 border-yellow-400 scale-110 shadow-[0_0_30px_rgba(250,204,21,0.7)]'
+                        ? 'bg-orange-600/90 border-yellow-400 scale-105 md:scale-110 shadow-[0_0_20px_rgba(250,204,21,0.7)] md:shadow-[0_0_30px_rgba(250,204,21,0.7)]'
                         : 'bg-slate-700/60 border-slate-500'
                   }`}
                   initial={{ y: 50, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: idx * 0.1 }}
                 >
-                  <span className={`text-4xl font-black ${
+                  <span className={`text-2xl md:text-4xl font-black ${
                     word.spoken ? 'text-emerald-200 line-through' : 
                     idx === currentWordIndex ? 'text-yellow-300' : 'text-white/70'
                   }`}>
@@ -324,7 +324,7 @@ export const RPGQuickBlock = ({ words, onComplete }: RPGQuickBlockProps) => {
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                     >
-                      <Shield className="w-12 h-12 text-emerald-300" />
+                      <Shield className="w-8 h-8 md:w-12 md:h-12 text-emerald-300" />
                     </motion.div>
                   )}
                 </motion.div>
