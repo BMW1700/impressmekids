@@ -89,12 +89,11 @@ export const RPGCommandMenu = ({
   };
 
   return (
-    <div className="relative">
+    <div className="relative" style={{ overflow: 'visible' }}>
       {/* Spell Submenu */}
       <AnimatePresence>
         {showSpellMenu && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowSpellMenu(false)}>
-            <div onClick={(e) => e.stopPropagation()}>
+          <div className="absolute bottom-full left-0 mb-2 z-50 w-64">
             <RPGSpellMenu
               currentMp={currentMp}
               onSelectSpell={handleSpellSelect}
@@ -102,7 +101,6 @@ export const RPGCommandMenu = ({
               spells={getCharacterSpells()}
               characterName={getCharacterName()}
             />
-            </div>
           </div>
         )}
       </AnimatePresence>
@@ -110,14 +108,12 @@ export const RPGCommandMenu = ({
       {/* Item Submenu */}
       <AnimatePresence>
         {showItemMenu && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowItemMenu(false)}>
-            <div onClick={(e) => e.stopPropagation()}>
+          <div className="absolute bottom-full left-0 mb-2 z-50 w-64">
             <RPGItemMenu
               inventory={inventory}
               onSelectItem={handleItemSelect}
               onClose={() => setShowItemMenu(false)}
             />
-            </div>
           </div>
         )}
       </AnimatePresence>
