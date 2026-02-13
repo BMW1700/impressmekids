@@ -22,6 +22,12 @@ import { useStudentBenchmarkResults } from "@/hooks/useBenchmarkData";
 import { format } from "date-fns";
 import { Download, FileText, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Printer, Shield } from "lucide-react";
 
+const escapeHtml = (text: string): string => {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+};
+
 interface BenchmarkReportProps {
   studentId: string;
   studentName: string;
