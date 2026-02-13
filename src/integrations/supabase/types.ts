@@ -6380,7 +6380,6 @@ export type Database = {
           ip_address: string | null
           parent_email: string
           parent_name: string
-          password_temp: string | null
           student_email: string
           student_role: string | null
         }
@@ -6396,7 +6395,6 @@ export type Database = {
           ip_address?: string | null
           parent_email: string
           parent_name: string
-          password_temp?: string | null
           student_email: string
           student_role?: string | null
         }
@@ -6412,7 +6410,6 @@ export type Database = {
           ip_address?: string | null
           parent_email?: string
           parent_name?: string
-          password_temp?: string | null
           student_email?: string
           student_role?: string | null
         }
@@ -7637,7 +7634,6 @@ export type Database = {
           full_name: string
           id: string
           parent_name: string
-          password_temp: string
           student_email: string
           student_role: string
         }[]
