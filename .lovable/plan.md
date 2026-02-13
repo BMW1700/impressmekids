@@ -1,26 +1,28 @@
 
 
-# Fix Magic & Items Submenus -- Pop Up as Centered Overlay
+# Fix Magic & Items Submenus Being Clipped
 
-## Problem
-The Magic and Items submenus use `absolute bottom-full` positioning, which causes them to fly off the top of the screen on desktop since the command menu sits near the bottom of the viewport.
+## Root Cause
 
-## Solution
-Change the submenus from absolute-positioned children of the command menu to **fixed-position centered overlays** on the screen. This way they always appear in the middle of the viewport (like a modal), fully visible on both desktop and mobile.
+The entire RPG battle arena is wrapped in a container with `overflow-hidden` (line 1776 of `RPGBattleArena.tsx`):
+
+```text
+fixed inset-x-0 top-0 h-[100dvh] z-50 overflow-hidden
+```
+
+This clips **everything** inside it -- including the `fixed inset-0 z-[9999]` spell and item overlays. Even though they use `fixed` positioning, browsers clip them because their parent has `overflow-hidden` in certain stacking/rendering contexts.
+
+## Solution: React Portal
+
+Render the spell and item overlay menus using **React Portals** (`ReactDOM.createPortal`). This moves them completely outside the battle arena DOM tree and attaches them directly to `document.body`, so they cannot be clipped by any parent container.
 
 ## Changes
 
 ### File: `src/components/aura/game/rpg/RPGCommandMenu.tsx`
 
-1. **Spell submenu container (line 96):** Change from `absolute bottom-full left-0 mb-2 z-20` to `fixed inset-0 z-50 flex items-center justify-center bg-black/50` -- this creates a centered modal overlay with a dark backdrop.
+1. Add `import { createPortal } from "react-dom"` at the top.
+2. Wrap both the spell submenu overlay and the item submenu overlay in `createPortal(..., document.body)` so they render outside the clipped battle arena container.
+3. Keep the existing `fixed inset-0 z-[9999] flex items-center justify-center bg-black/60` styling -- it will now work correctly since the elements are no longer inside the clipped parent.
 
-2. **Item submenu container (line 111):** Same change as above.
-
-3. Add a click handler on the backdrop so clicking outside closes the menu (already handled by `onClose` prop).
-
-### Result
-- Submenus appear centered on screen as overlays, always fully visible
-- Works on both mobile and desktop
-- Dark backdrop makes them easy to read and dismissible
-- Desktop layout unchanged otherwise
+No other files need to change. The command menu buttons, behavior, and styling all stay the same -- only the rendering target for the overlays changes.
 
