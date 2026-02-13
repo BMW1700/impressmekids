@@ -165,12 +165,12 @@ export function BenchmarkReport({
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Benchmark Report - ${studentName}</title>
+        <title>Benchmark Report - ${escapeHtml(studentName)}</title>
         ${styles}
       </head>
       <body>
         <div class="report-header">
-          <h1 class="report-title">${studentName}</h1>
+          <h1 class="report-title">${escapeHtml(studentName)}</h1>
           <p class="report-subtitle">Grade ${gradeLevel} • Oral Reading Fluency Benchmark Report</p>
           <p class="report-subtitle">Generated ${format(new Date(), "MMMM d, yyyy")}</p>
         </div>
@@ -179,17 +179,17 @@ export function BenchmarkReport({
         <div class="metrics-grid">
           <div class="metric-card">
             <div class="metric-label">WCPM</div>
-            <div class="metric-value">${latestResult.wcpm}</div>
+            <div class="metric-value">${Number(latestResult.wcpm)}</div>
             <div class="metric-detail">${percentileRange} percentile</div>
           </div>
           <div class="metric-card">
             <div class="metric-label">Accuracy</div>
-            <div class="metric-value">${latestResult.accuracy_percentage || 'N/A'}%</div>
-            <div class="metric-detail">${latestResult.fluency_level ? getFluencyLevelLabel(latestResult.fluency_level as FluencyLevel) : ''} Level</div>
+            <div class="metric-value">${latestResult.accuracy_percentage ? Number(latestResult.accuracy_percentage) : 'N/A'}%</div>
+            <div class="metric-detail">${latestResult.fluency_level ? escapeHtml(getFluencyLevelLabel(latestResult.fluency_level as FluencyLevel)) : ''} Level</div>
           </div>
           <div class="metric-card">
             <div class="metric-label">Prosody</div>
-            <div class="metric-value">${latestResult.prosody_score || 'N/A'}/4</div>
+            <div class="metric-value">${latestResult.prosody_score ? Number(latestResult.prosody_score) : 'N/A'}/4</div>
             <div class="metric-detail">NAEP Scale</div>
           </div>
           <div class="metric-card">
@@ -201,7 +201,7 @@ export function BenchmarkReport({
 
         <div class="section">
           <div class="section-title">Benchmark Status</div>
-          <span class="status-badge ${statusClass}">${getBenchmarkStatusLabel(latestResult.benchmark_status as BenchmarkStatus)}</span>
+          <span class="status-badge ${statusClass}">${escapeHtml(getBenchmarkStatusLabel(latestResult.benchmark_status as BenchmarkStatus))}</span>
         </div>
 
         ${norm ? `
@@ -222,10 +222,10 @@ export function BenchmarkReport({
           <div class="section-title">Assessment Details</div>
           <div class="assessment-grid">
             <div class="assessment-item"><div class="assessment-label">Date</div><div class="assessment-value">${format(new Date(latestResult.assessment_date), "MMMM d, yyyy")}</div></div>
-            <div class="assessment-item"><div class="assessment-label">Words Read</div><div class="assessment-value">${latestResult.words_read || 'N/A'}</div></div>
-            <div class="assessment-item"><div class="assessment-label">Miscues</div><div class="assessment-value">${latestResult.miscue_count}</div></div>
-            <div class="assessment-item"><div class="assessment-label">Self-Corrections</div><div class="assessment-value">${latestResult.self_corrections}</div></div>
-            ${latestResult.passage_title ? `<div class="assessment-item" style="grid-column: span 2;"><div class="assessment-label">Passage</div><div class="assessment-value">${latestResult.passage_title}</div></div>` : ''}
+            <div class="assessment-item"><div class="assessment-label">Words Read</div><div class="assessment-value">${latestResult.words_read ? Number(latestResult.words_read) : 'N/A'}</div></div>
+            <div class="assessment-item"><div class="assessment-label">Miscues</div><div class="assessment-value">${Number(latestResult.miscue_count)}</div></div>
+            <div class="assessment-item"><div class="assessment-label">Self-Corrections</div><div class="assessment-value">${Number(latestResult.self_corrections)}</div></div>
+            ${latestResult.passage_title ? `<div class="assessment-item" style="grid-column: span 2;"><div class="assessment-label">Passage</div><div class="assessment-value">${escapeHtml(latestResult.passage_title)}</div></div>` : ''}
           </div>
         </div>
 
@@ -246,7 +246,7 @@ export function BenchmarkReport({
           ${results.slice(0, 5).map((r: any) => `
             <div class="history-item">
               <span>${format(new Date(r.assessment_date), "MMM d, yyyy")}</span>
-              <span><strong>${r.wcpm} WCPM</strong> • ${getBenchmarkStatusLabel(r.benchmark_status as BenchmarkStatus)}</span>
+              <span><strong>${Number(r.wcpm)} WCPM</strong> • ${escapeHtml(getBenchmarkStatusLabel(r.benchmark_status as BenchmarkStatus))}</span>
             </div>
           `).join('')}
         </div>
