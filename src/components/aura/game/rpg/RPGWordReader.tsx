@@ -911,9 +911,10 @@ export const RPGWordReader = ({
           return (
             <motion.div
               key={`${word}-${index}`}
-              className={`px-4 py-2 rounded-lg font-medium transition-all ${colorClass}`}
+              className={`px-4 py-2 rounded-lg font-medium transition-all cursor-pointer ${colorClass}`}
               animate={shouldPulse ? { scale: [1.1, 1.15, 1.1] } : {}}
               transition={{ repeat: shouldPulse ? Infinity : 0, duration: 1.2 }}
+              onClick={() => playCorrectPronunciation(clean)}
             >
               <div className="flex items-center gap-1.5">
                 {icon}
@@ -969,7 +970,10 @@ export const RPGWordReader = ({
           </motion.div>
         )}
 
-        <motion.p className="text-4xl md:text-5xl font-bold text-white tracking-wide">
+        <motion.p 
+          className="text-4xl md:text-5xl font-bold text-white tracking-wide cursor-pointer"
+          onClick={() => cleanWord && playCorrectPronunciation(cleanWord)}
+        >
           {cleanWord || "Ready"}
         </motion.p>
 
