@@ -89,31 +89,35 @@ export const RPGCommandMenu = ({
   };
 
   return (
-    <div className="relative" style={{ overflow: 'visible' }}>
-      {/* Spell Submenu */}
+    <div className="relative">
+      {/* Spell Submenu - Fixed overlay */}
       <AnimatePresence>
         {showSpellMenu && (
-          <div className="absolute bottom-full left-0 mb-2 z-50 w-64">
-            <RPGSpellMenu
-              currentMp={currentMp}
-              onSelectSpell={handleSpellSelect}
-              onClose={() => setShowSpellMenu(false)}
-              spells={getCharacterSpells()}
-              characterName={getCharacterName()}
-            />
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" onClick={() => setShowSpellMenu(false)}>
+            <div className="w-72" onClick={(e) => e.stopPropagation()}>
+              <RPGSpellMenu
+                currentMp={currentMp}
+                onSelectSpell={handleSpellSelect}
+                onClose={() => setShowSpellMenu(false)}
+                spells={getCharacterSpells()}
+                characterName={getCharacterName()}
+              />
+            </div>
           </div>
         )}
       </AnimatePresence>
 
-      {/* Item Submenu */}
+      {/* Item Submenu - Fixed overlay */}
       <AnimatePresence>
         {showItemMenu && (
-          <div className="absolute bottom-full left-0 mb-2 z-50 w-64">
-            <RPGItemMenu
-              inventory={inventory}
-              onSelectItem={handleItemSelect}
-              onClose={() => setShowItemMenu(false)}
-            />
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" onClick={() => setShowItemMenu(false)}>
+            <div className="w-72" onClick={(e) => e.stopPropagation()}>
+              <RPGItemMenu
+                inventory={inventory}
+                onSelectItem={handleItemSelect}
+                onClose={() => setShowItemMenu(false)}
+              />
+            </div>
           </div>
         )}
       </AnimatePresence>
