@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { BookOpen, Shield, Sparkles, Package } from "lucide-react";
 import { RPGSpellMenu, Spell, valorSpells, elaraSpells, ellaSpells } from "./RPGSpellMenu";
@@ -90,37 +91,43 @@ export const RPGCommandMenu = ({
 
   return (
     <div className="relative">
-      {/* Spell Submenu - Fixed overlay */}
-      <AnimatePresence>
-        {showSpellMenu && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" onClick={() => setShowSpellMenu(false)}>
-            <div className="w-72" onClick={(e) => e.stopPropagation()}>
-              <RPGSpellMenu
-                currentMp={currentMp}
-                onSelectSpell={handleSpellSelect}
-                onClose={() => setShowSpellMenu(false)}
-                spells={getCharacterSpells()}
-                characterName={getCharacterName()}
-              />
+      {/* Spell Submenu - Portal to body */}
+      {createPortal(
+        <AnimatePresence>
+          {showSpellMenu && (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" onClick={() => setShowSpellMenu(false)}>
+              <div className="w-72" onClick={(e) => e.stopPropagation()}>
+                <RPGSpellMenu
+                  currentMp={currentMp}
+                  onSelectSpell={handleSpellSelect}
+                  onClose={() => setShowSpellMenu(false)}
+                  spells={getCharacterSpells()}
+                  characterName={getCharacterName()}
+                />
+              </div>
             </div>
-          </div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
-      {/* Item Submenu - Fixed overlay */}
-      <AnimatePresence>
-        {showItemMenu && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" onClick={() => setShowItemMenu(false)}>
-            <div className="w-72" onClick={(e) => e.stopPropagation()}>
-              <RPGItemMenu
-                inventory={inventory}
-                onSelectItem={handleItemSelect}
-                onClose={() => setShowItemMenu(false)}
-              />
+      {/* Item Submenu - Portal to body */}
+      {createPortal(
+        <AnimatePresence>
+          {showItemMenu && (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" onClick={() => setShowItemMenu(false)}>
+              <div className="w-72" onClick={(e) => e.stopPropagation()}>
+                <RPGItemMenu
+                  inventory={inventory}
+                  onSelectItem={handleItemSelect}
+                  onClose={() => setShowItemMenu(false)}
+                />
+              </div>
             </div>
-          </div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
       {/* Classic RPG Panel Border */}
       <div className="relative bg-gradient-to-b from-slate-900/95 to-slate-950/95 rounded-lg 
