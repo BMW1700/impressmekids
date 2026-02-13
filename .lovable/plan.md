@@ -1,28 +1,18 @@
 
+# Add Tap-to-Hear on Words in RPG Mode
 
-# Fix Magic & Items Submenus Being Clipped
+## What This Does
+Clicking/tapping any word -- either the small word pills at the top or the big current word in the center -- will speak that word aloud using the existing pronunciation player. This lets students hear upcoming words, not just the current one.
 
-## Root Cause
+## Scope
+Only one file changes: `RPGWordReader.tsx`. No other files or logic are touched.
 
-The entire RPG battle arena is wrapped in a container with `overflow-hidden` (line 1776 of `RPGBattleArena.tsx`):
+## Technical Details
 
-```text
-fixed inset-x-0 top-0 h-[100dvh] z-50 overflow-hidden
-```
+### File: `src/components/aura/game/rpg/RPGWordReader.tsx`
 
-This clips **everything** inside it -- including the `fixed inset-0 z-[9999]` spell and item overlays. Even though they use `fixed` positioning, browsers clip them because their parent has `overflow-hidden` in certain stacking/rendering contexts.
+**1. Word queue pills (lines 911-923):** Add an `onClick` handler to each word pill that calls `playCorrectPronunciation(clean)` where `clean` is the already-computed cleaned word text. Also add `cursor-pointer` to the className so users see it's clickable.
 
-## Solution: React Portal
+**2. Large current word display (line 972):** Add an `onClick` handler on the word text `<motion.p>` element that calls `playCorrectPronunciation(cleanWord)` (reusing the same logic as the existing "Hear" button). Add `cursor-pointer` styling.
 
-Render the spell and item overlay menus using **React Portals** (`ReactDOM.createPortal`). This moves them completely outside the battle arena DOM tree and attaches them directly to `document.body`, so they cannot be clipped by any parent container.
-
-## Changes
-
-### File: `src/components/aura/game/rpg/RPGCommandMenu.tsx`
-
-1. Add `import { createPortal } from "react-dom"` at the top.
-2. Wrap both the spell submenu overlay and the item submenu overlay in `createPortal(..., document.body)` so they render outside the clipped battle arena container.
-3. Keep the existing `fixed inset-0 z-[9999] flex items-center justify-center bg-black/60` styling -- it will now work correctly since the elements are no longer inside the clipped parent.
-
-No other files need to change. The command menu buttons, behavior, and styling all stay the same -- only the rendering target for the overlays changes.
-
+Both use the existing `playCorrectPronunciation` import -- no new dependencies or functions needed. The speech recognition session continues running unaffected since `playCorrectPronunciation` uses the speech synthesis API (output), which is independent from speech recognition (input).
