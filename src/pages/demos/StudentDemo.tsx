@@ -5,10 +5,11 @@ import {
   Gamepad2, Shield, Sparkles, BookOpenCheck, ArrowLeft, CheckCircle, Trophy, 
   Target, Flame, Menu, AlertCircle, Link as LinkIcon, Clock, Star, MapPin,
   MessageSquare, Phone, Mail, ExternalLink, UserCircle, Settings, Award,
-  ChevronLeft, FileText, BarChart3, Play
+  ChevronLeft, FileText, BarChart3, Play, Megaphone, Grid3X3, BookHeart,
+  UserCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -18,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion, AnimatePresence } from "framer-motion";
 import { DemoTourProvider, TourStep } from "@/components/demos/DemoTourGuide";
 import { DemoHighlight } from "@/components/demos/DemoHighlight";
+import { liquidGlassTabClass } from "@/components/ui/liquid-glass-button";
 
 const sections = [
   { id: "home", label: "Home", icon: Home, color: "from-violet-500 to-purple-600" },
@@ -40,13 +42,19 @@ const tourSteps: TourStep[] = [
   { id: "home-stats", title: "Your Stats at a Glance", description: "See your assignments, completed work, games won, and daily streak right from the home page." },
   { id: "smart-action", title: "Smart Next Action", description: "AI recommends the most important thing to work on next based on due dates and your progress." },
   { id: "daily-missions", title: "Daily Missions", description: "Complete daily goals to earn XP and keep your streak going. New missions appear every day!" },
+  // Today section
+  { id: "today-due", title: "Due Today", description: "See all assignments and tasks due today in one place. Start any assignment directly from here." },
+  { id: "today-pastdue", title: "Past Due Alerts", description: "Any overdue assignments appear here with red alerts so you can catch up quickly." },
+  // Courses
   { id: "courses", title: "My Courses", description: "View all your enrolled classes. Click any course card to see assignments, grades, and class materials." },
   // Classroom detail steps
-  { id: "classroom-detail", title: "Inside a Classroom", description: "This is what a classroom looks like when you click into it. You'll see tabs for Stream, Assignments, Syllabus, and Leaderboard." },
-  { id: "classroom-stream", title: "Class Stream", description: "The Stream shows announcements from your teacher, recent activity, and important updates for this class." },
-  { id: "classroom-assignments", title: "Classroom Assignments", description: "View all assignments for this class — upcoming, in progress, and completed. Click any to start working." },
+  { id: "classroom-header", title: "Classroom View", description: "Inside a classroom you see the class name and a 'Back to Courses' button. Below is a grid of tabs for all classroom features." },
+  { id: "classroom-tabs", title: "Classroom Tabs", description: "9 tabs organized in a 3×3 grid: Syllabus, Assignments, Announcements, Discussions, Study Materials, Study Games, Calendar, Grades, and Trends." },
+  { id: "classroom-announcements", title: "Class Announcements", description: "The Announcements tab shows messages from your teacher — assignment notifications, reminders, and class updates." },
+  { id: "classroom-assignments", title: "Classroom Assignments", description: "View all published assignments for this class. Click any assignment to start working on it." },
+  { id: "classroom-grades", title: "Your Grades", description: "The Grades tab shows your current grade and all graded assignments for this specific class." },
   { id: "classroom-leaderboard", title: "Class Leaderboard", description: "See how you rank against classmates based on assignment scores, games won, and AURA reading performance." },
-  // Back to main sections
+  // Clubs
   { id: "clubs", title: "Clubs & Activities", description: "Browse and join school clubs. See upcoming events and connect with classmates who share your interests." },
   // Calendar steps
   { id: "calendar-section", title: "Your Calendar", description: "See all assignments, class schedules, and school events in one unified calendar view." },
@@ -184,34 +192,87 @@ const DemoHomeSection = () => (
   </div>
 );
 
+// ── Today Section (matches TodaySection.tsx) ──
 const DemoTodaySection = () => (
   <div className="space-y-6 animate-fade-in">
-    <h2 className="text-3xl font-black text-gradient-purple">Today's Schedule</h2>
-    {[
-      { time: "8:00 AM", event: "ELA – Mrs. Davis", type: "Class", color: "border-l-primary" },
-      { time: "9:30 AM", event: "Math – Mr. Thompson", type: "Class", color: "border-l-blue-500" },
-      { time: "11:00 AM", event: "Science Quiz Due", type: "Assignment", color: "border-l-amber-500" },
-      { time: "1:00 PM", event: "Reading Club Meeting", type: "Club", color: "border-l-pink-500" },
-      { time: "2:30 PM", event: "AURA Reading Practice", type: "Activity", color: "border-l-green-500" },
-    ].map((item) => (
-      <Card key={item.time} variant="glass" className={cn("border-l-4 hover-lift", item.color)}>
-        <CardContent className="p-5 flex items-center justify-between">
-          <div><p className="font-semibold">{item.event}</p><p className="text-sm text-muted-foreground">{item.time}</p></div>
-          <Badge variant="outline">{item.type}</Badge>
+    <h1 className="text-3xl font-bold text-foreground">Today</h1>
+
+    {/* Due Today */}
+    <DemoHighlight stepId="today-due" tooltip="All assignments and tasks due today. Click 'Start' to begin working on any of them.">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-primary" />
+            <CardTitle>Due Today</CardTitle>
+            <Badge variant="secondary">3</Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {[
+              { title: "Chapter 6 Reading Comprehension", category: "Homework", classroom: "5th Grade ELA", dueTime: "3:00 PM" },
+              { title: "Math Word Problems Set 3", category: "Homework", classroom: "5th Grade Math", dueTime: "4:00 PM" },
+              { title: "Science Vocabulary Review", category: "Quiz", classroom: "5th Grade Science", dueTime: "11:59 PM" },
+            ].map((a) => (
+              <div key={a.title} className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <h3 className="font-semibold text-foreground">{a.title}</h3>
+                    <Badge variant="outline" className={
+                      a.category === "Quiz" ? "bg-yellow-500/10 text-yellow-700 border-yellow-200" : "bg-blue-500/10 text-blue-700 border-blue-200"
+                    }>{a.category}</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{a.classroom} • Due at {a.dueTime}</p>
+                </div>
+                <Button>Start</Button>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
-    ))}
+    </DemoHighlight>
+
+    {/* Past Due */}
+    <DemoHighlight stepId="today-pastdue" tooltip="Overdue assignments that still need to be completed. Submit them as soon as possible!">
+      <Card className="border-destructive">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 text-destructive" />
+            <CardTitle className="text-destructive">Past Due</CardTitle>
+            <Badge variant="destructive">1</Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-4 border border-destructive/50 rounded-lg hover:bg-destructive/5 transition-colors">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <h3 className="font-semibold text-foreground">Geometry Basics Worksheet</h3>
+                  <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-200">Homework</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">5th Grade Math • Was due Feb 14</p>
+              </div>
+              <Button variant="destructive">Complete Now</Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </DemoHighlight>
   </div>
 );
 
 const DemoCoursesSection = ({ onOpenClassroom }: { onOpenClassroom: (name: string) => void }) => (
   <div className="space-y-6 animate-fade-in">
     <DemoHighlight stepId="courses" tooltip="Each card represents a class you're enrolled in. Click to view assignments, materials, and grades for that class.">
-      <h2 className="text-3xl font-black text-gradient-purple">My Courses</h2>
-      <div className="grid md:grid-cols-2 gap-6 mt-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-foreground">My Courses</h1>
+        <Button><span className="mr-2">+</span> Join Course</Button>
+      </div>
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
         {[
           { name: "5th Grade ELA", teacher: "Mrs. Davis", students: 28, code: "ELA-2025" },
           { name: "5th Grade Math", teacher: "Mr. Thompson", students: 26, code: "MATH-2025" },
+          { name: "5th Grade Science", teacher: "Ms. Chen", students: 24, code: "SCI-2025" },
         ].map((c) => (
           <Card key={c.name} variant="glass" className="hover-lift cursor-pointer" onClick={() => onOpenClassroom(c.name)}>
             <CardContent className="p-6">
@@ -230,87 +291,120 @@ const DemoCoursesSection = ({ onOpenClassroom }: { onOpenClassroom: (name: strin
   </div>
 );
 
-// ── Demo Classroom Detail (Student View) ──
+// ── Demo Classroom Detail (Student View) — Matches actual ClassroomDetail ──
 const DemoClassroomDetail = ({ classroomName, onBack }: { classroomName: string; onBack: () => void }) => {
-  const [classTab, setClassTab] = useState("stream");
+  const [classTab, setClassTab] = useState("announcements");
+
+  // Student tabs matching STUDENT_TABS from ClassroomTabsList
+  const studentTabs = [
+    { id: "syllabus", icon: FileText, label: "Syllabus" },
+    { id: "assignments", icon: FileText, label: "Assignments" },
+    { id: "announcements", icon: Megaphone, label: "Announcements" },
+    { id: "discussions", icon: MessageSquare, label: "Discussions" },
+    { id: "study", icon: BookOpen, label: "Study Materials" },
+    { id: "tournaments", icon: Play, label: "Study Games" },
+    { id: "calendar", icon: Calendar, label: "Calendar" },
+    { id: "grades", icon: GraduationCap, label: "Grades" },
+    { id: "trends", icon: BarChart3, label: "Trends" },
+  ];
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={onBack} className="gap-1"><ChevronLeft className="h-4 w-4" /> Back to Courses</Button>
-        <h2 className="text-2xl font-bold">{classroomName}</h2>
-      </div>
+      {/* Header matching real ClassroomDetail */}
+      <DemoHighlight stepId="classroom-header" tooltip="The classroom header shows the class name. Click 'Back to Courses' to return to your course list.">
+        <div className="flex items-center gap-3 mb-2">
+          <Button variant="ghost" size="sm" onClick={onBack} className="gap-1"><ChevronLeft className="h-4 w-4" /> Back to Courses</Button>
+        </div>
+        <Card className="shadow-elegant border-2 border-primary/10 overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
+          <CardHeader className="bg-gradient-to-br from-muted/30 to-muted/10 relative z-10">
+            <CardTitle className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+              {classroomName}
+            </CardTitle>
+            <div className="flex items-center gap-4 text-muted-foreground">
+              <div className="flex items-center gap-2"><Users className="h-5 w-5" /><span className="font-medium">28 students</span></div>
+            </div>
+          </CardHeader>
+        </Card>
+      </DemoHighlight>
 
-      <DemoHighlight stepId="classroom-detail" tooltip="Inside a classroom you'll find the Stream, Assignments, Syllabus, and Leaderboard tabs.">
+      {/* Tabs - 3x3 liquid glass grid matching ClassroomTabsList student view */}
+      <DemoHighlight stepId="classroom-tabs" tooltip="9 tabs in a 3×3 grid — each one controls a different section of the classroom. Click any tab to explore.">
         <Tabs value={classTab} onValueChange={setClassTab}>
-          <TabsList className="bg-muted/50 rounded-xl p-1.5 gap-1">
-            <TabsTrigger value="stream" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Stream</TabsTrigger>
-            <TabsTrigger value="assignments" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Assignments</TabsTrigger>
-            <TabsTrigger value="syllabus" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Syllabus</TabsTrigger>
-            <TabsTrigger value="leaderboard" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Leaderboard</TabsTrigger>
+          <TabsList className="grid grid-cols-3 w-full h-auto p-2 bg-muted/50 rounded-xl gap-2">
+            {studentTabs.map((tab) => (
+              <TabsTrigger key={tab.id} value={tab.id} className={cn("relative", liquidGlassTabClass)}>
+                <tab.icon className="mr-2 h-4 w-4" />
+                {tab.label}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
-          <TabsContent value="stream" className="mt-4">
-            <DemoHighlight stepId="classroom-stream" tooltip="Announcements, materials shared by the teacher, and recent class activity appear here.">
+          {/* Announcements Tab (Stream) */}
+          <TabsContent value="announcements" className="mt-6">
+            <DemoHighlight stepId="classroom-announcements" tooltip="Teacher announcements and updates for this class. Assignment notifications appear here too.">
+              <div className="mb-4"><h2 className="text-2xl font-bold">Announcements</h2></div>
               <div className="space-y-4">
                 {[
-                  { title: "Chapter 6 Reading Assigned", body: "Please read Chapter 6 and answer the comprehension questions by Friday.", time: "Today, 9:15 AM", teacher: "Mrs. Davis" },
-                  { title: "Vocabulary Quiz Results Posted", body: "Great job everyone! Class average was 88%. Check your individual scores in the gradebook.", time: "Yesterday, 2:30 PM", teacher: "Mrs. Davis" },
-                  { title: "Field Trip Permission Slips", body: "Don't forget to return your signed permission slips for the museum trip by this Friday.", time: "2 days ago", teacher: "Mrs. Davis" },
-                ].map((post) => (
-                  <Card key={post.title} variant="glass">
-                    <CardContent className="p-5">
-                      <div className="flex items-start gap-4">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center flex-shrink-0">
-                          <span className="text-sm font-bold text-white">{post.teacher[0]}</span>
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <p className="font-bold">{post.title}</p>
-                            <span className="text-xs text-muted-foreground">{post.time}</span>
-                          </div>
-                          <p className="text-sm text-muted-foreground mt-1">{post.body}</p>
-                          <p className="text-xs text-muted-foreground mt-2">— {post.teacher}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </DemoHighlight>
-          </TabsContent>
-
-          <TabsContent value="assignments" className="mt-4">
-            <DemoHighlight stepId="classroom-assignments" tooltip="All assignments for this class. Click any assignment to start working on it or view your submission.">
-              <div className="space-y-3">
-                {[
-                  { title: "Chapter 6 Reading Comprehension", due: "Feb 21", status: "Not Started", points: 100, type: "Reading" },
-                  { title: "Vocabulary Week 12", due: "Feb 19", status: "In Progress", points: 50, type: "Quiz" },
-                  { title: "Chapter 5 Comprehension", due: "Feb 14", status: "Graded", points: 100, grade: "92%", type: "Reading" },
-                  { title: "Creative Writing: My Hero", due: "Feb 12", status: "Graded", points: 75, grade: "88%", type: "Essay" },
-                  { title: "Vocabulary Week 11", due: "Feb 10", status: "Graded", points: 50, grade: "95%", type: "Quiz" },
+                  { title: "Chapter 6 Reading Assigned", content: "Please read Chapter 6 and answer the comprehension questions by Friday.", type: "assignment" as const, time: "2026-02-16T09:15:00" },
+                  { title: "Vocabulary Quiz Results Posted", content: "Great job everyone! Class average was 88%. Check your individual scores in the gradebook.", type: "announcement" as const, time: "2026-02-15T14:30:00" },
+                  { title: "Field Trip Permission Slips", content: "Don't forget to return your signed permission slips for the museum trip by this Friday.", type: "announcement" as const, time: "2026-02-14T10:00:00" },
                 ].map((a) => (
-                  <Card key={a.title} variant="glass" className="hover-lift cursor-pointer">
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center",
-                          a.status === "Graded" ? "bg-green-100" : a.status === "In Progress" ? "bg-amber-100" : "bg-blue-100"
-                        )}>
-                          {a.status === "Graded" ? <CheckCircle className="h-5 w-5 text-green-600" /> :
-                           a.status === "In Progress" ? <Clock className="h-5 w-5 text-amber-600" /> :
-                           <FileText className="h-5 w-5 text-blue-600" />}
+                  <Card key={a.title} className="shadow-card hover:shadow-yellow transition-all duration-300">
+                    <CardHeader>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-2 flex-1">
+                          {a.type === "assignment" ? <FileText className="h-5 w-5 text-primary" /> : <Bell className="h-5 w-5 text-primary" />}
+                          <CardTitle className="text-lg">{a.title}</CardTitle>
                         </div>
-                        <div>
-                          <p className="font-semibold">{a.title}</p>
-                          <p className="text-xs text-muted-foreground">Due {a.due} • {a.points} pts • {a.type}</p>
-                        </div>
+                        <Badge variant={a.type === "assignment" ? "default" : "secondary"}>
+                          {a.type === "assignment" ? "Assignment" : "Announcement"}
+                        </Badge>
                       </div>
-                      <div className="text-right">
-                        {a.grade ? (
-                          <span className="text-lg font-bold text-green-600">{a.grade}</span>
-                        ) : (
-                          <Badge variant={a.status === "In Progress" ? "default" : "outline"} className={a.status === "In Progress" ? "bg-amber-100 text-amber-700 hover:bg-amber-100" : ""}>{a.status}</Badge>
-                        )}
+                      <CardDescription>
+                        {new Date(a.time).toLocaleDateString()} at {new Date(a.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm whitespace-pre-wrap">{a.content}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </DemoHighlight>
+          </TabsContent>
+
+          {/* Assignments Tab */}
+          <TabsContent value="assignments" className="mt-6">
+            <DemoHighlight stepId="classroom-assignments" tooltip="All published assignments for this class. Click any to view details and start working.">
+              <div className="mb-4"><h2 className="text-2xl font-bold">Assignments</h2></div>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[
+                  { title: "Chapter 6 Reading Comprehension", due: "Feb 21", status: "published", category: "Homework", questions: 10, timer: null },
+                  { title: "Vocabulary Week 12", due: "Feb 19", status: "published", category: "Quiz", questions: 20, timer: 15 },
+                  { title: "Chapter 5 Comprehension", due: "Feb 14", status: "published", category: "Homework", questions: 8, timer: null },
+                  { title: "Creative Writing: My Hero", due: "Feb 12", status: "published", category: "Test", questions: 3, timer: 45 },
+                ].map((a) => (
+                  <Card key={a.title} className="shadow-card hover:shadow-purple transition-shadow">
+                    <CardHeader>
+                      <CardTitle className="text-lg">{a.title}</CardTitle>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="default"><span className="mr-1">👁</span> Published</Badge>
+                        {a.category && <Badge variant="outline" className={
+                          a.category === "Test" ? "bg-red-500/10 text-red-700 border-red-200" :
+                          a.category === "Quiz" ? "bg-yellow-500/10 text-yellow-700 border-yellow-200" :
+                          "bg-blue-500/10 text-blue-700 border-blue-200"
+                        }>{a.category}</Badge>}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <Badge variant="outline">{a.questions} Questions</Badge>
+                          {a.timer && <Badge variant="outline">{a.timer} min</Badge>}
+                        </div>
+                        <p className="text-xs text-muted-foreground">Due: {a.due}</p>
+                        <Button variant="outline" className="w-full mt-2">Start Assignment</Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -319,8 +413,9 @@ const DemoClassroomDetail = ({ classroomName, onBack }: { classroomName: string;
             </DemoHighlight>
           </TabsContent>
 
-          <TabsContent value="syllabus" className="mt-4">
-            <Card variant="glass">
+          {/* Syllabus Tab */}
+          <TabsContent value="syllabus" className="mt-6">
+            <Card>
               <CardContent className="p-6">
                 <h3 className="font-bold text-lg mb-4">📋 Class Syllabus</h3>
                 <div className="space-y-4 text-sm">
@@ -335,18 +430,156 @@ const DemoClassroomDetail = ({ classroomName, onBack }: { classroomName: string;
                     <p className="font-semibold mb-1">Office Hours</p>
                     <p className="text-muted-foreground">Tuesday & Thursday 3:00–4:00 PM, Room 204</p>
                   </div>
-                  <div className="p-4 rounded-lg bg-muted/30">
-                    <p className="font-semibold mb-1">Required Materials</p>
-                    <p className="text-muted-foreground">Composition notebook, folder, #2 pencils</p>
-                  </div>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="leaderboard" className="mt-4">
-            <DemoHighlight stepId="classroom-leaderboard" tooltip="See how you stack up! Rankings are based on assignment scores, games won, and AURA reading performance.">
-              <Card variant="glass">
+          {/* Discussions Tab */}
+          <TabsContent value="discussions" className="mt-6">
+            <div className="mb-4"><h2 className="text-2xl font-bold">Discussions</h2></div>
+            <div className="space-y-4">
+              {[
+                { title: "What was your favorite part of Chapter 5?", replies: 12, lastReply: "2 hours ago" },
+                { title: "Study group for the science quiz?", replies: 8, lastReply: "Yesterday" },
+                { title: "Book recommendations for free reading", replies: 15, lastReply: "2 days ago" },
+              ].map((d) => (
+                <Card key={d.title} className="hover-lift cursor-pointer">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <MessageSquare className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-semibold">{d.title}</p>
+                        <p className="text-xs text-muted-foreground">{d.replies} replies • Last reply {d.lastReply}</p>
+                      </div>
+                    </div>
+                    <Badge variant="outline">{d.replies}</Badge>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* Study Materials Tab */}
+          <TabsContent value="study" className="mt-6">
+            <div className="mb-4">
+              <h2 className="text-2xl font-bold">Study Materials</h2>
+              <p className="text-muted-foreground">Review flashcard sets from your teacher</p>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[
+                { title: "ELA Vocabulary Week 12", subject: "ELA", cards: 24 },
+                { title: "Chapter 5 Key Terms", subject: "ELA", cards: 18 },
+              ].map((set) => (
+                <Card key={set.title} className="shadow-card hover:shadow-purple transition-shadow">
+                  <CardHeader><CardTitle className="text-lg">{set.title}</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <Badge variant="secondary">{set.subject}</Badge>
+                      <p className="text-sm text-muted-foreground"><strong>{set.cards}</strong> flashcards</p>
+                      <Button className="w-full"><Play className="mr-2 h-4 w-4" /> Study Now</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* Study Games Tab */}
+          <TabsContent value="tournaments" className="mt-6">
+            <div className="mb-4"><h2 className="text-2xl font-bold">Study Games</h2></div>
+            <Card className="p-12 text-center">
+              <Trophy className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-xl font-bold mb-2">No Tournaments Yet</h3>
+              <p className="text-muted-foreground">Your teacher hasn't created any tournaments yet</p>
+            </Card>
+          </TabsContent>
+
+          {/* Calendar Tab */}
+          <TabsContent value="calendar" className="mt-6">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold">Class Calendar</h2>
+                  <p className="text-muted-foreground">View upcoming assignments and events for this class</p>
+                </div>
+                <Button><Calendar className="h-4 w-4 mr-2" /> View Full Calendar</Button>
+              </div>
+              <Card className="p-6">
+                <div className="space-y-4">
+                  <h3 className="font-semibold flex items-center gap-2"><Calendar className="h-5 w-5 text-primary" /> Upcoming Deadlines</h3>
+                  <div className="space-y-3">
+                    {[
+                      { title: "Vocabulary Week 12", category: "Quiz", due: "Feb 19" },
+                      { title: "Chapter 6 Reading Comprehension", category: "Homework", due: "Feb 21" },
+                      { title: "Creative Writing Final Draft", category: "Test", due: "Feb 28" },
+                    ].map((a) => (
+                      <div key={a.title} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <FileText className="h-4 w-4 text-primary" />
+                          <div>
+                            <p className="font-medium text-sm">{a.title}</p>
+                            <p className="text-xs text-muted-foreground">{a.category}</p>
+                          </div>
+                        </div>
+                        <Badge variant="outline">{a.due}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Grades Tab */}
+          <TabsContent value="grades" className="mt-6">
+            <DemoHighlight stepId="classroom-grades" tooltip="Your grades for this specific class. See scores on all graded assignments.">
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold">Your Grades</h2>
+                  <p className="text-muted-foreground">View your current grades and performance in this class</p>
+                </div>
+                <Card>
+                  <CardContent className="p-0">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/50"><tr><th className="text-left p-4 font-medium">Assignment</th><th className="text-left p-4 font-medium">Category</th><th className="text-left p-4 font-medium">Grade</th><th className="text-left p-4 font-medium">Status</th></tr></thead>
+                      <tbody>
+                        {[
+                          { a: "Chapter 5 Comprehension", c: "Homework", g: "92%", s: "Graded" },
+                          { a: "Vocabulary Week 11", c: "Quiz", g: "95%", s: "Graded" },
+                          { a: "Creative Writing: My Hero", c: "Test", g: "88%", s: "Graded" },
+                          { a: "Chapter 6 Reading", c: "Homework", g: "—", s: "Not Started" },
+                        ].map((r) => (
+                          <tr key={r.a} className="border-t border-border hover:bg-muted/30">
+                            <td className="p-4 font-medium">{r.a}</td><td className="p-4">{r.c}</td><td className="p-4 font-bold">{r.g}</td>
+                            <td className="p-4"><Badge variant={r.s === "Graded" ? "default" : "outline"} className={r.s === "Graded" ? "bg-green-100 text-green-700 hover:bg-green-100" : ""}>{r.s}</Badge></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
+              </div>
+            </DemoHighlight>
+          </TabsContent>
+
+          {/* Trends Tab */}
+          <TabsContent value="trends" className="mt-6">
+            <DemoHighlight stepId="classroom-leaderboard" tooltip="See how you rank and track your performance trends over time in this class.">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold">Your Progress</h2>
+                <p className="text-muted-foreground">Track your performance trends in this classroom</p>
+              </div>
+              <div className="grid md:grid-cols-3 gap-4 mb-6">
+                {[
+                  { label: "Current Average", value: "91%", icon: "📊" },
+                  { label: "Assignments Completed", value: "12/15", icon: "✅" },
+                  { label: "Class Rank", value: "#2", icon: "🏆" },
+                ].map((s) => (
+                  <Card key={s.label}><CardContent className="p-5 text-center"><span className="text-2xl mb-2 block">{s.icon}</span><p className="text-sm text-muted-foreground">{s.label}</p><p className="text-3xl font-black">{s.value}</p></CardContent></Card>
+                ))}
+              </div>
+              <Card>
                 <CardContent className="p-0">
                   <table className="w-full text-sm">
                     <thead className="bg-muted/50">
@@ -355,24 +588,22 @@ const DemoClassroomDetail = ({ classroomName, onBack }: { classroomName: string;
                         <th className="text-left p-4 font-medium">Student</th>
                         <th className="text-left p-4 font-medium">Avg Grade</th>
                         <th className="text-left p-4 font-medium">Games Won</th>
-                        <th className="text-left p-4 font-medium">AURA Score</th>
                         <th className="text-left p-4 font-medium">Total</th>
                       </tr>
                     </thead>
                     <tbody>
                       {[
-                        { rank: "🥇", name: "Sophia Chen", avg: "96%", games: 12, aura: 95, total: 520 },
-                        { rank: "🥈", name: "Demo Student (You)", avg: "92%", games: 8, aura: 88, total: 485, you: true },
-                        { rank: "🥉", name: "Emma Johnson", avg: "91%", games: 10, aura: 82, total: 470 },
-                        { rank: "4", name: "Liam Martinez", avg: "87%", games: 6, aura: 78, total: 420 },
-                        { rank: "5", name: "Noah Williams", avg: "85%", games: 9, aura: 75, total: 410 },
+                        { rank: "🥇", name: "Sophia Chen", avg: "96%", games: 12, total: 520 },
+                        { rank: "🥈", name: "Demo Student (You)", avg: "92%", games: 8, total: 485, you: true },
+                        { rank: "🥉", name: "Emma Johnson", avg: "91%", games: 10, total: 470 },
+                        { rank: "4", name: "Liam Martinez", avg: "87%", games: 6, total: 420 },
+                        { rank: "5", name: "Noah Williams", avg: "85%", games: 9, total: 410 },
                       ].map((s) => (
                         <tr key={s.name} className={cn("border-t border-border", s.you && "bg-primary/5 font-semibold")}>
                           <td className="p-4 text-lg">{s.rank}</td>
                           <td className="p-4">{s.name}</td>
                           <td className="p-4">{s.avg}</td>
                           <td className="p-4">{s.games}</td>
-                          <td className="p-4">{s.aura}</td>
                           <td className="p-4 font-bold">{s.total}</td>
                         </tr>
                       ))}
@@ -444,7 +675,7 @@ const DemoCalendarSection = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <DemoHighlight stepId="calendar-section" tooltip="Your unified calendar shows class times, assignment due dates, club meetings, and school events all in one view.">
-        <h2 className="text-3xl font-black text-gradient-purple">Calendar</h2>
+        <h1 className="text-3xl font-bold text-foreground">Calendar</h1>
       </DemoHighlight>
 
       <DemoHighlight stepId="calendar-month" tooltip="Monthly grid view — days with events show colored dots. Click any day to see full details.">
@@ -496,7 +727,7 @@ const DemoCalendarSection = () => {
           {[
             { date: "Mon, Feb 17", items: [{ t: "Chapter 6 Reading Due", type: "Assignment", color: "bg-red-100 text-red-700" }, { t: "ELA 8:00 AM", type: "Class", color: "bg-blue-100 text-blue-700" }] },
             { date: "Tue, Feb 18", items: [{ t: "Math Word Problems Due", type: "Assignment", color: "bg-red-100 text-red-700" }, { t: "Reading Club 1:00 PM", type: "Club", color: "bg-pink-100 text-pink-700" }] },
-            { date: "Wed, Feb 19", items: [{ t: "Science Fair Setup", type: "Event", color: "bg-amber-100 text-amber-700" }, { t: "Science Explorers 2:30 PM", type: "Club", color: "bg-pink-100 text-pink-700" }] },
+            { date: "Wed, Feb 19", items: [{ t: "Science Fair Setup", type: "Event", color: "bg-amber-100 text-amber-700" }] },
             { date: "Thu, Feb 20", items: [{ t: "Vocabulary Quiz", type: "Assignment", color: "bg-red-100 text-red-700" }, { t: "Chess Club 3:00 PM", type: "Club", color: "bg-pink-100 text-pink-700" }] },
             { date: "Fri, Feb 21", items: [{ t: "No School – Teacher Workday", type: "Holiday", color: "bg-green-100 text-green-700" }] },
           ].map((day) => (
@@ -522,7 +753,7 @@ const DemoCalendarSection = () => {
 
 const DemoAnnouncementsSection = () => (
   <div className="space-y-6 animate-fade-in">
-    <h2 className="text-3xl font-black text-gradient-purple">Announcements</h2>
+    <h1 className="text-3xl font-bold text-foreground">Announcements</h1>
     <div className="space-y-4">
       {[
         { teacher: "Mrs. Davis", time: "1 hour ago", title: "Field Trip Permission Slips", body: "Please return your signed permission slips for the museum trip by Friday. Extra copies are available at the front office.", urgent: true },
@@ -821,10 +1052,14 @@ const StudentDemo = () => {
 
   const stepsWithActions = tourSteps.map((step) => {
     const sectionMap: Record<string, string> = {
+      "today-due": "today",
+      "today-pastdue": "today",
       courses: "courses",
-      "classroom-detail": "classroom-detail",
-      "classroom-stream": "classroom-detail",
+      "classroom-header": "classroom-detail",
+      "classroom-tabs": "classroom-detail",
+      "classroom-announcements": "classroom-detail",
       "classroom-assignments": "classroom-detail",
+      "classroom-grades": "classroom-detail",
       "classroom-leaderboard": "classroom-detail",
       clubs: "clubs",
       "calendar-section": "calendar",
@@ -836,6 +1071,15 @@ const StudentDemo = () => {
       "safety-section": "safety",
       "account-section": "account",
     };
+
+    // Map step IDs to classroom tab switches
+    const classTabMap: Record<string, string> = {
+      "classroom-announcements": "announcements",
+      "classroom-assignments": "assignments",
+      "classroom-grades": "grades",
+      "classroom-leaderboard": "trends",
+    };
+
     return {
       ...step,
       action: sectionMap[step.id] ? () => {
@@ -850,8 +1094,7 @@ const StudentDemo = () => {
 
   return (
     <DemoTourProvider steps={stepsWithActions} onStepChange={(step) => {
-      // Auto-switch classroom tabs when tour navigates within a classroom
-      // This is handled by the DemoHighlight active state
+      // Tab switching is handled by DemoClassroomDetail internally via user clicks
     }}>
       <div className="min-h-screen flex flex-col bg-background">
         <div className="bg-primary/10 border-b border-primary/20 px-4 py-2 flex items-center justify-between">
