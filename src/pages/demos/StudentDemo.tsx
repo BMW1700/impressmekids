@@ -4,7 +4,8 @@ import {
   Home, Calendar, BookOpen, Users, Bell, GraduationCap, FolderOpen, User, 
   Gamepad2, Shield, Sparkles, BookOpenCheck, ArrowLeft, CheckCircle, Trophy, 
   Target, Flame, Menu, AlertCircle, Link as LinkIcon, Clock, Star, MapPin,
-  MessageSquare, Phone, Mail, ExternalLink, UserCircle, Settings, Award
+  MessageSquare, Phone, Mail, ExternalLink, UserCircle, Settings, Award,
+  ChevronLeft, FileText, BarChart3, Play
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion, AnimatePresence } from "framer-motion";
 import { DemoTourProvider, TourStep } from "@/components/demos/DemoTourGuide";
 import { DemoHighlight } from "@/components/demos/DemoHighlight";
@@ -34,13 +36,23 @@ const sections = [
 ];
 
 const tourSteps: TourStep[] = [
-  { id: "sidebar", title: "Navigation Sidebar", description: "Use the sidebar to navigate between all sections of your student dashboard. Each icon represents a different area.", action: undefined },
+  { id: "sidebar", title: "Navigation Sidebar", description: "Use the sidebar to navigate between all sections of your student dashboard. Each icon represents a different area." },
   { id: "home-stats", title: "Your Stats at a Glance", description: "See your assignments, completed work, games won, and daily streak right from the home page." },
   { id: "smart-action", title: "Smart Next Action", description: "AI recommends the most important thing to work on next based on due dates and your progress." },
   { id: "daily-missions", title: "Daily Missions", description: "Complete daily goals to earn XP and keep your streak going. New missions appear every day!" },
   { id: "courses", title: "My Courses", description: "View all your enrolled classes. Click any course card to see assignments, grades, and class materials." },
+  // Classroom detail steps
+  { id: "classroom-detail", title: "Inside a Classroom", description: "This is what a classroom looks like when you click into it. You'll see tabs for Stream, Assignments, Syllabus, and Leaderboard." },
+  { id: "classroom-stream", title: "Class Stream", description: "The Stream shows announcements from your teacher, recent activity, and important updates for this class." },
+  { id: "classroom-assignments", title: "Classroom Assignments", description: "View all assignments for this class — upcoming, in progress, and completed. Click any to start working." },
+  { id: "classroom-leaderboard", title: "Class Leaderboard", description: "See how you rank against classmates based on assignment scores, games won, and AURA reading performance." },
+  // Back to main sections
   { id: "clubs", title: "Clubs & Activities", description: "Browse and join school clubs. See upcoming events and connect with classmates who share your interests." },
+  // Calendar steps
   { id: "calendar-section", title: "Your Calendar", description: "See all assignments, class schedules, and school events in one unified calendar view." },
+  { id: "calendar-month", title: "Monthly View", description: "The month view shows all events at a glance. Days with events are highlighted. Click any day to see details." },
+  { id: "calendar-upcoming", title: "Upcoming Events", description: "A quick list of your next events — assignments due, club meetings, and school events — sorted by date." },
+  // Remaining sections
   { id: "study-games", title: "Study Games", description: "Play educational games like Jeopardy 1v1, Number Maker, and more to learn while having fun!" },
   { id: "aura", title: "AURA Reading Practice", description: "Practice reading aloud with AI-powered feedback on speed, accuracy, and pronunciation." },
   { id: "gradebook", title: "Gradebook", description: "Track all your grades across every class and assignment in one place." },
@@ -76,7 +88,7 @@ const DemoSidebar = ({ activeSection, onSectionChange, isSheet = false, onClose 
       <nav className="space-y-1.5">
         {sections.map((section, index) => {
           const Icon = section.icon;
-          const isActive = activeSection === section.id;
+          const isActive = activeSection === section.id || (activeSection === "classroom-detail" && section.id === "courses");
           return (
             <motion.button
               key={section.id}
@@ -192,7 +204,7 @@ const DemoTodaySection = () => (
   </div>
 );
 
-const DemoCoursesSection = () => (
+const DemoCoursesSection = ({ onOpenClassroom }: { onOpenClassroom: (name: string) => void }) => (
   <div className="space-y-6 animate-fade-in">
     <DemoHighlight stepId="courses" tooltip="Each card represents a class you're enrolled in. Click to view assignments, materials, and grades for that class.">
       <h2 className="text-3xl font-black text-gradient-purple">My Courses</h2>
@@ -201,7 +213,7 @@ const DemoCoursesSection = () => (
           { name: "5th Grade ELA", teacher: "Mrs. Davis", students: 28, code: "ELA-2025" },
           { name: "5th Grade Math", teacher: "Mr. Thompson", students: 26, code: "MATH-2025" },
         ].map((c) => (
-          <Card key={c.name} variant="glass" className="hover-lift cursor-pointer">
+          <Card key={c.name} variant="glass" className="hover-lift cursor-pointer" onClick={() => onOpenClassroom(c.name)}>
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center"><BookOpen className="h-6 w-6 text-white" /></div>
@@ -209,6 +221,7 @@ const DemoCoursesSection = () => (
               </div>
               <h3 className="text-xl font-bold mb-1">{c.name}</h3>
               <p className="text-sm text-muted-foreground">{c.teacher} • {c.students} students</p>
+              <Button size="sm" variant="outline" className="mt-3 w-full">View Classroom →</Button>
             </CardContent>
           </Card>
         ))}
@@ -216,6 +229,164 @@ const DemoCoursesSection = () => (
     </DemoHighlight>
   </div>
 );
+
+// ── Demo Classroom Detail (Student View) ──
+const DemoClassroomDetail = ({ classroomName, onBack }: { classroomName: string; onBack: () => void }) => {
+  const [classTab, setClassTab] = useState("stream");
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="sm" onClick={onBack} className="gap-1"><ChevronLeft className="h-4 w-4" /> Back to Courses</Button>
+        <h2 className="text-2xl font-bold">{classroomName}</h2>
+      </div>
+
+      <DemoHighlight stepId="classroom-detail" tooltip="Inside a classroom you'll find the Stream, Assignments, Syllabus, and Leaderboard tabs.">
+        <Tabs value={classTab} onValueChange={setClassTab}>
+          <TabsList className="bg-muted/50 rounded-xl p-1.5 gap-1">
+            <TabsTrigger value="stream" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Stream</TabsTrigger>
+            <TabsTrigger value="assignments" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Assignments</TabsTrigger>
+            <TabsTrigger value="syllabus" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Syllabus</TabsTrigger>
+            <TabsTrigger value="leaderboard" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Leaderboard</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="stream" className="mt-4">
+            <DemoHighlight stepId="classroom-stream" tooltip="Announcements, materials shared by the teacher, and recent class activity appear here.">
+              <div className="space-y-4">
+                {[
+                  { title: "Chapter 6 Reading Assigned", body: "Please read Chapter 6 and answer the comprehension questions by Friday.", time: "Today, 9:15 AM", teacher: "Mrs. Davis" },
+                  { title: "Vocabulary Quiz Results Posted", body: "Great job everyone! Class average was 88%. Check your individual scores in the gradebook.", time: "Yesterday, 2:30 PM", teacher: "Mrs. Davis" },
+                  { title: "Field Trip Permission Slips", body: "Don't forget to return your signed permission slips for the museum trip by this Friday.", time: "2 days ago", teacher: "Mrs. Davis" },
+                ].map((post) => (
+                  <Card key={post.title} variant="glass">
+                    <CardContent className="p-5">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-bold text-white">{post.teacher[0]}</span>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <p className="font-bold">{post.title}</p>
+                            <span className="text-xs text-muted-foreground">{post.time}</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">{post.body}</p>
+                          <p className="text-xs text-muted-foreground mt-2">— {post.teacher}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </DemoHighlight>
+          </TabsContent>
+
+          <TabsContent value="assignments" className="mt-4">
+            <DemoHighlight stepId="classroom-assignments" tooltip="All assignments for this class. Click any assignment to start working on it or view your submission.">
+              <div className="space-y-3">
+                {[
+                  { title: "Chapter 6 Reading Comprehension", due: "Feb 21", status: "Not Started", points: 100, type: "Reading" },
+                  { title: "Vocabulary Week 12", due: "Feb 19", status: "In Progress", points: 50, type: "Quiz" },
+                  { title: "Chapter 5 Comprehension", due: "Feb 14", status: "Graded", points: 100, grade: "92%", type: "Reading" },
+                  { title: "Creative Writing: My Hero", due: "Feb 12", status: "Graded", points: 75, grade: "88%", type: "Essay" },
+                  { title: "Vocabulary Week 11", due: "Feb 10", status: "Graded", points: 50, grade: "95%", type: "Quiz" },
+                ].map((a) => (
+                  <Card key={a.title} variant="glass" className="hover-lift cursor-pointer">
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center",
+                          a.status === "Graded" ? "bg-green-100" : a.status === "In Progress" ? "bg-amber-100" : "bg-blue-100"
+                        )}>
+                          {a.status === "Graded" ? <CheckCircle className="h-5 w-5 text-green-600" /> :
+                           a.status === "In Progress" ? <Clock className="h-5 w-5 text-amber-600" /> :
+                           <FileText className="h-5 w-5 text-blue-600" />}
+                        </div>
+                        <div>
+                          <p className="font-semibold">{a.title}</p>
+                          <p className="text-xs text-muted-foreground">Due {a.due} • {a.points} pts • {a.type}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        {a.grade ? (
+                          <span className="text-lg font-bold text-green-600">{a.grade}</span>
+                        ) : (
+                          <Badge variant={a.status === "In Progress" ? "default" : "outline"} className={a.status === "In Progress" ? "bg-amber-100 text-amber-700 hover:bg-amber-100" : ""}>{a.status}</Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </DemoHighlight>
+          </TabsContent>
+
+          <TabsContent value="syllabus" className="mt-4">
+            <Card variant="glass">
+              <CardContent className="p-6">
+                <h3 className="font-bold text-lg mb-4">📋 Class Syllabus</h3>
+                <div className="space-y-4 text-sm">
+                  <div className="p-4 rounded-lg bg-muted/30">
+                    <p className="font-semibold mb-1">Grade Weights</p>
+                    <div className="grid grid-cols-2 gap-2 text-muted-foreground">
+                      <span>Assignments: 40%</span><span>Quizzes: 25%</span>
+                      <span>Participation: 15%</span><span>Final Project: 20%</span>
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-lg bg-muted/30">
+                    <p className="font-semibold mb-1">Office Hours</p>
+                    <p className="text-muted-foreground">Tuesday & Thursday 3:00–4:00 PM, Room 204</p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-muted/30">
+                    <p className="font-semibold mb-1">Required Materials</p>
+                    <p className="text-muted-foreground">Composition notebook, folder, #2 pencils</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="leaderboard" className="mt-4">
+            <DemoHighlight stepId="classroom-leaderboard" tooltip="See how you stack up! Rankings are based on assignment scores, games won, and AURA reading performance.">
+              <Card variant="glass">
+                <CardContent className="p-0">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="text-left p-4 font-medium">Rank</th>
+                        <th className="text-left p-4 font-medium">Student</th>
+                        <th className="text-left p-4 font-medium">Avg Grade</th>
+                        <th className="text-left p-4 font-medium">Games Won</th>
+                        <th className="text-left p-4 font-medium">AURA Score</th>
+                        <th className="text-left p-4 font-medium">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { rank: "🥇", name: "Sophia Chen", avg: "96%", games: 12, aura: 95, total: 520 },
+                        { rank: "🥈", name: "Demo Student (You)", avg: "92%", games: 8, aura: 88, total: 485, you: true },
+                        { rank: "🥉", name: "Emma Johnson", avg: "91%", games: 10, aura: 82, total: 470 },
+                        { rank: "4", name: "Liam Martinez", avg: "87%", games: 6, aura: 78, total: 420 },
+                        { rank: "5", name: "Noah Williams", avg: "85%", games: 9, aura: 75, total: 410 },
+                      ].map((s) => (
+                        <tr key={s.name} className={cn("border-t border-border", s.you && "bg-primary/5 font-semibold")}>
+                          <td className="p-4 text-lg">{s.rank}</td>
+                          <td className="p-4">{s.name}</td>
+                          <td className="p-4">{s.avg}</td>
+                          <td className="p-4">{s.games}</td>
+                          <td className="p-4">{s.aura}</td>
+                          <td className="p-4 font-bold">{s.total}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </CardContent>
+              </Card>
+            </DemoHighlight>
+          </TabsContent>
+        </Tabs>
+      </DemoHighlight>
+    </div>
+  );
+};
 
 const DemoClubsSection = () => (
   <div className="space-y-6 animate-fade-in">
@@ -253,36 +424,101 @@ const DemoClubsSection = () => (
   </div>
 );
 
-const DemoCalendarSection = () => (
-  <div className="space-y-6 animate-fade-in">
-    <DemoHighlight stepId="calendar-section" tooltip="Your unified calendar shows class times, assignment due dates, club meetings, and school events all in one view.">
-      <h2 className="text-3xl font-black text-gradient-purple">Calendar</h2>
-      <div className="mt-4 grid gap-3">
-        {[
-          { date: "Mon, Feb 17", items: [{ t: "Chapter 6 Reading Due", type: "Assignment", color: "bg-red-100 text-red-700" }, { t: "ELA 8:00 AM", type: "Class", color: "bg-blue-100 text-blue-700" }] },
-          { date: "Tue, Feb 18", items: [{ t: "Math Word Problems Due", type: "Assignment", color: "bg-red-100 text-red-700" }, { t: "Reading Club 1:00 PM", type: "Club", color: "bg-pink-100 text-pink-700" }] },
-          { date: "Wed, Feb 19", items: [{ t: "Science Fair Setup", type: "Event", color: "bg-amber-100 text-amber-700" }, { t: "Science Explorers 2:30 PM", type: "Club", color: "bg-pink-100 text-pink-700" }] },
-          { date: "Thu, Feb 20", items: [{ t: "Vocabulary Quiz", type: "Assignment", color: "bg-red-100 text-red-700" }, { t: "Chess Club 3:00 PM", type: "Club", color: "bg-pink-100 text-pink-700" }] },
-          { date: "Fri, Feb 21", items: [{ t: "No School – Teacher Workday", type: "Holiday", color: "bg-green-100 text-green-700" }] },
-        ].map((day) => (
-          <Card key={day.date} variant="glass">
-            <CardContent className="p-4">
-              <p className="font-bold text-sm mb-2">{day.date}</p>
-              <div className="space-y-2">
-                {day.items.map((item) => (
-                  <div key={item.t} className="flex items-center justify-between">
-                    <span className="text-sm">{item.t}</span>
-                    <Badge className={cn("text-xs", item.color)}>{item.type}</Badge>
+// ── Expanded Calendar Section ──
+const DemoCalendarSection = () => {
+  const today = new Date();
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).getDay();
+  const monthName = today.toLocaleString("default", { month: "long", year: "numeric" });
+
+  const eventDays: Record<number, { title: string; color: string }[]> = {
+    17: [{ title: "Chapter 6 Due", color: "bg-red-500" }],
+    18: [{ title: "Reading Club", color: "bg-pink-500" }],
+    19: [{ title: "Science Fair", color: "bg-amber-500" }],
+    20: [{ title: "Vocab Quiz", color: "bg-red-500" }, { title: "Chess Club", color: "bg-pink-500" }],
+    21: [{ title: "No School", color: "bg-green-500" }],
+    24: [{ title: "Math Test", color: "bg-blue-500" }],
+    26: [{ title: "AURA Benchmark", color: "bg-purple-500" }],
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <DemoHighlight stepId="calendar-section" tooltip="Your unified calendar shows class times, assignment due dates, club meetings, and school events all in one view.">
+        <h2 className="text-3xl font-black text-gradient-purple">Calendar</h2>
+      </DemoHighlight>
+
+      <DemoHighlight stepId="calendar-month" tooltip="Monthly grid view — days with events show colored dots. Click any day to see full details.">
+        <Card variant="glass">
+          <CardContent className="p-6">
+            <h3 className="font-bold text-lg mb-4 text-center">{monthName}</h3>
+            <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted-foreground mb-2">
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => <div key={d}>{d}</div>)}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {Array.from({ length: firstDay }).map((_, i) => <div key={`e-${i}`} />)}
+              {Array.from({ length: daysInMonth }).map((_, i) => {
+                const day = i + 1;
+                const isToday = day === today.getDate();
+                const events = eventDays[day];
+                return (
+                  <div key={day} className={cn(
+                    "aspect-square flex flex-col items-center justify-center rounded-lg text-sm cursor-pointer hover:bg-muted/50 transition-colors relative",
+                    isToday && "bg-primary text-primary-foreground font-bold ring-2 ring-primary/30",
+                    events && !isToday && "font-semibold"
+                  )}>
+                    <span>{day}</span>
+                    {events && (
+                      <div className="flex gap-0.5 mt-0.5">
+                        {events.slice(0, 3).map((e, idx) => (
+                          <div key={idx} className={cn("w-1.5 h-1.5 rounded-full", e.color)} />
+                        ))}
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </DemoHighlight>
-  </div>
-);
+                );
+              })}
+            </div>
+            <div className="flex flex-wrap gap-3 mt-4 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-500" /> Assignments</span>
+              <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-pink-500" /> Clubs</span>
+              <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-amber-500" /> Events</span>
+              <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-blue-500" /> Classes</span>
+              <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500" /> Holidays</span>
+              <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-purple-500" /> Assessments</span>
+            </div>
+          </CardContent>
+        </Card>
+      </DemoHighlight>
+
+      <DemoHighlight stepId="calendar-upcoming" tooltip="Quick chronological list of upcoming events so you never miss a deadline or meeting.">
+        <h3 className="font-bold text-lg">Upcoming Events</h3>
+        <div className="space-y-3 mt-3">
+          {[
+            { date: "Mon, Feb 17", items: [{ t: "Chapter 6 Reading Due", type: "Assignment", color: "bg-red-100 text-red-700" }, { t: "ELA 8:00 AM", type: "Class", color: "bg-blue-100 text-blue-700" }] },
+            { date: "Tue, Feb 18", items: [{ t: "Math Word Problems Due", type: "Assignment", color: "bg-red-100 text-red-700" }, { t: "Reading Club 1:00 PM", type: "Club", color: "bg-pink-100 text-pink-700" }] },
+            { date: "Wed, Feb 19", items: [{ t: "Science Fair Setup", type: "Event", color: "bg-amber-100 text-amber-700" }, { t: "Science Explorers 2:30 PM", type: "Club", color: "bg-pink-100 text-pink-700" }] },
+            { date: "Thu, Feb 20", items: [{ t: "Vocabulary Quiz", type: "Assignment", color: "bg-red-100 text-red-700" }, { t: "Chess Club 3:00 PM", type: "Club", color: "bg-pink-100 text-pink-700" }] },
+            { date: "Fri, Feb 21", items: [{ t: "No School – Teacher Workday", type: "Holiday", color: "bg-green-100 text-green-700" }] },
+          ].map((day) => (
+            <Card key={day.date} variant="glass">
+              <CardContent className="p-4">
+                <p className="font-bold text-sm mb-2">{day.date}</p>
+                <div className="space-y-2">
+                  {day.items.map((item) => (
+                    <div key={item.t} className="flex items-center justify-between">
+                      <span className="text-sm">{item.t}</span>
+                      <Badge className={cn("text-xs", item.color)}>{item.type}</Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </DemoHighlight>
+    </div>
+  );
+};
 
 const DemoAnnouncementsSection = () => (
   <div className="space-y-6 animate-fade-in">
@@ -480,12 +716,12 @@ const DemoLinksSection = () => (
     <h2 className="text-3xl font-black text-gradient-purple">Links & Resources</h2>
     <div className="grid md:grid-cols-2 gap-4">
       {[
-        { name: "Khan Academy", desc: "Free math and science lessons", emoji: "🎓", url: "#" },
-        { name: "Epic! Reading", desc: "Digital library with thousands of books", emoji: "📚", url: "#" },
-        { name: "Typing.com", desc: "Practice your typing skills", emoji: "⌨️", url: "#" },
-        { name: "Google Classroom", desc: "Access shared class materials", emoji: "📋", url: "#" },
-        { name: "School Library Catalog", desc: "Search and reserve library books", emoji: "🏛️", url: "#" },
-        { name: "BrainPOP", desc: "Animated educational videos", emoji: "🧠", url: "#" },
+        { name: "Khan Academy", desc: "Free math and science lessons", emoji: "🎓" },
+        { name: "Epic! Reading", desc: "Digital library with thousands of books", emoji: "📚" },
+        { name: "Typing.com", desc: "Practice your typing skills", emoji: "⌨️" },
+        { name: "Google Classroom", desc: "Access shared class materials", emoji: "📋" },
+        { name: "School Library Catalog", desc: "Search and reserve library books", emoji: "🏛️" },
+        { name: "BrainPOP", desc: "Animated educational videos", emoji: "🧠" },
       ].map((link) => (
         <Card key={link.name} variant="glass" className="hover-lift cursor-pointer">
           <CardContent className="p-4 flex items-center gap-4">
@@ -559,12 +795,16 @@ const DemoAccountSection = () => (
 const StudentDemo = () => {
   const [activeSection, setActiveSection] = useState("home");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [openClassroom, setOpenClassroom] = useState<string | null>(null);
 
   const renderSection = () => {
+    if (activeSection === "classroom-detail" && openClassroom) {
+      return <DemoClassroomDetail classroomName={openClassroom} onBack={() => setActiveSection("courses")} />;
+    }
     switch (activeSection) {
       case "home": return <DemoHomeSection />;
       case "today": return <DemoTodaySection />;
-      case "courses": return <DemoCoursesSection />;
+      case "courses": return <DemoCoursesSection onOpenClassroom={(name) => { setOpenClassroom(name); setActiveSection("classroom-detail"); }} />;
       case "clubs": return <DemoClubsSection />;
       case "calendar": return <DemoCalendarSection />;
       case "announcements": return <DemoAnnouncementsSection />;
@@ -581,15 +821,38 @@ const StudentDemo = () => {
 
   const stepsWithActions = tourSteps.map((step) => {
     const sectionMap: Record<string, string> = {
-      courses: "courses", clubs: "clubs", "calendar-section": "calendar",
-      "study-games": "study-games", aura: "aura-reading", gradebook: "gradebook",
-      "safety-section": "safety", "account-section": "account",
+      courses: "courses",
+      "classroom-detail": "classroom-detail",
+      "classroom-stream": "classroom-detail",
+      "classroom-assignments": "classroom-detail",
+      "classroom-leaderboard": "classroom-detail",
+      clubs: "clubs",
+      "calendar-section": "calendar",
+      "calendar-month": "calendar",
+      "calendar-upcoming": "calendar",
+      "study-games": "study-games",
+      aura: "aura-reading",
+      gradebook: "gradebook",
+      "safety-section": "safety",
+      "account-section": "account",
     };
-    return { ...step, action: sectionMap[step.id] ? () => setActiveSection(sectionMap[step.id]) : step.action };
+    return {
+      ...step,
+      action: sectionMap[step.id] ? () => {
+        const target = sectionMap[step.id];
+        setActiveSection(target);
+        if (target === "classroom-detail" && !openClassroom) {
+          setOpenClassroom("5th Grade ELA");
+        }
+      } : step.action,
+    };
   });
 
   return (
-    <DemoTourProvider steps={stepsWithActions}>
+    <DemoTourProvider steps={stepsWithActions} onStepChange={(step) => {
+      // Auto-switch classroom tabs when tour navigates within a classroom
+      // This is handled by the DemoHighlight active state
+    }}>
       <div className="min-h-screen flex flex-col bg-background">
         <div className="bg-primary/10 border-b border-primary/20 px-4 py-2 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -624,7 +887,7 @@ const StudentDemo = () => {
           <main className="flex-1 overflow-y-auto">
             <div className="container mx-auto px-4 py-8 pb-32">
               <AnimatePresence mode="wait">
-                <motion.div key={activeSection} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+                <motion.div key={activeSection + (openClassroom || "")} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
                   {renderSection()}
                 </motion.div>
               </AnimatePresence>
