@@ -161,7 +161,7 @@ const Index = () => {
               custom={0.6}
             >
               <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary-light text-lg px-8 py-6" asChild>
-                <Link to="/auth">
+                <Link to="/demos">
                   Request a Demo
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
@@ -339,7 +339,7 @@ const Index = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary-light text-lg px-8 py-6" asChild>
-                <Link to="/auth">
+                <Link to="/demos">
                   Schedule Demo
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
