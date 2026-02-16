@@ -21,6 +21,11 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 // Lazy-loaded routes for code splitting
+const Demos = lazy(() => import("./pages/Demos"));
+const StudentDemo = lazy(() => import("./pages/demos/StudentDemo"));
+const TeacherDemo = lazy(() => import("./pages/demos/TeacherDemo"));
+const ParentDemo = lazy(() => import("./pages/demos/ParentDemo"));
+const AdminDemo = lazy(() => import("./pages/demos/AdminDemo"));
 const PendingVerification = lazy(() => import("./pages/PendingVerification"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminCalendar = lazy(() => import("./pages/admin/AdminCalendar"));
@@ -144,6 +149,11 @@ const App = () => (
                   <Route path="/terms-of-service" element={<TermsOfService />} />
                   <Route path="/consent/:token" element={<ConsentVerification />} />
                   <Route path="/policies" element={<PolicyViewer />} />
+                  <Route path="/demos" element={<Demos />} />
+                  <Route path="/demos/student" element={<StudentDemo />} />
+                  <Route path="/demos/teacher" element={<TeacherDemo />} />
+                  <Route path="/demos/parent" element={<ParentDemo />} />
+                  <Route path="/demos/admin" element={<AdminDemo />} />
 
                   {/* Protected routes */}
                   <Route element={<RequireAuth />}>
