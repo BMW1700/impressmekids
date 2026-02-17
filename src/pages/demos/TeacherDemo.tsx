@@ -32,7 +32,7 @@ const tourSteps: TourStep[] = [
   { id: "tab-attendance-t", title: "Attendance", description: "Take daily attendance with one click per student. Track present, late, and absent — view history and patterns over time." },
   { id: "tab-students-t", title: "Students", description: "Full student roster with reading levels, grade averages, and risk flags. Click any student for their detailed profile." },
   { id: "tab-safety-t", title: "Safety & Drills", description: "Manage emergency drills and student safety. Track drill completion and safety readiness." },
-  { id: "tab-office-hours-t", title: "Office Hours", description: "Manage parent/student meeting requests. Set your availability and approve or decline meeting slots." },
+  { id: "tab-office-hours-t", title: "Office Hours", description: "Set your available office hours for parent meetings. Parents book open slots directly — booked meetings appear in Upcoming Bookings." },
   { id: "tab-announcements-t", title: "Announcements", description: "Post announcements and share materials. Students see these updates on their Announcements tab." },
   { id: "tab-assignments-t", title: "Assignments", description: "Create, edit, and grade assignments. See submission status — who's turned in, who's late, who hasn't started." },
   { id: "tab-discussions-t", title: "Discussions", description: "Create discussion topics and moderate student conversations. Foster class engagement and critical thinking." },
