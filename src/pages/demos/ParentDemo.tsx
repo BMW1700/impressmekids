@@ -25,9 +25,9 @@ const tourSteps: TourStep[] = [
   { id: "gradebook-tab", title: "Gradebook", description: "Detailed view of all grades by assignment, subject, and category." },
   { id: "calendar-btn", title: "Calendar", description: "View all upcoming events, assignments, and school dates for your child in one convenient calendar." },
   { id: "safety-btn", title: "Safety", description: "Real-time safety alerts and drill notifications. Get instant confirmation when your child is marked safe during emergencies." },
+  { id: "resources", title: "Links & Resources", description: "Access educational resources, school contact info, and helpful links shared by teachers." },
   { id: "notifications-btn", title: "Notifications", description: "Stay up to date with grade changes, new announcements, and important alerts from your child's teachers." },
   { id: "link-student-btn", title: "Link Student", description: "Connect your account to your child's profile to access their grades, assignments, and school activity." },
-  { id: "resources", title: "Links & Resources", description: "Access educational resources, school contact info, and helpful links shared by teachers." },
 ];
 
 const ParentDemo = () => {
