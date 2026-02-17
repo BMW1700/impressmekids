@@ -81,18 +81,15 @@ serve(async (req) => {
       }
     );
 
-    const { data, error } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'recovery',
-      email: email,
-    });
+    // Send reset email directly instead of returning the link
+    const { error } = await supabaseAdmin.auth.resetPasswordForEmail(email);
 
     if (error) throw error;
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Password reset link generated for ${email}`,
-        reset_link: data.properties.action_link
+        message: `Password reset email sent to ${email}`
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
