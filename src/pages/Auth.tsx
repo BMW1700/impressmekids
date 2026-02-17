@@ -224,7 +224,7 @@ const Auth = () => {
   };
 
   const handleCleverSignIn = () => {
-    const cleverClientId = 'afb863b57be9112271e5';
+    const cleverClientId = import.meta.env.VITE_CLEVER_CLIENT_ID || '';
     const redirectUri = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/clever-sync-callback`;
     // Generate cryptographic state parameter for CSRF protection
     const state = crypto.randomUUID();
