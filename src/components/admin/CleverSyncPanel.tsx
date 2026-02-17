@@ -12,7 +12,10 @@ export function CleverSyncPanel() {
   const handleCleverSync = () => {
     const cleverClientId = 'afb863b57be9112271e5';
     const redirectUri = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/clever-sync-callback`;
-    const cleverAuthUrl = `https://clever.com/oauth/authorize?response_type=code&client_id=${cleverClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&district_id=`;
+    // Generate cryptographic state parameter for CSRF protection
+    const state = crypto.randomUUID();
+    sessionStorage.setItem('clever_oauth_state', state);
+    const cleverAuthUrl = `https://clever.com/oauth/authorize?response_type=code&client_id=${cleverClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&district_id=&state=${state}`;
     
     toast.info("Redirecting to Clever for authorization...");
     window.location.href = cleverAuthUrl;

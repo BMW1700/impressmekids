@@ -226,7 +226,10 @@ const Auth = () => {
   const handleCleverSignIn = () => {
     const cleverClientId = 'afb863b57be9112271e5';
     const redirectUri = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/clever-sync-callback`;
-    const cleverAuthUrl = `https://clever.com/oauth/authorize?response_type=code&client_id=${cleverClientId}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+    // Generate cryptographic state parameter for CSRF protection
+    const state = crypto.randomUUID();
+    sessionStorage.setItem('clever_oauth_state', state);
+    const cleverAuthUrl = `https://clever.com/oauth/authorize?response_type=code&client_id=${cleverClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
     
     window.location.href = cleverAuthUrl;
   };

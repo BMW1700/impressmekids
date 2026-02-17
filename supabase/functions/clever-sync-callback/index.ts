@@ -32,6 +32,13 @@ serve(async (req) => {
     const url = new URL(req.url);
     const code = url.searchParams.get('code');
     const error = url.searchParams.get('error');
+    const state = url.searchParams.get('state');
+
+    // Validate state parameter exists (CSRF protection)
+    if (!state) {
+      console.error('Missing OAuth state parameter');
+      return Response.redirect(`${appUrl}/auth?error=missing_state`, 302);
+    }
 
     // Handle OAuth errors
     if (error) {
