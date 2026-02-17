@@ -23,8 +23,6 @@ const tourSteps: TourStep[] = [
   { id: "assignments", title: "Upcoming Assignments", description: "See what's due and when. Help your child plan their study time effectively." },
   { id: "announcements", title: "Announcements", description: "Teacher and school-wide announcements so you never miss important updates." },
   { id: "gradebook-tab", title: "Gradebook", description: "Detailed view of all grades by assignment, subject, and category." },
-  { id: "reading-tab", title: "Reading Progress", description: "AURA reading data including words per minute, accuracy trends, and session history." },
-  { id: "calendar-tab", title: "Calendar", description: "View all upcoming events, assignments, and school dates for your child." },
   { id: "resources", title: "Links & Resources", description: "Access educational resources, school contact info, and helpful links shared by teachers." },
 ];
 
@@ -40,7 +38,7 @@ const ParentDemo = () => {
 
   const stepsWithActions = tourSteps.map((step) => {
     const tabMap: Record<string, string> = {
-      "gradebook-tab": "gradebook", "reading-tab": "reading", "calendar-tab": "calendar",
+      "gradebook-tab": "gradebook",
     };
     return { ...step, action: tabMap[step.id] ? () => setCurrentTab(tabMap[step.id]) : undefined };
   });
@@ -98,12 +96,6 @@ const ParentDemo = () => {
               </TabsTrigger>
               <TabsTrigger value="gradebook" className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary-dark data-[state=active]:text-white rounded-lg px-6 py-2.5 transition-all">
                 <GraduationCap className="h-4 w-4" /> Gradebook
-              </TabsTrigger>
-              <TabsTrigger value="reading" className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary-dark data-[state=active]:text-white rounded-lg px-6 py-2.5 transition-all">
-                <BookOpenCheck className="h-4 w-4" /> Reading
-              </TabsTrigger>
-              <TabsTrigger value="calendar" className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary-dark data-[state=active]:text-white rounded-lg px-6 py-2.5 transition-all">
-                <CalendarIcon className="h-4 w-4" /> Calendar
               </TabsTrigger>
             </TabsList>
 
@@ -206,74 +198,6 @@ const ParentDemo = () => {
                     </table>
                   </CardContent>
                 </Card>
-              </DemoHighlight>
-            </TabsContent>
-
-            <TabsContent value="reading">
-              <DemoHighlight stepId="reading-tab" tooltip="AURA reading analytics for your child — words per minute, accuracy percentage, and trends over time.">
-                <div className="space-y-6">
-                  <h2 className="text-2xl font-bold">Reading Progress — {selectedChild}</h2>
-                  <div className="grid sm:grid-cols-3 gap-4">
-                    <Card variant="glass"><CardContent className="p-5 text-center"><p className="text-sm text-muted-foreground">Words Per Minute</p><p className="text-3xl font-black">{data.wpm}</p><p className="text-xs text-green-600 mt-1">↗ +8 from last week</p></CardContent></Card>
-                    <Card variant="glass"><CardContent className="p-5 text-center"><p className="text-sm text-muted-foreground">Accuracy</p><p className="text-3xl font-black">{data.accuracy}</p><p className="text-xs text-green-600 mt-1">↗ +2% from last week</p></CardContent></Card>
-                    <Card variant="glass"><CardContent className="p-5 text-center"><p className="text-sm text-muted-foreground">Sessions This Week</p><p className="text-3xl font-black">4</p><p className="text-xs text-muted-foreground mt-1">Goal: 5 sessions</p></CardContent></Card>
-                  </div>
-                  <Card variant="glass">
-                    <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5 text-primary" /> Weekly Progress</CardTitle></CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {[
-                          { week: "Week 1 (Jan 27)", wpm: 98, acc: "89%" },
-                          { week: "Week 2 (Feb 3)", wpm: 103, acc: "91%" },
-                          { week: "Week 3 (Feb 10)", wpm: 108, acc: "93%" },
-                          { week: "This Week", wpm: parseInt(data.wpm), acc: data.accuracy },
-                        ].map((w) => (
-                          <div key={w.week} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                            <span className="text-sm font-medium">{w.week}</span>
-                            <div className="flex gap-4 text-sm">
-                              <span>{w.wpm} WPM</span>
-                              <span>{w.acc} accuracy</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card variant="glass">
-                    <CardHeader><CardTitle>Areas of Focus</CardTitle></CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="p-3 rounded-lg bg-green-50 border border-green-200"><p className="text-sm font-medium text-green-800">✅ Fluency: Reading smoothly with natural pacing</p></div>
-                      <div className="p-3 rounded-lg bg-amber-50 border border-amber-200"><p className="text-sm font-medium text-amber-800">⚠️ Pronunciation: Needs practice with multi-syllable words</p></div>
-                      <div className="p-3 rounded-lg bg-green-50 border border-green-200"><p className="text-sm font-medium text-green-800">✅ Comprehension: Answering questions correctly after reading</p></div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </DemoHighlight>
-            </TabsContent>
-
-            <TabsContent value="calendar">
-              <DemoHighlight stepId="calendar-tab" tooltip="All upcoming events, assignments, and school dates for your child in one view.">
-                <h2 className="text-2xl font-bold mb-4">Calendar — {selectedChild}</h2>
-                <div className="space-y-3">
-                  {[
-                    { date: "Mon, Feb 17", items: ["Chapter 6 Reading Due (ELA)", "ELA 8:00 AM"] },
-                    { date: "Tue, Feb 18", items: ["Math Word Problems Due", "Parent-Teacher Conference 4:00 PM"] },
-                    { date: "Wed, Feb 19", items: ["Science Fair Setup"] },
-                    { date: "Thu, Feb 20", items: ["Vocabulary Quiz (ELA)", "Reading Club 1:00 PM"] },
-                    { date: "Fri, Feb 21", items: ["Field Trip — Permission Slip Required!"] },
-                  ].map((day) => (
-                    <Card key={day.date} variant="glass">
-                      <CardContent className="p-4">
-                        <p className="font-bold text-sm mb-2">{day.date}</p>
-                        <div className="space-y-1">
-                          {day.items.map((item) => (
-                            <p key={item} className="text-sm text-muted-foreground">• {item}</p>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
               </DemoHighlight>
             </TabsContent>
           </Tabs>
