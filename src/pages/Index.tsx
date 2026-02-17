@@ -162,7 +162,7 @@ const Index = () => {
             >
               <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary-light text-lg px-8 py-6" asChild>
                 <Link to="/demos">
-                  Request a Demo
+                  Try our Demo
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
