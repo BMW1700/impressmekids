@@ -336,40 +336,58 @@ const TeacherClassroomDetail = ({
           </DemoHighlight>
         </TabsContent>
 
-        {/* Office Hours / Meeting Requests */}
+        {/* Office Hours */}
         <TabsContent value="meeting-requests" className="mt-6">
-          <DemoHighlight stepId="tab-office-hours-t" tooltip="Manage parent and student meeting requests. Set your availability and approve meeting slots.">
+          <DemoHighlight stepId="tab-office-hours-t" tooltip="Set your available office hours. Parents book open slots directly — no approval needed.">
             <div className="mb-6">
               <h2 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Office Hours</h2>
-              <p className="text-muted-foreground mt-1">Manage meeting requests from parents and students</p>
+              <p className="text-muted-foreground mt-1">Set your availability and view upcoming parent bookings</p>
             </div>
-            <div className="space-y-4">
-              {[
-                { parent: "Mrs. Martinez", student: "Liam Martinez", reason: "Discuss reading progress", date: "Feb 18, 3:00 PM", status: "Pending" },
-                { parent: "Mr. Chen", student: "Sophia Chen", reason: "Advanced placement discussion", date: "Feb 19, 2:30 PM", status: "Approved" },
-                { parent: "Mrs. Davis", student: "Ethan Davis", reason: "Behavior concerns", date: "Feb 20, 4:00 PM", status: "Pending" },
-              ].map((m) => (
-                <Card key={m.parent} variant="glass">
-                  <CardContent className="p-5 flex items-center justify-between">
-                    <div>
-                      <p className="font-bold">{m.parent}</p>
-                      <p className="text-sm text-muted-foreground">Re: {m.student} — {m.reason}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{m.date}</p>
+
+            <Card variant="glass" className="mb-6">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-lg">My Office Hours</h3>
+                  <Button size="sm">+ Add Time Slot</Button>
+                </div>
+                <div className="space-y-3">
+                  {[
+                    { day: "Tuesday", time: "3:00 PM – 4:00 PM" },
+                    { day: "Wednesday", time: "2:30 PM – 3:30 PM" },
+                    { day: "Thursday", time: "3:00 PM – 4:00 PM" },
+                  ].map((slot) => (
+                    <div key={slot.day + slot.time} className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+                      <div>
+                        <p className="font-medium">{slot.day}</p>
+                        <p className="text-sm text-muted-foreground">{slot.time}</p>
+                      </div>
+                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Available</Badge>
                     </div>
-                    <div className="flex gap-2">
-                      {m.status === "Pending" ? (
-                        <>
-                          <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white">Approve</Button>
-                          <Button size="sm" variant="outline">Decline</Button>
-                        </>
-                      ) : (
-                        <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Approved</Badge>
-                      )}
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card variant="glass">
+              <CardContent className="p-5">
+                <h3 className="font-bold text-lg mb-4">Upcoming Bookings</h3>
+                <div className="space-y-4">
+                  {[
+                    { parent: "Mrs. Martinez", student: "Liam Martinez", reason: "Discuss reading progress", date: "Feb 18, 3:00 PM" },
+                    { parent: "Mr. Chen", student: "Sophia Chen", reason: "Advanced placement discussion", date: "Feb 19, 2:30 PM" },
+                  ].map((m) => (
+                    <div key={m.parent} className="flex items-center justify-between p-4 rounded-lg border border-border bg-muted/30">
+                      <div>
+                        <p className="font-bold">{m.parent}</p>
+                        <p className="text-sm text-muted-foreground">Re: {m.student} — {m.reason}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{m.date}</p>
+                      </div>
+                      <Badge className="bg-primary/10 text-primary hover:bg-primary/10">Booked</Badge>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           </DemoHighlight>
         </TabsContent>
 
