@@ -1,7 +1,4 @@
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from '../_shared/cors.ts';
 
 // AWS Signature V4 signing helper functions
 async function hmacSha256(key: Uint8Array, data: string): Promise<Uint8Array> {
