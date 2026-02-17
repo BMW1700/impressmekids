@@ -70,6 +70,7 @@ const ParentSafety = lazy(() => import("./pages/parent/ParentSafety"));
 const ParentReviewSubmission = lazy(() => import("./pages/parent/ParentReviewSubmission"));
 const ParentReviewAnnotations = lazy(() => import("./pages/parent/ParentReviewAnnotations"));
 const PWAInstallGuide = lazy(() => import("./pages/parent/PWAInstallGuide"));
+const DataPrivacy = lazy(() => import("./pages/parent/DataPrivacy"));
 const DistrictDashboard = lazy(() => import("./pages/district/DistrictDashboard"));
 const DistrictManagerDashboard = lazy(() => import("./pages/district/DistrictManagerDashboard"));
 const RegisterDistrict = lazy(() => import("./pages/district/RegisterDistrict"));
@@ -201,6 +202,7 @@ const App = () => (
                     <Route path="/parent/review-submission/:submissionId" element={<ParentReviewSubmission />} />
                     <Route path="/parent/review-annotations/:submissionId" element={<ParentReviewAnnotations />} />
                     <Route path="/parent/install-app" element={<PWAInstallGuide />} />
+                    <Route path="/parent/data-privacy" element={<DataPrivacy />} />
 
                     <Route path="/admin" element={<AdminDashboard />} />
                     <Route path="/admin/dashboard" element={<AdminDashboard />} />

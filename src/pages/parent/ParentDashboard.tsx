@@ -13,6 +13,7 @@ import {
   GraduationCap,
   Sparkles,
   Link,
+  FileKey,
 } from "lucide-react";
 import { ParentNotificationBell } from "@/components/parent/ParentNotificationBell";
 import { StudentLookupModal } from "@/components/parent/StudentLookupModal";
@@ -216,6 +217,13 @@ const ParentDashboard = () => {
                   className="gap-2 glass-card border-0 hover:bg-primary/5"
                 >
                   <Link className="h-4 w-4" /> Links & Resources
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/parent/data-privacy")}
+                  className="gap-2 glass-card border-0 hover:bg-primary/5"
+                >
+                  <FileKey className="h-4 w-4" /> Data & Privacy
                 </Button>
               </>
             )}
