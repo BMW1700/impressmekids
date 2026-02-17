@@ -72,6 +72,7 @@ const tourSteps: TourStep[] = [
   { id: "aura", title: "AURA Reading Practice", description: "Practice reading aloud with AI-powered feedback on speed, accuracy, and pronunciation." },
   { id: "gradebook", title: "Gradebook", description: "Track all your grades across every class and assignment in one place." },
   { id: "safety-section", title: "Safety Center", description: "Report concerns anonymously, access emergency contacts, and find trusted adults at school." },
+  { id: "links-resources-section", title: "Links & Resources", description: "Quick access to helpful links, school resources, and external tools shared by your teachers and school." },
   { id: "account-section", title: "Your Account", description: "Manage your profile, avatar, language settings, and more." },
 ];
 
@@ -958,28 +959,30 @@ const DemoSafetySection = () => (
 
 const DemoLinksSection = () => (
   <div className="space-y-6 animate-fade-in">
-    <h2 className="text-3xl font-black text-gradient-purple">Links & Resources</h2>
-    <div className="grid md:grid-cols-2 gap-4">
-      {[
-        { name: "Khan Academy", desc: "Free math and science lessons", emoji: "🎓" },
-        { name: "Epic! Reading", desc: "Digital library with thousands of books", emoji: "📚" },
-        { name: "Typing.com", desc: "Practice your typing skills", emoji: "⌨️" },
-        { name: "Google Classroom", desc: "Access shared class materials", emoji: "📋" },
-        { name: "School Library Catalog", desc: "Search and reserve library books", emoji: "🏛️" },
-        { name: "BrainPOP", desc: "Animated educational videos", emoji: "🧠" },
-      ].map((link) => (
-        <Card key={link.name} variant="glass" className="hover-lift cursor-pointer">
-          <CardContent className="p-4 flex items-center gap-4">
-            <span className="text-2xl">{link.emoji}</span>
-            <div className="flex-1">
-              <p className="font-semibold">{link.name}</p>
-              <p className="text-xs text-muted-foreground">{link.desc}</p>
-            </div>
-            <ExternalLink className="h-4 w-4 text-muted-foreground" />
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+    <DemoHighlight stepId="links-resources-section" tooltip="Quick access to helpful links, school resources, and external tools shared by your teachers and school.">
+      <h2 className="text-3xl font-black text-gradient-purple">Links & Resources</h2>
+      <div className="grid md:grid-cols-2 gap-4 mt-4">
+        {[
+          { name: "Khan Academy", desc: "Free math and science lessons", emoji: "🎓" },
+          { name: "Epic! Reading", desc: "Digital library with thousands of books", emoji: "📚" },
+          { name: "Typing.com", desc: "Practice your typing skills", emoji: "⌨️" },
+          { name: "Google Classroom", desc: "Access shared class materials", emoji: "📋" },
+          { name: "School Library Catalog", desc: "Search and reserve library books", emoji: "🏛️" },
+          { name: "BrainPOP", desc: "Animated educational videos", emoji: "🧠" },
+        ].map((link) => (
+          <Card key={link.name} variant="glass" className="hover-lift cursor-pointer">
+            <CardContent className="p-4 flex items-center gap-4">
+              <span className="text-2xl">{link.emoji}</span>
+              <div className="flex-1">
+                <p className="font-semibold">{link.name}</p>
+                <p className="text-xs text-muted-foreground">{link.desc}</p>
+              </div>
+              <ExternalLink className="h-4 w-4 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </DemoHighlight>
   </div>
 );
 
@@ -1164,6 +1167,7 @@ const StudentDemo = () => {
     aura: "aura-reading",
     gradebook: "gradebook",
     "safety-section": "safety",
+    "links-resources-section": "links-resources",
     "account-section": "account",
   };
 
