@@ -23,6 +23,10 @@ const tourSteps: TourStep[] = [
   { id: "assignments", title: "Upcoming Assignments", description: "See what's due and when. Help your child plan their study time effectively." },
   { id: "announcements", title: "Announcements", description: "Teacher and school-wide announcements so you never miss important updates." },
   { id: "gradebook-tab", title: "Gradebook", description: "Detailed view of all grades by assignment, subject, and category." },
+  { id: "calendar-btn", title: "Calendar", description: "View all upcoming events, assignments, and school dates for your child in one convenient calendar." },
+  { id: "safety-btn", title: "Safety", description: "Real-time safety alerts and drill notifications. Get instant confirmation when your child is marked safe during emergencies." },
+  { id: "notifications-btn", title: "Notifications", description: "Stay up to date with grade changes, new announcements, and important alerts from your child's teachers." },
+  { id: "link-student-btn", title: "Link Student", description: "Connect your account to your child's profile to access their grades, assignments, and school activity." },
   { id: "resources", title: "Links & Resources", description: "Access educational resources, school contact info, and helpful links shared by teachers." },
 ];
 
@@ -68,14 +72,20 @@ const ParentDemo = () => {
               <p className="text-lg text-muted-foreground ml-[68px]">Monitor your children's academic journey</p>
             </div>
             <div className="flex gap-3 flex-wrap">
-              <DemoHighlight stepId="resources" tooltip="Quick access to educational websites, school contact info, and resources shared by your child's teachers.">
-                <div className="flex gap-3 flex-wrap">
-                  <Button variant="outline" className="gap-2 glass-card border-0 hover:bg-primary/5"><CalendarIcon className="h-4 w-4" /> Calendar</Button>
-                  <Button variant="outline" className="gap-2 glass-card border-0 hover:bg-primary/5"><Shield className="h-4 w-4" /> Safety</Button>
-                  <Button variant="outline" className="gap-2 glass-card border-0 hover:bg-primary/5"><LinkIcon className="h-4 w-4" /> Links & Resources</Button>
-                  <Button variant="outline" className="gap-2 glass-card border-0 hover:bg-primary/5"><Bell className="h-4 w-4" /> Notifications</Button>
-                  <Button variant="gradient" className="gap-2"><UserPlus className="h-4 w-4" /> Link Student</Button>
-                </div>
+              <DemoHighlight stepId="calendar-btn" tooltip="View all upcoming events, assignments, and school dates for your child.">
+                <Button variant="outline" className="gap-2 glass-card border-0 hover:bg-primary/5"><CalendarIcon className="h-4 w-4" /> Calendar</Button>
+              </DemoHighlight>
+              <DemoHighlight stepId="safety-btn" tooltip="Real-time safety alerts — get instant notification when your child is confirmed safe during drills or emergencies.">
+                <Button variant="outline" className="gap-2 glass-card border-0 hover:bg-primary/5"><Shield className="h-4 w-4" /> Safety</Button>
+              </DemoHighlight>
+              <DemoHighlight stepId="resources" tooltip="Quick access to educational websites, school contact info, and resources shared by teachers.">
+                <Button variant="outline" className="gap-2 glass-card border-0 hover:bg-primary/5"><LinkIcon className="h-4 w-4" /> Links & Resources</Button>
+              </DemoHighlight>
+              <DemoHighlight stepId="notifications-btn" tooltip="Stay up to date with grade changes, announcements, and important alerts from teachers.">
+                <Button variant="outline" className="gap-2 glass-card border-0 hover:bg-primary/5"><Bell className="h-4 w-4" /> Notifications</Button>
+              </DemoHighlight>
+              <DemoHighlight stepId="link-student-btn" tooltip="Connect your account to your child's profile to access their grades, assignments, and activity.">
+                <Button variant="gradient" className="gap-2"><UserPlus className="h-4 w-4" /> Link Student</Button>
               </DemoHighlight>
             </div>
           </div>
