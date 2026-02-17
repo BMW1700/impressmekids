@@ -5,7 +5,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Users, GraduationCap, Shield, Calendar, Settings, School, Link, FileUp, Zap, Database, UserPlus, UserCheck } from "lucide-react";
+import { Loader2, Users, GraduationCap, Shield, Calendar, Settings, School, Link, FileUp, Zap, Database, UserPlus, UserCheck, Trash2 } from "lucide-react";
 import { useAdminData } from "@/hooks/useAdminData";
 import { liquidGlassTabClass } from "@/components/ui/liquid-glass-button";
 import { TeacherListCard } from "@/components/admin/TeacherListCard";
@@ -21,6 +21,7 @@ import { SchoolEventManager } from "@/components/admin/SchoolEventManager";
 import { BulkStudentImport } from "@/components/admin/BulkStudentImport";
 import { AccountVerificationRequests } from "@/components/admin/AccountVerificationRequests";
 import { CleverSyncPanel } from "@/components/admin/CleverSyncPanel";
+import { DeletionRequestsPanel } from "@/components/admin/DeletionRequestsPanel";
 import { SchoolsManagementModal } from "@/components/admin/SchoolsManagementModal";
 import { SchoolResourcesModal } from "@/components/admin/SchoolResourcesModal";
 import { ConnectToSchoolDialog } from "@/components/admin/ConnectToSchoolDialog";
@@ -305,6 +306,7 @@ export default function AdminDashboard() {
                       {currentTab === "calendar" && <><Calendar className="h-4 w-4" />Calendar</>}
                       {currentTab === "safety" && <><Shield className="h-4 w-4" />Safety</>}
                       {currentTab === "backups" && <><Database className="h-4 w-4" />Backups</>}
+                      {currentTab === "deletion-requests" && <><Trash2 className="h-4 w-4" />Deletion Requests</>}
                     </div>
                   </SelectValue>
                 </SelectTrigger>
@@ -324,6 +326,7 @@ export default function AdminDashboard() {
                   )}
                   <SelectItem value="calendar"><div className="flex items-center gap-2"><Calendar className="h-4 w-4" />Calendar</div></SelectItem>
                   <SelectItem value="safety"><div className="flex items-center gap-2"><Shield className="h-4 w-4" />Safety</div></SelectItem>
+                  <SelectItem value="deletion-requests"><div className="flex items-center gap-2"><Trash2 className="h-4 w-4" />Deletion Requests</div></SelectItem>
                   {!selectedSchoolId && (
                     <SelectItem value="backups"><div className="flex items-center gap-2"><Database className="h-4 w-4" />Backups</div></SelectItem>
                   )}
@@ -340,11 +343,12 @@ export default function AdminDashboard() {
                       <TabsTrigger value="students" className={liquidGlassTabClass}>Students</TabsTrigger>
                       <TabsTrigger value="admins" className={liquidGlassTabClass}>Admins</TabsTrigger>
                     </TabsList>
-                    {/* School-specific view: Row 2 - Parental Linking, Calendar, Safety */}
-                    <TabsList className="grid w-full grid-cols-3 h-auto p-2 bg-muted/50 rounded-xl gap-2">
+                    {/* School-specific view: Row 2 - Parental Linking, Calendar, Safety, Deletion Requests */}
+                    <TabsList className="grid w-full grid-cols-4 h-auto p-2 bg-muted/50 rounded-xl gap-2">
                       <TabsTrigger value="parent-requests" className={liquidGlassTabClass}>Parental Linking</TabsTrigger>
                       <TabsTrigger value="calendar" className={liquidGlassTabClass}>Calendar</TabsTrigger>
                       <TabsTrigger value="safety" className={liquidGlassTabClass}>Safety</TabsTrigger>
+                      <TabsTrigger value="deletion-requests" className={liquidGlassTabClass}>Deletion Requests</TabsTrigger>
                     </TabsList>
                   </>
                 ) : (
@@ -357,13 +361,14 @@ export default function AdminDashboard() {
                       <TabsTrigger value="teacher-requests" className={liquidGlassTabClass}>Account Requests</TabsTrigger>
                       <TabsTrigger value="parent-requests" className={liquidGlassTabClass}>Parental Linking</TabsTrigger>
                     </TabsList>
-                    {/* All Schools view: Row 2 - Import, Clever, Calendar, Safety, Backups */}
-                    <TabsList className="grid w-full grid-cols-5 h-auto p-2 bg-muted/50 rounded-xl gap-2">
+                    {/* All Schools view: Row 2 - Import, Clever, Calendar, Safety, Backups, Deletion Requests */}
+                    <TabsList className="grid w-full grid-cols-6 h-auto p-2 bg-muted/50 rounded-xl gap-2">
                       <TabsTrigger value="import" className={liquidGlassTabClass}>Import</TabsTrigger>
                       <TabsTrigger value="clever" className={liquidGlassTabClass}>Clever</TabsTrigger>
                       <TabsTrigger value="calendar" className={liquidGlassTabClass}>Calendar</TabsTrigger>
                       <TabsTrigger value="safety" className={liquidGlassTabClass}>Safety</TabsTrigger>
                       <TabsTrigger value="backups" className={liquidGlassTabClass}>Backups</TabsTrigger>
+                      <TabsTrigger value="deletion-requests" className={liquidGlassTabClass}>Deletion Requests</TabsTrigger>
                     </TabsList>
                   </>
                 )}
@@ -503,6 +508,10 @@ export default function AdminDashboard() {
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="deletion-requests" className="space-y-4">
+              <DeletionRequestsPanel />
             </TabsContent>
           </Tabs>
         </div>

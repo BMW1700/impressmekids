@@ -1967,6 +1967,67 @@ export type Database = {
           },
         ]
       }
+      data_deletion_requests: {
+        Row: {
+          completed_at: string | null
+          id: string
+          parent_id: string
+          reason: string
+          requested_at: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["deletion_request_status"]
+          student_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          id?: string
+          parent_id: string
+          reason: string
+          requested_at?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["deletion_request_status"]
+          student_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          id?: string
+          parent_id?: string
+          reason?: string
+          requested_at?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["deletion_request_status"]
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_deletion_requests_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "parent_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_deletion_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_deletion_requests_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       data_restoration_requests: {
         Row: {
           backup_id: string
@@ -7957,6 +8018,7 @@ export type Database = {
     Enums: {
       answer_status: "not_attempted" | "in_progress" | "completed"
       app_role: "admin" | "teacher" | "student" | "district_manager" | "parent"
+      deletion_request_status: "pending" | "approved" | "denied" | "completed"
       difficulty_level: "easy" | "medium" | "hard"
       elimination_status: "active" | "eliminated"
       event_category:
@@ -8119,6 +8181,7 @@ export const Constants = {
     Enums: {
       answer_status: ["not_attempted", "in_progress", "completed"],
       app_role: ["admin", "teacher", "student", "district_manager", "parent"],
+      deletion_request_status: ["pending", "approved", "denied", "completed"],
       difficulty_level: ["easy", "medium", "hard"],
       elimination_status: ["active", "eliminated"],
       event_category: [
