@@ -14,83 +14,83 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.list-cold-storage-backups]
-verify_jwt = true
+verify_jwt = false
 
 [functions.restore-cold-storage-backup]
-verify_jwt = true
+verify_jwt = false
 
 [functions.request-data-restoration]
-verify_jwt = true
+verify_jwt = false
 
 [functions.check-backup-health]
-verify_jwt = true
+verify_jwt = false
 
 [functions.cleanup-old-backups]
 verify_jwt = false
 
 [functions.generate-teacher-summary]
-verify_jwt = true
+verify_jwt = false
 
 [functions.start-tournament]
-verify_jwt = true
+verify_jwt = false
 
 [functions.seed-and-create-matches]
-verify_jwt = true
+verify_jwt = false
 
 [functions.start-round]
-verify_jwt = true
+verify_jwt = false
 
 [functions.show-next-question]
-verify_jwt = true
+verify_jwt = false
 
 [functions.buzz-in]
-verify_jwt = true
+verify_jwt = false
 
 [functions.submit-answer]
-verify_jwt = true
+verify_jwt = false
 
 [functions.end-round-and-compute-winners]
-verify_jwt = true
+verify_jwt = false
 
 [functions.generate-question-ai]
-verify_jwt = true
+verify_jwt = false
 
 [functions.generate-flashcards]
 verify_jwt = false
 
 [functions.analyze-aura]
-verify_jwt = true
+verify_jwt = false
 
 [functions.generate-practice-exercises]
-verify_jwt = true
+verify_jwt = false
 
 [functions.calculate-exercise-effectiveness]
-verify_jwt = true
+verify_jwt = false
 
 [functions.extract-text-from-image]
-verify_jwt = true
+verify_jwt = false
 
 [functions.train-ml-models]
-verify_jwt = true
+verify_jwt = false
 
 [functions.update-q-learning]
-verify_jwt = true
+verify_jwt = false
 
 [functions.send-drill-notification]
-verify_jwt = true
+verify_jwt = false
 
 [functions.delete-user-account]
-verify_jwt = true
+verify_jwt = false
 
 # Allow internal server-to-server calls without JWT
 [functions.send-push-notification]
 verify_jwt = false
 
 [functions.send-safety-alert]
-verify_jwt = true
+verify_jwt = false
 
 [functions.send-risk-alerts]
-verify_jwt = true
+verify_jwt = false
 
 [functions.check-weather-alerts]
 verify_jwt = false
@@ -99,19 +99,19 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.report-emergency]
-verify_jwt = true
+verify_jwt = false
 
 [functions.escalation-engine]
-verify_jwt = true
+verify_jwt = false
 
 [functions.send-substitute-access-email]
-verify_jwt = true
+verify_jwt = false
 
 [functions.send-phoneme-report]
-verify_jwt = true
+verify_jwt = false
 
 [functions.bulk-create-students]
-verify_jwt = true
+verify_jwt = false
 
 [functions.generate-world-backgrounds]
 verify_jwt = false
