@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Link } from "react-router-dom";
 import { 
   Home, Calendar, BookOpen, Users, Bell, GraduationCap, FolderOpen, User, 
@@ -58,7 +59,7 @@ const tourSteps: TourStep[] = [
   { id: "classroom-tournaments", title: "Study Games", description: "Educational tournaments and games created by your teacher for this class." },
   { id: "classroom-calendar", title: "Class Calendar", description: "View upcoming assignment deadlines and class events specific to this course." },
   { id: "classroom-grades", title: "Grades", description: "Your current grades and scores on all graded assignments for this class." },
-  { id: "classroom-leaderboard", title: "Trends & Leaderboard", description: "Track your performance trends and see how you rank against classmates." },
+  { id: "classroom-leaderboard", title: "Performance Trends", description: "Track your grade trends over time and see how you compare to the class average." },
   // Clubs
   { id: "clubs", title: "Clubs & Activities", description: "Browse and join school clubs. See upcoming events and connect with classmates who share your interests." },
   // Calendar steps
@@ -580,52 +581,47 @@ const DemoClassroomDetail = ({ classroomName, onBack, activeClassTab, onClassTab
             </DemoHighlight>
           </TabsContent>
 
-          {/* Trends Tab */}
+           {/* Trends Tab */}
           <TabsContent value="trends" className="mt-6">
-            <DemoHighlight stepId="classroom-leaderboard" tooltip="See how you rank and track your performance trends over time in this class.">
+            <DemoHighlight stepId="classroom-leaderboard" tooltip="Track how your performance compares to the class average over time.">
               <div className="mb-6">
-                <h2 className="text-2xl font-bold">Your Progress</h2>
-                <p className="text-muted-foreground">Track your performance trends in this classroom</p>
+                <h2 className="text-2xl font-bold">Your Performance Trends</h2>
+                <p className="text-muted-foreground">See how you compare to the class average over time</p>
               </div>
               <div className="grid md:grid-cols-3 gap-4 mb-6">
                 {[
-                  { label: "Current Average", value: "91%", icon: "📊" },
+                  { label: "Your Average", value: "91%", icon: "📊" },
+                  { label: "Class Average", value: "84%", icon: "📈" },
                   { label: "Assignments Completed", value: "12/15", icon: "✅" },
-                  { label: "Class Rank", value: "#2", icon: "🏆" },
                 ].map((s) => (
                   <Card key={s.label}><CardContent className="p-5 text-center"><span className="text-2xl mb-2 block">{s.icon}</span><p className="text-sm text-muted-foreground">{s.label}</p><p className="text-3xl font-black">{s.value}</p></CardContent></Card>
                 ))}
               </div>
               <Card>
-                <CardContent className="p-0">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="text-left p-4 font-medium">Rank</th>
-                        <th className="text-left p-4 font-medium">Student</th>
-                        <th className="text-left p-4 font-medium">Avg Grade</th>
-                        <th className="text-left p-4 font-medium">Games Won</th>
-                        <th className="text-left p-4 font-medium">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        { rank: "🥇", name: "Sophia Chen", avg: "96%", games: 12, total: 520 },
-                        { rank: "🥈", name: "Demo Student (You)", avg: "92%", games: 8, total: 485, you: true },
-                        { rank: "🥉", name: "Emma Johnson", avg: "91%", games: 10, total: 470 },
-                        { rank: "4", name: "Liam Martinez", avg: "87%", games: 6, total: 420 },
-                        { rank: "5", name: "Noah Williams", avg: "85%", games: 9, total: 410 },
-                      ].map((s) => (
-                        <tr key={s.name} className={cn("border-t border-border", s.you && "bg-primary/5 font-semibold")}>
-                          <td className="p-4 text-lg">{s.rank}</td>
-                          <td className="p-4">{s.name}</td>
-                          <td className="p-4">{s.avg}</td>
-                          <td className="p-4">{s.games}</td>
-                          <td className="p-4 font-bold">{s.total}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <CardContent className="p-6">
+                  <h3 className="font-bold mb-4">Grade Trend: You vs Class Average</h3>
+                  <div className="w-full h-[260px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={[
+                        { week: "Week 1", you: 85, classAvg: 80 },
+                        { week: "Week 2", you: 88, classAvg: 81 },
+                        { week: "Week 3", you: 82, classAvg: 82 },
+                        { week: "Week 4", you: 90, classAvg: 83 },
+                        { week: "Week 5", you: 93, classAvg: 84 },
+                        { week: "Week 6", you: 89, classAvg: 83 },
+                        { week: "Week 7", you: 94, classAvg: 85 },
+                        { week: "Week 8", you: 91, classAvg: 84 },
+                      ]}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="week" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                        <YAxis domain={[70, 100]} tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                        <Tooltip />
+                        <Legend />
+                        <Line type="monotone" dataKey="you" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ fill: "hsl(var(--primary))", r: 4 }} name="You" />
+                        <Line type="monotone" dataKey="classAvg" stroke="hsl(var(--muted-foreground))" strokeWidth={2} strokeDasharray="5 5" dot={{ fill: "hsl(var(--muted-foreground))", r: 3 }} name="Class Average" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
                 </CardContent>
               </Card>
             </DemoHighlight>
