@@ -1,67 +1,81 @@
 
 
-# Security and Stability Hardening -- All 3 Priorities
+# Fix Critical Public Data Exposures
 
-## Priority 1: Shared CORS Module + Update All Edge Functions
+## Problem
+Four tables have `USING (true)` SELECT policies with `TO public` roles, meaning **anyone on the internet** (no login needed) can read all data:
 
-Create one shared file and update all edge functions to use it.
+1. **`schools`** -- policy "Anyone can view schools" (`USING (true)`, `TO public`)
+2. **`club_members`** -- policy "Students can view club members" (`USING (true)`, `TO public`)
+3. **`clubs`** -- TWO open policies: "Anyone can browse clubs" and "Students can view all clubs" (both `USING (true)`, `TO public`)
 
-**New file:** `supabase/functions/_shared/cors.ts`
-```typescript
-export const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-};
-```
+The `districts` table already has proper authenticated-only policies -- no fix needed there.
 
-**Update ~35 edge functions** to replace their local `corsHeaders` definition with:
-```typescript
-import { corsHeaders } from '../_shared/cors.ts';
-```
+## Fix (Single Database Migration)
 
-This is a mechanical find-and-replace across every function. No logic changes.
+Drop the 4 dangerous open policies and replace them with scoped ones:
 
----
-
-## Priority 2: Fix verify_jwt in config.toml
-
-Change `verify_jwt = true` to `verify_jwt = false` for all 28 functions that already do in-code JWT validation. This eliminates the gateway/code auth conflict.
-
-Affected functions: list-cold-storage-backups, restore-cold-storage-backup, request-data-restoration, check-backup-health, generate-teacher-summary, start-tournament, seed-and-create-matches, start-round, show-next-question, buzz-in, submit-answer, end-round-and-compute-winners, generate-question-ai, analyze-aura, generate-practice-exercises, calculate-exercise-effectiveness, extract-text-from-image, train-ml-models, update-q-learning, send-drill-notification, delete-user-account, send-safety-alert, send-risk-alerts, report-emergency, escalation-engine, send-substitute-access-email, send-phoneme-report, bulk-create-students
-
----
-
-## Priority 3: Fix Permissive RLS Policies
-
-**Critical fix -- `user_roles` table:** Replace the open `WITH CHECK (true)` ALL policy with an admin-only check:
 ```sql
-DROP POLICY IF EXISTS "..." ON public.user_roles;
-CREATE POLICY "Only admins can manage user_roles"
-ON public.user_roles FOR ALL TO authenticated
-USING (public.has_role(auth.uid(), 'admin'))
-WITH CHECK (public.has_role(auth.uid(), 'admin'));
+-- 1. SCHOOLS: Drop public-readable policy, keep admin policy
+DROP POLICY "Anyone can view schools" ON public.schools;
+
+-- Authenticated users can see schools in their district
+CREATE POLICY "Authenticated users can view schools in their district"
+ON public.schools FOR SELECT TO authenticated
+USING (
+  user_belongs_to_school(auth.uid(), id)
+  OR admin_can_access_school(auth.uid(), district_id)
+  OR has_role(auth.uid(), 'admin')
+);
+
+-- 2. CLUB_MEMBERS: Drop public-readable policy
+DROP POLICY "Students can view club members" ON public.club_members;
+
+-- Members can see other members of clubs they belong to
+CREATE POLICY "Club members can view fellow members"
+ON public.club_members FOR SELECT TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM club_members cm
+    WHERE cm.club_id = club_members.club_id
+    AND cm.user_id = auth.uid()
+  )
+  OR EXISTS (
+    SELECT 1 FROM clubs
+    WHERE clubs.id = club_members.club_id
+    AND clubs.owner_id = auth.uid()
+  )
+  OR has_role(auth.uid(), 'admin')
+);
+
+-- 3. CLUBS: Drop both public-readable policies
+DROP POLICY "Anyone can browse clubs" ON public.clubs;
+DROP POLICY "Students can view all clubs" ON public.clubs;
+
+-- Authenticated users can view clubs (school-scoped or own clubs)
+CREATE POLICY "Authenticated users can view clubs"
+ON public.clubs FOR SELECT TO authenticated
+USING (true);
+-- Clubs are a discovery feature; restricting to authenticated
+-- users only (not public/anon) is sufficient
 ```
 
-**Audit remaining 11 tables:** For tables only written to by service-role edge functions (like `security_audit_log`, `backup_audit_log`, `safety_audit_log`, `aura_access_log`), the permissive policies are harmless since service role bypasses RLS. These will be reviewed and either tightened or documented as intentional.
+## What This Changes
 
----
+| Table | Before | After |
+|-------|--------|-------|
+| schools | Anyone on internet can read | Only logged-in users in same district/school |
+| club_members | Anyone on internet can read | Only fellow club members or club owner |
+| clubs | Anyone on internet can read | Only authenticated users (login required) |
 
-## Execution Order
+## What It Does NOT Break
+- Students can still browse and join clubs (they're authenticated)
+- Teachers can still manage club members (owner check preserved)
+- Admin access is preserved via `has_role` checks
+- Existing INSERT/UPDATE/DELETE policies are untouched
 
-1. Create shared CORS module
-2. Update all edge functions to use shared CORS (batch of parallel edits)
-3. Update config.toml (single file edit)
-4. Database migration for RLS fixes
-5. Deploy all edge functions
-6. Verify with test calls
-
-## Risk Assessment
-
-| Change | Risk | Reversible |
-|--------|------|------------|
-| Shared CORS module | None | Yes |
-| Edge function CORS imports | None | Yes |
-| verify_jwt = false | None (code auth remains) | Yes |
-| user_roles RLS fix | Low (verify admin creation flows) | Yes |
-| Audit log RLS review | None (service role bypasses) | Yes |
+## Technical Details
+- Single database migration with 4 DROP + 3 CREATE statements
+- No code changes needed -- all queries already run as authenticated users
+- The `club_members` SELECT policy uses a subquery on itself, but since it's a SELECT policy (not referencing `user_roles`), there's no infinite recursion risk
 
