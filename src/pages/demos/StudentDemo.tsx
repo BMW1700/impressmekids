@@ -7,7 +7,8 @@ import {
   Target, Flame, Menu, AlertCircle, Link as LinkIcon, Clock, Star, MapPin,
   MessageSquare, Phone, Mail, ExternalLink, UserCircle, Settings, Award,
   ChevronLeft, FileText, BarChart3, Play, Megaphone, Grid3X3, BookHeart,
-  UserCheck
+  UserCheck, Camera, Edit, CreditCard, Plus, MoreVertical, Pill, AlertTriangle,
+  Lock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -983,53 +984,124 @@ const DemoLinksSection = () => (
 );
 
 const DemoAccountSection = () => (
-  <div className="space-y-6 animate-fade-in">
+  <div className="space-y-6 animate-fade-in max-w-3xl">
     <DemoHighlight stepId="account-section" tooltip="Manage your profile details, change your avatar, adjust settings, and customize your dashboard experience.">
-      <h2 className="text-3xl font-black text-gradient-purple">My Account</h2>
-      <div className="grid md:grid-cols-2 gap-6 mt-4">
-        <Card variant="glass">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center"><span className="text-3xl">👩‍🎓</span></div>
-              <div>
-                <h3 className="font-bold text-lg">Demo Student</h3>
-                <p className="text-sm text-muted-foreground">5th Grade • Lincoln Elementary</p>
-                <p className="text-sm text-muted-foreground">demo.student@school.edu</p>
-              </div>
+      <h1 className="text-3xl font-bold text-foreground">Account Settings</h1>
+
+      {/* Profile Information */}
+      <Card className="mt-4">
+        <CardHeader><CardTitle>Profile Information</CardTitle></CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="h-20 w-20 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-3xl">👩‍🎓</div>
+            <div>
+              <Button variant="outline" size="sm"><Camera className="h-4 w-4 mr-2" /> Change Photo</Button>
+              <p className="text-xs text-muted-foreground mt-1">Max 5MB, JPG or PNG</p>
             </div>
-            <Button variant="outline" className="w-full"><UserCircle className="h-4 w-4 mr-2" /> Edit Profile</Button>
-          </CardContent>
-        </Card>
-        <Card variant="glass">
-          <CardContent className="p-6 space-y-4">
-            <h3 className="font-bold text-lg flex items-center gap-2"><Settings className="h-5 w-5" /> Settings</h3>
-            <div className="space-y-3 text-sm">
-              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30"><span>Language</span><Badge variant="outline">English</Badge></div>
-              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30"><span>Dark Mode</span><Badge variant="outline">Off</Badge></div>
-              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30"><span>Notifications</span><Badge variant="outline">On</Badge></div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2"><User className="h-4 w-4" /> Full Name</label>
+            <div className="p-3 border border-border rounded-lg bg-muted/50"><p className="text-foreground">Demo Student</p></div>
+            <p className="text-xs text-muted-foreground">Contact your school administrator to change your legal name</p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2"><User className="h-4 w-4" /> Preferred Name</label>
+            <div className="flex items-center gap-2">
+              <div className="p-3 border border-border rounded-lg bg-muted/50 flex-1"><p className="text-foreground">Demo</p></div>
+              <Button size="icon" variant="ghost"><Edit className="h-4 w-4" /></Button>
             </div>
-          </CardContent>
-        </Card>
-        <Card variant="glass" className="md:col-span-2">
-          <CardContent className="p-6">
-            <h3 className="font-bold text-lg flex items-center gap-2 mb-4"><Award className="h-5 w-5 text-amber-500" /> Achievements</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { name: "Bookworm", desc: "Read 10 passages", emoji: "📚", earned: true },
-                { name: "Streak Master", desc: "5-day login streak", emoji: "🔥", earned: true },
-                { name: "Quiz Whiz", desc: "Score 100% on a quiz", emoji: "🧠", earned: true },
-                { name: "Game Champion", desc: "Win 20 study games", emoji: "🏆", earned: false },
-              ].map((a) => (
-                <div key={a.name} className={cn("p-4 rounded-xl text-center border", a.earned ? "bg-amber-50 border-amber-200" : "bg-muted/30 border-border opacity-50")}>
-                  <span className="text-2xl mb-2 block">{a.emoji}</span>
-                  <p className="font-semibold text-sm">{a.name}</p>
-                  <p className="text-xs text-muted-foreground">{a.desc}</p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2"><Mail className="h-4 w-4" /> Email Address</label>
+            <div className="p-3 border border-border rounded-lg bg-muted/50"><p className="text-foreground">demo.student@school.edu</p></div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2"><CreditCard className="h-4 w-4" /> Student ID</label>
+            <div className="p-3 border border-border rounded-lg bg-muted/50 font-mono"><p className="text-foreground">STU-2025-0042</p></div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2"><User className="h-4 w-4" /> Grade</label>
+            <div className="p-3 border border-border rounded-lg bg-muted/50"><p className="text-foreground">Grade 5</p></div>
+            <p className="text-xs text-muted-foreground">Contact your teacher to update your grade level</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Emergency Contacts */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Emergency Contacts</CardTitle>
+          <Button size="sm"><Plus className="h-4 w-4 mr-2" /> Add Contact</Button>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {[
+              { name: "Sarah Student", relationship: "Mother", phone: "(555) 123-4567" },
+              { name: "John Student", relationship: "Father", phone: "(555) 987-6543" },
+            ].map((contact) => (
+              <div key={contact.name} className="p-4 border border-border rounded-lg bg-muted/30 relative">
+                <Button variant="ghost" size="icon" className="absolute top-2 right-2"><MoreVertical className="h-4 w-4" /></Button>
+                <div className="space-y-2 pr-8">
+                  <div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" /><p className="font-medium text-foreground">{contact.name}</p></div>
+                  <span className="text-sm text-muted-foreground">{contact.relationship}</span>
+                  <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" /><span className="text-sm text-primary">{contact.phone}</span></div>
                 </div>
-              ))}
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Medications */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2"><Pill className="h-5 w-5" /> Medications</CardTitle>
+          <Button size="sm"><Plus className="h-4 w-4 mr-2" /> Add Medication</Button>
+        </CardHeader>
+        <CardContent>
+          <div className="p-4 border border-border rounded-lg bg-muted/30 relative">
+            <Button variant="ghost" size="icon" className="absolute top-2 right-2"><MoreVertical className="h-4 w-4" /></Button>
+            <div className="space-y-2 pr-8">
+              <div className="flex items-center gap-2"><Pill className="h-4 w-4 text-muted-foreground" /><p className="font-medium text-foreground">Children's Zyrtec</p></div>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <span className="font-medium">5mg</span>
+                <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> Morning</span>
+              </div>
+              <p className="text-sm text-muted-foreground">For seasonal allergies</p>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Allergies */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5" /> Allergies</CardTitle>
+          <Button size="sm"><Plus className="h-4 w-4 mr-2" /> Add Allergy</Button>
+        </CardHeader>
+        <CardContent>
+          <div className="p-4 border border-border rounded-lg bg-muted/30 relative">
+            <Button variant="ghost" size="icon" className="absolute top-2 right-2"><MoreVertical className="h-4 w-4" /></Button>
+            <div className="space-y-2 pr-8">
+              <div className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-muted-foreground" /><p className="font-medium text-foreground">Peanuts</p></div>
+              <p className="text-sm text-muted-foreground">Severe – carries EpiPen</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Security */}
+      <Card>
+        <CardHeader><CardTitle>Security</CardTitle></CardHeader>
+        <CardContent>
+          <Button variant="outline" className="w-full"><Lock className="h-4 w-4 mr-2" /> Change Password</Button>
+        </CardContent>
+      </Card>
     </DemoHighlight>
   </div>
 );
