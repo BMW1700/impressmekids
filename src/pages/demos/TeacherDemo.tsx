@@ -51,7 +51,7 @@ const tourSteps: TourStep[] = [
   { id: "calendar-month-t", title: "Monthly Calendar", description: "See all your events at a glance. Color-coded dots show deadlines, meetings, and school events." },
   { id: "calendar-upcoming-t", title: "Upcoming Schedule", description: "A chronological list of everything coming up — deadlines, conferences, grading periods, and staff meetings." },
   { id: "directory-tab", title: "Directory", description: "Search for students, parents, and staff. View contact info and class rosters." },
-  { id: "actions-tab", title: "Teacher Tools", description: "Access study games, story library, AURA analytics, and AI model training from one place." },
+  { id: "actions-tab", title: "Teacher Tools", description: "Access Browse Games, AURA Analytics, Story Library, and Resources from one place." },
 ];
 
 // Teacher classroom tab config matching ClassroomTabsList
@@ -1137,13 +1137,13 @@ const TeacherDemo = () => {
               </TabsContent>
 
               <TabsContent value="actions" className="mt-6 space-y-4">
-                <DemoHighlight stepId="actions-tab" tooltip="Quick access to teacher power tools — browse study games, manage the story library, view AURA analytics, and configure AI models.">
+                <DemoHighlight stepId="actions-tab" tooltip="Quick access to teacher power tools — browse study games, manage the story library, view AURA analytics, and organize your resources.">
                   <div className="grid md:grid-cols-2 gap-6">
                     {[
-                      { icon: Sparkles, title: "Browse Games", desc: "Explore educational games to assign to students. Preview games before sharing them.", color: "from-indigo-500 to-violet-500" },
-                      { icon: BookOpen, title: "Story Library", desc: "Manage reading passages. Upload custom texts or choose from the built-in library.", color: "from-emerald-500 to-teal-500" },
-                      { icon: BarChart3, title: "AURA Analytics", desc: "View class-wide reading trends: WPM, accuracy, fluency scores, and pronunciation patterns.", color: "from-amber-500 to-orange-500" },
-                      { icon: Brain, title: "ML Model Training", desc: "Configure AI models for personalized learning paths and automated grading.", color: "from-purple-500 to-pink-500" },
+                      { icon: Sparkles, title: "Browse Games", desc: "Explore educational games for your classroom", color: "from-purple-500 to-violet-500", btn: "View Games" },
+                      { icon: BarChart3, title: "AURA Analytics", desc: "Track student pronunciation with AI", color: "from-amber-500 to-orange-500", btn: "View Analytics" },
+                      { icon: BookOpen, title: "Story Library", desc: "Create & manage reading stories", color: "from-orange-500 to-red-500", btn: "Manage Stories" },
+                      { icon: Sparkles, title: "Resources", desc: "Save and organize your personal teaching resources", color: "from-indigo-500 to-purple-500", btn: "View Resources" },
                     ].map((action) => (
                       <Card key={action.title} className="hover:shadow-lg transition-all cursor-pointer">
                         <CardContent className="p-6">
@@ -1154,7 +1154,7 @@ const TeacherDemo = () => {
                             <div>
                               <h3 className="font-bold text-lg">{action.title}</h3>
                               <p className="text-sm text-muted-foreground mt-1">{action.desc}</p>
-                              <Button size="sm" variant="outline" className="mt-3">Open <ChevronRight className="h-3 w-3 ml-1" /></Button>
+                              <Button size="sm" variant="outline" className="mt-3">{action.btn} <ChevronRight className="h-3 w-3 ml-1" /></Button>
                             </div>
                           </div>
                         </CardContent>
