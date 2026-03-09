@@ -156,6 +156,7 @@ const App = () => (
                   <Route path="/demos/teacher" element={<TeacherDemo />} />
                   <Route path="/demos/parent" element={<ParentDemo />} />
                   <Route path="/demos/admin" element={<AdminDemo />} />
+                  <Route path="/pricing" element={<Pricing />} />
 
                   {/* Protected routes */}
                   <Route element={<RequireAuth />}>
