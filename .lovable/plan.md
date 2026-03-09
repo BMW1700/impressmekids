@@ -1,58 +1,81 @@
 
 
-# Plan: Landing Page Redesign + RPG Enemy Sync Fix
+# Fix Critical Public Data Exposures
 
-## Two Problems Identified
+## Problem
+Four tables have `USING (true)` SELECT policies with `TO public` roles, meaning **anyone on the internet** (no login needed) can read all data:
 
-### Problem 1: RPG Enemy Desync Bug
-**Root cause found.** There are TWO places that build level data and map enemies:
-1. `src/pages/student/AuraPractice.tsx` (lines 394-435, 443-471) — has the **full** enemy map with all 20+ enemy types (cave_troll, storm_harpy, ink_kraken, void_phantom, etc.)
-2. `src/components/student/sections/AuraReadingSection.tsx` (lines 353-400) — has an **incomplete** enemy map with only 4 types (minion, guard, elite, boss), and also casts enemies to a narrow type `('minion' | 'guard' | 'elite' | 'boss' | 'dragon')[]`
+1. **`schools`** -- policy "Anyone can view schools" (`USING (true)`, `TO public`)
+2. **`club_members`** -- policy "Students can view club members" (`USING (true)`, `TO public`)
+3. **`clubs`** -- TWO open policies: "Anyone can browse clubs" and "Students can view all clubs" (both `USING (true)`, `TO public`)
 
-**Result:** Students entering RPG mode through different entry points (standalone AuraPractice page vs. embedded AuraReadingSection) see different enemies. In AuraReadingSection, any world 5-8 enemy falls back to `'minion'` because the map is incomplete.
+The `districts` table already has proper authenticated-only policies -- no fix needed there.
 
-**Fix:** Sync AuraReadingSection's enemy type cast and enemyMap to match AuraPractice exactly — include all 20+ enemy types in both the type assertion and the enemyMap.
+## Fix (Single Database Migration)
 
-### Problem 2: Landing Page — Not the Only Problem, But the Biggest
-The landing page is generic and undersells the product. Here is what will change:
+Drop the 4 dangerous open policies and replace them with scoped ones:
 
-**Hero Section** — Replace generic headline with the AURA differentiator:
-- New headline: **"The AI Reading Platform That Replaces $15/Student Assessments — For Free"**
-- New subheadline referencing AURA + SSVRS safety system
-- Keep "Try our Demo" + "Start Free Trial" CTAs
+```sql
+-- 1. SCHOOLS: Drop public-readable policy, keep admin policy
+DROP POLICY "Anyone can view schools" ON public.schools;
 
-**Stats Section** — Replace adjectives with concrete proof points:
-- "$0/student" vs "$10-15 with DIBELS"
-- "4 Proprietary ML Models" 
-- "5 Playable Games + RPG Campaign"
-- "538+ Security Policies"
+-- Authenticated users can see schools in their district
+CREATE POLICY "Authenticated users can view schools in their district"
+ON public.schools FOR SELECT TO authenticated
+USING (
+  user_belongs_to_school(auth.uid(), id)
+  OR admin_can_access_school(auth.uid(), district_id)
+  OR has_role(auth.uid(), 'admin')
+);
 
-**Testimonials Section** — Replace fake testimonials with a "Request a Pilot" CTA + demo video embed placeholder. Remove fabricated names entirely to avoid credibility damage.
+-- 2. CLUB_MEMBERS: Drop public-readable policy
+DROP POLICY "Students can view club members" ON public.club_members;
 
-**Research Section** — Already good, move it ABOVE the features section so differentiators appear first.
+-- Members can see other members of clubs they belong to
+CREATE POLICY "Club members can view fellow members"
+ON public.club_members FOR SELECT TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM club_members cm
+    WHERE cm.club_id = club_members.club_id
+    AND cm.user_id = auth.uid()
+  )
+  OR EXISTS (
+    SELECT 1 FROM clubs
+    WHERE clubs.id = club_members.club_id
+    AND clubs.owner_id = auth.uid()
+  )
+  OR has_role(auth.uid(), 'admin')
+);
 
-**Section reorder:**
-1. Hero (rewritten)
-2. Stats (concrete numbers)
-3. Research/Innovation (moved up — this is the differentiator)
-4. Features (existing, minor copy tweaks)
-5. Built for Every Role (existing)
-6. Trust & Security (existing)
-7. New "Request a Pilot" CTA (replaces fake testimonials)
-8. Footer CTA
+-- 3. CLUBS: Drop both public-readable policies
+DROP POLICY "Anyone can browse clubs" ON public.clubs;
+DROP POLICY "Students can view all clubs" ON public.clubs;
 
-## Files to Change
+-- Authenticated users can view clubs (school-scoped or own clubs)
+CREATE POLICY "Authenticated users can view clubs"
+ON public.clubs FOR SELECT TO authenticated
+USING (true);
+-- Clubs are a discovery feature; restricting to authenticated
+-- users only (not public/anon) is sufficient
+```
 
-| File | Change |
-|------|--------|
-| `src/components/student/sections/AuraReadingSection.tsx` | Fix enemy type cast (line 379) and add complete enemyMap (lines 394-399) matching AuraPractice.tsx |
-| `src/pages/Index.tsx` | Rewrite hero headline/subheadline, reorder sections (Research before Features), replace testimonial with pilot CTA |
-| `src/components/landing/StatsSection.tsx` | Replace generic stats with concrete numbers |
-| `src/components/landing/TestimonialSection.tsx` | Replace fake testimonials with "Request a Pilot" section + demo video placeholder |
+## What This Changes
 
-## What This Does NOT Change
-- No backend changes
-- No new routes or pages
-- No game mechanics changes
-- RPG campaign data (`campaignData.ts`) is already correct — the bug is purely in how the two entry points consume it
+| Table | Before | After |
+|-------|--------|-------|
+| schools | Anyone on internet can read | Only logged-in users in same district/school |
+| club_members | Anyone on internet can read | Only fellow club members or club owner |
+| clubs | Anyone on internet can read | Only authenticated users (login required) |
+
+## What It Does NOT Break
+- Students can still browse and join clubs (they're authenticated)
+- Teachers can still manage club members (owner check preserved)
+- Admin access is preserved via `has_role` checks
+- Existing INSERT/UPDATE/DELETE policies are untouched
+
+## Technical Details
+- Single database migration with 4 DROP + 3 CREATE statements
+- No code changes needed -- all queries already run as authenticated users
+- The `club_members` SELECT policy uses a subquery on itself, but since it's a SELECT policy (not referencing `user_roles`), there's no infinite recursion risk
 

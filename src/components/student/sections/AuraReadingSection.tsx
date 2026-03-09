@@ -376,7 +376,7 @@ export const AuraReadingSection = () => {
       return {
         id: levelData.id,
         story,
-        enemies: levelData.enemies as ('minion' | 'guard' | 'elite' | 'boss' | 'dragon')[],
+        enemies: levelData.enemies as CampaignLevel['enemies'],
         isBossLevel: levelData.isBossLevel,
         starsEarned: isCompleted ? 2 : 0,
         isCompleted,
@@ -396,6 +396,22 @@ export const AuraReadingSection = () => {
         guard: 'guard',
         elite: 'elite',
         boss: 'boss',
+        dragon: 'dragon',
+        ice_golem: 'ice_golem',
+        shadow_wraith: 'shadow_wraith',
+        stone_guardian: 'stone_guardian',
+        cave_troll: 'cave_troll',
+        crystal_spider: 'crystal_spider',
+        echo_wraith: 'echo_wraith',
+        storm_harpy: 'storm_harpy',
+        cloud_giant: 'cloud_giant',
+        zephyr: 'zephyr',
+        ink_kraken: 'ink_kraken',
+        reef_guardian: 'reef_guardian',
+        leviathan: 'leviathan',
+        void_phantom: 'void_phantom',
+        reality_shifter: 'reality_shifter',
+        word_eater: 'word_eater',
       };
       setRpgEnemyType(enemyMap[primaryEnemy] || 'minion');
       

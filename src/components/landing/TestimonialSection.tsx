@@ -1,67 +1,80 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Quote } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+import { ArrowRight, Play, BookOpen, Shield, Sparkles } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export const TestimonialSection = () => {
-  const testimonials = [
-    {
-      quote: "The AI-powered insights have completely transformed how I identify and support struggling readers. I now intervene weeks earlier than before.",
-      author: "Sarah Mitchell",
-      role: "3rd Grade Teacher",
-      school: "Lincoln Elementary",
-      initials: "SM"
-    },
-    {
-      quote: "Finally, a platform that actually understands the science of reading. The cross-modal analysis is unlike anything I've seen in 15 years of teaching.",
-      author: "James Rodriguez",
-      role: "Reading Specialist",
-      school: "Washington School District",
-      initials: "JR"
-    },
-    {
-      quote: "Our students are more engaged, and the data helps us prove what's working. The ML predictions have been remarkably accurate.",
-      author: "Dr. Emily Chen",
-      role: "Curriculum Director",
-      school: "Metro Public Schools",
-      initials: "EC"
-    }
-  ];
-
   return (
-    <section className="py-16 bg-background">
+    <section className="py-20 bg-background">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Trusted by Educators Nationwide
-          </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            See how teachers are using our AI-powered platform to accelerate student literacy
-          </p>
-        </div>
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <Badge variant="outline" className="mb-4 px-4 py-2 bg-gradient-primary text-white border-none">
+              See It In Action
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Experience What Makes Us Different
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Try our interactive demos — no sign-up required. See the AI reading assessment, RPG campaign, and classroom tools for yourself.
+            </p>
+          </div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-7xl mx-auto">
-          {testimonials.map((testimonial, index) => (
-            <Card key={index} className="hover:shadow-card transition-shadow duration-300">
-              <CardContent className="pt-6">
-                <Quote className="h-8 w-8 text-primary mb-4 opacity-50" />
-                <p className="text-muted-foreground mb-6 italic">
-                  "{testimonial.quote}"
-                </p>
-                <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarFallback className="bg-gradient-primary text-white">
-                      {testimonial.initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="font-semibold text-foreground">{testimonial.author}</div>
-                    <div className="text-sm text-muted-foreground">{testimonial.role}</div>
-                    <div className="text-xs text-muted-foreground">{testimonial.school}</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          {/* Demo Video Placeholder */}
+          <div className="relative rounded-2xl overflow-hidden bg-muted border-2 border-border mb-12 aspect-video flex items-center justify-center group hover:border-primary transition-colors cursor-pointer">
+            <div className="text-center">
+              <div className="inline-flex p-6 rounded-full bg-primary/10 mb-4 group-hover:bg-primary/20 transition-colors">
+                <Play className="h-12 w-12 text-primary" />
+              </div>
+              <p className="text-lg font-semibold text-foreground">Product Demo Coming Soon</p>
+              <p className="text-sm text-muted-foreground mt-1">Try the interactive demos below in the meantime</p>
+            </div>
+          </div>
+
+          {/* Value Props Grid */}
+          <div className="grid md:grid-cols-3 gap-6 mb-12">
+            <div className="text-center p-6 rounded-xl bg-card border border-border">
+              <BookOpen className="h-8 w-8 text-primary mx-auto mb-3" />
+              <h3 className="font-bold text-foreground mb-2">AURA Reading Assessment</h3>
+              <p className="text-sm text-muted-foreground">
+                AI-powered fluency analysis that replaces expensive standardized tests — at $0/student
+              </p>
+            </div>
+            <div className="text-center p-6 rounded-xl bg-card border border-border">
+              <Sparkles className="h-8 w-8 text-primary mx-auto mb-3" />
+              <h3 className="font-bold text-foreground mb-2">RPG Reading Campaign</h3>
+              <p className="text-sm text-muted-foreground">
+                Students defeat enemies by reading aloud — turning literacy practice into an adventure
+              </p>
+            </div>
+            <div className="text-center p-6 rounded-xl bg-card border border-border">
+              <Shield className="h-8 w-8 text-primary mx-auto mb-3" />
+              <h3 className="font-bold text-foreground mb-2">SSVRS Safety System</h3>
+              <p className="text-sm text-muted-foreground">
+                The only literacy platform with an integrated student safety & violence risk screening system
+              </p>
+            </div>
+          </div>
+
+          {/* CTA */}
+          <div className="text-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 text-lg px-8 py-6" asChild>
+                <Link to="/demos">
+                  Try Interactive Demos
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
+              <Button size="lg" variant="outline" className="text-lg px-8 py-6" asChild>
+                <Link to="/auth">
+                  Request a Pilot Program
+                </Link>
+              </Button>
+            </div>
+            <p className="mt-4 text-sm text-muted-foreground">
+              No credit card required • Free for up to 30 students • Setup in minutes
+            </p>
+          </div>
         </div>
       </div>
     </section>

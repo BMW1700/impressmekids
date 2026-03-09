@@ -57,7 +57,6 @@ const Index = () => {
   useEffect(() => {
     let cancelled = false;
 
-    // Never block the landing page forever
     const hardTimeout = window.setTimeout(() => {
       if (!cancelled) setIsCheckingAuth(false);
     }, 1500);
@@ -70,7 +69,6 @@ const Index = () => {
 
         if (!session || cancelled) return;
 
-        // User is authenticated, redirect to their dashboard
         const { data: profileData } = await supabase.rpc('get_user_profile', {
           _user_id: session.user.id,
         });
@@ -113,7 +111,8 @@ const Index = () => {
     );
   }
 
-  return <div className="min-h-screen flex flex-col">
+  return (
+    <div className="min-h-screen flex flex-col">
       <Header />
       
       {/* Hero Section */}
@@ -129,7 +128,7 @@ const Index = () => {
               custom={0.1}
             >
               <Badge variant="secondary" className="mb-6 px-4 py-2 text-sm font-semibold">
-                Complete Classroom Solution
+                AI-Powered Literacy • Safety • Classroom Management
               </Badge>
             </motion.div>
             
@@ -140,7 +139,9 @@ const Index = () => {
               animate="visible"
               custom={0.2}
             >
-              Your Complete Platform for <span className="text-secondary">Teaching & Learning</span>
+              The AI Reading Platform That Replaces{" "}
+              <span className="text-secondary">$15/Student Assessments</span>
+              {" "}— For Free
             </motion.h1>
             
             <motion.p 
@@ -150,7 +151,7 @@ const Index = () => {
               animate="visible"
               custom={0.4}
             >
-              A collaborative learning platform that empowers teachers, students, and parents to connect, communicate, and inspire academic growth in and beyond the classroom.
+              AURA uses 4 proprietary ML models to assess reading fluency, predict at-risk students, and deliver targeted interventions — all while students play an RPG adventure. Plus an integrated student safety system no other platform has.
             </motion.p>
 
             <motion.div 
@@ -162,7 +163,7 @@ const Index = () => {
             >
               <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary-light text-lg px-8 py-6" asChild>
                 <Link to="/demos">
-                  Try our Demo
+                  Try Interactive Demo
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
@@ -182,11 +183,11 @@ const Index = () => {
             >
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5" />
-                <span>One stop shop for all classrooms</span>
+                <span>Free for up to 30 students</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5" />
-                <span>Privacy-first design</span>
+                <span>FERPA & COPPA aligned</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5" />
@@ -197,8 +198,11 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Stats Section */}
+      {/* Stats Section — concrete proof points */}
       <StatsSection />
+
+      {/* Research & Innovation — differentiator, shown early */}
+      <ResearchSection />
 
       {/* Features Section */}
       <section className="py-20 bg-background">
@@ -229,7 +233,7 @@ const Index = () => {
               </div>
               <h3 className="text-2xl font-bold mb-3">Interactive Games</h3>
               <p className="text-muted-foreground">
-                Engage students with educational games, tournaments, and practice exercises that make learning fun and competitive
+                Engage students with educational games, tournaments, and an RPG reading campaign that makes literacy practice an adventure
               </p>
             </div>
             
@@ -266,10 +270,10 @@ const Index = () => {
               <h3 className="text-xl font-bold mb-3">For Teachers</h3>
               <ul className="text-sm text-muted-foreground space-y-2">
                 <li>• Create & grade assignments</li>
+                <li>• AI-powered reading assessments</li>
                 <li>• Track student progress</li>
-                <li>• Generate AI insights</li>
                 <li>• Manage classrooms</li>
-                <li>• Schedule events</li>
+                <li>• Early intervention alerts</li>
               </ul>
             </div>
             
@@ -279,11 +283,11 @@ const Index = () => {
               </div>
               <h3 className="text-xl font-bold mb-3">For Students</h3>
               <ul className="text-sm text-muted-foreground space-y-2">
-                <li>• Complete assignments</li>
-                <li>• Play educational games</li>
+                <li>• RPG reading adventure</li>
+                <li>• Educational games & tournaments</li>
                 <li>• Track your progress</li>
                 <li>• Practice reading skills</li>
-                <li>• View your calendar</li>
+                <li>• Earn XP & rewards</li>
               </ul>
             </div>
             
@@ -294,7 +298,7 @@ const Index = () => {
               <h3 className="text-xl font-bold mb-3">For Parents</h3>
               <ul className="text-sm text-muted-foreground space-y-2">
                 <li>• Monitor child progress</li>
-                <li>• View assignments</li>
+                <li>• View assignments & grades</li>
                 <li>• Connect with teachers</li>
                 <li>• Track schedules</li>
                 <li>• Get notifications</li>
@@ -309,38 +313,35 @@ const Index = () => {
               <ul className="text-sm text-muted-foreground space-y-2">
                 <li>• Manage school users</li>
                 <li>• Oversee classrooms</li>
-                <li>• Schedule events</li>
-                <li>• Handle backups</li>
-                <li>• View analytics</li>
+                <li>• District-wide analytics</li>
+                <li>• Safety system oversight</li>
+                <li>• Data backups & exports</li>
               </ul>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Research & Innovation Section */}
-      <ResearchSection />
-
-      {/* Testimonials */}
-      <TestimonialSection />
-
       {/* Trust & Security */}
       <TrustSection />
+
+      {/* See It In Action — replaces fake testimonials */}
+      <TestimonialSection />
 
       {/* CTA Section */}
       <section className="py-20 bg-gradient-hero text-white">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-3xl md:text-5xl font-bold mb-6">
-              Ready to Simplify Your Classroom?
+              Ready to Replace Expensive Assessments?
             </h2>
             <p className="text-xl mb-8 opacity-95 max-w-2xl mx-auto">
-              Join educators using our complete platform to manage assignments, engage students, and drive learning outcomes
+              Join educators using AURA to assess reading fluency, engage students through gaming, and identify at-risk learners — all for free
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary-light text-lg px-8 py-6" asChild>
                 <Link to="/demos">
-                  Schedule Demo
+                  Try Interactive Demo
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
@@ -349,13 +350,14 @@ const Index = () => {
               </Button>
             </div>
             <p className="mt-6 text-sm opacity-75">
-              No credit card required • Setup in minutes • Privacy-first platform
+              Free for up to 30 students • No credit card required • FERPA & COPPA aligned
             </p>
           </div>
         </div>
       </section>
 
       <Footer />
-    </div>;
+    </div>
+  );
 };
 export default Index;
