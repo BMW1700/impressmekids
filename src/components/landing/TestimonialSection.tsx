@@ -9,7 +9,7 @@ export const TestimonialSection = () => {
       <div className="container mx-auto px-4">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <Badge variant="outline" className="mb-4 px-4 py-2 bg-gradient-primary text-white border-none">
+            <Badge variant="outline" className="mb-4 px-4 py-2 bg-primary text-primary-foreground border-none">
               See It In Action
             </Badge>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
