@@ -26,7 +26,7 @@ export const TestimonialSection = () => {
               <BookOpen className="h-8 w-8 text-primary mx-auto mb-3" />
               <h3 className="font-bold text-foreground mb-2">AURA Reading Assessment</h3>
               <p className="text-sm text-muted-foreground">
-                AI-powered fluency analysis that replaces expensive standardized tests — at $0/student
+                AI-powered fluency analysis that replaces expensive standardized tests — at a fraction of the cost
               </p>
             </div>
             <div className="text-center p-6 rounded-xl bg-card border border-border">

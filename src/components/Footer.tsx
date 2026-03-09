@@ -49,9 +49,9 @@ export const Footer = () => {
             <Link to="/terms-of-service" className="text-muted-foreground hover:text-primary transition-colors">
               {t('footer.termsOfService')}
             </Link>
-            <a href="https://impressme.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-dark transition-colors font-medium">
+            <span className="text-primary font-medium">
               An ImpressMe Family App ✨
-            </a>
+            </span>
           </div>
         </div>
       </div>

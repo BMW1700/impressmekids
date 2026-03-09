@@ -481,10 +481,10 @@ const DistrictDashboard = () => {
                     <div className="font-semibold">District Report</div>
                     <div className="text-xs text-muted-foreground">Complete analytics summary</div>
                   </Button>
-                  <Button variant="outline" className="h-auto py-4 flex-col items-start" disabled>
+                  <Button variant="outline" className="h-auto py-4 flex-col items-start">
                     <BarChart3 className="h-5 w-5 mb-2" />
                     <div className="font-semibold">Performance Report</div>
-                    <div className="text-xs text-muted-foreground">Coming soon</div>
+                    <div className="text-xs text-muted-foreground">Student performance overview</div>
                   </Button>
                 </div>
               </CardContent>
