@@ -336,7 +336,7 @@ const Index = () => {
               Ready to Replace Expensive Assessments?
             </h2>
             <p className="text-xl mb-8 opacity-95 max-w-2xl mx-auto">
-              Join educators using AURA to assess reading fluency, engage students through gaming, and identify at-risk learners — all for free
+              Join educators using AURA to assess reading fluency, engage students through gaming, and identify at-risk learners — at a fraction of the cost
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary-light text-lg px-8 py-6" asChild>
@@ -346,11 +346,11 @@ const Index = () => {
                 </Link>
               </Button>
               <Button size="lg" variant="outline" className="bg-white text-primary hover:bg-white/90 text-lg px-8 py-6" asChild>
-                <Link to="/auth">Start Free Trial</Link>
+                <Link to="/auth">Request a Pilot</Link>
               </Button>
             </div>
             <p className="mt-6 text-sm opacity-75">
-              Free for up to 30 students • No credit card required • FERPA & COPPA aligned
+              $5–7/student/year • No credit card required • FERPA & COPPA aligned
             </p>
           </div>
         </div>
