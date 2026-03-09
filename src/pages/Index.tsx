@@ -278,8 +278,8 @@ const Index = () => {
             </div>
             
             <div className="p-6 rounded-xl bg-card hover:shadow-card transition-all duration-300">
-              <div className="inline-flex p-3 rounded-full bg-gradient-primary mb-4">
-                <BookOpen className="h-6 w-6 text-white" />
+              <div className="inline-flex p-3 rounded-full bg-primary/10 mb-4">
+                <BookOpen className="h-6 w-6 text-primary" />
               </div>
               <h3 className="text-xl font-bold mb-3">For Students</h3>
               <ul className="text-sm text-muted-foreground space-y-2">
