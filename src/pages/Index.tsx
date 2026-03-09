@@ -264,8 +264,8 @@ const Index = () => {
           
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
             <div className="p-6 rounded-xl bg-card hover:shadow-card transition-all duration-300">
-              <div className="inline-flex p-3 rounded-full bg-gradient-primary mb-4">
-                <GraduationCap className="h-6 w-6 text-white" />
+              <div className="inline-flex p-3 rounded-full bg-primary/10 mb-4">
+                <GraduationCap className="h-6 w-6 text-primary" />
               </div>
               <h3 className="text-xl font-bold mb-3">For Teachers</h3>
               <ul className="text-sm text-muted-foreground space-y-2">
