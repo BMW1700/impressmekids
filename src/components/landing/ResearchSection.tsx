@@ -50,7 +50,7 @@ export const ResearchSection = () => {
             <Card key={index} className="hover:shadow-purple transition-all duration-300 hover:scale-[1.02] border-2">
               <CardHeader>
                 <div className="flex items-start justify-between mb-4">
-                  <div className="p-3 rounded-lg bg-gradient-primary text-white">
+                  <div className="p-3 rounded-lg bg-primary/10 text-primary">
                     {innovation.icon}
                   </div>
                   <Badge variant="secondary" className="text-xs">

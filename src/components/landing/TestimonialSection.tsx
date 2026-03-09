@@ -61,7 +61,7 @@ export const TestimonialSection = () => {
               </Button>
             </div>
             <p className="mt-4 text-sm text-muted-foreground">
-              No credit card required • Free for up to 30 students • Setup in minutes
+              No credit card required • Pilot programs available • Setup in minutes
             </p>
           </div>
         </div>

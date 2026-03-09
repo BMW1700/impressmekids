@@ -1,5 +1,5 @@
 import { GameTile } from "@/components/GameTile";
-import { Zap, Trophy, BookOpen, Brain, Calculator, Globe, Hash, PawPrint, Map, Swords } from "lucide-react";
+import { Zap, Hash, PawPrint, Map, Swords } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export const GamesSection = () => {

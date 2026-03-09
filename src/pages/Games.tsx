@@ -3,7 +3,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { GameTile } from "@/components/GameTile";
 import { Button } from "@/components/ui/button";
-import { Zap, Trophy, BookOpen, Brain, Calculator, Globe, Hash, PawPrint, Map, Home, Swords } from "lucide-react";
+import { Zap, Hash, PawPrint, Map, Home, Swords } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
