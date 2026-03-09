@@ -82,6 +82,7 @@ const SecurityPortal = lazy(() => import("./pages/SecurityPortal"));
 const ClubDetail = lazy(() => import("./pages/teacher/ClubDetail"));
 const BrowseClubs = lazy(() => import("./pages/student/BrowseClubs"));
 const TeacherPersonalResources = lazy(() => import("./pages/teacher/TeacherPersonalResources"));
+const Pricing = lazy(() => import("./pages/Pricing"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
