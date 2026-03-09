@@ -20,17 +20,6 @@ export const TestimonialSection = () => {
             </p>
           </div>
 
-          {/* Demo Video Placeholder */}
-          <div className="relative rounded-2xl overflow-hidden bg-muted border-2 border-border mb-12 aspect-video flex items-center justify-center group hover:border-primary transition-colors cursor-pointer">
-            <div className="text-center">
-              <div className="inline-flex p-6 rounded-full bg-primary/10 mb-4 group-hover:bg-primary/20 transition-colors">
-                <Play className="h-12 w-12 text-primary" />
-              </div>
-              <p className="text-lg font-semibold text-foreground">Product Demo Coming Soon</p>
-              <p className="text-sm text-muted-foreground mt-1">Try the interactive demos below in the meantime</p>
-            </div>
-          </div>
-
           {/* Value Props Grid */}
           <div className="grid md:grid-cols-3 gap-6 mb-12">
             <div className="text-center p-6 rounded-xl bg-card border border-border">
