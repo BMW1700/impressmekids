@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight, Play, BookOpen, Shield, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpen, Shield, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export const TestimonialSection = () => {
