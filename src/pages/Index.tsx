@@ -183,15 +183,15 @@ const Index = () => {
             >
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5" />
-                <span>Free for up to 30 students</span>
+                <span>4 Proprietary ML Models</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5" />
-                <span>FERPA & COPPA aligned</span>
+                <span>FERPA & COPPA Aligned</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5" />
-                <span>No credit card required</span>
+                <span>Setup in Minutes</span>
               </div>
             </motion.div>
           </div>
