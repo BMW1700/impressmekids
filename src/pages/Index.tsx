@@ -218,8 +218,8 @@ const Index = () => {
           
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             <div className="text-center p-8 rounded-xl bg-card border-2 border-border hover:border-primary hover:shadow-card transition-all duration-300">
-              <div className="inline-flex p-4 rounded-full bg-gradient-primary mb-6">
-                <ClipboardList className="h-10 w-10 text-white" />
+              <div className="inline-flex p-4 rounded-full bg-primary/10 mb-6">
+                <ClipboardList className="h-10 w-10 text-primary" />
               </div>
               <h3 className="text-2xl font-bold mb-3">Assignment Management</h3>
               <p className="text-muted-foreground">
