@@ -376,7 +376,7 @@ export const AuraReadingSection = () => {
       return {
         id: levelData.id,
         story,
-        enemies: levelData.enemies as ('minion' | 'guard' | 'elite' | 'boss' | 'dragon')[],
+        enemies: levelData.enemies as CampaignLevel['enemies'],
         isBossLevel: levelData.isBossLevel,
         starsEarned: isCompleted ? 2 : 0,
         isCompleted,
