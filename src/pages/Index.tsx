@@ -169,7 +169,7 @@ const Index = () => {
               </Button>
               <Button size="lg" variant="outline" className="bg-white/10 text-white border-2 border-white hover:bg-white hover:text-primary text-lg px-8 py-6" asChild>
                 <Link to="/auth">
-                  Start Free Trial
+                  Get Started
                 </Link>
               </Button>
             </motion.div>
