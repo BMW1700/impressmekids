@@ -139,9 +139,9 @@ const Index = () => {
               animate="visible"
               custom={0.2}
             >
-              The AI Reading Platform That Replaces{" "}
-              <span className="text-secondary">$15/Student Assessments</span>
-              {" "}— For Free
+              Your Complete{" "}
+              <span className="text-secondary">AI-Powered Platform</span>
+              {" "}for Teaching & Learning
             </motion.h1>
             
             <motion.p 
