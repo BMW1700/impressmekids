@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight, Play, BookOpen, Shield, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpen, Shield, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export const TestimonialSection = () => {
@@ -9,7 +9,7 @@ export const TestimonialSection = () => {
       <div className="container mx-auto px-4">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <Badge variant="outline" className="mb-4 px-4 py-2 bg-gradient-primary text-white border-none">
+            <Badge variant="outline" className="mb-4 px-4 py-2 bg-primary text-primary-foreground border-none">
               See It In Action
             </Badge>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
@@ -18,17 +18,6 @@ export const TestimonialSection = () => {
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Try our interactive demos — no sign-up required. See the AI reading assessment, RPG campaign, and classroom tools for yourself.
             </p>
-          </div>
-
-          {/* Demo Video Placeholder */}
-          <div className="relative rounded-2xl overflow-hidden bg-muted border-2 border-border mb-12 aspect-video flex items-center justify-center group hover:border-primary transition-colors cursor-pointer">
-            <div className="text-center">
-              <div className="inline-flex p-6 rounded-full bg-primary/10 mb-4 group-hover:bg-primary/20 transition-colors">
-                <Play className="h-12 w-12 text-primary" />
-              </div>
-              <p className="text-lg font-semibold text-foreground">Product Demo Coming Soon</p>
-              <p className="text-sm text-muted-foreground mt-1">Try the interactive demos below in the meantime</p>
-            </div>
           </div>
 
           {/* Value Props Grid */}
@@ -67,12 +56,12 @@ export const TestimonialSection = () => {
               </Button>
               <Button size="lg" variant="outline" className="text-lg px-8 py-6" asChild>
                 <Link to="/auth">
-                  Request a Pilot Program
+                  Request a Pilot
                 </Link>
               </Button>
             </div>
             <p className="mt-4 text-sm text-muted-foreground">
-              No credit card required • Free for up to 30 students • Setup in minutes
+              No credit card required • Pilot programs available • Setup in minutes
             </p>
           </div>
         </div>

@@ -34,7 +34,7 @@ export const ResearchSection = () => {
     <section className="py-20 bg-background">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <Badge variant="outline" className="mb-4 px-4 py-2 bg-gradient-primary text-white border-none">
+          <Badge variant="outline" className="mb-4 px-4 py-2 bg-primary text-primary-foreground border-none">
             Revolutionary AI Technology
           </Badge>
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
@@ -50,7 +50,7 @@ export const ResearchSection = () => {
             <Card key={index} className="hover:shadow-purple transition-all duration-300 hover:scale-[1.02] border-2">
               <CardHeader>
                 <div className="flex items-start justify-between mb-4">
-                  <div className="p-3 rounded-lg bg-gradient-primary text-white">
+                  <div className="p-3 rounded-lg bg-primary/10 text-primary">
                     {innovation.icon}
                   </div>
                   <Badge variant="secondary" className="text-xs">

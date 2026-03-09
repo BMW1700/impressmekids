@@ -4,9 +4,9 @@ export const StatsSection = () => {
   const stats = [
     {
       icon: <DollarSign className="h-8 w-8" />,
-      value: "$0/Student",
-      label: "Reading Assessments",
-      description: "vs $10–15/student with DIBELS & mCLASS"
+      value: "$5–7/Year",
+      label: "Per Student",
+      description: "Up to 60% less than DIBELS & mCLASS"
     },
     {
       icon: <Brain className="h-8 w-8" />,
@@ -37,7 +37,7 @@ export const StatsSection = () => {
               key={index}
               className="text-center p-6 rounded-lg bg-card hover:shadow-card transition-all duration-300 hover:scale-105"
             >
-              <div className="inline-flex p-3 rounded-full bg-gradient-primary mb-4 text-white">
+              <div className="inline-flex p-3 rounded-full bg-primary/10 mb-4 text-primary">
                 {stat.icon}
               </div>
               <div className="text-3xl font-bold text-foreground mb-1">{stat.value}</div>

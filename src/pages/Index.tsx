@@ -139,9 +139,9 @@ const Index = () => {
               animate="visible"
               custom={0.2}
             >
-              The AI Reading Platform That Replaces{" "}
-              <span className="text-secondary">$15/Student Assessments</span>
-              {" "}— For Free
+              Your Complete{" "}
+              <span className="text-secondary">AI-Powered Platform</span>
+              {" "}for Teaching & Learning
             </motion.h1>
             
             <motion.p 
@@ -169,7 +169,7 @@ const Index = () => {
               </Button>
               <Button size="lg" variant="outline" className="bg-white/10 text-white border-2 border-white hover:bg-white hover:text-primary text-lg px-8 py-6" asChild>
                 <Link to="/auth">
-                  Start Free Trial
+                  Get Started
                 </Link>
               </Button>
             </motion.div>
@@ -183,15 +183,15 @@ const Index = () => {
             >
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5" />
-                <span>Free for up to 30 students</span>
+                <span>4 Proprietary ML Models</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5" />
-                <span>FERPA & COPPA aligned</span>
+                <span>FERPA & COPPA Aligned</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5" />
-                <span>No credit card required</span>
+                <span>Setup in Minutes</span>
               </div>
             </motion.div>
           </div>
@@ -218,8 +218,8 @@ const Index = () => {
           
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             <div className="text-center p-8 rounded-xl bg-card border-2 border-border hover:border-primary hover:shadow-card transition-all duration-300">
-              <div className="inline-flex p-4 rounded-full bg-gradient-primary mb-6">
-                <ClipboardList className="h-10 w-10 text-white" />
+              <div className="inline-flex p-4 rounded-full bg-primary/10 mb-6">
+                <ClipboardList className="h-10 w-10 text-primary" />
               </div>
               <h3 className="text-2xl font-bold mb-3">Assignment Management</h3>
               <p className="text-muted-foreground">
@@ -228,8 +228,8 @@ const Index = () => {
             </div>
             
             <div className="text-center p-8 rounded-xl bg-card border-2 border-border hover:border-primary hover:shadow-card transition-all duration-300">
-              <div className="inline-flex p-4 rounded-full bg-gradient-primary mb-6">
-                <Trophy className="h-10 w-10 text-white" />
+              <div className="inline-flex p-4 rounded-full bg-primary/10 mb-6">
+                <Trophy className="h-10 w-10 text-primary" />
               </div>
               <h3 className="text-2xl font-bold mb-3">Interactive Games</h3>
               <p className="text-muted-foreground">
@@ -238,8 +238,8 @@ const Index = () => {
             </div>
             
             <div className="text-center p-8 rounded-xl bg-card border-2 border-border hover:border-primary hover:shadow-card transition-all duration-300">
-              <div className="inline-flex p-4 rounded-full bg-gradient-primary mb-6">
-                <Users2 className="h-10 w-10 text-white" />
+              <div className="inline-flex p-4 rounded-full bg-primary/10 mb-6">
+                <Users2 className="h-10 w-10 text-primary" />
               </div>
               <h3 className="text-2xl font-bold mb-3">Communication Hub</h3>
               <p className="text-muted-foreground">
@@ -264,8 +264,8 @@ const Index = () => {
           
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
             <div className="p-6 rounded-xl bg-card hover:shadow-card transition-all duration-300">
-              <div className="inline-flex p-3 rounded-full bg-gradient-primary mb-4">
-                <GraduationCap className="h-6 w-6 text-white" />
+              <div className="inline-flex p-3 rounded-full bg-primary/10 mb-4">
+                <GraduationCap className="h-6 w-6 text-primary" />
               </div>
               <h3 className="text-xl font-bold mb-3">For Teachers</h3>
               <ul className="text-sm text-muted-foreground space-y-2">
@@ -278,8 +278,8 @@ const Index = () => {
             </div>
             
             <div className="p-6 rounded-xl bg-card hover:shadow-card transition-all duration-300">
-              <div className="inline-flex p-3 rounded-full bg-gradient-primary mb-4">
-                <BookOpen className="h-6 w-6 text-white" />
+              <div className="inline-flex p-3 rounded-full bg-primary/10 mb-4">
+                <BookOpen className="h-6 w-6 text-primary" />
               </div>
               <h3 className="text-xl font-bold mb-3">For Students</h3>
               <ul className="text-sm text-muted-foreground space-y-2">
@@ -292,8 +292,8 @@ const Index = () => {
             </div>
             
             <div className="p-6 rounded-xl bg-card hover:shadow-card transition-all duration-300">
-              <div className="inline-flex p-3 rounded-full bg-gradient-primary mb-4">
-                <MessageSquare className="h-6 w-6 text-white" />
+              <div className="inline-flex p-3 rounded-full bg-primary/10 mb-4">
+                <MessageSquare className="h-6 w-6 text-primary" />
               </div>
               <h3 className="text-xl font-bold mb-3">For Parents</h3>
               <ul className="text-sm text-muted-foreground space-y-2">
@@ -306,8 +306,8 @@ const Index = () => {
             </div>
             
             <div className="p-6 rounded-xl bg-card hover:shadow-card transition-all duration-300">
-              <div className="inline-flex p-3 rounded-full bg-gradient-primary mb-4">
-                <LayoutDashboard className="h-6 w-6 text-white" />
+              <div className="inline-flex p-3 rounded-full bg-primary/10 mb-4">
+                <LayoutDashboard className="h-6 w-6 text-primary" />
               </div>
               <h3 className="text-xl font-bold mb-3">For Admins</h3>
               <ul className="text-sm text-muted-foreground space-y-2">
@@ -336,7 +336,7 @@ const Index = () => {
               Ready to Replace Expensive Assessments?
             </h2>
             <p className="text-xl mb-8 opacity-95 max-w-2xl mx-auto">
-              Join educators using AURA to assess reading fluency, engage students through gaming, and identify at-risk learners — all for free
+              Join educators using AURA to assess reading fluency, engage students through gaming, and identify at-risk learners — at a fraction of the cost
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary-light text-lg px-8 py-6" asChild>
@@ -346,11 +346,11 @@ const Index = () => {
                 </Link>
               </Button>
               <Button size="lg" variant="outline" className="bg-white text-primary hover:bg-white/90 text-lg px-8 py-6" asChild>
-                <Link to="/auth">Start Free Trial</Link>
+                <Link to="/auth">Request a Pilot</Link>
               </Button>
             </div>
             <p className="mt-6 text-sm opacity-75">
-              Free for up to 30 students • No credit card required • FERPA & COPPA aligned
+              $5–7/student/year • No credit card required • FERPA & COPPA aligned
             </p>
           </div>
         </div>

@@ -1,75 +1,81 @@
 
 
-# Audit & Plan: Superintendent-Ready ImpressMe Kids
+# Fix Critical Public Data Exposures
 
-## 1. LANDING PAGE VERDICT: REVERT THE HERO
+## Problem
+Four tables have `USING (true)` SELECT policies with `TO public` roles, meaning **anyone on the internet** (no login needed) can read all data:
 
-**Yes, revert the hero section.** The current headline says "Replaces $15/Student Assessments — For Free" which is factually wrong since your product is NOT free. The bottom CTA also says "all for free." This will immediately destroy credibility with a superintendent.
+1. **`schools`** -- policy "Anyone can view schools" (`USING (true)`, `TO public`)
+2. **`club_members`** -- policy "Students can view club members" (`USING (true)`, `TO public`)
+3. **`clubs`** -- TWO open policies: "Anyone can browse clubs" and "Students can view all clubs" (both `USING (true)`, `TO public`)
 
-**Plan:** Revert the hero headline, subheadline, and CTA trust badges back to the previous version (before the "For Free" changes). Keep the structural improvements that ARE better:
-- Stats section with concrete numbers (but fix "$0/Student" to your real pricing)
-- Research section placement (above generic features) — this is genuinely better
-- Testimonial section replacement (no fake names) — this is genuinely better
+The `districts` table already has proper authenticated-only policies -- no fix needed there.
 
-**Specific changes:**
-- `src/pages/Index.tsx`: Revert hero to something accurate like "Your Complete AI-Powered Platform for Teaching & Learning" or lead with the value prop without the "free" claim. Remove "Free for up to 30 students" and "all for free" from the bottom CTA. Replace "Start Free Trial" with "Get Started" or "Request a Pilot."
-- `src/components/landing/StatsSection.tsx`: Change "$0/Student" to your actual price point or a comparative stat like "Up to 60% Less Than DIBELS"
-- Bottom CTA section: Remove all "free" language, replace with "Schedule a Demo" / "Request a Pilot"
+## Fix (Single Database Migration)
 
-## 2. RPG ENEMY SYNC — VERIFIED FIXED
+Drop the 4 dangerous open policies and replace them with scoped ones:
 
-Both `AuraPractice.tsx` and `AuraReadingSection.tsx` now share the complete 20+ enemy type map. No further action needed.
+```sql
+-- 1. SCHOOLS: Drop public-readable policy, keep admin policy
+DROP POLICY "Anyone can view schools" ON public.schools;
 
-## 3. CRITICAL ISSUES FOR SUPERINTENDENT PRESENTATION
+-- Authenticated users can see schools in their district
+CREATE POLICY "Authenticated users can view schools in their district"
+ON public.schools FOR SELECT TO authenticated
+USING (
+  user_belongs_to_school(auth.uid(), id)
+  OR admin_can_access_school(auth.uid(), district_id)
+  OR has_role(auth.uid(), 'admin')
+);
 
-### A. Remove ALL "Coming Soon" Game Tiles (HIGH PRIORITY)
-`src/pages/Games.tsx` has 5 games marked `isComingSoon` (Math Race, Word Builder, Science Sprint, Geography Quest, Spelling Bee). A superintendent seeing half the games as vaporware will question product maturity. **Remove them entirely** — only show the 5 playable games.
+-- 2. CLUB_MEMBERS: Drop public-readable policy
+DROP POLICY "Students can view club members" ON public.club_members;
 
-### B. No Pricing Page (HIGH PRIORITY)
-There is no `/pricing` route anywhere. A superintendent WILL ask "how much does this cost?" You need a pricing page with tiers:
-- Pilot/Trial tier (free for evaluation)
-- School tier (per-student/year)
-- District tier (contact us)
+-- Members can see other members of clubs they belong to
+CREATE POLICY "Club members can view fellow members"
+ON public.club_members FOR SELECT TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM club_members cm
+    WHERE cm.club_id = club_members.club_id
+    AND cm.user_id = auth.uid()
+  )
+  OR EXISTS (
+    SELECT 1 FROM clubs
+    WHERE clubs.id = club_members.club_id
+    AND clubs.owner_id = auth.uid()
+  )
+  OR has_role(auth.uid(), 'admin')
+);
 
-### C. "Product Demo Coming Soon" Video Placeholder
-`TestimonialSection.tsx` has a big video placeholder that says "Product Demo Coming Soon." For a superintendent presentation, either have a real video or remove this section entirely. A "coming soon" video on a product you're trying to sell is a red flag.
+-- 3. CLUBS: Drop both public-readable policies
+DROP POLICY "Anyone can browse clubs" ON public.clubs;
+DROP POLICY "Students can view all clubs" ON public.clubs;
 
-### D. Design Mandate Violations
-Multiple icon backgrounds still use `bg-gradient-primary` (found in ResearchSection, Features section, Built for Every Role section, StatsSection). Your design mandate says solid colors with subtle shadows. Fix these for visual consistency.
+-- Authenticated users can view clubs (school-scoped or own clubs)
+CREATE POLICY "Authenticated users can view clubs"
+ON public.clubs FOR SELECT TO authenticated
+USING (true);
+-- Clubs are a discovery feature; restricting to authenticated
+-- users only (not public/anon) is sufficient
+```
 
-### E. No Teacher Onboarding Wizard
-When the superintendent asks "what does a teacher see on day one?" — the answer is an empty dashboard with no guidance. You need at minimum a welcome state or "Create your first classroom" prompt for empty dashboards.
+## What This Changes
 
-### F. Footer Says "An ImpressMe Family App"
-The footer links to `impressme.com` and says "An ImpressMe Family App ✨". Make sure this parent brand exists and looks professional. If `impressme.com` is a dead link, the superintendent will notice.
+| Table | Before | After |
+|-------|--------|-------|
+| schools | Anyone on internet can read | Only logged-in users in same district/school |
+| club_members | Anyone on internet can read | Only fellow club members or club owner |
+| clubs | Anyone on internet can read | Only authenticated users (login required) |
 
-## 4. PRIORITY ORDER (40 minutes)
+## What It Does NOT Break
+- Students can still browse and join clubs (they're authenticated)
+- Teachers can still manage club members (owner check preserved)
+- Admin access is preserved via `has_role` checks
+- Existing INSERT/UPDATE/DELETE policies are untouched
 
-Given your time constraint, here's what to tackle:
-
-| Priority | Task | Time Est |
-|----------|------|----------|
-| **P0** | Revert hero headline to accurate copy, fix all "free" claims | 5 min |
-| **P0** | Remove 5 "Coming Soon" game tiles from Games.tsx | 2 min |
-| **P0** | Remove "Product Demo Coming Soon" video placeholder (or replace with screenshots) | 3 min |
-| **P1** | Fix `bg-gradient-primary` icon backgrounds → solid colors | 10 min |
-| **P1** | Create `/pricing` page with 3 tiers | 15 min |
-| **P2** | Add empty-state welcome message to teacher dashboard | 10 min |
-
-## 5. WHAT'S ACTUALLY GOOD AND READY
-
-- **Auth system**: Robust with COPPA age verification, parental consent, district codes, role-based routing — enterprise-grade
-- **Teacher dashboard**: Full tabs (classrooms, AURA analytics, ML training, calendar, directory, resources)
-- **Student dashboard**: 13 sections including AURA reading, games, gradebook, safety, clubs
-- **Parent dashboard**: Child monitoring, safety, data privacy, notification settings, PWA install
-- **Admin dashboard**: Security, safety drills, calendar, school settings
-- **District dashboard**: Multi-school oversight
-- **5 playable games**: TriviaTastic, Name That Animal, Number Maker, US States Quiz, Tug of War
-- **RPG campaign**: 9 worlds, 21 enemy types, working battle system
-- **Safety system (SSVRS)**: Complete with drill monitoring, parent responses, visitor management
-- **Demo pages**: 4 role-specific interactive demos (student, teacher, parent, admin)
-- **Security**: 538+ RLS policies, FERPA/COPPA alignment
-- **i18n**: Multilingual support
-
-**Bottom line:** The product itself is superintendent-ready. The landing page and "Coming Soon" elements are not. Fix those and you're presenting a polished, professional platform.
+## Technical Details
+- Single database migration with 4 DROP + 3 CREATE statements
+- No code changes needed -- all queries already run as authenticated users
+- The `club_members` SELECT policy uses a subquery on itself, but since it's a SELECT policy (not referencing `user_roles`), there's no infinite recursion risk
 
