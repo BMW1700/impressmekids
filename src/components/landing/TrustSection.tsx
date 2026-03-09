@@ -16,12 +16,12 @@ export const TrustSection = () => {
     {
       icon: <FileCheck className="h-6 w-6" />,
       title: "Enterprise Security",
-      description: "Industry-standard security practices"
+      description: "538+ row-level security policies"
     },
     {
       icon: <Eye className="h-6 w-6" />,
       title: "Privacy First",
-      description: "Data protection by design"
+      description: "Data encrypted in transit and at rest"
     }
   ];
 
@@ -57,7 +57,7 @@ export const TrustSection = () => {
 
         <div className="mt-12 text-center">
           <p className="text-sm text-muted-foreground">
-            All student data is encrypted in transit and at rest. We never sell or share student information. Working toward full FERPA, COPPA, and SOC 2 certification.
+            All student data is encrypted in transit and at rest. We never sell or share student information.
           </p>
         </div>
       </div>

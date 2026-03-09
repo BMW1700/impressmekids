@@ -1,30 +1,30 @@
-import { ClipboardCheck, Gamepad2, Users, Sparkles } from "lucide-react";
+import { DollarSign, Brain, Gamepad2, ShieldCheck } from "lucide-react";
 
 export const StatsSection = () => {
   const stats = [
     {
-      icon: <ClipboardCheck className="h-8 w-8" />,
-      value: "All-in-One",
-      label: "Platform",
-      description: "Complete classroom solution"
+      icon: <DollarSign className="h-8 w-8" />,
+      value: "$0/Student",
+      label: "Reading Assessments",
+      description: "vs $10–15/student with DIBELS & mCLASS"
+    },
+    {
+      icon: <Brain className="h-8 w-8" />,
+      value: "4",
+      label: "Proprietary ML Models",
+      description: "Built in-house, not available anywhere else"
     },
     {
       icon: <Gamepad2 className="h-8 w-8" />,
-      value: "Interactive",
-      label: "Learning Games",
-      description: "Engaging educational tools"
+      value: "5 Games +",
+      label: "RPG Campaign",
+      description: "Students learn through play & adventure"
     },
     {
-      icon: <Users className="h-8 w-8" />,
-      value: "Teachers &",
-      label: "Students",
-      description: "Built for everyone"
-    },
-    {
-      icon: <Sparkles className="h-8 w-8" />,
-      value: "AI-Powered",
-      label: "Literacy Tools",
-      description: "Advanced reading analysis"
+      icon: <ShieldCheck className="h-8 w-8" />,
+      value: "538+",
+      label: "Security Policies",
+      description: "Enterprise-grade data protection"
     }
   ];
 
