@@ -50,46 +50,6 @@ const games = [
     icon: Swords,
     isAvailable: true,
   },
-  {
-    id: 'math_race',
-    title: 'Math Race',
-    description: 'Solve math problems faster than opponents. Perfect for arithmetic skills!',
-    gradeRange: 'Grades K-8',
-    icon: Calculator,
-    isAvailable: false,
-  },
-  {
-    id: 'word_builder',
-    title: 'Word Builder',
-    description: 'Create words and outscore the competition in this vocabulary challenge!',
-    gradeRange: 'Grades 1-8',
-    icon: BookOpen,
-    isAvailable: false,
-  },
-  {
-    id: 'science_sprint',
-    title: 'Science Sprint',
-    description: 'Race through science questions and learn amazing facts about our world!',
-    gradeRange: 'Grades 3-12',
-    icon: Brain,
-    isAvailable: false,
-  },
-  {
-    id: 'geography_quest',
-    title: 'Geography Quest',
-    description: 'Explore the world through fun geography challenges and trivia!',
-    gradeRange: 'Grades 2-10',
-    icon: Globe,
-    isAvailable: false,
-  },
-  {
-    id: 'spelling_bee',
-    title: 'Spelling Bee',
-    description: 'Show off spelling skills in head-to-head spelling competitions!',
-    gradeRange: 'Grades 1-8',
-    icon: Trophy,
-    isAvailable: false,
-  },
 ];
 
 export const SelectGameModal = ({ open, onOpenChange, onSelectGame }: SelectGameModalProps) => {
