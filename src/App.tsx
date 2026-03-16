@@ -138,7 +138,8 @@ const App = () => (
             <Sonner />
             <PushNotificationPrompt />
             <SentryUserTracker />
-          <BrowserRouter>
+            <BrowserRouter>
+            <DemoGate>
             <RouteAwareProviders>
               <OfflineIndicator />
               <Suspense fallback={<PageLoader />}>
