@@ -226,6 +226,7 @@ const App = () => (
                 </Routes>
               </Suspense>
               </RouteAwareProviders>
+            </DemoGate>
             </BrowserRouter>
           </TooltipProvider>
         </AuthProvider>
