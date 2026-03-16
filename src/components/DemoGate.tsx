@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Lock } from "lucide-react";
 
 const DEMO_USERNAME = "Brecon69";
-const DEMO_PASSWORD = "Jordansucks22";
+const DEMO_PASSWORD = "Jadon4769$";
 const STORAGE_KEY = "imk_demo_access";
 
 export function DemoGate({ children }: { children: ReactNode }) {
