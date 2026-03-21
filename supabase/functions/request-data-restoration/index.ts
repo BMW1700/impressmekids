@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
     // Send email notification
     try {
       const { error: emailError } = await resend.emails.send({
-        from: 'Impress Me Kids Backups <onboarding@resend.dev>',
+        from: 'NabuLearn Backups <onboarding@resend.dev>',
         to: ['admin@meapphq.com'],
         subject: `🚨 Data Restoration Request - ${requestData.urgency.toUpperCase()} Priority`,
         html: `
@@ -206,7 +206,7 @@ Deno.serve(async (req) => {
             <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 24px 0;">
             
             <p style="color: #6B7280; font-size: 12px;">
-              This is an automated notification from the Impress Me Kids backup system.<br>
+              This is an automated notification from the NabuLearn backup system.<br>
               Request ID: ${request.id}<br>
               Timestamp: ${new Date().toISOString()}
             </p>

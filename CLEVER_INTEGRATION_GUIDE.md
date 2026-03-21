@@ -1,4 +1,4 @@
-# Clever Integration Setup Guide for Impress Me Kids
+# Clever Integration Setup Guide for NabuLearn
 
 ## Overview
 Clever is the **#1 Student Information System (SIS) integration** used by K-12 schools in the US. It provides:
@@ -35,7 +35,7 @@ Clever is the **#1 Student Information System (SIS) integration** used by K-12 s
 
 1. In Clever dashboard, click **"Create a new application"**
 2. Fill in application details:
-   - **Application Name:** Impress Me Kids
+   - **Application Name:** NabuLearn
    - **Description:** AI-powered literacy and assessment platform for K-12 schools
    - **Icon:** Upload your logo (optional)
    - **Category:** Educational Platform
@@ -229,7 +229,7 @@ Before pitching to schools:
 
 1. **Add "Install via Clever" button** to your marketing site
 2. **Create Clever integration demo video** for sales pitches
-3. **Document for school IT:** "How to install Impress Me Kids via Clever"
+3. **Document for school IT:** "How to install NabuLearn via Clever"
 4. **Add "Clever Certified" badge** to your homepage (after certification)
 
 ---

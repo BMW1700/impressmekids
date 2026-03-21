@@ -12,7 +12,7 @@ const tiers = [
     icon: <GraduationCap className="h-6 w-6 text-primary" />,
     price: "Free",
     priceDetail: "Up to 30 students",
-    description: "Perfect for evaluating ImpressMe Kids before a district-wide rollout",
+    description: "Perfect for evaluating NabuLearn before a district-wide rollout",
     features: [
       "Full AURA reading assessment",
       "RPG reading campaign",
@@ -151,12 +151,12 @@ const Pricing = () => {
           {/* Comparison callout */}
           <div className="bg-muted/50 rounded-2xl p-8 md:p-12 max-w-4xl mx-auto text-center">
             <h2 className="text-2xl md:text-3xl font-bold mb-4">
-              Why Schools Choose ImpressMe Kids
+              Why Schools Choose NabuLearn
             </h2>
             <div className="grid sm:grid-cols-3 gap-6 mt-8">
               <div>
                 <div className="text-3xl font-bold text-primary mb-1">$5–7</div>
-                <div className="text-sm text-muted-foreground">ImpressMe per student/year</div>
+                <div className="text-sm text-muted-foreground">NabuLearn per student/year</div>
               </div>
               <div>
                 <div className="text-3xl font-bold text-muted-foreground mb-1">$10–15</div>

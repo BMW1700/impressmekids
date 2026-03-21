@@ -290,7 +290,7 @@ const translations: Record<Language, Translations> = {
     'parentRequestAccess.childEmailPlaceholder': 'student@school.edu',
     'parentRequestAccess.messageLabel': 'Message to Teacher (Optional)',
     'parentRequestAccess.messagePlaceholder':
-      "Hello, I am [Child's Name]'s parent. I would like access to view their progress on ImpressMe Kids.",
+      "Hello, I am [Child's Name]'s parent. I would like access to view their progress on NabuLearn.",
     'parentRequestAccess.sending': 'Sending Request...',
     'parentRequestAccess.send': 'Send Access Request',
 
@@ -345,7 +345,7 @@ const translations: Record<Language, Translations> = {
     // Footer
     'footer.privacyPolicy': 'Privacy Policy',
     'footer.termsOfService': 'Terms of Service',
-    'footer.copyright': '© {year} ImpressMe Family App. All rights reserved.',
+    'footer.copyright': '© {year} NabuLearn. All rights reserved.',
   },
   es: {
     // Navigation
@@ -617,7 +617,7 @@ const translations: Record<Language, Translations> = {
     'parentRequestAccess.childEmailPlaceholder': 'estudiante@escuela.edu',
     'parentRequestAccess.messageLabel': 'Mensaje al Docente (Opcional)',
     'parentRequestAccess.messagePlaceholder':
-      'Hola, soy el/la padre/madre de [Nombre del Niño/a]. Me gustaría acceder para ver su progreso en ImpressMe Kids.',
+      'Hola, soy el/la padre/madre de [Nombre del Niño/a]. Me gustaría acceder para ver su progreso en NabuLearn.',
     'parentRequestAccess.sending': 'Enviando solicitud...',
     'parentRequestAccess.send': 'Enviar Solicitud de Acceso',
 
@@ -672,7 +672,7 @@ const translations: Record<Language, Translations> = {
     // Footer
     'footer.privacyPolicy': 'Política de Privacidad',
     'footer.termsOfService': 'Términos de Servicio',
-    'footer.copyright': '© {year} ImpressMe Family App. Todos los derechos reservados.',
+    'footer.copyright': '© {year} NabuLearn. Todos los derechos reservados.',
   },
   fr: {
     // Navigation
@@ -945,7 +945,7 @@ const translations: Record<Language, Translations> = {
     'parentRequestAccess.childEmailPlaceholder': 'eleve@ecole.fr',
     'parentRequestAccess.messageLabel': "Message à l’Enseignant (Optionnel)",
     'parentRequestAccess.messagePlaceholder':
-      "Bonjour, je suis le parent de [Nom de l’Enfant]. Je souhaite accéder à ses progrès sur ImpressMe Kids.",
+      "Bonjour, je suis le parent de [Nom de l’Enfant]. Je souhaite accéder à ses progrès sur NabuLearn.",
     'parentRequestAccess.sending': 'Envoi de la demande...',
     'parentRequestAccess.send': 'Envoyer la Demande d’Accès',
 
@@ -1000,7 +1000,7 @@ const translations: Record<Language, Translations> = {
     // Footer
     'footer.privacyPolicy': 'Politique de Confidentialité',
     'footer.termsOfService': "Conditions d'Utilisation",
-    'footer.copyright': '© {year} ImpressMe Family App. Tous droits réservés.',
+    'footer.copyright': '© {year} NabuLearn. Tous droits réservés.',
   },
 };
 

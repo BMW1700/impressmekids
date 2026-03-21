@@ -836,7 +836,7 @@ const Auth = () => {
             <div className="rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 p-3 shadow-2xl">
               <img 
                 src={logo} 
-                alt="ImpressMe Kids" 
+                alt="NabuLearn" 
                 className="h-16 w-16 rounded-lg"
               />
             </div>
@@ -848,7 +848,7 @@ const Auth = () => {
           <h1 className="text-3xl md:text-4xl font-semibold text-white mb-3 tracking-tight">
             Welcome to{" "}
             <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-amber-400 bg-clip-text text-transparent">
-              ImpressMe Kids
+              NabuLearn
             </span>
           </h1>
           <p className="text-white/50 text-base">

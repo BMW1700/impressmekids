@@ -40,7 +40,7 @@ export const Footer = () => {
         {/* Footer Links */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} ImpressMe Kids. {t('footer.copyright').replace('© {year} ImpressMe Family App. ', '')}
+            © {new Date().getFullYear()} NabuLearn. {t('footer.copyright').replace('© {year} NabuLearn. ', '')}
           </div>
           <div className="flex items-center gap-4 text-sm">
             <Link to="/privacy-policy" className="text-muted-foreground hover:text-primary transition-colors">
@@ -50,7 +50,7 @@ export const Footer = () => {
               {t('footer.termsOfService')}
             </Link>
             <span className="text-primary font-medium">
-              An ImpressMe Family App ✨
+              Powered by NabuLearn ✨
             </span>
           </div>
         </div>

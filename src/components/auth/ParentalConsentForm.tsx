@@ -176,7 +176,7 @@ export function ParentalConsentForm({ open, studentEmail, signupData, onConsentR
                 disabled={isLoading}
               />
               <label htmlFor="dataCollection" className="text-sm leading-relaxed cursor-pointer">
-                I understand that ImpressMe Kids will collect my child's name, email, assignment data, and reading analytics for educational purposes only.
+                I understand that NabuLearn will collect my child's name, email, assignment data, and reading analytics for educational purposes only.
               </label>
             </div>
 

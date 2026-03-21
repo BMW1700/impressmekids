@@ -428,7 +428,7 @@ serve(async (req) => {
             type === 'all_clear' ? '#16a34a' : '#ea580c';
           
           const emailBody = {
-            from: "ImpressMe Kids Safety <safety@impressmekids.com>",
+            from: "NabuLearn Safety <safety@nabulearn.com>",
             to: parent.email,
             subject: notificationTitle.replace(/[🚨✅📅]/g, '').trim(),
             html: `
@@ -459,7 +459,7 @@ serve(async (req) => {
                 </div>
                 <div style="padding: 20px; background: #f3f4f6; text-align: center; border-top: 1px solid #e5e7eb;">
                   <p style="color: #6b7280; font-size: 12px; margin: 0;">
-                    This is an automated safety notification from ImpressMe Kids.<br>
+                    This is an automated safety notification from NabuLearn.<br>
                     For immediate questions, contact your school directly.
                   </p>
                 </div>

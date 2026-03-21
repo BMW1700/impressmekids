@@ -31,9 +31,9 @@ const GoogleVertexSecurityControls = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <p>
-            Impress Me Kids utilizes Google Vertex AI as a cloud-based artificial intelligence platform for 
+            NabuLearn utilizes Google Vertex AI as a cloud-based artificial intelligence platform for 
             analyzing student voice recordings, generating educational content, and providing adaptive learning insights. 
-            This document maps security controls between inherited responsibilities (Google's) and owned responsibilities (Impress Me Kids').
+            This document maps security controls between inherited responsibilities (Google's) and owned responsibilities (NabuLearn').
           </p>
           <div className="grid md:grid-cols-3 gap-4 mt-4">
             <div className="p-4 border rounded-lg">
@@ -50,7 +50,7 @@ const GoogleVertexSecurityControls = () => {
                 <h4 className="font-semibold">Owned Controls</h4>
               </div>
               <p className="text-2xl font-bold">8</p>
-              <p className="text-sm text-muted-foreground">Managed by Impress Me Kids</p>
+              <p className="text-sm text-muted-foreground">Managed by NabuLearn</p>
             </div>
             <div className="p-4 border rounded-lg">
               <div className="flex items-center gap-2 mb-2">
@@ -69,7 +69,7 @@ const GoogleVertexSecurityControls = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Server className="h-5 w-5" />
-            Vertex AI Usage in Impress Me Kids
+            Vertex AI Usage in NabuLearn
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -537,7 +537,7 @@ const GoogleVertexSecurityControls = () => {
                 <li>Cloud Audit Logs showing Vertex AI API calls with timestamps</li>
                 <li>Supabase edge function logs correlating with Cloud Audit Logs</li>
                 <li>Certificate validation tests for TLS connections</li>
-                <li>Incident response runbook referencing both Google and Impress Me Kids procedures</li>
+                <li>Incident response runbook referencing both Google and NabuLearn procedures</li>
               </ul>
             </div>
           </div>
@@ -621,7 +621,7 @@ const GoogleVertexSecurityControls = () => {
       {/* Footer */}
       <div className="mt-8 p-4 border rounded-lg bg-muted/30">
         <p className="text-sm text-muted-foreground text-center">
-          This document is maintained by the Impress Me Kids Security Team and reviewed quarterly. 
+          This document is maintained by the NabuLearn Security Team and reviewed quarterly. 
           For questions or updates, contact the Security Lead.
         </p>
       </div>

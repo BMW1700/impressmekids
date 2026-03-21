@@ -37,7 +37,7 @@ export default function AcceptableUsePolicy() {
         <h2 className="text-2xl font-bold text-foreground">1. Purpose</h2>
         <p className="text-muted-foreground">
           This Acceptable Use Policy (AUP) establishes the rules and guidelines for the appropriate 
-          use of Impress Me Kids' information technology resources, systems, and data. This policy 
+          use of NabuLearn' information technology resources, systems, and data. This policy 
           is designed to protect the organization, its employees, partners, students, and the data 
           entrusted to us while ensuring compliance with SOC 2 requirements and educational data 
           privacy regulations (FERPA, COPPA).
@@ -356,7 +356,7 @@ export default function AcceptableUsePolicy() {
           <CardContent className="pt-6 space-y-4">
             <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg mb-4">
               <p className="text-foreground font-semibold">
-                Notice: Impress Me Kids reserves the right to monitor all use of company systems, 
+                Notice: NabuLearn reserves the right to monitor all use of company systems, 
                 networks, and resources without prior notice.
               </p>
             </div>
@@ -429,12 +429,12 @@ export default function AcceptableUsePolicy() {
             <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
               <li>Direct supervisor or manager</li>
               <li>Human Resources department</li>
-              <li>Security Officer (security@impressmekids.com)</li>
+              <li>Security Officer (security@nabulearn.com)</li>
               <li>Anonymous reporting channel (if available)</li>
             </ul>
             <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg mt-4">
               <p className="text-foreground">
-                <strong>Non-Retaliation:</strong> Impress Me Kids prohibits retaliation against 
+                <strong>Non-Retaliation:</strong> NabuLearn prohibits retaliation against 
                 anyone who reports a policy violation in good faith.
               </p>
             </div>
@@ -455,7 +455,7 @@ export default function AcceptableUsePolicy() {
             <div className="border-2 border-dashed border-muted p-6 rounded-lg">
               <p className="text-sm text-muted-foreground italic">
                 "I acknowledge that I have read, understood, and agree to comply with the 
-                Impress Me Kids Acceptable Use Policy. I understand that violations may result 
+                NabuLearn Acceptable Use Policy. I understand that violations may result 
                 in disciplinary action and that my use of company systems may be monitored."
               </p>
               <div className="grid grid-cols-2 gap-4 mt-6">

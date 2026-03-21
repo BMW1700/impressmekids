@@ -1,4 +1,4 @@
-# Google SSO Setup Guide for Impress Me Kids
+# Google SSO Setup Guide for NabuLearn
 
 ## Overview
 Google Single Sign-On (SSO) allows students and teachers to sign in using their existing Google accounts (e.g., @gmail.com or school Google Workspace accounts). This is **critical for enterprise adoption** as most schools use Google Workspace for Education.
@@ -16,7 +16,7 @@ Google Single Sign-On (SSO) allows students and teachers to sign in using their 
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Click **"Select a project"** → **"New Project"**
-3. Project name: `Impress Me Kids Auth`
+3. Project name: `NabuLearn Auth`
 4. Click **"Create"**
 
 ---
@@ -27,7 +27,7 @@ Google Single Sign-On (SSO) allows students and teachers to sign in using their 
    - **APIs & Services** → **OAuth consent screen**
 2. Choose **"External"** (for all users)
 3. Fill in required fields:
-   - **App name:** Impress Me Kids
+   - **App name:** NabuLearn
    - **User support email:** your-email@domain.com
    - **Developer contact email:** your-email@domain.com
 4. Under **"Authorized domains"**, add:
@@ -48,7 +48,7 @@ Google Single Sign-On (SSO) allows students and teachers to sign in using their 
 1. Navigate to **APIs & Services** → **Credentials**
 2. Click **"+ Create Credentials"** → **"OAuth Client ID"**
 3. Application type: **"Web application"**
-4. Name: `Impress Me Kids Web Client`
+4. Name: `NabuLearn Web Client`
 
 5. **Authorized JavaScript origins:**
    ```

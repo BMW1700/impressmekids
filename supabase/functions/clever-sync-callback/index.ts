@@ -26,7 +26,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const appUrl = Deno.env.get('APP_URL') || 'https://impressmekids.com';
+  const appUrl = Deno.env.get('APP_URL') || 'https://nabulearn.com';
   
   try {
     const url = new URL(req.url);

@@ -197,7 +197,7 @@ A: We have stronger audit logging and explicit parental consent management.
 
 ## Platform Status
 
-🎉 **Impress Me Kids is now 95% school-ready!**
+🎉 **NabuLearn is now 95% school-ready!**
 
 **Ready for**:
 - School district demos

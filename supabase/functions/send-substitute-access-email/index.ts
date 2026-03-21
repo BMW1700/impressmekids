@@ -56,10 +56,10 @@ const handler = async (req: Request): Promise<Response> => {
       minute: '2-digit',
     });
 
-    const loginUrl = appUrl || Deno.env.get("APP_URL") || "https://impressmekids.com";
+    const loginUrl = appUrl || Deno.env.get("APP_URL") || "https://nabulearn.com";
 
     const emailResponse = await resend.emails.send({
-      from: "ImpressMe Kids <noreply@impressmekids.com>",
+      from: "NabuLearn <noreply@nabulearn.com>",
       to: [substituteEmail],
       subject: `Substitute Access Code for ${classroomName}`,
       html: `
@@ -92,7 +92,7 @@ const handler = async (req: Request): Promise<Response> => {
                       </p>
                       
                       <p style="margin: 0 0 24px; color: #374151; font-size: 16px; line-height: 1.6;">
-                        ${teacherName || 'A teacher'} has granted you temporary access to <strong>${classroomName}</strong> on ImpressMe Kids.
+                        ${teacherName || 'A teacher'} has granted you temporary access to <strong>${classroomName}</strong> on NabuLearn.
                       </p>
                       
                       <!-- Access Code Box -->
@@ -147,7 +147,7 @@ const handler = async (req: Request): Promise<Response> => {
                   <tr>
                     <td style="background-color: #f9fafb; padding: 24px 40px; text-align: center; border-top: 1px solid #e5e7eb;">
                       <p style="margin: 0 0 8px; color: #9ca3af; font-size: 12px;">
-                        This is an automated message from ImpressMe Kids.
+                        This is an automated message from NabuLearn.
                       </p>
                       <p style="margin: 0; color: #9ca3af; font-size: 12px;">
                         If you did not expect this email, please disregard it.

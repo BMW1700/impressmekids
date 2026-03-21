@@ -9,7 +9,7 @@ export default function VPATCompliance() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="font-semibold">Product Name:</p>
-              <p>ImpressMe Kids Learning Management System</p>
+              <p>NabuLearn Learning Management System</p>
             </div>
             <div>
               <p className="font-semibold">Product Version:</p>
@@ -25,7 +25,7 @@ export default function VPATCompliance() {
             </div>
             <div>
               <p className="font-semibold">Contact Information:</p>
-              <p>accessibility@impressmekids.com</p>
+              <p>accessibility@nabulearn.com</p>
             </div>
             <div>
               <p className="font-semibold">Evaluation Methods:</p>
@@ -130,7 +130,7 @@ export default function VPATCompliance() {
           <div className="border-l-4 border-green-500 pl-4">
             <h3 className="text-lg font-semibold mb-2">2.4.2 Page Titled (Level A)</h3>
             <p className="mb-2"><strong>Conformance:</strong> <span className="text-green-600 font-semibold">Supports</span></p>
-            <p className="text-sm"><strong>Remarks:</strong> All pages have descriptive titles that identify the content or purpose (e.g., "Student Dashboard - ImpressMe Kids", "Complete Assignment - Reading Comprehension").</p>
+            <p className="text-sm"><strong>Remarks:</strong> All pages have descriptive titles that identify the content or purpose (e.g., "Student Dashboard - NabuLearn", "Complete Assignment - Reading Comprehension").</p>
           </div>
 
           <div className="border-l-4 border-green-500 pl-4">
@@ -345,13 +345,13 @@ export default function VPATCompliance() {
       <div className="mt-8 p-6 bg-green-50 border-2 border-green-500 rounded-lg">
         <h2 className="text-xl font-bold mb-4 text-green-900">Accessibility Commitment</h2>
         <p className="mb-4 leading-relaxed">
-          ImpressMe Kids is committed to ensuring digital accessibility for all users, including those with disabilities. 
+          NabuLearn is committed to ensuring digital accessibility for all users, including those with disabilities. 
           We continually work to improve the user experience and apply relevant accessibility standards to ensure our 
           platform is accessible to everyone.
         </p>
         <p className="font-semibold mb-2">For accessibility support or to report issues:</p>
         <ul className="list-disc list-inside space-y-1 ml-4">
-          <li>Email: accessibility@impressmekids.com</li>
+          <li>Email: accessibility@nabulearn.com</li>
           <li>Expected response time: 2 business days</li>
           <li>Alternative format requests honored within 5 business days</li>
         </ul>

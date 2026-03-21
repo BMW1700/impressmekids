@@ -32,14 +32,14 @@ export default function VendorManagementPolicy() {
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
             This Vendor Management Policy establishes the framework for evaluating, selecting, onboarding, 
-            monitoring, and managing third-party vendors that provide services to Impress Me Kids. This policy 
+            monitoring, and managing third-party vendors that provide services to NabuLearn. This policy 
             ensures that vendor relationships meet security, privacy, compliance, and operational requirements 
             aligned with SOC 2 Trust Services Criteria.
           </p>
           <div className="grid md:grid-cols-3 gap-4">
             <div className="p-4 border rounded-lg">
               <div className="font-semibold mb-2">Policy Scope</div>
-              <p className="text-sm text-muted-foreground">All third-party vendors with access to Impress Me Kids systems or student data</p>
+              <p className="text-sm text-muted-foreground">All third-party vendors with access to NabuLearn systems or student data</p>
             </div>
             <div className="p-4 border rounded-lg">
               <div className="font-semibold mb-2">Key Vendors</div>
@@ -78,10 +78,10 @@ export default function VendorManagementPolicy() {
               This policy applies to all third-party vendors that:
             </p>
             <ul className="list-disc list-inside space-y-1 ml-4 text-muted-foreground">
-              <li>Have access to Impress Me Kids systems, networks, or infrastructure</li>
+              <li>Have access to NabuLearn systems, networks, or infrastructure</li>
               <li>Process, store, or transmit student data or other sensitive information</li>
               <li>Provide critical services that impact system availability or security</li>
-              <li>Are integrated into the Impress Me Kids technology stack</li>
+              <li>Are integrated into the NabuLearn technology stack</li>
             </ul>
           </div>
         </CardContent>
@@ -480,8 +480,8 @@ export default function VendorManagementPolicy() {
               If a vendor experiences a security incident or service outage:
             </p>
             <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
-              <li>Vendor must notify Impress Me Kids within 24 hours</li>
-              <li>Security Officer assesses impact on Impress Me Kids systems and data</li>
+              <li>Vendor must notify NabuLearn within 24 hours</li>
+              <li>Security Officer assesses impact on NabuLearn systems and data</li>
               <li>Activate incident response procedures if student data is affected</li>
               <li>Document incident details, timeline, and vendor response</li>
               <li>Review vendor's remediation plan and timeline</li>
