@@ -37,7 +37,7 @@ export default function SecurityAwarenessTrainingPolicy() {
         <p className="text-muted-foreground">
           This Security Awareness Training Policy establishes the requirements for educating all personnel 
           on information security best practices, threats, and their responsibilities in protecting 
-          Impress Me Kids' information assets, student data, and systems. This policy ensures compliance 
+          NabuLearn' information assets, student data, and systems. This policy ensures compliance 
           with SOC 2 Trust Service Criteria, FERPA, and COPPA requirements.
         </p>
       </section>
@@ -249,7 +249,7 @@ export default function SecurityAwarenessTrainingPolicy() {
         <Card>
           <CardContent className="pt-6 space-y-4">
             <p className="text-muted-foreground">
-              To reinforce training and measure effectiveness, Impress Me Kids conducts regular 
+              To reinforce training and measure effectiveness, NabuLearn conducts regular 
               phishing simulation exercises.
             </p>
             <Table>

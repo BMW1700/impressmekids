@@ -16,7 +16,7 @@ const TermsOfService = () => {
             <section>
               <h2 className="text-xl font-semibold mb-3">Acceptance of Terms</h2>
               <p className="text-muted-foreground">
-                By accessing or using Impress Me Kids ("the Platform"), you agree to be bound by these Terms of Service. 
+                By accessing or using NabuLearn ("the Platform"), you agree to be bound by these Terms of Service. 
                 If you do not agree to these terms, please do not use the Platform.
               </p>
             </section>
@@ -74,7 +74,7 @@ const TermsOfService = () => {
               <h2 className="text-xl font-semibold mb-3">Data Ownership</h2>
               <p className="text-muted-foreground">
                 All student data, including AURA recordings, assignments, and grades, remains the property of the school district. 
-                Impress Me Kids acts as a service provider and does not claim ownership of any student data. Schools retain full 
+                NabuLearn acts as a service provider and does not claim ownership of any student data. Schools retain full 
                 control over their data and can request a complete export or deletion at any time.
               </p>
             </section>
@@ -99,7 +99,7 @@ const TermsOfService = () => {
             <section>
               <h2 className="text-xl font-semibold mb-3">Limitation of Liability</h2>
               <p className="text-muted-foreground">
-                Impress Me Kids is provided "as is" without warranty of any kind. We are not liable for any indirect, incidental, 
+                NabuLearn is provided "as is" without warranty of any kind. We are not liable for any indirect, incidental, 
                 or consequential damages arising from use of the Platform. Our total liability shall not exceed the amount paid 
                 by the school for the Platform during the current academic year.
               </p>
@@ -126,7 +126,7 @@ const TermsOfService = () => {
               <h2 className="text-xl font-semibold mb-3">Contact Information</h2>
               <p className="text-muted-foreground">
                 For questions about these Terms, contact us at: <br />
-                <strong>legal@impressmekids.com</strong>
+                <strong>legal@nabulearn.com</strong>
               </p>
             </section>
           </CardContent>

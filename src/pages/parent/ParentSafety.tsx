@@ -575,7 +575,7 @@ export default function ParentSafety() {
                 Install App for Instant Notifications
               </h2>
               <p className="text-muted-foreground mb-4">
-                Install ImpressMe Kids on your phone to receive instant push notifications during emergencies and drills.
+                Install NabuLearn on your phone to receive instant push notifications during emergencies and drills.
               </p>
               <Button onClick={() => navigate("/parent/install-app")}>
                 <Smartphone className="h-4 w-4 mr-2" />

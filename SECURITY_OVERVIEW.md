@@ -1,7 +1,7 @@
-# Security Overview - Impress Me Kids
+# Security Overview - NabuLearn
 
 ## Executive Summary
-Impress Me Kids implements enterprise-grade security measures to protect student data, comply with educational regulations, and provide safe, secure learning environments for schools.
+NabuLearn implements enterprise-grade security measures to protect student data, comply with educational regulations, and provide safe, secure learning environments for schools.
 
 ---
 
@@ -176,7 +176,7 @@ Impress Me Kids implements enterprise-grade security measures to protect student
 ## 📞 Security Questions?
 
 For security inquiries, compliance documentation, or penetration testing reports, please contact:
-- **Email**: security@impressmekids.com
+- **Email**: security@nabulearn.com
 - **Documentation**: Available in project Privacy Policy and Terms of Service
 
 ---

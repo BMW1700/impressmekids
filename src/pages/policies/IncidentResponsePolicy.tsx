@@ -12,7 +12,7 @@ export const IncidentResponsePolicy = () => {
 
       <section className="policy-section">
         <h2>1. Policy Statement & Objectives</h2>
-        <p>This policy establishes procedures for detecting, responding to, and recovering from security incidents affecting the Impress Me Kids (IMK) platform. Our objectives are to:</p>
+        <p>This policy establishes procedures for detecting, responding to, and recovering from security incidents affecting the NabuLearn (IMK) platform. Our objectives are to:</p>
         <ul>
           <li>Detect and respond to security incidents rapidly</li>
           <li>Contain incidents to minimize impact on students and operations</li>
@@ -356,7 +356,7 @@ Subject: Important Security Notice - Action Required
 
 Dear [Parent Name / Student Name],
 
-We are writing to inform you of a security incident that may have affected your account on the Impress Me Kids platform.
+We are writing to inform you of a security incident that may have affected your account on the NabuLearn platform.
 
 WHAT HAPPENED:
 On [date], we discovered [brief description of incident]. We immediately took action to contain the incident and have since [remediation steps].
@@ -372,13 +372,13 @@ WHAT WE ARE DOING:
 WHAT YOU SHOULD DO:
 • Reset your password immediately using this link: [link]
 • Review your account activity for any suspicious behavior
-• Contact us at security@impressmekids.com with any concerns
+• Contact us at security@nabulearn.com with any concerns
 
 We sincerely apologize for this incident and are committed to protecting your information.
 
 Sincerely,
 [Security Lead Name]
-Security Lead, Impress Me Kids
+Security Lead, NabuLearn
 [Contact information]
           </pre>
         </div>
@@ -436,7 +436,7 @@ Security Lead, Impress Me Kids
       <div className="policy-footer">
         <p><strong>Classification:</strong> Internal Use Only</p>
         <p><strong>Document Control:</strong> This policy is maintained by the Security Lead and stored in the shared Security Policies folder.</p>
-        <p><strong>Emergency Contact:</strong> Security Lead (Ben) - Slack @security-incidents | Email: security@impressmekids.com</p>
+        <p><strong>Emergency Contact:</strong> Security Lead (Ben) - Slack @security-incidents | Email: security@nabulearn.com</p>
       </div>
     </div>
   );

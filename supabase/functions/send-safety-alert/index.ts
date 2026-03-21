@@ -183,7 +183,7 @@ serve(async (req) => {
       const emailPromises = allUsers.map(async (user) => {
         try {
           const emailBody = {
-            from: "ImpressMe Kids Safety <safety@impressmekids.com>",
+            from: "NabuLearn Safety <safety@nabulearn.com>",
             to: user.email,
             subject: `[${alert.severity.toUpperCase()}] ${alert.title}`,
             html: `
@@ -203,7 +203,7 @@ serve(async (req) => {
                     : ''}
                   <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
                     <p style="color: #6b7280; font-size: 14px; margin: 0;">
-                      This is an automated safety notification from ImpressMe Kids.<br>
+                      This is an automated safety notification from NabuLearn.<br>
                       For questions, please contact your school administration.
                     </p>
                   </div>

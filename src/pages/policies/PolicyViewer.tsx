@@ -391,7 +391,7 @@ export default function PolicyViewer() {
       {/* Footer for print */}
       <div className="hidden print:block policy-footer">
         <div>
-          <strong>Impress Me Kids</strong> | Confidential & Proprietary
+          <strong>NabuLearn</strong> | Confidential & Proprietary
         </div>
         <div>
           Document ID: IMK-POL-{selectedPolicy.toUpperCase()}-v1.0

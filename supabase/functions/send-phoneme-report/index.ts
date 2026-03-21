@@ -215,7 +215,7 @@ const handler = async (req: Request): Promise<Response> => {
           </div>
           
           <p style="color: #6b7280; font-size: 14px; margin-top: 24px; text-align: center;">
-            This report was sent from ImpressMe Kids. Log in to your parent dashboard for more details.
+            This report was sent from NabuLearn. Log in to your parent dashboard for more details.
           </p>
         </div>
       </body>
@@ -231,7 +231,7 @@ const handler = async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "ImpressMe Kids <onboarding@resend.dev>",
+        from: "NabuLearn <onboarding@resend.dev>",
         to: [parent.email],
         subject: `📊 Sound Accuracy Report for ${student.full_name} - ${classroom.name}`,
         html: emailHtml,

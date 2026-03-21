@@ -60,15 +60,15 @@ export const Header = ({ showAuthButtons = true, onSignOut, children, studentId 
             <div className="rounded-lg bg-gradient-hero group-hover:scale-110 transition-transform overflow-hidden">
               <img 
                 src={logo} 
-                alt="ImpressMe Kids Logo" 
+                alt="NabuLearn Logo" 
                 className="h-10 w-10 object-cover"
               />
             </div>
             <div>
               <h1 className="text-xl font-bold bg-gradient-hero bg-clip-text text-transparent group-hover:opacity-80 transition-opacity">
-                ImpressMe Kids
+                NabuLearn
               </h1>
-              <p className="text-xs text-muted-foreground">An ImpressMe Family App</p>
+              <p className="text-xs text-muted-foreground">Powered by NabuLearn</p>
             </div>
           </Link>
           

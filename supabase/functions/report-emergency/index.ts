@@ -131,7 +131,7 @@ serve(async (req) => {
     if (resendApiKey && adminEmails.length > 0) {
       const emailPromises = adminEmails.map(async (adminEmail) => {
         const emailBody = {
-          from: "ImpressMe Kids Emergencies <emergencies@impressmekids.com>",
+          from: "NabuLearn Emergencies <emergencies@nabulearn.com>",
           to: adminEmail,
           subject: `🚨 EMERGENCY REPORT: ${emergencyTypeDisplay}`,
           html: `
@@ -169,7 +169,7 @@ serve(async (req) => {
                 
                 <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
                   <p style="color: #6b7280; font-size: 14px; margin: 0;">
-                    This is an automated emergency notification from ImpressMe Kids.
+                    This is an automated emergency notification from NabuLearn.
                   </p>
                 </div>
               </div>

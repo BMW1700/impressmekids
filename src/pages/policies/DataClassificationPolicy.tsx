@@ -18,7 +18,7 @@ export default function DataClassificationPolicy() {
         <h3>1.1 Purpose</h3>
         <p>
           This Data Classification & Handling Policy establishes standards for classifying, labeling, 
-          handling, storing, transmitting, and disposing of data assets at Impress Me Kids. The policy 
+          handling, storing, transmitting, and disposing of data assets at NabuLearn. The policy 
           ensures appropriate protection of sensitive information, particularly student Personally 
           Identifiable Information (PII), educational records, and audio recordings, in compliance with 
           FERPA, COPPA, and SOC 2 requirements.
@@ -27,7 +27,7 @@ export default function DataClassificationPolicy() {
         <h3>1.2 Scope</h3>
         <p>This policy applies to:</p>
         <ul>
-          <li>All data created, collected, processed, stored, or transmitted by Impress Me Kids systems</li>
+          <li>All data created, collected, processed, stored, or transmitted by NabuLearn systems</li>
           <li>All employees, contractors, vendors, and third parties with access to company data</li>
           <li>All storage locations (cloud infrastructure, databases, file systems, backups)</li>
           <li>All transmission methods (APIs, web interfaces, mobile applications, email)</li>
@@ -36,7 +36,7 @@ export default function DataClassificationPolicy() {
 
         <h3>1.3 Policy Statement</h3>
         <p>
-          Impress Me Kids is committed to protecting the confidentiality, integrity, and availability 
+          NabuLearn is committed to protecting the confidentiality, integrity, and availability 
           of all data entrusted to us. We classify data based on sensitivity and regulatory requirements, 
           implementing controls proportionate to the classification level. Student data privacy is our 
           highest priority, and we maintain strict compliance with FERPA and COPPA regulations.
@@ -586,7 +586,7 @@ export default function DataClassificationPolicy() {
         <ol>
           <li><strong>Detection & Reporting (0-1 hour):</strong>
             <ul>
-              <li>Any user detecting a breach reports to security@impressmekids.com</li>
+              <li>Any user detecting a breach reports to security@nabulearn.com</li>
               <li>Security team initiates Incident Response Plan</li>
             </ul>
           </li>
@@ -794,7 +794,7 @@ export default function DataClassificationPolicy() {
       <footer className="policy-footer">
         <p><strong>Approval:</strong></p>
         <p>This policy has been reviewed and approved by the Chief Information Security Officer.</p>
-        <p><strong>Questions:</strong> Contact security@impressmekids.com</p>
+        <p><strong>Questions:</strong> Contact security@nabulearn.com</p>
       </footer>
     </div>
   );

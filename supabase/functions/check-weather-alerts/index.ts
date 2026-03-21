@@ -45,7 +45,7 @@ serve(async (req) => {
       try {
         const response = await fetch(nwsUrl, {
           headers: {
-            'User-Agent': '(ImpressMe Kids Emergency Alert System, contact@impressmekids.com)',
+            'User-Agent': '(NabuLearn Emergency Alert System, contact@nabulearn.com)',
             'Accept': 'application/geo+json'
           }
         });

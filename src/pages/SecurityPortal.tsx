@@ -109,7 +109,7 @@ export default function SecurityPortal() {
             Security & Compliance
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Impress Me Kids is built with security-first architecture to protect student data, 
+            NabuLearn is built with security-first architecture to protect student data, 
             ensure regulatory compliance, and maintain a safe learning environment.
           </p>
         </div>
@@ -308,7 +308,7 @@ export default function SecurityPortal() {
                 For security inquiries, compliance documentation, or to report a security concern, 
                 please contact our security team.
               </p>
-              <p className="text-primary font-medium">security@impressmekids.com</p>
+              <p className="text-primary font-medium">security@nabulearn.com</p>
             </CardContent>
           </Card>
         </section>

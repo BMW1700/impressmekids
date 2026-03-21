@@ -12,7 +12,7 @@ export const AccessControlPolicy = () => {
 
       <section className="policy-section">
         <h2>1. Policy Statement</h2>
-        <p>This policy defines Role-Based Access Control (RBAC) implementation and data access permissions for the Impress Me Kids (IMK) platform. All access decisions follow the Principle of Least Privilege and comply with FERPA, COPPA, and SOC 2 requirements.</p>
+        <p>This policy defines Role-Based Access Control (RBAC) implementation and data access permissions for the NabuLearn (IMK) platform. All access decisions follow the Principle of Least Privilege and comply with FERPA, COPPA, and SOC 2 requirements.</p>
         <p><strong>Core Principles:</strong></p>
         <ul>
           <li><strong>Role-Based Access Control (RBAC):</strong> Permissions granted based on user role, not individual identity</li>

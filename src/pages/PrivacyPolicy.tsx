@@ -16,7 +16,7 @@ const PrivacyPolicy = () => {
             <section>
               <h2 className="text-xl font-semibold mb-3">FERPA Compliance</h2>
               <p className="text-muted-foreground">
-                Impress Me Kids complies with the Family Educational Rights and Privacy Act (FERPA) and protects student education records. 
+                NabuLearn complies with the Family Educational Rights and Privacy Act (FERPA) and protects student education records. 
                 We never sell or share student data with third parties for marketing purposes.
               </p>
             </section>
@@ -168,7 +168,7 @@ const PrivacyPolicy = () => {
               <h2 className="text-xl font-semibold mb-3">Contact Information</h2>
               <p className="text-muted-foreground">
                 For privacy-related questions or to exercise your rights under FERPA/COPPA, contact us at: <br />
-                <strong>privacy@impressmekids.com</strong>
+                <strong>privacy@nabulearn.com</strong>
               </p>
             </section>
           </CardContent>

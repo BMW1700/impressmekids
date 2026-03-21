@@ -430,7 +430,7 @@ export default function IncidentResponseTabletop() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-muted-foreground">
-              This tabletop exercise successfully validated Impress Me Kids' Incident Response Policy and procedures. 
+              This tabletop exercise successfully validated NabuLearn' Incident Response Policy and procedures. 
               The team demonstrated strong coordination, rapid containment, and adherence to FERPA requirements. 
               Technical security controls (RLS, audit logs, consent verification) performed as designed and significantly 
               limited the impact of the breach.
@@ -455,7 +455,7 @@ export default function IncidentResponseTabletop() {
           <p><strong>Classification:</strong> Confidential - Internal Use Only</p>
           <p><strong>Document Control:</strong> This tabletop exercise log is maintained as evidence of IR preparedness.</p>
           <p><strong>Next Exercise:</strong> Scheduled for Q2 2025</p>
-          <p><strong>Contact:</strong> security@impressmekids.com</p>
+          <p><strong>Contact:</strong> security@nabulearn.com</p>
         </div>
       </div>
     </div>

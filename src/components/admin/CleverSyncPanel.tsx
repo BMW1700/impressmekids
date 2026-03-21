@@ -88,7 +88,7 @@ export function CleverSyncPanel() {
         <div className="border-t pt-4">
           <h4 className="text-sm font-medium mb-2">Setup Instructions:</h4>
           <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-            <li>District admin installs "ImpressMe Kids" from Clever Library</li>
+            <li>District admin installs "NabuLearn" from Clever Library</li>
             <li>Click "Sync with Clever" button above</li>
             <li>Authorize data access in Clever portal</li>
             <li>Students/teachers sign in with "Sign in with Clever" button</li>
@@ -97,8 +97,8 @@ export function CleverSyncPanel() {
 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
           <p className="text-xs text-blue-800">
-            <strong>Note:</strong> Clever integration requires your district to have installed the ImpressMe Kids app in their Clever dashboard. 
-            Contact your district IT administrator if you don't see ImpressMe Kids in your Clever apps.
+            <strong>Note:</strong> Clever integration requires your district to have installed the NabuLearn app in their Clever dashboard. 
+            Contact your district IT administrator if you don't see NabuLearn in your Clever apps.
           </p>
         </div>
       </CardContent>

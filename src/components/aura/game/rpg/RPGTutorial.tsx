@@ -19,7 +19,7 @@ const tutorialSteps: TutorialStep[] = [
   {
     id: 'welcome',
     title: 'Welcome, Young Reader!',
-    message: "Welcome to Impress Me Kids! This game will make you an INCREDIBLE reader while having tons of fun! Let me show you how it works!",
+    message: "Welcome to NabuLearn! This game will make you an INCREDIBLE reader while having tons of fun! Let me show you how it works!",
     highlight: 'none',
     icon: <Sparkles className="h-8 w-8 text-yellow-400" />,
   },

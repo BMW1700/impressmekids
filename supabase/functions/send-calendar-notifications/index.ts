@@ -274,7 +274,7 @@ serve(async (req) => {
                 ${itemsHtml}
                 <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
                   <p style="color: #6b7280; font-size: 14px; margin: 0;">
-                    This is an automated reminder from ImpressMe Kids.<br>
+                    This is an automated reminder from NabuLearn.<br>
                     You can manage your notification preferences in your account settings.
                   </p>
                 </div>
@@ -284,7 +284,7 @@ serve(async (req) => {
 
           try {
             await resend.emails.send({
-              from: "ImpressMe Kids <notifications@impressmekids.com>",
+              from: "NabuLearn <notifications@nabulearn.com>",
               to: [parentAccount.email],
               subject: `📅 ${upcomingItems.length} upcoming ${upcomingItems.length === 1 ? 'item' : 'items'} ${daysText}`,
               html: emailHtml,
