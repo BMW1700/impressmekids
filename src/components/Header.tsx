@@ -68,7 +68,7 @@ export const Header = ({ showAuthButtons = true, onSignOut, children, studentId 
               <h1 className="text-xl font-bold bg-gradient-hero bg-clip-text text-transparent group-hover:opacity-80 transition-opacity">
                 NabuLearn
               </h1>
-              <p className="text-xs text-muted-foreground">Powered by NabuLearn</p>
+              <p className="text-xs text-muted-foreground">The Science of Reading</p>
             </div>
           </Link>
           
