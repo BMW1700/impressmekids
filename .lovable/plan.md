@@ -1,81 +1,72 @@
 
 
-# Fix Critical Public Data Exposures
+# Rebrand: ImpressMe Kids → NabuLearn
 
-## Problem
-Four tables have `USING (true)` SELECT policies with `TO public` roles, meaning **anyone on the internet** (no login needed) can read all data:
+## Scope
 
-1. **`schools`** -- policy "Anyone can view schools" (`USING (true)`, `TO public`)
-2. **`club_members`** -- policy "Students can view club members" (`USING (true)`, `TO public`)
-3. **`clubs`** -- TWO open policies: "Anyone can browse clubs" and "Students can view all clubs" (both `USING (true)`, `TO public`)
+This is a **find-and-replace rebrand** across the entire codebase. Based on my search, there are **~670 matches across 51 source files** plus **~100 matches across 8 non-source files** (markdown guides, CSS, manifest, etc.).
 
-The `districts` table already has proper authenticated-only policies -- no fix needed there.
+## Naming Convention
 
-## Fix (Single Database Migration)
+| Old | New |
+|-----|-----|
+| ImpressMe Kids | NabuLearn |
+| Impress Me Kids | NabuLearn |
+| ImpressMe Family App | NabuLearn |
+| An ImpressMe Family App | Powered by NabuLearn |
+| impressmekids.com (emails) | nabulearn.com |
+| @impressme (Twitter) | @nabulearn |
 
-Drop the 4 dangerous open policies and replace them with scoped ones:
+## What Changes
 
-```sql
--- 1. SCHOOLS: Drop public-readable policy, keep admin policy
-DROP POLICY "Anyone can view schools" ON public.schools;
+### High-visibility files (user-facing)
+1. **Header.tsx** — Logo alt text, title "NabuLearn", remove "An ImpressMe Family App" subtitle (or change to tagline like "The Science of Reading")
+2. **Footer.tsx** — Copyright "© 2026 NabuLearn", remove "An ImpressMe Family App ✨", update domain references
+3. **index.html** — `<title>`, meta tags, OG tags, apple-mobile-web-app-title, author
+4. **site.webmanifest** — name, short_name
+5. **LanguageContext.tsx** — All translation strings referencing the old name (en, es, fr)
+6. **DemoGate.tsx** — Any branding text on the gate screen
 
--- Authenticated users can see schools in their district
-CREATE POLICY "Authenticated users can view schools in their district"
-ON public.schools FOR SELECT TO authenticated
-USING (
-  user_belongs_to_school(auth.uid(), id)
-  OR admin_can_access_school(auth.uid(), district_id)
-  OR has_role(auth.uid(), 'admin')
-);
+### Pages & policies (~15 files)
+7. **TermsOfService.tsx** — legal@impressmekids.com → legal@nabulearn.com
+8. **PrivacyPolicy.tsx** — privacy@impressmekids.com → privacy@nabulearn.com
+9. **All policy pages** (SystemDescription, IncidentResponse, RiskRegister, VPAT, SecurityAwareness, BackupDisasterRecovery, IncidentResponseTabletop) — All "Impress Me Kids" references and email addresses → NabuLearn / nabulearn.com
 
--- 2. CLUB_MEMBERS: Drop public-readable policy
-DROP POLICY "Students can view club members" ON public.club_members;
+### Edge functions (~5 files)
+10. **send-safety-alert** — from email, body text
+11. **send-parent-consent-email** — from email, subject, body, APP_URL fallback
+12. **send-calendar-notifications** — from email
+13. **send-push-notification** — VAPID mailto
+14. **send-drill-notification** — from email
+15. **clever-sync-callback** — APP_URL fallback
+16. **restore-cold-storage-backup** — support email
 
--- Members can see other members of clubs they belong to
-CREATE POLICY "Club members can view fellow members"
-ON public.club_members FOR SELECT TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM club_members cm
-    WHERE cm.club_id = club_members.club_id
-    AND cm.user_id = auth.uid()
-  )
-  OR EXISTS (
-    SELECT 1 FROM clubs
-    WHERE clubs.id = club_members.club_id
-    AND clubs.owner_id = auth.uid()
-  )
-  OR has_role(auth.uid(), 'admin')
-);
+### Internal components (~20 files)
+17. **ParentalConsentForm.tsx** — consent text
+18. **PWAInstallGuide.tsx** — install instructions
+19. **RequestRestorationDialog.tsx** — support team references
+20. **calendarUtils.ts** — PRODID and UID domain
+21. **Landing page sections** (TestimonialSection, StatsSection, etc.) — any remaining brand references
 
--- 3. CLUBS: Drop both public-readable policies
-DROP POLICY "Anyone can browse clubs" ON public.clubs;
-DROP POLICY "Students can view all clubs" ON public.clubs;
+### Non-source files (markdown guides)
+22. **SECURITY_OVERVIEW.md, SCHOOL_ADMIN_SECURITY_GUIDE.md, CLEVER_INTEGRATION_GUIDE.md, GOOGLE_SSO_SETUP_GUIDE.md, PHASE_2 docs** — All old name references
 
--- Authenticated users can view clubs (school-scoped or own clubs)
-CREATE POLICY "Authenticated users can view clubs"
-ON public.clubs FOR SELECT TO authenticated
-USING (true);
--- Clubs are a discovery feature; restricting to authenticated
--- users only (not public/anon) is sufficient
-```
+### CSS
+23. **src/index.css** — Comment "Impress Me Kids Purple & Yellow Theme" → "NabuLearn Theme"
 
-## What This Changes
+## What Does NOT Change
+- The logo image file itself (`src/assets/logo.png`) — you'll need to upload a new logo separately
+- Color scheme / design system (unless you want that changed too)
+- Any database tables or RLS policies
+- The DemoGate access code (stays `Brecon69`)
 
-| Table | Before | After |
-|-------|--------|-------|
-| schools | Anyone on internet can read | Only logged-in users in same district/school |
-| club_members | Anyone on internet can read | Only fellow club members or club owner |
-| clubs | Anyone on internet can read | Only authenticated users (login required) |
+## Approach
+Systematic file-by-file replacement. All ~51 source files + 8 non-source files updated in one pass. Every instance of "ImpressMe Kids", "Impress Me Kids", "ImpressMe Family", "impressmekids.com" replaced with "NabuLearn" / "nabulearn.com".
 
-## What It Does NOT Break
-- Students can still browse and join clubs (they're authenticated)
-- Teachers can still manage club members (owner check preserved)
-- Admin access is preserved via `has_role` checks
-- Existing INSERT/UPDATE/DELETE policies are untouched
-
-## Technical Details
-- Single database migration with 4 DROP + 3 CREATE statements
-- No code changes needed -- all queries already run as authenticated users
-- The `club_members` SELECT policy uses a subquery on itself, but since it's a SELECT policy (not referencing `user_roles`), there's no infinite recursion risk
+## Domain Setup
+After the code rebrand, you'll need to:
+1. Go to **Project Settings → Domains** in Lovable
+2. Click **Connect Domain** and enter `nabulearn.com`
+3. At your domain registrar, add an A record pointing to `185.158.133.1` and a `www` A record to the same IP
+4. Add `www.nabulearn.com` as well so both resolve
 
