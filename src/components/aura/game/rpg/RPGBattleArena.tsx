@@ -300,6 +300,10 @@ export const RPGBattleArena = ({
   // Floating damage numbers
   const [floatingDamages, setFloatingDamages] = useState<{id: number; damage: number; x: number; y: number; isPlayer: boolean; isCritical?: boolean}[]>([]);
   
+  // Speed/accuracy bonus HUD indicators (patent-visible mechanics)
+  const [speedBonusFlash, setSpeedBonusFlash] = useState<{ tier: 'fast' | 'normal' | 'slow'; timeMs: number } | null>(null);
+  const [accuracyTier, setAccuracyTier] = useState<{ multiplier: number; percent: number }>({ multiplier: 1.0, percent: 100 });
+  
   // Sound toggle
   const [soundEnabled, setSoundEnabled] = useState(true);
   
