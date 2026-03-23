@@ -229,6 +229,12 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
     }
   }, [words, cleanWord, attempts]);
 
+  // Handler refs so recognition callbacks always use latest logic
+  const handleCorrectRef = useRef(handleCorrect);
+  const handleIncorrectRef = useRef(handleIncorrect);
+  useEffect(() => { handleCorrectRef.current = handleCorrect; }, [handleCorrect]);
+  useEffect(() => { handleIncorrectRef.current = handleIncorrect; }, [handleIncorrect]);
+
   const startContinuousListening = useCallback(() => {
     unlockSpeechSynthesis();
     
