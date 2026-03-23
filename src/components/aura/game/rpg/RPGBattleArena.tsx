@@ -2365,6 +2365,48 @@ export const RPGBattleArena = ({
                           enableEchoRetry={true}
                           mode={selectedCharacter === 'elara' ? 'fast' : 'normal'}
                         />
+                        
+                        {/* Speed & Accuracy Bonus HUD — patent-visible mechanics */}
+                        <AnimatePresence>
+                          {speedBonusFlash && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: -10, scale: 0.8 }}
+                              className={`flex items-center justify-center gap-2 py-1 px-3 rounded-lg text-sm font-bold ${
+                                speedBonusFlash.tier === 'fast'
+                                  ? 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/50'
+                                  : speedBonusFlash.tier === 'normal'
+                                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                  : 'bg-slate-500/20 text-slate-400 border border-slate-500/30'
+                              }`}
+                            >
+                              {speedBonusFlash.tier === 'fast' && <span>⚡ SPEED BONUS!</span>}
+                              {speedBonusFlash.tier === 'normal' && <span>✓ Good pace</span>}
+                              {speedBonusFlash.tier === 'slow' && <span>🐌 Too slow</span>}
+                              <span className="text-xs opacity-75">
+                                {(speedBonusFlash.timeMs / 1000).toFixed(1)}s
+                              </span>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                        
+                        {/* Accuracy tier indicator */}
+                        {accuracyTier.percent > 0 && wordsRead >= 3 && (
+                          <div className="flex items-center justify-center gap-2 text-xs">
+                            <span className={`px-2 py-0.5 rounded ${
+                              accuracyTier.multiplier >= 1.2
+                                ? 'bg-yellow-500/20 text-yellow-300'
+                                : accuracyTier.multiplier >= 1.1
+                                ? 'bg-emerald-500/20 text-emerald-300'
+                                : 'bg-slate-500/20 text-slate-400'
+                            }`}>
+                              {accuracyTier.multiplier >= 1.2 ? '🎯 ' : accuracyTier.multiplier >= 1.1 ? '✨ ' : ''}
+                              Accuracy: {accuracyTier.percent}%
+                              {accuracyTier.multiplier > 1.0 && ` (×${accuracyTier.multiplier.toFixed(1)})`}
+                            </span>
+                          </div>
+                        )}
                       </>
                     )}
                     
