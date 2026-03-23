@@ -168,7 +168,7 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
       
       isProcessingRef.current = false;
     }, 350);
-  }, [correctStreak, cleanWord, attempts, words]);
+  }, [cleanWord, words]);
 
   const handleIncorrect = useCallback((_spokenWord: string) => {
     if (isProcessingRef.current) return;
