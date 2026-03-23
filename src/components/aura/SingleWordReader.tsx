@@ -76,6 +76,8 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
   const currentWordInGroupRef = useRef(currentWordInGroup);
   const wordsPerGroupRef = useRef(wordsPerGroup);
   const isProcessingRef = useRef(false);
+  const correctStreakRef = useRef(0);
+  const attemptsRef = useRef(0);
   const { toast } = useToast();
 
   // Keep refs in sync with state
@@ -116,7 +118,8 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
     setFeedback('correct');
     soundEffectsRef.current.correctWord();
     
-    const newStreak = correctStreak + 1;
+    const newStreak = correctStreakRef.current + 1;
+    correctStreakRef.current = newStreak;
     setCorrectStreak(newStreak);
     
     // XP calculation
@@ -139,13 +142,14 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
     setWordResults(prev => [...prev, {
       word: wordToSave,
       correct: true,
-      attempts: attempts + 1,
+      attempts: attemptsRef.current + 1,
       skipped: false,
     }]);
     
     // Move to next word after brief delay
     setTimeout(() => {
       setFeedback(null);
+      attemptsRef.current = 0;
       setAttempts(0);
       
       // Check if there are more words in the current group
@@ -165,7 +169,7 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
       
       isProcessingRef.current = false;
     }, 350);
-  }, [correctStreak, cleanWord, attempts, words]);
+  }, [cleanWord, words]);
 
   const handleIncorrect = useCallback((_spokenWord: string) => {
     if (isProcessingRef.current) return;
@@ -176,7 +180,9 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
 
     setFeedback('incorrect');
     soundEffectsRef.current.incorrectWord();
+    correctStreakRef.current = 0;
     setCorrectStreak(0);
+    attemptsRef.current += 1;
     setAttempts(prev => prev + 1);
 
     // Play correct pronunciation of the current word
@@ -201,8 +207,10 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
       skipped: true,
     }]);
 
+    correctStreakRef.current = 0;
     setCorrectStreak(0);
     setFeedback(null);
+    attemptsRef.current = 0;
     setAttempts(0);
     
     // Check if there are more words in the current group
@@ -220,6 +228,12 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
       currentWordInGroupRef.current = 0;
     }
   }, [words, cleanWord, attempts]);
+
+  // Handler refs so recognition callbacks always use latest logic
+  const handleCorrectRef = useRef(handleCorrect);
+  const handleIncorrectRef = useRef(handleIncorrect);
+  useEffect(() => { handleCorrectRef.current = handleCorrect; }, [handleCorrect]);
+  useEffect(() => { handleIncorrectRef.current = handleIncorrect; }, [handleIncorrect]);
 
   const startContinuousListening = useCallback(() => {
     unlockSpeechSynthesis();
@@ -285,9 +299,9 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
       }
       
       if (matched) {
-        handleCorrect();
+        handleCorrectRef.current();
       } else if (spokenWords.length > 0) {
-        handleIncorrect(spokenWords[0] || transcript);
+        handleIncorrectRef.current(spokenWords[0] || transcript);
       }
     };
 
@@ -329,7 +343,7 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
 
     recognitionRef.current = recognition;
     recognition.start();
-  }, [words, currentIndex, handleCorrect, handleIncorrect, toast, isComplete]);
+  }, [words, toast, isComplete]);
 
   const stopListening = useCallback(() => {
     if (recognitionRef.current) {

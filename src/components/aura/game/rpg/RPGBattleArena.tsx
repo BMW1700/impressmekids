@@ -235,6 +235,12 @@ export const RPGBattleArena = ({
   const [wordsRead, setWordsRead] = useState(0);
   const [correctWords, setCorrectWords] = useState(0);
   const [totalDamage, setTotalDamage] = useState(0);
+  
+  // Refs for volatile combat counters (prevents stale closures in callbacks)
+  const streakRef = useRef(0);
+  const longestStreakRef = useRef(0);
+  const wordsReadRef = useRef(0);
+  const correctWordsRef = useRef(0);
   const [inventory, setInventory] = useState<Record<InventoryKey, number>>({ health_potion: 2, magic_potion: 1 });
   
   // Ref to track latest enemyHp for use in callbacks (prevents stale closure issues in mini-games)
@@ -1301,8 +1307,10 @@ export const RPGBattleArena = ({
     // Only count if not already counted
     if (!countedWordIndicesRef.current.has(globalIndex)) {
       countedWordIndicesRef.current.add(globalIndex);
+      wordsReadRef.current += 1;
       setWordsRead(prev => prev + 1);
       // Reset streak on first miss (accuracy rigor)
+      streakRef.current = 0;
       setStreak(0);
       console.log('[RPGBattle] handleMiss: Counted miss immediately', { globalIndex, spokenWord });
     }
@@ -1331,6 +1339,7 @@ export const RPGBattleArena = ({
     // This prevents double-counting when user clicks "Continue" after a miss
     if (!countedWordIndicesRef.current.has(globalIndex)) {
       countedWordIndicesRef.current.add(globalIndex);
+      wordsReadRef.current += 1;
       setWordsRead(prev => prev + 1);
     }
     setCurrentWordResult(correct);
@@ -1350,16 +1359,19 @@ export const RPGBattleArena = ({
     }
 
     if (correct) {
-      const newStreak = streak + 1;
+      const newStreak = streakRef.current + 1;
+      streakRef.current = newStreak;
       setStreak(newStreak);
+      correctWordsRef.current += 1;
       setCorrectWords(prev => prev + 1);
-      if (newStreak > longestStreak) {
+      if (newStreak > longestStreakRef.current) {
+        longestStreakRef.current = newStreak;
         setLongestStreak(newStreak);
       }
 
       // Calculate session accuracy for damage multiplier
-      const currentCorrect = correctWords + 1; // +1 for this word
-      const currentWordsRead = wordsRead + (countedWordIndicesRef.current.has(globalIndex) ? 0 : 1);
+      const currentCorrect = correctWordsRef.current;
+      const currentWordsRead = wordsReadRef.current;
       const sessionAccuracy = currentWordsRead > 0 ? currentCorrect / currentWordsRead : 1.0;
       
       // Calculate damage using patent-critical formula: word length + speed + streak + accuracy
@@ -1493,6 +1505,7 @@ export const RPGBattleArena = ({
       }
     } else {
       setStreak(0);
+      streakRef.current = 0;
       // Enemy always counter-attacks on miss
       const damage = Math.floor(enemy.attack * 0.5);
       setEnemyAbilityMessage(`${enemy.name} strikes back!`);
@@ -1535,7 +1548,7 @@ export const RPGBattleArena = ({
     setTimeout(() => {
       setCurrentWordResult(null);
     }, 800);
-  }, [streak, longestStreak, words, batchStartIndex, enemy, calculateDamage, isPoisoned, poisonDamage, isDebuffed, debuffTurns, attackType, selectedCharacter, correctWords, wordsRead]);
+  }, [words, batchStartIndex, enemy, calculateDamage, isPoisoned, poisonDamage, isDebuffed, debuffTurns, attackType, selectedCharacter]);
   
   // Handle coin collection complete
   const handleCoinCollectionComplete = useCallback(() => {
