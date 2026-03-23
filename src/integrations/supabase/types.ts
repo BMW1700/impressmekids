@@ -8006,6 +8006,14 @@ export type Database = {
             Args: { p_district_id: string; p_user_id: string }
             Returns: undefined
           }
+      upsert_reading_stats: {
+        Args: {
+          p_student_id: string
+          p_words_read: number
+          p_xp_earned: number
+        }
+        Returns: undefined
+      }
       user_belongs_to_school: {
         Args: { _school_id: string; _user_id: string }
         Returns: boolean
