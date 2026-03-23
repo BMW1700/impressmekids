@@ -118,7 +118,8 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
     setFeedback('correct');
     soundEffectsRef.current.correctWord();
     
-    const newStreak = correctStreak + 1;
+    const newStreak = correctStreakRef.current + 1;
+    correctStreakRef.current = newStreak;
     setCorrectStreak(newStreak);
     
     // XP calculation
