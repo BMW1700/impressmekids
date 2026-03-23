@@ -1339,6 +1339,7 @@ export const RPGBattleArena = ({
     // This prevents double-counting when user clicks "Continue" after a miss
     if (!countedWordIndicesRef.current.has(globalIndex)) {
       countedWordIndicesRef.current.add(globalIndex);
+      wordsReadRef.current += 1;
       setWordsRead(prev => prev + 1);
     }
     setCurrentWordResult(correct);
