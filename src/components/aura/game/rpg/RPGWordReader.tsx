@@ -29,7 +29,8 @@ export interface WordAttempt {
 
 interface RPGWordReaderProps {
   words: string[];
-  onResult: (correct: boolean, spokenWord: string, wordIndex: number) => void;
+  /** Called with response time in ms for speed-based damage calculation */
+  onResult: (correct: boolean, spokenWord: string, wordIndex: number, responseTimeMs?: number) => void;
   onBatchComplete?: (results: WordAttempt[]) => void;
   onRetrySuccess?: (wordIndex: number) => void; // Called when a retried word is read correctly (for HP healing)
   onMiss?: (spokenWord: string, wordIndex: number) => void; // Called immediately when first attempt is incorrect (for accuracy tracking)
@@ -141,6 +142,9 @@ export const RPGWordReader = ({
   const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const echoIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
+  // Response time tracking for patent-critical speed-based damage
+  const wordDisplayTimestampRef = useRef<number>(0);
+  
   // Word generation tracking
   const wordGenerationRef = useRef(0);
   
@@ -151,6 +155,8 @@ export const RPGWordReader = ({
   // Keep refs in sync
   useEffect(() => {
     currentIndexRef.current = currentIndex;
+    // Record timestamp when a new word becomes the active target
+    wordDisplayTimestampRef.current = Date.now();
   }, [currentIndex]);
 
   // Only reset when word CONTENT actually changes, not on every render
@@ -291,9 +297,14 @@ export const RPGWordReader = ({
       setEmojiPopups(prev => [...prev, newPopup]);
     }
     
+    // Calculate response time (ms between word display and correct speech match)
+    const responseTimeMs = wordDisplayTimestampRef.current > 0
+      ? Date.now() - wordDisplayTimestampRef.current
+      : undefined;
+    
     // Mark word as completed and report to parent (deals damage, gives coins)
     setCompletedWords(prev => new Set([...prev, wordIndex]));
-    onResult(true, spokenWord, wordIndex);
+    onResult(true, spokenWord, wordIndex, responseTimeMs);
     
     // CRITICAL FIX: Advance index IMMEDIATELY so next speech results compare to next word
     const nextIndex = wordIndex + 1;
@@ -470,7 +481,7 @@ export const RPGWordReader = ({
     isRetryAttemptRef.current = false;
     
     // NOW trigger the enemy attack via onResult(false, ...)
-    onResult(false, spoken, index);
+    onResult(false, spoken, index, undefined);
     
     // Advance to next word
     const batch = words?.slice(0, Math.min(batchSize, words?.length || 0)) || [];

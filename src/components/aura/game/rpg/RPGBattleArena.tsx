@@ -300,6 +300,10 @@ export const RPGBattleArena = ({
   // Floating damage numbers
   const [floatingDamages, setFloatingDamages] = useState<{id: number; damage: number; x: number; y: number; isPlayer: boolean; isCritical?: boolean}[]>([]);
   
+  // Speed/accuracy bonus HUD indicators (patent-visible mechanics)
+  const [speedBonusFlash, setSpeedBonusFlash] = useState<{ tier: 'fast' | 'normal' | 'slow'; timeMs: number } | null>(null);
+  const [accuracyTier, setAccuracyTier] = useState<{ multiplier: number; percent: number }>({ multiplier: 1.0, percent: 100 });
+  
   // Sound toggle
   const [soundEnabled, setSoundEnabled] = useState(true);
   
@@ -1011,18 +1015,49 @@ export const RPGBattleArena = ({
     }
   }, [phase, currentSpeaker, dialogueIndex, enemy.dialogueIntro.length]);
 
-  // Calculate word damage
-  const calculateDamage = useCallback((wordLength: number, currentStreak: number) => {
+  // Calculate word damage — PATENT-CRITICAL: based on word length, reading speed, streak, and session accuracy
+  // No random component — all damage is deterministic from reading performance
+  const calculateDamage = useCallback((wordLength: number, currentStreak: number, responseTimeMs?: number, sessionAccuracy?: number): { damage: number; speedTier: 'fast' | 'normal' | 'slow'; isCritical: boolean; accuracyMultiplier: number } => {
     let baseDamage = Math.max(8, wordLength * 3);
     const streakBonus = Math.floor(currentStreak / 2) * 5;
-    const criticalBonus = Math.random() > 0.85 ? 15 : 0;
+    
+    // SPEED BONUS: Based on response time (ms between word appearing and correct speech)
+    let speedBonus = 0;
+    let speedTier: 'fast' | 'normal' | 'slow' = 'normal';
+    let isCritical = false;
+    
+    if (responseTimeMs !== undefined && responseTimeMs > 0) {
+      if (responseTimeMs < 1500) {
+        speedBonus = 15; // Fast reader — critical hit!
+        speedTier = 'fast';
+        isCritical = true;
+      } else if (responseTimeMs < 3000) {
+        speedBonus = 8; // Good pace
+        speedTier = 'normal';
+      } else {
+        speedBonus = 0; // Slow — no bonus
+        speedTier = 'slow';
+      }
+    }
+    
+    // ACCURACY MULTIPLIER: Based on session accuracy (correctWords / wordsRead)
+    let accuracyMultiplier = 1.0;
+    if (sessionAccuracy !== undefined) {
+      if (sessionAccuracy >= 0.90) {
+        accuracyMultiplier = 1.2; // 90%+ accuracy = 20% damage boost
+      } else if (sessionAccuracy >= 0.75) {
+        accuracyMultiplier = 1.1; // 75-89% = 10% boost
+      }
+    }
     
     // Apply debuff if active
     if (isDebuffed) {
       baseDamage = Math.floor(baseDamage * 0.7);
     }
     
-    return baseDamage + streakBonus + criticalBonus;
+    const totalDamage = Math.floor((baseDamage + streakBonus + speedBonus) * accuracyMultiplier);
+    
+    return { damage: totalDamage, speedTier, isCritical, accuracyMultiplier };
   }, [isDebuffed]);
 
   // Trigger screen shake
@@ -1275,7 +1310,7 @@ export const RPGBattleArena = ({
 
   // Handle word result from RPGWordReader
   // wordIndex is 0-4 within the current batch
-  const handleWordResult = useCallback((correct: boolean, spokenWord: string, wordIndex: number) => {
+  const handleWordResult = useCallback((correct: boolean, spokenWord: string, wordIndex: number, responseTimeMs?: number) => {
     // Calculate the global index in the full words array
     const globalIndex = batchStartIndex + wordIndex;
     const word = words[globalIndex] || "";
@@ -1322,8 +1357,23 @@ export const RPGBattleArena = ({
         setLongestStreak(newStreak);
       }
 
-      // Calculate base damage
-      const baseDamage = Math.floor(calculateDamage(word.length || 5, newStreak) * enemy.wordDamageMultiplier);
+      // Calculate session accuracy for damage multiplier
+      const currentCorrect = correctWords + 1; // +1 for this word
+      const currentWordsRead = wordsRead + (countedWordIndicesRef.current.has(globalIndex) ? 0 : 1);
+      const sessionAccuracy = currentWordsRead > 0 ? currentCorrect / currentWordsRead : 1.0;
+      
+      // Calculate damage using patent-critical formula: word length + speed + streak + accuracy
+      const damageResult = calculateDamage(word.length || 5, newStreak, responseTimeMs, sessionAccuracy);
+      const baseDamage = Math.floor(damageResult.damage * enemy.wordDamageMultiplier);
+      
+      // Update speed bonus HUD indicator
+      if (responseTimeMs !== undefined) {
+        setSpeedBonusFlash({ tier: damageResult.speedTier, timeMs: responseTimeMs });
+        setTimeout(() => setSpeedBonusFlash(null), 1200);
+      }
+      
+      // Update accuracy tier HUD
+      setAccuracyTier({ multiplier: damageResult.accuracyMultiplier, percent: Math.round(sessionAccuracy * 100) });
       
       // ELARA-SPECIFIC: 5-word charge system for plasma barrage (3x damage)
       let actualDamage = baseDamage;
@@ -1417,8 +1467,8 @@ export const RPGBattleArena = ({
           setEnemyHp(prev => Math.max(0, prev - actualDamage));
           triggerScreenShake();
           
-          // Add floating damage for big hits
-          if (isElaraBarrage) {
+          // Add floating damage for big hits (Elara barrage or speed crits)
+          if (isElaraBarrage || damageResult.isCritical) {
             setFloatingDamages(prev => [...prev, {
               id: Date.now(),
               damage: actualDamage,
@@ -1485,7 +1535,7 @@ export const RPGBattleArena = ({
     setTimeout(() => {
       setCurrentWordResult(null);
     }, 800);
-  }, [streak, longestStreak, words, batchStartIndex, enemy, calculateDamage, isPoisoned, poisonDamage, isDebuffed, debuffTurns, attackType, selectedCharacter]);
+  }, [streak, longestStreak, words, batchStartIndex, enemy, calculateDamage, isPoisoned, poisonDamage, isDebuffed, debuffTurns, attackType, selectedCharacter, correctWords, wordsRead]);
   
   // Handle coin collection complete
   const handleCoinCollectionComplete = useCallback(() => {
@@ -2315,6 +2365,48 @@ export const RPGBattleArena = ({
                           enableEchoRetry={true}
                           mode={selectedCharacter === 'elara' ? 'fast' : 'normal'}
                         />
+                        
+                        {/* Speed & Accuracy Bonus HUD — patent-visible mechanics */}
+                        <AnimatePresence>
+                          {speedBonusFlash && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: -10, scale: 0.8 }}
+                              className={`flex items-center justify-center gap-2 py-1 px-3 rounded-lg text-sm font-bold ${
+                                speedBonusFlash.tier === 'fast'
+                                  ? 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/50'
+                                  : speedBonusFlash.tier === 'normal'
+                                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                  : 'bg-slate-500/20 text-slate-400 border border-slate-500/30'
+                              }`}
+                            >
+                              {speedBonusFlash.tier === 'fast' && <span>⚡ SPEED BONUS!</span>}
+                              {speedBonusFlash.tier === 'normal' && <span>✓ Good pace</span>}
+                              {speedBonusFlash.tier === 'slow' && <span>🐌 Too slow</span>}
+                              <span className="text-xs opacity-75">
+                                {(speedBonusFlash.timeMs / 1000).toFixed(1)}s
+                              </span>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                        
+                        {/* Accuracy tier indicator */}
+                        {accuracyTier.percent > 0 && wordsRead >= 3 && (
+                          <div className="flex items-center justify-center gap-2 text-xs">
+                            <span className={`px-2 py-0.5 rounded ${
+                              accuracyTier.multiplier >= 1.2
+                                ? 'bg-yellow-500/20 text-yellow-300'
+                                : accuracyTier.multiplier >= 1.1
+                                ? 'bg-emerald-500/20 text-emerald-300'
+                                : 'bg-slate-500/20 text-slate-400'
+                            }`}>
+                              {accuracyTier.multiplier >= 1.2 ? '🎯 ' : accuracyTier.multiplier >= 1.1 ? '✨ ' : ''}
+                              Accuracy: {accuracyTier.percent}%
+                              {accuracyTier.multiplier > 1.0 && ` (×${accuracyTier.multiplier.toFixed(1)})`}
+                            </span>
+                          </div>
+                        )}
                       </>
                     )}
                     
