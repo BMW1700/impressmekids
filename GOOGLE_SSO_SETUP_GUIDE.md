@@ -58,7 +58,7 @@ Google Single Sign-On (SSO) allows students and teachers to sign in using their 
 6. **Authorized redirect URIs:**
    ```
    https://sjigkjwkgovculkovcjy.supabase.co/auth/v1/callback
-   https://impress-me-kids.lovable.app/auth
+    https://nabulearn.com/auth
    ```
 
 7. Click **"Create"**
