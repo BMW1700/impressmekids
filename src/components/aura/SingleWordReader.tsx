@@ -206,8 +206,10 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
       skipped: true,
     }]);
 
+    correctStreakRef.current = 0;
     setCorrectStreak(0);
     setFeedback(null);
+    attemptsRef.current = 0;
     setAttempts(0);
     
     // Check if there are more words in the current group
