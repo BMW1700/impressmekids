@@ -206,7 +206,7 @@ If sign-in still fails, check the URL bar for error parameters:
 
 **Error: "requested path is invalid"**
 - Your Site URL or Redirect URL is not configured in the backend
-- Solution: Set **Site URL** to `https://impress-me-kids.lovable.app` in backend auth settings
+- Solution: Set **Site URL** to `https://nabulearn.com` in backend auth settings
 
 **Users stuck on "Choose role" after Google sign-in**
 - This is expected for district staff (e.g., @district.edu emails)
