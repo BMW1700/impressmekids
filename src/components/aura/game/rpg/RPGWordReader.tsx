@@ -155,6 +155,8 @@ export const RPGWordReader = ({
   // Keep refs in sync
   useEffect(() => {
     currentIndexRef.current = currentIndex;
+    // Record timestamp when a new word becomes the active target
+    wordDisplayTimestampRef.current = Date.now();
   }, [currentIndex]);
 
   // Only reset when word CONTENT actually changes, not on every render
