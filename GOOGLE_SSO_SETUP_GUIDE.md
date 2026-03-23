@@ -95,8 +95,8 @@ If you have a custom domain:
     - Under **Redirect URLs**, add: `https://nabulearn.com/auth`
 
 2. Go back to Google Cloud Console:
-   - Add your custom domain to **Authorized JavaScript origins**
-   - Add `https://your-custom-domain.com/auth` to **Authorized redirect URIs**
+    - Add `https://nabulearn.com` to **Authorized JavaScript origins**
+    - Add `https://nabulearn.com/auth` to **Authorized redirect URIs**
 
 ---
 
