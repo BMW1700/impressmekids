@@ -76,6 +76,8 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
   const currentWordInGroupRef = useRef(currentWordInGroup);
   const wordsPerGroupRef = useRef(wordsPerGroup);
   const isProcessingRef = useRef(false);
+  const correctStreakRef = useRef(0);
+  const attemptsRef = useRef(0);
   const { toast } = useToast();
 
   // Keep refs in sync with state
