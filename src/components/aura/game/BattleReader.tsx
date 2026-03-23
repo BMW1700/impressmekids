@@ -339,11 +339,8 @@ export const BattleReader = ({
       }
     }
 
-    // Update student_reading_stats (daily streak, total words, XP)
-    await updateStudentReadingStats(studentId, {
-      wordsRead: finalState.wordsRead,
-      xpEarned,
-    });
+    // NOTE: student_reading_stats is already updated by the embedded WordByWordReader
+    // Do NOT call updateStudentReadingStats here to avoid double-counting
 
     setShowCelebration(true);
   };

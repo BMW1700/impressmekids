@@ -157,10 +157,13 @@ export const GuidedReadingFlow = ({
     }
     
     // Update student_reading_stats (daily streak, total words, XP)
-    await updateStudentReadingStats(studentId, {
-      wordsRead: stats.wordsRead || 0,
-      xpEarned: stats.xpEarned || stats.wordsRead || 0,
-    });
+    // Only for SingleWordReader mode — WordByWordReader already updates stats internally
+    if (readingMode === 'word-by-word') {
+      await updateStudentReadingStats(studentId, {
+        wordsRead: stats.wordsRead || 0,
+        xpEarned: stats.xpEarned || stats.wordsRead || 0,
+      });
+    }
 
     setShowCelebration(true);
   };

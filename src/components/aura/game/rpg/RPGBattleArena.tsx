@@ -1548,7 +1548,7 @@ export const RPGBattleArena = ({
     setTimeout(() => {
       setCurrentWordResult(null);
     }, 800);
-  }, [streak, longestStreak, words, batchStartIndex, enemy, calculateDamage, isPoisoned, poisonDamage, isDebuffed, debuffTurns, attackType, selectedCharacter, correctWords, wordsRead]);
+  }, [words, batchStartIndex, enemy, calculateDamage, isPoisoned, poisonDamage, isDebuffed, debuffTurns, attackType, selectedCharacter]);
   
   // Handle coin collection complete
   const handleCoinCollectionComplete = useCallback(() => {
