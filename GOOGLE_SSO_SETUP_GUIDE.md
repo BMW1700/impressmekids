@@ -102,7 +102,7 @@ If you have a custom domain:
 
 ## Testing
 
-1. Go to your app's login page: [https://impress-me-kids.lovable.app/auth](https://impress-me-kids.lovable.app/auth)
+1. Go to your app's login page: [https://nabulearn.com/auth](https://nabulearn.com/auth)
 2. Click **"Sign in with Google"**
 3. Choose a Google account
 4. You should be redirected back and logged in automatically
