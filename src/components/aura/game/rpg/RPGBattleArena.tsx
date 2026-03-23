@@ -1310,7 +1310,7 @@ export const RPGBattleArena = ({
 
   // Handle word result from RPGWordReader
   // wordIndex is 0-4 within the current batch
-  const handleWordResult = useCallback((correct: boolean, spokenWord: string, wordIndex: number) => {
+  const handleWordResult = useCallback((correct: boolean, spokenWord: string, wordIndex: number, responseTimeMs?: number) => {
     // Calculate the global index in the full words array
     const globalIndex = batchStartIndex + wordIndex;
     const word = words[globalIndex] || "";
