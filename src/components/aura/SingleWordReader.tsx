@@ -179,7 +179,9 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
 
     setFeedback('incorrect');
     soundEffectsRef.current.incorrectWord();
+    correctStreakRef.current = 0;
     setCorrectStreak(0);
+    attemptsRef.current += 1;
     setAttempts(prev => prev + 1);
 
     // Play correct pronunciation of the current word
