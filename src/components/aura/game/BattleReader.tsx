@@ -23,6 +23,7 @@ import { getRandomTaunt } from "@/lib/campaignData";
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import { WordByWordReader } from "../WordByWordReader";
 import { CuratedStory } from "@/data/curatedStories";
+import { updateStudentReadingStats } from "@/lib/updateStudentReadingStats";
 
 interface BattleReaderProps {
   story: CuratedStory;
