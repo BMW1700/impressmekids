@@ -293,9 +293,9 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
       }
       
       if (matched) {
-        handleCorrect();
+        handleCorrectRef.current();
       } else if (spokenWords.length > 0) {
-        handleIncorrect(spokenWords[0] || transcript);
+        handleIncorrectRef.current(spokenWords[0] || transcript);
       }
     };
 
