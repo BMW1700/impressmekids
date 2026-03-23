@@ -1505,6 +1505,7 @@ export const RPGBattleArena = ({
       }
     } else {
       setStreak(0);
+      streakRef.current = 0;
       // Enemy always counter-attacks on miss
       const damage = Math.floor(enemy.attack * 0.5);
       setEnemyAbilityMessage(`${enemy.name} strikes back!`);
