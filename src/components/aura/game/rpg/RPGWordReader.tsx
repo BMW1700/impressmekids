@@ -481,7 +481,7 @@ export const RPGWordReader = ({
     isRetryAttemptRef.current = false;
     
     // NOW trigger the enemy attack via onResult(false, ...)
-    onResult(false, spoken, index);
+    onResult(false, spoken, index, undefined);
     
     // Advance to next word
     const batch = words?.slice(0, Math.min(batchSize, words?.length || 0)) || [];
