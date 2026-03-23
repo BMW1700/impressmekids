@@ -142,7 +142,7 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
     setWordResults(prev => [...prev, {
       word: wordToSave,
       correct: true,
-      attempts: attempts + 1,
+      attempts: attemptsRef.current + 1,
       skipped: false,
     }]);
     
