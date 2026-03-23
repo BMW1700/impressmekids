@@ -339,6 +339,12 @@ export const BattleReader = ({
       }
     }
 
+    // Update student_reading_stats (daily streak, total words, XP)
+    await updateStudentReadingStats(studentId, {
+      wordsRead: finalState.wordsRead,
+      xpEarned,
+    });
+
     setShowCelebration(true);
   };
 
