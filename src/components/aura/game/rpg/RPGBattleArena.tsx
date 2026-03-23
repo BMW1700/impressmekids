@@ -1011,18 +1011,49 @@ export const RPGBattleArena = ({
     }
   }, [phase, currentSpeaker, dialogueIndex, enemy.dialogueIntro.length]);
 
-  // Calculate word damage
-  const calculateDamage = useCallback((wordLength: number, currentStreak: number) => {
+  // Calculate word damage — PATENT-CRITICAL: based on word length, reading speed, streak, and session accuracy
+  // No random component — all damage is deterministic from reading performance
+  const calculateDamage = useCallback((wordLength: number, currentStreak: number, responseTimeMs?: number, sessionAccuracy?: number): { damage: number; speedTier: 'fast' | 'normal' | 'slow'; isCritical: boolean; accuracyMultiplier: number } => {
     let baseDamage = Math.max(8, wordLength * 3);
     const streakBonus = Math.floor(currentStreak / 2) * 5;
-    const criticalBonus = Math.random() > 0.85 ? 15 : 0;
+    
+    // SPEED BONUS: Based on response time (ms between word appearing and correct speech)
+    let speedBonus = 0;
+    let speedTier: 'fast' | 'normal' | 'slow' = 'normal';
+    let isCritical = false;
+    
+    if (responseTimeMs !== undefined && responseTimeMs > 0) {
+      if (responseTimeMs < 1500) {
+        speedBonus = 15; // Fast reader — critical hit!
+        speedTier = 'fast';
+        isCritical = true;
+      } else if (responseTimeMs < 3000) {
+        speedBonus = 8; // Good pace
+        speedTier = 'normal';
+      } else {
+        speedBonus = 0; // Slow — no bonus
+        speedTier = 'slow';
+      }
+    }
+    
+    // ACCURACY MULTIPLIER: Based on session accuracy (correctWords / wordsRead)
+    let accuracyMultiplier = 1.0;
+    if (sessionAccuracy !== undefined) {
+      if (sessionAccuracy >= 0.90) {
+        accuracyMultiplier = 1.2; // 90%+ accuracy = 20% damage boost
+      } else if (sessionAccuracy >= 0.75) {
+        accuracyMultiplier = 1.1; // 75-89% = 10% boost
+      }
+    }
     
     // Apply debuff if active
     if (isDebuffed) {
       baseDamage = Math.floor(baseDamage * 0.7);
     }
     
-    return baseDamage + streakBonus + criticalBonus;
+    const totalDamage = Math.floor((baseDamage + streakBonus + speedBonus) * accuracyMultiplier);
+    
+    return { damage: totalDamage, speedTier, isCritical, accuracyMultiplier };
   }, [isDebuffed]);
 
   // Trigger screen shake
