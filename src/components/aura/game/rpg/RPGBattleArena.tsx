@@ -1630,74 +1630,7 @@ export const RPGBattleArena = ({
   // Track battle start time for duration calculation
   const battleStartTime = useRef(Date.now());
   
-  // CRITICAL: Update student_reading_stats to sync with main ecosystem
-  const updateStudentReadingStats = useCallback(async (victory: boolean, finalWordsRead: number, finalCorrectWords: number, finalXpEarned: number) => {
-    if (!studentId || finalWordsRead === 0) return;
-    
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      
-      // Fetch existing stats
-      const { data: existingStats, error: fetchError } = await supabase
-        .from('student_reading_stats')
-        .select('*')
-        .eq('student_id', studentId)
-        .maybeSingle();
-      
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        console.error('[RPGBattle] Error fetching student stats:', fetchError);
-        return;
-      }
-      
-      // Calculate streak
-      let newStreak = 1;
-      let newLongestStreak = 1;
-      
-      if (existingStats) {
-        const lastActivity = existingStats.last_activity_date;
-        if (lastActivity) {
-          const lastDate = new Date(lastActivity);
-          const todayDate = new Date(today);
-          const diffDays = Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-          
-          if (diffDays === 0) {
-            // Same day - keep streak
-            newStreak = existingStats.current_streak_days || 1;
-          } else if (diffDays === 1) {
-            // Consecutive day - increment streak
-            newStreak = (existingStats.current_streak_days || 0) + 1;
-          } else {
-            // Streak broken - reset to 1
-            newStreak = 1;
-          }
-        }
-        newLongestStreak = Math.max(existingStats.longest_streak_days || 0, newStreak);
-      }
-      
-      // Upsert stats
-      const statsUpdate = {
-        student_id: studentId,
-        total_words_read: (existingStats?.total_words_read || 0) + finalWordsRead,
-        total_sessions: (existingStats?.total_sessions || 0) + 1,
-        current_streak_days: newStreak,
-        longest_streak_days: newLongestStreak,
-        xp_points: (existingStats?.xp_points || 0) + finalXpEarned,
-        last_activity_date: today,
-      };
-      
-      const { error: upsertError } = await supabase
-        .from('student_reading_stats')
-        .upsert(statsUpdate, { onConflict: 'student_id' });
-      
-      if (upsertError) {
-        console.error('[RPGBattle] Error updating student stats:', upsertError);
-      } else {
-        console.log('[RPGBattle] ✅ Student reading stats synced to main ecosystem:', statsUpdate);
-      }
-    } catch (err) {
-      console.error('[RPGBattle] Error in updateStudentReadingStats:', err);
-    }
-  }, [studentId]);
+  // CRITICAL: Update student_reading_stats using shared atomic utility
   
   // Handle battle end - also saves reading session for teacher visibility
   const handleBattleEnd = useCallback(async (victory: boolean) => {

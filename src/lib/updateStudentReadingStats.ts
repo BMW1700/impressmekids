@@ -1,7 +1,68 @@
 import { supabase } from "@/integrations/supabase/client";
 
+interface PendingReadingStat {
+  studentId: string;
+  wordsRead: number;
+  xpEarned: number;
+  timestamp: number;
+}
+
+const PENDING_KEY = "pending_reading_stats";
+
+/**
+ * Flush any cached stats that failed to save while offline.
+ * Called on module load and whenever the browser comes back online.
+ */
+const flushPendingStats = async () => {
+  const raw = localStorage.getItem(PENDING_KEY);
+  if (!raw) return;
+
+  let pending: PendingReadingStat[];
+  try {
+    pending = JSON.parse(raw);
+  } catch {
+    localStorage.removeItem(PENDING_KEY);
+    return;
+  }
+  if (!pending.length) {
+    localStorage.removeItem(PENDING_KEY);
+    return;
+  }
+
+  const stillPending: PendingReadingStat[] = [];
+
+  for (const entry of pending) {
+    try {
+      const { error } = await supabase.rpc("upsert_reading_stats", {
+        p_student_id: entry.studentId,
+        p_words_read: entry.wordsRead,
+        p_xp_earned: entry.xpEarned,
+      });
+      if (error) throw error;
+      console.log("[ReadingStats] ✅ Flushed pending stat for", entry.studentId);
+    } catch {
+      stillPending.push(entry);
+    }
+  }
+
+  if (stillPending.length) {
+    localStorage.setItem(PENDING_KEY, JSON.stringify(stillPending));
+  } else {
+    localStorage.removeItem(PENDING_KEY);
+  }
+};
+
+// Auto-flush on load and when coming back online
+if (typeof window !== "undefined") {
+  flushPendingStats();
+  window.addEventListener("online", flushPendingStats);
+}
+
 /**
  * Shared utility to upsert student_reading_stats after any reading session.
+ * Uses an atomic database RPC — no read-then-write race conditions.
+ * On network failure, caches to localStorage for automatic retry.
+ *
  * Used by GuidedReadingFlow (SingleWordReader + full-passage) and BattleReader.
  */
 export const updateStudentReadingStats = async (
@@ -11,62 +72,32 @@ export const updateStudentReadingStats = async (
     xpEarned: number;
   }
 ) => {
+  if (!studentId || sessionData.wordsRead === 0) return;
+
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const { error } = await supabase.rpc("upsert_reading_stats", {
+      p_student_id: studentId,
+      p_words_read: sessionData.wordsRead,
+      p_xp_earned: sessionData.xpEarned,
+    });
 
-    const { data: existingStats } = await supabase
-      .from('student_reading_stats')
-      .select('*')
-      .eq('student_id', studentId)
-      .maybeSingle();
+    if (error) throw error;
+    console.log("[ReadingStats] ✅ Stats synced for", studentId);
+  } catch (err) {
+    console.error("[ReadingStats] Failed, caching for retry:", err);
 
-    if (existingStats) {
-      const lastActivity = existingStats.last_activity_date;
-      let newStreak = existingStats.current_streak_days || 1;
-
-      if (lastActivity) {
-        const lastDate = new Date(lastActivity);
-        const todayDate = new Date(today);
-        const diffDays = Math.floor(
-          (todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)
-        );
-
-        if (diffDays === 1) {
-          newStreak += 1;
-        } else if (diffDays > 1) {
-          newStreak = 1;
-        }
-        // diffDays === 0 → same day, keep streak
-      }
-
-      const longestStreak = Math.max(
-        existingStats.longest_streak_days || 0,
-        newStreak
-      );
-
-      await supabase
-        .from('student_reading_stats')
-        .update({
-          total_words_read: (existingStats.total_words_read || 0) + sessionData.wordsRead,
-          total_sessions: (existingStats.total_sessions || 0) + 1,
-          current_streak_days: newStreak,
-          longest_streak_days: longestStreak,
-          xp_points: (existingStats.xp_points || 0) + sessionData.xpEarned,
-          last_activity_date: today,
-        })
-        .eq('student_id', studentId);
-    } else {
-      await supabase.from('student_reading_stats').insert({
-        student_id: studentId,
-        total_words_read: sessionData.wordsRead,
-        total_sessions: 1,
-        current_streak_days: 1,
-        longest_streak_days: 1,
-        xp_points: sessionData.xpEarned,
-        last_activity_date: today,
+    try {
+      const raw = localStorage.getItem(PENDING_KEY);
+      const pending: PendingReadingStat[] = raw ? JSON.parse(raw) : [];
+      pending.push({
+        studentId,
+        wordsRead: sessionData.wordsRead,
+        xpEarned: sessionData.xpEarned,
+        timestamp: Date.now(),
       });
+      localStorage.setItem(PENDING_KEY, JSON.stringify(pending));
+    } catch {
+      // localStorage full or unavailable — silent fail
     }
-  } catch (error) {
-    console.error('Error updating student reading stats:', error);
   }
 };
