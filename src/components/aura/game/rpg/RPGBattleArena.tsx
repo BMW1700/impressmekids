@@ -1307,8 +1307,10 @@ export const RPGBattleArena = ({
     // Only count if not already counted
     if (!countedWordIndicesRef.current.has(globalIndex)) {
       countedWordIndicesRef.current.add(globalIndex);
+      wordsReadRef.current += 1;
       setWordsRead(prev => prev + 1);
       // Reset streak on first miss (accuracy rigor)
+      streakRef.current = 0;
       setStreak(0);
       console.log('[RPGBattle] handleMiss: Counted miss immediately', { globalIndex, spokenWord });
     }
