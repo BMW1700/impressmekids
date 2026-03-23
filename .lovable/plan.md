@@ -1,62 +1,57 @@
 
-Goal: make streak counters accurate in Word-by-Word and both game flows, without changing microphone behavior.
 
-1) Audit Findings (root causes)
-- SingleWordReader streak bug:
-  - `startContinuousListening` creates one recognition session and `onresult` keeps the original `handleCorrect`.
-  - `handleCorrect` uses `correctStreak + 1` from that old closure, so streak can stay at 1 even after multiple correct words.
-  - File: `src/components/aura/SingleWordReader.tsx` (streak calc in `handleCorrect`, recognition setup in `startContinuousListening`).
-- RPG battle streak bug:
-  - `handleWordResult` in `RPGBattleArena` computes `newStreak = streak + 1` from callback-closure state, not guaranteed latest state during rapid speech events.
-  - This can flatten/lag streak progression (e.g., staying at x1).
-  - File: `src/components/aura/game/rpg/RPGBattleArena.tsx`.
-- RPG reader callback staleness:
-  - `RPGWordReader` keeps one recognition instance; callbacks can hold stale `onResult`/`streak` unless refs are used.
-  - File: `src/components/aura/game/rpg/RPGWordReader.tsx`.
-- Data accuracy regression from prior patch:
-  - `GuidedReadingFlow` now always calls shared stats updater, while full-passage `WordByWordReader` already updates stats itself.
-  - `BattleReader` also calls shared updater, while its embedded `WordByWordReader` already updates stats.
-  - This causes double-counting of sessions/XP/words in those paths.
-  - Files: `src/components/aura/GuidedReadingFlow.tsx`, `src/components/aura/game/BattleReader.tsx`, `src/components/aura/WordByWordReader.tsx`.
+# Atomic Stats + Offline Resilience (Ecosystem-Preserving)
 
-2) Implementation Plan
-- A. Fix SingleWordReader real-time streak logic
-  - Add `correctStreakRef` (and attempt-related refs as needed) as source of truth for speech callbacks.
-  - Update `handleCorrect` to compute from ref/functional update, then sync both state + ref.
-  - Ensure incorrect/skip paths reset both state + ref.
-  - Route recognition `onresult` through handler refs (`handleCorrectRef`/`handleIncorrectRef`) so live mic always uses latest logic.
-- B. Fix RPG battle streak progression deterministically
-  - Add refs for volatile combat counters (`streak`, `longestStreak`, `wordsRead`, `correctWords`).
-  - In `handleWordResult` and `handleMiss`, calculate next values from refs (not closure snapshots), then sync state.
-  - Keep damage/accuracy calculations based on computed next counters so HUD, damage, and streak are consistent.
-- C. Harden RPGWordReader against stale parent callbacks
-  - Add `onResultRef`/`onMissRef`/`streakRef` and use refs in recognition-result processing.
-  - This ensures long-lived recognition sessions always call latest parent logic.
-- D. Remove streak/stat distortion from duplicate writes
-  - `GuidedReadingFlow`: only run shared `updateStudentReadingStats` for SingleWord mode.
-  - `BattleReader`: remove extra shared stats call (or gate it) because `WordByWordReader` already persists stats.
-  - Keep full-passage behavior unchanged where it already works.
-- E. Regression pass for all three problematic sections
-  - Word-by-Word mode (SingleWordReader): 5 consecutive correct words should show streak 1→5.
-  - RPG mode: consecutive correct words should move panel streak x1→x2→x3 and “Best” update live.
-  - Battle mode: streak/words/HUD should increment once per real word event.
-  - Confirm backend stats increase once per completed session (no doubles).
+## What stays the same
+All 16+ files that READ from `student_reading_stats` are untouched. The table schema is unchanged. Every mode (AURA word-by-word, RPG, Campaign/Battle) continues writing to the same table. Streaks, XP, words read, achievements, missions, leaderboards — all still fed from the same source.
 
-3) Technical Details (what will and won’t change)
-- Will change:
-  - `src/components/aura/SingleWordReader.tsx`
-  - `src/components/aura/game/rpg/RPGBattleArena.tsx`
-  - `src/components/aura/game/rpg/RPGWordReader.tsx`
-  - `src/components/aura/GuidedReadingFlow.tsx` (gating shared stats update)
-  - `src/components/aura/game/BattleReader.tsx` (remove/gate duplicate update)
-- Will not change:
-  - Mic interaction model (no continuous-mic behavior redesign).
-  - Database schema/migrations (not needed for this fix).
+## What changes
 
-4) Success Criteria
-- Streak counters in UI match actual consecutive correctness in:
-  - Word-by-Word mode,
-  - RPG mode,
-  - Battle mode.
-- No more “stuck at 1” behavior after multiple consecutive correct words.
-- Stats persistence no longer double-counts in full-passage/battle wrappers.
+### 1. New database RPC function: `upsert_reading_stats`
+- Atomically increments `total_words_read`, `total_sessions`, `xp_points`
+- Calculates streak internally (same-day keep, next-day increment, gap reset)
+- Updates `longest_streak_days` via `GREATEST()`
+- `SECURITY DEFINER` so it works through RLS
+- Same exact math as current JS code, just race-condition-proof
+
+### 2. Rewrite `src/lib/updateStudentReadingStats.ts`
+- Replace 60 lines of read-then-write with single `supabase.rpc('upsert_reading_stats', {...})`
+- Add try/catch: on failure, cache to `localStorage` key `pending_reading_stats`
+- On module load + `window.addEventListener('online')`: flush pending entries
+- Same function signature — all callers (GuidedReadingFlow, etc.) unchanged
+
+### 3. Replace RPGBattleArena's inline stats code
+- Remove the 70-line `updateStudentReadingStats` callback (lines 1634-1700)
+- Import and call the shared utility instead
+- This actually makes RPG **more** integrated with the ecosystem (same code path as all other modes)
+
+## Ecosystem flow after change
+
+```text
+SingleWordReader ──→ GuidedReadingFlow ──→ shared utility ──→ RPC ──→ student_reading_stats
+WordByWordReader ──→ (internal stats)  ──→ shared utility ──→ RPC ──→ student_reading_stats  
+RPGBattleArena   ──→ shared utility    ──→ RPC ──→ student_reading_stats
+                                                         ↑
+                                              (same table, same columns)
+                                                         ↓
+                              GamificationHeader, Leaderboard, Achievements,
+                              Missions, ReadingProgressPanel, SmartNotifications,
+                              KidFriendlyProgress, FullReadingStatsModal — ALL read from here
+```
+
+## Files modified
+| File | Change |
+|------|--------|
+| New migration | `upsert_reading_stats` RPC function |
+| `src/lib/updateStudentReadingStats.ts` | RPC call + offline retry |
+| `src/components/aura/game/rpg/RPGBattleArena.tsx` | Replace inline stats with shared utility import |
+
+## What will NOT break
+- No mic/speech code touched
+- No UI components changed
+- No table schema changes
+- No reading flow logic changes
+- Achievement checks still read from same table
+- Leaderboards still read from same table
+- Everything in the ecosystem still works exactly as before
+
