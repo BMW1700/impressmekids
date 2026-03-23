@@ -177,7 +177,7 @@ This error means Google is blocking sign-in attempts. Follow these steps **in or
 
 1. **Close all browser windows** (this clears session cookies)
 2. Open a **new incognito/private window**
-3. Go to: `https://impress-me-kids.lovable.app/auth`
+3. Go to: `https://nabulearn.com/auth`
 4. Click **"Sign in with Google"**
 5. **Test with both:**
    - A personal **Gmail** account (e.g., `yourname@gmail.com`)
