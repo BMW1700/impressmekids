@@ -91,8 +91,8 @@ If you have a custom domain:
 
 1. In Lovable Cloud dashboard:
    - Go to **Users** → **Auth Settings**
-   - Under **Site URL**, set: `https://your-custom-domain.com`
-   - Under **Redirect URLs**, add: `https://your-custom-domain.com/auth`
+    - Under **Site URL**, set: `https://nabulearn.com`
+    - Under **Redirect URLs**, add: `https://nabulearn.com/auth`
 
 2. Go back to Google Cloud Console:
    - Add your custom domain to **Authorized JavaScript origins**
