@@ -15,6 +15,7 @@ import { CuratedStory } from "@/data/curatedStories";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { getMiscueInterventions } from "@/lib/miscueAnalysis";
+import { updateStudentReadingStats } from "@/lib/updateStudentReadingStats";
 
 interface GuidedReadingFlowProps {
   story: CuratedStory;
@@ -155,6 +156,12 @@ export const GuidedReadingFlow = ({
       }
     }
     
+    // Update student_reading_stats (daily streak, total words, XP)
+    await updateStudentReadingStats(studentId, {
+      wordsRead: stats.wordsRead || 0,
+      xpEarned: stats.xpEarned || stats.wordsRead || 0,
+    });
+
     setShowCelebration(true);
   };
 

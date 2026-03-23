@@ -23,6 +23,7 @@ import { getRandomTaunt } from "@/lib/campaignData";
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import { WordByWordReader } from "../WordByWordReader";
 import { CuratedStory } from "@/data/curatedStories";
+import { updateStudentReadingStats } from "@/lib/updateStudentReadingStats";
 
 interface BattleReaderProps {
   story: CuratedStory;
@@ -337,6 +338,12 @@ export const BattleReader = ({
         console.error('Failed to complete battle:', error);
       }
     }
+
+    // Update student_reading_stats (daily streak, total words, XP)
+    await updateStudentReadingStats(studentId, {
+      wordsRead: finalState.wordsRead,
+      xpEarned,
+    });
 
     setShowCelebration(true);
   };

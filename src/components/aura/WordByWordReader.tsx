@@ -865,6 +865,10 @@ export const WordByWordReader = ({
                           updated.set(wordIdx, 'incorrect');
                           realtimeWordStatusRef.current = updated;
                           
+                          // Reset streak on definitive incorrect
+                          setCorrectStreak(0);
+                          correctStreakRef.current = 0;
+                          
                           // BATTLE MODE: Fire callback for incorrect word
                           if (onWordResult) {
                             onWordResult({
@@ -899,6 +903,10 @@ export const WordByWordReader = ({
                     if (updated.get(wordIdx) === 'pending-incorrect') {
                       updated.set(wordIdx, 'incorrect');
                       realtimeWordStatusRef.current = updated;
+                      
+                      // Reset streak on definitive incorrect
+                      setCorrectStreak(0);
+                      correctStreakRef.current = 0;
                       
                       // BATTLE MODE: Fire callback for incorrect word
                       if (onWordResult) {
