@@ -1359,16 +1359,19 @@ export const RPGBattleArena = ({
     }
 
     if (correct) {
-      const newStreak = streak + 1;
+      const newStreak = streakRef.current + 1;
+      streakRef.current = newStreak;
       setStreak(newStreak);
+      correctWordsRef.current += 1;
       setCorrectWords(prev => prev + 1);
-      if (newStreak > longestStreak) {
+      if (newStreak > longestStreakRef.current) {
+        longestStreakRef.current = newStreak;
         setLongestStreak(newStreak);
       }
 
       // Calculate session accuracy for damage multiplier
-      const currentCorrect = correctWords + 1; // +1 for this word
-      const currentWordsRead = wordsRead + (countedWordIndicesRef.current.has(globalIndex) ? 0 : 1);
+      const currentCorrect = correctWordsRef.current;
+      const currentWordsRead = wordsReadRef.current;
       const sessionAccuracy = currentWordsRead > 0 ? currentCorrect / currentWordsRead : 1.0;
       
       // Calculate damage using patent-critical formula: word length + speed + streak + accuracy
