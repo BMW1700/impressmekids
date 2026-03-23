@@ -15,6 +15,7 @@ import { CuratedStory } from "@/data/curatedStories";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { getMiscueInterventions } from "@/lib/miscueAnalysis";
+import { updateStudentReadingStats } from "@/lib/updateStudentReadingStats";
 
 interface GuidedReadingFlowProps {
   story: CuratedStory;
