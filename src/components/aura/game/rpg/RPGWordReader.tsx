@@ -142,6 +142,9 @@ export const RPGWordReader = ({
   const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const echoIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
+  // Response time tracking for patent-critical speed-based damage
+  const wordDisplayTimestampRef = useRef<number>(0);
+  
   // Word generation tracking
   const wordGenerationRef = useRef(0);
   
