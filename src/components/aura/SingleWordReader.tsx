@@ -343,7 +343,7 @@ export const SingleWordReader = ({ passageText, onComplete }: SingleWordReaderPr
 
     recognitionRef.current = recognition;
     recognition.start();
-  }, [words, currentIndex, handleCorrect, handleIncorrect, toast, isComplete]);
+  }, [words, toast, isComplete]);
 
   const stopListening = useCallback(() => {
     if (recognitionRef.current) {
