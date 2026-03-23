@@ -235,6 +235,12 @@ export const RPGBattleArena = ({
   const [wordsRead, setWordsRead] = useState(0);
   const [correctWords, setCorrectWords] = useState(0);
   const [totalDamage, setTotalDamage] = useState(0);
+  
+  // Refs for volatile combat counters (prevents stale closures in callbacks)
+  const streakRef = useRef(0);
+  const longestStreakRef = useRef(0);
+  const wordsReadRef = useRef(0);
+  const correctWordsRef = useRef(0);
   const [inventory, setInventory] = useState<Record<InventoryKey, number>>({ health_potion: 2, magic_potion: 1 });
   
   // Ref to track latest enemyHp for use in callbacks (prevents stale closure issues in mini-games)
