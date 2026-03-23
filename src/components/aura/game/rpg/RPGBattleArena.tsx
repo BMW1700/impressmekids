@@ -1707,7 +1707,7 @@ export const RPGBattleArena = ({
       xpEarned: finalXpEarned,
       goldEarned, // NEW: Pass gold to parent for wallet sync
     });
-  }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete, studentId, story, battleMode, saveToAuraRecords, updateStudentReadingStats, goldEarned]);
+  }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete, studentId, story, battleMode, saveToAuraRecords, goldEarned]);
 
   // Get current batch of words for reading - MEMOIZED for stable reference
   // batchStartIndex only changes when we complete a full batch, keeping this stable
