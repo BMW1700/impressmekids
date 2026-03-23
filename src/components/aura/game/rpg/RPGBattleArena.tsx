@@ -1357,8 +1357,23 @@ export const RPGBattleArena = ({
         setLongestStreak(newStreak);
       }
 
-      // Calculate base damage
-      const baseDamage = Math.floor(calculateDamage(word.length || 5, newStreak) * enemy.wordDamageMultiplier);
+      // Calculate session accuracy for damage multiplier
+      const currentCorrect = correctWords + 1; // +1 for this word
+      const currentWordsRead = wordsRead + (countedWordIndicesRef.current.has(globalIndex) ? 0 : 1);
+      const sessionAccuracy = currentWordsRead > 0 ? currentCorrect / currentWordsRead : 1.0;
+      
+      // Calculate damage using patent-critical formula: word length + speed + streak + accuracy
+      const damageResult = calculateDamage(word.length || 5, newStreak, responseTimeMs, sessionAccuracy);
+      const baseDamage = Math.floor(damageResult.damage * enemy.wordDamageMultiplier);
+      
+      // Update speed bonus HUD indicator
+      if (responseTimeMs !== undefined) {
+        setSpeedBonusFlash({ tier: damageResult.speedTier, timeMs: responseTimeMs });
+        setTimeout(() => setSpeedBonusFlash(null), 1200);
+      }
+      
+      // Update accuracy tier HUD
+      setAccuracyTier({ multiplier: damageResult.accuracyMultiplier, percent: Math.round(sessionAccuracy * 100) });
       
       // ELARA-SPECIFIC: 5-word charge system for plasma barrage (3x damage)
       let actualDamage = baseDamage;
