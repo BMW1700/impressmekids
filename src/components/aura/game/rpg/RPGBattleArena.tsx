@@ -1692,8 +1692,8 @@ export const RPGBattleArena = ({
         });
         console.log('[RPGBattle] ML training data saved to aura_records');
         
-        // CRITICAL: Sync to main student_reading_stats table
-        await updateStudentReadingStats(victory, wordsRead, correctWords, finalXpEarned);
+        // CRITICAL: Sync to main student_reading_stats table (atomic RPC)
+        await updateSharedReadingStats(studentId, { wordsRead, xpEarned: finalXpEarned });
       } catch (err) {
         console.error('[RPGBattle] Error saving reading data:', err);
       }
