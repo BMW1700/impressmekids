@@ -1,8 +1,8 @@
-// Service Worker for ImpressMe Kids
+// Service Worker for NabuLearn
 // Handles push notifications and offline capabilities
 // v2 - Network-first for navigations to prevent stale index.html
 
-const CACHE_NAME = 'impressme-kids-v2';
+const CACHE_NAME = 'nabulearn-v2';
 const STATIC_ASSETS = [
   '/favicon-32x32.png',
   '/android-chrome-192x192.png',
