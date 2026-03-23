@@ -148,7 +148,7 @@ This error means Google is blocking sign-in attempts. Follow these steps **in or
 3. Click the **edit icon** (pencil)
 4. **Verify Authorized JavaScript origins:**
    ```
-   https://impress-me-kids.lovable.app
+    https://nabulearn.com
    ```
    - Must be exactly this URL (no trailing slash, no `http://`)
 
