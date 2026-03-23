@@ -1467,8 +1467,8 @@ export const RPGBattleArena = ({
           setEnemyHp(prev => Math.max(0, prev - actualDamage));
           triggerScreenShake();
           
-          // Add floating damage for big hits
-          if (isElaraBarrage) {
+          // Add floating damage for big hits (Elara barrage or speed crits)
+          if (isElaraBarrage || damageResult.isCritical) {
             setFloatingDamages(prev => [...prev, {
               id: Date.now(),
               damage: actualDamage,
