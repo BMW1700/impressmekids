@@ -52,8 +52,7 @@ Google Single Sign-On (SSO) allows students and teachers to sign in using their 
 
 5. **Authorized JavaScript origins:**
    ```
-   https://impress-me-kids.lovable.app
-   https://your-custom-domain.com (if applicable)
+   https://nabulearn.com
    ```
 
 6. **Authorized redirect URIs:**
