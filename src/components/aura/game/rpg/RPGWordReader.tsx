@@ -29,6 +29,7 @@ export interface WordAttempt {
 
 interface RPGWordReaderProps {
   words: string[];
+  /** Called with response time in ms for speed-based damage calculation */
   onResult: (correct: boolean, spokenWord: string, wordIndex: number) => void;
   onBatchComplete?: (results: WordAttempt[]) => void;
   onRetrySuccess?: (wordIndex: number) => void; // Called when a retried word is read correctly (for HP healing)
