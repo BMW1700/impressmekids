@@ -62,6 +62,7 @@ import { calculateGoldEarned, calculateXpEarned } from "@/lib/gameEconomy";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { speechManager } from "@/lib/speechRecognitionManager";
 import { supabase } from "@/integrations/supabase/client";
+import { updateStudentReadingStats as updateSharedReadingStats } from "@/lib/updateStudentReadingStats";
 import { useMLIntegration } from "@/hooks/useMLIntegration";
 
 // Sound effects singleton
