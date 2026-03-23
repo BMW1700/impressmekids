@@ -95,7 +95,7 @@ self.addEventListener('fetch', (event) => {
 // Push event - handle incoming push notifications
 self.addEventListener('push', (event) => {
   let notificationData = {
-    title: 'ImpressMe Kids',
+    title: 'NabuLearn',
     body: 'You have a new notification',
     icon: '/android-chrome-192x192.png',
     badge: '/favicon-32x32.png',
