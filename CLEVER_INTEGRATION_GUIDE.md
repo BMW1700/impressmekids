@@ -39,7 +39,7 @@ Clever is the **#1 Student Information System (SIS) integration** used by K-12 s
    - **Description:** AI-powered literacy and assessment platform for K-12 schools
    - **Icon:** Upload your logo (optional)
    - **Category:** Educational Platform
-   - **Website:** https://impress-me-kids.lovable.app
+   - **Website:** https://nabulearn.com
 
 ---
 

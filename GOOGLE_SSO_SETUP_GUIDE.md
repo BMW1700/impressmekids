@@ -52,14 +52,13 @@ Google Single Sign-On (SSO) allows students and teachers to sign in using their 
 
 5. **Authorized JavaScript origins:**
    ```
-   https://impress-me-kids.lovable.app
-   https://your-custom-domain.com (if applicable)
+   https://nabulearn.com
    ```
 
 6. **Authorized redirect URIs:**
    ```
    https://sjigkjwkgovculkovcjy.supabase.co/auth/v1/callback
-   https://impress-me-kids.lovable.app/auth
+    https://nabulearn.com/auth
    ```
 
 7. Click **"Create"**
@@ -92,18 +91,18 @@ If you have a custom domain:
 
 1. In Lovable Cloud dashboard:
    - Go to **Users** → **Auth Settings**
-   - Under **Site URL**, set: `https://your-custom-domain.com`
-   - Under **Redirect URLs**, add: `https://your-custom-domain.com/auth`
+    - Under **Site URL**, set: `https://nabulearn.com`
+    - Under **Redirect URLs**, add: `https://nabulearn.com/auth`
 
 2. Go back to Google Cloud Console:
-   - Add your custom domain to **Authorized JavaScript origins**
-   - Add `https://your-custom-domain.com/auth` to **Authorized redirect URIs**
+    - Add `https://nabulearn.com` to **Authorized JavaScript origins**
+    - Add `https://nabulearn.com/auth` to **Authorized redirect URIs**
 
 ---
 
 ## Testing
 
-1. Go to your app's login page: [https://impress-me-kids.lovable.app/auth](https://impress-me-kids.lovable.app/auth)
+1. Go to your app's login page: [https://nabulearn.com/auth](https://nabulearn.com/auth)
 2. Click **"Sign in with Google"**
 3. Choose a Google account
 4. You should be redirected back and logged in automatically
@@ -149,7 +148,7 @@ This error means Google is blocking sign-in attempts. Follow these steps **in or
 3. Click the **edit icon** (pencil)
 4. **Verify Authorized JavaScript origins:**
    ```
-   https://impress-me-kids.lovable.app
+    https://nabulearn.com
    ```
    - Must be exactly this URL (no trailing slash, no `http://`)
 
@@ -178,7 +177,7 @@ This error means Google is blocking sign-in attempts. Follow these steps **in or
 
 1. **Close all browser windows** (this clears session cookies)
 2. Open a **new incognito/private window**
-3. Go to: `https://impress-me-kids.lovable.app/auth`
+3. Go to: `https://nabulearn.com/auth`
 4. Click **"Sign in with Google"**
 5. **Test with both:**
    - A personal **Gmail** account (e.g., `yourname@gmail.com`)
@@ -207,7 +206,7 @@ If sign-in still fails, check the URL bar for error parameters:
 
 **Error: "requested path is invalid"**
 - Your Site URL or Redirect URL is not configured in the backend
-- Solution: Set **Site URL** to `https://impress-me-kids.lovable.app` in backend auth settings
+- Solution: Set **Site URL** to `https://nabulearn.com` in backend auth settings
 
 **Users stuck on "Choose role" after Google sign-in**
 - This is expected for district staff (e.g., @district.edu emails)
