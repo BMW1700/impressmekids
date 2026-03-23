@@ -297,9 +297,14 @@ export const RPGWordReader = ({
       setEmojiPopups(prev => [...prev, newPopup]);
     }
     
+    // Calculate response time (ms between word display and correct speech match)
+    const responseTimeMs = wordDisplayTimestampRef.current > 0
+      ? Date.now() - wordDisplayTimestampRef.current
+      : undefined;
+    
     // Mark word as completed and report to parent (deals damage, gives coins)
     setCompletedWords(prev => new Set([...prev, wordIndex]));
-    onResult(true, spokenWord, wordIndex);
+    onResult(true, spokenWord, wordIndex, responseTimeMs);
     
     // CRITICAL FIX: Advance index IMMEDIATELY so next speech results compare to next word
     const nextIndex = wordIndex + 1;
