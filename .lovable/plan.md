@@ -1,31 +1,49 @@
 
 
-# Gap 1: Add Phoneme Tracking to RPG Battles
+# Gap 2 (Revised): Smart Story Recommendation Based on Q-Learning
 
-## What Changes
-One file modified: `src/components/aura/game/rpg/RPGBattleArena.tsx`
+## The Problem With the Old Plan
+Reordering words within a story would destroy the narrative. A kid can't read scrambled sentences. That was a bad idea.
+
+## The Right Approach
+Each story already has a `target_phonemes` field (e.g., `["d", "p", "s", "k"]`). Instead of scrambling words, we **score and rank stories** so the system recommends stories that contain the phonemes the student needs to practice most.
+
+The student still picks their story — but the UI highlights which ones are "recommended for you" based on their weaknesses.
 
 ## How It Works
 
-1. **Add import** for `getIPAPronunciation` from `@/lib/cmuDictWrapper`
+```text
+Student's Q-Learning data says: struggles with [θ, ʃ, ɹ]
+                                    ↓
+Story A target_phonemes: [d, p, s, k]     → low match
+Story B target_phonemes: [θ, ɹ, s, t]     → HIGH match (2 overlap)
+Story C target_phonemes: [ʃ, tʃ, dʒ, l]   → HIGH match (1 overlap)
+                                    ↓
+Stories B and C get a "Recommended for You" badge in the story picker
+```
 
-2. **Add a ref** to accumulate phoneme data throughout the battle:
-   ```ts
-   const phonemeAccumulatorRef = useRef<Record<string, { correct: number; total: number }>>({});
-   ```
+## Changes
 
-3. **Inside `handleWordResult`** (line ~1325, after `const word = words[globalIndex] || ""`), add ~10 lines:
-   - Call `getIPAPronunciation(word)` to get the phoneme array
-   - For each phoneme, increment `total` by 1
-   - If `correct`, also increment `correct` by 1
-   - Wrapped in try/catch so any failure is silently logged (zero risk to game flow)
+### 1. New utility: `src/lib/adaptiveStoryRanking.ts`
+- Pure function: takes an array of stories + student's struggling phonemes → returns stories sorted by relevance
+- Scoring: count how many of the story's `target_phonemes` overlap with the student's weak phonemes
+- No side effects, easy to test
 
-4. **At battle end** (line ~1690), replace `phonemeScores: {}` with:
-   - Convert the accumulator to `{ phoneme: score_0_to_100 }` format
-   - `score = Math.round((correct / total) * 100)` per phoneme
+### 2. Modify: `src/components/aura/StoryLibrary.tsx`
+- Import the ranking utility and the ML context (via `useMLContextSafe`)
+- On mount, fetch the student's struggling phonemes from the ML context or skill vector
+- If data exists: sort stories so highest-match ones appear first, add a "Recommended" badge
+- If no data: show stories in default order (zero-risk fallback)
 
-## What This Achieves
-- Every RPG battle now feeds real phoneme-level accuracy data into the ML pipeline
-- The Q-Learning agent gets actual training signal from combat sessions
-- Zero changes to damage formulas, HP, streaks, or any game mechanics
+### 3. Modify: `src/components/aura/game/CampaignModeEntry.tsx`
+- Same ranking logic applied to campaign story selection
+
+## Safety
+- Stories are never modified or scrambled — just sorted/badged
+- Students can still pick any story they want
+- No ML data = default order, no visible change
+- Zero changes to RPG battle mechanics
+
+## Patent Alignment
+This closes the loop for Claim 3: the RL agent's phoneme recommendations now influence which reading content is presented to the student, making the system genuinely adaptive.
 
