@@ -1328,6 +1328,23 @@ export const RPGBattleArena = ({
     const globalIndex = batchStartIndex + wordIndex;
     const word = words[globalIndex] || "";
     
+    // Phoneme tracking: decompose word and accumulate per-phoneme accuracy
+    try {
+      const pronunciations = getIPAPronunciation(word);
+      const phonemes = pronunciations[0] || [];
+      for (const phoneme of phonemes) {
+        if (!phonemeAccumulatorRef.current[phoneme]) {
+          phonemeAccumulatorRef.current[phoneme] = { correct: 0, total: 0 };
+        }
+        phonemeAccumulatorRef.current[phoneme].total++;
+        if (correct) {
+          phonemeAccumulatorRef.current[phoneme].correct++;
+        }
+      }
+    } catch (e) {
+      console.warn('[RPGBattle] Phoneme tracking error (non-blocking):', e);
+    }
+    
     console.log('[RPGBattle] handleWordResult:', { 
       batchStart: batchStartIndex, 
       wordIndex, 
