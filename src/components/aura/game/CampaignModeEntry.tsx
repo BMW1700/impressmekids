@@ -32,6 +32,13 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
   const { progress, progressLoading } = useCampaignProgress(studentId);
   const { assets, updateCampaignIntroVideo, updateCampaignIntroVideos, updateWorldIntroVideo, updateWorldIntroVideos, updateEllaAvatar, updateGrogAvatar, updateStoryIntroVideo, updateStoryIntroVideos } = useCampaignAssets();
   const { toast } = useToast();
+  const mlContext = useMLContextSafe();
+  
+  const strugglingPhonemes = useMemo(() => extractStrugglingPhonemes(mlContext), [mlContext]);
+  const recommendedTitles = useMemo(() => {
+    const ranked = rankStoriesByPhonemeNeed(stories, strugglingPhonemes);
+    return new Set(ranked.filter(r => r.isRecommended).map(r => r.story.title));
+  }, [stories, strugglingPhonemes]);
   
   const [currentView, setCurrentView] = useState<CampaignView>('intro');
   const [selectedWorld, setSelectedWorld] = useState<number>(1);
