@@ -3,13 +3,15 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Filter, Sparkles, Sword, BookOpen, Crown } from "lucide-react";
+import { Search, Filter, Sparkles, Sword, BookOpen, Crown, Brain } from "lucide-react";
 import { StoryCard } from "./StoryCard";
 import { curatedStories, CuratedStory } from "@/data/curatedStories";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import { motion } from "framer-motion";
+import { useMLContextSafe } from "@/components/ml/MLStatusProvider";
+import { rankStoriesByPhonemeNeed, extractStrugglingPhonemes } from "@/lib/adaptiveStoryRanking";
 
 interface StoryLibraryProps {
   onSelectStory: (story: CuratedStory) => void;
