@@ -27,6 +27,7 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(categoryFilter || "all");
   const [selectedGrade, setSelectedGrade] = useState("all");
+  const mlContext = useMLContextSafe();
 
   // Fetch student's reading progress
   const { data: progressData } = useQuery({
@@ -130,21 +131,44 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
     });
   }, [searchQuery, selectedCategory, selectedGrade, allStories]);
 
+  // Get struggling phonemes from ML context
+  const strugglingPhonemes = useMemo(() => {
+    return extractStrugglingPhonemes(mlContext);
+  }, [mlContext]);
+
+  // Rank stories by phoneme need
+  const rankedStories = useMemo(() => {
+    return rankStoriesByPhonemeNeed(filteredStories, strugglingPhonemes);
+  }, [filteredStories, strugglingPhonemes]);
+
+  // Build a set of recommended story titles for badge display
+  const recommendedTitles = useMemo(() => {
+    return new Set(rankedStories.filter(r => r.isRecommended).map(r => r.story.title));
+  }, [rankedStories]);
+
   // Featured stories (community stories that got promoted)
   const featuredStories = useMemo(() => {
     return allStories.filter(story => story.isFeatured).slice(0, 3);
   }, [allStories]);
 
-  // Recommended stories
+  // Recommended stories - now ML-powered when available
   const recommendedStories = useMemo(() => {
-    // Prioritize featured, then high-voted community stories
+    // If we have ML recommendations, use them
+    if (strugglingPhonemes.length > 0) {
+      const mlRecommended = rankedStories
+        .filter(r => r.isRecommended)
+        .map(r => r.story)
+        .slice(0, 3);
+      if (mlRecommended.length > 0) return mlRecommended;
+    }
+    // Fallback: prioritize featured, then high-voted community stories
     const sorted = [...allStories].sort((a, b) => {
       if (a.isFeatured && !b.isFeatured) return -1;
       if (!a.isFeatured && b.isFeatured) return 1;
       return (b.thumbsUpCount || 0) - (a.thumbsUpCount || 0);
     });
     return sorted.slice(0, 3);
-  }, [allStories]);
+  }, [allStories, strugglingPhonemes, rankedStories]);
 
   // Get current user for campaign progress
   const { data: user } = useQuery({
