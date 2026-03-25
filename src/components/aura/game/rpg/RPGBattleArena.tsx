@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { getIPAPronunciation } from "@/lib/cmuDictWrapper";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Flame, Trophy, Skull, Star, AlertTriangle, Coins, Volume2, VolumeX } from "lucide-react";
@@ -256,6 +257,9 @@ export const RPGBattleArena = ({
   // When onMiss fires, we count the miss immediately. When handleWordResult(false) fires later via "Continue",
   // we skip the wordsRead increment if already counted.
   const countedWordIndicesRef = useRef<Set<number>>(new Set());
+  
+  // Phoneme tracking: accumulate per-phoneme accuracy throughout the battle
+  const phonemeAccumulatorRef = useRef<Record<string, { correct: number; total: number }>>({});
   
   // Elara-specific: 5-word charge system for plasma barrage
   const [elaraChargeCount, setElaraChargeCount] = useState(0);
@@ -1324,6 +1328,23 @@ export const RPGBattleArena = ({
     const globalIndex = batchStartIndex + wordIndex;
     const word = words[globalIndex] || "";
     
+    // Phoneme tracking: decompose word and accumulate per-phoneme accuracy
+    try {
+      const pronunciations = getIPAPronunciation(word);
+      const phonemes = pronunciations[0] || [];
+      for (const phoneme of phonemes) {
+        if (!phonemeAccumulatorRef.current[phoneme]) {
+          phonemeAccumulatorRef.current[phoneme] = { correct: 0, total: 0 };
+        }
+        phonemeAccumulatorRef.current[phoneme].total++;
+        if (correct) {
+          phonemeAccumulatorRef.current[phoneme].correct++;
+        }
+      }
+    } catch (e) {
+      console.warn('[RPGBattle] Phoneme tracking error (non-blocking):', e);
+    }
+    
     console.log('[RPGBattle] handleWordResult:', { 
       batchStart: batchStartIndex, 
       wordIndex, 
@@ -1687,7 +1708,11 @@ export const RPGBattleArena = ({
           wordsRead,
           durationSeconds: Math.round(durationSeconds),
           pauseCount: 0,
-          phonemeScores: {},
+          phonemeScores: Object.fromEntries(
+            Object.entries(phonemeAccumulatorRef.current).map(
+              ([phoneme, { correct, total }]) => [phoneme, total > 0 ? Math.round((correct / total) * 100) : 0]
+            )
+          ),
           includeSpeakingData: true,
         });
         console.log('[RPGBattle] ML training data saved to aura_records');
