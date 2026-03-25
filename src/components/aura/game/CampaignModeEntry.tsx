@@ -1,10 +1,10 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Sword, BookOpen, Trophy, Flame, Star, ChevronRight, Crown, CheckCircle, RotateCcw, Pencil, Upload, X } from "lucide-react";
+import { Sword, BookOpen, Trophy, Flame, Star, ChevronRight, Crown, CheckCircle, RotateCcw, Pencil, Upload, X, Brain } from "lucide-react";
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import { useCampaignAssets } from "@/hooks/useCampaignAssets";
 import { CampaignWorldMap } from "./CampaignWorldMap";
@@ -16,6 +16,8 @@ import { CuratedStory } from "@/data/curatedStories";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { EnemyType } from "@/lib/battleMechanics";
+import { useMLContextSafe } from "@/components/ml/MLStatusProvider";
+import { rankStoriesByPhonemeNeed, extractStrugglingPhonemes } from "@/lib/adaptiveStoryRanking";
 
 interface CampaignModeEntryProps {
   studentId: string;
