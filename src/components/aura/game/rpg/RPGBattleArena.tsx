@@ -1708,7 +1708,11 @@ export const RPGBattleArena = ({
           wordsRead,
           durationSeconds: Math.round(durationSeconds),
           pauseCount: 0,
-          phonemeScores: {},
+          phonemeScores: Object.fromEntries(
+            Object.entries(phonemeAccumulatorRef.current).map(
+              ([phoneme, { correct, total }]) => [phoneme, total > 0 ? Math.round((correct / total) * 100) : 0]
+            )
+          ),
           includeSpeakingData: true,
         });
         console.log('[RPGBattle] ML training data saved to aura_records');
