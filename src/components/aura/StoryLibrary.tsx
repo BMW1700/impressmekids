@@ -343,7 +343,17 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
       {/* Recommended Section */}
       {recommendedStories.length > 0 && selectedCategory === 'all' && !searchQuery && featuredStories.length === 0 && (
         <div>
-          <h3 className="font-heading text-xl font-bold mb-4">✨ Recommended for You</h3>
+          <h3 className="font-heading text-xl font-bold mb-4 flex items-center gap-2">
+            {strugglingPhonemes.length > 0 ? (
+              <>
+                <Brain className="h-5 w-5 text-primary" />
+                Recommended for You
+                <Badge variant="secondary" className="text-xs">ML-Powered</Badge>
+              </>
+            ) : (
+              '✨ Recommended for You'
+            )}
+          </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {recommendedStories.map((story, index) => (
               <StoryCard
