@@ -1,49 +1,46 @@
 
 
-# Gap 2 (Revised): Smart Story Recommendation Based on Q-Learning
+# Generate Code-Accurate Patent Brief for Chris (v2)
 
-## The Problem With the Old Plan
-Reordering words within a story would destroy the narrative. A kid can't read scrambled sentences. That was a bad idea.
+## Purpose
+Create a plain-English technical document for your patent attorney Chris that is 100% accurate to the actual codebase. Not for the USPTO directly — for Chris so he can draft the provisional patent filing without back-and-forth.
 
-## The Right Approach
-Each story already has a `target_phonemes` field (e.g., `["d", "p", "s", "k"]`). Instead of scrambling words, we **score and rank stories** so the system recommends stories that contain the phonemes the student needs to practice most.
+## What's Wrong With the Current Document (5 Errors)
 
-The student still picks their story — but the UI highlights which ones are "recommended for you" based on their weaknesses.
+| Section | Document Says | Code Actually Does |
+|---------|--------------|-------------------|
+| Base Damage | `8 + (letters / 2)` | `Max(8, letters x 3)` — "elephant" = 24, not 12 |
+| Speed Bonus | Under 1.5s = 30%, Under 2s = 15% | Under 1.5s = +15 flat points, Under 3s = +8 flat points |
+| Streak | 3+ = 1.5x, 5+ = 2x, 10+ = 3x | `Floor(streak / 2) x 5` flat additive bonus |
+| Accuracy | 95%+ = 1.5x XP, 85%+ = 1.25x XP | 90%+ = 1.2x damage, 75%+ = 1.1x damage |
+| Section 4C | "Two children see different words" | Children see different **stories** recommended, not different words within a story |
 
-## How It Works
+## What the New Document Will Contain
 
-```text
-Student's Q-Learning data says: struggles with [θ, ʃ, ɹ]
-                                    ↓
-Story A target_phonemes: [d, p, s, k]     → low match
-Story B target_phonemes: [θ, ɹ, s, t]     → HIGH match (2 overlap)
-Story C target_phonemes: [ʃ, tʃ, dʒ, l]   → HIGH match (1 overlap)
-                                    ↓
-Stories B and C get a "Recommended for You" badge in the story picker
-```
+**Same structure, same dumbed-down tone, corrected math, plus missing innovations:**
 
-## Changes
+1. **Section 1** — What the invention is (minor tweaks for clarity)
+2. **Section 2** — Step-by-step how it works (mostly fine, keep as-is)
+3. **Section 3** — Damage formula with CORRECT math and a corrected worked example ("elephant" = 64 damage, not 31)
+4. **Section 4A** — Q-Learning agent (accurate, keep)
+5. **Section 4B** — Fatigue model (accurate, keep)
+6. **Section 4C** — FIXED: explain that personalization happens at the **story recommendation** level, not per-word scrambling. Stories are ranked by phoneme overlap with the student's weaknesses.
+7. **Section 4D** — NEW: Phoneme tracking during battle (Gap 1 we built). During combat, every word is decomposed into individual speech sounds and accuracy is tracked per-phoneme. This feeds back into the Q-table.
+8. **Section 4E** — NEW: Cross-Modal Transfer Network. The system predicts a child's speaking ability from their reading data without requiring a separate speech assessment.
+9. **Section 5** — Competitor comparison (update damage formula column)
+10. **Section 6** — Pipeline diagram (add the feedback loop: Battle → Phoneme Scores → Q-Table → Story Recommendation → Next Battle)
+11. **Section 7** — Database storage (accurate, keep)
+12. **Claims** — Fix Claim 2 ("determines which stories are recommended" not "which words are presented"). Add Claim 4 for cross-modal prediction and Claim 5 for real-time phoneme decomposition during gameplay.
 
-### 1. New utility: `src/lib/adaptiveStoryRanking.ts`
-- Pure function: takes an array of stories + student's struggling phonemes → returns stories sorted by relevance
-- Scoring: count how many of the story's `target_phonemes` overlap with the student's weak phonemes
-- No side effects, easy to test
+## Output
+- File: `/mnt/documents/NabuLearn_Patent_Technical_Description_v2.docx`
+- Same formatting: CONFIDENTIAL header, page numbers, professional tables
+- Generated via `docx-js` script
+- QA: convert to images, inspect every page before delivering
 
-### 2. Modify: `src/components/aura/StoryLibrary.tsx`
-- Import the ranking utility and the ML context (via `useMLContextSafe`)
-- On mount, fetch the student's struggling phonemes from the ML context or skill vector
-- If data exists: sort stories so highest-match ones appear first, add a "Recommended" badge
-- If no data: show stories in default order (zero-risk fallback)
-
-### 3. Modify: `src/components/aura/game/CampaignModeEntry.tsx`
-- Same ranking logic applied to campaign story selection
-
-## Safety
-- Stories are never modified or scrambled — just sorted/badged
-- Students can still pick any story they want
-- No ML data = default order, no visible change
-- Zero changes to RPG battle mechanics
-
-## Patent Alignment
-This closes the loop for Claim 3: the RL agent's phoneme recommendations now influence which reading content is presented to the student, making the system genuinely adaptive.
+## Technical Approach
+- Write a Node.js script using the `docx` package
+- US Letter format, 1-inch margins, Arial font
+- Proper numbered lists, tables with borders, headers/footers
+- Every formula and number verified against `RPGBattleArena.tsx` line 1031-1072
 
