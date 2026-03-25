@@ -258,6 +258,9 @@ export const RPGBattleArena = ({
   // we skip the wordsRead increment if already counted.
   const countedWordIndicesRef = useRef<Set<number>>(new Set());
   
+  // Phoneme tracking: accumulate per-phoneme accuracy throughout the battle
+  const phonemeAccumulatorRef = useRef<Record<string, { correct: number; total: number }>>({});
+  
   // Elara-specific: 5-word charge system for plasma barrage
   const [elaraChargeCount, setElaraChargeCount] = useState(0);
   const elaraChargeRef = useRef(0); // For stable reference in callbacks
