@@ -106,7 +106,7 @@ export const RPGBattleArena = ({
   onComplete,
 }: RPGBattleArenaProps) => {
   // ML Integration for saving training data
-  const { saveToAuraRecords } = useMLIntegration();
+  const { saveToAuraRecords, triggerQLearningUpdate } = useMLIntegration();
   // Multi-enemy queue system
   const buildEnemyQueue = useCallback((primaryType: EnemyType): EnemyType[] => {
     // For certain levels, add Drake the Dragon after the primary enemy
@@ -1716,6 +1716,35 @@ export const RPGBattleArena = ({
           includeSpeakingData: true,
         });
         console.log('[RPGBattle] ML training data saved to aura_records');
+
+        // Trigger Q-learning update so the adaptive loop closes in real-time
+        const phonemePerformance = Object.entries(phonemeAccumulatorRef.current).flatMap(
+          ([phoneme, { correct, total }]) => {
+            const results = [];
+            for (let i = 0; i < total; i++) {
+              results.push({ phoneme, correct: i < correct, word: '' });
+            }
+            return results;
+          }
+        );
+
+        if (phonemePerformance.length > 0) {
+          const masteredPhonemes = Object.entries(phonemeAccumulatorRef.current)
+            .filter(([_, { correct, total }]) => total > 0 && (correct / total) >= 0.85)
+            .map(([p]) => p);
+          const strugglingPhonemes = Object.entries(phonemeAccumulatorRef.current)
+            .filter(([_, { correct, total }]) => total > 0 && (correct / total) < 0.70)
+            .map(([p]) => p);
+
+          await triggerQLearningUpdate(
+            studentId,
+            phonemePerformance,
+            masteredPhonemes,
+            strugglingPhonemes,
+            worldNumber || 1
+          );
+          console.log('[RPGBattle] Q-learning updated with', phonemePerformance.length, 'phoneme observations');
+        }
         
         // CRITICAL: Sync to main student_reading_stats table (atomic RPC)
         await updateSharedReadingStats(studentId, { wordsRead, xpEarned: finalXpEarned });
@@ -1732,7 +1761,7 @@ export const RPGBattleArena = ({
       xpEarned: finalXpEarned,
       goldEarned, // NEW: Pass gold to parent for wallet sync
     });
-  }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete, studentId, story, battleMode, saveToAuraRecords, goldEarned]);
+  }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete, studentId, story, battleMode, saveToAuraRecords, triggerQLearningUpdate, goldEarned]);
 
   // Get current batch of words for reading - MEMOIZED for stable reference
   // batchStartIndex only changes when we complete a full batch, keeping this stable
