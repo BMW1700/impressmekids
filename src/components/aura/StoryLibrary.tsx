@@ -3,13 +3,15 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Filter, Sparkles, Sword, BookOpen, Crown } from "lucide-react";
+import { Search, Filter, Sparkles, Sword, BookOpen, Crown, Brain } from "lucide-react";
 import { StoryCard } from "./StoryCard";
 import { curatedStories, CuratedStory } from "@/data/curatedStories";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import { motion } from "framer-motion";
+import { useMLContextSafe } from "@/components/ml/MLStatusProvider";
+import { rankStoriesByPhonemeNeed, extractStrugglingPhonemes } from "@/lib/adaptiveStoryRanking";
 
 interface StoryLibraryProps {
   onSelectStory: (story: CuratedStory) => void;
@@ -25,6 +27,7 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(categoryFilter || "all");
   const [selectedGrade, setSelectedGrade] = useState("all");
+  const mlContext = useMLContextSafe();
 
   // Fetch student's reading progress
   const { data: progressData } = useQuery({
@@ -128,21 +131,44 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
     });
   }, [searchQuery, selectedCategory, selectedGrade, allStories]);
 
+  // Get struggling phonemes from ML context
+  const strugglingPhonemes = useMemo(() => {
+    return extractStrugglingPhonemes(mlContext);
+  }, [mlContext]);
+
+  // Rank stories by phoneme need
+  const rankedStories = useMemo(() => {
+    return rankStoriesByPhonemeNeed(filteredStories, strugglingPhonemes);
+  }, [filteredStories, strugglingPhonemes]);
+
+  // Build a set of recommended story titles for badge display
+  const recommendedTitles = useMemo(() => {
+    return new Set(rankedStories.filter(r => r.isRecommended).map(r => r.story.title));
+  }, [rankedStories]);
+
   // Featured stories (community stories that got promoted)
   const featuredStories = useMemo(() => {
     return allStories.filter(story => story.isFeatured).slice(0, 3);
   }, [allStories]);
 
-  // Recommended stories
+  // Recommended stories - now ML-powered when available
   const recommendedStories = useMemo(() => {
-    // Prioritize featured, then high-voted community stories
+    // If we have ML recommendations, use them
+    if (strugglingPhonemes.length > 0) {
+      const mlRecommended = rankedStories
+        .filter(r => r.isRecommended)
+        .map(r => r.story)
+        .slice(0, 3);
+      if (mlRecommended.length > 0) return mlRecommended;
+    }
+    // Fallback: prioritize featured, then high-voted community stories
     const sorted = [...allStories].sort((a, b) => {
       if (a.isFeatured && !b.isFeatured) return -1;
       if (!a.isFeatured && b.isFeatured) return 1;
       return (b.thumbsUpCount || 0) - (a.thumbsUpCount || 0);
     });
     return sorted.slice(0, 3);
-  }, [allStories]);
+  }, [allStories, strugglingPhonemes, rankedStories]);
 
   // Get current user for campaign progress
   const { data: user } = useQuery({
@@ -317,7 +343,17 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
       {/* Recommended Section */}
       {recommendedStories.length > 0 && selectedCategory === 'all' && !searchQuery && featuredStories.length === 0 && (
         <div>
-          <h3 className="font-heading text-xl font-bold mb-4">✨ Recommended for You</h3>
+          <h3 className="font-heading text-xl font-bold mb-4 flex items-center gap-2">
+            {strugglingPhonemes.length > 0 ? (
+              <>
+                <Brain className="h-5 w-5 text-primary" />
+                Recommended for You
+                <Badge variant="secondary" className="text-xs">ML-Powered</Badge>
+              </>
+            ) : (
+              '✨ Recommended for You'
+            )}
+          </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {recommendedStories.map((story, index) => (
               <StoryCard

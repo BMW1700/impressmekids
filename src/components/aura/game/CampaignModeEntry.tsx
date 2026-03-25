@@ -1,10 +1,10 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Sword, BookOpen, Trophy, Flame, Star, ChevronRight, Crown, CheckCircle, RotateCcw, Pencil, Upload, X } from "lucide-react";
+import { Sword, BookOpen, Trophy, Flame, Star, ChevronRight, Crown, CheckCircle, RotateCcw, Pencil, Upload, X, Brain } from "lucide-react";
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import { useCampaignAssets } from "@/hooks/useCampaignAssets";
 import { CampaignWorldMap } from "./CampaignWorldMap";
@@ -16,6 +16,8 @@ import { CuratedStory } from "@/data/curatedStories";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { EnemyType } from "@/lib/battleMechanics";
+import { useMLContextSafe } from "@/components/ml/MLStatusProvider";
+import { rankStoriesByPhonemeNeed, extractStrugglingPhonemes } from "@/lib/adaptiveStoryRanking";
 
 interface CampaignModeEntryProps {
   studentId: string;
@@ -30,6 +32,13 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
   const { progress, progressLoading } = useCampaignProgress(studentId);
   const { assets, updateCampaignIntroVideo, updateCampaignIntroVideos, updateWorldIntroVideo, updateWorldIntroVideos, updateEllaAvatar, updateGrogAvatar, updateStoryIntroVideo, updateStoryIntroVideos } = useCampaignAssets();
   const { toast } = useToast();
+  const mlContext = useMLContextSafe();
+  
+  const strugglingPhonemes = useMemo(() => extractStrugglingPhonemes(mlContext), [mlContext]);
+  const recommendedTitles = useMemo(() => {
+    const ranked = rankStoriesByPhonemeNeed(stories, strugglingPhonemes);
+    return new Set(ranked.filter(r => r.isRecommended).map(r => r.story.title));
+  }, [stories, strugglingPhonemes]);
   
   const [currentView, setCurrentView] = useState<CampaignView>('intro');
   const [selectedWorld, setSelectedWorld] = useState<number>(1);
@@ -604,7 +613,14 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
                       )}
                     </div>
                     <CardContent className="p-4">
-                      <h3 className="font-bold truncate">{story.title}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold truncate">{story.title}</h3>
+                        {recommendedTitles.has(story.title) && !isCompleted && (
+                          <Badge variant="secondary" className="text-[10px] shrink-0 flex items-center gap-1">
+                            <Brain className="h-3 w-3" /> For You
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground truncate">{story.description}</p>
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
