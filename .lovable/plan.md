@@ -1,88 +1,76 @@
 
 
-# Brutally Honest Platform Audit — March 26, 2026
+# Brutally Honest Post-Fix Audit — March 26, 2026
 
-## Bottom Line
+## What Got Fixed (Confirmed Gone from Scan)
+- District privilege escalation — FIXED
+- Backup audit log public INSERT — FIXED
+- Safety audit log public INSERT — FIXED
+- Schools INSERT tautology — FIXED
+- Parent profile view without approved check — FIXED
 
-**The 5 security fixes from the last audit were NEVER IMPLEMENTED.** They were planned and approved, but the migrations were never run. The same vulnerabilities are still live. You have **6 errors** and **11 warnings** on the security scan right now.
+## What's Still Broken: 5 ERRORS, 2 WARNINGS
 
-**RPG mode and AURA are completely untouched** — no code changes were made to any RPG or AURA files. Those systems are safe.
+### ERRORS (Must fix)
 
----
+| # | Finding | Table | Why It's Still Here |
+|---|---------|-------|---------------------|
+| 1 | **Consent records still updatable by anyone** — Migration 6 re-added `USING (true)` for `{anon, authenticated}` | `student_signup_consents` | Last migration partially regressed the fix. The `WITH CHECK` constraints help but `USING (true)` means any row is targetable |
+| 2 | **Any user can insert behavior stats for any student** — INSERT `{public}` WITH CHECK `(true)` | `student_behavior_stats` | Was never in the migration plan |
+| 3 | **Any user can insert risk alert notifications** — INSERT `{public}` WITH CHECK `(true)` | `risk_alert_notifications` | Was never in the migration plan |
+| 4 | **Any user can insert risk history for any student** — INSERT `{public}` WITH CHECK `(true)` | `student_risk_history` | Was in original plan but migration was skipped |
+| 5 | **Any user can insert practice exercises for any student** — INSERT `{public}` WITH CHECK `(true)` | `practice_exercises` | Was in original plan but migration was skipped |
 
-## Current Security Scan Results: 6 ERRORS, 11 WARNINGS
+### WARNINGS (Lower priority)
 
-### ERRORS (Must fix before pilots)
+| # | Finding | Table |
+|---|---------|-------|
+| 1 | Any user can insert game rounds | `game_rounds` |
+| 2 | Any user can insert/update game player records | `game_players` |
 
-| # | Finding | Table | Status |
-|---|---------|-------|--------|
-| 1 | **Any user can forge parental consent** — UPDATE policy uses `USING (true)` for `{anon, authenticated}` | `student_signup_consents` | STILL OPEN |
-| 2 | **Any authenticated user can create districts** — INSERT uses `auth.uid() IS NOT NULL` | `districts` | STILL OPEN |
-| 3 | **Anyone can inject fake backup audit logs** — INSERT policy applied to `{public}` not `{service_role}` | `backup_audit_log` | STILL OPEN |
-| 4 | **Anyone can inject fake safety audit logs** — INSERT policy applied to `{public}` not `{service_role}` | `safety_audit_log` | STILL OPEN |
-| 5 | **Any admin can create schools in ANY district** — tautological condition `p.district_id = p.district_id` (compares column to itself) | `schools` | NEW FINDING |
-| 6 | **Parents with denied requests can view student profiles** — `can_parent_view_student_profile` has no `status = 'approved'` check | `profiles` function | STILL OPEN |
+### 9 Warnings (Acceptable)
+The remaining 9 `SUPA_rls_policy_always_true` warnings are on service-role-managed audit/system tables — these are expected false positives.
 
-### WARNINGS (11 total — mostly acceptable)
-All 11 are "RLS Policy Always True" warnings on audit/system tables that use `WITH CHECK (true)` for service-role INSERT. These are acceptable false positives for tables managed by triggers and SECURITY DEFINER functions — EXCEPT for the ones flagged as errors above.
+## Did the fixes break RPG or AURA?
 
----
+**No. Zero app code was touched.** All 6 migrations were purely RLS policy changes. RPGBattleArena.tsx, useMLIntegration.ts, crossModalTransferNetwork.ts, cmuDictWrapper.ts, and all AURA recording components are completely untouched.
 
-## Did the security changes break RPG or AURA?
-
-**No.** Zero changes were made to:
-- `RPGBattleArena.tsx` (RPG combat, damage formulas, Q-learning call)
-- `useMLIntegration.ts` (ML pipeline, training data saves)
-- `crossModalTransferNetwork.ts` (Cross-Modal Transfer)
-- `cmuDictWrapper.ts` (phoneme dictionary)
-- Any AURA reading/recording components
-
-The proposed fixes are **purely RLS policy changes** — they restrict who can write to admin tables. No student-facing, teacher-facing, or game code is affected.
-
----
-
-## Compliance Scorecard (Honest)
+## Compliance Scorecard (Updated)
 
 ```text
-COPPA Parental Consent Flow    ❌ BROKEN — anyone can forge consent records
+COPPA Parental Consent Flow    ⚠️  IMPROVED but USING(true) still present
 COPPA Data Deletion Portal     ✅ Working
 COPPA Under-13 Age Gate        ✅ Working
-FERPA Student PII Protection   ⚠️  Weakened by district privilege escalation
-FERPA Audit Trail Integrity    ❌ BROKEN — anyone can inject fake audit entries
+FERPA Student PII Protection   ✅ District escalation FIXED
+FERPA Audit Trail Integrity    ✅ Audit log injection FIXED
 FERPA Role-Based Access        ✅ Working (538+ RLS policies)
-SOC 2 Access Controls          ❌ BLOCKED by privilege escalation + audit gaps
-SOC 2 Encryption               ✅ TLS + at-rest via infrastructure
-SOC 2 External Audit           ❌ Not done (required, can't be code-fixed)
-SOC 2 Pen Testing              ❌ Not done (required, can't be code-fixed)
+SOC 2 Access Controls          ⚠️  5 tables still allow public INSERT
+SOC 2 Encryption               ✅ TLS + at-rest
+SOC 2 External Audit           ❌ Not done (vendor task)
+SOC 2 Pen Testing              ❌ Not done (vendor task)
 ```
 
-**Pilot-ready?** Not until the 6 errors are fixed. A school IT team doing due diligence would find these.
+**Pilot-ready?** Almost. 5 more policy fixes needed — all identical pattern (drop `{public}` INSERT, replace with `{service_role}`).
 
----
+## Implementation Plan (All RLS-only, zero app code impact)
 
-## Implementation Plan (All RLS-only, zero impact on app code)
+### Migration 1: Fix consent USING(true) regression
+- Drop the `"Allow consent verification by token"` policy that uses `USING (true)`
+- Replace with service-role-only UPDATE (the consent verification edge function already uses service role)
+- Keep the existing service_role UPDATE policy
 
-### Migration 1: Fix COPPA consent tampering (CRITICAL)
-- Drop `"Allow consent verification"` UPDATE policy on `student_signup_consents`
-- Create new policy: `USING (consent_token = current_setting('request.headers')::json->>'x-consent-token')` OR restrict to `{service_role}` only
-- Remove `anon` from roles
+### Migration 2: Fix system table INSERT policies (batch)
+Drop `{public}` INSERT policies and replace with `{service_role}` on:
+- `student_behavior_stats` ("System can insert stats")
+- `risk_alert_notifications` ("System can insert notifications")
+- `student_risk_history` ("System can insert risk history")
+- `practice_exercises` ("System can create exercises")
 
-### Migration 2: Fix district privilege escalation (CRITICAL)
-- Drop `"District admins can create districts"` INSERT policy on `districts` (the `is_district_manager` policy already covers legitimate creation)
-- Drop `"District admins can insert their own account"` INSERT policy on `district_admins`
+### Migration 3: Fix game table INSERT policies
+- `game_rounds` — restrict INSERT to service_role or classroom teacher
+- `game_players` — restrict INSERT/UPDATE to service_role or `auth.uid() = profile_id`
 
-### Migration 3: Fix audit log INSERT policies
-- Drop `"Service role can insert audit logs"` (the `{public}` one) on `backup_audit_log` — keep the `{service_role}` version
-- Drop `"Service role can insert safety audit logs"` (the `{public}` one) on `safety_audit_log`
+### Migration 4: Re-run security scan to confirm 0 errors
 
-### Migration 4: Fix schools INSERT tautology
-- Drop `"Admins can create schools in their district"` policy
-- Recreate with correct condition: `p.district_id = schools.district_id` (not `p.district_id = p.district_id`)
-
-### Migration 5: Fix parent profile view
-- Update `can_parent_view_student_profile` function to add `AND par.status = 'approved'`
-
-### Migration 6: Re-run security scan to confirm 0 errors
-
-**Estimated time:** 2-3 hours. **Risk to existing features:** Zero — these are all database permission changes, no app code touched.
+**Estimated time:** 1 hour. **Risk to existing features:** Zero — all inserts to these tables come from triggers, SECURITY DEFINER functions, or edge functions using service_role.
 
