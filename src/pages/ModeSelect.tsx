@@ -90,9 +90,10 @@ const ModeSelect = () => {
           onClick={() => navigate('/school')}
           className="w-64 h-64 md:w-72 md:h-72 rounded-2xl flex flex-col items-center justify-center gap-4
             bg-white/10 backdrop-blur-xl border border-white/20
-            shadow-[0_8px_32px_rgba(0,0,0,0.2),inset_0_1px_1px_rgba(255,255,255,0.15)]
-            hover:bg-white/15 hover:border-white/30 hover:shadow-[0_12px_40px_rgba(168,85,247,0.3)]
-            transition-colors duration-300 cursor-pointer group"
+            shadow-[0_8px_32px_rgba(168,85,247,0.35),0_0_60px_rgba(168,85,247,0.2),inset_0_1px_1px_rgba(255,255,255,0.15)]
+            hover:shadow-[0_12px_50px_rgba(168,85,247,0.5),0_0_80px_rgba(168,85,247,0.35),inset_0_1px_1px_rgba(255,255,255,0.2)]
+            hover:bg-white/15 hover:border-white/30
+            transition-all duration-300 cursor-pointer group"
         >
           <div className="w-16 h-16 md:w-20 md:h-20 rounded-xl bg-white/10 flex items-center justify-center
             group-hover:bg-white/20 transition-colors duration-300">
@@ -112,9 +113,10 @@ const ModeSelect = () => {
           onClick={() => {/* Game mode - coming soon */}}
           className="w-56 h-56 md:w-64 md:h-64 rounded-2xl flex flex-col items-center justify-center gap-4
             bg-white/10 backdrop-blur-xl border border-white/20
-            shadow-[0_8px_32px_rgba(0,0,0,0.2),inset_0_1px_1px_rgba(255,255,255,0.15)]
-            hover:bg-white/15 hover:border-white/30 hover:shadow-[0_12px_40px_rgba(168,85,247,0.3)]
-            transition-colors duration-300 cursor-pointer group relative overflow-hidden"
+            shadow-[0_8px_32px_rgba(168,85,247,0.35),0_0_60px_rgba(168,85,247,0.2),inset_0_1px_1px_rgba(255,255,255,0.15)]
+            hover:shadow-[0_12px_50px_rgba(168,85,247,0.5),0_0_80px_rgba(168,85,247,0.35),inset_0_1px_1px_rgba(255,255,255,0.2)]
+            hover:bg-white/15 hover:border-white/30
+            transition-all duration-300 cursor-pointer group relative overflow-hidden"
         >
           <div className="w-16 h-16 md:w-20 md:h-20 rounded-xl bg-white/10 flex items-center justify-center
             group-hover:bg-white/20 transition-colors duration-300">
