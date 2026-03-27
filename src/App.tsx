@@ -16,6 +16,7 @@ import { SentryUserTracker } from "@/components/auth/SentryUserTracker";
 import { Loader2 } from "lucide-react";
 
 // Eagerly loaded critical routes
+import ModeSelect from "./pages/ModeSelect";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";

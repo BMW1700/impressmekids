@@ -51,66 +51,6 @@ const fadeInScale = {
 };
 
 const Index = () => {
-  const navigate = useNavigate();
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const hardTimeout = window.setTimeout(() => {
-      if (!cancelled) setIsCheckingAuth(false);
-    }, 1500);
-
-    const checkAuthAndRedirect = async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!session || cancelled) return;
-
-        const { data: profileData } = await supabase.rpc('get_user_profile', {
-          _user_id: session.user.id,
-        });
-
-        if (!profileData || profileData.length === 0 || cancelled) return;
-
-        const userRole = profileData[0].role;
-        if (userRole === 'teacher') {
-          navigate('/teacher/dashboard');
-        } else if (userRole === 'parent') {
-          navigate('/parent/dashboard');
-        } else if (userRole === 'district_admin') {
-          navigate('/district/dashboard');
-        } else if (userRole === 'admin') {
-          navigate('/admin/dashboard');
-        } else {
-          navigate('/student/dashboard');
-        }
-      } catch {
-        // Intentionally swallow here so / never bricks behind a spinner
-      } finally {
-        if (!cancelled) setIsCheckingAuth(false);
-      }
-    };
-
-    checkAuthAndRedirect();
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(hardTimeout);
-    };
-  }, [navigate]);
-
-  if (isCheckingAuth) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <div className="mt-4 text-sm text-muted-foreground">Loading…</div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
