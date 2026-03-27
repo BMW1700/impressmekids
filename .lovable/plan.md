@@ -1,28 +1,24 @@
 
 
-# Plan: Create Corrected Patent Attorney Response DOCX
+# Plan: Add Mode Selection Page + Move Landing to /school
 
-## What
-Create a corrected version of the patent attorney response document as a professional DOCX file, fixing the **one critical error**: the muscle group names and recovery rates in Question 2 don't match the actual code.
+## Changes
 
-## The Fix
+### 1. Create `src/pages/ModeSelect.tsx`
+- Full-screen page with app's gradient background
+- "Welcome to NabuLearn" large heading
+- Two liquid-glass square buttons: "School Mode" (larger, links to `/school`) and "Game Mode" (smaller, placeholder/disabled)
+- Move the auth-check redirect logic from `Index.tsx` into this page (logged-in users get redirected from `/` to their dashboard)
 
-**Current (WRONG):** "lips, tongue tip, tongue back, jaw, soft palate, vocal cords, teeth ridge (alveolar ridge), and airflow control" with fake recovery rates like "soft palate recovers at 5% per minute"
+### 2. Update `src/pages/Index.tsx`
+- Remove the auth redirect logic (lines 55-100ish) — the mode select page handles that now
+- Keep everything else exactly the same — this becomes the school mode landing page at `/school`
 
-**Corrected (matches `articulatoryModel.ts`):**
-1. Lips (bilabial) — 10%/min recovery
-2. Tongue tip (alveolar) — 8%/min
-3. Tongue back (velar) — 12%/min
-4. Tongue blade (palatal/postalveolar) — 9%/min
-5. Teeth/lips (labiodental) — 11%/min
-6. Tongue tip/teeth (dental) — 7%/min
-7. Glottis (glottal) — 15%/min
-8. Approximants — 10%/min
+### 3. Update `src/App.tsx`
+- Import `ModeSelect` eagerly
+- Route `/` → `ModeSelect`
+- Route `/school` → `Index` (the existing landing page, unchanged visually)
+- All other routes stay exactly where they are
 
-The example in the answer will also be corrected (e.g., "the 'th' sound uses the tongue tip/teeth (dental) group" instead of referencing non-existent groups).
-
-## Implementation
-- Single step: Generate a clean, professional DOCX using `docx-js` with all 8 questions and answers from the original document, correcting only the muscle group section
-- QA the output by converting to images and inspecting every page
-- Deliver as `/mnt/documents/NabuLearn_Patent_Attorney_Response_v2.docx`
+Zero impact on RPG, AURA, or any existing features. The current landing page just moves from `/` to `/school` with its full content preserved.
 
