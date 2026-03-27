@@ -145,8 +145,8 @@ const App = () => (
               <OfflineIndicator />
               <Suspense fallback={<PageLoader />}>
                 <Routes>
-                  {/* Public routes */}
-                  <Route path="/" element={<Index />} />
+                  <Route path="/" element={<ModeSelect />} />
+                  <Route path="/school" element={<Index />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/pending-verification" element={<PendingVerification />} />
                   <Route path="/privacy-policy" element={<PrivacyPolicy />} />
