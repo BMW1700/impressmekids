@@ -74,9 +74,10 @@ const ModeSelect = () => {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="text-4xl md:text-6xl font-bold text-white mb-16 text-center relative z-10"
+        className="text-5xl md:text-7xl lg:text-8xl font-bold mb-16 text-center relative z-10"
       >
-        Welcome to NabuLearn
+        <span className="text-white">Welcome to </span>
+        <span className="text-yellow-400">NabuLearn</span>
       </motion.h1>
 
       <div className="flex flex-col sm:flex-row items-center gap-8 sm:gap-12 relative z-10">
