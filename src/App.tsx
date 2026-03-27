@@ -16,6 +16,7 @@ import { SentryUserTracker } from "@/components/auth/SentryUserTracker";
 import { Loader2 } from "lucide-react";
 
 // Eagerly loaded critical routes
+import ModeSelect from "./pages/ModeSelect";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -144,8 +145,8 @@ const App = () => (
               <OfflineIndicator />
               <Suspense fallback={<PageLoader />}>
                 <Routes>
-                  {/* Public routes */}
-                  <Route path="/" element={<Index />} />
+                  <Route path="/" element={<ModeSelect />} />
+                  <Route path="/school" element={<Index />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/pending-verification" element={<PendingVerification />} />
                   <Route path="/privacy-policy" element={<PrivacyPolicy />} />
