@@ -12,7 +12,7 @@ import {
   GraduationCap,
   MessageSquare,
   LayoutDashboard,
-  Loader2,
+  
 } from "lucide-react";
 import { StatsSection } from "@/components/landing/StatsSection";
 import { TestimonialSection } from "@/components/landing/TestimonialSection";
