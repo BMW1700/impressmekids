@@ -38,6 +38,8 @@ const ModeSelect = () => {
           navigate('/district/dashboard');
         } else if (userRole === 'admin') {
           navigate('/admin/dashboard');
+        } else if (userRole === 'game_player') {
+          navigate('/game/dashboard');
         } else {
           navigate('/student/dashboard');
         }
@@ -111,7 +113,7 @@ const ModeSelect = () => {
           transition={{ duration: 0.5, delay: 0.35 }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.97 }}
-          onClick={() => {/* Game mode - coming soon */}}
+          onClick={() => navigate('/game')}
           className="w-full sm:w-56 h-44 sm:h-56 md:w-64 md:h-64 rounded-2xl flex flex-col items-center justify-center gap-3 sm:gap-4
             bg-white/10 backdrop-blur-xl border border-white/20
             shadow-[0_8px_32px_rgba(168,85,247,0.35),0_0_60px_rgba(168,85,247,0.2),inset_0_1px_1px_rgba(255,255,255,0.15)]
@@ -124,7 +126,7 @@ const ModeSelect = () => {
             <Gamepad2 className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 text-white" />
           </div>
           <span className="text-lg sm:text-xl md:text-2xl font-semibold text-white">Game Mode</span>
-          <span className="text-xs text-white/50 font-medium tracking-wide uppercase">Coming Soon</span>
+          <span className="text-xs sm:text-sm text-white/60">Play & Learn to Read</span>
         </motion.button>
       </div>
     </div>
