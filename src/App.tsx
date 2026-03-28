@@ -84,6 +84,10 @@ const ClubDetail = lazy(() => import("./pages/teacher/ClubDetail"));
 const BrowseClubs = lazy(() => import("./pages/student/BrowseClubs"));
 const TeacherPersonalResources = lazy(() => import("./pages/teacher/TeacherPersonalResources"));
 const Pricing = lazy(() => import("./pages/Pricing"));
+const GameAuth = lazy(() => import("./pages/game/GameAuth"));
+const GameDashboard = lazy(() => import("./pages/game/GameDashboard"));
+const GamePlay = lazy(() => import("./pages/game/GamePlay"));
+const GameAnalytics = lazy(() => import("./pages/game/GameAnalytics"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -124,7 +128,8 @@ function RouteAwareProviders({ children }: { children: ReactNode }) {
   const enableML =
     /aura|reading|calibration/i.test(path) ||
     path.startsWith("/student/aura") ||
-    path.startsWith("/teacher/aura");
+    path.startsWith("/teacher/aura") ||
+    path.startsWith("/game/");
 
   return <MLStatusProvider enabled={enableML}>{children}</MLStatusProvider>;
 }
@@ -159,6 +164,8 @@ const App = () => (
                   <Route path="/demos/parent" element={<ParentDemo />} />
                   <Route path="/demos/admin" element={<AdminDemo />} />
                   <Route path="/pricing" element={<Pricing />} />
+                  <Route path="/game" element={<GameAuth />} />
+                  <Route path="/game/auth" element={<GameAuth />} />
 
                   {/* Protected routes */}
                   <Route element={<RequireAuth />}>
@@ -220,6 +227,11 @@ const App = () => (
                     <Route path="/district/dashboard" element={<DistrictDashboard />} />
                     <Route path="/district-manager/dashboard" element={<DistrictManagerDashboard />} />
                     <Route path="/district/register" element={<RegisterDistrict />} />
+
+                    {/* Game Mode - protected routes */}
+                    <Route path="/game/dashboard" element={<GameDashboard />} />
+                    <Route path="/game/play" element={<GamePlay />} />
+                    <Route path="/game/analytics" element={<GameAnalytics />} />
                   </Route>
 
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
