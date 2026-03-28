@@ -6,7 +6,6 @@ import PhonemeHeatmap from "@/components/aura/PhonemeHeatmap";
 import AuraProgressChart from "@/components/aura/AuraProgressChart";
 import KidFriendlyProgress from "@/components/aura/KidFriendlyProgress";
 import PhonemeMasteryPathway from "@/components/aura/PhonemeMasteryPathway";
-import DifficultyProgressCard from "@/components/aura/DifficultyProgressCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -77,6 +76,21 @@ const GameAnalytics = () => {
       email: profile?.email || '',
     }
   }] : [];
+
+  // Extract phoneme mastery from skill vector
+  const phonemeScores = (skillVector?.phoneme_scores as Record<string, number> | null) || {};
+  const masteredPhonemes = Object.entries(phonemeScores)
+    .filter(([, score]) => score >= 0.8)
+    .map(([phoneme]) => phoneme);
+  const strugglingPhonemes = Object.entries(phonemeScores)
+    .filter(([, score]) => score < 0.5)
+    .map(([phoneme]) => phoneme);
+
+  // Extract recent grades for difficulty card
+  const recentGrades = (auraRecords || [])
+    .filter(r => r.grade !== null)
+    .slice(0, 10)
+    .map(r => r.grade!);
 
   if (recordsLoading) {
     return (
@@ -177,10 +191,7 @@ const GameAnalytics = () => {
             </div>
 
             {/* Progress Chart */}
-            {user?.id && <AuraProgressChart studentId={user.id} />}
-
-            {/* Difficulty Progress */}
-            {user?.id && <DifficultyProgressCard studentId={user.id} />}
+            <AuraProgressChart records={auraRecords || []} />
           </TabsContent>
 
           <TabsContent value="phonemes" className="space-y-6">
@@ -196,13 +207,18 @@ const GameAnalytics = () => {
               <CardContent>
                 <PhonemeHeatmap
                   students={heatmapStudents}
-                  auraRecords={auraRecords || []}
+                  skillVectors={skillVector ? [skillVector] : []}
+                  classroomId="game-mode"
+                  classroomName="My Progress"
                 />
               </CardContent>
             </Card>
 
             {/* Phoneme Mastery Pathway */}
-            {user?.id && <PhonemeMasteryPathway studentId={user.id} />}
+            <PhonemeMasteryPathway
+              masteredPhonemes={masteredPhonemes}
+              strugglingPhonemes={strugglingPhonemes}
+            />
           </TabsContent>
 
           <TabsContent value="sessions" className="space-y-4">
