@@ -8025,7 +8025,13 @@ export type Database = {
     }
     Enums: {
       answer_status: "not_attempted" | "in_progress" | "completed"
-      app_role: "admin" | "teacher" | "student" | "district_manager" | "parent"
+      app_role:
+        | "admin"
+        | "teacher"
+        | "student"
+        | "district_manager"
+        | "parent"
+        | "game_player"
       deletion_request_status: "pending" | "approved" | "denied" | "completed"
       difficulty_level: "easy" | "medium" | "hard"
       elimination_status: "active" | "eliminated"
@@ -8188,7 +8194,14 @@ export const Constants = {
   public: {
     Enums: {
       answer_status: ["not_attempted", "in_progress", "completed"],
-      app_role: ["admin", "teacher", "student", "district_manager", "parent"],
+      app_role: [
+        "admin",
+        "teacher",
+        "student",
+        "district_manager",
+        "parent",
+        "game_player",
+      ],
       deletion_request_status: ["pending", "approved", "denied", "completed"],
       difficulty_level: ["easy", "medium", "hard"],
       elimination_status: ["active", "eliminated"],
