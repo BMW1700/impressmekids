@@ -38,6 +38,8 @@ const ModeSelect = () => {
           navigate('/district/dashboard');
         } else if (userRole === 'admin') {
           navigate('/admin/dashboard');
+        } else if (userRole === 'game_player') {
+          navigate('/game/dashboard');
         } else {
           navigate('/student/dashboard');
         }
