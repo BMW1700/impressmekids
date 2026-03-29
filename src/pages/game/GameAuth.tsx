@@ -61,12 +61,7 @@ const GameAuth = () => {
           description: "We sent you a verification link. Please verify your email to continue.",
         });
       } else if (data.session) {
-        // Auto-confirmed — assign game_player role
-        await supabase.from('user_roles').upsert({
-          user_id: data.user!.id,
-          role: 'game_player' as any,
-        }, { onConflict: 'user_id,role' });
-
+        // Role is assigned by the handle_new_user trigger automatically
         navigate('/game/dashboard', { replace: true });
       }
     } catch (error: any) {
