@@ -60,12 +60,12 @@ export default function SchoolSetup() {
     async function fetchDistricts() {
       const { data } = await supabase
         .from("districts_public" as any)
-        .select("district_code,name,id")
+        .select("district_code,name")
         .order("name");
       if (data) {
         setDistricts(
           (data as any[]).map((d: any) => ({
-            id: d.id || d.district_code,
+            id: d.district_code,
             name: d.name,
             district_code: d.district_code,
           }))
