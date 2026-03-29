@@ -30,7 +30,15 @@ const ModeSelect = () => {
         if (!profileData || profileData.length === 0 || cancelled) return;
 
         const userRole = profileData[0].role;
-        const hasDistrict = !!profileData[0].district_id;
+
+        // Also check district_id from profiles table
+        const { data: profileRow } = await supabase
+          .from('profiles')
+          .select('district_id')
+          .eq('id', session.user.id)
+          .single();
+
+        const hasDistrict = !!profileRow?.district_id;
 
         // Game players always go to game dashboard
         if (userRole === 'game_player') {
