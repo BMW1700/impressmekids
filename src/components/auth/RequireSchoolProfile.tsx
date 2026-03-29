@@ -23,6 +23,17 @@ export function RequireSchoolProfile() {
   const hasSchoolRole = profile.role && SCHOOL_ROLES.includes(profile.role);
   const hasDistrict = !!profile.district_id;
 
+  // Allow substitute teachers through without role/district
+  const substituteAccess = sessionStorage.getItem('substituteAccess');
+  if (substituteAccess) {
+    try {
+      const parsed = JSON.parse(substituteAccess);
+      if (parsed.accessEnd && new Date(parsed.accessEnd) > new Date()) {
+        return <Outlet />;
+      }
+    } catch {}
+  }
+
   if (!hasSchoolRole || !hasDistrict) {
     return <Navigate to="/school/setup" state={{ from: location.pathname }} replace />;
   }
