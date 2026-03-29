@@ -1,35 +1,31 @@
 
 
-# Plan: Allow Substitute Teachers to Bypass School Profile Requirement
+# Fix: SchoolSetup Must Create Verification Request
 
 ## Problem
-The `/classrooms/:id` route is inside `<RequireSchoolProfile />`, so substitute teachers (who have no role or district) get redirected to `/school/setup` instead of reaching the classroom. The substitute flow uses `sessionStorage` to store access credentials — no actual Supabase auth account is needed.
+`SchoolSetup.tsx` (line 84-95) directly updates the profile with `role` and `district_id` and then redirects to the dashboard. It never:
+1. Creates an `account_verification_request` row
+2. Sets `is_verified = false`
+3. Redirects to `/pending-verification`
 
-## Solution
+So users who go through the SchoolSetup flow completely bypass admin verification and never show up in the Account Verification Requests panel.
 
-### 1. Update `src/components/auth/RequireSchoolProfile.tsx`
-Add a check: if `sessionStorage` contains a valid `substituteAccess` entry, allow the user through without requiring role + district. This is the same session key the substitute login flow already sets.
+## Fix
 
-```typescript
-const substituteAccess = sessionStorage.getItem('substituteAccess');
-if (substituteAccess) {
-  try {
-    const parsed = JSON.parse(substituteAccess);
-    // Only allow through if substitute access hasn't expired
-    if (parsed.accessEnd && new Date(parsed.accessEnd) > new Date()) {
-      return <Outlet />;
-    }
-  } catch {}
-}
+### `src/pages/SchoolSetup.tsx`
+Replace the `handleSubmit` logic (lines 79-117):
+
+1. After updating the profile with role + district_id, also ensure `is_verified` is set to `false`
+2. Look up the district name from the local `districts` array using the selected `district_code`
+3. Insert a row into `account_verification_requests` with status `pending`, including `user_id`, `profile_id`, `district_id`, `district_name`, `full_name` (from profile), `email` (from auth user), and `requested_role`
+4. Redirect to `/pending-verification` instead of the dashboard
+5. Show a toast saying "Your account is pending approval from your district administrator"
+
+The updated flow:
+```text
+User selects role + district → profile updated (is_verified=false) 
+→ verification request created → redirect to /pending-verification
 ```
 
-This check goes right after the loading spinner, before the role/district check. Substitute teachers skip the school profile requirement entirely.
-
-### 2. No other changes needed
-- The substitute login flow in `Auth.tsx` already stores the session and navigates to `/classrooms/:id`
-- The `RequireAuth` guard handles the broader auth check (substitute teachers may or may not have an account — the flow already works via `sessionStorage`)
-- `SchoolSetup.tsx` remains unchanged
-
-## Files Modified
-1. `src/components/auth/RequireSchoolProfile.tsx` — add substituteAccess sessionStorage bypass
+No other files need changes — the `AccountVerificationRequests` admin component already queries pending requests correctly.
 
