@@ -960,7 +960,7 @@ const AuraPractice = () => {
         </div>
       </main>
 
-      <Footer />
+      {!isGameMode && <Footer />}
     </div>
   );
 };
