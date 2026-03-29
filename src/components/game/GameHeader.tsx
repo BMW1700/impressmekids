@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Gamepad2, BarChart3, LogOut, Home } from "lucide-react";
+import { Gamepad2, BarChart3, LogOut, Home, LogIn } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ReactNode } from "react";
 
@@ -10,7 +10,7 @@ interface GameHeaderProps {
 }
 
 export const GameHeader = ({ children, studentId }: GameHeaderProps) => {
-  const { profile, signOut } = useAuth();
+  const { session, signOut } = useAuth();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -34,33 +34,57 @@ export const GameHeader = ({ children, studentId }: GameHeaderProps) => {
         <div className="flex items-center gap-2">
           {children}
           
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate('/game/analytics')}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <BarChart3 className="w-4 h-4 mr-1" />
-            <span className="hidden sm:inline">My Progress</span>
-          </Button>
+          {session ? (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/game/analytics')}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <BarChart3 className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">My Progress</span>
+              </Button>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate('/')}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <Home className="w-4 h-4" />
-          </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/')}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <Home className="w-4 h-4" />
+              </Button>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleSignOut}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <LogOut className="w-4 h-4" />
-          </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSignOut}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/')}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <Home className="w-4 h-4" />
+              </Button>
+
+              <Button
+                size="sm"
+                onClick={() => navigate('/game/auth')}
+                className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
+              >
+                <LogIn className="w-4 h-4 mr-1" />
+                Sign In
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </header>
