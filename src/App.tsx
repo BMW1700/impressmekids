@@ -90,6 +90,7 @@ const GameDashboard = lazy(() => import("./pages/game/GameDashboard"));
 const GamePlay = lazy(() => import("./pages/game/GamePlay"));
 const GameAnalytics = lazy(() => import("./pages/game/GameAnalytics"));
 const GameRPGDemo = lazy(() => import("./pages/game/GameRPGDemo"));
+const SchoolSetup = lazy(() => import("./pages/SchoolSetup"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
