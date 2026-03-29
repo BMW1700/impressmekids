@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { GameHeader } from "@/components/game/GameHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Swords, BookOpen, Mic, BarChart3, Flame, Star } from "lucide-react";
+import { Swords, BookOpen, Gamepad2, BarChart3, Flame, Star } from "lucide-react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,13 +54,13 @@ const GameDashboard = () => {
       onClick: () => navigate('/game/play?tab=stories'),
     },
     {
-      title: "Free Reading",
-      description: "Practice reading aloud with real-time AURA feedback",
-      icon: Mic,
-      color: "from-green-500/20 to-emerald-500/20",
-      borderColor: "border-green-500/30",
-      iconColor: "text-green-400",
-      onClick: () => navigate('/game/play?tab=reading'),
+      title: "Game Demo",
+      description: "Try a quick interactive demo of the RPG reading adventure",
+      icon: Gamepad2,
+      color: "from-purple-500/20 to-violet-500/20",
+      borderColor: "border-purple-500/30",
+      iconColor: "text-purple-400",
+      onClick: () => navigate('/game/demo'),
     },
   ];
 

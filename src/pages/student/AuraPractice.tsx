@@ -123,7 +123,11 @@ const AuraPractice = () => {
   useEffect(() => {
     const tab = searchParams.get('tab');
     const category = searchParams.get('category');
-    if (tab) setActiveTab(tab);
+    if (tab === 'rpg') {
+      setIsRpgMode(true);
+    } else if (tab) {
+      setActiveTab(tab);
+    }
     if (category) setCategoryFilter(category);
   }, [searchParams]);
 
