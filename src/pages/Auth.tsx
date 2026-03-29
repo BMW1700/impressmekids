@@ -56,6 +56,8 @@ const Auth = () => {
   const [parentEmailForConsent, setParentEmailForConsent] = useState("");
   const [isUnder13, setIsUnder13] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [authTab, setAuthTab] = useState<string>("signin");
+  const [duplicateEmailPrompt, setDuplicateEmailPrompt] = useState(false);
 
   // Substitute teacher mode
   const [isSubstituteMode, setIsSubstituteMode] = useState(false);
@@ -467,11 +469,8 @@ const Auth = () => {
         .rpc('check_email_exists_secure', { p_email: email.toLowerCase().trim() });
       
       if (profileCheck === true) {
-        toast({
-          title: "Email already registered",
-          description: "This email is already in use. Please sign in instead.",
-          variant: "destructive",
-        });
+        setDuplicateEmailPrompt(true);
+        setAuthTab("signin");
         setIsLoading(false);
         return;
       }
@@ -857,7 +856,7 @@ const Auth = () => {
         </div>
 
         {/* Auth Card */}
-        <Tabs defaultValue="signin" className="w-full">
+        <Tabs value={authTab} onValueChange={(v) => { setAuthTab(v); setDuplicateEmailPrompt(false); }} className="w-full">
           <TabsList className="grid w-full grid-cols-2 bg-white/15 border border-white/20 rounded-xl p-1 mb-6 backdrop-blur">
             <TabsTrigger 
               value="signin" 
@@ -874,6 +873,23 @@ const Auth = () => {
           </TabsList>
 
           <TabsContent value="signin" className="space-y-4">
+            {duplicateEmailPrompt && (
+              <div className="bg-yellow-500/20 border border-yellow-500/40 rounded-xl p-4 space-y-3">
+                <p className="text-white text-sm font-medium">
+                  An account with <span className="font-bold">{email}</span> already exists. Please sign in below.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-white border-white/30 hover:bg-white/10"
+                  onClick={() => { setDuplicateEmailPrompt(false); setAuthTab("signup"); }}
+                >
+                  <ArrowLeft className="h-4 w-4 mr-1" />
+                  Back to Sign Up
+                </Button>
+              </div>
+            )}
             {/* SSO Buttons */}
             <TooltipProvider delayDuration={300}>
               <Tooltip>
