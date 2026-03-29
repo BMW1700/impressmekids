@@ -171,71 +171,76 @@ const App = () => (
                   <Route path="/game/auth" element={<GameAuth />} />
                   <Route path="/game/demo" element={<GameRPGDemo />} />
 
-                  {/* Protected routes */}
+                  {/* Protected routes — auth required */}
                   <Route element={<RequireAuth />}>
+                    {/* School setup — needs auth but NOT school profile */}
+                    <Route path="/school/setup" element={<SchoolSetup />} />
 
-                    <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
-                    <Route path="/teacher/calendar" element={<TeacherCalendar />} />
-                    <Route path="/teacher/questions/:classroomId" element={<QuestionsLibrary />} />
-                    <Route path="/teacher/questions/:classroomId/:groupId" element={<QuestionGroupDetail />} />
-                    <Route path="/teacher/assignment/create/:classroomId" element={<CreateMultiQuestionAssignment />} />
-                    <Route path="/teacher/tournament/control" element={<TournamentControl />} />
-                    <Route path="/teacher/aura-analytics/:classroomId?" element={<AuraAnalytics />} />
-                    <Route path="/teacher/student/:studentId" element={<StudentProfile />} />
-                    <Route path="/teacher/reading-calibration" element={<ReadingAnalyticsCalibration />} />
-                    <Route path="/teacher/story-library" element={<StoryManagement />} />
-                    <Route path="/teacher/clubs/:clubId" element={<ClubDetail />} />
-                    <Route path="/teacher/resources" element={<TeacherPersonalResources />} />
-                    <Route path="/teacher/review-submission/:submissionId" element={<ReviewSubmission />} />
-                    <Route path="/teacher/assignment/review/:submissionId" element={<ReviewMultiQuestionSubmission />} />
-
-                    <Route path="/student/dashboard" element={<StudentDashboard />} />
-                    <Route path="/student/aura-practice" element={<AuraPractice />} />
-                    <Route path="/student/assignment/:assignmentId" element={<CompleteAssignment />} />
-                    <Route path="/student/review-submission/:submissionId" element={<ReviewMySubmission />} />
-                    <Route path="/student/review-annotations/:submissionId" element={<ReviewMyAnnotations />} />
-                    <Route path="/student/browse-clubs" element={<BrowseClubs />} />
-                    <Route path="/student/clubs/:clubId" element={<StudentClubDetail />} />
-
-                    <Route path="/calendar" element={<Calendar />} />
-                    <Route path="/classrooms/:id" element={<ClassroomDetail />} />
-                    <Route path="/join-class" element={<JoinClass />} />
-
-                    <Route path="/games" element={<Games />} />
-                    <Route path="/games/jeopardy-1v1" element={<JeopardyGame />} />
-                    <Route path="/games/number-maker" element={<NumberMaker />} />
-                    <Route path="/games/name-that-animal" element={<NameThatAnimalGame />} />
-                    <Route path="/games/us-states-quiz" element={<USStatesMapQuiz />} />
-                    <Route path="/games/tug-of-war" element={<TugOfWarGame />} />
-
-                    <Route path="/parent/dashboard" element={<ParentDashboard />} />
-                    <Route path="/parent/calendar" element={<ParentCalendar />} />
-                    <Route path="/parent/request-access" element={<RequestAccess />} />
-                    <Route path="/parent/notification-settings" element={<NotificationSettings />} />
-                    <Route path="/parent/child/:studentId" element={<ChildDetail />} />
-                    <Route path="/parent/safety" element={<ParentSafety />} />
-                    <Route path="/parent/review-submission/:submissionId" element={<ParentReviewSubmission />} />
-                    <Route path="/parent/review-annotations/:submissionId" element={<ParentReviewAnnotations />} />
-                    <Route path="/parent/install-app" element={<PWAInstallGuide />} />
-                    <Route path="/parent/data-privacy" element={<DataPrivacy />} />
-
-                    <Route path="/admin" element={<AdminDashboard />} />
-                    <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                    <Route path="/admin/calendar" element={<AdminCalendar />} />
-                    <Route path="/admin/settings" element={<SchoolSettings />} />
-                    <Route path="/admin/safety" element={<AdminSafetyDashboard />} />
-                    <Route path="/admin/safety/drill/:drillId" element={<AdminDrillMonitor />} />
-                    <Route path="/admin/security" element={<AdminSecurityDashboard />} />
-
-                    <Route path="/security" element={<SecurityPortal />} />
-                    <Route path="/district/dashboard" element={<DistrictDashboard />} />
-                    <Route path="/district-manager/dashboard" element={<DistrictManagerDashboard />} />
-                    <Route path="/district/register" element={<RegisterDistrict />} />
-
-                    {/* Game Mode - protected routes */}
+                    {/* Game Mode — needs auth but NOT school profile */}
                     <Route path="/game/dashboard" element={<GameDashboard />} />
                     <Route path="/game/play" element={<GamePlay />} />
                     <Route path="/game/analytics" element={<GameAnalytics />} />
+
+                    {/* School Mode — needs auth AND school profile (role + district) */}
+                    <Route element={<RequireSchoolProfile />}>
+                      <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
+                      <Route path="/teacher/calendar" element={<TeacherCalendar />} />
+                      <Route path="/teacher/questions/:classroomId" element={<QuestionsLibrary />} />
+                      <Route path="/teacher/questions/:classroomId/:groupId" element={<QuestionGroupDetail />} />
+                      <Route path="/teacher/assignment/create/:classroomId" element={<CreateMultiQuestionAssignment />} />
+                      <Route path="/teacher/tournament/control" element={<TournamentControl />} />
+                      <Route path="/teacher/aura-analytics/:classroomId?" element={<AuraAnalytics />} />
+                      <Route path="/teacher/student/:studentId" element={<StudentProfile />} />
+                      <Route path="/teacher/reading-calibration" element={<ReadingAnalyticsCalibration />} />
+                      <Route path="/teacher/story-library" element={<StoryManagement />} />
+                      <Route path="/teacher/clubs/:clubId" element={<ClubDetail />} />
+                      <Route path="/teacher/resources" element={<TeacherPersonalResources />} />
+                      <Route path="/teacher/review-submission/:submissionId" element={<ReviewSubmission />} />
+                      <Route path="/teacher/assignment/review/:submissionId" element={<ReviewMultiQuestionSubmission />} />
+
+                      <Route path="/student/dashboard" element={<StudentDashboard />} />
+                      <Route path="/student/aura-practice" element={<AuraPractice />} />
+                      <Route path="/student/assignment/:assignmentId" element={<CompleteAssignment />} />
+                      <Route path="/student/review-submission/:submissionId" element={<ReviewMySubmission />} />
+                      <Route path="/student/review-annotations/:submissionId" element={<ReviewMyAnnotations />} />
+                      <Route path="/student/browse-clubs" element={<BrowseClubs />} />
+                      <Route path="/student/clubs/:clubId" element={<StudentClubDetail />} />
+
+                      <Route path="/calendar" element={<Calendar />} />
+                      <Route path="/classrooms/:id" element={<ClassroomDetail />} />
+                      <Route path="/join-class" element={<JoinClass />} />
+
+                      <Route path="/games" element={<Games />} />
+                      <Route path="/games/jeopardy-1v1" element={<JeopardyGame />} />
+                      <Route path="/games/number-maker" element={<NumberMaker />} />
+                      <Route path="/games/name-that-animal" element={<NameThatAnimalGame />} />
+                      <Route path="/games/us-states-quiz" element={<USStatesMapQuiz />} />
+                      <Route path="/games/tug-of-war" element={<TugOfWarGame />} />
+
+                      <Route path="/parent/dashboard" element={<ParentDashboard />} />
+                      <Route path="/parent/calendar" element={<ParentCalendar />} />
+                      <Route path="/parent/request-access" element={<RequestAccess />} />
+                      <Route path="/parent/notification-settings" element={<NotificationSettings />} />
+                      <Route path="/parent/child/:studentId" element={<ChildDetail />} />
+                      <Route path="/parent/safety" element={<ParentSafety />} />
+                      <Route path="/parent/review-submission/:submissionId" element={<ParentReviewSubmission />} />
+                      <Route path="/parent/review-annotations/:submissionId" element={<ParentReviewAnnotations />} />
+                      <Route path="/parent/install-app" element={<PWAInstallGuide />} />
+                      <Route path="/parent/data-privacy" element={<DataPrivacy />} />
+
+                      <Route path="/admin" element={<AdminDashboard />} />
+                      <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                      <Route path="/admin/calendar" element={<AdminCalendar />} />
+                      <Route path="/admin/settings" element={<SchoolSettings />} />
+                      <Route path="/admin/safety" element={<AdminSafetyDashboard />} />
+                      <Route path="/admin/safety/drill/:drillId" element={<AdminDrillMonitor />} />
+                      <Route path="/admin/security" element={<AdminSecurityDashboard />} />
+
+                      <Route path="/security" element={<SecurityPortal />} />
+                      <Route path="/district/dashboard" element={<DistrictDashboard />} />
+                      <Route path="/district-manager/dashboard" element={<DistrictManagerDashboard />} />
+                      <Route path="/district/register" element={<RegisterDistrict />} />
+                    </Route>
                   </Route>
 
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
