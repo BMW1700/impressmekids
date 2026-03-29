@@ -8055,7 +8055,13 @@ export type Database = {
         | "picture_day"
         | "other"
       tournament_status: "waiting" | "in_progress" | "completed"
-      user_role: "teacher" | "student" | "admin" | "district_admin" | "parent"
+      user_role:
+        | "teacher"
+        | "student"
+        | "admin"
+        | "district_admin"
+        | "parent"
+        | "game_player"
     }
     CompositeTypes: {
       classroom_leaderboard_entry: {
@@ -8227,7 +8233,14 @@ export const Constants = {
         "other",
       ],
       tournament_status: ["waiting", "in_progress", "completed"],
-      user_role: ["teacher", "student", "admin", "district_admin", "parent"],
+      user_role: [
+        "teacher",
+        "student",
+        "admin",
+        "district_admin",
+        "parent",
+        "game_player",
+      ],
     },
   },
 } as const

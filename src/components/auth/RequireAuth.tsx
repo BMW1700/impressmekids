@@ -22,7 +22,10 @@ export function RequireAuth() {
   }
 
   if (!session) {
-    return <Navigate to="/auth" state={{ from: location.pathname }} replace />;
+    // Redirect game mode users to game auth, not school auth
+    const isGameRoute = location.pathname.startsWith('/game');
+    const authPath = isGameRoute ? '/game/auth' : '/auth';
+    return <Navigate to={authPath} state={{ from: location.pathname }} replace />;
   }
 
   return <Outlet />;
