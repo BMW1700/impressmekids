@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { CampaignModeEntry } from "@/components/aura/game/CampaignModeEntry";
 import { RPGBattleArena } from "@/components/aura/game/rpg/RPGBattleArena";
 import { RPGWorldMap, type WorldProgress } from "@/components/aura/game/rpg/RPGWorldMap";
@@ -16,6 +16,7 @@ import KidFriendlyProgress from "@/components/aura/KidFriendlyProgress";
 import { curatedStories } from "@/data/curatedStories";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { GameHeader } from "@/components/game/GameHeader";
 import { VoiceRecorder } from "@/components/aura/VoiceRecorder";
 import AuraFeedbackCard from "@/components/aura/AuraFeedbackCard";
 import AuraProgressChart from "@/components/aura/AuraProgressChart";
@@ -81,7 +82,9 @@ const ClassroomLeaderboardWrapper = ({ studentId }: { studentId: string }) => {
 const AuraPractice = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
+  const isGameMode = location.pathname.startsWith('/game');
   const [latestAnalysis, setLatestAnalysis] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
@@ -277,7 +280,7 @@ const AuraPractice = () => {
   if (isCampaignMode && user?.id) {
     return (
       <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
-        <Header />
+        {isGameMode ? <GameHeader studentId={user?.id} /> : <Header />}
         <main className="flex-1 container mx-auto px-4 py-8">
           <CampaignModeEntry
             studentId={user.id}
@@ -286,7 +289,7 @@ const AuraPractice = () => {
             isAdmin={profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'district_admin'}
           />
         </main>
-        <Footer />
+        {!isGameMode && <Footer />}
       </div>
     );
   }
@@ -331,7 +334,7 @@ const AuraPractice = () => {
 
     return (
       <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
-        <Header />
+        {isGameMode ? <GameHeader studentId={user?.id} /> : <Header />}
         <main className="flex-1 container mx-auto px-4 py-8">
           <RPGBattleArena
             story={rpgStory}
@@ -385,7 +388,7 @@ const AuraPractice = () => {
             }}
           />
         </main>
-        <Footer />
+        {!isGameMode && <Footer />}
       </div>
     );
   }
@@ -556,7 +559,7 @@ const AuraPractice = () => {
   if (isReadingStory && selectedStory && user?.id) {
     return (
       <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
-        <Header />
+        {isGameMode ? <GameHeader studentId={user?.id} /> : <Header />}
         <main className="flex-1 container mx-auto px-4 py-8">
           <GuidedReadingFlow
             story={selectedStory}
@@ -570,7 +573,7 @@ const AuraPractice = () => {
             screeningGradeLevel={activeScreening?.gradeLevel}
           />
         </main>
-        <Footer />
+        {!isGameMode && <Footer />}
       </div>
     );
   }
@@ -597,14 +600,14 @@ const AuraPractice = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
-      <Header />
+      {isGameMode ? <GameHeader studentId={user?.id} /> : <Header />}
       
       <main className="flex-1 container mx-auto px-4 py-8 animate-fade-in">
         <div className="max-w-6xl mx-auto space-y-6">
           <Button
             variant="ghost"
             onClick={() => {
-              navigate('/student/dashboard');
+              navigate(isGameMode ? '/game/dashboard' : '/student/dashboard');
               window.scrollTo(0, 0);
             }}
             className="mb-2"
@@ -631,8 +634,8 @@ const AuraPractice = () => {
 
           <SmartNotifications onNavigate={(path) => navigate(path)} />
 
-          {/* Active Screening Banner */}
-          {activeScreening?.passage && (
+          {/* Active Screening Banner - school only */}
+          {!isGameMode && activeScreening?.passage && (
             <Card className={`border-2 ${
               activeScreening.hasCompleted 
                 ? 'border-green-500 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30'
@@ -925,11 +928,11 @@ const AuraPractice = () => {
                   {/* Active Missions */}
                   <ActiveMissionsPanel studentId={user.id} />
                   
-                  {/* Class Challenge */}
-                  <ClassChallengeCard studentId={user.id} />
+                  {/* Class Challenge - hide in game mode */}
+                  {!isGameMode && <ClassChallengeCard studentId={user.id} />}
                   
-                  {/* Classroom Leaderboard */}
-                  <ClassroomLeaderboardWrapper studentId={user.id} />
+                  {/* Classroom Leaderboard - hide in game mode */}
+                  {!isGameMode && <ClassroomLeaderboardWrapper studentId={user.id} />}
                 </>
               )}
             </TabsContent>
@@ -957,7 +960,7 @@ const AuraPractice = () => {
         </div>
       </main>
 
-      <Footer />
+      {!isGameMode && <Footer />}
     </div>
   );
 };
