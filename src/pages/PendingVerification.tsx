@@ -31,12 +31,21 @@ export default function PendingVerification() {
         // Check if user is verified
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('is_verified, role, district_name')
+          .select('is_verified, role, district_name, district_id')
           .eq('id', user.id)
           .maybeSingle();
 
         if (profileError) {
           console.error('Error fetching profile verification status:', profileError);
+        }
+
+        // If user has no role or no district, send to school setup instead
+        const schoolRoles = ['teacher', 'student', 'parent', 'admin', 'district_admin'];
+        const hasSchoolRole = profile?.role && schoolRoles.includes(profile.role);
+        const hasDistrict = !!profile?.district_id;
+        if (!hasSchoolRole || !hasDistrict) {
+          navigate('/school/setup', { replace: true });
+          return;
         }
 
         if (profile?.is_verified) {
