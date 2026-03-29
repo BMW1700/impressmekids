@@ -88,6 +88,7 @@ const GameAuth = lazy(() => import("./pages/game/GameAuth"));
 const GameDashboard = lazy(() => import("./pages/game/GameDashboard"));
 const GamePlay = lazy(() => import("./pages/game/GamePlay"));
 const GameAnalytics = lazy(() => import("./pages/game/GameAnalytics"));
+const GameRPGDemo = lazy(() => import("./pages/game/GameRPGDemo"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -166,6 +167,7 @@ const App = () => (
                   <Route path="/pricing" element={<Pricing />} />
                   <Route path="/game" element={<GameAuth />} />
                   <Route path="/game/auth" element={<GameAuth />} />
+                  <Route path="/game/demo" element={<GameRPGDemo />} />
 
                   {/* Protected routes */}
                   <Route element={<RequireAuth />}>
