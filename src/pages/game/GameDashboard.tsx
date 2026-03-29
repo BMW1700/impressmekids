@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { GameHeader } from "@/components/game/GameHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Swords, BookOpen, Gamepad2, BarChart3, Flame, Star } from "lucide-react";
+import { Swords, BookOpen, Gamepad2, BarChart3, Flame, Star, LogIn } from "lucide-react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +12,7 @@ import { RPGPlayerHUD } from "@/components/aura/game/rpg/RPGPlayerHUD";
 
 const GameDashboard = () => {
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user, session, profile } = useAuth();
 
   const { progress } = useCampaignProgress(user?.id);
 
@@ -32,6 +32,7 @@ const GameDashboard = () => {
 
   const gold = progress?.total_gold ?? 0;
   const xp = progress?.total_xp_earned ?? 0;
+  const isSignedIn = !!session;
 
   const modeCards = [
     {
@@ -42,7 +43,8 @@ const GameDashboard = () => {
       borderColor: "border-red-500/30",
       iconColor: "text-red-400",
       primary: true,
-      onClick: () => navigate('/game/play?tab=rpg'),
+      requiresAuth: true,
+      onClick: () => isSignedIn ? navigate('/game/play?tab=rpg') : navigate('/game/auth'),
     },
     {
       title: "Story Library",
@@ -51,7 +53,8 @@ const GameDashboard = () => {
       color: "from-blue-500/20 to-cyan-500/20",
       borderColor: "border-blue-500/30",
       iconColor: "text-blue-400",
-      onClick: () => navigate('/game/play?tab=stories'),
+      requiresAuth: true,
+      onClick: () => isSignedIn ? navigate('/game/play?tab=stories') : navigate('/game/auth'),
     },
     {
       title: "Game Demo",
@@ -60,6 +63,7 @@ const GameDashboard = () => {
       color: "from-purple-500/20 to-violet-500/20",
       borderColor: "border-purple-500/30",
       iconColor: "text-purple-400",
+      requiresAuth: false,
       onClick: () => navigate('/game/demo'),
     },
   ];
@@ -67,7 +71,7 @@ const GameDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <GameHeader studentId={user?.id}>
-        {user?.id && (
+        {isSignedIn && user?.id && (
           <RPGPlayerHUD
             studentId={user.id}
             gold={gold}
@@ -85,35 +89,68 @@ const GameDashboard = () => {
           className="mb-8"
         >
           <h1 className="text-2xl sm:text-3xl font-bold">
-            Welcome back, <span className="text-yellow-400">{profile?.full_name?.split(' ')[0] || 'Adventurer'}</span>! 🎮
+            {isSignedIn ? (
+              <>Welcome back, <span className="text-yellow-400">{profile?.full_name?.split(' ')[0] || 'Adventurer'}</span>! 🎮</>
+            ) : (
+              <>Welcome to <span className="text-yellow-400">NabuLearn</span>! 🎮</>
+            )}
           </h1>
-          <p className="text-muted-foreground mt-1">Choose your reading adventure</p>
+          <p className="text-muted-foreground mt-1">
+            {isSignedIn ? 'Choose your reading adventure' : 'Sign in to track your progress and play'}
+          </p>
         </motion.div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-8">
-          <Card className="bg-gradient-to-br from-yellow-500/10 to-amber-500/10 border-yellow-500/20">
-            <CardContent className="p-3 text-center">
-              <Star className="w-5 h-5 text-yellow-400 mx-auto mb-1" />
-              <div className="text-lg font-bold text-yellow-400">{xp.toLocaleString()}</div>
-              <div className="text-xs text-muted-foreground">Total XP</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-br from-orange-500/10 to-red-500/10 border-orange-500/20">
-            <CardContent className="p-3 text-center">
-              <Flame className="w-5 h-5 text-orange-400 mx-auto mb-1" />
-              <div className="text-lg font-bold text-orange-400">{readingStats?.current_streak_days ?? 0}</div>
-              <div className="text-xs text-muted-foreground">Day Streak</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-br from-purple-500/10 to-violet-500/10 border-purple-500/20">
-            <CardContent className="p-3 text-center">
-              <BookOpen className="w-5 h-5 text-purple-400 mx-auto mb-1" />
-              <div className="text-lg font-bold text-purple-400">{readingStats?.total_words_read?.toLocaleString() ?? 0}</div>
-              <div className="text-xs text-muted-foreground">Words Read</div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Sign In CTA for unauthenticated users */}
+        {!isSignedIn && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8"
+          >
+            <Card className="bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border-yellow-500/30">
+              <CardContent className="flex items-center justify-between p-4">
+                <div>
+                  <h3 className="font-semibold">Sign in to start your adventure</h3>
+                  <p className="text-sm text-muted-foreground">Track your progress, earn XP, and battle enemies!</p>
+                </div>
+                <Button
+                  onClick={() => navigate('/game/auth')}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
+                >
+                  <LogIn className="w-4 h-4 mr-1" />
+                  Sign In
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Quick Stats — only for signed-in users */}
+        {isSignedIn && (
+          <div className="grid grid-cols-3 gap-3 mb-8">
+            <Card className="bg-gradient-to-br from-yellow-500/10 to-amber-500/10 border-yellow-500/20">
+              <CardContent className="p-3 text-center">
+                <Star className="w-5 h-5 text-yellow-400 mx-auto mb-1" />
+                <div className="text-lg font-bold text-yellow-400">{xp.toLocaleString()}</div>
+                <div className="text-xs text-muted-foreground">Total XP</div>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-orange-500/10 to-red-500/10 border-orange-500/20">
+              <CardContent className="p-3 text-center">
+                <Flame className="w-5 h-5 text-orange-400 mx-auto mb-1" />
+                <div className="text-lg font-bold text-orange-400">{readingStats?.current_streak_days ?? 0}</div>
+                <div className="text-xs text-muted-foreground">Day Streak</div>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-purple-500/10 to-violet-500/10 border-purple-500/20">
+              <CardContent className="p-3 text-center">
+                <BookOpen className="w-5 h-5 text-purple-400 mx-auto mb-1" />
+                <div className="text-lg font-bold text-purple-400">{readingStats?.total_words_read?.toLocaleString() ?? 0}</div>
+                <div className="text-xs text-muted-foreground">Words Read</div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Mode Cards */}
         <div className="grid gap-4">
@@ -138,6 +175,7 @@ const GameDashboard = () => {
                     <h3 className={`font-bold ${card.primary ? 'text-xl' : 'text-base'}`}>
                       {card.title}
                       {card.primary && <span className="ml-2 text-xs bg-red-500/30 text-red-300 px-2 py-0.5 rounded-full">Featured</span>}
+                      {card.requiresAuth && !isSignedIn && <span className="ml-2 text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Sign in required</span>}
                     </h3>
                     <p className="text-sm text-muted-foreground mt-0.5">{card.description}</p>
                   </div>
@@ -147,22 +185,24 @@ const GameDashboard = () => {
           ))}
         </div>
 
-        {/* View Progress CTA */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="mt-8"
-        >
-          <Button
-            onClick={() => navigate('/game/analytics')}
-            variant="outline"
-            className="w-full border-white/20 hover:bg-white/10"
+        {/* View Progress CTA — only for signed-in users */}
+        {isSignedIn && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="mt-8"
           >
-            <BarChart3 className="w-4 h-4 mr-2" />
-            View My Reading Progress
-          </Button>
-        </motion.div>
+            <Button
+              onClick={() => navigate('/game/analytics')}
+              variant="outline"
+              className="w-full border-white/20 hover:bg-white/10"
+            >
+              <BarChart3 className="w-4 h-4 mr-2" />
+              View My Reading Progress
+            </Button>
+          </motion.div>
+        )}
       </main>
     </div>
   );
