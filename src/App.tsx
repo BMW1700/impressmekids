@@ -167,7 +167,7 @@ const App = () => (
                   <Route path="/demos/parent" element={<ParentDemo />} />
                   <Route path="/demos/admin" element={<AdminDemo />} />
                   <Route path="/pricing" element={<Pricing />} />
-                  <Route path="/game" element={<GameAuth />} />
+                  <Route path="/game" element={<GameDashboard />} />
                   <Route path="/game/auth" element={<GameAuth />} />
                   <Route path="/game/demo" element={<GameRPGDemo />} />
 
