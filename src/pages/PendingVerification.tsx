@@ -155,6 +155,14 @@ export default function PendingVerification() {
           <Button 
             variant="outline" 
             className="w-full" 
+            onClick={() => navigate('/')}
+          >
+            <Home className="h-4 w-4 mr-2" />
+            Go Home
+          </Button>
+          <Button 
+            variant="outline" 
+            className="w-full" 
             onClick={handleSignOut}
           >
             <LogOut className="h-4 w-4 mr-2" />
