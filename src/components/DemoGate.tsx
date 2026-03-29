@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Lock } from "lucide-react";
 
-const DEMO_CODE = "Brecon69";
+const DEMO_CODE = "Brecon50";
 const STORAGE_KEY = "imk_demo_access";
 
 export function DemoGate({ children }: { children: ReactNode }) {
