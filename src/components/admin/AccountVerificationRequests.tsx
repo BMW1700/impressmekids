@@ -106,8 +106,9 @@ export function AccountVerificationRequests() {
 
   const denyMutation = useMutation({
     mutationFn: async (request: VerificationRequest) => {
-      // Step 1: Update request status
       const { data: { user } } = await supabase.auth.getUser();
+
+      // Step 1: Update request status
       const { error: requestError } = await supabase
         .from('account_verification_requests')
         .update({
@@ -119,18 +120,30 @@ export function AccountVerificationRequests() {
 
       if (requestError) throw requestError;
 
-      // Step 2: Delete user account via edge function
-      const { error: deleteError } = await supabase.functions.invoke('delete-user-account', {
-        body: { userId: request.user_id }
-      });
+      // Step 2: Reset the user's school profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          role: null,
+          district_id: null,
+          district_name: null,
+          is_verified: false
+        } as any)
+        .eq('id', request.profile_id);
 
-      if (deleteError) throw deleteError;
+      if (profileError) throw profileError;
+
+      // Step 3: Remove user roles
+      await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', request.user_id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['account-verification-requests'] });
       toast({
         title: "Account Denied",
-        description: "The account request has been denied and the account deleted.",
+        description: "Account request denied. The user can re-submit with different details.",
       });
     },
     onError: (error: any) => {
@@ -204,7 +217,7 @@ export function AccountVerificationRequests() {
                 disabled={approveMutation.isPending || denyMutation.isPending}
               >
                 <XCircle className="h-4 w-4 mr-1" />
-                Deny & Delete
+                Deny
               </Button>
             </div>
           </div>
