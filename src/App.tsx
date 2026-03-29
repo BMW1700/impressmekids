@@ -171,13 +171,15 @@ const App = () => (
                   <Route path="/game/auth" element={<GameAuth />} />
                   <Route path="/game/demo" element={<GameRPGDemo />} />
 
+                  {/* Game Mode — public pages (no auth required) */}
+                  <Route path="/game/dashboard" element={<GameDashboard />} />
+
                   {/* Protected routes — auth required */}
                   <Route element={<RequireAuth />}>
                     {/* School setup — needs auth but NOT school profile */}
                     <Route path="/school/setup" element={<SchoolSetup />} />
 
-                    {/* Game Mode — needs auth but NOT school profile */}
-                    <Route path="/game/dashboard" element={<GameDashboard />} />
+                    {/* Game Mode — needs auth for gameplay */}
                     <Route path="/game/play" element={<GamePlay />} />
                     <Route path="/game/analytics" element={<GameAnalytics />} />
 
