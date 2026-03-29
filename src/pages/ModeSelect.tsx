@@ -31,14 +31,15 @@ const ModeSelect = () => {
 
         const userRole = profileData[0].role;
 
-        // Also check district_id from profiles table
+        // Also check district_id and is_verified from profiles table
         const { data: profileRow } = await supabase
           .from('profiles')
-          .select('district_id')
+          .select('district_id, is_verified')
           .eq('id', session.user.id)
           .single();
 
         const hasDistrict = !!profileRow?.district_id;
+        const isVerified = profileRow?.is_verified !== false;
 
         // Game players always go to game dashboard
         if (userRole === 'game_player') {
@@ -46,9 +47,13 @@ const ModeSelect = () => {
           return;
         }
 
-        // School roles only auto-redirect if they have a district (complete profile)
+        // School roles only auto-redirect if they have a district AND are verified
         const schoolRoles = ['teacher', 'student', 'parent', 'admin', 'district_admin'];
         if (schoolRoles.includes(userRole) && hasDistrict) {
+          if (!isVerified) {
+            // Don't auto-redirect unverified users — let them stay on mode select
+            return;
+          }
           const dashboardMap: Record<string, string> = {
             teacher: '/teacher/dashboard',
             parent: '/parent/dashboard',
