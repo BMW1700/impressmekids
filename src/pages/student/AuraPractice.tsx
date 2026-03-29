@@ -280,7 +280,7 @@ const AuraPractice = () => {
   if (isCampaignMode && user?.id) {
     return (
       <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
-        <Header />
+        {isGameMode ? <GameHeader studentId={user?.id} /> : <Header />}
         <main className="flex-1 container mx-auto px-4 py-8">
           <CampaignModeEntry
             studentId={user.id}
@@ -289,7 +289,7 @@ const AuraPractice = () => {
             isAdmin={profile?.role === 'teacher' || profile?.role === 'admin' || profile?.role === 'district_admin'}
           />
         </main>
-        <Footer />
+        {!isGameMode && <Footer />}
       </div>
     );
   }
@@ -334,7 +334,7 @@ const AuraPractice = () => {
 
     return (
       <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
-        <Header />
+        {isGameMode ? <GameHeader studentId={user?.id} /> : <Header />}
         <main className="flex-1 container mx-auto px-4 py-8">
           <RPGBattleArena
             story={rpgStory}
@@ -388,7 +388,7 @@ const AuraPractice = () => {
             }}
           />
         </main>
-        <Footer />
+        {!isGameMode && <Footer />}
       </div>
     );
   }
