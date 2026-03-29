@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, LogOut } from "lucide-react";
+import { Clock, LogOut, Home } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface VerificationRequest {
@@ -152,6 +152,14 @@ export default function PendingVerification() {
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-2">
+          <Button 
+            variant="outline" 
+            className="w-full" 
+            onClick={() => navigate('/')}
+          >
+            <Home className="h-4 w-4 mr-2" />
+            Go Home
+          </Button>
           <Button 
             variant="outline" 
             className="w-full" 
