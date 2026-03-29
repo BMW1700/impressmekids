@@ -1,7 +1,7 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Link } from "react-router-dom";
-import { GraduationCap, BookOpen, MessageSquare, LayoutDashboard, ArrowRight, Play } from "lucide-react";
+import { GraduationCap, BookOpen, MessageSquare, LayoutDashboard, ArrowRight, Play, Swords } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 
@@ -33,6 +33,13 @@ const roles = [
     icon: LayoutDashboard,
     path: "/demos/admin",
     color: "from-purple-500 to-pink-500",
+  },
+  {
+    title: "RPG Reading Game",
+    description: "Experience the LexiQuest RPG — battle enemies by reading aloud in this interactive combat demo.",
+    icon: Swords,
+    path: "/game/demo",
+    color: "from-red-500 to-rose-500",
   },
 ];
 
