@@ -137,6 +137,12 @@ export function AccountVerificationRequests() {
         .from('user_roles')
         .delete()
         .eq('user_id', request.user_id);
+
+      // Step 4: Delete the verification request
+      await supabase
+        .from('account_verification_requests')
+        .delete()
+        .eq('id', request.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['account-verification-requests'] });
