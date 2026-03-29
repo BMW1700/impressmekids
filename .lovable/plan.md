@@ -1,50 +1,55 @@
-# Plan: RPG Game Demo + Dashboard Button Updates
+
+
+# Plan: School Mode Requires Role + District; Game Mode Does Not
 
 ## Summary
-
-Create a standalone interactive RPG demo page at `/game/demo` — completely separate from the school demos — and update the Game Dashboard buttons accordingly.
+Users without a role and district can freely use Game Mode. When they try to access School Mode protected pages, they get prompted to select a role and district before proceeding.
 
 ## Changes
 
-### 1. Create `src/pages/game/GameRPGDemo.tsx`
+### 1. Create `src/components/auth/RequireSchoolProfile.tsx`
+A new route guard wrapper (like RequireAuth but stricter) used only around school-mode protected routes. It checks:
+- If user has a valid school role (teacher/student/parent/admin/district_admin) AND a district_id → allow through
+- If user is missing role or district_id → redirect to a new `/school/setup` page where they pick role + district
+- Game players without school profile get redirected to setup if they want school access
 
-A self-contained interactive demo showcasing the RPG mode, using the same `DemoTourProvider` / `DemoHighlight` / `TourStep` pattern as the existing school demos. It will include:
+### 2. Create `src/pages/SchoolSetup.tsx`
+A simple page (matching app theme) that shows:
+- Role selection buttons (Student, Parent, Teacher, Admin) — reusing the same UI pattern from Auth.tsx
+- District selection dropdown (reusing DistrictCombobox)
+- On submit: updates the user's profile with the selected role and district, then redirects to appropriate dashboard
+- If user already has role+district, auto-redirect to dashboard
 
-- **GameHeader** at the top (not school Header)
-- **Tour steps** walking through: World Map overview → selecting a world → Level Select → Battle Mode selection → Battle Arena (mock/static) → Victory screen
-- **Static mock data** for worlds, levels, enemies, and battle stats — no auth or database required
-- **Visual replicas** of RPGWorldMap, RPGLevelSelect, and RPGBattleArena rendered with mock props so the user sees exactly what the real RPG looks like
-- **Same interactive tour UI** (bottom bar with prev/next, step indicators, highlighted sections) matching the school demo style
-- Themed with game mode colors/gradients (dark background, RPG-style)
+### 3. Update `src/App.tsx` routing
+- Wrap all school-mode protected routes (teacher/*, student/*, parent/*, admin/*, district/*) in a new `<RequireSchoolProfile />` layout route nested inside `<RequireAuth />`
+- Game mode routes (`/game/dashboard`, `/game/play`, `/game/analytics`) stay under just `<RequireAuth />` — no school profile needed
+- Add `/school/setup` as a protected route (requires auth but not school profile)
 
-### 2. Update `src/pages/game/GameDashboard.tsx`
+### 4. Update `src/components/auth/RequireAuth.tsx`
+- No changes needed for game mode redirect logic — it already redirects game routes to `/game/auth`
 
-Change the third mode card:
+## Route Structure After Changes
 
-- Title: "Free Reading" → **"Game Demo"**
-- Description: "Try a quick demo of the RPG reading adventure"
-- Icon: `Mic` → `Gamepad2`
-- Colors: keep green or switch to a purple/gaming gradient
-- `onClick`: `navigate('/game/demo')` instead of `/game/play?tab=reading`
+```text
+<RequireAuth>
+  /school/setup        → SchoolSetup (pick role + district)
+  /game/dashboard      → GameDashboard (no school profile needed)
+  /game/play           → GamePlay
+  /game/analytics      → GameAnalytics
 
-### 3. Fix RPG Campaign button — trigger RPG mode from URL
+  <RequireSchoolProfile>
+    /teacher/*          → requires role + district
+    /student/*          → requires role + district
+    /parent/*           → requires role + district
+    /admin/*            → requires role + district
+    /district/*         → requires role + district
+    /calendar, /games/* → requires role + district
+  </RequireSchoolProfile>
+</RequireAuth>
+```
 
-In `src/pages/student/AuraPractice.tsx` (lines 122-128), update the `useEffect` that handles URL params: when `tab=rpg` is detected, call `setIsRpgMode(true)` so clicking "RPG Campaign" from the dashboard actually opens the RPG world map.
+## Files
+1. `src/components/auth/RequireSchoolProfile.tsx` — **new** — checks role + district_id, redirects to `/school/setup`
+2. `src/pages/SchoolSetup.tsx` — **new** — role + district selection page
+3. `src/App.tsx` — nest school routes under RequireSchoolProfile, keep game routes under just RequireAuth
 
-### 4. Update `src/App.tsx`
-
-- Import `GameRPGDemo` (lazy)
-- Add route: `/game/demo` → `GameRPGDemo` (public, no auth required — it's a demo)
-
-## Files Modified
-
-1. `src/pages/game/GameRPGDemo.tsx` — **new** — standalone RPG demo with tour
-2. `src/pages/game/GameDashboard.tsx` — update third card to "Game Demo"
-3. `src/pages/student/AuraPractice.tsx` — fix `tab=rpg` to trigger `setIsRpgMode(true)`
-4. `src/App.tsx` — add `/game/demo` route
-
-&nbsp;
-
-&nbsp;
-
-***Remeber, the demo for this should be a demo of the RPG game mode. Make sure that this demo is a completely separate demo than the one in the school mode. This demo should have the same type of look, feel, function and interactiveness as the demo in the school mode, but should be completely separate and should be for the RPG mode ONLY.***
