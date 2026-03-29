@@ -82,7 +82,9 @@ const ClassroomLeaderboardWrapper = ({ studentId }: { studentId: string }) => {
 const AuraPractice = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
+  const isGameMode = location.pathname.startsWith('/game');
   const [latestAnalysis, setLatestAnalysis] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
