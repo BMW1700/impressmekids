@@ -470,7 +470,6 @@ const Auth = () => {
       
       if (profileCheck === true) {
         setDuplicateEmailPrompt(true);
-        setAuthTab("signin");
         setIsLoading(false);
         return;
       }
