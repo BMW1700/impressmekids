@@ -1,58 +1,41 @@
 
 
-# Game Mode Issues — Honest Assessment & Fix Plan
+# Fix Plan: Game Mode Play Experience
 
-## What Works
-- Routing structure is correct
-- ModeSelect page correctly links and redirects
-- GameAuth UI is solid
-- GameDashboard, GameAnalytics, GameHeader are well-built
-- RLS policies for `game_player` were created correctly
-- `game_player` was added to `app_role` enum
+## Problem
+GamePlay.tsx renders AuraPractice directly, which shows school Header/Footer, ClassChallengeCard, ClassroomLeaderboardWrapper, and other school-specific UI. Consumer users see broken/empty school widgets.
 
-## What's Broken
+## Solution
+Add game-mode awareness to AuraPractice so it hides school-specific elements when accessed from `/game/play`.
 
-### 1. CRITICAL: Signup assigns `student` instead of `game_player`
-The `handle_new_user()` trigger has a CASE statement that only handles `teacher`, `student`, `admin`, `parent`. The `ELSE` branch defaults to `student`. So every game mode signup silently becomes a student — they'll never see the game dashboard and will be redirected to the student dashboard.
+### 1. Detect game mode in AuraPractice (`src/pages/student/AuraPractice.tsx`)
+- Use `useLocation()` to check if path starts with `/game`
+- OR accept a `gameMode` prop (passed from GamePlay)
+- Set a `const isGameMode = ...` flag
 
-**Fix:** Update `handle_new_user()` to add a `WHEN 'game_player'` branch. Also add `game_player` to the `user_role` enum (separate from `app_role`) since `profiles.role` uses that type.
+### 2. Conditionally render based on `isGameMode`
+When `isGameMode` is true:
+- Replace `<Header />` with `<GameHeader />` (the game-mode header component)
+- Remove `<Footer />`
+- Hide `<ClassChallengeCard>`
+- Hide `<ClassroomLeaderboardWrapper>`
+- Hide the "Back to Dashboard" button that navigates to `/student-dashboard` — replace with one that goes to `/game/dashboard`
+- Keep everything else: RPG, Stories, Reading, Presentations tabs all stay
 
-### 2. CRITICAL: Post-email-verification role assignment never happens
-GameAuth line 65-68 tries to upsert `user_roles` after signup, but only runs when `data.session` exists (auto-confirm). Email confirmation is NOT auto-enabled, so users verify via email, come back, and the upsert code never runs. The trigger fix in #1 solves this since the trigger fires at signup time regardless.
+### 3. Update GamePlay.tsx
+- Minimal change — just pass `gameMode` prop or rely on URL detection in AuraPractice
 
-### 3. MODERATE: GamePlay doesn't actually work as a game mode experience
-`GamePlay.tsx` just renders `AuraPractice` which has its own student-focused header, classroom navigation, and doesn't consume the `?tab=rpg` query param from the dashboard links. Users always see the default AuraPractice tab, not the RPG they clicked on.
+### 4. Verify PhonemeHeatmap props in GameAnalytics
+- Read PhonemeHeatmap component to confirm the `students` and `skillVectors` prop shapes match what GameAnalytics provides
+- Fix any mismatches
 
-**Fix:** Pass `initialTab` and `gameMode` props to AuraPractice (or wrap it with overrides). Strip school-specific UI when in game mode context.
+## Files Modified
+1. `src/pages/student/AuraPractice.tsx` — add game mode conditional rendering (~15 lines changed across 5 spots)
+2. `src/pages/game/GamePlay.tsx` — potentially pass prop
+3. `src/pages/game/GameAnalytics.tsx` — fix PhonemeHeatmap props if needed
 
-### 4. MODERATE: RequireAuth redirects to `/auth` (school login)
-If a game mode user's session expires while on `/game/dashboard`, they get sent to the school auth page, not `/game/auth`. Confusing for consumer users.
-
-**Fix:** Update RequireAuth to detect game routes and redirect to `/game/auth` instead.
-
-### 5. MINOR: PhonemeHeatmap prop mismatch
-GameAnalytics passes `students` and `skillVectors` props to PhonemeHeatmap, but I'd need to verify the component actually accepts data in that shape for a single-user case (it was built for classroom-level display).
-
-## Database Migration Needed
-```sql
--- Add game_player to user_role enum (profiles.role uses this)
-ALTER TYPE public.user_role ADD VALUE IF NOT EXISTS 'game_player';
-
--- Update handle_new_user to recognize game_player
-CREATE OR REPLACE FUNCTION public.handle_new_user() ...
-  WHEN 'game_player' THEN
-    final_role := 'game_player'::app_role;
-    final_user_role := 'game_player'::user_role;
-  ...
-```
-
-## Files to Modify
-1. **1 migration** — add `game_player` to `user_role` enum + update `handle_new_user()` trigger
-2. **`src/pages/game/GamePlay.tsx`** — pass game mode context and initial tab to AuraPractice
-3. **`src/pages/student/AuraPractice.tsx`** — accept `gameMode` prop to hide school-specific UI
-4. **`src/components/auth/RequireAuth.tsx`** — redirect game routes to `/game/auth`
-5. **`src/pages/game/GameAuth.tsx`** — remove the dead upsert code (trigger handles it now)
-
-## Summary
-The scaffolding is solid but the signup pipeline is fundamentally broken — no game mode user would actually get the `game_player` role today. That's the #1 fix. After that, the play experience needs polish to actually feel like a consumer product rather than a student dashboard wrapper.
+## What stays untouched
+- All RPG battle components, story library, reading flow — zero changes
+- Database, RLS policies, auth — all already correct
+- GameDashboard, GameAuth, GameHeader — already solid
 
