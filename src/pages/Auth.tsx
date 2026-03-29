@@ -873,6 +873,23 @@ const Auth = () => {
           </TabsList>
 
           <TabsContent value="signin" className="space-y-4">
+            {duplicateEmailPrompt && (
+              <div className="bg-yellow-500/20 border border-yellow-500/40 rounded-xl p-4 space-y-3">
+                <p className="text-white text-sm font-medium">
+                  An account with <span className="font-bold">{email}</span> already exists. Please sign in below.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-white border-white/30 hover:bg-white/10"
+                  onClick={() => { setDuplicateEmailPrompt(false); setAuthTab("signup"); }}
+                >
+                  <ArrowLeft className="h-4 w-4 mr-1" />
+                  Back to Sign Up
+                </Button>
+              </div>
+            )}
             {/* SSO Buttons */}
             <TooltipProvider delayDuration={300}>
               <Tooltip>
