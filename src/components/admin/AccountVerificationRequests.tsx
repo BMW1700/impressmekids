@@ -124,7 +124,6 @@ export function AccountVerificationRequests() {
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
-          role: null,
           district_id: null,
           district_name: null,
           is_verified: false
