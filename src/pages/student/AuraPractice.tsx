@@ -634,8 +634,8 @@ const AuraPractice = () => {
 
           <SmartNotifications onNavigate={(path) => navigate(path)} />
 
-          {/* Active Screening Banner */}
-          {activeScreening?.passage && (
+          {/* Active Screening Banner - school only */}
+          {!isGameMode && activeScreening?.passage && (
             <Card className={`border-2 ${
               activeScreening.hasCompleted 
                 ? 'border-green-500 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30'
