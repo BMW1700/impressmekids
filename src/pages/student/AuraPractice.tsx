@@ -600,14 +600,14 @@ const AuraPractice = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
-      <Header />
+      {isGameMode ? <GameHeader studentId={user?.id} /> : <Header />}
       
       <main className="flex-1 container mx-auto px-4 py-8 animate-fade-in">
         <div className="max-w-6xl mx-auto space-y-6">
           <Button
             variant="ghost"
             onClick={() => {
-              navigate('/student/dashboard');
+              navigate(isGameMode ? '/game/dashboard' : '/student/dashboard');
               window.scrollTo(0, 0);
             }}
             className="mb-2"
@@ -928,11 +928,11 @@ const AuraPractice = () => {
                   {/* Active Missions */}
                   <ActiveMissionsPanel studentId={user.id} />
                   
-                  {/* Class Challenge */}
-                  <ClassChallengeCard studentId={user.id} />
+                  {/* Class Challenge - hide in game mode */}
+                  {!isGameMode && <ClassChallengeCard studentId={user.id} />}
                   
-                  {/* Classroom Leaderboard */}
-                  <ClassroomLeaderboardWrapper studentId={user.id} />
+                  {/* Classroom Leaderboard - hide in game mode */}
+                  {!isGameMode && <ClassroomLeaderboardWrapper studentId={user.id} />}
                 </>
               )}
             </TabsContent>
