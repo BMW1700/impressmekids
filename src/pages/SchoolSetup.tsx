@@ -81,32 +81,42 @@ export default function SchoolSetup() {
 
     setLoading(true);
     try {
+      // Update profile with role, district, and mark as unverified
       const { error } = await supabase
         .from("profiles")
-        .update({ role: selectedRole, district_id: selectedDistrict })
+        .update({ role: selectedRole, district_id: selectedDistrict, is_verified: false } as any)
         .eq("id", profile.id);
 
       if (error) throw error;
 
-      // Also insert into user_roles if not already there
+      // Insert into user_roles
       await supabase.from("user_roles").upsert(
         { user_id: profile.id, role: selectedRole as any },
         { onConflict: "user_id,role" }
       );
 
-      toast({ title: "School profile set up!", description: "Redirecting to your dashboard..." });
+      // Look up district name
+      const districtName = districts.find(d => d.district_code === selectedDistrict)?.name || selectedDistrict;
 
-      const dashboardMap: Record<string, string> = {
-        teacher: "/teacher/dashboard",
-        student: "/student/dashboard",
-        parent: "/parent/dashboard",
-        admin: "/admin/dashboard",
-        district_admin: "/district/dashboard",
-      };
+      // Get user email
+      const { data: { user } } = await supabase.auth.getUser();
 
-      // Small delay to let auth context refresh
+      // Create verification request
+      await supabase.from("account_verification_requests").insert({
+        user_id: profile.id,
+        profile_id: profile.id,
+        district_id: selectedDistrict,
+        district_name: districtName,
+        full_name: profile.full_name || "",
+        email: user?.email || "",
+        requested_role: selectedRole,
+        status: "pending",
+      } as any);
+
+      toast({ title: "Account submitted for approval", description: "Your district administrator will review your request." });
+
       setTimeout(() => {
-        navigate(dashboardMap[selectedRole] || from, { replace: true });
+        navigate("/pending-verification", { replace: true });
         window.location.reload();
       }, 500);
     } catch (err: any) {
