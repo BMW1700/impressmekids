@@ -1,41 +1,50 @@
+# Plan: RPG Game Demo + Dashboard Button Updates
 
+## Summary
 
-# Fix Plan: Game Mode Play Experience
+Create a standalone interactive RPG demo page at `/game/demo` — completely separate from the school demos — and update the Game Dashboard buttons accordingly.
 
-## Problem
-GamePlay.tsx renders AuraPractice directly, which shows school Header/Footer, ClassChallengeCard, ClassroomLeaderboardWrapper, and other school-specific UI. Consumer users see broken/empty school widgets.
+## Changes
 
-## Solution
-Add game-mode awareness to AuraPractice so it hides school-specific elements when accessed from `/game/play`.
+### 1. Create `src/pages/game/GameRPGDemo.tsx`
 
-### 1. Detect game mode in AuraPractice (`src/pages/student/AuraPractice.tsx`)
-- Use `useLocation()` to check if path starts with `/game`
-- OR accept a `gameMode` prop (passed from GamePlay)
-- Set a `const isGameMode = ...` flag
+A self-contained interactive demo showcasing the RPG mode, using the same `DemoTourProvider` / `DemoHighlight` / `TourStep` pattern as the existing school demos. It will include:
 
-### 2. Conditionally render based on `isGameMode`
-When `isGameMode` is true:
-- Replace `<Header />` with `<GameHeader />` (the game-mode header component)
-- Remove `<Footer />`
-- Hide `<ClassChallengeCard>`
-- Hide `<ClassroomLeaderboardWrapper>`
-- Hide the "Back to Dashboard" button that navigates to `/student-dashboard` — replace with one that goes to `/game/dashboard`
-- Keep everything else: RPG, Stories, Reading, Presentations tabs all stay
+- **GameHeader** at the top (not school Header)
+- **Tour steps** walking through: World Map overview → selecting a world → Level Select → Battle Mode selection → Battle Arena (mock/static) → Victory screen
+- **Static mock data** for worlds, levels, enemies, and battle stats — no auth or database required
+- **Visual replicas** of RPGWorldMap, RPGLevelSelect, and RPGBattleArena rendered with mock props so the user sees exactly what the real RPG looks like
+- **Same interactive tour UI** (bottom bar with prev/next, step indicators, highlighted sections) matching the school demo style
+- Themed with game mode colors/gradients (dark background, RPG-style)
 
-### 3. Update GamePlay.tsx
-- Minimal change — just pass `gameMode` prop or rely on URL detection in AuraPractice
+### 2. Update `src/pages/game/GameDashboard.tsx`
 
-### 4. Verify PhonemeHeatmap props in GameAnalytics
-- Read PhonemeHeatmap component to confirm the `students` and `skillVectors` prop shapes match what GameAnalytics provides
-- Fix any mismatches
+Change the third mode card:
+
+- Title: "Free Reading" → **"Game Demo"**
+- Description: "Try a quick demo of the RPG reading adventure"
+- Icon: `Mic` → `Gamepad2`
+- Colors: keep green or switch to a purple/gaming gradient
+- `onClick`: `navigate('/game/demo')` instead of `/game/play?tab=reading`
+
+### 3. Fix RPG Campaign button — trigger RPG mode from URL
+
+In `src/pages/student/AuraPractice.tsx` (lines 122-128), update the `useEffect` that handles URL params: when `tab=rpg` is detected, call `setIsRpgMode(true)` so clicking "RPG Campaign" from the dashboard actually opens the RPG world map.
+
+### 4. Update `src/App.tsx`
+
+- Import `GameRPGDemo` (lazy)
+- Add route: `/game/demo` → `GameRPGDemo` (public, no auth required — it's a demo)
 
 ## Files Modified
-1. `src/pages/student/AuraPractice.tsx` — add game mode conditional rendering (~15 lines changed across 5 spots)
-2. `src/pages/game/GamePlay.tsx` — potentially pass prop
-3. `src/pages/game/GameAnalytics.tsx` — fix PhonemeHeatmap props if needed
 
-## What stays untouched
-- All RPG battle components, story library, reading flow — zero changes
-- Database, RLS policies, auth — all already correct
-- GameDashboard, GameAuth, GameHeader — already solid
+1. `src/pages/game/GameRPGDemo.tsx` — **new** — standalone RPG demo with tour
+2. `src/pages/game/GameDashboard.tsx` — update third card to "Game Demo"
+3. `src/pages/student/AuraPractice.tsx` — fix `tab=rpg` to trigger `setIsRpgMode(true)`
+4. `src/App.tsx` — add `/game/demo` route
 
+&nbsp;
+
+&nbsp;
+
+***Remeber, the demo for this should be a demo of the RPG game mode. Make sure that this demo is a completely separate demo than the one in the school mode. This demo should have the same type of look, feel, function and interactiveness as the demo in the school mode, but should be completely separate and should be for the RPG mode ONLY.***
