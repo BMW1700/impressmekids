@@ -8,6 +8,7 @@ import { ThemeProvider } from "next-themes";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { RequireAuth } from "@/components/auth/RequireAuth";
+import { RequireSchoolProfile } from "@/components/auth/RequireSchoolProfile";
 import { DemoGate } from "@/components/DemoGate";
 import { PushNotificationPrompt } from "@/components/notifications/PushNotificationPrompt";
 import { OfflineIndicator } from "@/components/safety/OfflineIndicator";
