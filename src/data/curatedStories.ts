@@ -11,7 +11,9 @@ export interface CuratedStory {
   cover_gradient: string;
 }
 
-export const curatedStories: CuratedStory[] = [
+import { getStoryGradeLevel, getStoryDifficultyLevel } from '@/lib/phonemeDifficulty';
+
+const rawStories: CuratedStory[] = [
   // Kindergarten Stories (Grade 0)
   {
     title: "The Friendly Dog",
