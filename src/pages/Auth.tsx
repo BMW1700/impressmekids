@@ -872,23 +872,6 @@ const Auth = () => {
           </TabsList>
 
           <TabsContent value="signin" className="space-y-4">
-            {duplicateEmailPrompt && (
-              <div className="bg-yellow-500/20 border border-yellow-500/40 rounded-xl p-4 space-y-3">
-                <p className="text-white text-sm font-medium">
-                  An account with <span className="font-bold">{email}</span> already exists. Please sign in below.
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="text-white border-white/30 hover:bg-white/10"
-                  onClick={() => { setDuplicateEmailPrompt(false); setAuthTab("signup"); }}
-                >
-                  <ArrowLeft className="h-4 w-4 mr-1" />
-                  Back to Sign Up
-                </Button>
-              </div>
-            )}
             {/* SSO Buttons */}
             <TooltipProvider delayDuration={300}>
               <Tooltip>
@@ -1485,6 +1468,34 @@ const Auth = () => {
           });
         }}
       />
+      {/* Duplicate Email Dialog */}
+      <Dialog open={duplicateEmailPrompt} onOpenChange={setDuplicateEmailPrompt}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Account Already Exists</DialogTitle>
+            <DialogDescription>
+              An account with <span className="font-semibold">{email}</span> already exists. Would you like to sign in instead?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 justify-end mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setDuplicateEmailPrompt(false)}
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back
+            </Button>
+            <Button
+              onClick={() => {
+                setDuplicateEmailPrompt(false);
+                setAuthTab("signin");
+              }}
+            >
+              Sign In
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       {/* Reset button for stuck auth states */}
       <div className="mt-4 flex justify-center">
         <AuthResetButton />
