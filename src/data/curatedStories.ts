@@ -602,3 +602,10 @@ const rawStories: CuratedStory[] = [
     cover_gradient: "from-purple-600 to-indigo-700"
   }
 ];
+
+// Compute grade_level and difficulty_level from phoneme analysis
+export const curatedStories: CuratedStory[] = rawStories.map(story => ({
+  ...story,
+  grade_level: getStoryGradeLevel(story.passage_text),
+  difficulty_level: getStoryDifficultyLevel(story.passage_text),
+}));
