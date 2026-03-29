@@ -30,19 +30,35 @@ const ModeSelect = () => {
         if (!profileData || profileData.length === 0 || cancelled) return;
 
         const userRole = profileData[0].role;
-        if (userRole === 'teacher') {
-          navigate('/teacher/dashboard');
-        } else if (userRole === 'parent') {
-          navigate('/parent/dashboard');
-        } else if (userRole === 'district_admin') {
-          navigate('/district/dashboard');
-        } else if (userRole === 'admin') {
-          navigate('/admin/dashboard');
-        } else if (userRole === 'game_player') {
+
+        // Also check district_id from profiles table
+        const { data: profileRow } = await supabase
+          .from('profiles')
+          .select('district_id')
+          .eq('id', session.user.id)
+          .single();
+
+        const hasDistrict = !!profileRow?.district_id;
+
+        // Game players always go to game dashboard
+        if (userRole === 'game_player') {
           navigate('/game/dashboard');
-        } else {
-          navigate('/student/dashboard');
+          return;
         }
+
+        // School roles only auto-redirect if they have a district (complete profile)
+        const schoolRoles = ['teacher', 'student', 'parent', 'admin', 'district_admin'];
+        if (schoolRoles.includes(userRole) && hasDistrict) {
+          const dashboardMap: Record<string, string> = {
+            teacher: '/teacher/dashboard',
+            parent: '/parent/dashboard',
+            district_admin: '/district/dashboard',
+            admin: '/admin/dashboard',
+            student: '/student/dashboard',
+          };
+          navigate(dashboardMap[userRole] || '/student/dashboard');
+        }
+        // If no complete school profile, stay on mode select — don't redirect
       } catch {
         // Intentionally swallow so page never bricks behind a spinner
       } finally {
