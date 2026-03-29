@@ -559,7 +559,7 @@ const AuraPractice = () => {
   if (isReadingStory && selectedStory && user?.id) {
     return (
       <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
-        <Header />
+        {isGameMode ? <GameHeader studentId={user?.id} /> : <Header />}
         <main className="flex-1 container mx-auto px-4 py-8">
           <GuidedReadingFlow
             story={selectedStory}
@@ -573,7 +573,7 @@ const AuraPractice = () => {
             screeningGradeLevel={activeScreening?.gradeLevel}
           />
         </main>
-        <Footer />
+        {!isGameMode && <Footer />}
       </div>
     );
   }
