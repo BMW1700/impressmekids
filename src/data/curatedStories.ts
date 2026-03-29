@@ -11,7 +11,9 @@ export interface CuratedStory {
   cover_gradient: string;
 }
 
-export const curatedStories: CuratedStory[] = [
+import { getStoryGradeLevel, getStoryDifficultyLevel } from '@/lib/phonemeDifficulty';
+
+const rawStories: CuratedStory[] = [
   // Kindergarten Stories (Grade 0)
   {
     title: "The Friendly Dog",
@@ -600,3 +602,10 @@ export const curatedStories: CuratedStory[] = [
     cover_gradient: "from-purple-600 to-indigo-700"
   }
 ];
+
+// Compute grade_level and difficulty_level from phoneme analysis
+export const curatedStories: CuratedStory[] = rawStories.map(story => ({
+  ...story,
+  grade_level: getStoryGradeLevel(story.passage_text),
+  difficulty_level: getStoryDifficultyLevel(story.passage_text),
+}));
