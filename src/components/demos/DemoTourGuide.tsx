@@ -71,7 +71,7 @@ export const DemoTourProvider = ({ steps, children, onStepChange }: { steps: Tou
                     </div>
                     <div className="min-w-0">
                       <h3 className="font-bold text-foreground text-sm sm:text-base truncate">{steps[currentStep]?.title}</h3>
-                      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 line-clamp-2">{steps[currentStep]?.description}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{steps[currentStep]?.description}</p>
                     </div>
                   </div>
                   <Button variant="ghost" size="sm" onClick={endTour} className="flex-shrink-0 text-muted-foreground hover:text-foreground p-1 h-auto">
