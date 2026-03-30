@@ -57,18 +57,6 @@ const TeacherDashboard = () => {
   // Lazy load all students only when dialog opens
   const { data: classroomsWithStudents = [], refetch: loadAllStudents } = useTeacherAllStudents(classrooms);
 
-  // Only block on auth - let data load progressively
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">{t("teacherDashboard.loading")}</p>
-        </div>
-      </div>
-    );
-  }
-
   useEffect(() => {
     if (authLoading) return;
     if (!user || !profile) {
@@ -79,6 +67,17 @@ const TeacherDashboard = () => {
       navigate("/pending-verification");
     }
   }, [user, profile, authLoading, navigate]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">{t("teacherDashboard.loading")}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!user || !profile || profile.role !== "teacher" || profile.is_verified === false) {
     return null;
