@@ -149,8 +149,14 @@ const TeacherPersonalResources = () => {
     );
   }
 
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user || !profile || profile.role !== "teacher") {
+      navigate("/auth");
+    }
+  }, [user, profile, authLoading, navigate]);
+
   if (!user || !profile || profile.role !== "teacher") {
-    navigate("/auth");
     return null;
   }
 

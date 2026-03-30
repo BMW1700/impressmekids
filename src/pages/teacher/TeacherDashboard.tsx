@@ -69,20 +69,18 @@ const TeacherDashboard = () => {
     );
   }
 
-  if (!user || !profile) {
-    navigate("/auth");
-    return null;
-  }
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user || !profile) {
+      navigate("/auth");
+    } else if (profile.role !== "teacher") {
+      navigate("/student/dashboard");
+    } else if (profile.is_verified === false) {
+      navigate("/pending-verification");
+    }
+  }, [user, profile, authLoading, navigate]);
 
-  if (profile.role !== "teacher") {
-    navigate("/student/dashboard");
-    return null;
-  }
-
-  // Only redirect when we KNOW the user is unverified.
-  // (null means verification status hasn't loaded yet)
-  if (profile.is_verified === false) {
-    navigate("/pending-verification");
+  if (!user || !profile || profile.role !== "teacher" || profile.is_verified === false) {
     return null;
   }
 
