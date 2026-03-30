@@ -210,6 +210,7 @@ const GameAnalytics = () => {
                   skillVectors={skillVector ? [skillVector] : []}
                   classroomId="game-mode"
                   classroomName="My Progress"
+                  hideClassAverage
                 />
               </CardContent>
             </Card>

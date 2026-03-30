@@ -12,6 +12,7 @@ interface PhonemeHeatmapProps {
   skillVectors: any[];
   classroomId: string;
   classroomName: string;
+  hideClassAverage?: boolean;
 }
 
 // Use RAW IPA symbols (matches database) with teacher-friendly labels
@@ -33,7 +34,7 @@ const COMMON_PHONEMES = [
   { symbol: "ɪ", label: "IH Sound", example: "sit" },
 ];
 
-const PhonemeHeatmap = ({ students, skillVectors, classroomId, classroomName }: PhonemeHeatmapProps) => {
+const PhonemeHeatmap = ({ students, skillVectors, classroomId, classroomName, hideClassAverage = false }: PhonemeHeatmapProps) => {
   const [selectedCell, setSelectedCell] = useState<{ studentId: string; phoneme: string } | null>(null);
   const [reportDialogData, setReportDialogData] = useState<{ studentId: string; studentName: string } | null>(null);
 
@@ -222,6 +223,7 @@ const PhonemeHeatmap = ({ students, skillVectors, classroomId, classroomName }: 
                 </tr>
               ))}
               {/* Class Average Row */}
+              {!hideClassAverage && (
               <tr className="bg-gradient-to-r from-primary/20 to-primary/10 font-bold border-t-4 border-primary/30">
                 <td className="p-4 border-2 border-primary/20 text-base">
                   <div className="flex items-center gap-2">
@@ -244,6 +246,7 @@ const PhonemeHeatmap = ({ students, skillVectors, classroomId, classroomName }: 
                   );
                 })}
               </tr>
+              )}
             </tbody>
           </table>
         </div>
