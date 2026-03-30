@@ -26,7 +26,7 @@ import { DrillAlertOverlay } from "@/components/student/DrillAlertOverlay";
 import { useAuth } from "@/contexts/AuthContext";
 
 const StudentDashboard = () => {
-  const { user, profile, isLoading: authLoading, signOut } = useAuth();
+  const { user, profile, isLoading: authLoading, isProfileLoading, signOut } = useAuth();
   const [studentProfile, setStudentProfile] = useState<any>(null);
   const [classrooms, setClassrooms] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,10 +38,14 @@ const StudentDashboard = () => {
   const { data: assignmentStats } = useStudentAssignmentStats(profile?.id);
 
   useEffect(() => {
-    if (authLoading) return;
-    
-    if (!user || !profile) {
+    if (authLoading || isProfileLoading) return;
+
+    if (!user) {
       navigate('/auth');
+      return;
+    }
+
+    if (!profile) {
       return;
     }
 
@@ -59,7 +63,7 @@ const StudentDashboard = () => {
 
     // Load data in parallel
     loadDashboardData();
-  }, [authLoading, user, profile]);
+  }, [authLoading, isProfileLoading, user, profile, navigate]);
 
   const loadDashboardData = async () => {
     if (!user) return;

@@ -37,7 +37,7 @@ interface TeacherResource {
 }
 
 const TeacherPersonalResources = () => {
-  const { user, profile, isLoading: authLoading } = useAuth();
+  const { user, profile, isLoading: authLoading, isProfileLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -142,11 +142,18 @@ const TeacherPersonalResources = () => {
   };
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!user || !profile || profile.role !== "teacher") {
+    if (authLoading || isProfileLoading) return;
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+    if (!profile) {
+      return;
+    }
+    if (profile.role !== "teacher") {
       navigate("/auth");
     }
-  }, [user, profile, authLoading, navigate]);
+  }, [user, profile, authLoading, isProfileLoading, navigate]);
 
   if (authLoading) {
     return (
