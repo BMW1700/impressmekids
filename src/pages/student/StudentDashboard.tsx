@@ -38,10 +38,14 @@ const StudentDashboard = () => {
   const { data: assignmentStats } = useStudentAssignmentStats(profile?.id);
 
   useEffect(() => {
-    if (authLoading) return;
-    
-    if (!user || !profile) {
+    if (authLoading || isProfileLoading) return;
+
+    if (!user) {
       navigate('/auth');
+      return;
+    }
+
+    if (!profile) {
       return;
     }
 
@@ -59,7 +63,7 @@ const StudentDashboard = () => {
 
     // Load data in parallel
     loadDashboardData();
-  }, [authLoading, user, profile]);
+  }, [authLoading, isProfileLoading, user, profile, navigate]);
 
   const loadDashboardData = async () => {
     if (!user) return;

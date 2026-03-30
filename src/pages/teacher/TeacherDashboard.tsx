@@ -58,15 +58,17 @@ const TeacherDashboard = () => {
   const { data: classroomsWithStudents = [], refetch: loadAllStudents } = useTeacherAllStudents(classrooms);
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!user || !profile) {
+    if (authLoading || isProfileLoading) return;
+    if (!user) {
       navigate("/auth");
+    } else if (!profile) {
+      return;
     } else if (profile.role !== "teacher") {
       navigate("/student/dashboard");
     } else if (profile.is_verified === false) {
       navigate("/pending-verification");
     }
-  }, [user, profile, authLoading, navigate]);
+  }, [user, profile, authLoading, isProfileLoading, navigate]);
 
   if (authLoading) {
     return (
