@@ -38,38 +38,23 @@ setupGlobalErrorHandler();
   } as any;
 })();
 
-// Service Worker hotfix for tab-switch reload loops:
-// 1) unregister stale workers once
-// 2) clear stale NabuLearn caches once
-// 3) avoid SW message listeners entirely
+// Listen for Service Worker updates.
+// IMPORTANT: do NOT force reload here; repeated SW_UPDATED messages can remount the app and
+// trigger the browser's replaceState safety limit.
 if ("serviceWorker" in navigator) {
-  const SW_HOTFIX_KEY = "sw_tab_reload_hotfix_v1";
-
-  (async () => {
-    try {
-      if (localStorage.getItem(SW_HOTFIX_KEY) === "1") return;
-
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map((r) => r.unregister()));
-
-      if ("caches" in window) {
-        const keys = await caches.keys();
-        await Promise.all(
-          keys
-            .filter((k) => k.startsWith("nabulearn-"))
-            .map((k) => caches.delete(k))
-        );
+  navigator.serviceWorker.addEventListener("message", (event) => {
+    if (event.data?.type === "SW_UPDATED") {
+      try {
+        sessionStorage.setItem("sw_updated_available", "1");
+      } catch {
+        // ignore
       }
-
-      localStorage.setItem(SW_HOTFIX_KEY, "1");
       if (!import.meta.env.PROD) {
         // eslint-disable-next-line no-console
-        console.log("[sw] tab-reload hotfix applied");
+        console.log('[sw] update available');
       }
-    } catch {
-      // ignore
     }
-  })();
+  });
 }
 
 createRoot(document.getElementById("root")!).render(
