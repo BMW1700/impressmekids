@@ -150,7 +150,6 @@ const App = () => (
             <BrowserRouter>
             <DemoGate>
             <RouteAwareProviders>
-              <OfflineIndicator />
               <Suspense fallback={<PageLoader />}>
                 <Routes>
                   <Route path="/" element={<ModeSelect />} />
