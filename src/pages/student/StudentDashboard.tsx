@@ -26,7 +26,7 @@ import { DrillAlertOverlay } from "@/components/student/DrillAlertOverlay";
 import { useAuth } from "@/contexts/AuthContext";
 
 const StudentDashboard = () => {
-  const { user, profile, isLoading: authLoading, signOut } = useAuth();
+  const { user, profile, isLoading: authLoading, isProfileLoading, signOut } = useAuth();
   const [studentProfile, setStudentProfile] = useState<any>(null);
   const [classrooms, setClassrooms] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);

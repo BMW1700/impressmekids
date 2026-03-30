@@ -37,7 +37,7 @@ interface TeacherResource {
 }
 
 const TeacherPersonalResources = () => {
-  const { user, profile, isLoading: authLoading } = useAuth();
+  const { user, profile, isLoading: authLoading, isProfileLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();

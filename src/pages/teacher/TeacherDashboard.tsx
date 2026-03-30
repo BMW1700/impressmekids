@@ -35,7 +35,7 @@ import { useTeacherDashboardData, useTeacherAllStudents } from "@/hooks/useTeach
 import { useTeacherClubs } from "@/hooks/useTeacherClubs";
 
 const TeacherDashboard = () => {
-  const { user, profile, isLoading: authLoading, signOut } = useAuth();
+  const { user, profile, isLoading: authLoading, isProfileLoading, signOut } = useAuth();
   const { 
     classrooms, 
     classroomsLoading, 

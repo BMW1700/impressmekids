@@ -38,11 +38,19 @@ setupGlobalErrorHandler();
   } as any;
 })();
 
-// Unconditionally unregister all service workers to prevent tab-switch reloads
+// Unconditionally unregister all service workers and clear caches to prevent tab-switch reloads
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.getRegistrations().then((regs) => {
-    regs.forEach((r) => r.unregister());
-  }).catch(() => {});
+  navigator.serviceWorker
+    .getRegistrations()
+    .then((regs) => Promise.all(regs.map((r) => r.unregister())))
+    .catch(() => {});
+
+  if ("caches" in window) {
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
+      .catch(() => {});
+  }
 }
 
 createRoot(document.getElementById("root")!).render(

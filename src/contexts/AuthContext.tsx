@@ -32,50 +32,88 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true); // Session loading only
   const [isProfileLoading, setIsProfileLoading] = useState(false);
 
+  const fetchProfile = async (userId: string): Promise<UserProfile | null | undefined> => {
+    try {
+      const { data, error } = await supabase.rpc('get_user_profile', { _user_id: userId });
+
+      // Keep existing profile on transient backend errors to prevent redirect loops.
+      if (error) {
+        console.error('Error fetching profile via RPC:', error);
+        return undefined;
+      }
+
+      if (!data || data.length === 0) {
+        return null;
+      }
+
+      const profileData = data[0];
+
+      // Fetch verification status, email, student_id, and district_id from profiles table
+      const { data: verificationData, error: verificationError } = await supabase
+        .from('profiles')
+        .select('is_verified, school_id, district_id, email, student_id')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (verificationError) {
+        console.error('Error fetching verification data:', verificationError);
+      }
+
+      return {
+        id: profileData.id,
+        email: verificationData?.email ?? null,
+        full_name: profileData.full_name,
+        role: profileData.role,
+        // If we can't read it for any reason, keep null so the UI doesn't force a pending redirect.
+        is_verified: verificationData?.is_verified ?? null,
+        school_id: verificationData?.school_id ?? null,
+        district_id: verificationData?.district_id ?? null,
+        student_id: verificationData?.student_id ?? null,
+      };
+    } catch (error) {
+      // Keep previous profile during unexpected fetch errors (especially on tab return token refresh).
+      console.error('Error fetching profile:', error);
+      return undefined;
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
 
-    // Set up auth state listener FIRST (critical for proper initialization)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const syncSession = (nextSession: Session | null) => {
       if (!isMounted) return;
-      
-      // Synchronous state updates only - prevents deadlocks
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (event === 'SIGNED_OUT') {
+
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+      setIsLoading(false);
+
+      if (!nextSession?.user) {
         setProfile(null);
-        setIsLoading(false);
         setIsProfileLoading(false);
-      } else if (session?.user) {
-        // Session is resolved - UI can render immediately
-        setIsLoading(false);
-        // Defer profile fetch to prevent deadlock (profile loading is separate)
-        setIsProfileLoading(true);
-        setTimeout(() => {
-          if (isMounted) fetchProfile(session.user.id);
-        }, 0);
-      } else {
-        setIsLoading(false);
       }
+    };
+
+    // Auth listener only syncs session/user state.
+    // Profile fetching is handled in a separate effect to avoid auth callback timing issues.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (!isMounted) return;
+
+      if (event === 'SIGNED_OUT') {
+        syncSession(null);
+        return;
+      }
+
+      syncSession(nextSession);
     });
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!isMounted) return;
-      
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        // Session resolved - stop blocking UI
-        setIsLoading(false);
-        setIsProfileLoading(true);
-        fetchProfile(session.user.id);
-      } else {
-        setIsLoading(false);
-      }
-    });
+    supabase.auth.getSession()
+      .then(({ data: { session: initialSession } }) => {
+        syncSession(initialSession);
+      })
+      .catch((error) => {
+        console.error('Error getting initial session:', error);
+        if (isMounted) setIsLoading(false);
+      });
 
     return () => {
       isMounted = false;
@@ -83,45 +121,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const fetchProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase.rpc('get_user_profile', { _user_id: userId });
-      
-      if (!error && data && data.length > 0) {
-        const profileData = data[0];
-        
-        // Fetch verification status, email, student_id, and district_id from profiles table
-        const { data: verificationData, error: verificationError } = await supabase
-          .from('profiles')
-          .select('is_verified, school_id, district_id, email, student_id')
-          .eq('id', userId)
-          .maybeSingle();
+  useEffect(() => {
+    let isActive = true;
 
-        if (verificationError) {
-          console.error('Error fetching verification data:', verificationError);
-        }
-        
-        setProfile({
-          id: profileData.id,
-          email: verificationData?.email ?? null,
-          full_name: profileData.full_name,
-          role: profileData.role,
-          // If we can't read it for any reason, keep null so the UI doesn't force a pending redirect.
-          is_verified: verificationData?.is_verified ?? null,
-          school_id: verificationData?.school_id ?? null,
-          district_id: verificationData?.district_id ?? null,
-          student_id: verificationData?.student_id ?? null,
-        });
-      } else {
-        setProfile(null);
+    const loadProfile = async (userId: string) => {
+      setIsProfileLoading(true);
+      const nextProfile = await fetchProfile(userId);
+      if (!isActive) return;
+
+      if (nextProfile !== undefined) {
+        setProfile(nextProfile);
       }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      setProfile(null);
-    } finally {
+
       setIsProfileLoading(false);
+    };
+
+    if (!user?.id) {
+      setProfile(null);
+      setIsProfileLoading(false);
+      return;
     }
-  };
+
+    loadProfile(user.id);
+
+    return () => {
+      isActive = false;
+    };
+  }, [user?.id]);
 
   const signOut = async () => {
     try {
@@ -132,6 +158,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(null);
       setUser(null);
       setProfile(null);
+      setIsProfileLoading(false);
+      setIsLoading(false);
     }
   };
 
