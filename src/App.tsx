@@ -97,7 +97,7 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 2 * 60 * 1000, // 2 minutes - reduces refetching on navigation
       refetchOnWindowFocus: false, // Don't refetch when user returns to tab
-      refetchOnMount: "always", // Refetch if stale when component mounts
+      refetchOnMount: false, // Don't refetch on mount to prevent reload feel
       retry: 1, // Only retry once on failure
     },
   },

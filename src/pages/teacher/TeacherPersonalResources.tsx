@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -141,6 +141,13 @@ const TeacherPersonalResources = () => {
     addResourceMutation.mutate({ name: newResourceName.trim(), url: formattedUrl });
   };
 
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user || !profile || profile.role !== "teacher") {
+      navigate("/auth");
+    }
+  }, [user, profile, authLoading, navigate]);
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20">
@@ -150,7 +157,6 @@ const TeacherPersonalResources = () => {
   }
 
   if (!user || !profile || profile.role !== "teacher") {
-    navigate("/auth");
     return null;
   }
 

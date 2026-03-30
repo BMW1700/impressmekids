@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -57,7 +57,17 @@ const TeacherDashboard = () => {
   // Lazy load all students only when dialog opens
   const { data: classroomsWithStudents = [], refetch: loadAllStudents } = useTeacherAllStudents(classrooms);
 
-  // Only block on auth - let data load progressively
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user || !profile) {
+      navigate("/auth");
+    } else if (profile.role !== "teacher") {
+      navigate("/student/dashboard");
+    } else if (profile.is_verified === false) {
+      navigate("/pending-verification");
+    }
+  }, [user, profile, authLoading, navigate]);
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20">
@@ -69,20 +79,7 @@ const TeacherDashboard = () => {
     );
   }
 
-  if (!user || !profile) {
-    navigate("/auth");
-    return null;
-  }
-
-  if (profile.role !== "teacher") {
-    navigate("/student/dashboard");
-    return null;
-  }
-
-  // Only redirect when we KNOW the user is unverified.
-  // (null means verification status hasn't loaded yet)
-  if (profile.is_verified === false) {
-    navigate("/pending-verification");
+  if (!user || !profile || profile.role !== "teacher" || profile.is_verified === false) {
     return null;
   }
 
