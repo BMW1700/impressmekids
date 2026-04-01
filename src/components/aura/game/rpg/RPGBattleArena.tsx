@@ -127,7 +127,16 @@ export const RPGBattleArena = ({
   const [enemyQueue] = useState<EnemyType[]>(() => buildEnemyQueue(enemyType));
   const [currentEnemyIndex, setCurrentEnemyIndex] = useState(0);
   const currentEnemyType = enemyQueue[currentEnemyIndex];
-  const enemy = getEnemyForBattle(currentEnemyType);
+  const enemy = (() => {
+    const theme = getStoredTheme();
+    if (theme === 'agent') {
+      if (currentEnemyType === 'boss' || currentEnemyType === 'final_boss') {
+        return getAgentBossForWorld(worldNumber);
+      }
+      return getAgentEnemy(currentEnemyType);
+    }
+    return getEnemyForBattle(currentEnemyType);
+  })();
   const [defeatedEnemy, setDefeatedEnemy] = useState<RPGEnemy | null>(null);
   
   // Battle state
