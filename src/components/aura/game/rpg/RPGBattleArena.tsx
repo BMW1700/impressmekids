@@ -52,7 +52,7 @@ import { RPGWordPowerUp } from "./RPGWordPowerUp";
 import { RPGVocabShield } from "./RPGVocabShield";
 import { RPGContextClue } from "./RPGContextClue";
 import { ComprehensionQuiz } from "./ComprehensionQuiz";
-import { isPowerWord, getWordDefinition } from "./VocabularyTracker";
+import { isPowerWord, getWordDefinition, WORD_DEFINITIONS } from "./VocabularyTracker";
 import { 
   heroKnight, 
   allyWizard,
