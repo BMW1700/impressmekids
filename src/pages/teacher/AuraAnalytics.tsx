@@ -535,7 +535,7 @@ const AuraAnalytics = () => {
                                                   pred.readinessLevel === 'high' ? 'default' : 
                                                   pred.readinessLevel === 'medium' ? 'secondary' : 'outline'
                                                 }>
-                                                  /{pred.phoneme}/ ({pred.transferProbability}%)
+                                                  {ipaToEnglishWithSlashes(pred.phoneme)} ({pred.transferProbability}%)
                                                 </Badge>
                                               ))}
                                             </div>

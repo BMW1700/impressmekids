@@ -79,7 +79,7 @@ const PracticeExerciseCard = ({ exercise, onComplete }: PracticeExerciseCardProp
                 <div className="flex gap-1 mt-1">
                   {exercise.phoneme_targets.map((phoneme) => (
                     <Badge key={phoneme} variant="secondary" className="text-xs">
-                      {phoneme}
+                      {ipaToEnglishWithSlashes(phoneme)}
                     </Badge>
                   ))}
                 </div>
