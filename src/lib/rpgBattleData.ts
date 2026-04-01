@@ -134,7 +134,7 @@ export const goblinMinion: RPGEnemy = {
   id: 'goblin_minion',
   name: 'Goblin Scout',
   type: 'minion',
-  maxHp: 80, // Was 40
+  maxHp: 320, // 4x: was 80
   attack: 12, // Was 8
   defense: 4, // Was 2
   wordDamageMultiplier: 0.85, // Harder to damage
@@ -163,7 +163,7 @@ export const goblinGuard: RPGEnemy = {
   id: 'goblin_guard',
   name: 'Goblin Guard',
   type: 'guard',
-  maxHp: 120, // Was 70
+  maxHp: 480, // 4x: was 120
   attack: 15, // Was 12
   defense: 8, // Was 5
   wordDamageMultiplier: 0.7, // Was 0.8
@@ -193,7 +193,7 @@ export const goblinElite: RPGEnemy = {
   id: 'goblin_elite',
   name: 'Goblin Warlord',
   type: 'elite',
-  maxHp: 180, // Was 100
+  maxHp: 720, // 4x: was 180
   attack: 22, // Was 18
   defense: 12, // Was 8
   wordDamageMultiplier: 0.5, // Was 0.6
@@ -225,7 +225,7 @@ export const grogTheGoblinKing: RPGEnemy = {
   id: 'grog',
   name: 'Grog the Goblin King',
   type: 'final_boss', // Changed to final_boss for menacing treatment
-  maxHp: 300,
+  maxHp: 1200, // 4x: was 300
   attack: 30,
   defense: 15,
   wordDamageMultiplier: 0.4,
@@ -263,7 +263,7 @@ export const galairTheWickedSorcerer: RPGEnemy = {
   id: 'galair',
   name: 'Galair the Wicked Sorcerer',
   type: 'final_boss',
-  maxHp: 500,
+  maxHp: 2000, // 4x: was 500
   attack: 40,
   defense: 20,
   wordDamageMultiplier: 0.3,
@@ -303,7 +303,7 @@ export const drakeTheDragon: RPGEnemy = {
   id: 'drake',
   name: 'Drake the Dragon',
   type: 'dragon',
-  maxHp: 280,
+  maxHp: 1120, // 4x: was 280
   attack: 35,
   defense: 18,
   wordDamageMultiplier: 0.45,
@@ -363,7 +363,7 @@ export const iceGolem: RPGEnemy = {
   id: 'ice_golem',
   name: 'Frostfang the Ice Golem',
   type: 'ice_golem',
-  maxHp: 220,
+  maxHp: 880, // 4x: was 220
   attack: 28,
   defense: 20,
   wordDamageMultiplier: 0.55,
@@ -398,7 +398,7 @@ export const shadowWraith: RPGEnemy = {
   id: 'shadow_wraith',
   name: 'Whisper the Shadow Wraith',
   type: 'shadow_wraith',
-  maxHp: 180,
+  maxHp: 720, // 4x: was 180
   attack: 32,
   defense: 12,
   wordDamageMultiplier: 0.6,
@@ -433,7 +433,7 @@ export const stoneGuardian: RPGEnemy = {
   id: 'stone_guardian',
   name: 'Granite the Stone Guardian',
   type: 'stone_guardian',
-  maxHp: 350,
+  maxHp: 1400, // 4x: was 350
   attack: 25,
   defense: 30,
   wordDamageMultiplier: 0.35,
@@ -468,7 +468,7 @@ export const goblinShaman: RPGEnemy = {
   id: 'goblin_shaman',
   name: 'Zix the Goblin Shaman',
   type: 'elite',
-  maxHp: 160,
+  maxHp: 640, // 4x: was 160
   attack: 26,
   defense: 10,
   wordDamageMultiplier: 0.55,
@@ -505,7 +505,7 @@ export const caveTroll: RPGEnemy = {
   id: 'cave_troll',
   name: 'Grumbold the Cave Troll',
   type: 'minion', // Uses minion type for compatibility
-  maxHp: 200,
+  maxHp: 800, // 4x: was 200
   attack: 30,
   defense: 25,
   wordDamageMultiplier: 0.5,
@@ -539,7 +539,7 @@ export const crystalSpider: RPGEnemy = {
   id: 'crystal_spider',
   name: 'Prism the Crystal Spider',
   type: 'minion',
-  maxHp: 100,
+  maxHp: 400, // 4x: was 100
   attack: 18,
   defense: 8,
   wordDamageMultiplier: 0.8,
@@ -573,7 +573,7 @@ export const echoWraith: RPGEnemy = {
   id: 'echo_wraith',
   name: 'Echo the Wraith of Whispers',
   type: 'boss',
-  maxHp: 280,
+  maxHp: 1120, // 4x: was 280
   attack: 28,
   defense: 15,
   wordDamageMultiplier: 0.4,
@@ -612,7 +612,7 @@ export const stormHarpy: RPGEnemy = {
   id: 'storm_harpy',
   name: 'Tempest the Storm Harpy',
   type: 'guard',
-  maxHp: 120,
+  maxHp: 480, // 4x: was 120
   attack: 22,
   defense: 10,
   wordDamageMultiplier: 0.7,
@@ -646,7 +646,7 @@ export const cloudGiant: RPGEnemy = {
   id: 'cloud_giant',
   name: 'Cumulus the Cloud Giant',
   type: 'elite',
-  maxHp: 320,
+  maxHp: 1280, // 4x: was 320
   attack: 25,
   defense: 20,
   wordDamageMultiplier: 0.35,
@@ -680,7 +680,7 @@ export const zephyr: RPGEnemy = {
   id: 'zephyr',
   name: 'Zephyr the Wind Lord',
   type: 'boss',
-  maxHp: 350,
+  maxHp: 1400, // 4x: was 350
   attack: 32,
   defense: 18,
   wordDamageMultiplier: 0.38,
@@ -719,7 +719,7 @@ export const inkKraken: RPGEnemy = {
   id: 'ink_kraken',
   name: 'Inkling the Ink Kraken',
   type: 'guard',
-  maxHp: 180,
+  maxHp: 720, // 4x: was 180
   attack: 24,
   defense: 14,
   wordDamageMultiplier: 0.55,
@@ -753,7 +753,7 @@ export const reefGuardian: RPGEnemy = {
   id: 'reef_guardian',
   name: 'Coral the Reef Guardian',
   type: 'guard',
-  maxHp: 160,
+  maxHp: 640, // 4x: was 160
   attack: 20,
   defense: 28,
   wordDamageMultiplier: 0.45,
@@ -787,7 +787,7 @@ export const leviathan: RPGEnemy = {
   id: 'leviathan',
   name: 'Leviathan the Ancient',
   type: 'boss',
-  maxHp: 450,
+  maxHp: 1800, // 4x: was 450
   attack: 38,
   defense: 22,
   wordDamageMultiplier: 0.28,
@@ -828,7 +828,7 @@ export const voidPhantom: RPGEnemy = {
   id: 'void_phantom',
   name: 'Nihil the Void Phantom',
   type: 'guard',
-  maxHp: 140,
+  maxHp: 560, // 4x: was 140
   attack: 26,
   defense: 8,
   wordDamageMultiplier: 0.6,
@@ -862,7 +862,7 @@ export const realityShifter: RPGEnemy = {
   id: 'reality_shifter',
   name: 'Paradox the Reality Shifter',
   type: 'elite',
-  maxHp: 220,
+  maxHp: 880, // 4x: was 220
   attack: 28,
   defense: 16,
   wordDamageMultiplier: 0.42,
@@ -896,7 +896,7 @@ export const wordEater: RPGEnemy = {
   id: 'word_eater',
   name: 'The Word Eater',
   type: 'final_boss',
-  maxHp: 600,
+  maxHp: 2400, // 4x: was 600
   attack: 45,
   defense: 25,
   wordDamageMultiplier: 0.22,
