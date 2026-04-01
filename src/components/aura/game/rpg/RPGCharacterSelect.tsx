@@ -4,6 +4,8 @@ import { SirValor } from '../characters/SirValor';
 import { Elara } from '../characters/Elara';
 import { PrincessElla } from '../characters/PrincessElla';
 import { Shield, Sparkles, Flower2, Heart, Zap, Sword } from 'lucide-react';
+import { AgentCharacterSelect } from './AgentCharacterSelect';
+import { getStoredTheme } from '@/lib/gameTheme';
 
 export type PlayableCharacter = 'valor' | 'elara' | 'ella';
 
