@@ -184,8 +184,9 @@ export const RPGBattleArena = ({
     speechManager.forceStop();
     
     // FIXED: Save collected power words to student_vocabulary on victory
-    if (collectedPowerWords.length > 0) {
-      const wordsToSave = collectedPowerWords.map(w => ({
+    const wordsToSave = collectedPowerWordsRef.current;
+    if (wordsToSave.length > 0) {
+      const records = wordsToSave.map(w => ({
         student_id: studentId,
         word: w.toLowerCase(),
         definition: getWordDefinition(w),
@@ -195,10 +196,10 @@ export const RPGBattleArena = ({
       }));
       supabase
         .from('student_vocabulary')
-        .upsert(wordsToSave, { onConflict: 'student_id,word', ignoreDuplicates: true })
+        .upsert(records, { onConflict: 'student_id,word', ignoreDuplicates: true })
         .then(({ error }) => {
           if (error) console.error('[RPGBattle] Failed to save power words:', error);
-          else console.log('[RPGBattle] Saved', wordsToSave.length, 'power words');
+          else console.log('[RPGBattle] Saved', records.length, 'power words');
         });
     }
     
