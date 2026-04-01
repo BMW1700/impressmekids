@@ -114,6 +114,19 @@ export const RPGBattleBackground = ({
       case 'void_phantom': return 'void';
       case 'reality_shifter': return 'void';
       case 'word_eater': return 'void';
+      // Agent mode enemies
+      case 'street_thug': return 'underground';
+      case 'hired_gun': return 'underground';
+      case 'the_broker': return 'underground';
+      case 'cyber_hacker': return 'neon_district';
+      case 'drone_sentry': return 'neon_district';
+      case 'the_architect': return 'neon_district';
+      case 'rogue_agent': return 'embassy';
+      case 'bodyguard': return 'embassy';
+      case 'the_double_agent': return 'embassy';
+      case 'operative': return 'syndicate_hq';
+      case 'enforcer': return 'syndicate_hq';
+      case 'the_director': return 'syndicate_hq';
       default: return 'forest';
     }
   }, [enemyType]);
