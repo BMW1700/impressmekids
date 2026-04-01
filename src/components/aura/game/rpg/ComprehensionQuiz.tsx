@@ -46,42 +46,57 @@ const generateQuestions = (storyTitle: string, storyText: string, count: number 
     storyText.match(/\b[a-z]{5,}\b/gi)?.map(w => w.toLowerCase()) || []
   )].slice(0, 20);
 
+  // Helper: get plausible distractors from the story text itself
+  const getStoryDistractors = (correctText: string, count: number): string[] => {
+    const available = sentences
+      .map(s => s.trim().slice(0, 60))
+      .filter(s => s !== correctText && s.length > 10);
+    const shuffled = available.sort(() => Math.random() - 0.5).slice(0, count);
+    // Pad if not enough
+    const fallbacks = ['Something completely different happened', 'The story changed direction unexpectedly'];
+    while (shuffled.length < count) {
+      shuffled.push(fallbacks[shuffled.length] || 'None of the above');
+    }
+    return shuffled;
+  };
+
   // Q1: Character identification
   if (potentialCharacters.length > 0) {
     const mainChar = potentialCharacters[0];
-    const distractors = ['Captain Whiskers', 'Professor Cloud', 'Lady Moonbeam']
+    // Use other potential characters first, then plausible names
+    const charPool = [...potentialCharacters.slice(1), 'Marcus', 'Elena', 'Jasper']
       .filter(d => d !== mainChar).slice(0, 3);
     
     questions.push({
       question: `Who is a character in this story?`,
-      options: [mainChar, ...distractors].sort(() => Math.random() - 0.5),
-      correctIndex: 0, // Will be recalculated after shuffle
+      options: [mainChar, ...charPool].sort(() => Math.random() - 0.5),
+      correctIndex: 0,
       type: 'character'
     });
-    // Fix correctIndex after shuffle
     const lastQ = questions[questions.length - 1];
     lastQ.correctIndex = lastQ.options.indexOf(mainChar);
   }
 
   // Q2: What happened first (sequence)
-  if (sentences.length >= 2) {
+  if (sentences.length >= 3) {
     const firstEvent = sentences[0].trim().slice(0, 60);
-    const laterEvent = sentences[Math.min(sentences.length - 1, 2)].trim().slice(0, 60);
+    const laterEvent = sentences[Math.min(sentences.length - 1, 3)].trim().slice(0, 60);
+    const midEvent = sentences[Math.floor(sentences.length / 2)].trim().slice(0, 60);
     
     questions.push({
       question: `What happened first in the story?`,
       options: [
         `"${firstEvent}..."`,
         `"${laterEvent}..."`,
-        'The characters had a big party',
-        'Everyone went to sleep'
+        `"${midEvent}..."`,
+        'The story started with an ending'
       ],
       correctIndex: 0,
       type: 'sequence'
     });
   }
 
-  // Q3: Main idea / what's the story about
+  // Q3: Main idea / what's the story about — use plausible wrong themes
   const storyLower = storyText.toLowerCase();
   const themes = [
     { key: 'adventure', label: 'an adventure or journey' },
@@ -97,54 +112,54 @@ const generateQuestions = (storyTitle: string, storyText: string, count: number 
   ];
   
   const detectedTheme = themes.find(t => storyLower.includes(t.key)) || { key: 'story', label: 'an interesting story' };
+  // Pick wrong themes that are plausible but not detected
+  const wrongThemes = themes
+    .filter(t => t.key !== detectedTheme.key && !storyLower.includes(t.key))
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 3)
+    .map(t => t.label.charAt(0).toUpperCase() + t.label.slice(1));
   
   questions.push({
     question: `What is "${storyTitle}" mostly about?`,
     options: [
       detectedTheme.label.charAt(0).toUpperCase() + detectedTheme.label.slice(1),
-      'A recipe for making cookies',
-      'How to solve math problems',
-      'A list of phone numbers'
-    ],
+      ...wrongThemes
+    ].slice(0, 4),
     correctIndex: 0,
     type: 'main_idea'
   });
 
-  // Q4: Cause/effect or problem identification
+  // Q4: Cause/effect or problem identification — plausible distractors from story
   if (sentences.length >= 3) {
     const middleSentence = sentences[Math.floor(sentences.length / 2)].trim();
-    // Look for action words
     const actionWords = middleSentence.match(/\b(found|discovered|decided|tried|wanted|needed|realized|noticed)\b/i);
     if (actionWords) {
       const snippet = middleSentence.slice(0, 50);
+      const distractors = getStoryDistractors(snippet, 3);
       questions.push({
         question: `What happened in the middle of the story?`,
         options: [
           `"${snippet}..."`,
-          'Nothing happened at all',
-          'The story ended suddenly',
-          'A new story began'
-        ],
+          ...distractors.map(d => `"${d}..."`)
+        ].slice(0, 4),
         correctIndex: 0,
         type: 'cause_effect'
       });
     }
   }
 
-  // Q5: Detail question - uses actual content
+  // Q5: Detail question — uses actual content with plausible wrong details
   if (sentences.length >= 2) {
-    // Pick a sentence with a content word
     const detailSentence = sentences.find(s => s.length > 20 && s.length < 100) || sentences[0];
     const detail = detailSentence.trim().slice(0, 55);
+    const wrongDetails = getStoryDistractors(detail, 3);
     
     questions.push({
       question: `Which of these is true about the story?`,
       options: [
         `"${detail}..." is part of the story`,
-        'The story takes place on Mars',
-        'All the characters are robots',
-        'The story is written in French'
-      ],
+        ...wrongDetails.map(d => `"${d}..." is the main point`)
+      ].slice(0, 4),
       correctIndex: 0,
       type: 'main_idea'
     });

@@ -187,6 +187,9 @@ const WORD_DEFINITIONS: Record<string, string> = {
   whisper: 'to speak very softly',
 };
 
+// Export WORD_DEFINITIONS for use by other components (e.g., RPGVocabShield)
+export { WORD_DEFINITIONS };
+
 // Check if a word is a power word (longer, not common)
 export const isPowerWord = (word: string): boolean => {
   const cleaned = word.toLowerCase().replace(/[^a-z]/g, '');

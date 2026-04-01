@@ -52,7 +52,7 @@ import { RPGWordPowerUp } from "./RPGWordPowerUp";
 import { RPGVocabShield } from "./RPGVocabShield";
 import { RPGContextClue } from "./RPGContextClue";
 import { ComprehensionQuiz } from "./ComprehensionQuiz";
-import { isPowerWord, getWordDefinition } from "./VocabularyTracker";
+import { isPowerWord, getWordDefinition, WORD_DEFINITIONS } from "./VocabularyTracker";
 import { 
   heroKnight, 
   allyWizard,
@@ -182,8 +182,29 @@ export const RPGBattleArena = ({
     console.log('[RPGBattle] 🏆 TRIGGERING VICTORY:', reason);
     clearAllTimeouts();
     speechManager.forceStop();
+    
+    // FIXED: Save collected power words to student_vocabulary on victory
+    const wordsToSave = collectedPowerWordsRef.current;
+    if (wordsToSave.length > 0) {
+      const records = wordsToSave.map(w => ({
+        student_id: studentId,
+        word: w.toLowerCase(),
+        definition: getWordDefinition(w),
+        times_seen: 1,
+        times_correct: 0,
+        mastered: false,
+      }));
+      supabase
+        .from('student_vocabulary')
+        .upsert(records, { onConflict: 'student_id,word', ignoreDuplicates: true })
+        .then(({ error }) => {
+          if (error) console.error('[RPGBattle] Failed to save power words:', error);
+          else console.log('[RPGBattle] Saved', records.length, 'power words');
+        });
+    }
+    
     setPhase('victory');
-  }, [clearAllTimeouts]);
+  }, [clearAllTimeouts, studentId]);
   
   const triggerDefeat = useCallback((reason: string) => {
     if (phaseRef.current === 'victory' || phaseRef.current === 'defeat') {
@@ -328,6 +349,7 @@ export const RPGBattleArena = ({
   // === LITERACY FEATURES STATE ===
   const [activePowerWord, setActivePowerWord] = useState<{ id: number; word: string; definition: string | null } | null>(null);
   const [collectedPowerWords, setCollectedPowerWords] = useState<string[]>([]);
+  const collectedPowerWordsRef = useRef<string[]>([]);
   const [vocabShieldData, setVocabShieldData] = useState<{ word: string; definition: string; distractors: string[] } | null>(null);
   const [contextClueData, setContextClueData] = useState<{ sentence: string; blankWord: string; options: string[] } | null>(null);
   const [bossGateTriggered, setBossGateTriggered] = useState(false);
@@ -925,6 +947,7 @@ export const RPGBattleArena = ({
     const definition = getWordDefinition(word);
     setActivePowerWord({ id: Date.now(), word, definition });
     setCollectedPowerWords(prev => [...prev, word.toLowerCase()]);
+    collectedPowerWordsRef.current = [...collectedPowerWordsRef.current, word.toLowerCase()];
     // Bonus gold for power words
     setGoldEarned(prev => prev + 2);
     // Auto-dismiss after 2.5 seconds
@@ -937,10 +960,12 @@ export const RPGBattleArena = ({
     if (sentences.length < 2) return null;
     
     const sentence = sentences[Math.floor(Math.random() * sentences.length)].trim();
-    const words = sentence.split(/\s+/).filter(w => w.replace(/[^a-zA-Z]/g, '').length >= 4);
-    if (words.length < 3) return null;
+    // Keep the raw word tokens so we can find them in the original sentence even with punctuation
+    const wordTokens = sentence.split(/\s+/).filter(w => w.replace(/[^a-zA-Z]/g, '').length >= 4);
+    if (wordTokens.length < 3) return null;
     
-    const blankWord = words[Math.floor(Math.random() * words.length)].replace(/[^a-zA-Z]/g, '');
+    const rawToken = wordTokens[Math.floor(Math.random() * wordTokens.length)];
+    const blankWord = rawToken.replace(/[^a-zA-Z]/g, '');
     // Generate distractors from other words in passage
     const allWords = (story.passage_text || '').match(/\b[a-zA-Z]{4,}\b/g) || [];
     const uniqueWords = [...new Set(allWords.map(w => w.toLowerCase()))].filter(w => w !== blankWord.toLowerCase());
@@ -951,24 +976,13 @@ export const RPGBattleArena = ({
     return { sentence: sentence + '.', blankWord, options };
   }, [story.passage_text]);
 
-  // Generate vocab shield data from collected words
+  // Generate vocab shield data — uses full WORD_DEFINITIONS from VocabularyTracker
   const generateVocabShield = useCallback((): { word: string; definition: string; distractors: string[] } | null => {
-    // Try collected power words first, then any word from definitions
-    const definedWords = Object.entries({
-      adventure: 'an exciting experience or journey',
-      mysterious: 'hard to understand or explain',
-      beautiful: 'very pretty or pleasing to look at',
-      enormous: 'very large, huge',
-      dangerous: 'likely to cause harm',
-      brilliant: 'very smart or very bright',
-      courage: 'the ability to do something brave',
-      creature: 'any living animal or being',
-      discover: 'to find something for the first time',
-      guardian: 'someone who protects or watches over',
-    });
+    const definedWords = Object.entries(WORD_DEFINITIONS) as [string, string][];
+    if (definedWords.length < 4) return null;
     
     const picked = definedWords[Math.floor(Math.random() * definedWords.length)];
-    const otherDefs = definedWords.filter(([w]) => w !== picked[0]).map(([, d]) => d);
+    const otherDefs = definedWords.filter(([w]) => w !== picked[0]).map(([, d]) => d as string);
     const distractors = otherDefs.sort(() => Math.random() - 0.5).slice(0, 2);
     
     return { word: picked[0], definition: picked[1], distractors };
@@ -1015,6 +1029,8 @@ export const RPGBattleArena = ({
       enemyHpRef.current = 0;
       setEnemyHp(0);
       battleSounds.celebrationSound();
+      // FIXED: Explicitly trigger victory since phase is 'boss_gate', not 'reading'/'combat'
+      triggerVictory('Boss gate answered correctly — final blow!');
     } else {
       // Wrong - boss heals 15%
       const healAmount = Math.floor(enemy.maxHp * 0.15);
@@ -1024,7 +1040,7 @@ export const RPGBattleArena = ({
       setBossGateTriggered(false); // Allow re-trigger
       returnToReading();
     }
-  }, [enemy.maxHp, returnToReading]);
+  }, [enemy.maxHp, returnToReading, triggerVictory]);
 
   // Check for vocab shield / context clue triggers at HP thresholds
   // These piggyback on the existing HP-based mini-game system
@@ -1587,7 +1603,27 @@ export const RPGBattleArena = ({
       
       // Calculate damage using patent-critical formula: word length + speed + streak + accuracy
       const damageResult = calculateDamage(word.length || 5, newStreak, responseTimeMs, sessionAccuracy);
-      const baseDamage = Math.floor(damageResult.damage * enemy.wordDamageMultiplier);
+      let baseDamage = Math.floor(damageResult.damage * enemy.wordDamageMultiplier);
+      
+      // MASTERY BONUS: Check if this word was previously seen/mastered
+      const cleanedWord = word.toLowerCase().replace(/[^a-z]/g, '');
+      if (collectedPowerWords.includes(cleanedWord) || WORD_DEFINITIONS[cleanedWord]) {
+        // Word is in our vocab system — check how many times it's been seen
+        const seenCount = collectedPowerWords.filter(w => w === cleanedWord).length;
+        if (seenCount >= 3) {
+          // Mastered word — 1.5x damage
+          baseDamage = Math.floor(baseDamage * 1.5);
+          setWordMasteryBonus({ word: cleanedWord, multiplier: 1.5 });
+          setComboAnnouncement('⭐ WORD MASTERED! ×1.5');
+          setComboPowerLevel('ultra');
+          setTimeout(() => { setComboAnnouncement(null); setWordMasteryBonus(null); }, 1200);
+        } else if (seenCount >= 1) {
+          // Previously seen — 1.2x damage
+          baseDamage = Math.floor(baseDamage * 1.2);
+          setWordMasteryBonus({ word: cleanedWord, multiplier: 1.2 });
+          setTimeout(() => setWordMasteryBonus(null), 800);
+        }
+      }
       
       // Update speed bonus HUD indicator
       if (responseTimeMs !== undefined) {
