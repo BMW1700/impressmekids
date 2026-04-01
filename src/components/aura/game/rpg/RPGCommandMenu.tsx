@@ -82,6 +82,8 @@ export const RPGCommandMenu = ({
   const handleSpellSelect = (spell: Spell) => {
     setShowSpellMenu(false);
     onCastSpell?.(spell);
+    setSelectedIndex(0);
+    onSelectCommand('read');
   };
 
   const handleItemSelect = (item: Item) => {
