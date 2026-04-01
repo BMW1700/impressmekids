@@ -1624,24 +1624,24 @@ export const RPGBattleArena = ({
       const damageResult = calculateDamage(word.length || 5, newStreak, responseTimeMs, sessionAccuracy);
       let baseDamage = Math.floor(damageResult.damage * enemy.wordDamageMultiplier);
       
-      // MASTERY BONUS: Check if this word was previously seen/mastered
+      // MASTERY BONUS: Check cross-session DB data + current-battle words
       const cleanedWord = word.toLowerCase().replace(/[^a-z]/g, '');
-      if (collectedPowerWords.includes(cleanedWord) || WORD_DEFINITIONS[cleanedWord]) {
-        // Word is in our vocab system — check how many times it's been seen
-        const seenCount = collectedPowerWords.filter(w => w === cleanedWord).length;
-        if (seenCount >= 3) {
-          // Mastered word — 1.5x damage
-          baseDamage = Math.floor(baseDamage * 1.5);
-          setWordMasteryBonus({ word: cleanedWord, multiplier: 1.5 });
-          setComboAnnouncement('⭐ WORD MASTERED! ×1.5');
-          setComboPowerLevel('ultra');
-          setTimeout(() => { setComboAnnouncement(null); setWordMasteryBonus(null); }, 1200);
-        } else if (seenCount >= 1) {
-          // Previously seen — 1.2x damage
-          baseDamage = Math.floor(baseDamage * 1.2);
-          setWordMasteryBonus({ word: cleanedWord, multiplier: 1.2 });
-          setTimeout(() => setWordMasteryBonus(null), 800);
-        }
+      const dbCount = knownWordsRef.current[cleanedWord] ?? 0;
+      const sessionCount = collectedPowerWords.filter(w => w === cleanedWord).length;
+      const totalCount = dbCount + sessionCount;
+      
+      if (totalCount >= 3 || WORD_DEFINITIONS[cleanedWord] && dbCount >= 3) {
+        // Mastered word — 1.5x damage
+        baseDamage = Math.floor(baseDamage * 1.5);
+        setWordMasteryBonus({ word: cleanedWord, multiplier: 1.5 });
+        setComboAnnouncement('⭐ WORD MASTERED! ×1.5');
+        setComboPowerLevel('ultra');
+        setTimeout(() => { setComboAnnouncement(null); setWordMasteryBonus(null); }, 1200);
+      } else if (totalCount >= 1) {
+        // Previously seen — 1.2x damage
+        baseDamage = Math.floor(baseDamage * 1.2);
+        setWordMasteryBonus({ word: cleanedWord, multiplier: 1.2 });
+        setTimeout(() => setWordMasteryBonus(null), 800);
       }
       
       // Update speed bonus HUD indicator
