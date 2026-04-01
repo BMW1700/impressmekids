@@ -618,8 +618,10 @@ export const RPGWorldMap = ({
           }}
           transition={{ duration: 4, repeat: Infinity }}
         >
-          "Princess Ella's books are scattered across four worlds. 
-          Defeat Grog's minions, rescue the books, and restore magic to the kingdom!"
+          {getStoredTheme() === 'agent' 
+            ? '"The Syndicate has stolen classified intelligence files. Infiltrate their operation, decode their secrets, and bring down The Director!"'
+            : '"Princess Ella\'s books are scattered across four worlds. Defeat Grog\'s minions, rescue the books, and restore magic to the kingdom!"'
+          }
         </motion.p>
       </motion.div>
     </div>

@@ -34,5 +34,9 @@ export {
   StoneGuardianSilhouette, 
   GrogSilhouette, 
   GalairSilhouette,
+  BrokerSilhouette,
+  ArchitectSilhouette,
+  DoubleAgentSilhouette,
+  DirectorSilhouette,
   BossSilhouettes 
 } from './BossSilhouettes';

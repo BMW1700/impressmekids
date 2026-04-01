@@ -437,6 +437,59 @@ export const RPGBattleBackground = ({
             ))}
           </>
         );
+      case 'neon':
+        return (
+          <>
+            {/* Neon signs */}
+            {Array.from({ length: 5 }).map((_, i) => (
+              <motion.div
+                key={`neon-${i}`}
+                className="absolute rounded-sm"
+                style={{
+                  width: 30 + Math.random() * 60,
+                  height: 8 + Math.random() * 12,
+                  left: `${10 + i * 18}%`,
+                  top: `${20 + Math.random() * 30}%`,
+                  background: ['#22D3EE', '#A855F7', '#F43F5E', '#10B981', '#F59E0B'][i],
+                  opacity: 0.3,
+                  filter: `blur(${1 + Math.random() * 2}px)`,
+                }}
+                animate={{
+                  opacity: [0.2, 0.5, 0.2],
+                }}
+                transition={{
+                  duration: 1.5 + Math.random() * 2,
+                  delay: Math.random() * 2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              />
+            ))}
+            {/* Digital rain effect */}
+            {Array.from({ length: 12 }).map((_, i) => (
+              <motion.div
+                key={`rain-${i}`}
+                className="absolute text-cyan-500/30 text-[8px] font-mono"
+                style={{
+                  left: `${5 + i * 8}%`,
+                  top: '-5%',
+                }}
+                animate={{
+                  y: [0, 500],
+                  opacity: [0, 0.4, 0],
+                }}
+                transition={{
+                  duration: 4 + Math.random() * 3,
+                  delay: Math.random() * 3,
+                  repeat: Infinity,
+                  ease: "linear",
+                }}
+              >
+                {Array.from({ length: 8 }).map(() => String.fromCharCode(0x30A0 + Math.random() * 96)).join('')}
+              </motion.div>
+            ))}
+          </>
+        );
       default:
         return null;
     }
