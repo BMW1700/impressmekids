@@ -433,7 +433,7 @@ export const stoneGuardian: RPGEnemy = {
   id: 'stone_guardian',
   name: 'Granite the Stone Guardian',
   type: 'stone_guardian',
-  maxHp: 350,
+  maxHp: 1400, // 4x: was 350
   attack: 25,
   defense: 30,
   wordDamageMultiplier: 0.35,
