@@ -225,7 +225,7 @@ export const grogTheGoblinKing: RPGEnemy = {
   id: 'grog',
   name: 'Grog the Goblin King',
   type: 'final_boss', // Changed to final_boss for menacing treatment
-  maxHp: 300,
+  maxHp: 1200, // 4x: was 300
   attack: 30,
   defense: 15,
   wordDamageMultiplier: 0.4,
