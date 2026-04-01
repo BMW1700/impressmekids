@@ -166,7 +166,7 @@ const PhonemeProgressionTree = ({
                           <Icon className="h-5 w-5" />
                         </div>
                         
-                        <div className="text-xs font-mono mb-2">{phoneme.symbol}</div>
+                        <div className="text-xs font-mono mb-2">/{phoneme.label.toLowerCase()}/</div>
                         
                         <div className="flex items-center justify-between text-xs">
                           <span className="font-medium">

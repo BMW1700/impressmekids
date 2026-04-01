@@ -9,10 +9,10 @@ interface PhonemeProgressChartProps {
   studentName: string;
 }
 
-const TRACKED_PHONEMES = ["/r/", "/θ/", "/l/", "/s/"];
-const PHONEME_COLORS = {
+const TRACKED_PHONEMES = ["/r/", "/th/", "/l/", "/s/"];
+const PHONEME_COLORS: Record<string, string> = {
   "/r/": "#3b82f6",
-  "/θ/": "#10b981",
+  "/th/": "#10b981",
   "/l/": "#f59e0b",
   "/s/": "#8b5cf6",
 };
