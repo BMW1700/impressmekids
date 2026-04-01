@@ -561,7 +561,7 @@ export const RPGCharacter = ({
       {showSprite && (
         usePremiumSprites ? renderPremiumSprite() : (
           <RPGCharacterSprite
-            type={(spriteType as string) === 'princess' ? 'knight' : spriteType as 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian'}
+            type={(['princess', 'agent_x', 'cipher', 'shadow_agent'].includes(spriteType)) ? 'knight' : spriteType as 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian'}
             isEnemy={isEnemy}
             isAttacking={isAttacking}
             isTakingDamage={isTakingDamage}
