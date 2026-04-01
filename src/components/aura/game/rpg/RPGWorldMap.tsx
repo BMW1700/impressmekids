@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Lock, Star, Swords, Crown, TreePine, Mountain, Castle, Flame, Sparkles, Gem, Cloud, Waves, Eclipse, GraduationCap, ShoppingBag, Zap } from "lucide-react";
 import { campaignWorlds, CampaignWorld } from "@/lib/campaignData";
+import { agentCampaignWorlds } from "@/lib/agentCampaignData";
 import { getStoredTheme, setStoredTheme, type GameTheme } from "@/lib/gameTheme";
 import { 
   DrakeSilhouette, 
@@ -14,6 +15,10 @@ import {
   ZephyrSilhouette,
   LeviathanSilhouette,
   WordEaterSilhouette,
+  BrokerSilhouette,
+  ArchitectSilhouette,
+  DoubleAgentSilhouette,
+  DirectorSilhouette,
 } from "../characters/BossSilhouettes";
 import { AnimatedStarCounter } from "../effects/StarCollectionEffect";
 import { AnimatedBookCounter } from "../effects/FlyingBookAnimation";
