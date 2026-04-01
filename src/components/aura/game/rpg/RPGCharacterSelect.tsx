@@ -14,6 +14,13 @@ interface RPGCharacterSelectProps {
 }
 
 export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
+  const theme = getStoredTheme();
+  
+  // Delegate to agent character select if in agent mode
+  if (theme === 'agent') {
+    return <AgentCharacterSelect onSelect={onSelect} />;
+  }
+
   return (
     <motion.div
       className="fixed inset-0 z-50 bg-gradient-to-b from-slate-900 via-purple-900/50 to-slate-900 flex flex-col items-center justify-center p-4 overflow-auto"
