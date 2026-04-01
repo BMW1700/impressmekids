@@ -204,7 +204,7 @@ export const RPGBattleArena = ({
     }
     
     setPhase('victory');
-  }, [clearAllTimeouts, collectedPowerWords, studentId]);
+  }, [clearAllTimeouts, studentId]);
   
   const triggerDefeat = useCallback((reason: string) => {
     if (phaseRef.current === 'victory' || phaseRef.current === 'defeat') {
