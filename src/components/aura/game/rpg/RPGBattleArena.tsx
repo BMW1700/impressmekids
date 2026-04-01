@@ -355,6 +355,25 @@ export const RPGBattleArena = ({
   const [bossGateTriggered, setBossGateTriggered] = useState(false);
   const [wordMasteryBonus, setWordMasteryBonus] = useState<{ word: string; multiplier: number } | null>(null);
   
+  // Cross-session word mastery: cache DB vocabulary on mount
+  const knownWordsRef = useRef<Record<string, number>>({});
+  useEffect(() => {
+    if (!studentId) return;
+    supabase
+      .from('student_vocabulary')
+      .select('word, times_correct')
+      .eq('student_id', studentId)
+      .then(({ data }) => {
+        if (data) {
+          const map: Record<string, number> = {};
+          data.forEach((row: { word: string; times_correct: number }) => {
+            map[row.word.toLowerCase()] = row.times_correct ?? 0;
+          });
+          knownWordsRef.current = map;
+        }
+      });
+  }, [studentId]);
+  
   // Update sound effects when toggle changes
   useEffect(() => {
     battleSounds.setSoundEnabled(soundEnabled);
