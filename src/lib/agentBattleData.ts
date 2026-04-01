@@ -269,6 +269,7 @@ export const getAgentEnemy = (enemyType: string): RPGEnemy => {
     case 'minion': return { ...streetThug };
     case 'guard': return { ...hiredGun };
     case 'elite': return { ...cyberHacker };
+    case 'dragon': return { ...cyberHacker };
     case 'boss': return { ...theBroker };
     case 'final_boss': return { ...theDirector };
     default: return { ...streetThug };
