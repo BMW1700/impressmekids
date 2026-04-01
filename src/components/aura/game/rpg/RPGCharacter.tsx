@@ -371,6 +371,64 @@ export const RPGCharacter = ({
           />
         );
       }
+      // Agent mode enemy sprites
+      if (spriteType === 'street_thug_agent') {
+        return (
+          <StreetThug
+            state={commonState as StreetThugState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      if (spriteType === 'hired_gun_agent') {
+        return (
+          <HiredGun
+            state={commonState as HiredGunState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      if (spriteType === 'cyber_hacker_agent') {
+        return (
+          <CyberHacker
+            state={commonState as CyberHackerState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      if (spriteType === 'the_broker_agent') {
+        return (
+          <TheBroker
+            state={commonState as TheBrokerState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="large"
+            showHealthBar={true}
+          />
+        );
+      }
+      if (spriteType === 'the_director_agent') {
+        return (
+          <TheDirector
+            state={commonState as TheDirectorState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="large"
+            showHealthBar={true}
+          />
+        );
+      }
       // Goblin types - fallback
       return (
         <GoblinGuard
