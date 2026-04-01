@@ -1,37 +1,37 @@
 
 
-# Fix: No Books Found at Grade Levels 4 and 5
+# Complete the 44-Phoneme Set
 
-## Problem
-Line 609 of `src/data/curatedStories.ts` overwrites every story's hardcoded `grade_level` with the phoneme-computed value:
-```ts
-grade_level: getStoryGradeLevel(story.passage_text),
-```
+## Current State
+The heatmap has **40 phonemes**. To reach **44**, we need to add **3 R-controlled vowel entries** and **fix the schwa (ə) mapping bug** so it actually produces data.
 
-The current thresholds in `getStoryGradeLevel()` use uniform 0.5 steps (2.0, 2.5, 3.0, 3.5, 4.0, 4.5...). Most English prose — even "advanced" passages — averages around 2.5–3.5 word difficulty, so stories cluster into grades 1–3, then jump to 6+. Grades 4 and 5 get zero stories.
+## Missing Phonemes (3 to add)
+| Symbol | Label | Example |
+|--------|-------|---------|
+| ɑɹ | /ar/ | car |
+| ɔɹ | /or/ | for |
+| ɛɹ | /air/ | fair |
 
-## Fix
+## Critical Bug Fix: Schwa (ə)
+The schwa entry exists in the heatmap but **never receives data** because `cmuDictWrapper.ts` strips stress markers before mapping, so `AH0` (schwa) becomes `AH` → `ʌ` instead of `ə`. Fix: check stress digit before stripping.
 
-### Recalibrate the grade thresholds in `src/lib/phonemeDifficulty.ts`
+## Changes
 
-Replace the uniform 0.5-step thresholds with tighter spacing in the mid-range so that the natural distribution of English text actually populates grades 4 and 5:
+### 1. `src/lib/cmuDictWrapper.ts`
+- Fix `arpabetToIPAPhonemes` to map `AH0` → `ə` (schwa) while `AH1`/`AH2` → `ʌ`
+- Add post-processing to detect vowel+ɹ sequences and emit composite R-controlled phonemes (`ɑɹ`, `ɔɹ`, `ɛɹ`) alongside the individual phonemes
 
-```
-< 2.0 → Grade 0 (Pre-K)
-< 2.3 → Grade 1
-< 2.6 → Grade 2
-< 2.9 → Grade 3
-< 3.2 → Grade 4
-< 3.5 → Grade 5
-< 4.0 → Grade 6
-< 4.8 → Grade 7
-≥ 4.8 → Grade 8
-```
+### 2. `src/components/aura/PhonemeHeatmap.tsx`
+- Add 3 R-controlled vowel entries to `COMMON_PHONEMES` array (reaching 44 total)
 
-This narrows the bands where most text lands (2.0–3.5 range) and widens the upper bands. Stories with longer words and harder phonemes (the ones currently hardcoded as grade 4/5) should now land in those buckets.
+### 3. `src/lib/phonemeDifficulty.ts`
+- Add `ɑɹ`, `ɔɹ`, `ɛɹ` to the difficulty map (moderate difficulty ~2.5-3.0)
 
-### One file changed
-- `src/lib/phonemeDifficulty.ts` — update the 8 threshold values in `getStoryGradeLevel()`
+### 4. `src/lib/phonemeDistance.ts`
+- Add `ɑɹ`, `ɔɹ`, `ɛɹ` to the articulatory feature matrix
 
-No other files need changes. The computed values in `curatedStories.ts` will automatically recalculate.
+### 5. Edge functions (`update-q-learning`, `generate-practice-exercises`, `analyze-aura`)
+- Add the 3 R-controlled phonemes to their phoneme lists/feature maps
+
+No calculation logic changes — just adding the missing phonemes into existing systems.
 
