@@ -217,8 +217,6 @@ export const analyzePhonemePatterns = (
  * Get human-readable name for a phoneme
  */
 export const getPhonemeDisplayName = (phoneme: string): string => {
-  // Use centralized utility - import dynamically to avoid circular deps
-  const { ipaToFriendlyLabel } = require('./phonemeDisplayUtils');
   return ipaToFriendlyLabel(phoneme) || `/${phoneme}/`;
 };
 
