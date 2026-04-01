@@ -226,6 +226,52 @@ export const VocabularyTracker = ({
     enabled: !!studentId,
   });
 
+  // Increment times_correct for a word and mark mastered if >= 3
+  const incrementMasteryMutation = useMutation({
+    mutationFn: async (word: string) => {
+      const cleaned = word.toLowerCase().replace(/[^a-z]/g, '');
+      // First get current record
+      const { data: existing } = await supabase
+        .from('student_vocabulary')
+        .select('id, times_correct, times_seen')
+        .eq('student_id', studentId)
+        .eq('word', cleaned)
+        .maybeSingle();
+      
+      if (existing) {
+        const newCorrect = (existing.times_correct || 0) + 1;
+        const newSeen = (existing.times_seen || 0) + 1;
+        const { error } = await supabase
+          .from('student_vocabulary')
+          .update({ 
+            times_correct: newCorrect, 
+            times_seen: newSeen,
+            mastered: newCorrect >= 3 
+          })
+          .eq('id', existing.id);
+        if (error) throw error;
+        return { newCorrect, mastered: newCorrect >= 3 };
+      } else {
+        // Word not tracked yet — insert it
+        const { error } = await supabase
+          .from('student_vocabulary')
+          .insert({
+            student_id: studentId,
+            word: cleaned,
+            definition: getWordDefinition(cleaned),
+            times_seen: 1,
+            times_correct: 1,
+            mastered: false,
+          });
+        if (error) throw error;
+        return { newCorrect: 1, mastered: false };
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['student-vocabulary', studentId] });
+    },
+  });
+
   // Add new words mutation
   const addWordsMutation = useMutation({
     mutationFn: async (words: string[]) => {
