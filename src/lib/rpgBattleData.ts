@@ -363,7 +363,7 @@ export const iceGolem: RPGEnemy = {
   id: 'ice_golem',
   name: 'Frostfang the Ice Golem',
   type: 'ice_golem',
-  maxHp: 220,
+  maxHp: 880, // 4x: was 220
   attack: 28,
   defense: 20,
   wordDamageMultiplier: 0.55,
