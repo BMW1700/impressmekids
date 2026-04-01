@@ -955,8 +955,6 @@ export const RPGBattleArena = ({
 
   // Generate vocab shield data — uses full WORD_DEFINITIONS from VocabularyTracker
   const generateVocabShield = useCallback((): { word: string; definition: string; distractors: string[] } | null => {
-    // Import the full 130+ word dictionary
-    const { WORD_DEFINITIONS } = require('./VocabularyTracker');
     const definedWords = Object.entries(WORD_DEFINITIONS) as [string, string][];
     if (definedWords.length < 4) return null;
     
