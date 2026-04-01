@@ -1630,7 +1630,7 @@ export const RPGBattleArena = ({
       const sessionCount = collectedPowerWords.filter(w => w === cleanedWord).length;
       const totalCount = dbCount + sessionCount;
       
-      if (totalCount >= 3 || WORD_DEFINITIONS[cleanedWord] && dbCount >= 3) {
+      if (totalCount >= 3) {
         // Mastered word — 1.5x damage
         baseDamage = Math.floor(baseDamage * 1.5);
         setWordMasteryBonus({ word: cleanedWord, multiplier: 1.5 });

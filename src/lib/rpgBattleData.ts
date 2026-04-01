@@ -896,7 +896,7 @@ export const wordEater: RPGEnemy = {
   id: 'word_eater',
   name: 'The Word Eater',
   type: 'final_boss',
-  maxHp: 600,
+  maxHp: 2400, // 4x: was 600
   attack: 45,
   defense: 25,
   wordDamageMultiplier: 0.22,
