@@ -719,7 +719,7 @@ export const inkKraken: RPGEnemy = {
   id: 'ink_kraken',
   name: 'Inkling the Ink Kraken',
   type: 'guard',
-  maxHp: 180,
+  maxHp: 720, // 4x: was 180
   attack: 24,
   defense: 14,
   wordDamageMultiplier: 0.55,
