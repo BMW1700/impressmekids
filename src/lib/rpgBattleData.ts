@@ -303,7 +303,7 @@ export const drakeTheDragon: RPGEnemy = {
   id: 'drake',
   name: 'Drake the Dragon',
   type: 'dragon',
-  maxHp: 280,
+  maxHp: 1120, // 4x: was 280
   attack: 35,
   defense: 18,
   wordDamageMultiplier: 0.45,
