@@ -330,7 +330,7 @@ export default function StudentProfile() {
                             .filter(([_, score]) => (score as number) >= 70 && (score as number) < 85)
                             .map(([phoneme, score]) => (
                               <Badge key={phoneme} variant="secondary" className="bg-yellow-50 text-yellow-700">
-                                {phoneme}: {score}%
+                                {ipaToEnglish(phoneme)}: {score}%
                               </Badge>
                             ))}
                         </div>
