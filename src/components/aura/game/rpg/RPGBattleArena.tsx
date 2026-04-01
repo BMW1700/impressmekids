@@ -182,8 +182,28 @@ export const RPGBattleArena = ({
     console.log('[RPGBattle] 🏆 TRIGGERING VICTORY:', reason);
     clearAllTimeouts();
     speechManager.forceStop();
+    
+    // FIXED: Save collected power words to student_vocabulary on victory
+    if (collectedPowerWords.length > 0) {
+      const wordsToSave = collectedPowerWords.map(w => ({
+        student_id: studentId,
+        word: w.toLowerCase(),
+        definition: getWordDefinition(w),
+        times_seen: 1,
+        times_correct: 0,
+        mastered: false,
+      }));
+      supabase
+        .from('student_vocabulary')
+        .upsert(wordsToSave, { onConflict: 'student_id,word', ignoreDuplicates: true })
+        .then(({ error }) => {
+          if (error) console.error('[RPGBattle] Failed to save power words:', error);
+          else console.log('[RPGBattle] Saved', wordsToSave.length, 'power words');
+        });
+    }
+    
     setPhase('victory');
-  }, [clearAllTimeouts]);
+  }, [clearAllTimeouts, collectedPowerWords, studentId]);
   
   const triggerDefeat = useCallback((reason: string) => {
     if (phaseRef.current === 'victory' || phaseRef.current === 'defeat') {
