@@ -430,13 +430,13 @@ const AuraPractice = () => {
             cover_gradient: 'from-green-400 to-emerald-500',
             target_phonemes: [],
           }
-        : (curatedStories[levelData.storyIndex] || curatedStories[idx % curatedStories.length]);
+        : (activeStories[levelData.storyIndex] || activeStories[idx % activeStories.length]);
       
       const isCompleted = completedStories.includes(story.title);
       
       // Unlock logic: first level always unlocked, subsequent levels unlock when previous is completed
       const isUnlocked = idx === 0 || completedStories.includes(
-        curatedStories[selectedWorld.levels[idx - 1]?.storyIndex]?.title || ''
+        activeStories[selectedWorld.levels[idx - 1]?.storyIndex]?.title || ''
       ) || completedStories.length >= idx;
       
       return {
