@@ -15,23 +15,54 @@ interface PhonemeHeatmapProps {
   hideClassAverage?: boolean;
 }
 
-// Use RAW IPA symbols (matches database) with teacher-friendly labels
+// All 44 phonemes with IPA symbols (matches database) and teacher-friendly labels
 const COMMON_PHONEMES = [
-  { symbol: "ɹ", label: "R Sound", example: "rabbit" },
-  { symbol: "θ", label: "TH Sound", example: "think" },
-  { symbol: "ð", label: "TH Sound", example: "the" },
-  { symbol: "l", label: "L Sound", example: "lamp" },
-  { symbol: "s", label: "S Sound", example: "snake" },
-  { symbol: "z", label: "Z Sound", example: "zebra" },
-  { symbol: "ʃ", label: "SH Sound", example: "ship" },
-  { symbol: "tʃ", label: "CH Sound", example: "chair" },
-  { symbol: "dʒ", label: "J Sound", example: "jump" },
-  { symbol: "v", label: "V Sound", example: "van" },
-  { symbol: "w", label: "W Sound", example: "water" },
-  { symbol: "æ", label: "A Sound", example: "cat" },
-  { symbol: "ʌ", label: "UH Sound", example: "cup" },
-  { symbol: "ɛ", label: "EH Sound", example: "bed" },
-  { symbol: "ɪ", label: "IH Sound", example: "sit" },
+  // === Consonants (24) ===
+  { symbol: "b", label: "/b/", example: "bat" },
+  { symbol: "d", label: "/d/", example: "dog" },
+  { symbol: "f", label: "/f/", example: "fish" },
+  { symbol: "ɡ", label: "/g/", example: "go" },
+  { symbol: "h", label: "/h/", example: "hat" },
+  { symbol: "dʒ", label: "/j/", example: "jump" },
+  { symbol: "k", label: "/k/", example: "kite" },
+  { symbol: "l", label: "/l/", example: "lamp" },
+  { symbol: "m", label: "/m/", example: "man" },
+  { symbol: "n", label: "/n/", example: "nut" },
+  { symbol: "ŋ", label: "/ng/", example: "sing" },
+  { symbol: "p", label: "/p/", example: "pen" },
+  { symbol: "ɹ", label: "/r/", example: "rabbit" },
+  { symbol: "s", label: "/s/", example: "snake" },
+  { symbol: "t", label: "/t/", example: "top" },
+  { symbol: "v", label: "/v/", example: "van" },
+  { symbol: "w", label: "/w/", example: "water" },
+  { symbol: "j", label: "/y/", example: "yes" },
+  { symbol: "z", label: "/z/", example: "zebra" },
+  { symbol: "θ", label: "/th/", example: "think" },
+  { symbol: "ð", label: "/th/", example: "this" },
+  { symbol: "tʃ", label: "/ch/", example: "chair" },
+  { symbol: "ʃ", label: "/sh/", example: "ship" },
+  { symbol: "ʒ", label: "/zh/", example: "measure" },
+  // === Short Vowels (5) ===
+  { symbol: "æ", label: "/a/", example: "cat" },
+  { symbol: "ɛ", label: "/e/", example: "bed" },
+  { symbol: "ɪ", label: "/i/", example: "sit" },
+  { symbol: "ɑ", label: "/o/", example: "hot" },
+  { symbol: "ʌ", label: "/u/", example: "cup" },
+  // === Long Vowels (5) ===
+  { symbol: "eɪ", label: "/ae/", example: "make" },
+  { symbol: "i", label: "/ee/", example: "tree" },
+  { symbol: "aɪ", label: "/ie/", example: "like" },
+  { symbol: "oʊ", label: "/oe/", example: "home" },
+  { symbol: "u", label: "/ue/", example: "blue" },
+  // === Other Vowels (3) ===
+  { symbol: "ʊ", label: "/oo/", example: "book" },
+  { symbol: "ɔ", label: "/au/", example: "saw" },
+  { symbol: "ə", label: "/er/", example: "about" },
+  // === R-controlled Vowels (3) ===
+  { symbol: "ɝ", label: "/ur/", example: "bird" },
+  // === Diphthongs (2) ===
+  { symbol: "aʊ", label: "/ow/", example: "out" },
+  { symbol: "ɔɪ", label: "/oi/", example: "boy" },
 ];
 
 const PhonemeHeatmap = ({ students, skillVectors, classroomId, classroomName, hideClassAverage = false }: PhonemeHeatmapProps) => {

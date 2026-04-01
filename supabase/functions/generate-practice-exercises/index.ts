@@ -21,6 +21,17 @@ const phonemeFeatures: { [key: string]: { voicing: number; place: number; manner
   'ŋ': { voicing: 1, place: 3, manner: 4 },
   'l': { voicing: 1, place: 2, manner: 5 }, 'ɹ': { voicing: 1, place: 2, manner: 6 },
   'w': { voicing: 1, place: 8, manner: 6 }, 'j': { voicing: 1, place: 9, manner: 6 },
+  // Vowels
+  'æ': { voicing: 1, place: 10, manner: 7 }, 'ɑ': { voicing: 1, place: 11, manner: 7 },
+  'ɛ': { voicing: 1, place: 10, manner: 8 }, 'ɪ': { voicing: 1, place: 10, manner: 9 },
+  'i': { voicing: 1, place: 10, manner: 10 }, 'ʌ': { voicing: 1, place: 11, manner: 8 },
+  'u': { voicing: 1, place: 11, manner: 10 }, 'ʊ': { voicing: 1, place: 11, manner: 9 },
+  'ə': { voicing: 1, place: 12, manner: 8 }, 'ɔ': { voicing: 1, place: 11, manner: 8 },
+  'ɝ': { voicing: 1, place: 12, manner: 9 },
+  // Diphthongs
+  'aɪ': { voicing: 1, place: 10, manner: 7 }, 'aʊ': { voicing: 1, place: 11, manner: 7 },
+  'eɪ': { voicing: 1, place: 10, manner: 8 }, 'oʊ': { voicing: 1, place: 11, manner: 9 },
+  'ɔɪ': { voicing: 1, place: 11, manner: 7 },
 };
 
 const phonemeDistance = (p1: string, p2: string): number => {
