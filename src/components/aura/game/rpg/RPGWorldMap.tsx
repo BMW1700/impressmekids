@@ -372,7 +372,7 @@ export const RPGWorldMap = ({
       {/* World Cards with Enhanced Connecting Paths */}
       <div className="max-w-4xl mx-auto relative z-[5]">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {campaignWorlds.map((world, index) => {
+          {(getStoredTheme() === 'agent' ? agentCampaignWorlds : campaignWorlds).map((world, index) => {
             const progress = getWorldProgress(world.id);
             const unlocked = isWorldUnlocked(world);
             const completionPercent = progress.totalLevels > 0 
