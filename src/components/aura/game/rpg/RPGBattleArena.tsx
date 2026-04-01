@@ -951,24 +951,15 @@ export const RPGBattleArena = ({
     return { sentence: sentence + '.', blankWord, options };
   }, [story.passage_text]);
 
-  // Generate vocab shield data from collected words
+  // Generate vocab shield data — uses full WORD_DEFINITIONS from VocabularyTracker
   const generateVocabShield = useCallback((): { word: string; definition: string; distractors: string[] } | null => {
-    // Try collected power words first, then any word from definitions
-    const definedWords = Object.entries({
-      adventure: 'an exciting experience or journey',
-      mysterious: 'hard to understand or explain',
-      beautiful: 'very pretty or pleasing to look at',
-      enormous: 'very large, huge',
-      dangerous: 'likely to cause harm',
-      brilliant: 'very smart or very bright',
-      courage: 'the ability to do something brave',
-      creature: 'any living animal or being',
-      discover: 'to find something for the first time',
-      guardian: 'someone who protects or watches over',
-    });
+    // Import the full 130+ word dictionary
+    const { WORD_DEFINITIONS } = require('./VocabularyTracker');
+    const definedWords = Object.entries(WORD_DEFINITIONS) as [string, string][];
+    if (definedWords.length < 4) return null;
     
     const picked = definedWords[Math.floor(Math.random() * definedWords.length)];
-    const otherDefs = definedWords.filter(([w]) => w !== picked[0]).map(([, d]) => d);
+    const otherDefs = definedWords.filter(([w]) => w !== picked[0]).map(([, d]) => d as string);
     const distractors = otherDefs.sort(() => Math.random() - 0.5).slice(0, 2);
     
     return { word: picked[0], definition: picked[1], distractors };
