@@ -340,7 +340,7 @@ export const ClassroomAIInsights = ({ classroomId }: ClassroomAIInsightsProps) =
                       <div className="flex flex-wrap gap-1">
                         {student.phoneme_analysis.mastered_sounds.map((sound, i) => (
                           <Badge key={i} variant="secondary" className="bg-green-50 text-green-700 text-xs">
-                            {sound}
+                            {ipaToEnglish(sound)}
                           </Badge>
                         ))}
                       </div>
