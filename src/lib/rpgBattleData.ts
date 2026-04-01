@@ -862,7 +862,7 @@ export const realityShifter: RPGEnemy = {
   id: 'reality_shifter',
   name: 'Paradox the Reality Shifter',
   type: 'elite',
-  maxHp: 220,
+  maxHp: 880, // 4x: was 220
   attack: 28,
   defense: 16,
   wordDamageMultiplier: 0.42,
