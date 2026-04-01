@@ -1,0 +1,120 @@
+import { type CampaignLevel, type CampaignWorld, type CampaignEnemyType } from './campaignData';
+
+// Agent mode enemy types mapped to classic enemy type system
+// We reuse the CampaignEnemyType union but map agent enemies to existing types for battle engine compatibility
+export type AgentEnemyType = 'street_thug' | 'hired_gun' | 'cyber_hacker' | 'drone_sentry' | 'rogue_agent' | 'bodyguard' | 'operative' | 'enforcer' | 'the_broker' | 'the_architect' | 'the_double_agent' | 'the_director';
+
+// Map agent enemy types to classic engine types for battle compatibility
+export const agentToClassicEnemyMap: Record<AgentEnemyType, CampaignEnemyType> = {
+  street_thug: 'minion',
+  hired_gun: 'guard',
+  cyber_hacker: 'elite',
+  drone_sentry: 'minion',
+  rogue_agent: 'guard',
+  bodyguard: 'elite',
+  operative: 'guard',
+  enforcer: 'elite',
+  the_broker: 'boss',
+  the_architect: 'boss',
+  the_double_agent: 'boss',
+  the_director: 'final_boss',
+};
+
+export const agentCampaignWorlds: CampaignWorld[] = [
+  // TUTORIAL (shared with classic)
+  {
+    id: 0,
+    name: 'Training Facility',
+    description: 'Complete your field training before deployment.',
+    gradient: 'from-slate-400 via-zinc-500 to-gray-600',
+    bgColor: 'bg-slate-900/20',
+    enemyTypes: ['minion'],
+    requiredGradeLevel: 0,
+    storyCount: 1,
+    unlockRequirement: 0,
+    lore: 'Welcome, recruit. Before you enter the field, you must demonstrate your skills. Read the briefings, complete the exercises, and prove you have what it takes to become an agent.',
+    levels: [
+      { id: 1, storyIndex: -1, enemies: ['minion'], isBossLevel: false, starThresholds: [30, 50, 70] },
+    ],
+  },
+  {
+    id: 1,
+    name: 'The Underground',
+    description: 'Infiltrate a criminal network operating beneath the city.',
+    gradient: 'from-zinc-600 via-stone-700 to-neutral-800',
+    bgColor: 'bg-zinc-900/20',
+    enemyTypes: ['minion', 'guard'],
+    requiredGradeLevel: 9,
+    storyCount: 5,
+    unlockRequirement: 0,
+    lore: 'Intelligence reports indicate a shadowy criminal network called The Syndicate is operating from the city\'s underground tunnels. Your mission: infiltrate their ranks, gather intel, and take down their local boss — The Broker.',
+    levels: [
+      { id: 1, storyIndex: 0, enemies: ['minion'], isBossLevel: false, starThresholds: [60, 80, 95] },
+      { id: 2, storyIndex: 1, enemies: ['minion', 'minion'], isBossLevel: false, starThresholds: [60, 80, 95] },
+      { id: 3, storyIndex: 2, enemies: ['guard'], isBossLevel: false, starThresholds: [60, 80, 95] },
+      { id: 4, storyIndex: 3, enemies: ['guard', 'minion'], isBossLevel: false, starThresholds: [60, 80, 95] },
+      { id: 5, storyIndex: 4, enemies: ['boss'], isBossLevel: true, starThresholds: [50, 70, 90] },
+    ],
+  },
+  {
+    id: 2,
+    name: 'Neon District',
+    description: 'Hack through a cyber city controlled by rogue AI.',
+    gradient: 'from-cyan-500 via-blue-600 to-purple-700',
+    bgColor: 'bg-cyan-900/20',
+    enemyTypes: ['minion', 'guard', 'elite'],
+    requiredGradeLevel: 9,
+    storyCount: 6,
+    unlockRequirement: 3,
+    lore: 'The Syndicate\'s tech division operates from the Neon District — a sprawling cyber city where every screen is a surveillance node. The Architect, a genius hacker, controls the digital infrastructure. Shut down the network.',
+    levels: [
+      { id: 1, storyIndex: 5, enemies: ['minion'], isBossLevel: false, starThresholds: [60, 80, 95] },
+      { id: 2, storyIndex: 6, enemies: ['guard'], isBossLevel: false, starThresholds: [60, 80, 95] },
+      { id: 3, storyIndex: 7, enemies: ['minion', 'guard'], isBossLevel: false, starThresholds: [60, 80, 95] },
+      { id: 4, storyIndex: 8, enemies: ['elite'], isBossLevel: false, starThresholds: [55, 75, 90] },
+      { id: 5, storyIndex: 9, enemies: ['guard', 'elite'], isBossLevel: false, starThresholds: [55, 75, 90] },
+      { id: 6, storyIndex: 10, enemies: ['boss'], isBossLevel: true, starThresholds: [50, 70, 90] },
+    ],
+  },
+  {
+    id: 3,
+    name: 'The Embassy',
+    description: 'Navigate diplomatic espionage in a hostile nation.',
+    gradient: 'from-amber-600 via-yellow-700 to-orange-800',
+    bgColor: 'bg-amber-900/20',
+    enemyTypes: ['guard', 'elite'],
+    requiredGradeLevel: 10,
+    storyCount: 6,
+    unlockRequirement: 6,
+    lore: 'The Syndicate has placed a mole inside a foreign embassy. Diplomatic tensions are rising. You must identify the Double Agent before classified intelligence falls into enemy hands. Trust no one.',
+    levels: [
+      { id: 1, storyIndex: 11, enemies: ['guard'], isBossLevel: false, starThresholds: [55, 75, 90] },
+      { id: 2, storyIndex: 12, enemies: ['guard', 'guard'], isBossLevel: false, starThresholds: [55, 75, 90] },
+      { id: 3, storyIndex: 13, enemies: ['elite'], isBossLevel: false, starThresholds: [55, 75, 90] },
+      { id: 4, storyIndex: 14, enemies: ['elite', 'guard'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 5, storyIndex: 15, enemies: ['elite', 'elite'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 6, storyIndex: 16, enemies: ['boss'], isBossLevel: true, starThresholds: [45, 65, 85] },
+    ],
+  },
+  {
+    id: 4,
+    name: 'Syndicate HQ',
+    description: 'The final mission. Take down The Director.',
+    gradient: 'from-red-600 via-rose-700 to-red-900',
+    bgColor: 'bg-red-900/20',
+    enemyTypes: ['guard', 'elite', 'boss'],
+    requiredGradeLevel: 10,
+    storyCount: 7,
+    unlockRequirement: 10,
+    lore: 'You\'ve traced the Syndicate back to their fortress headquarters. The Director — the mastermind behind it all — waits inside. This is the final mission. Complete your reading objectives, defeat the Director, and dismantle the Syndicate once and for all.',
+    levels: [
+      { id: 1, storyIndex: 17, enemies: ['guard', 'guard'], isBossLevel: false, starThresholds: [55, 75, 90] },
+      { id: 2, storyIndex: 18, enemies: ['elite'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 3, storyIndex: 19, enemies: ['elite', 'guard'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 4, storyIndex: 20, enemies: ['elite', 'elite'], isBossLevel: false, starThresholds: [45, 65, 80] },
+      { id: 5, storyIndex: 21, enemies: ['elite', 'elite'], isBossLevel: false, starThresholds: [45, 65, 80] },
+      { id: 6, storyIndex: 22, enemies: ['boss'], isBossLevel: false, starThresholds: [45, 65, 80] },
+      { id: 7, storyIndex: 23, enemies: ['final_boss'], isBossLevel: true, starThresholds: [40, 60, 80] },
+    ],
+  },
+];
