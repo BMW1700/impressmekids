@@ -64,6 +64,8 @@ import {
   MiniGameType,
   RPGCharacter as RPGCharacterType,
 } from "@/lib/rpgBattleData";
+import { getAgentHero, getAgentEnemy, getAgentBossForWorld } from "@/lib/agentBattleData";
+import { getStoredTheme } from "@/lib/gameTheme";
 import { CuratedStory } from "@/data/curatedStories";
 import { calculateGoldEarned, calculateXpEarned } from "@/lib/gameEconomy";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
@@ -125,7 +127,16 @@ export const RPGBattleArena = ({
   const [enemyQueue] = useState<EnemyType[]>(() => buildEnemyQueue(enemyType));
   const [currentEnemyIndex, setCurrentEnemyIndex] = useState(0);
   const currentEnemyType = enemyQueue[currentEnemyIndex];
-  const enemy = getEnemyForBattle(currentEnemyType);
+  const enemy = (() => {
+    const theme = getStoredTheme();
+    if (theme === 'agent') {
+      if (currentEnemyType === 'boss' || currentEnemyType === 'final_boss') {
+        return getAgentBossForWorld(worldNumber);
+      }
+      return getAgentEnemy(currentEnemyType);
+    }
+    return getEnemyForBattle(currentEnemyType);
+  })();
   const [defeatedEnemy, setDefeatedEnemy] = useState<RPGEnemy | null>(null);
   
   // Battle state
@@ -225,6 +236,10 @@ export const RPGBattleArena = ({
   
   // Get character data from selection
   const getCharacterData = useCallback((charId: PlayableCharacter | null): RPGCharacterType => {
+    const theme = getStoredTheme();
+    if (theme === 'agent') {
+      return getAgentHero(charId || 'valor');
+    }
     switch (charId) {
       case 'elara': return allyWizard;
       case 'ella': return princessElla;
@@ -1884,7 +1899,11 @@ export const RPGBattleArena = ({
   const handleTransitionComplete = useCallback(() => {
     const nextIndex = currentEnemyIndex + 1;
     setCurrentEnemyIndex(nextIndex);
-    const nextEnemy = getEnemyForBattle(enemyQueue[nextIndex]);
+    const nextEnemyType = enemyQueue[nextIndex];
+    const theme = getStoredTheme();
+    const nextEnemy = theme === 'agent'
+      ? (nextEnemyType === 'boss' || nextEnemyType === 'final_boss' ? getAgentBossForWorld(worldNumber) : getAgentEnemy(nextEnemyType))
+      : getEnemyForBattle(nextEnemyType);
     setEnemyHp(nextEnemy.maxHp);
     // Reset random mini-game triggers for the new enemy
     setTriggeredMiniGames(new Set());
@@ -2084,7 +2103,7 @@ export const RPGBattleArena = ({
       <RPGEnemyTransition
         isActive={phase === 'enemy_transition'}
         defeatedEnemy={defeatedEnemy}
-        nextEnemy={currentEnemyIndex < enemyQueue.length - 1 ? getEnemyForBattle(enemyQueue[currentEnemyIndex + 1]) : null}
+        nextEnemy={currentEnemyIndex < enemyQueue.length - 1 ? (() => { const t = getStoredTheme(); const ne = enemyQueue[currentEnemyIndex + 1]; return t === 'agent' ? (ne === 'boss' || ne === 'final_boss' ? getAgentBossForWorld(worldNumber) : getAgentEnemy(ne)) : getEnemyForBattle(ne); })() : null}
         onTransitionComplete={handleTransitionComplete}
       />
 

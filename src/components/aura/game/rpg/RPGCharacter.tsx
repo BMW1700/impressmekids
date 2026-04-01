@@ -103,9 +103,9 @@ const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean)
   const hero = character as RPGCharacterType;
   const theme = getStoredTheme();
   if (theme === 'agent') {
-    if (hero.id === 'valor' || hero.id === 'agent_x') return 'agent_x';
-    if (hero.id === 'wizard' || hero.id === 'cipher') return 'cipher';
-    if (hero.id === 'ella' || hero.id === 'shadow') return 'shadow_agent';
+    if (hero.id === 'knight') return 'agent_x';
+    if (hero.id === 'wizard') return 'cipher';
+    if (hero.id === 'ella') return 'shadow_agent';
   }
   if (hero.id === 'wizard') return 'wizard';
   if (hero.id === 'ella') return 'princess';
