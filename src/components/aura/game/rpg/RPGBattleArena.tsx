@@ -1096,6 +1096,7 @@ export const RPGBattleArena = ({
     
     setWizardMp(prev => prev - spell.mpCost);
     setAttackType(spell.effect);
+    hasManualSpellRef.current = true;
     setDamageAmount(spell.damage);
     
     // Handle healing spells differently - they target the player
