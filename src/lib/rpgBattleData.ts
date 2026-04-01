@@ -828,7 +828,7 @@ export const voidPhantom: RPGEnemy = {
   id: 'void_phantom',
   name: 'Nihil the Void Phantom',
   type: 'guard',
-  maxHp: 140,
+  maxHp: 560, // 4x: was 140
   attack: 26,
   defense: 8,
   wordDamageMultiplier: 0.6,
