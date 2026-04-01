@@ -263,7 +263,7 @@ const GeneratedExercises = ({ problematicPhonemes, studentGrade = 5 }: Generated
                   Target sounds:
                   {exercise.phoneme_targets.map((phoneme: string) => (
                     <Badge key={phoneme} variant="outline" className="text-xs">
-                      /{phoneme}/
+                      {ipaToEnglishWithSlashes(phoneme)}
                     </Badge>
                   ))}
                 </CardDescription>

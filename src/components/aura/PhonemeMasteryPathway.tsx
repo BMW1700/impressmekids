@@ -152,7 +152,7 @@ const PhonemeMasteryPathway = ({
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg font-semibold">/{prediction.phoneme}/</span>
+                        <span className="text-lg font-semibold">{ipaToEnglishWithSlashes(prediction.phoneme)}</span>
                         <Badge variant={getReadinessBadgeVariant(prediction.readinessLevel)}>
                           {getReadinessLabel(prediction.readinessLevel)}
                         </Badge>

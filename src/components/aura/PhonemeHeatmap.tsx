@@ -298,7 +298,7 @@ const PhonemeHeatmap = ({ students, skillVectors, classroomId, classroomName, hi
                   Selected: <strong>{students.find(s => s.student_id === selectedCell.studentId)?.profiles?.full_name}</strong>
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Phoneme: <strong className="font-mono text-primary">{selectedCell.phoneme}</strong>
+                  Phoneme: <strong className="font-mono text-primary">{ipaToEnglish(selectedCell.phoneme)}</strong>
                 </p>
               </div>
             </div>

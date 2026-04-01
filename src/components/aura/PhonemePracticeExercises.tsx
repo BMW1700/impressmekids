@@ -129,7 +129,7 @@ export const PhonemePracticeExercises = ({ studentId }: PhonemePracticeExercises
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-2xl font-bold text-primary">
-                    /{exercise.phoneme}/
+                    {ipaToEnglishWithSlashes(exercise.phoneme)}
                   </CardTitle>
                   <CardDescription className="mt-1">
                     {exercise.tips}
