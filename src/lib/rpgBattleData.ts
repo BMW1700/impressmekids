@@ -263,7 +263,7 @@ export const galairTheWickedSorcerer: RPGEnemy = {
   id: 'galair',
   name: 'Galair the Wicked Sorcerer',
   type: 'final_boss',
-  maxHp: 500,
+  maxHp: 2000, // 4x: was 500
   attack: 40,
   defense: 20,
   wordDamageMultiplier: 0.3,
