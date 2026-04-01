@@ -324,7 +324,7 @@ export const ClassroomAIInsights = ({ classroomId }: ClassroomAIInsightsProps) =
                       <div className="flex flex-wrap gap-1">
                         {student.phoneme_analysis.struggling_sounds.map((sound, i) => (
                           <Badge key={i} variant="destructive" className="text-xs">
-                            {sound}
+                            {ipaToEnglish(sound)}
                             {student.phoneme_analysis?.accuracy_scores?.[sound.split(' ')[0]] && 
                               ` ${student.phoneme_analysis.accuracy_scores[sound.split(' ')[0]]}%`
                             }
