@@ -573,7 +573,7 @@ export const echoWraith: RPGEnemy = {
   id: 'echo_wraith',
   name: 'Echo the Wraith of Whispers',
   type: 'boss',
-  maxHp: 280,
+  maxHp: 1120, // 4x: was 280
   attack: 28,
   defense: 15,
   wordDamageMultiplier: 0.4,
