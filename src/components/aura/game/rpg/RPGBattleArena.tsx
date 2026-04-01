@@ -1899,7 +1899,11 @@ export const RPGBattleArena = ({
   const handleTransitionComplete = useCallback(() => {
     const nextIndex = currentEnemyIndex + 1;
     setCurrentEnemyIndex(nextIndex);
-    const nextEnemy = getEnemyForBattle(enemyQueue[nextIndex]);
+    const nextEnemyType = enemyQueue[nextIndex];
+    const theme = getStoredTheme();
+    const nextEnemy = theme === 'agent'
+      ? (nextEnemyType === 'boss' || nextEnemyType === 'final_boss' ? getAgentBossForWorld(worldNumber) : getAgentEnemy(nextEnemyType))
+      : getEnemyForBattle(nextEnemyType);
     setEnemyHp(nextEnemy.maxHp);
     // Reset random mini-game triggers for the new enemy
     setTriggeredMiniGames(new Set());
