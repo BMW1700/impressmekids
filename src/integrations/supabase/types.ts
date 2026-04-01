@@ -4357,6 +4357,7 @@ export type Database = {
           district_name: string | null
           email: string
           full_name: string
+          game_theme: string | null
           id: string
           is_verified: boolean | null
           role: Database["public"]["Enums"]["user_role"]
@@ -4371,6 +4372,7 @@ export type Database = {
           district_name?: string | null
           email: string
           full_name: string
+          game_theme?: string | null
           id: string
           is_verified?: boolean | null
           role?: Database["public"]["Enums"]["user_role"]
@@ -4385,6 +4387,7 @@ export type Database = {
           district_name?: string | null
           email?: string
           full_name?: string
+          game_theme?: string | null
           id?: string
           is_verified?: boolean | null
           role?: Database["public"]["Enums"]["user_role"]

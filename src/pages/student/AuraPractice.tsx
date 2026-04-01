@@ -10,10 +10,14 @@ import { RPGLevelSelect, type CampaignLevel } from "@/components/aura/game/rpg/R
 import { type BattleMode } from "@/components/aura/game/rpg/RPGBattleModeSelector";
 import { BookRescueCelebration } from "@/components/aura/game/BookRescueCelebration";
 import { campaignWorlds, type CampaignWorld } from "@/lib/campaignData";
+import { agentCampaignWorlds } from "@/lib/agentCampaignData";
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import type { EnemyType } from "@/lib/battleMechanics";
 import KidFriendlyProgress from "@/components/aura/KidFriendlyProgress";
 import { curatedStories } from "@/data/curatedStories";
+import { agentStories } from "@/data/agentStories";
+import { getStoredTheme, setStoredTheme, type GameTheme } from "@/lib/gameTheme";
+import { ThemeSelector } from "@/components/aura/game/rpg/ThemeSelector";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { GameHeader } from "@/components/game/GameHeader";
@@ -94,6 +98,12 @@ const AuraPractice = () => {
   const [customTopic, setCustomTopic] = useState<string | undefined>();
   const [presentationMetrics, setPresentationMetrics] = useState<PresentationMetrics | null>(null);
   const [presentationTranscript, setPresentationTranscript] = useState<string>('');
+  const [gameTheme, setGameTheme] = useState<GameTheme | null>(getStoredTheme());
+  const [showThemeSelector, setShowThemeSelector] = useState(false);
+  
+  // Theme-aware data sources
+  const activeWorlds = gameTheme === 'agent' ? agentCampaignWorlds : campaignWorlds;
+  const activeStories = gameTheme === 'agent' ? agentStories : curatedStories;
   const [isCampaignMode, setIsCampaignMode] = useState(false);
   const [isRpgMode, setIsRpgMode] = useState(false);
   const [rpgView, setRpgView] = useState<'world_map' | 'level_select' | 'battle'>('world_map');
@@ -420,13 +430,13 @@ const AuraPractice = () => {
             cover_gradient: 'from-green-400 to-emerald-500',
             target_phonemes: [],
           }
-        : (curatedStories[levelData.storyIndex] || curatedStories[idx % curatedStories.length]);
+        : (activeStories[levelData.storyIndex] || activeStories[idx % activeStories.length]);
       
       const isCompleted = completedStories.includes(story.title);
       
       // Unlock logic: first level always unlocked, subsequent levels unlock when previous is completed
       const isUnlocked = idx === 0 || completedStories.includes(
-        curatedStories[selectedWorld.levels[idx - 1]?.storyIndex]?.title || ''
+        activeStories[selectedWorld.levels[idx - 1]?.storyIndex]?.title || ''
       ) || completedStories.length >= idx;
       
       return {
@@ -511,13 +521,23 @@ const AuraPractice = () => {
     );
   }
 
+  // RPG Mode - Theme Selector (first time)
+  if (isRpgMode && !gameTheme) {
+    return (
+      <ThemeSelector onSelect={(theme) => {
+        setStoredTheme(theme);
+        setGameTheme(theme);
+      }} />
+    );
+  }
+
   // RPG Mode - World Map
   if (isRpgMode && rpgView === 'world_map' && user?.id) {
     // Calculate world progress from campaign data
     const worldProgressData = campaignProgress?.world_progress as Record<string, string[]> || {};
     const totalBooksRescued = campaignProgress?.books_rescued || 0;
     
-    const worldProgress: WorldProgress[] = campaignWorlds.map(w => {
+    const worldProgress: WorldProgress[] = activeWorlds.map(w => {
       const worldStories = worldProgressData[w.id.toString()] || [];
       const totalLevels = w.levels.length;
       const levelsCompleted = worldStories.length;

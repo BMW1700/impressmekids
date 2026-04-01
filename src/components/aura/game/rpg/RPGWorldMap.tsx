@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Lock, Star, Swords, Crown, TreePine, Mountain, Castle, Flame, Sparkles, Gem, Cloud, Waves, Eclipse, GraduationCap, ShoppingBag, Zap } from "lucide-react";
 import { campaignWorlds, CampaignWorld } from "@/lib/campaignData";
+import { getStoredTheme, setStoredTheme, type GameTheme } from "@/lib/gameTheme";
 import { 
   DrakeSilhouette, 
   IceGolemSilhouette, 
@@ -251,10 +252,26 @@ export const RPGWorldMap = ({
 
       {/* Header */}
       <div className="relative z-[5] flex items-center justify-between mb-6 flex-wrap gap-3">
-        <Button variant="ghost" onClick={onBack} className="text-white hover:bg-white/10">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" onClick={onBack} className="text-white hover:bg-white/10">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+          {/* Theme toggle */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs border-purple-500/50 text-purple-300 hover:bg-purple-500/20"
+            onClick={() => {
+              const current = getStoredTheme();
+              const next: GameTheme = current === 'agent' ? 'classic' : 'agent';
+              setStoredTheme(next);
+              window.location.reload();
+            }}
+          >
+            {getStoredTheme() === 'agent' ? '🕵️ Agent Mode' : '⚔️ Classic'} — Switch
+          </Button>
+        </div>
         
         {/* Player HUD with Gold, XP, Streak, Achievements, Pets */}
         {studentId && (

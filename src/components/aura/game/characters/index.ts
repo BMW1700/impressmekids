@@ -22,6 +22,11 @@ export { RealityShifter, type RealityShifterState } from './RealityShifter';
 export { WordEater, type WordEaterState } from './WordEater';
 export { EchoWraith, type EchoWraithState } from './EchoWraith';
 
+// Agent Mode characters
+export { AgentX, type AgentXState } from './AgentX';
+export { Cipher, type CipherState } from './Cipher';
+export { Shadow, type ShadowState } from './Shadow';
+
 // Export boss silhouettes for world map
 export { 
   DrakeSilhouette, 

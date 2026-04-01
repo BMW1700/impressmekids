@@ -1,29 +1,19 @@
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { SirValor } from '../characters/SirValor';
-import { Elara } from '../characters/Elara';
-import { PrincessElla } from '../characters/PrincessElla';
-import { Shield, Sparkles, Flower2, Heart, Zap, Sword } from 'lucide-react';
-import { AgentCharacterSelect } from './AgentCharacterSelect';
-import { getStoredTheme } from '@/lib/gameTheme';
+import { AgentX } from '../characters/AgentX';
+import { Cipher } from '../characters/Cipher';
+import { Shadow } from '../characters/Shadow';
+import { Crosshair, Cpu, Eye, Heart, Zap, Shield } from 'lucide-react';
+import type { PlayableCharacter } from './RPGCharacterSelect';
 
-export type PlayableCharacter = 'valor' | 'elara' | 'ella';
-
-interface RPGCharacterSelectProps {
+interface AgentCharacterSelectProps {
   onSelect: (character: PlayableCharacter) => void;
 }
 
-export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
-  const theme = getStoredTheme();
-  
-  // Delegate to agent character select if in agent mode
-  if (theme === 'agent') {
-    return <AgentCharacterSelect onSelect={onSelect} />;
-  }
-
+export const AgentCharacterSelect = ({ onSelect }: AgentCharacterSelectProps) => {
   return (
     <motion.div
-      className="fixed inset-0 z-50 bg-gradient-to-b from-slate-900 via-purple-900/50 to-slate-900 flex flex-col items-center justify-center p-4 overflow-auto"
+      className="fixed inset-0 z-50 bg-gradient-to-b from-slate-950 via-blue-950/50 to-slate-950 flex flex-col items-center justify-center p-4 overflow-auto"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
     >
@@ -33,14 +23,14 @@ export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
         transition={{ delay: 0.2 }}
         className="text-center mb-6"
       >
-        <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-200 drop-shadow-lg mb-2">
-          ⚔️ CHOOSE YOUR HERO ⚔️
+        <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-200 drop-shadow-lg mb-2">
+          🕵️ SELECT YOUR AGENT 🕵️
         </h1>
-        <p className="text-white/80 text-lg">Select a champion to battle the forces of evil!</p>
+        <p className="text-white/80 text-lg">Choose your operative for the mission</p>
       </motion.div>
 
       <div className="flex flex-wrap gap-6 items-stretch justify-center max-w-5xl">
-        {/* Sir Valor - Tank */}
+        {/* Agent X - Balanced */}
         <motion.div
           className="flex flex-col items-center w-64"
           initial={{ x: -50, opacity: 0 }}
@@ -48,23 +38,22 @@ export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
           transition={{ delay: 0.3 }}
           whileHover={{ scale: 1.03 }}
         >
-          <div 
-            className="bg-gradient-to-b from-blue-900/60 to-slate-900/80 backdrop-blur-sm rounded-2xl p-5 border-2 border-blue-500/50 hover:border-blue-400 transition-all cursor-pointer w-full"
+          <div
+            className="bg-gradient-to-b from-slate-800/60 to-slate-900/80 backdrop-blur-sm rounded-2xl p-5 border-2 border-slate-500/50 hover:border-slate-400 transition-all cursor-pointer w-full"
             onClick={() => onSelect('valor')}
           >
             <div className="flex justify-center mb-3">
-              <SirValor state="idle" healthPercent={100} size="medium" showHealthBar={false} />
+              <AgentX state="idle" healthPercent={100} size="medium" showHealthBar={false} />
             </div>
-            
+
             <div className="text-center mb-3">
-              <h3 className="text-xl font-bold text-white">Sir Valor</h3>
-              <div className="flex items-center justify-center gap-1 text-blue-300">
-                <Shield className="h-4 w-4" />
-                <span className="text-sm">The Brave Knight</span>
+              <h3 className="text-xl font-bold text-white">Agent X</h3>
+              <div className="flex items-center justify-center gap-1 text-slate-300">
+                <Crosshair className="h-4 w-4" />
+                <span className="text-sm">Field Operative</span>
               </div>
             </div>
 
-            {/* Stats */}
             <div className="space-y-2 mb-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-400 flex items-center gap-1">
@@ -74,7 +63,7 @@ export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-400 flex items-center gap-1">
-                  <Sword className="h-3 w-3 text-orange-400" /> Attack
+                  <Zap className="h-3 w-3 text-orange-400" /> Attack
                 </span>
                 <span className="text-orange-400 font-bold">Medium</span>
               </div>
@@ -87,19 +76,19 @@ export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
             </div>
 
             <p className="text-xs text-slate-400 text-center mb-3">
-              Balanced fighter with strong defense. Great for beginners!
+              Versatile field agent. Strong defense, reliable in any situation.
             </p>
           </div>
-          
+
           <Button
             onClick={() => onSelect('valor')}
-            className="mt-3 bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 w-full"
+            className="mt-3 bg-slate-600 hover:bg-slate-500 text-white font-bold px-8 w-full"
           >
-            Choose Valor
+            Choose Agent X
           </Button>
         </motion.div>
 
-        {/* Elara - Glass Cannon */}
+        {/* Cipher - Glass Cannon */}
         <motion.div
           className="flex flex-col items-center w-64"
           initial={{ y: 50, opacity: 0 }}
@@ -107,23 +96,22 @@ export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
           transition={{ delay: 0.4 }}
           whileHover={{ scale: 1.03 }}
         >
-          <div 
-            className="bg-gradient-to-b from-purple-900/60 to-slate-900/80 backdrop-blur-sm rounded-2xl p-5 border-2 border-purple-500/50 hover:border-purple-400 transition-all cursor-pointer w-full"
+          <div
+            className="bg-gradient-to-b from-cyan-900/60 to-slate-900/80 backdrop-blur-sm rounded-2xl p-5 border-2 border-cyan-500/50 hover:border-cyan-400 transition-all cursor-pointer w-full"
             onClick={() => onSelect('elara')}
           >
             <div className="flex justify-center mb-3">
-              <Elara state="idle" healthPercent={100} size="medium" showHealthBar={false} />
+              <Cipher state="idle" healthPercent={100} size="medium" showHealthBar={false} />
             </div>
-            
+
             <div className="text-center mb-3">
-              <h3 className="text-xl font-bold text-white">Elara</h3>
-              <div className="flex items-center justify-center gap-1 text-purple-300">
-                <Sparkles className="h-4 w-4" />
-                <span className="text-sm">The Wise Wizard</span>
+              <h3 className="text-xl font-bold text-white">Cipher</h3>
+              <div className="flex items-center justify-center gap-1 text-cyan-300">
+                <Cpu className="h-4 w-4" />
+                <span className="text-sm">Elite Hacker</span>
               </div>
             </div>
 
-            {/* Stats */}
             <div className="space-y-2 mb-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-400 flex items-center gap-1">
@@ -146,19 +134,19 @@ export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
             </div>
 
             <p className="text-xs text-slate-400 text-center mb-3">
-              <span className="text-cyan-400 font-bold">FAST MODE:</span> Read 5 words quickly for 3x damage plasma beam!
+              <span className="text-cyan-400 font-bold">FAST MODE:</span> Read 5 words quickly for 3x damage DDoS Overload!
             </p>
           </div>
-          
+
           <Button
             onClick={() => onSelect('elara')}
-            className="mt-3 bg-purple-600 hover:bg-purple-500 text-white font-bold px-8 w-full"
+            className="mt-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-8 w-full"
           >
-            Choose Elara
+            Choose Cipher
           </Button>
         </motion.div>
 
-        {/* Princess Ella - Balanced with Flower Powers */}
+        {/* Shadow - Balanced Stealth */}
         <motion.div
           className="flex flex-col items-center w-64"
           initial={{ x: 50, opacity: 0 }}
@@ -166,23 +154,22 @@ export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
           transition={{ delay: 0.5 }}
           whileHover={{ scale: 1.03 }}
         >
-          <div 
-            className="bg-gradient-to-b from-pink-900/60 to-slate-900/80 backdrop-blur-sm rounded-2xl p-5 border-2 border-pink-500/50 hover:border-pink-400 transition-all cursor-pointer w-full"
+          <div
+            className="bg-gradient-to-b from-purple-900/60 to-slate-900/80 backdrop-blur-sm rounded-2xl p-5 border-2 border-purple-500/50 hover:border-purple-400 transition-all cursor-pointer w-full"
             onClick={() => onSelect('ella')}
           >
             <div className="flex justify-center mb-3">
-              <PrincessElla state="idle" healthPercent={100} size="medium" showHealthBar={false} />
+              <Shadow state="idle" healthPercent={100} size="medium" showHealthBar={false} />
             </div>
-            
+
             <div className="text-center mb-3">
-              <h3 className="text-xl font-bold text-white">Princess Ella</h3>
-              <div className="flex items-center justify-center gap-1 text-pink-300">
-                <Flower2 className="h-4 w-4" />
-                <span className="text-sm">The Flower Princess</span>
+              <h3 className="text-xl font-bold text-white">Shadow</h3>
+              <div className="flex items-center justify-center gap-1 text-purple-300">
+                <Eye className="h-4 w-4" />
+                <span className="text-sm">Stealth Specialist</span>
               </div>
             </div>
 
-            {/* Stats */}
             <div className="space-y-2 mb-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-400 flex items-center gap-1">
@@ -192,9 +179,9 @@ export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-400 flex items-center gap-1">
-                  <Flower2 className="h-3 w-3 text-pink-400" /> Attack
+                  <Zap className="h-3 w-3 text-purple-400" /> Attack
                 </span>
-                <span className="text-pink-400 font-bold">Medium</span>
+                <span className="text-purple-400 font-bold">Medium</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-400 flex items-center gap-1">
@@ -205,15 +192,15 @@ export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
             </div>
 
             <p className="text-xs text-slate-400 text-center mb-3">
-              <span className="text-pink-400 font-bold">Flower Powers:</span> Thorn strikes & petal shields!
+              <span className="text-purple-400 font-bold">Stealth Ops:</span> Silent takedowns & smoke screens!
             </p>
           </div>
-          
+
           <Button
             onClick={() => onSelect('ella')}
-            className="mt-3 bg-pink-600 hover:bg-pink-500 text-white font-bold px-8 w-full"
+            className="mt-3 bg-purple-600 hover:bg-purple-500 text-white font-bold px-8 w-full"
           >
-            Choose Ella
+            Choose Shadow
           </Button>
         </motion.div>
       </div>
@@ -224,7 +211,7 @@ export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
         transition={{ delay: 0.7 }}
         className="mt-6 text-white/50 text-sm"
       >
-        Each hero has unique abilities. Choose wisely!
+        Each agent has unique abilities. Choose your operative wisely.
       </motion.p>
     </motion.div>
   );
