@@ -13,6 +13,7 @@ import { useTeacherNotes } from "@/hooks/useTeacherNotes";
 import { generateNextBestAction, getActionEmoji } from "@/lib/nextBestActionML";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format } from "date-fns";
+import { ipaToEnglish } from "@/lib/phonemeDisplayUtils";
 import MLInsightsDashboard from "@/components/aura/MLInsightsDashboard";
 import { ReadingSessionsList } from "@/components/aura/ReadingSessionsList";
 import { AudioPlaybackButton } from "@/components/aura/AudioPlaybackButton";
