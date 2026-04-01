@@ -612,7 +612,7 @@ export const stormHarpy: RPGEnemy = {
   id: 'storm_harpy',
   name: 'Tempest the Storm Harpy',
   type: 'guard',
-  maxHp: 120,
+  maxHp: 480, // 4x: was 120
   attack: 22,
   defense: 10,
   wordDamageMultiplier: 0.7,
