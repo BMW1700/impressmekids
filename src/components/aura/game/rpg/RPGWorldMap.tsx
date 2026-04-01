@@ -148,26 +148,29 @@ const AnimatedStar = ({ filled, delay }: { filled: boolean; delay: number }) => 
 
 // Boss silhouette component with proper SVG characters
 const BossSilhouette = ({ worldId, isUnlocked }: { worldId: number; isUnlocked: boolean }) => {
+  const currentTheme = getStoredTheme();
+  const isAgent = currentTheme === 'agent';
+
   const renderSilhouette = () => {
+    if (isAgent) {
+      switch (worldId) {
+        case 1: return <BrokerSilhouette isUnlocked={isUnlocked} size="small" />;
+        case 2: return <ArchitectSilhouette isUnlocked={isUnlocked} size="small" />;
+        case 3: return <DoubleAgentSilhouette isUnlocked={isUnlocked} size="small" />;
+        case 4: return <DirectorSilhouette isUnlocked={isUnlocked} size="small" />;
+        default: return <BrokerSilhouette isUnlocked={isUnlocked} size="small" />;
+      }
+    }
     switch (worldId) {
-      case 1:
-        return <DrakeSilhouette isUnlocked={isUnlocked} size="small" />;
-      case 2:
-        return <IceGolemSilhouette isUnlocked={isUnlocked} size="small" />;
-      case 3:
-        return <StoneGuardianSilhouette isUnlocked={isUnlocked} size="small" />;
-      case 4:
-        return <GrogSilhouette isUnlocked={isUnlocked} size="small" />;
-      case 5:
-        return <EchoWraithSilhouette isUnlocked={isUnlocked} size="small" />;
-      case 6:
-        return <ZephyrSilhouette isUnlocked={isUnlocked} size="small" />;
-      case 7:
-        return <LeviathanSilhouette isUnlocked={isUnlocked} size="small" />;
-      case 8:
-        return <WordEaterSilhouette isUnlocked={isUnlocked} size="small" />;
-      default:
-        return <DrakeSilhouette isUnlocked={isUnlocked} size="small" />;
+      case 1: return <DrakeSilhouette isUnlocked={isUnlocked} size="small" />;
+      case 2: return <IceGolemSilhouette isUnlocked={isUnlocked} size="small" />;
+      case 3: return <StoneGuardianSilhouette isUnlocked={isUnlocked} size="small" />;
+      case 4: return <GrogSilhouette isUnlocked={isUnlocked} size="small" />;
+      case 5: return <EchoWraithSilhouette isUnlocked={isUnlocked} size="small" />;
+      case 6: return <ZephyrSilhouette isUnlocked={isUnlocked} size="small" />;
+      case 7: return <LeviathanSilhouette isUnlocked={isUnlocked} size="small" />;
+      case 8: return <WordEaterSilhouette isUnlocked={isUnlocked} size="small" />;
+      default: return <DrakeSilhouette isUnlocked={isUnlocked} size="small" />;
     }
   };
 
