@@ -680,7 +680,7 @@ export const zephyr: RPGEnemy = {
   id: 'zephyr',
   name: 'Zephyr the Wind Lord',
   type: 'boss',
-  maxHp: 350,
+  maxHp: 1400, // 4x: was 350
   attack: 32,
   defense: 18,
   wordDamageMultiplier: 0.38,
