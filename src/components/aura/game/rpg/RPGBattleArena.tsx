@@ -1080,6 +1080,13 @@ export const RPGBattleArena = ({
     }
   }, [phase, battleMode, enemy, bossGateTriggered, triggeredThresholds, generateVocabShield, generateContextClue, setPhaseSafe]);
 
+  // Call literacy mini-game check when enemyHp changes
+  useEffect(() => {
+    if (battleMode === 'classic' && phase === 'reading') {
+      checkLiteracyMiniGame();
+    }
+  }, [enemyHp, battleMode, phase, checkLiteracyMiniGame]);
+
   // Trigger word barrage attack
   const triggerWordBarrage = useCallback(() => {
     const wordCount = enemy.barrageWordCount || 5;
