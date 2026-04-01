@@ -98,7 +98,12 @@ const AuraPractice = () => {
   const [customTopic, setCustomTopic] = useState<string | undefined>();
   const [presentationMetrics, setPresentationMetrics] = useState<PresentationMetrics | null>(null);
   const [presentationTranscript, setPresentationTranscript] = useState<string>('');
-  const [isCampaignMode, setIsCampaignMode] = useState(false);
+  const [gameTheme, setGameTheme] = useState<GameTheme | null>(getStoredTheme());
+  const [showThemeSelector, setShowThemeSelector] = useState(false);
+  
+  // Theme-aware data sources
+  const activeWorlds = gameTheme === 'agent' ? agentCampaignWorlds : campaignWorlds;
+  const activeStories = gameTheme === 'agent' ? agentStories : curatedStories;
   const [isRpgMode, setIsRpgMode] = useState(false);
   const [rpgView, setRpgView] = useState<'world_map' | 'level_select' | 'battle'>('world_map');
   const [selectedWorld, setSelectedWorld] = useState<CampaignWorld | null>(null);

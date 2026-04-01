@@ -34,9 +34,13 @@ import { RPGLevelSelect, type CampaignLevel } from "@/components/aura/game/rpg/R
 import { type BattleMode } from "@/components/aura/game/rpg/RPGBattleModeSelector";
 import { BookRescueCelebration } from "@/components/aura/game/BookRescueCelebration";
 import { campaignWorlds, type CampaignWorld } from "@/lib/campaignData";
+import { agentCampaignWorlds } from "@/lib/agentCampaignData";
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import type { EnemyType } from "@/lib/battleMechanics";
 import { curatedStories } from "@/data/curatedStories";
+import { agentStories } from "@/data/agentStories";
+import { getStoredTheme, setStoredTheme, type GameTheme } from "@/lib/gameTheme";
+import { ThemeSelector } from "@/components/aura/game/rpg/ThemeSelector";
 import type { CuratedStory as Story } from "@/data/curatedStories";
 
 // Helper component to get student's classroom and show leaderboard
