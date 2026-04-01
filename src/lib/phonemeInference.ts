@@ -7,6 +7,7 @@
 
 import { getIPAPronunciation } from './cmuDictWrapper';
 import { phonemeDistance, arePhonemesSimilar, phonemeFeatures } from './phonemeDistance';
+import { ipaToFriendlyLabel } from './phonemeDisplayUtils';
 
 export interface PhonemeSubstitution {
   expected: string;
