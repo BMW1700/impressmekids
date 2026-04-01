@@ -2103,7 +2103,7 @@ export const RPGBattleArena = ({
       <RPGEnemyTransition
         isActive={phase === 'enemy_transition'}
         defeatedEnemy={defeatedEnemy}
-        nextEnemy={currentEnemyIndex < enemyQueue.length - 1 ? getEnemyForBattle(enemyQueue[currentEnemyIndex + 1]) : null}
+        nextEnemy={currentEnemyIndex < enemyQueue.length - 1 ? (() => { const t = getStoredTheme(); const ne = enemyQueue[currentEnemyIndex + 1]; return t === 'agent' ? (ne === 'boss' || ne === 'final_boss' ? getAgentBossForWorld(worldNumber) : getAgentEnemy(ne)) : getEnemyForBattle(ne); })() : null}
         onTransitionComplete={handleTransitionComplete}
       />
 
