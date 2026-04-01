@@ -455,11 +455,21 @@ export const AuraReadingSection = () => {
     );
   }
 
+  // RPG Mode - Theme Selector (first time)
+  if (isRpgMode && !gameTheme) {
+    return (
+      <ThemeSelector onSelect={(theme) => {
+        setStoredTheme(theme);
+        setGameTheme(theme);
+      }} />
+    );
+  }
+
   // RPG Mode - World Map
   if (isRpgMode && rpgView === 'world_map' && user?.id) {
     const worldProgressData = campaignProgress?.world_progress as Record<string, string[]> || {};
     
-    const worldProgress: WorldProgress[] = campaignWorlds.map(world => ({
+    const worldProgress: WorldProgress[] = activeWorlds.map(world => ({
       worldId: world.id,
       levelsCompleted: worldProgressData[world.id.toString()]?.length || 0,
       totalLevels: world.levels.length,
