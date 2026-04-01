@@ -14,10 +14,19 @@ import { getIPAPronunciation } from './cmuDictWrapper';
 // Based on age of acquisition in typically developing children
 const phonemeDifficultyMap: Record<string, number> = {
   // === EASY (1-2): Acquired by age 3 ===
-  // Vowels - simple
-  'ɑ': 1, 'æ': 1, 'ʌ': 1, 'ɛ': 1, 'ɪ': 1, 'i': 1, 'ʊ': 1, 'u': 1, 'ɔ': 1,
-  'ɝ': 2,
-  
+  // Short vowels
+  'ɑ': 1, // /a/ as in "hot", /ar/ as in "car"
+  'æ': 1, // /a/ as in "cat"
+  'ʌ': 1, // /u/ as in "cup"
+  'ɛ': 1, // /e/ as in "bed"
+  'ɪ': 1, // /i/ as in "sit"
+  'i': 1, // /ee/ as in "tree"
+  'ʊ': 1, // /oo/ as in "book"
+  'u': 1, // /ue/ as in "blue"
+  'ɔ': 1, // /au/ as in "saw"
+  'ə': 1, // schwa as in "about"
+  'ɝ': 2, // /ur/, /er/ as in "bird", "teacher"
+
   // Early consonants
   'm': 1, 'n': 1, 'p': 1, 'b': 1, 'h': 1, 'w': 1,
   't': 2, 'd': 2,
@@ -28,23 +37,23 @@ const phonemeDifficultyMap: Record<string, number> = {
   's': 4, 'z': 4,
   'v': 4,
   'l': 5,
-  'tʃ': 4, // ch
-  'dʒ': 4, // j as in "judge"
-  'ʃ': 5,  // sh
+  'tʃ': 4, // /ch/ as in "chair"
+  'dʒ': 4, // /j/ as in "judge"
+  'ʃ': 5,  // /sh/ as in "ship"
 
   // === HARD (6-10): Acquired by age 6+ ===
-  'ɹ': 7,  // r - one of the last acquired
-  'θ': 7,  // th (voiceless, "think")
-  'ð': 6,  // th (voiced, "this")
-  'ʒ': 8,  // zh (as in "measure")
-  'ŋ': 5,  // ng
+  'ɹ': 7,  // /r/ - one of the last acquired
+  'θ': 7,  // /th/ (voiceless, "think")
+  'ð': 6,  // /th/ (voiced, "this")
+  'ʒ': 8,  // /zh/ (as in "measure")
+  'ŋ': 5,  // /ng/ (as in "sing")
 
   // Diphthongs - moderate difficulty
-  'aʊ': 4, // "out"
-  'aɪ': 3, // "eye"
-  'eɪ': 3, // "day"
-  'oʊ': 3, // "go"
-  'ɔɪ': 5, // "boy"
+  'aʊ': 4, // /ow/ as in "out"
+  'aɪ': 3, // /ie/ as in "eye"
+  'eɪ': 3, // /ae/ as in "day"
+  'oʊ': 3, // /oe/ as in "go"
+  'ɔɪ': 5, // /oi/ as in "boy"
 };
 
 /**

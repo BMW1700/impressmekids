@@ -583,7 +583,7 @@ async function handleExerciseUpdate(
   }
 
   // Get next recommended phoneme
-  const allPhonemes = ['b', 'p', 'd', 't', 'g', 'k', 'm', 'n', 'f', 'v', 's', 'z', 'sh', 'th', 'l', 'r', 'w', 'y'];
+  const allPhonemes = ['b', 'p', 'd', 't', 'g', 'ɡ', 'k', 'f', 'v', 'θ', 'ð', 's', 'z', 'ʃ', 'ʒ', 'h', 'tʃ', 'dʒ', 'm', 'n', 'ŋ', 'l', 'ɹ', 'w', 'j', 'æ', 'ɑ', 'ɛ', 'ɪ', 'i', 'ʌ', 'u', 'ʊ', 'ə', 'ɔ', 'ɝ', 'aɪ', 'aʊ', 'eɪ', 'oʊ', 'ɔɪ'];
   const candidatePhonemes = allPhonemes.filter(p => !nextMastered.includes(p));
   const nextRecommendation = qAgent.selectBestPhoneme(nextMastered, nextStruggling, Math.round(nextLevel), candidatePhonemes);
 
