@@ -51,12 +51,16 @@ export const RPGContextClue = ({ clue, enemyName, onComplete }: RPGContextCluePr
     }, 1500);
   }, [showResult, correctIndex, onComplete]);
 
-  // Build display sentence with blank — use loose match that handles adjacent punctuation
-  const escapedWord = clue.blankWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const displaySentence = clue.sentence.replace(
-    new RegExp(`(?<=^|\\s|[^a-zA-Z])${escapedWord}(?=$|\\s|[^a-zA-Z])`, 'i'),
-    '______'
-  );
+  // Build display sentence with blank — cross-browser safe (no lookbehind)
+  const tokens = clue.sentence.split(/\b/);
+  let replaced = false;
+  const displaySentence = tokens.map(t => {
+    if (!replaced && t.toLowerCase() === clue.blankWord.toLowerCase()) {
+      replaced = true;
+      return '______';
+    }
+    return t;
+  }).join('');
 
   return (
     <motion.div

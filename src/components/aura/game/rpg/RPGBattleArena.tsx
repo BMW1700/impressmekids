@@ -355,6 +355,25 @@ export const RPGBattleArena = ({
   const [bossGateTriggered, setBossGateTriggered] = useState(false);
   const [wordMasteryBonus, setWordMasteryBonus] = useState<{ word: string; multiplier: number } | null>(null);
   
+  // Cross-session word mastery: cache DB vocabulary on mount
+  const knownWordsRef = useRef<Record<string, number>>({});
+  useEffect(() => {
+    if (!studentId) return;
+    supabase
+      .from('student_vocabulary')
+      .select('word, times_correct')
+      .eq('student_id', studentId)
+      .then(({ data }) => {
+        if (data) {
+          const map: Record<string, number> = {};
+          data.forEach((row: { word: string; times_correct: number }) => {
+            map[row.word.toLowerCase()] = row.times_correct ?? 0;
+          });
+          knownWordsRef.current = map;
+        }
+      });
+  }, [studentId]);
+  
   // Update sound effects when toggle changes
   useEffect(() => {
     battleSounds.setSoundEnabled(soundEnabled);
@@ -1605,24 +1624,24 @@ export const RPGBattleArena = ({
       const damageResult = calculateDamage(word.length || 5, newStreak, responseTimeMs, sessionAccuracy);
       let baseDamage = Math.floor(damageResult.damage * enemy.wordDamageMultiplier);
       
-      // MASTERY BONUS: Check if this word was previously seen/mastered
+      // MASTERY BONUS: Check cross-session DB data + current-battle words
       const cleanedWord = word.toLowerCase().replace(/[^a-z]/g, '');
-      if (collectedPowerWords.includes(cleanedWord) || WORD_DEFINITIONS[cleanedWord]) {
-        // Word is in our vocab system — check how many times it's been seen
-        const seenCount = collectedPowerWords.filter(w => w === cleanedWord).length;
-        if (seenCount >= 3) {
-          // Mastered word — 1.5x damage
-          baseDamage = Math.floor(baseDamage * 1.5);
-          setWordMasteryBonus({ word: cleanedWord, multiplier: 1.5 });
-          setComboAnnouncement('⭐ WORD MASTERED! ×1.5');
-          setComboPowerLevel('ultra');
-          setTimeout(() => { setComboAnnouncement(null); setWordMasteryBonus(null); }, 1200);
-        } else if (seenCount >= 1) {
-          // Previously seen — 1.2x damage
-          baseDamage = Math.floor(baseDamage * 1.2);
-          setWordMasteryBonus({ word: cleanedWord, multiplier: 1.2 });
-          setTimeout(() => setWordMasteryBonus(null), 800);
-        }
+      const dbCount = knownWordsRef.current[cleanedWord] ?? 0;
+      const sessionCount = collectedPowerWords.filter(w => w === cleanedWord).length;
+      const totalCount = dbCount + sessionCount;
+      
+      if (totalCount >= 3 || WORD_DEFINITIONS[cleanedWord] && dbCount >= 3) {
+        // Mastered word — 1.5x damage
+        baseDamage = Math.floor(baseDamage * 1.5);
+        setWordMasteryBonus({ word: cleanedWord, multiplier: 1.5 });
+        setComboAnnouncement('⭐ WORD MASTERED! ×1.5');
+        setComboPowerLevel('ultra');
+        setTimeout(() => { setComboAnnouncement(null); setWordMasteryBonus(null); }, 1200);
+      } else if (totalCount >= 1) {
+        // Previously seen — 1.2x damage
+        baseDamage = Math.floor(baseDamage * 1.2);
+        setWordMasteryBonus({ word: cleanedWord, multiplier: 1.2 });
+        setTimeout(() => setWordMasteryBonus(null), 800);
       }
       
       // Update speed bonus HUD indicator
