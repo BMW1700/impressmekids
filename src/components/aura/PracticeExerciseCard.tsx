@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Check, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ipaToEnglishWithSlashes } from "@/lib/phonemeDisplayUtils";
 
 interface PracticeExerciseCardProps {
   exercise: {
@@ -78,7 +79,7 @@ const PracticeExerciseCard = ({ exercise, onComplete }: PracticeExerciseCardProp
                 <div className="flex gap-1 mt-1">
                   {exercise.phoneme_targets.map((phoneme) => (
                     <Badge key={phoneme} variant="secondary" className="text-xs">
-                      {phoneme}
+                      {ipaToEnglishWithSlashes(phoneme)}
                     </Badge>
                   ))}
                 </div>

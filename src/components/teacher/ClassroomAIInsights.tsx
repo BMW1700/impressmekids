@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Sparkles, TrendingUp, AlertTriangle, BookOpen } from "lucide-react";
 import { useTeacherSummary } from "@/hooks/useTeacherSummary";
 import { useNavigate } from "react-router-dom";
+import { ipaToEnglish } from "@/lib/phonemeDisplayUtils";
 
 interface ClassroomAIInsightsProps {
   classroomId: string;
@@ -323,7 +324,7 @@ export const ClassroomAIInsights = ({ classroomId }: ClassroomAIInsightsProps) =
                       <div className="flex flex-wrap gap-1">
                         {student.phoneme_analysis.struggling_sounds.map((sound, i) => (
                           <Badge key={i} variant="destructive" className="text-xs">
-                            {sound}
+                            {ipaToEnglish(sound)}
                             {student.phoneme_analysis?.accuracy_scores?.[sound.split(' ')[0]] && 
                               ` ${student.phoneme_analysis.accuracy_scores[sound.split(' ')[0]]}%`
                             }
@@ -339,7 +340,7 @@ export const ClassroomAIInsights = ({ classroomId }: ClassroomAIInsightsProps) =
                       <div className="flex flex-wrap gap-1">
                         {student.phoneme_analysis.mastered_sounds.map((sound, i) => (
                           <Badge key={i} variant="secondary" className="bg-green-50 text-green-700 text-xs">
-                            {sound}
+                            {ipaToEnglish(sound)}
                           </Badge>
                         ))}
                       </div>

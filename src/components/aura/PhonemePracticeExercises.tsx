@@ -7,7 +7,7 @@ import { generatePracticeExercises } from '@/lib/mispronunciationAnalysis';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { playCorrectPronunciation, unlockSpeechSynthesis } from '@/lib/pronunciationPlayer';
-import { ipaToEnglishWithSlashes } from '@/lib/phonemeDisplayUtils';
+import { ipaToEnglish, ipaToEnglishWithSlashes } from '@/lib/phonemeDisplayUtils';
 
 interface PhonemePracticeExercisesProps {
   studentId: string;
@@ -86,7 +86,7 @@ export const PhonemePracticeExercises = ({ studentId }: PhonemePracticeExercises
     } else {
       toast({
         title: 'Great job! 🎉',
-        description: `You've mastered the ${phoneme} sound!`,
+        description: `You've mastered the ${ipaToEnglish(phoneme)} sound!`,
       });
       loadExercises(); // Refresh list
     }

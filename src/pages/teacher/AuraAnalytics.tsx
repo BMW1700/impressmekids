@@ -8,6 +8,7 @@ import StudentAuraMetrics from "@/components/aura/StudentAuraMetrics";
 import PhonemeHeatmap from "@/components/aura/PhonemeHeatmap";
 import CrossModalScatterPlot from "@/components/aura/CrossModalScatterPlot";
 import AtRiskAlerts from "@/components/aura/AtRiskAlerts";
+import { ipaToEnglishWithSlashes } from "@/lib/phonemeDisplayUtils";
 import ProsodyInsights from "@/components/aura/ProsodyInsights";
 import { ClassroomScreeningDashboard } from "@/components/aura/ClassroomScreeningDashboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -534,7 +535,7 @@ const AuraAnalytics = () => {
                                                   pred.readinessLevel === 'high' ? 'default' : 
                                                   pred.readinessLevel === 'medium' ? 'secondary' : 'outline'
                                                 }>
-                                                  /{pred.phoneme}/ ({pred.transferProbability}%)
+                                                  {ipaToEnglishWithSlashes(pred.phoneme)} ({pred.transferProbability}%)
                                                 </Badge>
                                               ))}
                                             </div>

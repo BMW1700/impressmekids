@@ -111,7 +111,7 @@ const PhonemeProgressionTree = ({
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">🚀 Next Best Phoneme</p>
                   <p className="text-2xl font-bold">
-                    {nextPhoneme.label} <span className="text-muted-foreground text-base">{nextPhoneme.symbol}</span>
+                    {nextPhoneme.label} <span className="text-muted-foreground text-base">/{nextPhoneme.label.toLowerCase()}/</span>
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Dependencies met • Ready to practice
@@ -166,7 +166,7 @@ const PhonemeProgressionTree = ({
                           <Icon className="h-5 w-5" />
                         </div>
                         
-                        <div className="text-xs font-mono mb-2">{phoneme.symbol}</div>
+                        <div className="text-xs font-mono mb-2">/{phoneme.label.toLowerCase()}/</div>
                         
                         <div className="flex items-center justify-between text-xs">
                           <span className="font-medium">
