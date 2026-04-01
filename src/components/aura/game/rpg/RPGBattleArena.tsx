@@ -1646,6 +1646,7 @@ export const RPGBattleArena = ({
     setLastMiniGameCheck(0);
     setLastAttackCheck(0); // Reset attack check for new enemy
     setDefeatedEnemy(null);
+    hasManualSpellRef.current = false;
     setPhase('intro');
     setDialogueIndex(0);
     setCurrentSpeaker('enemy');
