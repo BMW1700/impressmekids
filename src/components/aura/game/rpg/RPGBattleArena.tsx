@@ -1475,7 +1475,7 @@ export const RPGBattleArena = ({
         setHeroAttacking(true);
         
         // Trigger spell effect based on attack type (lightning for Elara barrage)
-        setActiveSpell(isElaraBarrage ? 'lightning' : attackType);
+        setActiveSpell(attackType);
         setShowSpellEffect(true);
         
         // Play elemental sound effect
