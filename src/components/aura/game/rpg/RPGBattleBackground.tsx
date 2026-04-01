@@ -233,6 +233,43 @@ export const RPGBattleBackground = ({
           ambientColor: 'rgba(139, 92, 246, 0.4)',
           specialElements: 'void',
         };
+      // Agent mode themes
+      case 'underground':
+        return {
+          sky: 'from-zinc-950 via-stone-900 to-neutral-950',
+          ground: 'from-stone-800 to-zinc-950',
+          accent: 'bg-amber-500/15',
+          particles: 'bg-amber-200',
+          ambientColor: 'rgba(217, 119, 6, 0.15)',
+          specialElements: 'torches',
+        };
+      case 'neon_district':
+        return {
+          sky: 'from-slate-950 via-indigo-950 to-purple-950',
+          ground: 'from-slate-900 to-indigo-950',
+          accent: 'bg-cyan-500/25',
+          particles: 'bg-cyan-400',
+          ambientColor: 'rgba(6, 182, 212, 0.3)',
+          specialElements: 'neon',
+        };
+      case 'embassy':
+        return {
+          sky: 'from-slate-900 via-blue-950 to-slate-950',
+          ground: 'from-slate-800 to-blue-950',
+          accent: 'bg-blue-400/15',
+          particles: 'bg-blue-200',
+          ambientColor: 'rgba(59, 130, 246, 0.15)',
+          specialElements: 'banners',
+        };
+      case 'syndicate_hq':
+        return {
+          sky: 'from-red-950 via-slate-950 to-black',
+          ground: 'from-slate-900 to-red-950',
+          accent: 'bg-red-500/25',
+          particles: 'bg-red-400',
+          ambientColor: 'rgba(239, 68, 68, 0.25)',
+          specialElements: 'shadows',
+        };
       case 'forest':
       default:
         return {
