@@ -505,7 +505,7 @@ export const caveTroll: RPGEnemy = {
   id: 'cave_troll',
   name: 'Grumbold the Cave Troll',
   type: 'minion', // Uses minion type for compatibility
-  maxHp: 200,
+  maxHp: 800, // 4x: was 200
   attack: 30,
   defense: 25,
   wordDamageMultiplier: 0.5,
