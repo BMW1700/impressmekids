@@ -240,6 +240,7 @@ export const RPGBattleArena = ({
   
   // Refs for volatile combat counters (prevents stale closures in callbacks)
   const streakRef = useRef(0);
+  const hasManualSpellRef = useRef(false);
   const longestStreakRef = useRef(0);
   const wordsReadRef = useRef(0);
   const correctWordsRef = useRef(0);
