@@ -128,7 +128,7 @@ const PhonemeMasteryPathway = ({
             <div className="flex flex-wrap gap-1.5">
               {strugglingPhonemes.map((phoneme) => (
                 <Badge key={phoneme} variant="outline" className="border-amber-600/30 bg-amber-50 text-amber-700">
-                  /{phoneme}/
+                  {ipaToEnglishWithSlashes(phoneme)}
                 </Badge>
               ))}
             </div>
