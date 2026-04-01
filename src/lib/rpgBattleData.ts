@@ -163,7 +163,7 @@ export const goblinGuard: RPGEnemy = {
   id: 'goblin_guard',
   name: 'Goblin Guard',
   type: 'guard',
-  maxHp: 120, // Was 70
+  maxHp: 480, // 4x: was 120
   attack: 15, // Was 12
   defense: 8, // Was 5
   wordDamageMultiplier: 0.7, // Was 0.8
