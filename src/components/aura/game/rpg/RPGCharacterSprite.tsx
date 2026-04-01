@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 
-type CharacterType = 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian';
+type CharacterType = 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'agent_x' | 'cipher' | 'shadow_agent';
 
 interface RPGCharacterSpriteProps {
   type: CharacterType;
@@ -665,6 +665,109 @@ export const RPGCharacterSprite = ({
     </div>
   );
 
+  const renderAgentX = () => (
+    <div className="relative w-full h-full flex items-center justify-center">
+      <div className="absolute inset-x-[15%] top-[25%] bottom-[10%]
+        bg-gradient-to-b from-slate-700 via-slate-800 to-slate-900
+        rounded-t-[30%] rounded-b-[10%]
+        shadow-[inset_-5px_-5px_20px_rgba(0,0,0,0.4),inset_5px_5px_10px_rgba(255,255,255,0.1)]">
+        <div className="absolute top-[15%] left-[30%] right-[30%] h-[3%] bg-cyan-400/40" />
+        <div className="absolute bottom-[30%] left-0 right-0 h-[8%]
+          bg-gradient-to-r from-slate-600 via-slate-500 to-slate-600" />
+      </div>
+      <div className="absolute top-[5%] left-[22%] right-[22%] h-[25%]
+        bg-gradient-to-b from-amber-200 to-amber-300 rounded-[50%]
+        shadow-[inset_-3px_-3px_10px_rgba(0,0,0,0.2)]">
+        <div className="absolute top-[15%] left-[15%] right-[15%] h-[30%]
+          bg-gradient-to-b from-slate-800 to-slate-900 rounded-t-[50%]" />
+        <div className="absolute top-[55%] left-[25%] w-[15%] h-[15%] bg-slate-800 rounded-full" />
+        <div className="absolute top-[55%] right-[25%] w-[15%] h-[15%] bg-slate-800 rounded-full" />
+      </div>
+      <div className="absolute right-[-5%] top-[35%] w-[20%] h-[40%]"
+        style={{ transform: 'rotate(-15deg)' }}>
+        <div className="absolute top-0 left-[30%] w-[40%] h-[70%]
+          bg-gradient-to-t from-slate-400 via-slate-300 to-slate-200
+          shadow-[2px_0_4px_rgba(0,0,0,0.3)]"
+          style={{ clipPath: 'polygon(30% 0, 70% 0, 60% 100%, 40% 100%)' }} />
+        <div className="absolute bottom-[5%] left-[25%] w-[50%] h-[25%]
+          bg-gradient-to-b from-slate-700 to-slate-800 rounded-b" />
+      </div>
+      <div className="absolute top-[20%] left-[10%] right-[10%] bottom-0 -z-10
+        bg-gradient-to-b from-slate-800 to-slate-900 rounded-b-[30%]"
+        style={{ clipPath: 'polygon(10% 0, 90% 0, 100% 100%, 0% 100%)' }} />
+    </div>
+  );
+
+  const renderCipher = () => (
+    <div className="relative w-full h-full flex items-center justify-center">
+      <div className="absolute inset-x-[12%] top-[22%] bottom-[8%]
+        bg-gradient-to-b from-cyan-800 via-teal-900 to-slate-900
+        rounded-t-[25%] rounded-b-[15%]
+        shadow-[inset_-5px_-5px_20px_rgba(0,0,0,0.4)]">
+        <motion.div className="absolute top-[20%] left-[15%] w-[2px] h-[40%] bg-cyan-400/50"
+          animate={{ opacity: [0.3, 0.8, 0.3] }}
+          transition={{ duration: 2, repeat: Infinity }} />
+        <motion.div className="absolute top-[25%] right-[15%] w-[2px] h-[35%] bg-cyan-400/50"
+          animate={{ opacity: [0.3, 0.8, 0.3] }}
+          transition={{ duration: 2, repeat: Infinity, delay: 0.5 }} />
+      </div>
+      <div className="absolute top-[5%] left-[20%] right-[20%] h-[22%]
+        bg-gradient-to-b from-amber-300 to-amber-400 rounded-[50%]
+        shadow-[inset_-3px_-3px_10px_rgba(0,0,0,0.2)]">
+        <div className="absolute top-[10%] left-[10%] right-[10%] h-[35%]
+          bg-gradient-to-r from-slate-900 to-slate-800 rounded-t-[50%]" />
+        <div className="absolute top-[10%] left-[5%] w-[15%] h-[20%] bg-cyan-400/60" />
+        <div className="absolute top-[45%] left-[15%] right-[15%] h-[18%]
+          bg-cyan-700/80 rounded-lg" />
+        <motion.div className="absolute top-[47%] left-[18%] right-[18%] h-[14%]
+          bg-cyan-400/30 rounded"
+          animate={{ opacity: [0.2, 0.5, 0.2] }}
+          transition={{ duration: 1.5, repeat: Infinity }} />
+      </div>
+      <motion.div className="absolute right-[-10%] top-[40%] w-[25%] h-[30%]"
+        animate={isAttacking ? { opacity: 1 } : { opacity: 0.7 }}>
+        <div className="w-full h-full bg-gradient-to-br from-cyan-600/40 to-cyan-400/20 rounded-lg border border-cyan-500/30" />
+        {isAttacking && (
+          <motion.div className="absolute inset-0 flex items-center justify-center"
+            animate={{ opacity: [0.3, 0.8, 0.3] }}
+            transition={{ duration: 0.3, repeat: 3 }}>
+            <div className="w-3 h-3 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
+          </motion.div>
+        )}
+      </motion.div>
+    </div>
+  );
+
+  const renderShadowAgent = () => (
+    <div className="relative w-full h-full flex items-center justify-center">
+      <div className="absolute inset-x-[12%] top-[22%] bottom-[8%]
+        bg-gradient-to-b from-slate-800 via-slate-900 to-black
+        rounded-t-[25%] rounded-b-[15%]
+        shadow-[inset_-5px_-5px_20px_rgba(0,0,0,0.5)]">
+        <div className="absolute top-[50%] left-[30%] right-[30%] h-[5%]
+          bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
+      </div>
+      <div className="absolute top-[3%] left-[18%] right-[18%] h-[25%]
+        bg-gradient-to-b from-slate-700 to-slate-900 rounded-[50%]
+        shadow-[inset_-3px_-3px_10px_rgba(0,0,0,0.5)]">
+        <motion.div className="absolute top-[40%] left-[20%] w-[20%] h-[25%]
+          bg-emerald-400 rounded-full shadow-[0_0_10px_rgba(52,211,153,0.8)]"
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ repeat: Infinity, duration: 1.5 }} />
+        <motion.div className="absolute top-[40%] right-[20%] w-[20%] h-[25%]
+          bg-emerald-400 rounded-full shadow-[0_0_10px_rgba(52,211,153,0.8)]"
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ repeat: Infinity, duration: 1.5, delay: 0.2 }} />
+      </div>
+      <motion.div className="absolute inset-0 rounded-xl bg-slate-500/10 pointer-events-none"
+        animate={{ opacity: [0, 0.15, 0] }}
+        transition={{ repeat: Infinity, duration: 3 }} />
+      <div className="absolute top-[18%] left-[8%] right-[8%] bottom-0 -z-10
+        bg-gradient-to-b from-slate-900 to-black rounded-b-[30%] opacity-60"
+        style={{ clipPath: 'polygon(10% 0, 90% 0, 100% 100%, 0% 100%)' }} />
+    </div>
+  );
+
   const renderCharacter = () => {
     switch (type) {
       case 'knight': return renderKnight();
@@ -676,6 +779,9 @@ export const RPGCharacterSprite = ({
       case 'ice_golem': return renderIceGolem();
       case 'shadow_wraith': return renderShadowWraith();
       case 'stone_guardian': return renderStoneGuardian();
+      case 'agent_x': return renderAgentX();
+      case 'cipher': return renderCipher();
+      case 'shadow_agent': return renderShadowAgent();
       default: return renderKnight();
     }
   };

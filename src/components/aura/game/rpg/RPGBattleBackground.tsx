@@ -3,11 +3,11 @@ import { useMemo, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ImageIcon, Palette } from "lucide-react";
 
-type BackgroundTheme = 'castle' | 'dungeon' | 'forest' | 'throne' | 'volcano' | 'ice_cave' | 'ruins' | 'shadow_realm' | 'caverns' | 'sky_isles' | 'sunken_library' | 'void';
+type BackgroundTheme = 'castle' | 'dungeon' | 'forest' | 'throne' | 'volcano' | 'ice_cave' | 'ruins' | 'shadow_realm' | 'caverns' | 'sky_isles' | 'sunken_library' | 'void' | 'underground' | 'neon_district' | 'embassy' | 'syndicate_hq';
 
 interface RPGBattleBackgroundProps {
   theme?: BackgroundTheme;
-  enemyType?: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'goblin_shaman';
+  enemyType?: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'goblin_shaman' | 'street_thug' | 'hired_gun' | 'cyber_hacker' | 'drone_sentry' | 'rogue_agent' | 'bodyguard' | 'operative' | 'enforcer' | 'the_broker' | 'the_architect' | 'the_double_agent' | 'the_director';
   worldNumber?: number;
 }
 
@@ -114,6 +114,19 @@ export const RPGBattleBackground = ({
       case 'void_phantom': return 'void';
       case 'reality_shifter': return 'void';
       case 'word_eater': return 'void';
+      // Agent mode enemies
+      case 'street_thug': return 'underground';
+      case 'hired_gun': return 'underground';
+      case 'the_broker': return 'underground';
+      case 'cyber_hacker': return 'neon_district';
+      case 'drone_sentry': return 'neon_district';
+      case 'the_architect': return 'neon_district';
+      case 'rogue_agent': return 'embassy';
+      case 'bodyguard': return 'embassy';
+      case 'the_double_agent': return 'embassy';
+      case 'operative': return 'syndicate_hq';
+      case 'enforcer': return 'syndicate_hq';
+      case 'the_director': return 'syndicate_hq';
       default: return 'forest';
     }
   }, [enemyType]);
@@ -219,6 +232,43 @@ export const RPGBattleBackground = ({
           particles: 'bg-violet-400',
           ambientColor: 'rgba(139, 92, 246, 0.4)',
           specialElements: 'void',
+        };
+      // Agent mode themes
+      case 'underground':
+        return {
+          sky: 'from-zinc-950 via-stone-900 to-neutral-950',
+          ground: 'from-stone-800 to-zinc-950',
+          accent: 'bg-amber-500/15',
+          particles: 'bg-amber-200',
+          ambientColor: 'rgba(217, 119, 6, 0.15)',
+          specialElements: 'torches',
+        };
+      case 'neon_district':
+        return {
+          sky: 'from-slate-950 via-indigo-950 to-purple-950',
+          ground: 'from-slate-900 to-indigo-950',
+          accent: 'bg-cyan-500/25',
+          particles: 'bg-cyan-400',
+          ambientColor: 'rgba(6, 182, 212, 0.3)',
+          specialElements: 'neon',
+        };
+      case 'embassy':
+        return {
+          sky: 'from-slate-900 via-blue-950 to-slate-950',
+          ground: 'from-slate-800 to-blue-950',
+          accent: 'bg-blue-400/15',
+          particles: 'bg-blue-200',
+          ambientColor: 'rgba(59, 130, 246, 0.15)',
+          specialElements: 'banners',
+        };
+      case 'syndicate_hq':
+        return {
+          sky: 'from-red-950 via-slate-950 to-black',
+          ground: 'from-slate-900 to-red-950',
+          accent: 'bg-red-500/25',
+          particles: 'bg-red-400',
+          ambientColor: 'rgba(239, 68, 68, 0.25)',
+          specialElements: 'shadows',
         };
       case 'forest':
       default:
@@ -383,6 +433,59 @@ export const RPGBattleBackground = ({
                     transform: `rotate(${Math.random() * 20 - 10}deg)`,
                   }}
                 />
+              </motion.div>
+            ))}
+          </>
+        );
+      case 'neon':
+        return (
+          <>
+            {/* Neon signs */}
+            {Array.from({ length: 5 }).map((_, i) => (
+              <motion.div
+                key={`neon-${i}`}
+                className="absolute rounded-sm"
+                style={{
+                  width: 30 + Math.random() * 60,
+                  height: 8 + Math.random() * 12,
+                  left: `${10 + i * 18}%`,
+                  top: `${20 + Math.random() * 30}%`,
+                  background: ['#22D3EE', '#A855F7', '#F43F5E', '#10B981', '#F59E0B'][i],
+                  opacity: 0.3,
+                  filter: `blur(${1 + Math.random() * 2}px)`,
+                }}
+                animate={{
+                  opacity: [0.2, 0.5, 0.2],
+                }}
+                transition={{
+                  duration: 1.5 + Math.random() * 2,
+                  delay: Math.random() * 2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              />
+            ))}
+            {/* Digital rain effect */}
+            {Array.from({ length: 12 }).map((_, i) => (
+              <motion.div
+                key={`rain-${i}`}
+                className="absolute text-cyan-500/30 text-[8px] font-mono"
+                style={{
+                  left: `${5 + i * 8}%`,
+                  top: '-5%',
+                }}
+                animate={{
+                  y: [0, 500],
+                  opacity: [0, 0.4, 0],
+                }}
+                transition={{
+                  duration: 4 + Math.random() * 3,
+                  delay: Math.random() * 3,
+                  repeat: Infinity,
+                  ease: "linear",
+                }}
+              >
+                {Array.from({ length: 8 }).map(() => String.fromCharCode(0x30A0 + Math.random() * 96)).join('')}
               </motion.div>
             ))}
           </>

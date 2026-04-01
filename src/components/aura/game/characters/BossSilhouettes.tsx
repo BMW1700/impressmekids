@@ -723,6 +723,140 @@ export const WordEaterSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteP
   );
 };
 
+// Agent Mode Boss Silhouettes
+
+// The Broker Silhouette (Agent World 1 - suited crime boss)
+export const BrokerSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteProps) => {
+  const { width, height } = sizeConfig[size];
+  return (
+    <motion.div className="relative"
+      animate={isUnlocked ? { filter: ['drop-shadow(0 0 4px rgba(245, 158, 11, 0.5))', 'drop-shadow(0 0 12px rgba(245, 158, 11, 0.8))', 'drop-shadow(0 0 4px rgba(245, 158, 11, 0.5))'] } : {}}
+      transition={{ duration: 2, repeat: Infinity }}>
+      <svg width={width} height={height} viewBox="0 0 80 80" fill="none">
+        <defs>
+          <linearGradient id="brokerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={isUnlocked ? "#78716C" : "#475569"} stopOpacity="0.9" />
+            <stop offset="100%" stopColor={isUnlocked ? "#292524" : "#1E293B"} stopOpacity="0.9" />
+          </linearGradient>
+        </defs>
+        <path d="M30 25 L25 75 L55 75 L50 25" fill="url(#brokerGrad)" />
+        <circle cx="40" cy="20" r="10" fill="url(#brokerGrad)" />
+        <path d="M28 15 L40 8 L52 15" fill="url(#brokerGrad)" />
+        <line x1="40" y1="30" x2="40" y2="60" stroke={isUnlocked ? "#F59E0B" : "#475569"} strokeWidth="1.5" />
+        {isUnlocked && (
+          <>
+            <motion.circle cx="36" cy="19" r="1.5" fill="#FBBF24" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1, repeat: Infinity }} />
+            <motion.circle cx="44" cy="19" r="1.5" fill="#FBBF24" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1, repeat: Infinity, delay: 0.2 }} />
+          </>
+        )}
+      </svg>
+    </motion.div>
+  );
+};
+
+// The Architect Silhouette (Agent World 2 - tech helmet figure)
+export const ArchitectSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteProps) => {
+  const { width, height } = sizeConfig[size];
+  return (
+    <motion.div className="relative"
+      animate={isUnlocked ? { filter: ['drop-shadow(0 0 4px rgba(6, 182, 212, 0.5))', 'drop-shadow(0 0 12px rgba(6, 182, 212, 0.8))', 'drop-shadow(0 0 4px rgba(6, 182, 212, 0.5))'] } : {}}
+      transition={{ duration: 2, repeat: Infinity }}>
+      <svg width={width} height={height} viewBox="0 0 80 80" fill="none">
+        <defs>
+          <linearGradient id="architectGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={isUnlocked ? "#0E7490" : "#475569"} stopOpacity="0.9" />
+            <stop offset="100%" stopColor={isUnlocked ? "#164E63" : "#1E293B"} stopOpacity="0.9" />
+          </linearGradient>
+        </defs>
+        <path d="M30 28 L20 75 L60 75 L50 28" fill="url(#architectGrad)" />
+        <rect x="28" y="10" width="24" height="20" rx="4" fill="url(#architectGrad)" />
+        <rect x="30" y="18" width="20" height="6" rx="2" fill={isUnlocked ? "#22D3EE" : "#475569"} opacity="0.5" />
+        {isUnlocked && (
+          <motion.rect x="32" y="19" width="16" height="4" rx="1" fill="#22D3EE" opacity="0.3"
+            animate={{ opacity: [0.2, 0.6, 0.2] }} transition={{ duration: 1.5, repeat: Infinity }} />
+        )}
+        <path d="M15 35 L30 30 L30 50 L15 45" fill="url(#architectGrad)" />
+        <path d="M65 35 L50 30 L50 50 L65 45" fill="url(#architectGrad)" />
+        {isUnlocked && (
+          <>
+            <motion.circle cx="40" cy="50" r="5" stroke="#22D3EE" strokeWidth="1" fill="none"
+              animate={{ r: [5, 8, 5], opacity: [0.4, 0.8, 0.4] }} transition={{ duration: 2, repeat: Infinity }} />
+          </>
+        )}
+      </svg>
+    </motion.div>
+  );
+};
+
+// The Double Agent Silhouette (Agent World 3 - split face)
+export const DoubleAgentSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteProps) => {
+  const { width, height } = sizeConfig[size];
+  return (
+    <motion.div className="relative"
+      animate={isUnlocked ? { filter: ['drop-shadow(0 0 4px rgba(99, 102, 241, 0.5))', 'drop-shadow(0 0 12px rgba(99, 102, 241, 0.8))', 'drop-shadow(0 0 4px rgba(99, 102, 241, 0.5))'] } : {}}
+      transition={{ duration: 2, repeat: Infinity }}>
+      <svg width={width} height={height} viewBox="0 0 80 80" fill="none">
+        <defs>
+          <linearGradient id="doubleAgentGradL" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={isUnlocked ? "#3B82F6" : "#475569"} stopOpacity="0.9" />
+            <stop offset="100%" stopColor={isUnlocked ? "#1E3A8A" : "#1E293B"} stopOpacity="0.9" />
+          </linearGradient>
+          <linearGradient id="doubleAgentGradR" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={isUnlocked ? "#EF4444" : "#475569"} stopOpacity="0.9" />
+            <stop offset="100%" stopColor={isUnlocked ? "#7F1D1D" : "#1E293B"} stopOpacity="0.9" />
+          </linearGradient>
+        </defs>
+        <path d="M40 10 L40 75 L25 75 L20 25 Q25 10 40 10" fill="url(#doubleAgentGradL)" />
+        <path d="M40 10 L40 75 L55 75 L60 25 Q55 10 40 10" fill="url(#doubleAgentGradR)" />
+        <line x1="40" y1="10" x2="40" y2="75" stroke={isUnlocked ? "#FBBF24" : "#64748B"} strokeWidth="1" />
+        {isUnlocked && (
+          <>
+            <motion.circle cx="34" cy="25" r="2" fill="#60A5FA" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.2, repeat: Infinity }} />
+            <motion.circle cx="46" cy="25" r="2" fill="#F87171" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.2, repeat: Infinity, delay: 0.2 }} />
+          </>
+        )}
+      </svg>
+    </motion.div>
+  );
+};
+
+// The Director Silhouette (Agent World 4 - commanding figure)
+export const DirectorSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteProps) => {
+  const { width, height } = sizeConfig[size];
+  return (
+    <motion.div className="relative"
+      animate={isUnlocked ? { filter: ['drop-shadow(0 0 4px rgba(239, 68, 68, 0.5))', 'drop-shadow(0 0 15px rgba(239, 68, 68, 0.9))', 'drop-shadow(0 0 4px rgba(239, 68, 68, 0.5))'] } : {}}
+      transition={{ duration: 2, repeat: Infinity }}>
+      <svg width={width} height={height} viewBox="0 0 80 80" fill="none">
+        <defs>
+          <linearGradient id="directorGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={isUnlocked ? "#1E293B" : "#475569"} stopOpacity="0.95" />
+            <stop offset="100%" stopColor={isUnlocked ? "#0F172A" : "#1E293B"} stopOpacity="0.95" />
+          </linearGradient>
+        </defs>
+        <path d="M25 20 L55 20 L60 55 L55 75 L25 75 L20 55 L25 20" fill="url(#directorGrad)" />
+        <circle cx="40" cy="15" r="10" fill="url(#directorGrad)" />
+        <path d="M15 25 L25 22 L25 50 L15 45" fill="url(#directorGrad)" />
+        <path d="M65 25 L55 22 L55 50 L65 45" fill="url(#directorGrad)" />
+        <path d="M30 20 L25 18 L35 12 L40 10 L45 12 L55 18 L50 20"
+          fill={isUnlocked ? "#DC2626" : "#475569"} opacity="0.8" />
+        {isUnlocked && (
+          <>
+            <motion.circle cx="36" cy="14" r="2" fill="#EF4444"
+              animate={{ opacity: [0.5, 1, 0.5], filter: ['drop-shadow(0 0 2px #EF4444)', 'drop-shadow(0 0 6px #EF4444)', 'drop-shadow(0 0 2px #EF4444)'] }}
+              transition={{ duration: 1, repeat: Infinity }} />
+            <motion.circle cx="44" cy="14" r="2" fill="#EF4444"
+              animate={{ opacity: [0.5, 1, 0.5], filter: ['drop-shadow(0 0 2px #EF4444)', 'drop-shadow(0 0 6px #EF4444)', 'drop-shadow(0 0 2px #EF4444)'] }}
+              transition={{ duration: 1, repeat: Infinity, delay: 0.2 }} />
+            <motion.rect x="30" y="40" width="20" height="3" rx="1" fill="#EF4444"
+              animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ duration: 2, repeat: Infinity }} />
+          </>
+        )}
+      </svg>
+    </motion.div>
+  );
+};
+
 // Combined export for convenience
 export const BossSilhouettes = {
   Drake: DrakeSilhouette,
@@ -734,4 +868,8 @@ export const BossSilhouettes = {
   Zephyr: ZephyrSilhouette,
   Leviathan: LeviathanSilhouette,
   WordEater: WordEaterSilhouette,
+  Broker: BrokerSilhouette,
+  Architect: ArchitectSilhouette,
+  DoubleAgent: DoubleAgentSilhouette,
+  Director: DirectorSilhouette,
 };

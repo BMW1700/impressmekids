@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Lock, Star, Swords, Crown, TreePine, Mountain, Castle, Flame, Sparkles, Gem, Cloud, Waves, Eclipse, GraduationCap, ShoppingBag, Zap } from "lucide-react";
 import { campaignWorlds, CampaignWorld } from "@/lib/campaignData";
+import { agentCampaignWorlds } from "@/lib/agentCampaignData";
 import { getStoredTheme, setStoredTheme, type GameTheme } from "@/lib/gameTheme";
 import { 
   DrakeSilhouette, 
@@ -14,6 +15,10 @@ import {
   ZephyrSilhouette,
   LeviathanSilhouette,
   WordEaterSilhouette,
+  BrokerSilhouette,
+  ArchitectSilhouette,
+  DoubleAgentSilhouette,
+  DirectorSilhouette,
 } from "../characters/BossSilhouettes";
 import { AnimatedStarCounter } from "../effects/StarCollectionEffect";
 import { AnimatedBookCounter } from "../effects/FlyingBookAnimation";
@@ -143,26 +148,29 @@ const AnimatedStar = ({ filled, delay }: { filled: boolean; delay: number }) => 
 
 // Boss silhouette component with proper SVG characters
 const BossSilhouette = ({ worldId, isUnlocked }: { worldId: number; isUnlocked: boolean }) => {
+  const currentTheme = getStoredTheme();
+  const isAgent = currentTheme === 'agent';
+
   const renderSilhouette = () => {
+    if (isAgent) {
+      switch (worldId) {
+        case 1: return <BrokerSilhouette isUnlocked={isUnlocked} size="small" />;
+        case 2: return <ArchitectSilhouette isUnlocked={isUnlocked} size="small" />;
+        case 3: return <DoubleAgentSilhouette isUnlocked={isUnlocked} size="small" />;
+        case 4: return <DirectorSilhouette isUnlocked={isUnlocked} size="small" />;
+        default: return <BrokerSilhouette isUnlocked={isUnlocked} size="small" />;
+      }
+    }
     switch (worldId) {
-      case 1:
-        return <DrakeSilhouette isUnlocked={isUnlocked} size="small" />;
-      case 2:
-        return <IceGolemSilhouette isUnlocked={isUnlocked} size="small" />;
-      case 3:
-        return <StoneGuardianSilhouette isUnlocked={isUnlocked} size="small" />;
-      case 4:
-        return <GrogSilhouette isUnlocked={isUnlocked} size="small" />;
-      case 5:
-        return <EchoWraithSilhouette isUnlocked={isUnlocked} size="small" />;
-      case 6:
-        return <ZephyrSilhouette isUnlocked={isUnlocked} size="small" />;
-      case 7:
-        return <LeviathanSilhouette isUnlocked={isUnlocked} size="small" />;
-      case 8:
-        return <WordEaterSilhouette isUnlocked={isUnlocked} size="small" />;
-      default:
-        return <DrakeSilhouette isUnlocked={isUnlocked} size="small" />;
+      case 1: return <DrakeSilhouette isUnlocked={isUnlocked} size="small" />;
+      case 2: return <IceGolemSilhouette isUnlocked={isUnlocked} size="small" />;
+      case 3: return <StoneGuardianSilhouette isUnlocked={isUnlocked} size="small" />;
+      case 4: return <GrogSilhouette isUnlocked={isUnlocked} size="small" />;
+      case 5: return <EchoWraithSilhouette isUnlocked={isUnlocked} size="small" />;
+      case 6: return <ZephyrSilhouette isUnlocked={isUnlocked} size="small" />;
+      case 7: return <LeviathanSilhouette isUnlocked={isUnlocked} size="small" />;
+      case 8: return <WordEaterSilhouette isUnlocked={isUnlocked} size="small" />;
+      default: return <DrakeSilhouette isUnlocked={isUnlocked} size="small" />;
     }
   };
 
@@ -337,10 +345,12 @@ export const RPGWorldMap = ({
           transition={{ duration: 3, repeat: Infinity }}
         >
           <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-500 mb-2">
-            ⚔️ RPG Mode
+            {getStoredTheme() === 'agent' ? '🕵️ Agent Mode' : '⚔️ RPG Mode'}
           </h1>
         </motion.div>
-        <p className="text-purple-300 text-lg">Your reading adventure awaits, hero!</p>
+        <p className="text-purple-300 text-lg">
+          {getStoredTheme() === 'agent' ? 'Your covert reading mission begins, agent!' : 'Your reading adventure awaits, hero!'}
+        </p>
         
         {/* Sparkle decorations */}
         <motion.div
@@ -362,7 +372,7 @@ export const RPGWorldMap = ({
       {/* World Cards with Enhanced Connecting Paths */}
       <div className="max-w-4xl mx-auto relative z-[5]">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {campaignWorlds.map((world, index) => {
+          {(getStoredTheme() === 'agent' ? agentCampaignWorlds : campaignWorlds).map((world, index) => {
             const progress = getWorldProgress(world.id);
             const unlocked = isWorldUnlocked(world);
             const completionPercent = progress.totalLevels > 0 
@@ -608,8 +618,10 @@ export const RPGWorldMap = ({
           }}
           transition={{ duration: 4, repeat: Infinity }}
         >
-          "Princess Ella's books are scattered across four worlds. 
-          Defeat Grog's minions, rescue the books, and restore magic to the kingdom!"
+          {getStoredTheme() === 'agent' 
+            ? '"The Syndicate has stolen classified intelligence files. Infiltrate their operation, decode their secrets, and bring down The Director!"'
+            : '"Princess Ella\'s books are scattered across four worlds. Defeat Grog\'s minions, rescue the books, and restore magic to the kingdom!"'
+          }
         </motion.p>
       </motion.div>
     </div>
