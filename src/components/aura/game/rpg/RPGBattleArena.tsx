@@ -240,6 +240,7 @@ export const RPGBattleArena = ({
   
   // Refs for volatile combat counters (prevents stale closures in callbacks)
   const streakRef = useRef(0);
+  const hasManualSpellRef = useRef(false);
   const longestStreakRef = useRef(0);
   const wordsReadRef = useRef(0);
   const correctWordsRef = useRef(0);
@@ -1095,6 +1096,7 @@ export const RPGBattleArena = ({
     
     setWizardMp(prev => prev - spell.mpCost);
     setAttackType(spell.effect);
+    hasManualSpellRef.current = true;
     setDamageAmount(spell.damage);
     
     // Handle healing spells differently - they target the player
@@ -1473,7 +1475,7 @@ export const RPGBattleArena = ({
         setHeroAttacking(true);
         
         // Trigger spell effect based on attack type (lightning for Elara barrage)
-        setActiveSpell(isElaraBarrage ? 'lightning' : attackType);
+        setActiveSpell(attackType);
         setShowSpellEffect(true);
         
         // Play elemental sound effect
@@ -1521,7 +1523,7 @@ export const RPGBattleArena = ({
       }
 
       // Vary attack type based on streak (for non-Elara)
-      if (selectedCharacter !== 'elara') {
+      if (selectedCharacter !== 'elara' && !hasManualSpellRef.current) {
         const types: ('fire' | 'ice' | 'lightning' | 'slash')[] = ['slash', 'fire', 'ice', 'lightning'];
         setAttackType(types[Math.min(Math.floor(newStreak / 3), types.length - 1)]);
       }
@@ -1644,6 +1646,7 @@ export const RPGBattleArena = ({
     setLastMiniGameCheck(0);
     setLastAttackCheck(0); // Reset attack check for new enemy
     setDefeatedEnemy(null);
+    hasManualSpellRef.current = false;
     setPhase('intro');
     setDialogueIndex(0);
     setCurrentSpeaker('enemy');
