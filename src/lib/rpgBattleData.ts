@@ -193,7 +193,7 @@ export const goblinElite: RPGEnemy = {
   id: 'goblin_elite',
   name: 'Goblin Warlord',
   type: 'elite',
-  maxHp: 180, // Was 100
+  maxHp: 720, // 4x: was 180
   attack: 22, // Was 18
   defense: 12, // Was 8
   wordDamageMultiplier: 0.5, // Was 0.6
