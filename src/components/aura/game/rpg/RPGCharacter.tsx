@@ -436,7 +436,7 @@ export const RPGCharacter = ({
     }
 
     if (spriteType === 'cipher') {
-      const cipherState: CipherState = currentHp <= 0 ? 'defeated' : isTakingDamage ? 'hit' : isAttacking ? 'hacking' : 'idle';
+      const cipherState: CipherState = currentHp <= 0 ? 'defeated' : isTakingDamage ? 'hit' : isAttacking ? 'casting' : 'idle';
       return (
         <Cipher
           state={cipherState}
