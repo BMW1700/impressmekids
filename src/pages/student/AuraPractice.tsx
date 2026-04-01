@@ -10,10 +10,14 @@ import { RPGLevelSelect, type CampaignLevel } from "@/components/aura/game/rpg/R
 import { type BattleMode } from "@/components/aura/game/rpg/RPGBattleModeSelector";
 import { BookRescueCelebration } from "@/components/aura/game/BookRescueCelebration";
 import { campaignWorlds, type CampaignWorld } from "@/lib/campaignData";
+import { agentCampaignWorlds } from "@/lib/agentCampaignData";
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import type { EnemyType } from "@/lib/battleMechanics";
 import KidFriendlyProgress from "@/components/aura/KidFriendlyProgress";
 import { curatedStories } from "@/data/curatedStories";
+import { agentStories } from "@/data/agentStories";
+import { getStoredTheme, setStoredTheme, type GameTheme } from "@/lib/gameTheme";
+import { ThemeSelector } from "@/components/aura/game/rpg/ThemeSelector";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { GameHeader } from "@/components/game/GameHeader";
