@@ -1015,6 +1015,8 @@ export const RPGBattleArena = ({
       enemyHpRef.current = 0;
       setEnemyHp(0);
       battleSounds.celebrationSound();
+      // FIXED: Explicitly trigger victory since phase is 'boss_gate', not 'reading'/'combat'
+      triggerVictory('Boss gate answered correctly — final blow!');
     } else {
       // Wrong - boss heals 15%
       const healAmount = Math.floor(enemy.maxHp * 0.15);
@@ -1024,7 +1026,7 @@ export const RPGBattleArena = ({
       setBossGateTriggered(false); // Allow re-trigger
       returnToReading();
     }
-  }, [enemy.maxHp, returnToReading]);
+  }, [enemy.maxHp, returnToReading, triggerVictory]);
 
   // Check for vocab shield / context clue triggers at HP thresholds
   // These piggyback on the existing HP-based mini-game system
