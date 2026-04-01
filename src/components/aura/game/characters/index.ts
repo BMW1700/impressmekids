@@ -27,6 +27,13 @@ export { AgentX, type AgentXState } from './AgentX';
 export { Cipher, type CipherState } from './Cipher';
 export { Shadow, type ShadowState } from './Shadow';
 
+// Agent Mode enemy sprites
+export { StreetThug, type StreetThugState } from './StreetThug';
+export { HiredGun, type HiredGunState } from './HiredGun';
+export { CyberHacker, type CyberHackerState } from './CyberHacker';
+export { TheBroker, type TheBrokerState } from './TheBroker';
+export { TheDirector, type TheDirectorState } from './TheDirector';
+
 // Export boss silhouettes for world map
 export { 
   DrakeSilhouette, 

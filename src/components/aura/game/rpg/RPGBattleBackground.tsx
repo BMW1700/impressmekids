@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { useMemo, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ImageIcon, Palette } from "lucide-react";
+import { getStoredTheme } from "@/lib/gameTheme";
 
 type BackgroundTheme = 'castle' | 'dungeon' | 'forest' | 'throne' | 'volcano' | 'ice_cave' | 'ruins' | 'shadow_realm' | 'caverns' | 'sky_isles' | 'sunken_library' | 'void' | 'underground' | 'neon_district' | 'embassy' | 'syndicate_hq';
 
@@ -37,6 +38,18 @@ const worldNames: Record<number, string> = {
   8: 'The Void',
 };
 
+const agentWorldNames: Record<number, string> = {
+  0: 'Training Grounds',
+  1: 'The Underground',
+  2: 'Neon District',
+  3: 'The Embassy',
+  4: 'Syndicate HQ',
+  5: 'The Underground',
+  6: 'Neon District',
+  7: 'The Embassy',
+  8: 'Syndicate HQ',
+};
+
 export const RPGBattleBackground = ({ 
   theme,
   enemyType = 'minion',
@@ -54,7 +67,10 @@ export const RPGBattleBackground = ({
   });
 
   // Get current world name for button display
-  const currentWorldName = worldNames[worldNumber] || 'Unknown';
+  const gameTheme = getStoredTheme();
+  const currentWorldName = gameTheme === 'agent' 
+    ? (agentWorldNames[worldNumber] || 'Unknown Sector')
+    : (worldNames[worldNumber] || 'Unknown');
 
   // Save preference
   useEffect(() => {
@@ -93,6 +109,24 @@ export const RPGBattleBackground = ({
 
   // Auto-select theme based on enemy type if not specified
   const selectedTheme: BackgroundTheme = theme || useMemo(() => {
+    // Agent mode: select background by world number directly
+    const currentTheme = getStoredTheme();
+    if (currentTheme === 'agent') {
+      const agentWorldThemes: Record<number, BackgroundTheme> = {
+        0: 'underground',
+        1: 'underground',
+        2: 'neon_district',
+        3: 'embassy',
+        4: 'syndicate_hq',
+        5: 'underground',
+        6: 'neon_district',
+        7: 'embassy',
+        8: 'syndicate_hq',
+      };
+      return agentWorldThemes[worldNumber] || 'underground';
+    }
+    
+    // Classic mode: select by enemy type
     switch (enemyType) {
       case 'final_boss': return 'throne';
       case 'boss': return 'volcano';
@@ -114,22 +148,9 @@ export const RPGBattleBackground = ({
       case 'void_phantom': return 'void';
       case 'reality_shifter': return 'void';
       case 'word_eater': return 'void';
-      // Agent mode enemies
-      case 'street_thug': return 'underground';
-      case 'hired_gun': return 'underground';
-      case 'the_broker': return 'underground';
-      case 'cyber_hacker': return 'neon_district';
-      case 'drone_sentry': return 'neon_district';
-      case 'the_architect': return 'neon_district';
-      case 'rogue_agent': return 'embassy';
-      case 'bodyguard': return 'embassy';
-      case 'the_double_agent': return 'embassy';
-      case 'operative': return 'syndicate_hq';
-      case 'enforcer': return 'syndicate_hq';
-      case 'the_director': return 'syndicate_hq';
       default: return 'forest';
     }
-  }, [enemyType]);
+  }, [enemyType, worldNumber]);
 
   // Theme-specific gradients and colors (fallback when no image)
   const themeStyles = useMemo(() => {

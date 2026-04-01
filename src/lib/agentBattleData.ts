@@ -296,3 +296,42 @@ export const getAgentHero = (character: string): RPGCharacter => {
     default: return { ...agentX };
   }
 };
+
+// Agent mode dialogue
+export const agentHeroDialogue = {
+  intro: [
+    "Stay sharp, team. Intel says this sector is hostile.",
+    "Mission active. Weapons hot.",
+    "We've trained for this. Let's move.",
+    "HQ confirms hostile presence. Engage on my mark.",
+  ],
+  attack: [
+    "Engaging target!",
+    "Contact! Taking the shot!",
+    "Target acquired!",
+  ],
+  victory: [
+    "Target neutralized. Area secured.",
+    "Mission complete. Moving to extraction.",
+    "Good work, team. One step closer to the Syndicate.",
+  ],
+};
+
+export const agentCompanionDialogue = {
+  intro: [
+    "Systems online. Scanning for threats.",
+    "I've got your six, agent. Let's do this.",
+    "Comms are clear. Ready when you are.",
+    "Running tactical analysis now.",
+  ],
+  attack: [
+    "Deploying countermeasures!",
+    "Hacking their defenses!",
+    "Overriding their systems!",
+  ],
+  victory: [
+    "All systems green. Nice work.",
+    "Threat eliminated. Uploading intel to HQ.",
+    "That's another one down.",
+  ],
+};

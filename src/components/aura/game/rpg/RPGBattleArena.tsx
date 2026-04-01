@@ -64,7 +64,7 @@ import {
   MiniGameType,
   RPGCharacter as RPGCharacterType,
 } from "@/lib/rpgBattleData";
-import { getAgentHero, getAgentEnemy, getAgentBossForWorld } from "@/lib/agentBattleData";
+import { getAgentHero, getAgentEnemy, getAgentBossForWorld, agentHeroDialogue, agentCompanionDialogue } from "@/lib/agentBattleData";
 import { getStoredTheme } from "@/lib/gameTheme";
 import { CuratedStory } from "@/data/curatedStories";
 import { calculateGoldEarned, calculateXpEarned } from "@/lib/gameEconomy";
@@ -1229,10 +1229,13 @@ export const RPGBattleArena = ({
   // Get current dialogue
   const getCurrentDialogue = useCallback(() => {
     if (phase === 'intro') {
+      const isAgent = getStoredTheme() === 'agent';
+      const heroLines = isAgent ? agentHeroDialogue : heroDialogue;
+      const companionLines = isAgent ? agentCompanionDialogue : wizardDialogue;
       if (currentSpeaker === 'hero') {
-        return heroDialogue.intro[dialogueIndex % heroDialogue.intro.length];
+        return heroLines.intro[dialogueIndex % heroLines.intro.length];
       } else if (currentSpeaker === 'wizard') {
-        return wizardDialogue.intro[dialogueIndex % wizardDialogue.intro.length];
+        return companionLines.intro[dialogueIndex % companionLines.intro.length];
       } else {
         return enemy.dialogueIntro[dialogueIndex % enemy.dialogueIntro.length];
       }
