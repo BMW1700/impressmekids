@@ -92,7 +92,13 @@ export const StudentDashboardSidebar = ({
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.03, duration: 0.3 }}
                 onClick={() => {
-                  handleNavigation(section.id, false);
+                  if (section.id === 'aura-reading' && onNavigateToAuraReading) {
+                    handleNavigation(section.id, true, onNavigateToAuraReading);
+                  } else if (section.id === 'study-games' && onNavigateToGames) {
+                    handleNavigation(section.id, true, onNavigateToGames);
+                  } else {
+                    handleNavigation(section.id, false);
+                  }
                 }}
                 className={cn(
                   "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 relative group",
