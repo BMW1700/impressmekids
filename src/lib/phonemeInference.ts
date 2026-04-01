@@ -212,54 +212,13 @@ export const analyzePhonemePatterns = (
 };
 
 /**
+/**
  * Get human-readable name for a phoneme
  */
 export const getPhonemeDisplayName = (phoneme: string): string => {
-  const phonemeNames: Record<string, string> = {
-    // Consonants
-    'b': 'B sound (bat)',
-    'p': 'P sound (pat)',
-    'd': 'D sound (dog)',
-    't': 'T sound (top)',
-    'ɡ': 'G sound (go)',
-    'k': 'K sound (cat)',
-    'f': 'F sound (fun)',
-    'v': 'V sound (van)',
-    'θ': 'TH sound (think)',
-    'ð': 'TH sound (this)',
-    's': 'S sound (sun)',
-    'z': 'Z sound (zoo)',
-    'ʃ': 'SH sound (ship)',
-    'ʒ': 'ZH sound (measure)',
-    'h': 'H sound (hat)',
-    'tʃ': 'CH sound (chip)',
-    'dʒ': 'J sound (jump)',
-    'm': 'M sound (mom)',
-    'n': 'N sound (no)',
-    'ŋ': 'NG sound (sing)',
-    'l': 'L sound (love)',
-    'ɹ': 'R sound (red)',
-    'w': 'W sound (wet)',
-    'j': 'Y sound (yes)',
-    // Vowels
-    'æ': 'A as in "cat"',
-    'ɑ': 'AH as in "father"',
-    'ɛ': 'E as in "bed"',
-    'ɪ': 'I as in "bit"',
-    'i': 'EE as in "see"',
-    'ʌ': 'U as in "but"',
-    'u': 'OO as in "boot"',
-    'ʊ': 'OO as in "book"',
-    'ə': 'UH as in "about"',
-    'ɔ': 'AW as in "caught"',
-    'aɪ': 'I as in "my"',
-    'aʊ': 'OW as in "how"',
-    'oʊ': 'O as in "go"',
-    'eɪ': 'A as in "say"',
-    'ɔɪ': 'OY as in "boy"',
-  };
-  
-  return phonemeNames[phoneme] || `/${phoneme}/`;
+  // Use centralized utility - import dynamically to avoid circular deps
+  const { ipaToFriendlyLabel } = require('./phonemeDisplayUtils');
+  return ipaToFriendlyLabel(phoneme) || `/${phoneme}/`;
 };
 
 /**
