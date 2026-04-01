@@ -101,6 +101,12 @@ const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean)
   }
   // Check by character ID for heroes
   const hero = character as RPGCharacterType;
+  const theme = getStoredTheme();
+  if (theme === 'agent') {
+    if (hero.id === 'valor' || hero.id === 'agent_x') return 'agent_x';
+    if (hero.id === 'wizard' || hero.id === 'cipher') return 'cipher';
+    if (hero.id === 'ella' || hero.id === 'shadow') return 'shadow_agent';
+  }
   if (hero.id === 'wizard') return 'wizard';
   if (hero.id === 'ella') return 'princess';
   return 'knight';
