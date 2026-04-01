@@ -106,7 +106,7 @@ const PhonemeMasteryPathway = ({
             <div className="flex flex-wrap gap-1.5">
               {masteredPhonemes.slice(0, 12).map((phoneme) => (
                 <Badge key={phoneme} variant="outline" className="border-green-600/30 bg-green-50 text-green-700">
-                  /{phoneme}/
+                  {ipaToEnglishWithSlashes(phoneme)}
                 </Badge>
               ))}
               {masteredPhonemes.length > 12 && (
