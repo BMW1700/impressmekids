@@ -1,45 +1,42 @@
 
 
-# Brutally Honest Assessment: What's Still Broken
+# Brutally Honest: What's STILL Broken
 
-No console errors, but there are **critical wiring gaps** in `RPGCharacter.tsx` — the component that actually renders characters during battle. The agent sprites, backgrounds, and silhouettes you added exist, but **they never get used in combat** because `RPGCharacter.tsx` was never updated.
+**The core problem**: `RPGBattleArena.tsx` — the actual battle engine — has zero awareness of Agent Mode. It never imports or uses agent hero/enemy data. Every agent battle still uses classic `heroKnight`, `allyWizard`, and `princessElla`.
 
-## The Problems
+## Issue 1: Agent heroes never load in battle
+`RPGBattleArena.tsx` line 227-232 always returns classic heroes (`heroKnight`/`allyWizard`/`princessElla`). The `getAgentHero()` function in `agentBattleData.ts` exists but is never called. So even though Agent X shows on the character select screen, the battle uses Sir Valor's stats and name.
 
-### 1. Agent heroes render as classic sprites in battle
-`getSpriteType()` (line 86-89) only checks for `wizard`, `ella`, and defaults to `knight`. When you pick Agent X, Cipher, or Shadow, they all render as the classic knight sprite.
+## Issue 2: Agent enemies never load in battle
+Same problem — `getAgentEnemy()` and `getAgentBossForWorld()` exist but are never called. Every agent battle spawns classic goblins and dragons.
 
-### 2. Agent enemies render as goblins
-The enemy `idMap` (lines 49-63) has no entries for `street_thug`, `hired_gun`, `cyber_hacker`, `drone_sentry`, `rogue_agent`, `bodyguard`, `operative`, `enforcer`, `the_broker`, `the_architect`, `the_double_agent`, or `the_director`. They all fall through to the default `'goblin'` sprite.
+## Issue 3: Wrong ID mapping in `getSpriteType()`
+The sprite mapper checks `hero.id === 'valor'` but the actual hero IDs are `'knight'`, `'wizard'`, `'ella'` (even the agent hero objects use these same IDs). So the agent sprite rendering branch never triggers — agents always render as classic knight/wizard/princess sprites.
 
-### 3. Type assertions strip agent types
-Lines 400 and 497 cast `spriteType` to only classic types — even if we fixed the mapping, the agent types would get cast away before reaching `RPGCharacterSprite`.
+## Issue 4: Agent stories never load
+Need to verify if `AuraReadingSection.tsx` actually passes agent stories to the battle arena, or if the wiring stops before reaching combat.
 
-### 4. No premium sprite rendering for agents
-The `renderPremiumSprite()` function doesn't import or handle `AgentX`, `Cipher`, or `Shadow` components. Agent heroes won't get the nice SVG sprites even though they exist.
+---
 
 ## Fix Plan
 
-**Single file: `src/components/aura/game/rpg/RPGCharacter.tsx`**
+### A. `RPGBattleArena.tsx` — Make battle theme-aware
+- Import `getStoredTheme` and `getAgentHero` from agent data
+- Update `getCharacterData()` to return agent hero objects when theme is `'agent'`
+- This gives battles the right names ("Agent X" not "Sir Valor"), stats, abilities, and colors
 
-### A. Add imports for agent character components
-Import `AgentX`, `Cipher`, `Shadow` from the characters directory.
+### B. `RPGCharacter.tsx` — Fix `getSpriteType()` ID mapping
+- Change `hero.id === 'valor'` → `hero.id === 'knight'`
+- Change `hero.id === 'wizard' || hero.id === 'cipher'` → `hero.id === 'wizard'`  
+- Change `hero.id === 'ella' || hero.id === 'shadow'` → `hero.id === 'ella'`
+- These are the actual IDs the hero objects use, so the agent theme check + correct ID = correct sprite
 
-### B. Extend `SpriteType` to include agent types
-Add `'agent_x' | 'cipher' | 'shadow_agent'` plus agent enemy sprite aliases to the union type.
+### C. Verify story/enemy wiring in `AuraReadingSection.tsx`
+- Confirm agent stories and agent enemies are actually passed through to `RPGBattleArena` props
+- If not, wire them through
 
-### C. Update `getSpriteType()` for agent heroes
-Map hero IDs: when theme is agent and `hero.id === 'valor'` → `'agent_x'`, `'elara'` → `'cipher'`, `'ella'` → `'shadow_agent'`.
-
-### D. Update `getSpriteType()` for agent enemies
-Add agent enemy IDs to the `idMap` — they can reuse existing sprite types as visual stand-ins (e.g., `street_thug` → `goblin`, `the_broker` → `grog_king`) until dedicated agent enemy sprites are created, OR map them to the closest fitting existing sprites.
-
-### E. Add agent hero premium sprite rendering
-Add branches in `renderPremiumSprite()` for `agent_x`, `cipher`, `shadow_agent` that render the corresponding SVG components with proper animation states.
-
-### F. Fix type assertions on lines 400 and 497
-Include agent types in the type union so they pass through correctly.
-
-## Result
-After this fix, picking Agent X in agent mode will show the Agent X SVG in battle, agent enemies will render with appropriate sprites, and the full visual loop will be complete.
+### Files Modified
+1. `src/components/aura/game/rpg/RPGBattleArena.tsx` — theme-aware hero data loading
+2. `src/components/aura/game/rpg/RPGCharacter.tsx` — fix 3 lines in `getSpriteType()`
+3. Possibly `src/components/student/sections/AuraReadingSection.tsx` — verify enemy/story passthrough
 
