@@ -157,6 +157,18 @@ export const ipaToEnglish = (phoneme: string): string => {
   if (!phoneme) return phoneme;
   const trimmed = phoneme.trim().replace(/[0-9]/g, '');
 
+  // Handle "X→Y" arrow patterns (e.g. "ɛ→æ" → "e→a")
+  if (trimmed.includes('→')) {
+    const parts = trimmed.split('→');
+    return parts.map(p => ipaToEnglish(p.trim())).join('→');
+  }
+
+  // Handle "X→*" wildcard patterns
+  if (trimmed.includes('*')) {
+    const base = trimmed.replace(/→?\*/, '');
+    if (base) return ipaToEnglish(base);
+  }
+
   // Try IPA first (exact match, longest first for composites)
   if (IPA_TO_ENGLISH[trimmed]) return IPA_TO_ENGLISH[trimmed];
 
