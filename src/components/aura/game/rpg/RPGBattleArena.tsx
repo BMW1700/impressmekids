@@ -348,6 +348,7 @@ export const RPGBattleArena = ({
   // === LITERACY FEATURES STATE ===
   const [activePowerWord, setActivePowerWord] = useState<{ id: number; word: string; definition: string | null } | null>(null);
   const [collectedPowerWords, setCollectedPowerWords] = useState<string[]>([]);
+  const collectedPowerWordsRef = useRef<string[]>([]);
   const [vocabShieldData, setVocabShieldData] = useState<{ word: string; definition: string; distractors: string[] } | null>(null);
   const [contextClueData, setContextClueData] = useState<{ sentence: string; blankWord: string; options: string[] } | null>(null);
   const [bossGateTriggered, setBossGateTriggered] = useState(false);
