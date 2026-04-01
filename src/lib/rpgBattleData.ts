@@ -787,7 +787,7 @@ export const leviathan: RPGEnemy = {
   id: 'leviathan',
   name: 'Leviathan the Ancient',
   type: 'boss',
-  maxHp: 450,
+  maxHp: 1800, // 4x: was 450
   attack: 38,
   defense: 22,
   wordDamageMultiplier: 0.28,
