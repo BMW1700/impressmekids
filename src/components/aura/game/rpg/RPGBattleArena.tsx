@@ -602,8 +602,9 @@ export const RPGBattleArena = ({
   useEffect(() => {
     if (battleMode === 'classic' && phase === 'reading') {
       checkHPBasedMiniGame();
+      checkLiteracyMiniGame();
     }
-  }, [enemyHp, battleMode, phase, checkHPBasedMiniGame]);
+  }, [enemyHp, battleMode, phase, checkHPBasedMiniGame, checkLiteracyMiniGame]);
   
   // Call random enemy attack check when correctWords changes
   useEffect(() => {
