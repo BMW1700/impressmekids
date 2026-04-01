@@ -134,7 +134,7 @@ export const goblinMinion: RPGEnemy = {
   id: 'goblin_minion',
   name: 'Goblin Scout',
   type: 'minion',
-  maxHp: 80, // Was 40
+  maxHp: 320, // 4x: was 80
   attack: 12, // Was 8
   defense: 4, // Was 2
   wordDamageMultiplier: 0.85, // Harder to damage
