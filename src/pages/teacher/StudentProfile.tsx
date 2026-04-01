@@ -13,6 +13,7 @@ import { useTeacherNotes } from "@/hooks/useTeacherNotes";
 import { generateNextBestAction, getActionEmoji } from "@/lib/nextBestActionML";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format } from "date-fns";
+import { ipaToEnglish } from "@/lib/phonemeDisplayUtils";
 import MLInsightsDashboard from "@/components/aura/MLInsightsDashboard";
 import { ReadingSessionsList } from "@/components/aura/ReadingSessionsList";
 import { AudioPlaybackButton } from "@/components/aura/AudioPlaybackButton";
@@ -315,7 +316,7 @@ export default function StudentProfile() {
                             .filter(([_, score]) => (score as number) >= 85)
                             .map(([phoneme, score]) => (
                               <Badge key={phoneme} variant="secondary" className="bg-green-50 text-green-700">
-                                {phoneme}: {score}%
+                                {ipaToEnglish(phoneme)}: {score}%
                               </Badge>
                             ))}
                         </div>
@@ -329,7 +330,7 @@ export default function StudentProfile() {
                             .filter(([_, score]) => (score as number) >= 70 && (score as number) < 85)
                             .map(([phoneme, score]) => (
                               <Badge key={phoneme} variant="secondary" className="bg-yellow-50 text-yellow-700">
-                                {phoneme}: {score}%
+                                {ipaToEnglish(phoneme)}: {score}%
                               </Badge>
                             ))}
                         </div>
@@ -343,7 +344,7 @@ export default function StudentProfile() {
                             .filter(([_, score]) => (score as number) < 70)
                             .map(([phoneme, score]) => (
                               <Badge key={phoneme} variant="destructive">
-                                {phoneme}: {score}%
+                                {ipaToEnglish(phoneme)}: {score}%
                               </Badge>
                             ))}
                         </div>

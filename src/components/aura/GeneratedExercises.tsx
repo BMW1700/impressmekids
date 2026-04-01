@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Sparkles, CheckCircle2, BookOpen, Mic, Brain } from "lucide-react";
+import { ipaToEnglishWithSlashes } from "@/lib/phonemeDisplayUtils";
 
 interface GeneratedExercisesProps {
   problematicPhonemes: string[];
@@ -188,7 +189,7 @@ const GeneratedExercises = ({ problematicPhonemes, studentGrade = 5 }: Generated
           <CardContent>
             <p className="text-sm mb-2">
               <span className="font-medium">Focus on:</span>{' '}
-              <Badge variant="outline" className="text-sm font-mono">/{mlRecommendation.phoneme}/</Badge>
+              <Badge variant="outline" className="text-sm font-mono">{ipaToEnglishWithSlashes(mlRecommendation.phoneme)}</Badge>
             </p>
             <p className="text-xs text-muted-foreground">{mlRecommendation.reasoning}</p>
             <div className="mt-2 flex items-center gap-2">
@@ -262,7 +263,7 @@ const GeneratedExercises = ({ problematicPhonemes, studentGrade = 5 }: Generated
                   Target sounds:
                   {exercise.phoneme_targets.map((phoneme: string) => (
                     <Badge key={phoneme} variant="outline" className="text-xs">
-                      /{phoneme}/
+                      {ipaToEnglishWithSlashes(phoneme)}
                     </Badge>
                   ))}
                 </CardDescription>

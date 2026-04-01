@@ -11,6 +11,7 @@ import { Sparkles, Brain, TrendingUp, Zap, AlertTriangle, Activity } from "lucid
 import NeuralNetworkVisualization from "./NeuralNetworkVisualization";
 import PhonemeProgressionTree from "./PhonemeProgressionTree";
 import LiveCognitiveLoadMeter from "./LiveCognitiveLoadMeter";
+import { ipaToEnglishWithSlashes } from "@/lib/phonemeDisplayUtils";
 
 interface MLInsightsDashboardProps {
   studentId: string;
@@ -336,7 +337,7 @@ const MLInsightsDashboard = ({
                       {transferInsights.predictions.slice(0, 3).map((pred: any) => (
                         <div key={pred.phoneme} className="p-2 rounded bg-muted text-xs flex justify-between items-center">
                           <div>
-                            <span className="font-mono font-bold">/{pred.phoneme}/</span>
+                            <span className="font-mono font-bold">{ipaToEnglishWithSlashes(pred.phoneme)}</span>
                             <span className="ml-2 text-muted-foreground">{pred.reasoning}</span>
                           </div>
                           <Badge variant={pred.readinessLevel === 'high' ? 'default' : 'secondary'}>

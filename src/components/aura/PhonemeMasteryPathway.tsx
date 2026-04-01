@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, Target, TrendingUp, Sparkles, Info } from "lucide-react";
 import { predictPhonemeGains, TransferPrediction } from "@/lib/ml/phonemeTransferML";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ipaToEnglishWithSlashes } from "@/lib/phonemeDisplayUtils";
 
 interface PhonemeMasteryPathwayProps {
   masteredPhonemes: string[];
@@ -105,7 +106,7 @@ const PhonemeMasteryPathway = ({
             <div className="flex flex-wrap gap-1.5">
               {masteredPhonemes.slice(0, 12).map((phoneme) => (
                 <Badge key={phoneme} variant="outline" className="border-green-600/30 bg-green-50 text-green-700">
-                  /{phoneme}/
+                  {ipaToEnglishWithSlashes(phoneme)}
                 </Badge>
               ))}
               {masteredPhonemes.length > 12 && (
@@ -127,7 +128,7 @@ const PhonemeMasteryPathway = ({
             <div className="flex flex-wrap gap-1.5">
               {strugglingPhonemes.map((phoneme) => (
                 <Badge key={phoneme} variant="outline" className="border-amber-600/30 bg-amber-50 text-amber-700">
-                  /{phoneme}/
+                  {ipaToEnglishWithSlashes(phoneme)}
                 </Badge>
               ))}
             </div>
@@ -151,7 +152,7 @@ const PhonemeMasteryPathway = ({
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg font-semibold">/{prediction.phoneme}/</span>
+                        <span className="text-lg font-semibold">{ipaToEnglishWithSlashes(prediction.phoneme)}</span>
                         <Badge variant={getReadinessBadgeVariant(prediction.readinessLevel)}>
                           {getReadinessLabel(prediction.readinessLevel)}
                         </Badge>

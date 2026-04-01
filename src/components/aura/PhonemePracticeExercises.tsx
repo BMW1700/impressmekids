@@ -7,6 +7,7 @@ import { generatePracticeExercises } from '@/lib/mispronunciationAnalysis';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { playCorrectPronunciation, unlockSpeechSynthesis } from '@/lib/pronunciationPlayer';
+import { ipaToEnglishWithSlashes } from '@/lib/phonemeDisplayUtils';
 
 interface PhonemePracticeExercisesProps {
   studentId: string;
@@ -128,7 +129,7 @@ export const PhonemePracticeExercises = ({ studentId }: PhonemePracticeExercises
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-2xl font-bold text-primary">
-                    /{exercise.phoneme}/
+                    {ipaToEnglishWithSlashes(exercise.phoneme)}
                   </CardTitle>
                   <CardDescription className="mt-1">
                     {exercise.tips}
