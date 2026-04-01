@@ -38,6 +38,18 @@ const worldNames: Record<number, string> = {
   8: 'The Void',
 };
 
+const agentWorldNames: Record<number, string> = {
+  0: 'Training Grounds',
+  1: 'The Underground',
+  2: 'Neon District',
+  3: 'The Embassy',
+  4: 'Syndicate HQ',
+  5: 'The Underground',
+  6: 'Neon District',
+  7: 'The Embassy',
+  8: 'Syndicate HQ',
+};
+
 export const RPGBattleBackground = ({ 
   theme,
   enemyType = 'minion',
