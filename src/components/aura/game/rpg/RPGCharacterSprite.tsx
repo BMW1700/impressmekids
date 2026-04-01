@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 
-type CharacterType = 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian';
+type CharacterType = 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'agent_x' | 'cipher' | 'shadow_agent';
 
 interface RPGCharacterSpriteProps {
   type: CharacterType;
