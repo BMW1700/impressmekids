@@ -54,6 +54,11 @@ const phonemeDifficultyMap: Record<string, number> = {
   'eɪ': 3, // /ae/ as in "day"
   'oʊ': 3, // /oe/ as in "go"
   'ɔɪ': 5, // /oi/ as in "boy"
+
+  // R-controlled vowels
+  'ɑɹ': 6, // /ar/ as in "car"
+  'ɔɹ': 6, // /or/ as in "for"
+  'ɛɹ': 6, // /air/ as in "fair"
 };
 
 /**

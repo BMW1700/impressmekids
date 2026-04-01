@@ -51,6 +51,10 @@ export const phonemeFeatures: { [key: string]: { voicing: number; place: number;
   'eɪ': { voicing: 1, place: 10, manner: 8 }, // /ae/ (day)
   'oʊ': { voicing: 1, place: 11, manner: 9 }, // /oe/ (go)
   'ɔɪ': { voicing: 1, place: 11, manner: 7 }, // /oi/ (boy)
+  // R-controlled vowels
+  'ɑɹ': { voicing: 1, place: 11, manner: 6 }, // /ar/ (car)
+  'ɔɹ': { voicing: 1, place: 11, manner: 6 }, // /or/ (for)
+  'ɛɹ': { voicing: 1, place: 10, manner: 6 }, // /air/ (fair)
 };
 
 /**

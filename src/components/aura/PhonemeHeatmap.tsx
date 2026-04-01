@@ -63,6 +63,10 @@ const COMMON_PHONEMES = [
   // === Diphthongs (2) ===
   { symbol: "aʊ", label: "/ow/", example: "out" },
   { symbol: "ɔɪ", label: "/oi/", example: "boy" },
+  // === R-Controlled Vowels (3) ===
+  { symbol: "ɑɹ", label: "/ar/", example: "car" },
+  { symbol: "ɔɹ", label: "/or/", example: "for" },
+  { symbol: "ɛɹ", label: "/air/", example: "fair" },
 ];
 
 const PhonemeHeatmap = ({ students, skillVectors, classroomId, classroomName, hideClassAverage = false }: PhonemeHeatmapProps) => {
