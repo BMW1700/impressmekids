@@ -937,10 +937,12 @@ export const RPGBattleArena = ({
     if (sentences.length < 2) return null;
     
     const sentence = sentences[Math.floor(Math.random() * sentences.length)].trim();
-    const words = sentence.split(/\s+/).filter(w => w.replace(/[^a-zA-Z]/g, '').length >= 4);
-    if (words.length < 3) return null;
+    // Keep the raw word tokens so we can find them in the original sentence even with punctuation
+    const wordTokens = sentence.split(/\s+/).filter(w => w.replace(/[^a-zA-Z]/g, '').length >= 4);
+    if (wordTokens.length < 3) return null;
     
-    const blankWord = words[Math.floor(Math.random() * words.length)].replace(/[^a-zA-Z]/g, '');
+    const rawToken = wordTokens[Math.floor(Math.random() * wordTokens.length)];
+    const blankWord = rawToken.replace(/[^a-zA-Z]/g, '');
     // Generate distractors from other words in passage
     const allWords = (story.passage_text || '').match(/\b[a-zA-Z]{4,}\b/g) || [];
     const uniqueWords = [...new Set(allWords.map(w => w.toLowerCase()))].filter(w => w !== blankWord.toLowerCase());
