@@ -79,6 +79,112 @@ const WORD_DEFINITIONS: Record<string, string> = {
   carefully: 'with great attention',
   happily: 'in a happy way',
   bravely: 'in a brave way, without fear',
+  // Expanded vocabulary — ~100 more words
+  abandoned: 'left behind or given up on',
+  ancient: 'very old, from long ago',
+  approach: 'to come closer to something',
+  beneath: 'below or under something',
+  capture: 'to catch or take hold of',
+  cautious: 'being very careful to avoid danger',
+  celebrate: 'to do something special for a happy event',
+  certainly: 'without any doubt',
+  challenge: 'something difficult that tests your ability',
+  character: 'a person in a story or play',
+  comfort: 'a feeling of being safe and relaxed',
+  community: 'a group of people living in the same area',
+  companion: 'a friend who goes with you',
+  complete: 'to finish something',
+  confused: 'not able to understand something clearly',
+  courage: 'the ability to do something brave',
+  creature: 'any living animal or being',
+  curious: 'wanting to learn or know more',
+  darkness: 'when there is no light',
+  decided: 'made a choice about something',
+  delicate: 'easily broken or damaged',
+  describe: 'to tell what something is like',
+  destroy: 'to break something completely',
+  determined: 'having a strong desire to do something',
+  difficult: 'not easy to do or understand',
+  discover: 'to find something for the first time',
+  distance: 'how far apart two things are',
+  escape: 'to get away from danger',
+  exactly: 'in a way that is completely correct',
+  examine: 'to look at something very closely',
+  exhausted: 'extremely tired',
+  explore: 'to travel to find new things',
+  familiar: 'something you know or recognize',
+  favorite: 'liked more than all others',
+  ferocious: 'very fierce or violent',
+  fortunate: 'lucky or having good luck',
+  gathered: 'brought together in one place',
+  gigantic: 'extremely large',
+  glimmer: 'a faint or weak light',
+  graceful: 'moving in a smooth, beautiful way',
+  grateful: 'feeling thankful',
+  guardian: 'someone who protects or watches over',
+  hesitate: 'to pause before doing something',
+  imagine: 'to make a picture in your mind',
+  innocent: 'not guilty of doing wrong',
+  invisible: 'not able to be seen',
+  journey: 'a long trip from one place to another',
+  knowledge: 'information and understanding',
+  language: 'words used to communicate',
+  legendary: 'famous from stories told over time',
+  magnificent: 'extremely beautiful or impressive',
+  marvelous: 'causing great wonder, amazing',
+  mention: 'to talk about something briefly',
+  message: 'information sent to someone',
+  mountain: 'a very high hill',
+  natural: 'found in nature, not made by people',
+  necessary: 'needed or required',
+  obstacle: 'something in the way that stops you',
+  ordinary: 'normal, not special',
+  patient: 'able to wait without getting upset',
+  peaceful: 'calm and quiet',
+  perhaps: 'maybe, possibly',
+  permission: 'when someone says you are allowed',
+  pleasant: 'nice and enjoyable',
+  possess: 'to have or own something',
+  powerful: 'having great strength or force',
+  practice: 'doing something over and over to get better',
+  precious: 'very valuable and important',
+  prepare: 'to get ready for something',
+  probably: 'most likely to happen',
+  problem: 'something difficult to figure out',
+  promise: 'to say you will definitely do something',
+  protect: 'to keep safe from harm',
+  purpose: 'the reason for doing something',
+  realize: 'to suddenly understand something',
+  recognize: 'to know something you have seen before',
+  remember: 'to think of something from the past',
+  rescue: 'to save from danger',
+  respect: 'to show care for someone\'s feelings',
+  satisfy: 'to make someone happy or pleased',
+  separate: 'to move apart or divide',
+  serious: 'not joking, very important',
+  shelter: 'a place that protects from weather',
+  shimmering: 'shining with a soft, flickering light',
+  silence: 'complete quiet, no sound',
+  similar: 'almost the same but not exactly',
+  situation: 'what is happening at a certain time',
+  solution: 'the answer to a problem',
+  sparkle: 'to shine with small flashes of light',
+  struggle: 'to try very hard to do something difficult',
+  succeed: 'to do well at something',
+  suggest: 'to give an idea for someone to think about',
+  surprise: 'something unexpected',
+  survive: 'to stay alive through danger',
+  swiftly: 'moving very fast',
+  treasure: 'something very valuable',
+  triumph: 'a great victory or success',
+  trouble: 'problems or difficulties',
+  unusual: 'not normal or common',
+  valuable: 'worth a lot of money or importance',
+  vanish: 'to disappear suddenly',
+  village: 'a small town',
+  wander: 'to walk around without a plan',
+  warrior: 'a brave fighter',
+  whisper: 'to speak very softly',
 };
 
 // Check if a word is a power word (longer, not common)
@@ -118,6 +224,52 @@ export const VocabularyTracker = ({
       return (data || []) as VocabularyWord[];
     },
     enabled: !!studentId,
+  });
+
+  // Increment times_correct for a word and mark mastered if >= 3
+  const incrementMasteryMutation = useMutation({
+    mutationFn: async (word: string) => {
+      const cleaned = word.toLowerCase().replace(/[^a-z]/g, '');
+      // First get current record
+      const { data: existing } = await supabase
+        .from('student_vocabulary')
+        .select('id, times_correct, times_seen')
+        .eq('student_id', studentId)
+        .eq('word', cleaned)
+        .maybeSingle();
+      
+      if (existing) {
+        const newCorrect = (existing.times_correct || 0) + 1;
+        const newSeen = (existing.times_seen || 0) + 1;
+        const { error } = await supabase
+          .from('student_vocabulary')
+          .update({ 
+            times_correct: newCorrect, 
+            times_seen: newSeen,
+            mastered: newCorrect >= 3 
+          })
+          .eq('id', existing.id);
+        if (error) throw error;
+        return { newCorrect, mastered: newCorrect >= 3 };
+      } else {
+        // Word not tracked yet — insert it
+        const { error } = await supabase
+          .from('student_vocabulary')
+          .insert({
+            student_id: studentId,
+            word: cleaned,
+            definition: getWordDefinition(cleaned),
+            times_seen: 1,
+            times_correct: 1,
+            mastered: false,
+          });
+        if (error) throw error;
+        return { newCorrect: 1, mastered: false };
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['student-vocabulary', studentId] });
+    },
   });
 
   // Add new words mutation

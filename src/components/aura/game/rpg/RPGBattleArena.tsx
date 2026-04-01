@@ -47,6 +47,12 @@ import { RPGWebTrap } from "./RPGWebTrap";
 import { RPGCharacterSelect, PlayableCharacter } from "./RPGCharacterSelect";
 import { Spell } from "./RPGSpellMenu";
 import { Item } from "./RPGItemMenu";
+// NEW: Literacy features
+import { RPGWordPowerUp } from "./RPGWordPowerUp";
+import { RPGVocabShield } from "./RPGVocabShield";
+import { RPGContextClue } from "./RPGContextClue";
+import { ComprehensionQuiz } from "./ComprehensionQuiz";
+import { isPowerWord, getWordDefinition } from "./VocabularyTracker";
 import { 
   heroKnight, 
   allyWizard,
@@ -71,7 +77,7 @@ const battleSounds = new SoundEffects();
 
 type EnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'goblin_shaman';
 // UPDATED: Added goblin_horde for Classic mode mini-game + quick_block for enemy attacks
-type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'word_shield' | 'spell_combo' | 'dodge_words' | 'rhyme_chain' | 'speed_typist' | 'tug_of_war' | 'balloon_battle' | 'goblin_horde' | 'fireball_defense' | 'quick_block' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat' | 'word_echo' | 'wind_chase' | 'ink_splash' | 'crystal_prison' | 'lightning_storm' | 'void_pull' | 'ground_ripple' | 'web_trap';
+type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'word_shield' | 'spell_combo' | 'dodge_words' | 'rhyme_chain' | 'speed_typist' | 'tug_of_war' | 'balloon_battle' | 'goblin_horde' | 'fireball_defense' | 'quick_block' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat' | 'word_echo' | 'wind_chase' | 'ink_splash' | 'crystal_prison' | 'lightning_storm' | 'void_pull' | 'ground_ripple' | 'web_trap' | 'vocab_shield' | 'context_clue' | 'boss_gate';
 type InventoryKey = 'health_potion' | 'magic_potion';
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
 
@@ -318,6 +324,14 @@ export const RPGBattleArena = ({
   
   // Sound toggle
   const [soundEnabled, setSoundEnabled] = useState(true);
+  
+  // === LITERACY FEATURES STATE ===
+  const [activePowerWord, setActivePowerWord] = useState<{ id: number; word: string; definition: string | null } | null>(null);
+  const [collectedPowerWords, setCollectedPowerWords] = useState<string[]>([]);
+  const [vocabShieldData, setVocabShieldData] = useState<{ word: string; definition: string; distractors: string[] } | null>(null);
+  const [contextClueData, setContextClueData] = useState<{ sentence: string; blankWord: string; options: string[] } | null>(null);
+  const [bossGateTriggered, setBossGateTriggered] = useState(false);
+  const [wordMasteryBonus, setWordMasteryBonus] = useState<{ word: string; multiplier: number } | null>(null);
   
   // Update sound effects when toggle changes
   useEffect(() => {
@@ -903,6 +917,176 @@ export const RPGBattleArena = ({
     triggerScreenShake();
   }, []);
 
+  // === LITERACY FEATURE HANDLERS ===
+  
+  // Handle power word detection (called after a correct word read)
+  const handlePowerWordCheck = useCallback((word: string) => {
+    if (!isPowerWord(word)) return;
+    const definition = getWordDefinition(word);
+    setActivePowerWord({ id: Date.now(), word, definition });
+    setCollectedPowerWords(prev => [...prev, word.toLowerCase()]);
+    // Bonus gold for power words
+    setGoldEarned(prev => prev + 2);
+    // Auto-dismiss after 2.5 seconds
+    setTimeout(() => setActivePowerWord(null), 2500);
+  }, []);
+
+  // Generate context clue data from current story
+  const generateContextClue = useCallback((): { sentence: string; blankWord: string; options: string[] } | null => {
+    const sentences = (story.passage_text || '').split(/[.!?]+/).filter(s => s.trim().length > 15);
+    if (sentences.length < 2) return null;
+    
+    const sentence = sentences[Math.floor(Math.random() * sentences.length)].trim();
+    const words = sentence.split(/\s+/).filter(w => w.replace(/[^a-zA-Z]/g, '').length >= 4);
+    if (words.length < 3) return null;
+    
+    const blankWord = words[Math.floor(Math.random() * words.length)].replace(/[^a-zA-Z]/g, '');
+    // Generate distractors from other words in passage
+    const allWords = (story.passage_text || '').match(/\b[a-zA-Z]{4,}\b/g) || [];
+    const uniqueWords = [...new Set(allWords.map(w => w.toLowerCase()))].filter(w => w !== blankWord.toLowerCase());
+    const distractors = uniqueWords.sort(() => Math.random() - 0.5).slice(0, 2);
+    if (distractors.length < 2) return null;
+    
+    const options = [blankWord, ...distractors].sort(() => Math.random() - 0.5);
+    return { sentence: sentence + '.', blankWord, options };
+  }, [story.passage_text]);
+
+  // Generate vocab shield data from collected words
+  const generateVocabShield = useCallback((): { word: string; definition: string; distractors: string[] } | null => {
+    // Try collected power words first, then any word from definitions
+    const definedWords = Object.entries({
+      adventure: 'an exciting experience or journey',
+      mysterious: 'hard to understand or explain',
+      beautiful: 'very pretty or pleasing to look at',
+      enormous: 'very large, huge',
+      dangerous: 'likely to cause harm',
+      brilliant: 'very smart or very bright',
+      courage: 'the ability to do something brave',
+      creature: 'any living animal or being',
+      discover: 'to find something for the first time',
+      guardian: 'someone who protects or watches over',
+    });
+    
+    const picked = definedWords[Math.floor(Math.random() * definedWords.length)];
+    const otherDefs = definedWords.filter(([w]) => w !== picked[0]).map(([, d]) => d);
+    const distractors = otherDefs.sort(() => Math.random() - 0.5).slice(0, 2);
+    
+    return { word: picked[0], definition: picked[1], distractors };
+  }, []);
+
+  // Handle vocab shield complete
+  const handleVocabShieldComplete = useCallback((correct: boolean, damage: number) => {
+    if (correct && damage > 0) {
+      const newHp = Math.max(0, enemyHpRef.current - damage);
+      enemyHpRef.current = newHp;
+      setEnemyHp(newHp);
+      setTotalDamage(prev => prev + damage);
+      battleSounds.comboSuccess();
+    } else {
+      // Boss counter-attacks
+      setPlayerHp(prev => Math.max(0, prev - 15));
+      triggerScreenShake();
+    }
+    setVocabShieldData(null);
+    returnToReading();
+  }, [returnToReading]);
+
+  // Handle context clue complete
+  const handleContextClueComplete = useCallback((correct: boolean, damage: number) => {
+    if (correct && damage > 0) {
+      const newHp = Math.max(0, enemyHpRef.current - damage);
+      enemyHpRef.current = newHp;
+      setEnemyHp(newHp);
+      setTotalDamage(prev => prev + damage);
+    } else {
+      setPlayerHp(prev => Math.max(0, prev - 10));
+      triggerScreenShake();
+    }
+    setContextClueData(null);
+    returnToReading();
+  }, [returnToReading]);
+
+  // Handle boss gate complete
+  const handleBossGateComplete = useCallback((score: number, total: number, bonusXp: number, bonusGold: number) => {
+    if (score > 0) {
+      // Correct - kill the boss!
+      setXpEarned(prev => prev + bonusXp);
+      setGoldEarned(prev => prev + bonusGold);
+      enemyHpRef.current = 0;
+      setEnemyHp(0);
+      battleSounds.celebrationSound();
+    } else {
+      // Wrong - boss heals 15%
+      const healAmount = Math.floor(enemy.maxHp * 0.15);
+      const newHp = Math.min(enemy.maxHp, enemyHpRef.current + healAmount);
+      enemyHpRef.current = newHp;
+      setEnemyHp(newHp);
+      setBossGateTriggered(false); // Allow re-trigger
+      returnToReading();
+    }
+  }, [enemy.maxHp, returnToReading]);
+
+  // Check for vocab shield / context clue triggers at HP thresholds
+  // These piggyback on the existing HP-based mini-game system
+  const checkLiteracyMiniGame = useCallback(() => {
+    if (phase !== 'reading' || battleMode !== 'classic') return;
+    
+    const hpPercent = (enemyHpRef.current / enemy.maxHp) * 100;
+    
+    // Boss gate at 25% HP for boss/elite enemies
+    if (!bossGateTriggered && hpPercent <= 25 && hpPercent > 0 && 
+        (enemy.type === 'boss' || enemy.type === 'final_boss' || enemy.type === 'elite')) {
+      setBossGateTriggered(true);
+      setEnemyAbilityMessage(`${enemy.name} raises a LAST STAND BARRIER!`);
+      battleSounds.miniGameStart();
+      setTimeout(() => {
+        setEnemyAbilityMessage(null);
+        setPhaseSafe('boss_gate', 'boss gate trigger');
+      }, 1200);
+      return;
+    }
+    
+    // Vocab shield at 65% HP for boss/elite (only once)
+    if (hpPercent <= 65 && hpPercent > 60 && !triggeredThresholds.has(65) &&
+        (enemy.type === 'boss' || enemy.type === 'final_boss' || enemy.type === 'elite')) {
+      const shieldData = generateVocabShield();
+      if (shieldData) {
+        setTriggeredThresholds(prev => new Set([...prev, 65]));
+        setVocabShieldData(shieldData);
+        setEnemyAbilityMessage(`${enemy.name} activates WORD SHIELD!`);
+        battleSounds.miniGameStart();
+        setTimeout(() => {
+          setEnemyAbilityMessage(null);
+          setPhaseSafe('vocab_shield', 'vocab shield trigger');
+        }, 1000);
+        return;
+      }
+    }
+    
+    // Context clue at 40% HP (only once)
+    if (hpPercent <= 40 && hpPercent > 35 && !triggeredThresholds.has(40)) {
+      const clueData = generateContextClue();
+      if (clueData) {
+        setTriggeredThresholds(prev => new Set([...prev, 40]));
+        setContextClueData(clueData);
+        setEnemyAbilityMessage(`${enemy.name} casts WORD FOG!`);
+        battleSounds.miniGameStart();
+        setTimeout(() => {
+          setEnemyAbilityMessage(null);
+          setPhaseSafe('context_clue', 'context clue trigger');
+        }, 1000);
+        return;
+      }
+    }
+  }, [phase, battleMode, enemy, bossGateTriggered, triggeredThresholds, generateVocabShield, generateContextClue, setPhaseSafe]);
+
+  // Call literacy mini-game check when enemyHp changes
+  useEffect(() => {
+    if (battleMode === 'classic' && phase === 'reading') {
+      checkLiteracyMiniGame();
+    }
+  }, [enemyHp, battleMode, phase, checkLiteracyMiniGame]);
+
   // Trigger word barrage attack
   const triggerWordBarrage = useCallback(() => {
     const wordCount = enemy.barrageWordCount || 5;
@@ -1388,6 +1572,9 @@ export const RPGBattleArena = ({
       setStreak(newStreak);
       correctWordsRef.current += 1;
       setCorrectWords(prev => prev + 1);
+      
+      // Power word detection - show loot drop overlay
+      handlePowerWordCheck(word);
       if (newStreak > longestStreakRef.current) {
         longestStreakRef.current = newStreak;
         setLongestStreak(newStreak);
@@ -2125,7 +2312,39 @@ export const RPGBattleArena = ({
             onDamage={handleMiniGameDamage}
           />
         )}
+        {/* LITERACY FEATURES */}
+        {phase === 'vocab_shield' && vocabShieldData && (
+          <RPGVocabShield
+            vocabWord={vocabShieldData}
+            enemyName={enemy.name}
+            onComplete={handleVocabShieldComplete}
+          />
+        )}
+        {phase === 'context_clue' && contextClueData && (
+          <RPGContextClue
+            clue={contextClueData}
+            enemyName={enemy.name}
+            onComplete={handleContextClueComplete}
+          />
+        )}
+        {phase === 'boss_gate' && (
+          <ComprehensionQuiz
+            isOpen={true}
+            storyTitle={story.title}
+            storyText={story.passage_text || ''}
+            variant="boss_gate"
+            enemyName={enemy.name}
+            onComplete={handleBossGateComplete}
+            onSkip={() => {
+              setBossGateTriggered(false);
+              returnToReading();
+            }}
+          />
+        )}
       </AnimatePresence>
+
+      {/* Power Word Loot Drop */}
+      <RPGWordPowerUp powerWord={activePowerWord} />
 
       {/* Enemy Ability Message */}
       <AnimatePresence>
