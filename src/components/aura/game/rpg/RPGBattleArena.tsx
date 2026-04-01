@@ -325,6 +325,14 @@ export const RPGBattleArena = ({
   // Sound toggle
   const [soundEnabled, setSoundEnabled] = useState(true);
   
+  // === LITERACY FEATURES STATE ===
+  const [activePowerWord, setActivePowerWord] = useState<{ id: number; word: string; definition: string | null } | null>(null);
+  const [collectedPowerWords, setCollectedPowerWords] = useState<string[]>([]);
+  const [vocabShieldData, setVocabShieldData] = useState<{ word: string; definition: string; distractors: string[] } | null>(null);
+  const [contextClueData, setContextClueData] = useState<{ sentence: string; blankWord: string; options: string[] } | null>(null);
+  const [bossGateTriggered, setBossGateTriggered] = useState(false);
+  const [wordMasteryBonus, setWordMasteryBonus] = useState<{ word: string; multiplier: number } | null>(null);
+  
   // Update sound effects when toggle changes
   useEffect(() => {
     battleSounds.setSoundEnabled(soundEnabled);
