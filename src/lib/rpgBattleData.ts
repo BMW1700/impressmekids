@@ -398,7 +398,7 @@ export const shadowWraith: RPGEnemy = {
   id: 'shadow_wraith',
   name: 'Whisper the Shadow Wraith',
   type: 'shadow_wraith',
-  maxHp: 180,
+  maxHp: 720, // 4x: was 180
   attack: 32,
   defense: 12,
   wordDamageMultiplier: 0.6,
