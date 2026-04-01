@@ -23,6 +23,10 @@ import { VoidPhantom, VoidPhantomState } from "../characters/VoidPhantom";
 import { RealityShifter, RealityShifterState } from "../characters/RealityShifter";
 import { WordEater, WordEaterState } from "../characters/WordEater";
 import { EchoWraith, EchoWraithState } from "../characters/EchoWraith";
+import { AgentX, AgentXState } from "../characters/AgentX";
+import { Cipher, CipherState } from "../characters/Cipher";
+import { Shadow, ShadowState } from "../characters/Shadow";
+import { getStoredTheme } from "@/lib/gameTheme";
 
 interface RPGCharacterProps {
   character: RPGCharacterType | RPGEnemy;
