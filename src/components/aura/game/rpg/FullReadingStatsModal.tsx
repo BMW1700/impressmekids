@@ -43,38 +43,11 @@ interface FullReadingStatsModalProps {
   studentName?: string;
 }
 
-// Phoneme display mappings
-const arpabetLabels: Record<string, string> = {
-  AA: "ah (father)", AE: "a (cat)", AH: "uh (but)", AO: "aw (dog)",
-  AW: "ow (cow)", AY: "eye (my)", B: "b", CH: "ch (chair)",
-  D: "d", DH: "th (the)", EH: "e (bed)", ER: "er (bird)",
-  EY: "ay (say)", F: "f", G: "g", HH: "h",
-  IH: "i (sit)", IY: "ee (see)", JH: "j", K: "k",
-  L: "l", M: "m", N: "n", NG: "ng (sing)",
-  OW: "oh (go)", OY: "oy (boy)", P: "p", R: "r",
-  S: "s", SH: "sh (ship)", T: "t", TH: "th (think)",
-  UH: "oo (book)", UW: "oo (boot)", V: "v", W: "w",
-  Y: "y", Z: "z", ZH: "zh (measure)"
-};
+import { ipaToEnglish, ipaToFriendlyLabel } from '@/lib/phonemeDisplayUtils';
 
-const phonemeDisplay: Record<string, string> = {
-  AA: "ah", AE: "a", AH: "uh", AO: "aw", AW: "ow", AY: "i",
-  CH: "ch", DH: "th", EH: "e", ER: "er", EY: "ay", IH: "i",
-  IY: "ee", JH: "j", NG: "ng", OW: "oh", OY: "oy", SH: "sh",
-  TH: "th", UH: "oo", UW: "oo"
-};
-
-const normalizePhoneme = (phoneme: string) => phoneme.trim().replace(/[0-9]/g, "");
-const getPhonemeDisplay = (phoneme: string) => {
-  const raw = normalizePhoneme(phoneme);
-  const upper = raw.toUpperCase();
-  return phonemeDisplay[upper] || raw;
-};
-const getPhonemeLabel = (phoneme: string) => {
-  const raw = normalizePhoneme(phoneme);
-  const upper = raw.toUpperCase();
-  return arpabetLabels[upper] || raw;
-};
+// Aliases for backward compat within this file
+const getPhonemeDisplay = ipaToEnglish;
+const getPhonemeLabel = ipaToFriendlyLabel;
 
 // Phoneme mastery type from error patterns table
 interface PhonemePattern {
