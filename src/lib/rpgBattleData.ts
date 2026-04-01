@@ -468,7 +468,7 @@ export const goblinShaman: RPGEnemy = {
   id: 'goblin_shaman',
   name: 'Zix the Goblin Shaman',
   type: 'elite',
-  maxHp: 160,
+  maxHp: 640, // 4x: was 160
   attack: 26,
   defense: 10,
   wordDamageMultiplier: 0.55,
