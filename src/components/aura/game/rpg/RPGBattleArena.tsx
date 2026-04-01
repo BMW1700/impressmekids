@@ -2302,7 +2302,39 @@ export const RPGBattleArena = ({
             onDamage={handleMiniGameDamage}
           />
         )}
+        {/* LITERACY FEATURES */}
+        {phase === 'vocab_shield' && vocabShieldData && (
+          <RPGVocabShield
+            vocabWord={vocabShieldData}
+            enemyName={enemy.name}
+            onComplete={handleVocabShieldComplete}
+          />
+        )}
+        {phase === 'context_clue' && contextClueData && (
+          <RPGContextClue
+            clue={contextClueData}
+            enemyName={enemy.name}
+            onComplete={handleContextClueComplete}
+          />
+        )}
+        {phase === 'boss_gate' && (
+          <ComprehensionQuiz
+            isOpen={true}
+            storyTitle={story.title}
+            storyText={story.passage_text || ''}
+            variant="boss_gate"
+            enemyName={enemy.name}
+            onComplete={handleBossGateComplete}
+            onSkip={() => {
+              setBossGateTriggered(false);
+              returnToReading();
+            }}
+          />
+        )}
       </AnimatePresence>
+
+      {/* Power Word Loot Drop */}
+      <RPGWordPowerUp powerWord={activePowerWord} />
 
       {/* Enemy Ability Message */}
       <AnimatePresence>
