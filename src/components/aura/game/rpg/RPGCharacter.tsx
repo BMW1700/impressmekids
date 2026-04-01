@@ -26,6 +26,11 @@ import { EchoWraith, EchoWraithState } from "../characters/EchoWraith";
 import { AgentX, AgentXState } from "../characters/AgentX";
 import { Cipher, CipherState } from "../characters/Cipher";
 import { Shadow, ShadowState } from "../characters/Shadow";
+import { StreetThug, StreetThugState } from "../characters/StreetThug";
+import { HiredGun, HiredGunState } from "../characters/HiredGun";
+import { CyberHacker, CyberHackerState } from "../characters/CyberHacker";
+import { TheBroker, TheBrokerState } from "../characters/TheBroker";
+import { TheDirector, TheDirectorState } from "../characters/TheDirector";
 import { getStoredTheme } from "@/lib/gameTheme";
 
 interface RPGCharacterProps {
