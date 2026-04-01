@@ -646,7 +646,7 @@ export const cloudGiant: RPGEnemy = {
   id: 'cloud_giant',
   name: 'Cumulus the Cloud Giant',
   type: 'elite',
-  maxHp: 320,
+  maxHp: 1280, // 4x: was 320
   attack: 25,
   defense: 20,
   wordDamageMultiplier: 0.35,
