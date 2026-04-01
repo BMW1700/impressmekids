@@ -917,6 +917,169 @@ export const RPGBattleArena = ({
     triggerScreenShake();
   }, []);
 
+  // === LITERACY FEATURE HANDLERS ===
+  
+  // Handle power word detection (called after a correct word read)
+  const handlePowerWordCheck = useCallback((word: string) => {
+    if (!isPowerWord(word)) return;
+    const definition = getWordDefinition(word);
+    setActivePowerWord({ id: Date.now(), word, definition });
+    setCollectedPowerWords(prev => [...prev, word.toLowerCase()]);
+    // Bonus gold for power words
+    setGoldEarned(prev => prev + 2);
+    // Auto-dismiss after 2.5 seconds
+    setTimeout(() => setActivePowerWord(null), 2500);
+  }, []);
+
+  // Generate context clue data from current story
+  const generateContextClue = useCallback((): { sentence: string; blankWord: string; options: string[] } | null => {
+    const sentences = (story.passage_text || '').split(/[.!?]+/).filter(s => s.trim().length > 15);
+    if (sentences.length < 2) return null;
+    
+    const sentence = sentences[Math.floor(Math.random() * sentences.length)].trim();
+    const words = sentence.split(/\s+/).filter(w => w.replace(/[^a-zA-Z]/g, '').length >= 4);
+    if (words.length < 3) return null;
+    
+    const blankWord = words[Math.floor(Math.random() * words.length)].replace(/[^a-zA-Z]/g, '');
+    // Generate distractors from other words in passage
+    const allWords = (story.passage_text || '').match(/\b[a-zA-Z]{4,}\b/g) || [];
+    const uniqueWords = [...new Set(allWords.map(w => w.toLowerCase()))].filter(w => w !== blankWord.toLowerCase());
+    const distractors = uniqueWords.sort(() => Math.random() - 0.5).slice(0, 2);
+    if (distractors.length < 2) return null;
+    
+    const options = [blankWord, ...distractors].sort(() => Math.random() - 0.5);
+    return { sentence: sentence + '.', blankWord, options };
+  }, [story.passage_text]);
+
+  // Generate vocab shield data from collected words
+  const generateVocabShield = useCallback((): { word: string; definition: string; distractors: string[] } | null => {
+    // Try collected power words first, then any word from definitions
+    const definedWords = Object.entries({
+      adventure: 'an exciting experience or journey',
+      mysterious: 'hard to understand or explain',
+      beautiful: 'very pretty or pleasing to look at',
+      enormous: 'very large, huge',
+      dangerous: 'likely to cause harm',
+      brilliant: 'very smart or very bright',
+      courage: 'the ability to do something brave',
+      creature: 'any living animal or being',
+      discover: 'to find something for the first time',
+      guardian: 'someone who protects or watches over',
+    });
+    
+    const picked = definedWords[Math.floor(Math.random() * definedWords.length)];
+    const otherDefs = definedWords.filter(([w]) => w !== picked[0]).map(([, d]) => d);
+    const distractors = otherDefs.sort(() => Math.random() - 0.5).slice(0, 2);
+    
+    return { word: picked[0], definition: picked[1], distractors };
+  }, []);
+
+  // Handle vocab shield complete
+  const handleVocabShieldComplete = useCallback((correct: boolean, damage: number) => {
+    if (correct && damage > 0) {
+      const newHp = Math.max(0, enemyHpRef.current - damage);
+      enemyHpRef.current = newHp;
+      setEnemyHp(newHp);
+      setTotalDamage(prev => prev + damage);
+      battleSounds.comboSuccess();
+    } else {
+      // Boss counter-attacks
+      setPlayerHp(prev => Math.max(0, prev - 15));
+      triggerScreenShake();
+    }
+    setVocabShieldData(null);
+    returnToReading();
+  }, [returnToReading]);
+
+  // Handle context clue complete
+  const handleContextClueComplete = useCallback((correct: boolean, damage: number) => {
+    if (correct && damage > 0) {
+      const newHp = Math.max(0, enemyHpRef.current - damage);
+      enemyHpRef.current = newHp;
+      setEnemyHp(newHp);
+      setTotalDamage(prev => prev + damage);
+    } else {
+      setPlayerHp(prev => Math.max(0, prev - 10));
+      triggerScreenShake();
+    }
+    setContextClueData(null);
+    returnToReading();
+  }, [returnToReading]);
+
+  // Handle boss gate complete
+  const handleBossGateComplete = useCallback((score: number, total: number, bonusXp: number, bonusGold: number) => {
+    if (score > 0) {
+      // Correct - kill the boss!
+      setXpEarned(prev => prev + bonusXp);
+      setGoldEarned(prev => prev + bonusGold);
+      enemyHpRef.current = 0;
+      setEnemyHp(0);
+      battleSounds.celebrationSound();
+    } else {
+      // Wrong - boss heals 15%
+      const healAmount = Math.floor(enemy.maxHp * 0.15);
+      const newHp = Math.min(enemy.maxHp, enemyHpRef.current + healAmount);
+      enemyHpRef.current = newHp;
+      setEnemyHp(newHp);
+      setBossGateTriggered(false); // Allow re-trigger
+      returnToReading();
+    }
+  }, [enemy.maxHp, returnToReading]);
+
+  // Check for vocab shield / context clue triggers at HP thresholds
+  // These piggyback on the existing HP-based mini-game system
+  const checkLiteracyMiniGame = useCallback(() => {
+    if (phase !== 'reading' || battleMode !== 'classic') return;
+    
+    const hpPercent = (enemyHpRef.current / enemy.maxHp) * 100;
+    
+    // Boss gate at 25% HP for boss/elite enemies
+    if (!bossGateTriggered && hpPercent <= 25 && hpPercent > 0 && 
+        (enemy.type === 'boss' || enemy.type === 'final_boss' || enemy.type === 'elite')) {
+      setBossGateTriggered(true);
+      setEnemyAbilityMessage(`${enemy.name} raises a LAST STAND BARRIER!`);
+      battleSounds.miniGameStart();
+      setTimeout(() => {
+        setEnemyAbilityMessage(null);
+        setPhaseSafe('boss_gate', 'boss gate trigger');
+      }, 1200);
+      return;
+    }
+    
+    // Vocab shield at 65% HP for boss/elite (only once)
+    if (hpPercent <= 65 && hpPercent > 60 && !triggeredThresholds.has(65) &&
+        (enemy.type === 'boss' || enemy.type === 'final_boss' || enemy.type === 'elite')) {
+      const shieldData = generateVocabShield();
+      if (shieldData) {
+        setTriggeredThresholds(prev => new Set([...prev, 65]));
+        setVocabShieldData(shieldData);
+        setEnemyAbilityMessage(`${enemy.name} activates WORD SHIELD!`);
+        battleSounds.miniGameStart();
+        setTimeout(() => {
+          setEnemyAbilityMessage(null);
+          setPhaseSafe('vocab_shield', 'vocab shield trigger');
+        }, 1000);
+        return;
+      }
+    }
+    
+    // Context clue at 40% HP (only once)
+    if (hpPercent <= 40 && hpPercent > 35 && !triggeredThresholds.has(40)) {
+      const clueData = generateContextClue();
+      if (clueData) {
+        setTriggeredThresholds(prev => new Set([...prev, 40]));
+        setContextClueData(clueData);
+        setEnemyAbilityMessage(`${enemy.name} casts WORD FOG!`);
+        battleSounds.miniGameStart();
+        setTimeout(() => {
+          setEnemyAbilityMessage(null);
+          setPhaseSafe('context_clue', 'context clue trigger');
+        }, 1000);
+        return;
+      }
+    }
+  }, [phase, battleMode, enemy, bossGateTriggered, triggeredThresholds, generateVocabShield, generateContextClue, setPhaseSafe]);
+
   // Trigger word barrage attack
   const triggerWordBarrage = useCallback(() => {
     const wordCount = enemy.barrageWordCount || 5;
