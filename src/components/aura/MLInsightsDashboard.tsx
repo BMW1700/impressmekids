@@ -11,6 +11,7 @@ import { Sparkles, Brain, TrendingUp, Zap, AlertTriangle, Activity } from "lucid
 import NeuralNetworkVisualization from "./NeuralNetworkVisualization";
 import PhonemeProgressionTree from "./PhonemeProgressionTree";
 import LiveCognitiveLoadMeter from "./LiveCognitiveLoadMeter";
+import { ipaToEnglishWithSlashes } from "@/lib/phonemeDisplayUtils";
 
 interface MLInsightsDashboardProps {
   studentId: string;
