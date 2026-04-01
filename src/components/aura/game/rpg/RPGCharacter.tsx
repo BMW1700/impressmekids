@@ -23,6 +23,10 @@ import { VoidPhantom, VoidPhantomState } from "../characters/VoidPhantom";
 import { RealityShifter, RealityShifterState } from "../characters/RealityShifter";
 import { WordEater, WordEaterState } from "../characters/WordEater";
 import { EchoWraith, EchoWraithState } from "../characters/EchoWraith";
+import { AgentX, AgentXState } from "../characters/AgentX";
+import { Cipher, CipherState } from "../characters/Cipher";
+import { Shadow, ShadowState } from "../characters/Shadow";
+import { getStoredTheme } from "@/lib/gameTheme";
 
 interface RPGCharacterProps {
   character: RPGCharacterType | RPGEnemy;
@@ -40,7 +44,7 @@ interface RPGCharacterProps {
 }
 
 // Map character/enemy types to sprite types - EXTENDED with all new enemies
-type SpriteType = 'knight' | 'wizard' | 'princess' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'grog_king' | 'cave_troll' | 'crystal_spider' | 'storm_harpy' | 'cloud_giant' | 'wind_lord' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'echo_wraith';
+type SpriteType = 'knight' | 'wizard' | 'princess' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'grog_king' | 'cave_troll' | 'crystal_spider' | 'storm_harpy' | 'cloud_giant' | 'wind_lord' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'echo_wraith' | 'agent_x' | 'cipher' | 'shadow_agent';
 
 const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean): SpriteType => {
   if (isEnemy) {
@@ -60,6 +64,19 @@ const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean)
       'reality_shifter': 'reality_shifter',
       'word_eater': 'word_eater',
       'echo_wraith': 'echo_wraith',
+      // Agent mode enemies - map to closest visual match
+      'street_thug': 'goblin',
+      'hired_gun': 'cave_troll',
+      'cyber_hacker': 'shadow_wraith',
+      'drone_sentry': 'crystal_spider',
+      'rogue_agent': 'stone_guardian',
+      'bodyguard': 'ice_golem',
+      'operative': 'shadow_wraith',
+      'enforcer': 'cave_troll',
+      'the_broker': 'grog_king',
+      'the_architect': 'echo_wraith',
+      'the_double_agent': 'void_phantom',
+      'the_director': 'word_eater',
     };
     if (idMap[enemy.id]) return idMap[enemy.id];
     
@@ -84,6 +101,12 @@ const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean)
   }
   // Check by character ID for heroes
   const hero = character as RPGCharacterType;
+  const theme = getStoredTheme();
+  if (theme === 'agent') {
+    if (hero.id === 'valor' || hero.id === 'agent_x') return 'agent_x';
+    if (hero.id === 'wizard' || hero.id === 'cipher') return 'cipher';
+    if (hero.id === 'ella' || hero.id === 'shadow') return 'shadow_agent';
+  }
   if (hero.id === 'wizard') return 'wizard';
   if (hero.id === 'ella') return 'princess';
   return 'knight';
@@ -396,8 +419,52 @@ export const RPGCharacter = ({
       );
     }
 
-    // Fallback - use knight for any unhandled hero types (princess is always handled above)
-    const fallbackType = (spriteType as string) === 'princess' ? 'knight' : spriteType as 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian';
+    // Agent heroes
+    if (spriteType === 'agent_x') {
+      const agentState: AgentXState = currentHp <= 0 ? 'defeated' : isTakingDamage ? 'hit' : isDefending ? 'blocking' : isAttacking ? 'attacking' : 'idle';
+      return (
+        <AgentX
+          state={agentState}
+          healthPercent={hpPercentage}
+          currentHp={currentHp}
+          maxHp={character.maxHp}
+          size="medium"
+          currentStreak={currentStreak}
+          showHealthBar={showHealthBar}
+        />
+      );
+    }
+
+    if (spriteType === 'cipher') {
+      const cipherState: CipherState = currentHp <= 0 ? 'defeated' : isTakingDamage ? 'hit' : isAttacking ? 'casting' : 'idle';
+      return (
+        <Cipher
+          state={cipherState}
+          healthPercent={hpPercentage}
+          currentHp={currentHp}
+          maxHp={character.maxHp}
+          size="medium"
+          showHealthBar={showHealthBar}
+        />
+      );
+    }
+
+    if (spriteType === 'shadow_agent') {
+      const shadowState: ShadowState = currentHp <= 0 ? 'defeated' : isTakingDamage ? 'hit' : isAttacking ? 'attacking' : 'idle';
+      return (
+        <Shadow
+          state={shadowState}
+          healthPercent={hpPercentage}
+          currentHp={currentHp}
+          maxHp={character.maxHp}
+          size="medium"
+          showHealthBar={showHealthBar}
+        />
+      );
+    }
+
+    // Fallback - use knight for any unhandled hero types
+    const fallbackType = spriteType as 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian';
     return (
       <RPGCharacterSprite
         type={fallbackType}
@@ -494,7 +561,7 @@ export const RPGCharacter = ({
       {showSprite && (
         usePremiumSprites ? renderPremiumSprite() : (
           <RPGCharacterSprite
-            type={(spriteType as string) === 'princess' ? 'knight' : spriteType as 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian'}
+            type={(['princess', 'agent_x', 'cipher', 'shadow_agent'].includes(spriteType)) ? 'knight' : spriteType as 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian'}
             isEnemy={isEnemy}
             isAttacking={isAttacking}
             isTakingDamage={isTakingDamage}
