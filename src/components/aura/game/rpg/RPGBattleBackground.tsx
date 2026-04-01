@@ -67,8 +67,8 @@ export const RPGBattleBackground = ({
   });
 
   // Get current world name for button display
-  const theme = getStoredTheme();
-  const currentWorldName = theme === 'agent' 
+  const gameTheme = getStoredTheme();
+  const currentWorldName = gameTheme === 'agent' 
     ? (agentWorldNames[worldNumber] || 'Unknown Sector')
     : (worldNames[worldNumber] || 'Unknown');
 
