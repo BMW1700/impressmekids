@@ -1523,7 +1523,7 @@ export const RPGBattleArena = ({
       }
 
       // Vary attack type based on streak (for non-Elara)
-      if (selectedCharacter !== 'elara') {
+      if (selectedCharacter !== 'elara' && !hasManualSpellRef.current) {
         const types: ('fire' | 'ice' | 'lightning' | 'slash')[] = ['slash', 'fire', 'ice', 'lightning'];
         setAttackType(types[Math.min(Math.floor(newStreak / 3), types.length - 1)]);
       }
