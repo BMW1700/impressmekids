@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { useMemo, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ImageIcon, Palette } from "lucide-react";
+import { getStoredTheme } from "@/lib/gameTheme";
 
 type BackgroundTheme = 'castle' | 'dungeon' | 'forest' | 'throne' | 'volcano' | 'ice_cave' | 'ruins' | 'shadow_realm' | 'caverns' | 'sky_isles' | 'sunken_library' | 'void' | 'underground' | 'neon_district' | 'embassy' | 'syndicate_hq';
 
