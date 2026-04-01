@@ -36,6 +36,7 @@ const phonemeFeatures: { [key: string]: { voicing: number; place: number; manner
   'ɑɹ': { voicing: 1, place: 11, manner: 6 },
   'ɔɹ': { voicing: 1, place: 11, manner: 6 },
   'ɛɹ': { voicing: 1, place: 10, manner: 6 },
+  'ɪɹ': { voicing: 1, place: 10, manner: 6 },
 };
 
 const phonemeDistance = (p1: string, p2: string): number => {

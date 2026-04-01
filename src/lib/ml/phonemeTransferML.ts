@@ -143,6 +143,7 @@ export function explainPhonemeFeatures(phoneme: string): string {
     'ɑɹ': 'r-controlled open back vowel (car)',
     'ɔɹ': 'r-controlled open-mid back vowel (for)',
     'ɛɹ': 'r-controlled open-mid front vowel (fair)',
+    'ɪɹ': 'r-controlled near-close front vowel (ear)',
     // Legacy aliases
     'sh': 'voiceless postalveolar fricative',
     'zh': 'voiced postalveolar fricative',

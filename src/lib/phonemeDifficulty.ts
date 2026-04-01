@@ -59,6 +59,7 @@ const phonemeDifficultyMap: Record<string, number> = {
   'ɑɹ': 6, // /ar/ as in "car"
   'ɔɹ': 6, // /or/ as in "for"
   'ɛɹ': 6, // /air/ as in "fair"
+  'ɪɹ': 6, // /ear/ as in "ear"
 };
 
 /**
