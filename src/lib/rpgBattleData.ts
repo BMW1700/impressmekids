@@ -753,7 +753,7 @@ export const reefGuardian: RPGEnemy = {
   id: 'reef_guardian',
   name: 'Coral the Reef Guardian',
   type: 'guard',
-  maxHp: 160,
+  maxHp: 640, // 4x: was 160
   attack: 20,
   defense: 28,
   wordDamageMultiplier: 0.45,
