@@ -100,13 +100,13 @@ export const getStoryGradeLevel = (passageText: string): number => {
   // Thresholds calibrated so simple CVC stories → grade 0,
   // complex multi-syllable stories → grade 6-8
   if (avgDifficulty < 2.0) return 0;  // Pre-K / Kindergarten
-  if (avgDifficulty < 2.5) return 1;  // 1st grade
-  if (avgDifficulty < 3.0) return 2;  // 2nd grade
-  if (avgDifficulty < 3.5) return 3;  // 3rd grade
-  if (avgDifficulty < 4.0) return 4;  // 4th grade
-  if (avgDifficulty < 4.5) return 5;  // 5th grade
-  if (avgDifficulty < 5.0) return 6;  // 6th grade
-  if (avgDifficulty < 5.5) return 7;  // 7th grade
+  if (avgDifficulty < 2.3) return 1;  // 1st grade
+  if (avgDifficulty < 2.6) return 2;  // 2nd grade
+  if (avgDifficulty < 2.9) return 3;  // 3rd grade
+  if (avgDifficulty < 3.2) return 4;  // 4th grade
+  if (avgDifficulty < 3.5) return 5;  // 5th grade
+  if (avgDifficulty < 4.0) return 6;  // 6th grade
+  if (avgDifficulty < 4.8) return 7;  // 7th grade
   return 8;                            // 8th grade+
 };
 
