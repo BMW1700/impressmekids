@@ -1,37 +1,79 @@
 
 
-# Complete the 44-Phoneme Set
+# Replace IPA Symbols with English Letters Everywhere
 
-## Current State
-The heatmap has **40 phonemes**. To reach **44**, we need to add **3 R-controlled vowel entries** and **fix the schwa (ə) mapping bug** so it actually produces data.
+## Problem
+IPA symbols (ɛ, æ, ɪ, ɹ, θ, ð, ʃ, ʒ, ŋ, etc.) are shown raw to users in multiple components. Users see cryptic unicode characters instead of readable English labels like "sh", "th", "r", "a", etc.
 
-## Missing Phonemes (3 to add)
-| Symbol | Label | Example |
-|--------|-------|---------|
-| ɑɹ | /ar/ | car |
-| ɔɹ | /or/ | for |
-| ɛɹ | /air/ | fair |
+## Solution
+Create one centralized `ipaToEnglish()` utility and use it in every component that displays phonemes to users. Internal calculations (difficulty, distance, CMU lookups) keep using IPA — only the **display layer** changes.
 
-## Critical Bug Fix: Schwa (ə)
-The schwa entry exists in the heatmap but **never receives data** because `cmuDictWrapper.ts` strips stress markers before mapping, so `AH0` (schwa) becomes `AH` → `ʌ` instead of `ə`. Fix: check stress digit before stripping.
+## Centralized Mapping (new file: `src/lib/phonemeDisplayUtils.ts`)
 
-## Changes
+| IPA | Display | IPA | Display |
+|-----|---------|-----|---------|
+| b | b | p | p |
+| d | d | t | t |
+| ɡ | g | k | k |
+| f | f | v | v |
+| θ | th | ð | th |
+| s | s | z | z |
+| ʃ | sh | ʒ | zh |
+| h | h | tʃ | ch |
+| dʒ | j | m | m |
+| n | n | ŋ | ng |
+| l | l | ɹ | r |
+| w | w | j | y |
+| æ | a | ɛ | e |
+| ɪ | i | ɑ | o |
+| ʌ | u | eɪ | ae |
+| i | ee | aɪ | ie |
+| oʊ | oe | u | ue |
+| ʊ | oo | ɔ | au |
+| ə | er | ɝ | ur |
+| aʊ | ow | ɔɪ | oi |
+| ɑɹ | ar | ɔɹ | or |
+| ɛɹ | air | ɪɹ | ear |
 
-### 1. `src/lib/cmuDictWrapper.ts`
-- Fix `arpabetToIPAPhonemes` to map `AH0` → `ə` (schwa) while `AH1`/`AH2` → `ʌ`
-- Add post-processing to detect vowel+ɹ sequences and emit composite R-controlled phonemes (`ɑɹ`, `ɔɹ`, `ɛɹ`) alongside the individual phonemes
+## Files to Change
 
-### 2. `src/components/aura/PhonemeHeatmap.tsx`
-- Add 3 R-controlled vowel entries to `COMMON_PHONEMES` array (reaching 44 total)
+### 1. **NEW: `src/lib/phonemeDisplayUtils.ts`**
+- `ipaToEnglish(phoneme: string): string` — single source of truth
+- `ipaToEnglishWithSlashes(phoneme: string): string` — returns `/th/` format
+- Handles IPA, ARPABET, and pass-through for already-English symbols
 
-### 3. `src/lib/phonemeDifficulty.ts`
-- Add `ɑɹ`, `ɔɹ`, `ɛɹ` to the difficulty map (moderate difficulty ~2.5-3.0)
+### 2. `src/components/aura/game/rpg/FullReadingStatsModal.tsx`
+- Remove local `phonemeDisplay`, `arpabetLabels`, `getPhonemeDisplay`, `getPhonemeLabel`
+- Import and use `ipaToEnglish` from the new utility
 
-### 4. `src/lib/phonemeDistance.ts`
-- Add `ɑɹ`, `ɔɹ`, `ɛɹ` to the articulatory feature matrix
+### 3. `src/components/parent/ParentWeeklyReport.tsx`
+- Remove local `phonemeDisplay`, `arpabetLabels`, `getPhonemeDisplay`, `getPhonemeLabel`
+- Import and use `ipaToEnglish`
 
-### 5. Edge functions (`update-q-learning`, `generate-practice-exercises`, `analyze-aura`)
-- Add the 3 R-controlled phonemes to their phoneme lists/feature maps
+### 4. `src/components/aura/PhonemeMasteryPathway.tsx`
+- Replace `/{phoneme}/` and `/{prediction.phoneme}/` with `ipaToEnglishWithSlashes()`
 
-No calculation logic changes — just adding the missing phonemes into existing systems.
+### 5. `src/components/aura/PhonemePracticeExercises.tsx`
+- Replace `/{exercise.phoneme}/` with `ipaToEnglishWithSlashes()`
+
+### 6. `src/components/aura/MLInsightsDashboard.tsx`
+- Replace `/{pred.phoneme}/` with `ipaToEnglishWithSlashes()`
+
+### 7. `src/components/aura/GeneratedExercises.tsx`
+- Replace `/{mlRecommendation.phoneme}/` with `ipaToEnglishWithSlashes()`
+
+### 8. `src/components/aura/PhonemeHeatmap.tsx`
+- The `label` field in `COMMON_PHONEMES` already uses English — no change needed for the heatmap headers
+- Fix the selected-cell detail popup (line 301) to use `ipaToEnglish()` instead of raw `selectedCell.phoneme`
+
+### 9. `src/pages/teacher/StudentProfile.tsx`
+- Lines 318, 332, 346 display raw `{phoneme}` from `phoneme_scores` keys — wrap with `ipaToEnglish()`
+
+### 10. `src/lib/phonemeInference.ts`
+- Update `getPhonemeDisplayName()` to use the centralized utility for consistency
+
+## What Does NOT Change
+- All internal calculations (phonemeDifficulty, phonemeDistance, cmuDictWrapper, Q-learning, edge functions) continue using IPA symbols
+- Database storage continues using IPA symbols
+- Only the UI display layer is affected
 
