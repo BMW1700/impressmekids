@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Sparkles, CheckCircle2, BookOpen, Mic, Brain } from "lucide-react";
+import { ipaToEnglishWithSlashes } from "@/lib/phonemeDisplayUtils";
 
 interface GeneratedExercisesProps {
   problematicPhonemes: string[];
