@@ -227,6 +227,10 @@ export const RPGBattleArena = ({
   
   // Get character data from selection
   const getCharacterData = useCallback((charId: PlayableCharacter | null): RPGCharacterType => {
+    const theme = getStoredTheme();
+    if (theme === 'agent') {
+      return getAgentHero(charId || 'valor');
+    }
     switch (charId) {
       case 'elara': return allyWizard;
       case 'ella': return princessElla;
