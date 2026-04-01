@@ -139,6 +139,10 @@ export function explainPhonemeFeatures(phoneme: string): string {
     'eɪ': 'diphthong (day)',
     'oʊ': 'diphthong (go)',
     'ɔɪ': 'diphthong (boy)',
+    // R-controlled vowels
+    'ɑɹ': 'r-controlled open back vowel (car)',
+    'ɔɹ': 'r-controlled open-mid back vowel (for)',
+    'ɛɹ': 'r-controlled open-mid front vowel (fair)',
     // Legacy aliases
     'sh': 'voiceless postalveolar fricative',
     'zh': 'voiced postalveolar fricative',
