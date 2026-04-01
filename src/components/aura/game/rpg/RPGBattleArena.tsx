@@ -947,6 +947,7 @@ export const RPGBattleArena = ({
     const definition = getWordDefinition(word);
     setActivePowerWord({ id: Date.now(), word, definition });
     setCollectedPowerWords(prev => [...prev, word.toLowerCase()]);
+    collectedPowerWordsRef.current = [...collectedPowerWordsRef.current, word.toLowerCase()];
     // Bonus gold for power words
     setGoldEarned(prev => prev + 2);
     // Auto-dismiss after 2.5 seconds
