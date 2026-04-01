@@ -1408,7 +1408,7 @@ export const RPGBattleArena = ({
         setShowDamageNumber(false);
         // IMPORTANT: Spells are FREE ACTIONS - no enemy counter-attack!
         // This makes magic strategic and powerful
-        setCurrentCommand(null); // Return to command menu
+        setCurrentCommand('read'); // Auto-switch to Read after spell
       }, 600);
     }, 400);
   }, [wizardMp, playerCharacter.maxHp]);
