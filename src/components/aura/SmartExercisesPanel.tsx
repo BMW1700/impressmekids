@@ -71,7 +71,7 @@ export const SmartExercisesPanel = ({ exercises, onStartExercise }: SmartExercis
                         <div className="flex flex-wrap gap-1">
                           {exercise.phoneme_targets.map((phoneme, i) => (
                             <Badge key={i} variant="secondary" className="text-xs">
-                              /{phoneme}/
+                              {ipaToEnglishWithSlashes(phoneme)}
                             </Badge>
                           ))}
                         </div>

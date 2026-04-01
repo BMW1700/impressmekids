@@ -168,7 +168,7 @@ const PhonemeMasteryPathway = ({
                           <span className="text-xs text-muted-foreground">Similar to:</span>
                           {prediction.similarToMastered?.map(p => (
                             <Badge key={p} variant="outline" className="text-xs">
-                              /{p}/
+                              {ipaToEnglishWithSlashes(p)}
                             </Badge>
                           ))}
                         </div>

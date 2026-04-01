@@ -543,7 +543,7 @@ const AuraAnalytics = () => {
 
                                           {predictions[0] && (
                                             <div className="p-3 rounded-lg bg-primary/5 text-sm">
-                                              <p className="font-medium mb-1">Next Target: /{predictions[0].phoneme}/</p>
+                                              <p className="font-medium mb-1">Next Target: {ipaToEnglishWithSlashes(predictions[0].phoneme)}</p>
                                               <p className="text-muted-foreground">{predictions[0].reasoning}</p>
                                             </div>
                                           )}
