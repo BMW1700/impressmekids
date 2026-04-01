@@ -107,8 +107,6 @@ const WORD_DEFINITIONS: Record<string, string> = {
   difficult: 'not easy to do or understand',
   discover: 'to find something for the first time',
   distance: 'how far apart two things are',
-  enormous: 'very large, huge',
-  enormous: 'very, very big',
   escape: 'to get away from danger',
   exactly: 'in a way that is completely correct',
   examine: 'to look at something very closely',
