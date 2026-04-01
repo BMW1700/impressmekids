@@ -539,7 +539,7 @@ export const crystalSpider: RPGEnemy = {
   id: 'crystal_spider',
   name: 'Prism the Crystal Spider',
   type: 'minion',
-  maxHp: 100,
+  maxHp: 400, // 4x: was 100
   attack: 18,
   defense: 8,
   wordDamageMultiplier: 0.8,
