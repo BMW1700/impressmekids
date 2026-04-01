@@ -82,7 +82,12 @@ export const AuraReadingSection = () => {
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [isReadingStory, setIsReadingStory] = useState(false);
   const [isCampaignMode, setIsCampaignMode] = useState(false);
+  const [gameTheme, setGameTheme] = useState<GameTheme | null>(getStoredTheme());
   
+  // Theme-aware data sources
+  const activeWorlds = gameTheme === 'agent' ? agentCampaignWorlds : campaignWorlds;
+  const activeStories = gameTheme === 'agent' ? agentStories : curatedStories;
+
   // RPG Mode state
   const [isRpgMode, setIsRpgMode] = useState(false);
   const [rpgView, setRpgView] = useState<'world_map' | 'level_select' | 'battle'>('world_map');
