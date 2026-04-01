@@ -316,7 +316,7 @@ export default function StudentProfile() {
                             .filter(([_, score]) => (score as number) >= 85)
                             .map(([phoneme, score]) => (
                               <Badge key={phoneme} variant="secondary" className="bg-green-50 text-green-700">
-                                {phoneme}: {score}%
+                                {ipaToEnglish(phoneme)}: {score}%
                               </Badge>
                             ))}
                         </div>
