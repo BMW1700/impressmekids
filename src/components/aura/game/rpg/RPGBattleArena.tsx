@@ -1343,7 +1343,9 @@ export const RPGBattleArena = ({
       }]);
       
       setTimeout(() => {
-        setCurrentCommand(null);
+        setPhaseSafe('reading', 'heal complete');
+        setCurrentCommand('read');
+        setIsPlayerTurn(true);
       }, 600);
       return;
     }
