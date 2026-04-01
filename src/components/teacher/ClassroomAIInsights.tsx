@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Sparkles, TrendingUp, AlertTriangle, BookOpen } from "lucide-react";
 import { useTeacherSummary } from "@/hooks/useTeacherSummary";
 import { useNavigate } from "react-router-dom";
+import { ipaToEnglish } from "@/lib/phonemeDisplayUtils";
 
 interface ClassroomAIInsightsProps {
   classroomId: string;
