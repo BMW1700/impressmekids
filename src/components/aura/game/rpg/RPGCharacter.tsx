@@ -69,19 +69,19 @@ const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean)
       'reality_shifter': 'reality_shifter',
       'word_eater': 'word_eater',
       'echo_wraith': 'echo_wraith',
-      // Agent mode enemies - map to closest visual match
-      'street_thug': 'goblin',
-      'hired_gun': 'cave_troll',
-      'cyber_hacker': 'shadow_wraith',
-      'drone_sentry': 'crystal_spider',
-      'rogue_agent': 'stone_guardian',
-      'bodyguard': 'ice_golem',
-      'operative': 'shadow_wraith',
-      'enforcer': 'cave_troll',
-      'the_broker': 'grog_king',
-      'the_architect': 'echo_wraith',
-      'the_double_agent': 'void_phantom',
-      'the_director': 'word_eater',
+      // Agent mode enemies - unique agent sprites
+      'street_thug': 'street_thug_agent',
+      'hired_gun': 'hired_gun_agent',
+      'cyber_hacker': 'cyber_hacker_agent',
+      'drone_sentry': 'cyber_hacker_agent',
+      'rogue_agent': 'hired_gun_agent',
+      'bodyguard': 'hired_gun_agent',
+      'operative': 'hired_gun_agent',
+      'enforcer': 'street_thug_agent',
+      'the_broker': 'the_broker_agent',
+      'the_architect': 'cyber_hacker_agent',
+      'the_double_agent': 'hired_gun_agent',
+      'the_director': 'the_director_agent',
     };
     if (idMap[enemy.id]) return idMap[enemy.id];
     
