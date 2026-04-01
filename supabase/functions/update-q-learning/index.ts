@@ -403,7 +403,7 @@ async function handleReadingSessionUpdate(
     .eq('student_id', studentId);
 
   // Get next recommended phoneme
-  const allPhonemes = ['b', 'p', 'd', 't', 'g', 'k', 'm', 'n', 'f', 'v', 's', 'z', 'sh', 'th', 'l', 'r', 'w', 'y'];
+  const allPhonemes = ['b', 'p', 'd', 't', 'g', 'ɡ', 'k', 'f', 'v', 'θ', 'ð', 's', 'z', 'ʃ', 'ʒ', 'h', 'tʃ', 'dʒ', 'm', 'n', 'ŋ', 'l', 'ɹ', 'w', 'j', 'æ', 'ɑ', 'ɛ', 'ɪ', 'i', 'ʌ', 'u', 'ʊ', 'ə', 'ɔ', 'ɝ', 'aɪ', 'aʊ', 'eɪ', 'oʊ', 'ɔɪ'];
   const nextMastered = Object.keys(updatedPhonemeScores).filter(p => updatedPhonemeScores[p] > 80);
   const nextStruggling = Object.keys(updatedPhonemeScores).filter(p => updatedPhonemeScores[p] < 60);
   const candidatePhonemes = allPhonemes.filter(p => !nextMastered.includes(p));
