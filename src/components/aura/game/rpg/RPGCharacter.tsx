@@ -64,6 +64,19 @@ const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean)
       'reality_shifter': 'reality_shifter',
       'word_eater': 'word_eater',
       'echo_wraith': 'echo_wraith',
+      // Agent mode enemies - map to closest visual match
+      'street_thug': 'goblin',
+      'hired_gun': 'cave_troll',
+      'cyber_hacker': 'shadow_wraith',
+      'drone_sentry': 'crystal_spider',
+      'rogue_agent': 'stone_guardian',
+      'bodyguard': 'ice_golem',
+      'operative': 'shadow_wraith',
+      'enforcer': 'cave_troll',
+      'the_broker': 'grog_king',
+      'the_architect': 'echo_wraith',
+      'the_double_agent': 'void_phantom',
+      'the_director': 'word_eater',
     };
     if (idMap[enemy.id]) return idMap[enemy.id];
     
