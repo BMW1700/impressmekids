@@ -1,41 +1,37 @@
 
 
-# Fix Tab-Switch Reload Issue - Full Audit Results
+# Fix: No Books Found at Grade Levels 4 and 5
 
-## Root Causes Identified
+## Problem
+Line 609 of `src/data/curatedStories.ts` overwrites every story's hardcoded `grade_level` with the phoneme-computed value:
+```ts
+grade_level: getStoryGradeLevel(story.passage_text),
+```
 
-**1. Service Worker causing browser-level reloads**
-The `public/sw.js` calls `self.skipWaiting()` on install. When the browser detects a new SW version (which can happen on any navigation or tab return), the new SW activates immediately and the browser may reload controlled pages. The `usePushNotifications.ts` hook re-registers the SW, undoing the hotfix that unregistered it. The hotfix in `main.tsx` only runs once (guarded by localStorage flag), so after the SW gets re-registered by push, the problem returns.
+The current thresholds in `getStoryGradeLevel()` use uniform 0.5 steps (2.0, 2.5, 3.0, 3.5, 4.0, 4.5...). Most English prose — even "advanced" passages — averages around 2.5–3.5 word difficulty, so stories cluster into grades 1–3, then jump to 6+. Grades 4 and 5 get zero stories.
 
-**2. Auth guards that navigate during render (not in useEffect)**
-`TeacherDashboard.tsx` (lines 72-80) and `TeacherPersonalResources.tsx` (line 152-154) call `navigate()` directly in the render body, not inside `useEffect`. This is a React anti-pattern. During a Supabase token refresh, if `profile` is momentarily null between re-renders, these components immediately navigate away to `/auth`, making it look like the page "reloaded."
+## Fix
 
-**3. `refetchOnMount: "always"` in QueryClient defaults**
-In `src/App.tsx` line 100, `refetchOnMount: "always"` forces every query to refetch whenever a component mounts. Combined with any remounting behavior, this creates visible loading spinners and data flashing that feels like a reload.
+### Recalibrate the grade thresholds in `src/lib/phonemeDifficulty.ts`
 
-## Plan
+Replace the uniform 0.5-step thresholds with tighter spacing in the mid-range so that the natural distribution of English text actually populates grades 4 and 5:
 
-### Step 1: Kill the Service Worker entirely
-- Delete `public/sw.js`
-- In `main.tsx`: Remove the localStorage guard (`SW_HOTFIX_KEY`) so SW unregistration runs on EVERY page load unconditionally, cleaning up any lingering workers
-- In `usePushNotifications.ts`: Remove the `navigator.serviceWorker.register()` call and `navigator.serviceWorker.ready` calls. The hook will still exist but will be a no-op (returns `isSupported: false`) until push is re-implemented without a SW
-- Push notifications will be temporarily disabled. This is the price of stability.
+```
+< 2.0 → Grade 0 (Pre-K)
+< 2.3 → Grade 1
+< 2.6 → Grade 2
+< 2.9 → Grade 3
+< 3.2 → Grade 4
+< 3.5 → Grade 5
+< 4.0 → Grade 6
+< 4.8 → Grade 7
+≥ 4.8 → Grade 8
+```
 
-### Step 2: Fix render-time navigation anti-patterns
-- **`TeacherDashboard.tsx`**: Move the `if (!user || !profile)` and role/verification checks into the existing `useEffect` or a new one, instead of running them in the render body
-- **`TeacherPersonalResources.tsx`**: Same fix - move the `if (!user || !profile)` guard into a `useEffect`
-- These are the two files that navigate during render. Other dashboards (Student, Parent, Admin) already use `useEffect` correctly.
+This narrows the bands where most text lands (2.0–3.5 range) and widens the upper bands. Stories with longer words and harder phonemes (the ones currently hardcoded as grade 4/5) should now land in those buckets.
 
-### Step 3: Change QueryClient default from `refetchOnMount: "always"` to `false`
-- In `src/App.tsx`, change `refetchOnMount: "always"` to `refetchOnMount: false`
-- Combined with the existing `staleTime: 2 * 60 * 1000`, data will persist through any minor remounts without triggering visible refetches
-- Individual queries can override this if they need fresh data
+### One file changed
+- `src/lib/phonemeDifficulty.ts` — update the 8 threshold values in `getStoryGradeLevel()`
 
-### Files Modified
-1. `public/sw.js` - DELETE
-2. `src/main.tsx` - Remove localStorage guard, run SW cleanup unconditionally
-3. `src/hooks/usePushNotifications.ts` - Disable SW registration, return unsupported
-4. `src/pages/teacher/TeacherDashboard.tsx` - Move auth guard into useEffect
-5. `src/pages/teacher/TeacherPersonalResources.tsx` - Move auth guard into useEffect
-6. `src/App.tsx` - Change `refetchOnMount` to `false`
+No other files need changes. The computed values in `curatedStories.ts` will automatically recalculate.
 
