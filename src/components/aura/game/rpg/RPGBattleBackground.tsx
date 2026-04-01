@@ -3,7 +3,7 @@ import { useMemo, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ImageIcon, Palette } from "lucide-react";
 
-type BackgroundTheme = 'castle' | 'dungeon' | 'forest' | 'throne' | 'volcano' | 'ice_cave' | 'ruins' | 'shadow_realm' | 'caverns' | 'sky_isles' | 'sunken_library' | 'void';
+type BackgroundTheme = 'castle' | 'dungeon' | 'forest' | 'throne' | 'volcano' | 'ice_cave' | 'ruins' | 'shadow_realm' | 'caverns' | 'sky_isles' | 'sunken_library' | 'void' | 'underground' | 'neon_district' | 'embassy' | 'syndicate_hq';
 
 interface RPGBattleBackgroundProps {
   theme?: BackgroundTheme;
