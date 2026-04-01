@@ -47,6 +47,7 @@ const arpabetToIPAPhonemes = (arpabet: string): string[] => {
       if (current === 'ɑ') { result.push('ɑɹ'); i++; continue; }
       if (current === 'ɔ') { result.push('ɔɹ'); i++; continue; }
       if (current === 'ɛ') { result.push('ɛɹ'); i++; continue; }
+      if (current === 'ɪ') { result.push('ɪɹ'); i++; continue; }
     }
     result.push(current);
   }

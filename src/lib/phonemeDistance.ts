@@ -55,6 +55,7 @@ export const phonemeFeatures: { [key: string]: { voicing: number; place: number;
   'ɑɹ': { voicing: 1, place: 11, manner: 6 }, // /ar/ (car)
   'ɔɹ': { voicing: 1, place: 11, manner: 6 }, // /or/ (for)
   'ɛɹ': { voicing: 1, place: 10, manner: 6 }, // /air/ (fair)
+  'ɪɹ': { voicing: 1, place: 10, manner: 6 }, // /ear/ (ear)
 };
 
 /**
