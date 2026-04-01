@@ -521,13 +521,23 @@ const AuraPractice = () => {
     );
   }
 
+  // RPG Mode - Theme Selector (first time)
+  if (isRpgMode && !gameTheme) {
+    return (
+      <ThemeSelector onSelect={(theme) => {
+        setStoredTheme(theme);
+        setGameTheme(theme);
+      }} />
+    );
+  }
+
   // RPG Mode - World Map
   if (isRpgMode && rpgView === 'world_map' && user?.id) {
     // Calculate world progress from campaign data
     const worldProgressData = campaignProgress?.world_progress as Record<string, string[]> || {};
     const totalBooksRescued = campaignProgress?.books_rescued || 0;
     
-    const worldProgress: WorldProgress[] = campaignWorlds.map(w => {
+    const worldProgress: WorldProgress[] = activeWorlds.map(w => {
       const worldStories = worldProgressData[w.id.toString()] || [];
       const totalLevels = w.levels.length;
       const levelsCompleted = worldStories.length;
