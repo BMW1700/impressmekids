@@ -86,7 +86,7 @@ export const PhonemePracticeExercises = ({ studentId }: PhonemePracticeExercises
     } else {
       toast({
         title: 'Great job! 🎉',
-        description: `You've mastered the ${phoneme} sound!`,
+        description: `You've mastered the ${ipaToEnglish(phoneme)} sound!`,
       });
       loadExercises(); // Refresh list
     }
