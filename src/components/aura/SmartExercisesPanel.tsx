@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { BookOpen, Target, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { ipaToEnglishWithSlashes } from "@/lib/phonemeDisplayUtils";
 
 interface Exercise {
   type: string;
@@ -70,7 +71,7 @@ export const SmartExercisesPanel = ({ exercises, onStartExercise }: SmartExercis
                         <div className="flex flex-wrap gap-1">
                           {exercise.phoneme_targets.map((phoneme, i) => (
                             <Badge key={i} variant="secondary" className="text-xs">
-                              /{phoneme}/
+                              {ipaToEnglishWithSlashes(phoneme)}
                             </Badge>
                           ))}
                         </div>
