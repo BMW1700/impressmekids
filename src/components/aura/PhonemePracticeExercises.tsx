@@ -7,6 +7,7 @@ import { generatePracticeExercises } from '@/lib/mispronunciationAnalysis';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { playCorrectPronunciation, unlockSpeechSynthesis } from '@/lib/pronunciationPlayer';
+import { ipaToEnglishWithSlashes } from '@/lib/phonemeDisplayUtils';
 
 interface PhonemePracticeExercisesProps {
   studentId: string;

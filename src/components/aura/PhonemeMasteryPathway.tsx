@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, Target, TrendingUp, Sparkles, Info } from "lucide-react";
 import { predictPhonemeGains, TransferPrediction } from "@/lib/ml/phonemeTransferML";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ipaToEnglishWithSlashes } from "@/lib/phonemeDisplayUtils";
 
 interface PhonemeMasteryPathwayProps {
   masteredPhonemes: string[];

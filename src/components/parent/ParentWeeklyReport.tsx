@@ -35,19 +35,6 @@ import { ipaToEnglish, ipaToFriendlyLabel } from '@/lib/phonemeDisplayUtils';
 const getPhonemeDisplay = ipaToEnglish;
 const getPhonemeLabel = ipaToFriendlyLabel;
 
-const getPhonemeLabel_old = (phoneme: string) => {
-  if (!phoneme) return phoneme;
-
-  if (raw === "1") return "I sound";
-  if (raw === "ɛ") return "e (as in 'bed')";
-  if (raw === "æ") return "a (as in 'cat')";
-  if (raw === "ɪ") return "i (as in 'sit')";
-  if (raw === "ʌ") return "uh (as in 'but')";
-  if (raw === "ə") return "uh (as in 'sofa')";
-
-  const upper = raw.toUpperCase();
-  return arpabetLabels[upper] || raw;
-};
 
 export const ParentWeeklyReport = ({ studentId, studentName }: ParentWeeklyReportProps) => {
   const { data: progress, isLoading } = useWeeklyProgress(studentId);
