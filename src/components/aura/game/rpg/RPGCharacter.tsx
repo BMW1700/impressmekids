@@ -419,8 +419,52 @@ export const RPGCharacter = ({
       );
     }
 
-    // Fallback - use knight for any unhandled hero types (princess is always handled above)
-    const fallbackType = (spriteType as string) === 'princess' ? 'knight' : spriteType as 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian';
+    // Agent heroes
+    if (spriteType === 'agent_x') {
+      const agentState: AgentXState = currentHp <= 0 ? 'defeated' : isTakingDamage ? 'hit' : isDefending ? 'blocking' : isAttacking ? 'attacking' : 'idle';
+      return (
+        <AgentX
+          state={agentState}
+          healthPercent={hpPercentage}
+          currentHp={currentHp}
+          maxHp={character.maxHp}
+          size="medium"
+          currentStreak={currentStreak}
+          showHealthBar={showHealthBar}
+        />
+      );
+    }
+
+    if (spriteType === 'cipher') {
+      const cipherState: CipherState = currentHp <= 0 ? 'defeated' : isTakingDamage ? 'hit' : isAttacking ? 'hacking' : 'idle';
+      return (
+        <Cipher
+          state={cipherState}
+          healthPercent={hpPercentage}
+          currentHp={currentHp}
+          maxHp={character.maxHp}
+          size="medium"
+          showHealthBar={showHealthBar}
+        />
+      );
+    }
+
+    if (spriteType === 'shadow_agent') {
+      const shadowState: ShadowState = currentHp <= 0 ? 'defeated' : isTakingDamage ? 'hit' : isAttacking ? 'attacking' : 'idle';
+      return (
+        <Shadow
+          state={shadowState}
+          healthPercent={hpPercentage}
+          currentHp={currentHp}
+          maxHp={character.maxHp}
+          size="medium"
+          showHealthBar={showHealthBar}
+        />
+      );
+    }
+
+    // Fallback - use knight for any unhandled hero types
+    const fallbackType = spriteType as 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian';
     return (
       <RPGCharacterSprite
         type={fallbackType}
