@@ -28,6 +28,10 @@ export const phonemeFeatures: { [key: string]: { voicing: number; place: number;
   'aɪ': { voicing: 1, place: 10, manner: 7 }, 'aʊ': { voicing: 1, place: 11, manner: 7 },
   'eɪ': { voicing: 1, place: 10, manner: 8 }, 'oʊ': { voicing: 1, place: 11, manner: 9 },
   'ɔɪ': { voicing: 1, place: 11, manner: 7 },
+  // R-controlled vowels
+  'ɑɹ': { voicing: 1, place: 11, manner: 6 },
+  'ɔɹ': { voicing: 1, place: 11, manner: 6 },
+  'ɛɹ': { voicing: 1, place: 10, manner: 6 },
 };
 
 export const phonemeDistance = (p1: string, p2: string): number => {

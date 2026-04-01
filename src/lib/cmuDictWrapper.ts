@@ -25,13 +25,33 @@ const arpabetToIPA: { [key: string]: string } = {
  * Convert ARPAbet phonemes to IPA
  */
 const arpabetToIPAPhonemes = (arpabet: string): string[] => {
-  // Remove stress markers (0, 1, 2) and split
-  const phonemes = arpabet
-    .replace(/[012]/g, '')
-    .trim()
-    .split(/\s+/);
+  const tokens = arpabet.trim().split(/\s+/);
   
-  return phonemes.map(p => arpabetToIPA[p] || p).filter(Boolean);
+  const rawPhonemes = tokens.map(token => {
+    const stress = token.match(/[012]/)?.[0];
+    const base = token.replace(/[012]/g, '');
+    
+    // AH0 = schwa (ə), AH1/AH2 = strut (ʌ)
+    if (base === 'AH' && stress === '0') return 'ə';
+    
+    return arpabetToIPA[base] || base;
+  }).filter(Boolean);
+
+  // Post-process: detect R-controlled vowel sequences and emit composites
+  const result: string[] = [];
+  for (let i = 0; i < rawPhonemes.length; i++) {
+    const current = rawPhonemes[i];
+    const next = rawPhonemes[i + 1];
+    
+    if (next === 'ɹ') {
+      if (current === 'ɑ') { result.push('ɑɹ'); i++; continue; }
+      if (current === 'ɔ') { result.push('ɔɹ'); i++; continue; }
+      if (current === 'ɛ') { result.push('ɛɹ'); i++; continue; }
+    }
+    result.push(current);
+  }
+  
+  return result;
 };
 
 /**
