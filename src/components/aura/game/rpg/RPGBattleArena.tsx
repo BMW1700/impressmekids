@@ -64,6 +64,8 @@ import {
   MiniGameType,
   RPGCharacter as RPGCharacterType,
 } from "@/lib/rpgBattleData";
+import { getAgentHero, getAgentEnemy, getAgentBossForWorld } from "@/lib/agentBattleData";
+import { getStoredTheme } from "@/lib/gameTheme";
 import { CuratedStory } from "@/data/curatedStories";
 import { calculateGoldEarned, calculateXpEarned } from "@/lib/gameEconomy";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
