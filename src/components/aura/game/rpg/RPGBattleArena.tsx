@@ -47,6 +47,12 @@ import { RPGWebTrap } from "./RPGWebTrap";
 import { RPGCharacterSelect, PlayableCharacter } from "./RPGCharacterSelect";
 import { Spell } from "./RPGSpellMenu";
 import { Item } from "./RPGItemMenu";
+// NEW: Literacy features
+import { RPGWordPowerUp } from "./RPGWordPowerUp";
+import { RPGVocabShield } from "./RPGVocabShield";
+import { RPGContextClue } from "./RPGContextClue";
+import { ComprehensionQuiz } from "./ComprehensionQuiz";
+import { isPowerWord, getWordDefinition } from "./VocabularyTracker";
 import { 
   heroKnight, 
   allyWizard,
