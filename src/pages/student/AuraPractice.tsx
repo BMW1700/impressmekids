@@ -104,6 +104,7 @@ const AuraPractice = () => {
   // Theme-aware data sources
   const activeWorlds = gameTheme === 'agent' ? agentCampaignWorlds : campaignWorlds;
   const activeStories = gameTheme === 'agent' ? agentStories : curatedStories;
+  const [isCampaignMode, setIsCampaignMode] = useState(false);
   const [isRpgMode, setIsRpgMode] = useState(false);
   const [rpgView, setRpgView] = useState<'world_map' | 'level_select' | 'battle'>('world_map');
   const [selectedWorld, setSelectedWorld] = useState<CampaignWorld | null>(null);
