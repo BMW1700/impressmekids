@@ -31,6 +31,10 @@ import { HiredGun, HiredGunState } from "../characters/HiredGun";
 import { CyberHacker, CyberHackerState } from "../characters/CyberHacker";
 import { TheBroker, TheBrokerState } from "../characters/TheBroker";
 import { TheDirector, TheDirectorState } from "../characters/TheDirector";
+import { DroneSentry, DroneSentryState } from "../characters/DroneSentry";
+import { RogueAgent, RogueAgentState } from "../characters/RogueAgent";
+import { Bodyguard, BodyguardState } from "../characters/Bodyguard";
+import { TheArchitect, TheArchitectState } from "../characters/TheArchitect";
 import { getStoredTheme } from "@/lib/gameTheme";
 
 interface RPGCharacterProps {
