@@ -31,6 +31,10 @@ import { HiredGun, HiredGunState } from "../characters/HiredGun";
 import { CyberHacker, CyberHackerState } from "../characters/CyberHacker";
 import { TheBroker, TheBrokerState } from "../characters/TheBroker";
 import { TheDirector, TheDirectorState } from "../characters/TheDirector";
+import { DroneSentry, DroneSentryState } from "../characters/DroneSentry";
+import { RogueAgent, RogueAgentState } from "../characters/RogueAgent";
+import { Bodyguard, BodyguardState } from "../characters/Bodyguard";
+import { TheArchitect, TheArchitectState } from "../characters/TheArchitect";
 import { getStoredTheme } from "@/lib/gameTheme";
 
 interface RPGCharacterProps {
@@ -49,7 +53,7 @@ interface RPGCharacterProps {
 }
 
 // Map character/enemy types to sprite types - EXTENDED with all new enemies
-type SpriteType = 'knight' | 'wizard' | 'princess' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'grog_king' | 'cave_troll' | 'crystal_spider' | 'storm_harpy' | 'cloud_giant' | 'wind_lord' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'echo_wraith' | 'agent_x' | 'cipher' | 'shadow_agent' | 'street_thug_agent' | 'hired_gun_agent' | 'cyber_hacker_agent' | 'the_broker_agent' | 'the_director_agent';
+type SpriteType = 'knight' | 'wizard' | 'princess' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'grog_king' | 'cave_troll' | 'crystal_spider' | 'storm_harpy' | 'cloud_giant' | 'wind_lord' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'echo_wraith' | 'agent_x' | 'cipher' | 'shadow_agent' | 'street_thug_agent' | 'hired_gun_agent' | 'cyber_hacker_agent' | 'the_broker_agent' | 'the_director_agent' | 'drone_sentry_agent' | 'rogue_agent_agent' | 'bodyguard_agent' | 'the_architect_agent';
 
 const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean): SpriteType => {
   if (isEnemy) {
@@ -73,14 +77,14 @@ const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean)
       'street_thug': 'street_thug_agent',
       'hired_gun': 'hired_gun_agent',
       'cyber_hacker': 'cyber_hacker_agent',
-      'drone_sentry': 'cyber_hacker_agent',
-      'rogue_agent': 'hired_gun_agent',
-      'bodyguard': 'hired_gun_agent',
-      'operative': 'hired_gun_agent',
-      'enforcer': 'street_thug_agent',
+      'drone_sentry': 'drone_sentry_agent',
+      'rogue_agent': 'rogue_agent_agent',
+      'bodyguard': 'bodyguard_agent',
+      'operative': 'rogue_agent_agent',
+      'enforcer': 'bodyguard_agent',
       'the_broker': 'the_broker_agent',
-      'the_architect': 'cyber_hacker_agent',
-      'the_double_agent': 'hired_gun_agent',
+      'the_architect': 'the_architect_agent',
+      'the_double_agent': 'rogue_agent_agent',
       'the_director': 'the_director_agent',
     };
     if (idMap[enemy.id]) return idMap[enemy.id];
@@ -421,6 +425,51 @@ export const RPGCharacter = ({
         return (
           <TheDirector
             state={commonState as TheDirectorState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="large"
+            showHealthBar={true}
+          />
+        );
+      }
+      if (spriteType === 'drone_sentry_agent') {
+        return (
+          <DroneSentry
+            state={commonState as DroneSentryState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      if (spriteType === 'rogue_agent_agent') {
+        return (
+          <RogueAgent
+            state={commonState as RogueAgentState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      if (spriteType === 'bodyguard_agent') {
+        return (
+          <Bodyguard
+            state={commonState as BodyguardState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      if (spriteType === 'the_architect_agent') {
+        return (
+          <TheArchitect
+            state={commonState as TheArchitectState}
             healthPercent={hpPercentage}
             currentHp={currentHp}
             maxHp={character.maxHp}

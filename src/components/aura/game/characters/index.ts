@@ -33,6 +33,10 @@ export { HiredGun, type HiredGunState } from './HiredGun';
 export { CyberHacker, type CyberHackerState } from './CyberHacker';
 export { TheBroker, type TheBrokerState } from './TheBroker';
 export { TheDirector, type TheDirectorState } from './TheDirector';
+export { DroneSentry, type DroneSentryState } from './DroneSentry';
+export { RogueAgent, type RogueAgentState } from './RogueAgent';
+export { Bodyguard, type BodyguardState } from './Bodyguard';
+export { TheArchitect, type TheArchitectState } from './TheArchitect';
 
 // Export boss silhouettes for world map
 export { 

@@ -79,10 +79,25 @@ export const RPGBattleBackground = ({
     }
   }, [useAiBackground]);
 
+  // Agent mode world-to-DB mapping (IDs 10-14)
+  const agentWorldToDbId: Record<number, number> = {
+    0: 10, // Training Facility
+    1: 11, // The Underground
+    2: 12, // Neon District
+    3: 13, // The Embassy
+    4: 14, // Syndicate HQ
+    5: 11,
+    6: 12,
+    7: 13,
+    8: 14,
+  };
+
   // Fetch AI-generated background from database
   useEffect(() => {
     const fetchBackground = async () => {
-      const dbWorldId = worldToDbId[worldNumber] || 1;
+      const dbWorldId = gameTheme === 'agent' 
+        ? (agentWorldToDbId[worldNumber] || 11) 
+        : (worldToDbId[worldNumber] || 1);
       
       const { data, error } = await supabase
         .from('world_backgrounds')
