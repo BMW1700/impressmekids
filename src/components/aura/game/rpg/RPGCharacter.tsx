@@ -53,7 +53,7 @@ interface RPGCharacterProps {
 }
 
 // Map character/enemy types to sprite types - EXTENDED with all new enemies
-type SpriteType = 'knight' | 'wizard' | 'princess' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'grog_king' | 'cave_troll' | 'crystal_spider' | 'storm_harpy' | 'cloud_giant' | 'wind_lord' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'echo_wraith' | 'agent_x' | 'cipher' | 'shadow_agent' | 'street_thug_agent' | 'hired_gun_agent' | 'cyber_hacker_agent' | 'the_broker_agent' | 'the_director_agent';
+type SpriteType = 'knight' | 'wizard' | 'princess' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'grog_king' | 'cave_troll' | 'crystal_spider' | 'storm_harpy' | 'cloud_giant' | 'wind_lord' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'echo_wraith' | 'agent_x' | 'cipher' | 'shadow_agent' | 'street_thug_agent' | 'hired_gun_agent' | 'cyber_hacker_agent' | 'the_broker_agent' | 'the_director_agent' | 'drone_sentry_agent' | 'rogue_agent_agent' | 'bodyguard_agent' | 'the_architect_agent';
 
 const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean): SpriteType => {
   if (isEnemy) {
