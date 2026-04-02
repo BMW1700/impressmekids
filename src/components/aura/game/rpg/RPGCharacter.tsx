@@ -433,6 +433,51 @@ export const RPGCharacter = ({
           />
         );
       }
+      if (spriteType === 'drone_sentry_agent') {
+        return (
+          <DroneSentry
+            state={commonState as DroneSentryState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      if (spriteType === 'rogue_agent_agent') {
+        return (
+          <RogueAgent
+            state={commonState as RogueAgentState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      if (spriteType === 'bodyguard_agent') {
+        return (
+          <Bodyguard
+            state={commonState as BodyguardState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      if (spriteType === 'the_architect_agent') {
+        return (
+          <TheArchitect
+            state={commonState as TheArchitectState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="large"
+            showHealthBar={true}
+          />
+        );
+      }
       // Goblin types - fallback
       return (
         <GoblinGuard
