@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { BookOpen, Shield, Sparkles, Package } from "lucide-react";
-import { RPGSpellMenu, Spell, valorSpells, elaraSpells, ellaSpells } from "./RPGSpellMenu";
+import { RPGSpellMenu, Spell, valorSpells, elaraSpells, ellaSpells, agentXSpells, cipherSpells, shadowSpells } from "./RPGSpellMenu";
 import { RPGItemMenu, Item } from "./RPGItemMenu";
 
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
