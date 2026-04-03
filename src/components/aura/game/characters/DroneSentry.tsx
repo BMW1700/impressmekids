@@ -38,7 +38,7 @@ export const DroneSentry = ({ state, healthPercent, currentHp, maxHp, showDamage
   return (
     <motion.div
       className="relative"
-      style={{ width, height, transform: flipX ? 'scaleX(-1)' : undefined }}
+      style={{ width, height: height + 20, transform: flipX ? 'scaleX(-1)' : undefined }}
       animate={
         isDefeated ? { opacity: 0, y: 40, rotate: 45 } :
         isHit ? { x: [0, -6, 6, -3, 0], filter: ['brightness(1)', 'brightness(2)', 'brightness(1)'] } :
@@ -68,7 +68,6 @@ export const DroneSentry = ({ state, healthPercent, currentHp, maxHp, showDamage
           </filter>
         </defs>
 
-        {/* Shadow on ground */}
         <ellipse cx="60" cy="135" rx="30" ry="5" fill="rgba(0,0,0,0.2)" />
 
         {/* Rotor arms */}
@@ -90,35 +89,36 @@ export const DroneSentry = ({ state, healthPercent, currentHp, maxHp, showDamage
         {/* Rotor mounts */}
         <rect x="22" y="48" width="16" height="6" rx="3" fill="#4B5563" />
         <rect x="82" y="48" width="16" height="6" rx="3" fill="#4B5563" />
-        
-        {/* Arms connecting to body */}
         <rect x="38" y="50" width="12" height="4" rx="1" fill="#6B7280" />
         <rect x="70" y="50" width="12" height="4" rx="1" fill="#6B7280" />
 
         {/* Main body */}
         <ellipse cx="60" cy="70" rx="22" ry="18" fill="url(#droneBody)" />
         <ellipse cx="60" cy="65" rx="18" ry="12" fill="#4B5563" />
-        
-        {/* Top plate details */}
         <rect x="52" y="55" width="16" height="3" rx="1" fill="#9CA3AF" />
         <circle cx="60" cy="56" r="2" fill="#22D3EE" opacity="0.8" />
         
-        {/* Camera lens - center eye */}
+        {/* Camera lens */}
         <circle cx="60" cy="72" r="8" fill="#1F2937" stroke="#6B7280" strokeWidth="1.5" />
         <circle cx="60" cy="72" r="5" fill="url(#droneLens)" filter="url(#droneGlow)" />
         <circle cx="58" cy="70" r="1.5" fill="white" opacity="0.6" />
 
         {/* Side sensors */}
         <circle cx="42" cy="70" r="3" fill="#1F2937" stroke="#4B5563" strokeWidth="1" />
-        <circle cx="42" cy="70" r="1.5" fill="#22D3EE" opacity="0.7" />
+        <motion.circle cx="42" cy="70" r="1.5" fill="#22D3EE" opacity="0.7"
+          animate={{ opacity: [0.4, 0.9, 0.4] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+        />
         <circle cx="78" cy="70" r="3" fill="#1F2937" stroke="#4B5563" strokeWidth="1" />
-        <circle cx="78" cy="70" r="1.5" fill="#22D3EE" opacity="0.7" />
+        <motion.circle cx="78" cy="70" r="1.5" fill="#22D3EE" opacity="0.7"
+          animate={{ opacity: [0.4, 0.9, 0.4] }}
+          transition={{ duration: 1.5, repeat: Infinity, delay: 0.5 }}
+        />
 
-        {/* Bottom turret / weapon */}
+        {/* Bottom turret */}
         <rect x="55" y="85" width="10" height="12" rx="2" fill="#374151" />
         <rect x="57" y="95" width="6" height="8" rx="1" fill="#4B5563" />
         
-        {/* Weapon fire */}
         {isAttacking && (
           <motion.g animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 0.1, repeat: 3 }}>
             <rect x="58" y="103" width="4" height="12" rx="1" fill="#EF4444" opacity="0.9" />
@@ -132,10 +132,32 @@ export const DroneSentry = ({ state, healthPercent, currentHp, maxHp, showDamage
 
         {/* Antenna */}
         <line x1="60" y1="52" x2="60" y2="42" stroke="#9CA3AF" strokeWidth="1" />
-        <circle cx="60" cy="41" r="2" fill="#EF4444" opacity="0.8" />
+        <motion.circle cx="60" cy="41" r="2" fill="#EF4444" opacity="0.8"
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 1, repeat: Infinity }}
+        />
 
         {isHit && <ellipse cx="60" cy="70" rx="30" ry="25" fill="rgba(255,255,255,0.35)" />}
       </svg>
+
+      {/* Health bar */}
+      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-[85%]" style={{ transform: flipX ? 'scaleX(-1)' : undefined }}>
+        <div className="h-2 bg-gray-900 rounded-full overflow-hidden border border-gray-600">
+          <motion.div
+            className="h-full rounded-full"
+            style={{
+              background: healthPercent > 50 ? 'linear-gradient(90deg, #EF4444, #F87171)' :
+                healthPercent > 25 ? 'linear-gradient(90deg, #EAB308, #FACC15)' :
+                'linear-gradient(90deg, #DC2626, #991B1B)',
+            }}
+            animate={{ width: `${Math.max(0, healthPercent)}%` }}
+            transition={{ duration: 0.5 }}
+          />
+        </div>
+        {currentHp !== undefined && maxHp !== undefined && (
+          <p className="text-[8px] text-center text-gray-400 mt-0.5">{currentHp}/{maxHp}</p>
+        )}
+      </div>
 
       {showDamageNum && showDamage && (
         <motion.div
