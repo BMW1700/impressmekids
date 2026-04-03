@@ -111,12 +111,47 @@ export const Cipher = ({
               animate={{ opacity: [0.3, 0.8, 0.3] }}
               transition={{ duration: 0.3, repeat: 5 }}
             />
-            {/* Data stream */}
+            {/* Plasma number projectiles */}
+            <motion.text x="70" y="100" fill="#22D3EE" fontSize="12" fontFamily="monospace" fontWeight="bold"
+              animate={{ x: [70, 130], opacity: [1, 0], y: [100, 85] }}
+              transition={{ duration: 0.6 }}
+            >0</motion.text>
+            <motion.text x="75" y="110" fill="#06B6D4" fontSize="10" fontFamily="monospace" fontWeight="bold"
+              animate={{ x: [75, 135], opacity: [1, 0], y: [110, 90] }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >1</motion.text>
+            <motion.text x="65" y="95" fill="#67E8F9" fontSize="14" fontFamily="monospace" fontWeight="bold"
+              animate={{ x: [65, 125], opacity: [1, 0], y: [95, 80] }}
+              transition={{ duration: 0.7, delay: 0.2 }}
+            >1</motion.text>
+            <motion.text x="72" y="105" fill="#22D3EE" fontSize="11" fontFamily="monospace" fontWeight="bold"
+              animate={{ x: [72, 140], opacity: [1, 0], y: [105, 92] }}
+              transition={{ duration: 0.55, delay: 0.15 }}
+            >0</motion.text>
+            {/* Data stream burst */}
             <motion.circle cx="95" cy="115" r="15" fill="none" stroke="#22D3EE" strokeWidth="1"
               animate={{ r: [5, 25], opacity: [0.8, 0] }}
               transition={{ duration: 0.8, repeat: 2 }}
             />
           </motion.g>
+        )}
+
+        {/* Floating holographic numbers - idle state */}
+        {!isAttacking && !isDefeated && (
+          <g>
+            <motion.text x="95" y="90" fill="#22D3EE" fontSize="8" fontFamily="monospace" opacity={0.4}
+              animate={{ y: [90, 80], opacity: [0.4, 0, 0.4] }}
+              transition={{ duration: 3, repeat: Infinity }}
+            >0</motion.text>
+            <motion.text x="100" y="105" fill="#06B6D4" fontSize="6" fontFamily="monospace" opacity={0.3}
+              animate={{ y: [105, 95], opacity: [0.3, 0, 0.3] }}
+              transition={{ duration: 4, repeat: Infinity, delay: 1 }}
+            >1</motion.text>
+            <motion.text x="88" y="98" fill="#67E8F9" fontSize="7" fontFamily="monospace" opacity={0.35}
+              animate={{ y: [98, 88], opacity: [0.35, 0, 0.35] }}
+              transition={{ duration: 3.5, repeat: Infinity, delay: 0.5 }}
+            >1</motion.text>
+          </g>
         )}
 
         {/* Head */}

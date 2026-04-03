@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Flame, Snowflake, Zap, X, Sparkles, Flower2, Heart, Shield, Sword, Wind, Sun } from "lucide-react";
+import { Flame, Snowflake, Zap, X, Sparkles, Flower2, Heart, Shield, Sword, Wind, Sun, Crosshair, Binary, Eye, EyeOff, Wifi, Bomb, Target } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 
 export interface Spell {
@@ -122,6 +122,108 @@ export const ellaSpells: Spell[] = [
     color: 'from-teal-300 to-cyan-400', 
     effect: 'wind',
     description: 'A magical gust of wind!'
+  },
+];
+
+// Agent X's tactical abilities
+export const agentXSpells: Spell[] = [
+  {
+    id: 'tactical_strike',
+    name: 'Tactical Strike',
+    damage: 30,
+    mpCost: 15,
+    icon: Crosshair,
+    color: 'from-slate-500 to-slate-700',
+    effect: 'slash',
+    description: 'Precise close-quarters takedown'
+  },
+  {
+    id: 'flashbang',
+    name: 'Flashbang',
+    damage: 25,
+    mpCost: 20,
+    icon: Zap,
+    color: 'from-yellow-300 to-amber-500',
+    effect: 'lightning',
+    description: 'Blinding tactical grenade!'
+  },
+  {
+    id: 'precision_shot',
+    name: 'Precision Shot',
+    damage: 40,
+    mpCost: 25,
+    icon: Target,
+    color: 'from-red-600 to-rose-800',
+    effect: 'fire',
+    description: 'One shot, one hit.'
+  },
+];
+
+// Cipher's digital warfare abilities
+export const cipherSpells: Spell[] = [
+  {
+    id: 'data_burst',
+    name: 'Data Burst',
+    damage: 35,
+    mpCost: 20,
+    icon: Binary,
+    color: 'from-cyan-400 to-teal-600',
+    effect: 'fire',
+    description: 'Plasma numbers blast the target!'
+  },
+  {
+    id: 'system_hack',
+    name: 'System Hack',
+    damage: 25,
+    mpCost: 15,
+    icon: Wifi,
+    color: 'from-cyan-300 to-blue-500',
+    effect: 'lightning',
+    description: 'Override enemy defenses!'
+  },
+  {
+    id: 'firewall',
+    name: 'Firewall',
+    damage: 0,
+    mpCost: 20,
+    icon: Shield,
+    color: 'from-emerald-400 to-cyan-600',
+    effect: 'heal',
+    description: 'Digital barrier restores 25 HP'
+  },
+];
+
+// Shadow's stealth abilities
+export const shadowSpells: Spell[] = [
+  {
+    id: 'shadow_strike',
+    name: 'Shadow Strike',
+    damage: 35,
+    mpCost: 18,
+    icon: EyeOff,
+    color: 'from-purple-600 to-indigo-900',
+    effect: 'slash',
+    description: 'Strike from the darkness!'
+  },
+  {
+    id: 'smoke_bomb',
+    name: 'Smoke Bomb',
+    damage: 20,
+    mpCost: 12,
+    icon: Bomb,
+    color: 'from-gray-500 to-slate-700',
+    effect: 'wind',
+    description: 'Disorient and damage!'
+  },
+  {
+    id: 'assassination',
+    name: 'Assassination',
+    damage: 50,
+    mpCost: 30,
+    icon: Eye,
+    color: 'from-red-700 to-purple-900',
+    effect: 'fire',
+    description: 'Lethal precision strike!'
   },
 ];
 

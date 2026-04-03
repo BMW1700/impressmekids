@@ -457,7 +457,7 @@ export const RPGBattleArena = ({
   // Parse story into words - memoized for stability
   const storyWords = useMemo(() => {
     if (!story?.passage_text) return [];
-    return story.passage_text.split(/\s+/).filter(w => w.length > 0);
+    return story.passage_text.split(/\s+/).filter(w => w.length > 0 && !/^[\u2014\u2013\u2012\-—–]+$/.test(w));
   }, [story?.passage_text]);
 
   // Set words on mount

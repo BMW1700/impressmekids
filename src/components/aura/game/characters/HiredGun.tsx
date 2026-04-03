@@ -38,14 +38,20 @@ export const HiredGun = ({ state, healthPercent, currentHp, maxHp, showDamage, s
   return (
     <motion.div
       className="relative"
-      style={{ width, height, transform: flipX ? 'scaleX(-1)' : undefined }}
+      style={{ width, height: height + 20, transform: flipX ? 'scaleX(-1)' : undefined }}
       animate={isDefeated ? { opacity: 0, y: 20 } : isHit ? { x: [0, -6, 6, -3, 0] } : isAttacking ? { x: [0, -15, 5, 0] } : { y: [0, -2, 0] }}
       transition={isDefeated ? { duration: 1 } : isHit ? { duration: 0.3 } : isAttacking ? { duration: 0.35 } : { duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
     >
       <svg viewBox="0 0 100 180" width={width} height={height}>
+        <defs>
+          <linearGradient id="hgVest" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#4B5563" />
+            <stop offset="100%" stopColor="#1F2937" />
+          </linearGradient>
+        </defs>
         <ellipse cx="50" cy="175" rx="25" ry="5" fill="rgba(0,0,0,0.3)" />
         
-        {/* Legs - tactical pants */}
+        {/* Legs */}
         <rect x="34" y="115" width="13" height="48" rx="4" fill="#374151" />
         <rect x="53" y="115" width="13" height="48" rx="4" fill="#374151" />
         {/* Knee pads */}
@@ -54,26 +60,31 @@ export const HiredGun = ({ state, healthPercent, currentHp, maxHp, showDamage, s
         {/* Combat boots */}
         <rect x="32" y="157" width="17" height="14" rx="3" fill="#1F2937" />
         <rect x="51" y="157" width="17" height="14" rx="3" fill="#1F2937" />
+        <rect x="32" y="157" width="17" height="4" rx="1" fill="#374151" />
+        <rect x="51" y="157" width="17" height="4" rx="1" fill="#374151" />
         
-        {/* Body - tactical vest over dark shirt */}
+        {/* Body */}
         <rect x="28" y="60" width="44" height="58" rx="6" fill="#1F2937" />
         {/* Kevlar vest */}
-        <rect x="30" y="62" width="40" height="40" rx="5" fill="#374151" />
+        <rect x="30" y="62" width="40" height="40" rx="5" fill="url(#hgVest)" />
         <line x1="50" y1="62" x2="50" y2="102" stroke="#4B5563" strokeWidth="1" />
+        {/* MOLLE webbing */}
+        <line x1="35" y1="72" x2="35" y2="98" stroke="#6B7280" strokeWidth="0.5" />
+        <line x1="65" y1="72" x2="65" y2="98" stroke="#6B7280" strokeWidth="0.5" />
         {/* Vest pouches */}
         <rect x="33" y="75" width="10" height="8" rx="2" fill="#4B5563" stroke="#6B7280" strokeWidth="0.5" />
         <rect x="57" y="75" width="10" height="8" rx="2" fill="#4B5563" stroke="#6B7280" strokeWidth="0.5" />
+        <rect x="33" y="87" width="10" height="8" rx="2" fill="#4B5563" stroke="#6B7280" strokeWidth="0.5" />
         
         {/* Arms */}
         <rect x="18" y="65" width="12" height="38" rx="5" fill="#1F2937" />
         <rect x="70" y="65" width="12" height="38" rx="5" fill="#1F2937" />
         
-        {/* Weapon - suppressed pistol */}
+        {/* Weapon */}
         {isAttacking ? (
           <motion.g animate={{ rotate: [0, -10, 0] }} transition={{ duration: 0.2 }}>
             <rect x="76" y="90" width="22" height="6" rx="2" fill="#6B7280" />
             <rect x="94" y="89" width="8" height="8" rx="1" fill="#9CA3AF" />
-            {/* Muzzle flash */}
             <circle cx="103" cy="93" r="6" fill="#FDE047" opacity="0.8" />
           </motion.g>
         ) : (
@@ -82,14 +93,14 @@ export const HiredGun = ({ state, healthPercent, currentHp, maxHp, showDamage, s
           </g>
         )}
         
-        {/* Hands - gloved */}
+        {/* Gloved hands */}
         <circle cx="24" cy="105" r="5" fill="#374151" />
         <circle cx="76" cy="105" r="5" fill="#374151" />
         
         {/* Head */}
         <circle cx="50" cy="45" r="20" fill="#C4A882" />
         
-        {/* Balaclava / face cover */}
+        {/* Balaclava */}
         <path d="M30 45 Q30 25 50 18 Q70 25 70 45 L70 35 Q70 20 50 13 Q30 20 30 35 Z" fill="#1F2937" />
         <rect x="32" y="42" width="36" height="10" rx="3" fill="#1F2937" />
         
@@ -97,15 +108,40 @@ export const HiredGun = ({ state, healthPercent, currentHp, maxHp, showDamage, s
         <rect x="34" y="36" width="14" height="8" rx="3" fill="#065F46" opacity="0.9" />
         <rect x="52" y="36" width="14" height="8" rx="3" fill="#065F46" opacity="0.9" />
         <rect x="48" y="38" width="4" height="4" rx="1" fill="#374151" />
-        {/* Goggle glint */}
-        <rect x="36" y="37" width="4" height="2" rx="1" fill="#34D399" opacity="0.6" />
-        <rect x="54" y="37" width="4" height="2" rx="1" fill="#34D399" opacity="0.6" />
+        <motion.rect x="36" y="37" width="4" height="2" rx="1" fill="#34D399" opacity="0.6"
+          animate={{ opacity: [0.3, 0.8, 0.3] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        />
+        <motion.rect x="54" y="37" width="4" height="2" rx="1" fill="#34D399" opacity="0.6"
+          animate={{ opacity: [0.3, 0.8, 0.3] }}
+          transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+        />
         
         {/* Earpiece */}
         <rect x="68" y="40" width="5" height="8" rx="2" fill="#374151" />
-        
+        <circle cx="70" cy="40" r="1" fill="#EF4444" opacity="0.6" />
+
         {isHit && <rect x="0" y="0" width="100" height="180" fill="rgba(255,255,255,0.4)" rx="10" />}
       </svg>
+
+      {/* Health bar */}
+      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-[85%]" style={{ transform: flipX ? 'scaleX(-1)' : undefined }}>
+        <div className="h-2 bg-gray-900 rounded-full overflow-hidden border border-gray-600">
+          <motion.div
+            className="h-full rounded-full"
+            style={{
+              background: healthPercent > 50 ? 'linear-gradient(90deg, #EF4444, #F87171)' :
+                healthPercent > 25 ? 'linear-gradient(90deg, #EAB308, #FACC15)' :
+                'linear-gradient(90deg, #DC2626, #991B1B)',
+            }}
+            animate={{ width: `${Math.max(0, healthPercent)}%` }}
+            transition={{ duration: 0.5 }}
+          />
+        </div>
+        {currentHp !== undefined && maxHp !== undefined && (
+          <p className="text-[8px] text-center text-gray-400 mt-0.5">{currentHp}/{maxHp}</p>
+        )}
+      </div>
 
       {showDamageNum && showDamage && (
         <motion.div

@@ -2,11 +2,11 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { BookOpen, Shield, Sparkles, Package } from "lucide-react";
-import { RPGSpellMenu, Spell, valorSpells, elaraSpells, ellaSpells } from "./RPGSpellMenu";
+import { RPGSpellMenu, Spell, valorSpells, elaraSpells, ellaSpells, agentXSpells, cipherSpells, shadowSpells } from "./RPGSpellMenu";
 import { RPGItemMenu, Item } from "./RPGItemMenu";
 
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
-type CharacterId = 'valor' | 'elara' | 'ella';
+type CharacterId = 'valor' | 'elara' | 'ella' | 'agent_x' | 'cipher' | 'shadow';
 
 interface RPGCommandMenuProps {
   onSelectCommand: (command: CommandType) => void;
@@ -49,7 +49,10 @@ export const RPGCommandMenu = ({
       case 'valor': return valorSpells;
       case 'elara': return elaraSpells;
       case 'ella': return ellaSpells;
-      default: return elaraSpells; // Default to wizard spells
+      case 'agent_x': return agentXSpells;
+      case 'cipher': return cipherSpells;
+      case 'shadow': return shadowSpells;
+      default: return elaraSpells;
     }
   };
 
@@ -58,6 +61,9 @@ export const RPGCommandMenu = ({
       case 'valor': return 'Combat Arts';
       case 'elara': return 'Magic';
       case 'ella': return 'Nature Magic';
+      case 'agent_x': return 'Tactics';
+      case 'cipher': return 'Cyber Ops';
+      case 'shadow': return 'Stealth Ops';
       default: return 'Magic';
     }
   };
