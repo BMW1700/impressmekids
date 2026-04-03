@@ -6,7 +6,7 @@ import { RPGSpellMenu, Spell, valorSpells, elaraSpells, ellaSpells, agentXSpells
 import { RPGItemMenu, Item } from "./RPGItemMenu";
 
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
-type CharacterId = 'valor' | 'elara' | 'ella';
+type CharacterId = 'valor' | 'elara' | 'ella' | 'agent_x' | 'cipher' | 'shadow';
 
 interface RPGCommandMenuProps {
   onSelectCommand: (command: CommandType) => void;
