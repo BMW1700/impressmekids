@@ -49,7 +49,10 @@ export const RPGCommandMenu = ({
       case 'valor': return valorSpells;
       case 'elara': return elaraSpells;
       case 'ella': return ellaSpells;
-      default: return elaraSpells; // Default to wizard spells
+      case 'agent_x': return agentXSpells;
+      case 'cipher': return cipherSpells;
+      case 'shadow': return shadowSpells;
+      default: return elaraSpells;
     }
   };
 
@@ -58,6 +61,9 @@ export const RPGCommandMenu = ({
       case 'valor': return 'Combat Arts';
       case 'elara': return 'Magic';
       case 'ella': return 'Nature Magic';
+      case 'agent_x': return 'Tactics';
+      case 'cipher': return 'Cyber Ops';
+      case 'shadow': return 'Stealth Ops';
       default: return 'Magic';
     }
   };
