@@ -153,19 +153,6 @@ export const Cipher = ({
             >1</motion.text>
           </g>
         )}
-          <motion.g>
-            <rect x="85" y="120" width="20" height="15" rx="2" fill="#06B6D4" opacity={0.6} />
-            <motion.rect x="87" y="122" width="16" height="11" rx="1" fill="#22D3EE" opacity={0.4}
-              animate={{ opacity: [0.3, 0.8, 0.3] }}
-              transition={{ duration: 0.3, repeat: 5 }}
-            />
-            {/* Data stream */}
-            <motion.circle cx="95" cy="115" r="15" fill="none" stroke="#22D3EE" strokeWidth="1"
-              animate={{ r: [5, 25], opacity: [0.8, 0] }}
-              transition={{ duration: 0.8, repeat: 2 }}
-            />
-          </motion.g>
-        )}
 
         {/* Head */}
         <circle cx="60" cy="52" r="26" fill="#C68B59" />
