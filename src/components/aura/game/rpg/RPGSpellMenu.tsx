@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Flame, Snowflake, Zap, X, Sparkles, Flower2, Heart, Shield, Sword, Wind, Sun } from "lucide-react";
+import { Flame, Snowflake, Zap, X, Sparkles, Flower2, Heart, Shield, Sword, Wind, Sun, Crosshair, Binary, Eye, EyeOff, Wifi, Bomb, Target } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 
 export interface Spell {
