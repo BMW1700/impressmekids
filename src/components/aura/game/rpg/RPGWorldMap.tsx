@@ -40,6 +40,7 @@ interface RPGWorldMapProps {
   onSelectWorld: (world: CampaignWorld) => void;
   onBack: () => void;
   onStartBossRush?: () => void;
+  onSwitchMode?: () => void;
   studentId?: string;
   gold?: number;
   xp?: number;
