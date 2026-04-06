@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Mic, MicOff, Coins, Sparkles } from "lucide-react";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { MiniGoblin } from "./MiniGoblin";
+import { MiniOperative } from "./MiniOperative";
+import { getStoredTheme } from "@/lib/gameTheme";
 
 interface GoblinWord {
   id: number;
@@ -25,7 +27,10 @@ interface RPGGoblinHordeProps {
   enemyName?: string;
   onComplete: (result: { success: boolean; wordsSpoken: number; totalWords: number }) => void;
   onWordResult?: (word: string, correct: boolean) => void;
+  theme?: string;
 }
+
+const isAgent = () => getStoredTheme() === 'agent';
 
 const battleSounds = new SoundEffects();
 
@@ -266,7 +271,9 @@ export const RPGGoblinHorde = ({
     };
   }, []);
 
-  // Render goblin sprite
+  const agent = isAgent();
+
+  // Render goblin/operative sprite
   const renderGoblin = (goblin: GoblinWord) => {
     if (goblin.defeated) {
       return (
@@ -278,10 +285,12 @@ export const RPGGoblinHorde = ({
           animate={{ opacity: 0, scale: 1.5, y: -50 }}
           transition={{ duration: 0.5 }}
         >
-          <div className="text-4xl">💥</div>
+          <div className="text-4xl">{agent ? '⚡' : '💥'}</div>
         </motion.div>
       );
     }
+
+    const variants: Array<'soldier' | 'heavy' | 'sniper'> = ['soldier', 'heavy', 'sniper'];
 
     return (
       <motion.div
@@ -291,9 +300,8 @@ export const RPGGoblinHorde = ({
         animate={{ y: [0, -5, 0] }}
         transition={{ duration: 0.5, repeat: Infinity }}
       >
-        {/* Word above goblin */}
         <motion.div
-          className="bg-red-900/90 px-3 py-1 rounded-lg mb-2 border-2 border-red-500 shadow-lg"
+          className={`${agent ? 'bg-slate-800/90 border-cyan-500' : 'bg-red-900/90 border-red-500'} px-3 py-1 rounded-lg mb-2 border-2 shadow-lg`}
           animate={{ scale: [1, 1.05, 1] }}
           transition={{ duration: 0.8, repeat: Infinity }}
         >
@@ -302,10 +310,12 @@ export const RPGGoblinHorde = ({
           </span>
         </motion.div>
         
-        {/* Mini goblin sprite */}
         <div className="relative">
-          <MiniGoblin size={48} flipX />
-          {/* Running animation dust */}
+          {agent ? (
+            <MiniOperative size={48} flipX variant={variants[goblin.id % 3]} />
+          ) : (
+            <MiniGoblin size={48} flipX />
+          )}
           <motion.div
             className="absolute -bottom-1 left-0 text-lg opacity-60"
             animate={{ opacity: [0.3, 0.6, 0.3], x: [0, 8, 0] }}
@@ -339,10 +349,12 @@ export const RPGGoblinHorde = ({
             animate={{ rotate: [0, 10, -10, 0] }}
             transition={{ duration: 0.5, repeat: 3 }}
           >
-            {success ? '⚔️' : '😅'}
+            {agent ? (success ? '🎯' : '⚠️') : (success ? '⚔️' : '😅')}
           </motion.div>
           <h2 className={`text-3xl font-black mb-4 ${success ? 'text-green-400' : 'text-yellow-400'}`}>
-            {success ? 'HORDE DEFEATED!' : 'They Got Away!'}
+            {agent
+              ? (success ? 'SQUAD NEUTRALIZED!' : 'They Escaped!')
+              : (success ? 'HORDE DEFEATED!' : 'They Got Away!')}
           </h2>
           <div className="flex gap-8 justify-center mb-4">
             <div className="text-center">
@@ -376,21 +388,31 @@ export const RPGGoblinHorde = ({
       animate={{ opacity: 1 }}
     >
       {/* Background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-green-900 via-emerald-800 to-green-950" />
+      <div className={`absolute inset-0 ${agent
+        ? 'bg-gradient-to-b from-slate-900 via-slate-800 to-gray-950'
+        : 'bg-gradient-to-b from-green-900 via-emerald-800 to-green-950'}`} />
       
       {/* Ground */}
-      <div className="absolute bottom-0 left-0 right-0 h-[20%] bg-gradient-to-t from-amber-900 to-green-800" />
+      <div className={`absolute bottom-0 left-0 right-0 h-[20%] ${agent
+        ? 'bg-gradient-to-t from-gray-800 to-slate-700'
+        : 'bg-gradient-to-t from-amber-900 to-green-800'}`} />
       
       {/* Player zone indicator */}
-      <div className="absolute left-0 bottom-[15%] w-[8%] h-[30%] bg-gradient-to-r from-blue-500/30 to-transparent border-r-2 border-blue-400/50 flex items-center justify-center">
-        <div className="text-4xl">🛡️</div>
+      <div className={`absolute left-0 bottom-[15%] w-[8%] h-[30%] flex items-center justify-center border-r-2 ${agent
+        ? 'bg-gradient-to-r from-cyan-500/20 to-transparent border-cyan-400/50'
+        : 'bg-gradient-to-r from-blue-500/30 to-transparent border-blue-400/50'}`}>
+        <div className="text-4xl">{agent ? '🎯' : '🛡️'}</div>
       </div>
 
       {/* Header */}
       <div className="absolute top-4 left-4 right-4 flex justify-between items-start z-20">
-        <div className="bg-slate-900/80 px-4 py-2 rounded-xl border border-green-500/50">
-          <h2 className="text-xl font-black text-green-400">⚔️ GOBLIN HORDE!</h2>
-          <p className="text-sm text-green-300">Speak the words to defeat them!</p>
+        <div className={`bg-slate-900/80 px-4 py-2 rounded-xl border ${agent ? 'border-cyan-500/50' : 'border-green-500/50'}`}>
+          <h2 className={`text-xl font-black ${agent ? 'text-cyan-400' : 'text-green-400'}`}>
+            {agent ? '🎯 HOSTILE SQUAD!' : '⚔️ GOBLIN HORDE!'}
+          </h2>
+          <p className={`text-sm ${agent ? 'text-cyan-300' : 'text-green-300'}`}>
+            {agent ? 'Speak the words to eliminate them!' : 'Speak the words to defeat them!'}
+          </p>
         </div>
         
         <div className="flex gap-4">
