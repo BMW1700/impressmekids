@@ -1,8 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, Volume2, Repeat } from "lucide-react";
+import { Mic, Volume2, Repeat, Radar } from "lucide-react";
 import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { SoundEffects, unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
+import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
 
 interface EchoWord {
   id: string;

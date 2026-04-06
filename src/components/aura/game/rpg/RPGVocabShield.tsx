@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, Zap, X } from "lucide-react";
+import { Shield, Zap, X, Lock } from "lucide-react";
+import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 
 const sounds = new SoundEffects();
