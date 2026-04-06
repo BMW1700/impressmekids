@@ -2794,7 +2794,9 @@ export const RPGBattleArena = ({
               )}
 
               {/* Victory Screen */}
-              {phase === 'victory' && (
+              {phase === 'victory' && (() => {
+                const isAgentVictory = getStoredTheme() === 'agent';
+                return (
                 <motion.div
                   key="victory"
                   initial={{ opacity: 0, scale: 0.8 }}
@@ -2806,13 +2808,17 @@ export const RPGBattleArena = ({
                     transition={{ repeat: Infinity, duration: 2 }}
                     className="flex justify-center gap-2"
                   >
-                    <Trophy className="h-16 w-16 text-yellow-400" />
+                    {isAgentVictory
+                      ? <span className="text-6xl">🎯</span>
+                      : <Trophy className="h-16 w-16 text-yellow-400" />}
                   </motion.div>
                   <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-500">
-                    VICTORY!
+                    {isAgentVictory ? 'MISSION COMPLETE' : 'VICTORY!'}
                   </h2>
                   <p className="text-slate-300">
-                    You defeated <span className="text-red-400 font-bold">{enemy.name}</span>!
+                    {isAgentVictory
+                      ? <>Target <span className="text-red-400 font-bold">{enemy.name}</span> neutralized.</>
+                      : <>You defeated <span className="text-red-400 font-bold">{enemy.name}</span>!</>}
                   </p>
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-xl mx-auto">
@@ -2846,10 +2852,13 @@ export const RPGBattleArena = ({
                     Continue
                   </Button>
                 </motion.div>
-              )}
+                );
+              })()}
 
               {/* Defeat Screen */}
-              {phase === 'defeat' && (
+              {phase === 'defeat' && (() => {
+                const isAgentDefeat = getStoredTheme() === 'agent';
+                return (
                 <motion.div
                   key="defeat"
                   initial={{ opacity: 0 }}
@@ -2860,25 +2869,32 @@ export const RPGBattleArena = ({
                     animate={{ y: [0, -5, 0] }}
                     transition={{ repeat: Infinity, duration: 2 }}
                   >
-                    <Skull className="h-16 w-16 text-red-500 mx-auto" />
+                    {isAgentDefeat
+                      ? <span className="text-6xl block">⚠️</span>
+                      : <Skull className="h-16 w-16 text-red-500 mx-auto" />}
                   </motion.div>
-                  <h2 className="text-4xl font-black text-red-500">DEFEAT</h2>
+                  <h2 className="text-4xl font-black text-red-500">
+                    {isAgentDefeat ? 'MISSION FAILED' : 'DEFEAT'}
+                  </h2>
                   <p className="text-slate-300">
-                    {enemy.name} was too powerful...
+                    {isAgentDefeat
+                      ? <>{enemy.name} compromised the operation...</>
+                      : <>{enemy.name} was too powerful...</>}
                   </p>
                   <div className="flex justify-center gap-4">
                     <Button variant="outline" onClick={onBack} className="border-slate-600 text-slate-300">
-                      Return to Map
+                      {isAgentDefeat ? 'Return to HQ' : 'Return to Map'}
                     </Button>
                     <Button 
                       onClick={() => window.location.reload()}
                       className="bg-gradient-to-r from-red-500 to-rose-600"
                     >
-                      Try Again
+                      {isAgentDefeat ? 'Retry Mission' : 'Try Again'}
                     </Button>
                   </div>
                 </motion.div>
-              )}
+                );
+              })()}
             </AnimatePresence>
           </div>
         </div>
