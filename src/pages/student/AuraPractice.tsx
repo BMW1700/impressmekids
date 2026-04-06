@@ -16,7 +16,7 @@ import type { EnemyType } from "@/lib/battleMechanics";
 import KidFriendlyProgress from "@/components/aura/KidFriendlyProgress";
 import { curatedStories } from "@/data/curatedStories";
 import { agentStories } from "@/data/agentStories";
-import { getStoredTheme, setStoredTheme, type GameTheme } from "@/lib/gameTheme";
+import { getStoredTheme, setStoredTheme, type GameTheme, getGradeMode, getThemeFromGradeMode, type GradeMode } from "@/lib/gameTheme";
 import { ThemeSelector } from "@/components/aura/game/rpg/ThemeSelector";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
