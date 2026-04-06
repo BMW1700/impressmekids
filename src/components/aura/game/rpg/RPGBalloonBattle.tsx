@@ -14,6 +14,7 @@ interface RPGBalloonBattleProps {
   enemyName?: string;
   studentId?: string;
   storyTitle?: string;
+  gradeMode?: string;
   onComplete: (victory: boolean, stats: { wordsRead: number; correctWords: number; balloonsLost: number }) => void;
   onWordResult?: (word: string, correct: boolean) => void;
 }
@@ -51,6 +52,7 @@ export const RPGBalloonBattle = ({
   enemyName = "Enemy",
   studentId,
   storyTitle,
+  gradeMode,
   onComplete,
   onWordResult,
 }: RPGBalloonBattleProps) => {

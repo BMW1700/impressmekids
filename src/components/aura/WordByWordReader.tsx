@@ -235,6 +235,7 @@ export const WordByWordReader = ({
   onWordResult,
   battleMode,
   challengingMode,
+  gradeMode,
 }: WordByWordReaderProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);

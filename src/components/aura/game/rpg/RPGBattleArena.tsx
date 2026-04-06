@@ -92,6 +92,7 @@ interface RPGBattleArenaProps {
   studentId: string;
   battleMode?: BattleModeType;
   worldNumber?: number;
+  gradeMode?: string;
   onBack: () => void;
   onComplete: (victory: boolean, stats: BattleStats) => void;
 }
@@ -111,6 +112,7 @@ export const RPGBattleArena = ({
   studentId,
   battleMode = 'classic',
   worldNumber = 1,
+  gradeMode,
   onBack,
   onComplete,
 }: RPGBattleArenaProps) => {

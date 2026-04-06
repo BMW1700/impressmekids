@@ -25,6 +25,7 @@ interface RPGTugOfWarProps {
   enemyName?: string;
   studentId?: string;
   storyTitle?: string;
+  gradeMode?: string;
   onComplete: (victory: boolean, stats: { wordsRead: number; correctWords: number; incorrectWords: number }) => void;
   onWordResult?: (word: string, correct: boolean) => void;
   onExit?: () => void;
@@ -54,6 +55,7 @@ export const RPGTugOfWar = ({
   enemyName = "Goblins",
   studentId,
   storyTitle,
+  gradeMode,
   onComplete,
   onWordResult,
   onExit,
