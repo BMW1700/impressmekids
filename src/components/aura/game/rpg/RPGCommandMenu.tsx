@@ -29,9 +29,9 @@ const classicCommands: { id: CommandType; label: string; icon: typeof BookOpen; 
 ];
 
 const agentCommands: { id: CommandType; label: string; icon: typeof BookOpen; color: string }[] = [
-  { id: 'read', label: 'Brief', icon: Crosshair, color: 'from-emerald-500 to-teal-600' },
+  { id: 'read', label: 'Read', icon: Crosshair, color: 'from-emerald-500 to-teal-600' },
   { id: 'magic', label: 'Tech', icon: Cpu, color: 'from-cyan-500 to-blue-600' },
-  { id: 'defend', label: 'Cover', icon: ShieldAlert, color: 'from-slate-500 to-zinc-600' },
+  { id: 'defend', label: 'Defend', icon: ShieldAlert, color: 'from-slate-500 to-zinc-600' },
   { id: 'items', label: 'Gear', icon: Briefcase, color: 'from-amber-500 to-orange-600' },
 ];
 
