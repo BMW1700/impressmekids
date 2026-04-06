@@ -100,14 +100,14 @@ export const RPGStore = ({
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-gradient-to-br from-slate-900 via-amber-900/30 to-slate-900 rounded-2xl p-6 max-w-3xl w-full max-h-[85vh] overflow-hidden border border-amber-500/30 shadow-[0_0_50px_rgba(245,158,11,0.3)] flex flex-col"
+          className={`bg-gradient-to-br ${isAgent ? 'from-slate-900 via-cyan-900/30 to-slate-900 border-cyan-500/30 shadow-[0_0_50px_rgba(6,182,212,0.3)]' : 'from-slate-900 via-amber-900/30 to-slate-900 border-amber-500/30 shadow-[0_0_50px_rgba(245,158,11,0.3)]'} rounded-2xl p-6 max-w-3xl w-full max-h-[85vh] overflow-hidden border flex flex-col`}
         >
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-2xl font-black text-white flex items-center gap-2">
-                  <ShoppingBag className="w-7 h-7 text-amber-500" />
-                  Item Shop
+                  <ShoppingBag className={`w-7 h-7 ${isAgent ? 'text-cyan-500' : 'text-amber-500'}`} />
+                  {isAgent ? 'Field Requisitions' : 'Item Shop'}
                 </h2>
                 <div className="flex items-center gap-2 mt-1">
                   <Coins className="w-4 h-4 text-yellow-400" />
@@ -151,7 +151,7 @@ export const RPGStore = ({
                   {/* Special skin layout with character previews */}
                   {category === 'skin' ? (
                     <div className="grid grid-cols-3 gap-3">
-                      {STORE_ITEMS.filter(item => item.category === 'skin').map((item) => {
+                      {filteredItems.filter(item => item.category === 'skin').map((item) => {
                         const isOwned = ownedItems.includes(item.id);
                         const canAfford = currentGold >= item.price;
                         const isEquipped = item.skinVariant === equippedSkins[item.character || 'valor'];
@@ -200,7 +200,7 @@ export const RPGStore = ({
                   ) : (
                     /* Standard item grid */
                     <div className="grid grid-cols-2 gap-3">
-                      {STORE_ITEMS.filter(item => item.category === category).map((item) => {
+                      {filteredItems.filter(item => item.category === category).map((item) => {
                         const isOwned = item.category !== 'potion' && ownedItems.includes(item.id);
                         const canAfford = currentGold >= item.price;
                         const rarityStyle = RARITY_COLORS[item.rarity];
@@ -287,12 +287,14 @@ export const RPGStore = ({
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-4 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-purple-500/20 rounded-xl p-3 border border-purple-500/30"
+              className={`mt-4 bg-gradient-to-r ${isAgent ? 'from-cyan-500/20 via-teal-500/20 to-cyan-500/20 border-cyan-500/30' : 'from-purple-500/20 via-pink-500/20 to-purple-500/20 border-purple-500/30'} rounded-xl p-3 border`}
             >
               <div className="flex items-center justify-center gap-2">
-                <Sparkles className="w-4 h-4 text-purple-400" />
-                <span className="text-sm text-purple-300">Earn gold by reading books and winning battles!</span>
-                <Sparkles className="w-4 h-4 text-purple-400" />
+                <Sparkles className={`w-4 h-4 ${isAgent ? 'text-cyan-400' : 'text-purple-400'}`} />
+                <span className={`text-sm ${isAgent ? 'text-cyan-300' : 'text-purple-300'}`}>
+                  {isAgent ? 'Earn credits by completing missions and neutralizing threats!' : 'Earn gold by reading books and winning battles!'}
+                </span>
+                <Sparkles className={`w-4 h-4 ${isAgent ? 'text-cyan-400' : 'text-purple-400'}`} />
               </div>
             </motion.div>
         </motion.div>
