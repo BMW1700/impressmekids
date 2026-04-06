@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 
-export type SpellEffectType = 'fire' | 'ice' | 'lightning' | 'slash' | 'nature' | 'heal' | 'wind' | null;
+export type SpellEffectType = 'fire' | 'ice' | 'lightning' | 'slash' | 'nature' | 'heal' | 'wind' | 'data_burst' | null;
 
 interface RPGSpellEffectsProps {
   spellType: SpellEffectType;
