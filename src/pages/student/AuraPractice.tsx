@@ -188,7 +188,16 @@ const AuraPractice = () => {
     enabled: !!user?.id,
   });
 
-  // Check for active screening period
+  // Auto-select grade mode from profile default (only if no theme stored locally)
+  React.useEffect(() => {
+    if (!hasLoadedDefault && profile?.default_grade_mode && !getStoredTheme()) {
+      const defaultTheme = getThemeFromGradeMode(profile.default_grade_mode as GradeMode);
+      setGameTheme(defaultTheme);
+      setStoredTheme(defaultTheme);
+      setHasLoadedDefault(true);
+    }
+  }, [profile, hasLoadedDefault]);
+
   const { data: activeScreening } = useActiveScreeningPassage(user?.id);
 
   // Campaign progress hook - scoped by grade mode
