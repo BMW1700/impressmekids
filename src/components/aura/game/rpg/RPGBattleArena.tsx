@@ -19,6 +19,7 @@ import { RPGGhostlyWhispers } from "./RPGGhostlyWhispers";
 import { RPGRollingBoulders } from "./RPGRollingBoulders";
 import { RPGEnemyTransition } from "./RPGEnemyTransition";
 import { RPGSpellEffects } from "./RPGSpellEffects";
+import { RPGDataBurstEffect } from "./RPGDataBurstEffect";
 import { RPGCoinDrop } from "./RPGCoinDrop";
 // NEW: Import the attack mini-games (Word Blitz removed - caused crashes)
 import { RPGWordShield } from "./RPGWordShield";
