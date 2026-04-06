@@ -2127,11 +2127,18 @@ export const RPGBattleArena = ({
       />
 
       {/* Spell Effects Overlay */}
-      <RPGSpellEffects
-        spellType={activeSpell}
-        isActive={showSpellEffect}
-        onComplete={handleSpellComplete}
-      />
+      {activeSpell === 'data_burst' ? (
+        <RPGDataBurstEffect
+          isActive={showSpellEffect}
+          onComplete={handleSpellComplete}
+        />
+      ) : (
+        <RPGSpellEffects
+          spellType={activeSpell}
+          isActive={showSpellEffect}
+          onComplete={handleSpellComplete}
+        />
+      )}
       
       {/* Coin Drop Animation */}
       {showCoinDrop && (
