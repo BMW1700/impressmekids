@@ -1404,6 +1404,9 @@ export const RPGBattleArena = ({
       case 'wind':
         battleSounds.windGust();
         break;
+      case 'data_burst':
+        battleSounds.lightningCrack();
+        break;
     }
     
     // Trigger spell visual effect
