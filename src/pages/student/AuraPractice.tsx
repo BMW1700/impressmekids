@@ -99,6 +99,7 @@ const AuraPractice = () => {
   const [presentationMetrics, setPresentationMetrics] = useState<PresentationMetrics | null>(null);
   const [presentationTranscript, setPresentationTranscript] = useState<string>('');
   const [gameTheme, setGameTheme] = useState<GameTheme | null>(getStoredTheme());
+  const currentGradeMode: GradeMode = getGradeMode(gameTheme);
   const [showThemeSelector, setShowThemeSelector] = useState(false);
   
   // Theme-aware data sources
@@ -189,13 +190,13 @@ const AuraPractice = () => {
   // Check for active screening period
   const { data: activeScreening } = useActiveScreeningPassage(user?.id);
 
-  // Campaign progress hook
+  // Campaign progress hook - scoped by grade mode
   const { 
     progress: campaignProgress, 
     startBattle, 
     completeBattle,
     initializeProgress 
-  } = useCampaignProgress(user?.id);
+  } = useCampaignProgress(user?.id, currentGradeMode);
   const { data: records, refetch } = useQuery({
     queryKey: ['aura-records', user?.id],
     queryFn: async () => {
