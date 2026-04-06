@@ -154,9 +154,9 @@ export const AuraReadingSection = () => {
     enabled: !!user?.id,
   });
 
-  // Auto-select grade mode from profile default (only if no theme stored locally)
+  // Auto-select grade mode from profile default on page load
   useEffect(() => {
-    if (!hasLoadedDefault && profile?.default_grade_mode && !getStoredTheme()) {
+    if (!hasLoadedDefault && profile?.default_grade_mode) {
       const defaultTheme = getThemeFromGradeMode(profile.default_grade_mode as GradeMode);
       setGameTheme(defaultTheme);
       setStoredTheme(defaultTheme);
