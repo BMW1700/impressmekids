@@ -25,6 +25,7 @@ interface RPGTugOfWarProps {
   enemyName?: string;
   studentId?: string;
   storyTitle?: string;
+  gradeMode?: string;
   onComplete: (victory: boolean, stats: { wordsRead: number; correctWords: number; incorrectWords: number }) => void;
   onWordResult?: (word: string, correct: boolean) => void;
   onExit?: () => void;
@@ -54,6 +55,7 @@ export const RPGTugOfWar = ({
   enemyName = "Goblins",
   studentId,
   storyTitle,
+  gradeMode,
   onComplete,
   onWordResult,
   onExit,
@@ -135,6 +137,7 @@ export const RPGTugOfWar = ({
         fluency_score: fluencyScore,
         fluency_level: accuracyPercent >= 95 ? 'independent' : accuracyPercent >= 90 ? 'instructional' : 'frustration',
         reading_mode: 'tug_of_war',
+        grade_mode: gradeMode || 'k5',
       });
       
       if (error) {

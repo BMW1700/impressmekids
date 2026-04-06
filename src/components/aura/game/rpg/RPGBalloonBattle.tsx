@@ -14,6 +14,7 @@ interface RPGBalloonBattleProps {
   enemyName?: string;
   studentId?: string;
   storyTitle?: string;
+  gradeMode?: string;
   onComplete: (victory: boolean, stats: { wordsRead: number; correctWords: number; balloonsLost: number }) => void;
   onWordResult?: (word: string, correct: boolean) => void;
 }
@@ -51,6 +52,7 @@ export const RPGBalloonBattle = ({
   enemyName = "Enemy",
   studentId,
   storyTitle,
+  gradeMode,
   onComplete,
   onWordResult,
 }: RPGBalloonBattleProps) => {
@@ -157,6 +159,7 @@ export const RPGBalloonBattle = ({
         wcpm: wcpm,
         fluency_level: accuracyPercent >= 95 ? 'independent' : accuracyPercent >= 90 ? 'instructional' : 'frustration',
         reading_mode: 'balloon_battle',
+        grade_mode: gradeMode || 'k5',
       });
       
       if (error) {

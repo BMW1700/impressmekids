@@ -9,22 +9,25 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import { RPGPlayerHUD } from "@/components/aura/game/rpg/RPGPlayerHUD";
+import { getStoredTheme, getGradeMode } from "@/lib/gameTheme";
 
 const GameDashboard = () => {
   const navigate = useNavigate();
   const { user, session, profile } = useAuth();
 
-  const { progress } = useCampaignProgress(user?.id);
+  const currentGradeMode = getGradeMode(getStoredTheme());
+  const { progress } = useCampaignProgress(user?.id, currentGradeMode);
 
   const { data: readingStats } = useQuery({
-    queryKey: ['game-reading-stats', user?.id],
+    queryKey: ['game-reading-stats', user?.id, currentGradeMode],
     queryFn: async () => {
       if (!user?.id) return null;
-      const { data } = await supabase
+      let query = supabase
         .from('student_reading_stats')
         .select('*')
-        .eq('student_id', user.id)
-        .maybeSingle();
+        .eq('student_id', user.id);
+      if (currentGradeMode) query = query.eq('grade_mode', currentGradeMode);
+      const { data } = await query.maybeSingle();
       return data;
     },
     enabled: !!user?.id,

@@ -92,6 +92,7 @@ interface RPGBattleArenaProps {
   studentId: string;
   battleMode?: BattleModeType;
   worldNumber?: number;
+  gradeMode?: string;
   onBack: () => void;
   onComplete: (victory: boolean, stats: BattleStats) => void;
 }
@@ -111,6 +112,7 @@ export const RPGBattleArena = ({
   studentId,
   battleMode = 'classic',
   worldNumber = 1,
+  gradeMode,
   onBack,
   onComplete,
 }: RPGBattleArenaProps) => {
@@ -1982,6 +1984,7 @@ export const RPGBattleArena = ({
           wcpm: Math.round(correctWords / (durationSeconds / 60)),
           fluency_level: accuracyPercent >= 95 ? 'independent' : accuracyPercent >= 90 ? 'instructional' : 'frustration',
           reading_mode: battleMode === 'tug_of_war' ? 'tug_of_war' : battleMode === 'balloon' ? 'balloon_battle' : 'rpg_battle',
+          grade_mode: gradeMode || 'k5',
         });
         
         if (error) {
@@ -2275,6 +2278,7 @@ export const RPGBattleArena = ({
             words={barrageWords}
             heroName={playerCharacter.name}
             enemyName={enemy.name}
+            gradeMode={gradeMode}
             onComplete={handleTugOfWarComplete}
             onExit={onBack}
           />
@@ -2293,6 +2297,7 @@ export const RPGBattleArena = ({
             enemyName={enemy.name}
             studentId={studentId}
             storyTitle={story.title}
+            gradeMode={gradeMode}
             onComplete={handleBalloonBattleComplete}
           />
         )}

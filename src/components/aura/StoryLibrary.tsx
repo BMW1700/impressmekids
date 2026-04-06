@@ -346,6 +346,7 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
                 helpedNoCount={story.helpedNoCount}
                 isFeatured={story.isFeatured}
                 showVoting={!!story.storyId}
+                gradeMode={gradeMode}
                 onStartReading={() => onSelectStory(story)}
               />
             ))}
@@ -379,6 +380,7 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
                 helpedNoCount={story.helpedNoCount}
                 isFeatured={story.isFeatured}
                 showVoting={!!story.storyId}
+                gradeMode={gradeMode}
                 onStartReading={() => onSelectStory(story)}
               />
             ))}
@@ -405,6 +407,7 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
               helpedNoCount={story.helpedNoCount}
               isFeatured={story.isFeatured}
               showVoting={!!story.storyId}
+              gradeMode={gradeMode}
               onStartReading={() => onSelectStory(story)}
             />
           ))}

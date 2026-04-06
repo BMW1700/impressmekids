@@ -367,6 +367,7 @@ const AuraPractice = () => {
             studentId={user.id}
             battleMode={selectedBattleMode}
             worldNumber={selectedWorld?.id || 1}
+            gradeMode={currentGradeMode}
             onBack={() => {
               setRpgView('level_select');
               setRpgStory(null);
@@ -665,7 +666,7 @@ const AuraPractice = () => {
             </div>
             
             {/* Gamification Stats Header */}
-            {user?.id && <GamificationHeader studentId={user.id} />}
+            {user?.id && <GamificationHeader studentId={user.id} gradeMode={currentGradeMode} />}
           </div>
 
           <SmartNotifications onNavigate={(path) => navigate(path)} gradeMode={currentGradeMode} />

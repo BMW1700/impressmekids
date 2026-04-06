@@ -28,6 +28,7 @@ interface StoryCardProps {
   helpedNoCount?: number;
   isFeatured?: boolean;
   showVoting?: boolean;
+  gradeMode?: string;
   onStartReading: () => void;
   onBookshelfChange?: () => void;
 }
@@ -75,6 +76,7 @@ export const StoryCard = ({
   helpedNoCount = 0,
   isFeatured = false,
   showVoting = true,
+  gradeMode,
   onStartReading,
   onBookshelfChange
 }: StoryCardProps) => {
@@ -120,12 +122,14 @@ export const StoryCard = ({
       }
 
       if (isInBookshelf) {
-        // Remove from bookshelf
-        await supabase
+        // Remove from bookshelf (scoped by grade_mode)
+        const deleteQuery = supabase
           .from('student_reading_progress')
           .delete()
           .eq('student_id', user.id)
           .eq('story_id', libraryStoryId);
+        if (gradeMode) deleteQuery.eq('grade_mode', gradeMode);
+        await deleteQuery;
         
         setIsInBookshelf(false);
         toast({
@@ -133,7 +137,7 @@ export const StoryCard = ({
           description: "Story removed from your reading list",
         });
       } else {
-        // Add to bookshelf (want to read)
+        // Add to bookshelf (want to read) with grade_mode
         await supabase
           .from('student_reading_progress')
           .insert({
@@ -141,6 +145,7 @@ export const StoryCard = ({
             story_id: libraryStoryId,
             completed: false,
             times_read: 0,
+            grade_mode: gradeMode || 'k5',
           });
         
         setIsInBookshelf(true);
