@@ -629,6 +629,7 @@ export const AuraReadingSection = () => {
             onSelectStory={handleStorySelect} 
             onStartCampaign={() => setIsCampaignMode(true)}
             onStartRpgMode={() => setIsRpgMode(true)}
+            gradeMode={currentGradeMode}
           />
         </TabsContent>
 
