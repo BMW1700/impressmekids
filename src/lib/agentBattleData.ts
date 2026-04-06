@@ -290,8 +290,11 @@ export const getAgentBossForWorld = (worldId: number): RPGEnemy => {
 // Get agent hero by character selection
 export const getAgentHero = (character: string): RPGCharacter => {
   switch (character) {
+    case 'agent_x':
     case 'valor': return { ...agentX };
+    case 'cipher':
     case 'elara': return { ...cipher };
+    case 'shadow':
     case 'ella': return { ...shadow };
     default: return { ...agentX };
   }

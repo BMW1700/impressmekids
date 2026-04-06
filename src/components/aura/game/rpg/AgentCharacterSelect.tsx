@@ -40,7 +40,7 @@ export const AgentCharacterSelect = ({ onSelect }: AgentCharacterSelectProps) =>
         >
           <div
             className="bg-gradient-to-b from-slate-800/60 to-slate-900/80 backdrop-blur-sm rounded-2xl p-5 border-2 border-slate-500/50 hover:border-slate-400 transition-all cursor-pointer w-full"
-            onClick={() => onSelect('valor')}
+            onClick={() => onSelect('agent_x')}
           >
             <div className="flex justify-center mb-3">
               <AgentX state="idle" healthPercent={100} size="medium" showHealthBar={false} />
@@ -81,7 +81,7 @@ export const AgentCharacterSelect = ({ onSelect }: AgentCharacterSelectProps) =>
           </div>
 
           <Button
-            onClick={() => onSelect('valor')}
+            onClick={() => onSelect('agent_x')}
             className="mt-3 bg-slate-600 hover:bg-slate-500 text-white font-bold px-8 w-full"
           >
             Choose Agent X
@@ -98,7 +98,7 @@ export const AgentCharacterSelect = ({ onSelect }: AgentCharacterSelectProps) =>
         >
           <div
             className="bg-gradient-to-b from-cyan-900/60 to-slate-900/80 backdrop-blur-sm rounded-2xl p-5 border-2 border-cyan-500/50 hover:border-cyan-400 transition-all cursor-pointer w-full"
-            onClick={() => onSelect('elara')}
+            onClick={() => onSelect('cipher')}
           >
             <div className="flex justify-center mb-3">
               <Cipher state="idle" healthPercent={100} size="medium" showHealthBar={false} />
@@ -139,7 +139,7 @@ export const AgentCharacterSelect = ({ onSelect }: AgentCharacterSelectProps) =>
           </div>
 
           <Button
-            onClick={() => onSelect('elara')}
+            onClick={() => onSelect('cipher')}
             className="mt-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-8 w-full"
           >
             Choose Cipher
@@ -156,7 +156,7 @@ export const AgentCharacterSelect = ({ onSelect }: AgentCharacterSelectProps) =>
         >
           <div
             className="bg-gradient-to-b from-purple-900/60 to-slate-900/80 backdrop-blur-sm rounded-2xl p-5 border-2 border-purple-500/50 hover:border-purple-400 transition-all cursor-pointer w-full"
-            onClick={() => onSelect('ella')}
+            onClick={() => onSelect('shadow')}
           >
             <div className="flex justify-center mb-3">
               <Shadow state="idle" healthPercent={100} size="medium" showHealthBar={false} />
@@ -197,7 +197,7 @@ export const AgentCharacterSelect = ({ onSelect }: AgentCharacterSelectProps) =>
           </div>
 
           <Button
-            onClick={() => onSelect('ella')}
+            onClick={() => onSelect('shadow')}
             className="mt-3 bg-purple-600 hover:bg-purple-500 text-white font-bold px-8 w-full"
           >
             Choose Shadow

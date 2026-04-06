@@ -487,7 +487,8 @@ export const RPGBattleArena = ({
     setSelectedCharacter(character);
     
     // Pick random companion from remaining 2 characters
-    const allCharacters: PlayableCharacter[] = ['valor', 'elara', 'ella'];
+    const isAgent = getStoredTheme() === 'agent';
+    const allCharacters: PlayableCharacter[] = isAgent ? ['agent_x', 'cipher', 'shadow'] : ['valor', 'elara', 'ella'];
     const remaining = allCharacters.filter(c => c !== character);
     const randomCompanion = remaining[Math.floor(Math.random() * remaining.length)];
     setCompanionCharacter(randomCompanion);
@@ -1697,7 +1698,7 @@ export const RPGBattleArena = ({
       let actualDamage = baseDamage;
       let isElaraBarrage = false;
       
-      if (selectedCharacter === 'elara') {
+      if (selectedCharacter === 'elara' || selectedCharacter === 'cipher') {
         const newChargeCount = elaraChargeRef.current + 1;
         elaraChargeRef.current = newChargeCount;
         setElaraChargeCount(newChargeCount);
@@ -1807,7 +1808,7 @@ export const RPGBattleArena = ({
       }
 
       // Vary attack type based on streak (for non-Elara)
-      if (selectedCharacter !== 'elara' && !hasManualSpellRef.current) {
+      if (selectedCharacter !== 'elara' && selectedCharacter !== 'cipher' && !hasManualSpellRef.current) {
         const types: ('fire' | 'ice' | 'lightning' | 'slash')[] = ['slash', 'fire', 'ice', 'lightning'];
         setAttackType(types[Math.min(Math.floor(newStreak / 3), types.length - 1)]);
       }
@@ -2662,7 +2663,7 @@ export const RPGBattleArena = ({
                     {currentCommand === 'read' && currentWordBatch.length > 0 && (
                       <>
                         {/* Elara charge indicator */}
-                        {selectedCharacter === 'elara' && elaraChargeCount > 0 && elaraChargeCount < 5 && (
+                        {(selectedCharacter === 'elara' || selectedCharacter === 'cipher') && elaraChargeCount > 0 && elaraChargeCount < 5 && (
                           <motion.div 
                             className="bg-gradient-to-r from-purple-900/90 to-indigo-900/90 border-2 border-purple-400 rounded-lg px-4 py-2 mb-2"
                             animate={{ scale: [1, 1.02, 1] }}
@@ -2695,7 +2696,7 @@ export const RPGBattleArena = ({
                           streak={streak}
                           batchSize={5}
                           enableEchoRetry={true}
-                          mode={selectedCharacter === 'elara' ? 'fast' : 'normal'}
+                          mode={selectedCharacter === 'elara' || selectedCharacter === 'cipher' ? 'fast' : 'normal'}
                         />
                         
                         {/* Speed & Accuracy Bonus HUD — patent-visible mechanics */}
@@ -2762,8 +2763,8 @@ export const RPGBattleArena = ({
                           currentHp: playerHp, 
                           maxHp: playerCharacter.maxHp, 
                           isDefending: currentCommand === 'defend',
-                          currentMp: selectedCharacter === 'elara' ? wizardMp : undefined,
-                          maxMp: selectedCharacter === 'elara' ? 50 : undefined,
+                          currentMp: (selectedCharacter === 'elara' || selectedCharacter === 'cipher') ? wizardMp : undefined,
+                          maxMp: (selectedCharacter === 'elara' || selectedCharacter === 'cipher') ? 50 : undefined,
                         },
                       ]}
                       streak={streak}
