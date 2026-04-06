@@ -39,7 +39,7 @@ import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import type { EnemyType } from "@/lib/battleMechanics";
 import { curatedStories } from "@/data/curatedStories";
 import { agentStories } from "@/data/agentStories";
-import { getStoredTheme, setStoredTheme, type GameTheme, getGradeMode, type GradeMode } from "@/lib/gameTheme";
+import { getStoredTheme, setStoredTheme, type GameTheme, getGradeMode, getThemeFromGradeMode, type GradeMode } from "@/lib/gameTheme";
 import { ThemeSelector } from "@/components/aura/game/rpg/ThemeSelector";
 import type { CuratedStory as Story } from "@/data/curatedStories";
 
