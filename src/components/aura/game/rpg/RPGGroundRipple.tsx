@@ -301,15 +301,15 @@ export const RPGGroundRipple = ({
             {agent ? 'Incoming shockwave! Speak words to absorb the pulse!' : 'Grog smashes! Speak words to destroy the mountains!'}
           </p>
         </motion.div>
-      </>
-      ); })()}
-        
-        <div className="bg-stone-900/90 px-4 py-2 rounded-xl border border-amber-500/50">
+      
+        <div className={`${agent ? 'bg-slate-900/90' : 'bg-stone-900/90'} px-4 py-2 rounded-xl border ${agent ? 'border-cyan-500/50' : 'border-amber-500/50'}`}>
           <span className="text-emerald-400 font-bold text-lg">{destroyed}</span>
           <span className="text-slate-400 mx-1">/</span>
           <span className="text-slate-300">{gameWordsRef.current.length}</span>
         </div>
       </div>
+      </>
+      ); })()}
 
       {/* Mountains with words */}
       <AnimatePresence>
