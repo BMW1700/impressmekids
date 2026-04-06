@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { STORE_ITEMS, RARITY_COLORS, type StoreItem } from "@/lib/gameEconomy";
 import { useToast } from "@/hooks/use-toast";
 import { SkinPreviewCard } from "./SkinPreviewCard";
+import { getStoredTheme } from "@/lib/gameTheme";
 
 interface RPGStoreProps {
   isOpen: boolean;
@@ -14,7 +15,7 @@ interface RPGStoreProps {
   currentGold: number;
   ownedItems: string[];
   onPurchase: (item: StoreItem) => void;
-  equippedSkins?: { valor?: string; elara?: string };
+  equippedSkins?: { [key: string]: string | undefined };
   onEquipSkin?: (itemId: string) => void;
 }
 
@@ -43,8 +44,17 @@ export const RPGStore = ({
 }: RPGStoreProps) => {
   const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState('power');
+  const theme = getStoredTheme();
+  const isAgent = theme === 'agent';
 
-  const categories = [...new Set(STORE_ITEMS.map(item => item.category))];
+  // Filter items by theme: show theme-specific + shared (no theme tag = shared)
+  const filteredItems = STORE_ITEMS.filter(item => {
+    if (!item.theme) return true; // shared (potions, upgrades)
+    if (item.theme === 'shared') return true;
+    return item.theme === (isAgent ? 'agent' : 'classic');
+  });
+
+  const categories = [...new Set(filteredItems.map(item => item.category))];
 
   const handlePurchase = (item: StoreItem) => {
     if (currentGold < item.price) {
