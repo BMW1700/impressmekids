@@ -997,7 +997,7 @@ const AuraPractice = () => {
 
             <TabsContent value="progress" className="mt-6 space-y-6">
               {/* Kid-Friendly Progress at the top */}
-              {user?.id && <KidFriendlyProgress studentId={user.id} />}
+              {user?.id && <KidFriendlyProgress studentId={user.id} gradeMode={currentGradeMode} />}
               
               {!records || records.length === 0 ? (
                 <Card className="hover:scale-[1.01] transition-transform duration-200">

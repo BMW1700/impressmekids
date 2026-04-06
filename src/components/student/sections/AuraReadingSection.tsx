@@ -707,7 +707,7 @@ export const AuraReadingSection = () => {
         <TabsContent value="progress" className="mt-6 space-y-6">
           {/* Kid-Friendly Progress - Simple and Fun! */}
           {user?.id && (
-            <KidFriendlyProgress studentId={user.id} />
+            <KidFriendlyProgress studentId={user.id} gradeMode={currentGradeMode} />
           )}
           
           {/* Week-by-Week Improvement Tracker */}

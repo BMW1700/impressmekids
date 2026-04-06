@@ -3,21 +3,26 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Star, Flame, Zap, Trophy, Sparkles, TrendingUp, BookOpen } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { GradeMode } from "@/lib/gameTheme";
 
 interface KidFriendlyProgressProps {
   studentId: string;
+  gradeMode?: GradeMode;
 }
 
-const KidFriendlyProgress = ({ studentId }: KidFriendlyProgressProps) => {
+const KidFriendlyProgress = ({ studentId, gradeMode }: KidFriendlyProgressProps) => {
   const { data: stats, isLoading } = useQuery({
-    queryKey: ['kid-progress-stats', studentId],
+    queryKey: ['kid-progress-stats', studentId, gradeMode],
     queryFn: async () => {
       // Fetch reading stats
-      const { data: readingStats } = await supabase
+      let readingQuery = supabase
         .from('student_reading_stats')
         .select('*')
-        .eq('student_id', studentId)
-        .maybeSingle();
+        .eq('student_id', studentId);
+      if (gradeMode) {
+        readingQuery = readingQuery.eq('grade_mode', gradeMode);
+      }
+      const { data: readingStats } = await readingQuery.maybeSingle();
 
       // Fetch recent AURA records for WPM trend
       const { data: recentRecords } = await supabase
