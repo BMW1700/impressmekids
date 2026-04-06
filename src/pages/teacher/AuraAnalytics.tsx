@@ -180,6 +180,15 @@ const AuraAnalytics = () => {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={selectedGradeMode} onValueChange={(v) => setSelectedGradeMode(v as GradeMode)}>
+              <SelectTrigger className="w-full md:w-64">
+                <SelectValue placeholder="Select grade mode" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="k5">Aura Reading – Grades K-5</SelectItem>
+                <SelectItem value="6to12">Aura Reading – Grades 6-12</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Quick Stats Bar - COMBINED aura_records + reading_sessions */}
