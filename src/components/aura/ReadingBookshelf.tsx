@@ -18,19 +18,20 @@ const categoryLabels: Record<string, string> = {
 
 interface ReadingBookshelfProps {
   studentId?: string;
+  gradeMode?: string;
 }
 
-export const ReadingBookshelf = ({ studentId }: ReadingBookshelfProps = {}) => {
+export const ReadingBookshelf = ({ studentId, gradeMode }: ReadingBookshelfProps = {}) => {
   const { user } = useAuth();
   const effectiveStudentId = studentId || user?.id;
 
   // Fetch student's reading progress with proper scoping
   const { data: progressData, isLoading } = useQuery({
-    queryKey: ['reading-bookshelf', effectiveStudentId],
+    queryKey: ['reading-bookshelf', effectiveStudentId, gradeMode],
     queryFn: async () => {
       if (!effectiveStudentId) return null;
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('student_reading_progress')
         .select(`
           id,
@@ -47,9 +48,13 @@ export const ReadingBookshelf = ({ studentId }: ReadingBookshelfProps = {}) => {
           )
         `)
         .eq('student_id', effectiveStudentId)
-        .eq('completed', true)
+        .eq('completed', true);
+      
+      if (gradeMode) query = query.eq('grade_mode', gradeMode);
+      
+      const { data, error } = await query
         .order('completed_at', { ascending: false })
-        .limit(100); // Cap at 100 books for performance
+        .limit(100);
 
       if (error) throw error;
       return data;

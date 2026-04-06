@@ -39,16 +39,19 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
 
   // Fetch student's reading progress
   const { data: progressData } = useQuery({
-    queryKey: ['student-reading-progress'],
+    queryKey: ['student-reading-progress', gradeMode],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('student_reading_progress')
         .select('*')
         .eq('student_id', user.id);
+      
+      if (gradeMode) query = query.eq('grade_mode', gradeMode);
 
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     }
