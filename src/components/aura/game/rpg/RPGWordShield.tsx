@@ -173,8 +173,10 @@ export const RPGWordShield = ({
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-50">
       {/* Background with dramatic gradient */}
+      {(() => { const t = getMinigameTheme('wordShield'); const agent = isAgentMode(); return (
+      <>
       <motion.div
-        className="absolute inset-0 bg-gradient-to-b from-blue-950/90 via-indigo-900/80 to-slate-900/90"
+        className={`absolute inset-0 bg-gradient-to-b ${t.bgGradient}`}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       />
@@ -183,7 +185,7 @@ export const RPGWordShield = ({
       {[...Array(15)].map((_, i) => (
         <motion.div
           key={i}
-          className="absolute w-2 h-2 bg-cyan-400 rounded-full"
+          className={`absolute w-2 h-2 ${agent ? 'bg-teal-400' : 'bg-cyan-400'} rounded-full`}
           style={{ left: `${10 + Math.random() * 80}%`, top: `${Math.random() * 100}%` }}
           animate={{
             y: [0, -50, 0],
@@ -204,14 +206,16 @@ export const RPGWordShield = ({
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
       >
-        <div className="px-8 py-3 bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 rounded-xl border-2 border-cyan-300 shadow-[0_0_30px_rgba(34,211,238,0.5)]">
+        <div className={`px-8 py-3 bg-gradient-to-r ${t.accentGradient} rounded-xl border-2 ${t.accentColor} shadow-lg`}>
           <span className="text-white font-black text-xl flex items-center gap-3">
-            <Shield className="w-6 h-6" />
-            BUILD YOUR SHIELD!
-            <Shield className="w-6 h-6" />
+            {agent ? <Lock className="w-6 h-6" /> : <Shield className="w-6 h-6" />}
+            {t.title}
+            {agent ? <Lock className="w-6 h-6" /> : <Shield className="w-6 h-6" />}
           </span>
         </div>
       </motion.div>
+      </>
+      ); })()}
 
       {/* Large central timer */}
       <motion.div
@@ -423,13 +427,15 @@ export const RPGWordShield = ({
               initial={{ scale: 0 }}
               animate={{ scale: [0, 1.5, 1] }}
             >
+              {(() => { const t = getMinigameTheme('wordShield'); return (
               <div className={`text-5xl font-black ${shieldPower >= 50 ? 'text-emerald-400' : 'text-red-400'}`}>
                 {shieldPower >= 80 
-                  ? '✨ PERFECT SHIELD! ✨' 
+                  ? t.successMsg
                   : shieldPower >= 50 
-                    ? '🛡️ Shield Held!' 
-                    : '💥 Shield Cracked!'}
+                    ? (isAgentMode() ? '🔒 Firewall Held!' : '🛡️ Shield Held!')
+                    : t.failMsg}
               </div>
+              ); })()}
               <div className="text-2xl text-white mt-4">
                 {shieldPower >= 50 
                   ? `Blocked ${shieldPower}% of damage!` 

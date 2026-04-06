@@ -183,17 +183,19 @@ export const RPGSpellCombo = ({
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-50">
       {/* Magical background */}
+      {(() => { const t = getMinigameTheme('spellCombo'); const agent = isAgentMode(); return (
+      <>
       <motion.div
-        className="absolute inset-0 bg-gradient-to-b from-purple-950/90 via-indigo-900/85 to-violet-900/90"
+        className={`absolute inset-0 bg-gradient-to-b ${t.bgGradient}`}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       />
 
-      {/* Magic particles */}
+      {/* Particles */}
       {[...Array(25)].map((_, i) => (
         <motion.div
           key={i}
-          className="absolute text-yellow-400"
+          className={`absolute ${agent ? 'text-emerald-400' : 'text-yellow-400'}`}
           style={{ left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%`, fontSize: `${12 + Math.random() * 16}px` }}
           animate={{
             y: [0, -40, 0],
@@ -207,7 +209,7 @@ export const RPGSpellCombo = ({
             delay: Math.random() * 2,
           }}
         >
-          ✦
+          {agent ? '▪' : '✦'}
         </motion.div>
       ))}
 
@@ -217,14 +219,16 @@ export const RPGSpellCombo = ({
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
       >
-        <div className="px-8 py-3 bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 rounded-xl border-2 border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.5)]">
+        <div className={`px-8 py-3 bg-gradient-to-r ${t.accentGradient} rounded-xl border-2 ${t.accentColor} shadow-lg`}>
           <span className="text-white font-black text-xl flex items-center gap-3">
-            <Sparkles className="w-6 h-6 text-yellow-400" />
-            SPELL COMBO
-            <Sparkles className="w-6 h-6 text-yellow-400" />
+            {agent ? <Terminal className="w-6 h-6 text-emerald-400" /> : <Sparkles className="w-6 h-6 text-yellow-400" />}
+            {t.title}
+            {agent ? <Terminal className="w-6 h-6 text-emerald-400" /> : <Sparkles className="w-6 h-6 text-yellow-400" />}
           </span>
         </div>
       </motion.div>
+      </>
+      ); })()}
 
       {/* Timer */}
       {phase === 'casting' && (
@@ -392,8 +396,8 @@ export const RPGSpellCombo = ({
                   >
                     ✨⚡✨
                   </motion.div>
-                  <div className="text-5xl font-black text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.8)]">
-                    COMBO COMPLETE!
+                  <div className={`text-5xl font-black ${isAgentMode() ? 'text-emerald-400 drop-shadow-[0_0_20px_rgba(52,211,153,0.8)]' : 'text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.8)]'}`}>
+                    {getMinigameTheme('spellCombo').successMsg}
                   </div>
                   <div className="text-3xl text-emerald-400 mt-4">
                     {comboWords.length}x DAMAGE MULTIPLIER!
@@ -403,7 +407,7 @@ export const RPGSpellCombo = ({
                 <>
                   <div className="text-8xl mb-6">💔</div>
                   <div className="text-5xl font-black text-red-400">
-                    COMBO BROKEN
+                    {getMinigameTheme('spellCombo').failMsg}
                   </div>
                   <div className="text-xl text-slate-300 mt-4">
                     Normal damage only
