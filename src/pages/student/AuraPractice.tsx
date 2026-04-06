@@ -189,7 +189,7 @@ const AuraPractice = () => {
   });
 
   // Auto-select grade mode from profile default (only if no theme stored locally)
-  React.useEffect(() => {
+  useEffect(() => {
     if (!hasLoadedDefault && profile?.default_grade_mode && !getStoredTheme()) {
       const defaultTheme = getThemeFromGradeMode(profile.default_grade_mode as GradeMode);
       setGameTheme(defaultTheme);
