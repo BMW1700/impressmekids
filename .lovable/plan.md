@@ -1,72 +1,73 @@
 
 
-# Remaining Agent Mode Gaps — Brutally Honest
+# Brutally Honest: What's Left for Agent Mode Parity
 
-## What's WORKING ✓
-- Hero data, enemy data, sprite wiring — all correct end-to-end
-- Em-dash word filter — fixed
-- Agent-specific spells (Agent X, Cipher Data Burst, Shadow) — wired
-- Agent dialogue — mission-themed
-- Cipher charge text — shows "COMPILING" / "DATA BURST DEPLOYED"
-- Special barrage names — agent-themed ("MALWARE SWARM", etc.)
-- Literacy mini-game messages — agent-themed ("FIREWALL BARRIER", "ENCRYPTION", "SIGNAL JAM")
-- Health bars — all 6 non-boss enemies have built-in HP bars in their components
+## Already Fixed ✓
+- Hero/enemy data wiring, sprites, health bars, backgrounds from DB
+- Em-dash word filter, agent stories, comprehension questions
+- Mini-game announcement text (themed: "HOSTILE SQUAD", "MISSILES", "DRONE SWARM")
+- Enemy transition screen (themed: "PRIORITY TARGET DETECTED", crosshair icons)
+- Word mastery text ("INTEL DECODED")
+- Cipher charge text ("COMPILING" / "DATA BURST DEPLOYED")
+- Special barrage names ("MALWARE SWARM", etc.)
+- Literacy mini-game messages ("FIREWALL BARRIER", "ENCRYPTION", "SIGNAL JAM")
 - Boss silhouettes, character select, world map — all theme-aware
-- Story content — 24 diverse stories, backgrounds from DB
 
-## What's STILL NOT PERFECT
+## What's STILL Not Right
 
-### 1. Enemy Transition Screen shows dragon emoji + "BOSS BATTLE!" for dragon-type enemies
-`RPGEnemyTransition.tsx` line 187 checks `nextEnemy.type === 'dragon'` and shows a 🐉 emoji with fire particles. Agent bosses use types `'boss'` and `'final_boss'`, so they won't hit this branch — but if any agent enemy mapped to `'dragon'` type comes through, it would show fantasy content. The generic path (line 235) works fine but is bland. Agent transitions should show something like a 🎯 crosshair icon and "PRIORITY TARGET DETECTED!" or "BOSS INCOMING!" instead of "Next Enemy Approaches!".
+### 1. Mini-game VISUALS are fantasy (THE BIGGEST GAP)
+When agent enemies trigger `goblin_horde`, `beast_swarm`, or `fireball_defense`, the player sees:
+- **Cartoon goblins** (green SVG sprites with pointy ears) running at them
+- **Fire imps, shadow bats, frost sprites** (🔥🦇❄️ emojis)
+- **Fireballs** raining down
 
-### 2. Mini-game announcement text is still fantasy-themed
-Line 523: `'goblin_horde': '⚔️ GOBLIN HORDE! Speak words to defeat them! ⚔️'`
-Line 524: `'fireball_defense': '🔥 UNLEASHES FIREBALLS! 🔥'`
-Line 525: `'beast_swarm': 'summons BEAST SWARM!'`
-These trigger during agent battles because agent enemies reference these mini-game IDs in their `miniGames` arrays. The announcements break immersion.
+The announcement text says "HOSTILE SQUAD" but the visuals show goblins. This is the single biggest immersion break remaining. Three components need agent-mode awareness:
+- `RPGGoblinHorde` → should show soldiers/operatives
+- `RPGBeastSwarm` → should show drones
+- `RPGFireballDefense` → should show missiles/rockets
 
-### 3. Mini-game VISUALS are still fantasy
-`RPGGoblinHorde` renders goblins. `RPGBeastSwarm` renders beasts. `RPGFireballDefense` renders fireballs. These components have zero agent-mode awareness. When an agent enemy triggers `goblin_horde`, the player fights cartoon goblins mid-spy-mission. This is the single biggest immersion break remaining.
+### 2. Victory/Defeat screens are generic
+- Victory shows a Trophy icon and "VICTORY!" — fine for both modes
+- Defeat shows a Skull and "DEFEAT" and "{enemy.name} was too powerful..." — also fine
+- But agent mode could say "MISSION COMPLETE" / "MISSION FAILED" and "Return to HQ" instead of "Return to Map"
+- Minor polish, not a deal-breaker
 
-### 4. Word mastery announcement uses ⭐ emoji
-Line 1676: `'⭐ WORD MASTERED! ×1.5'` — not thematically wrong but could be agent-flavored like `'🎯 INTEL DECODED! ×1.5'`.
+### 3. No agent-specific mini-games yet
+You mentioned wanting Safe Breaker, Code Decrypt, etc. — those don't exist yet. Currently agent mode uses the exact same mini-game pool as classic.
 
-### 5. Victory/defeat screens are theme-agnostic
-The transition screen shows generic "DEFEATED!" text with ⭐ sparkles. Could show agent-themed "TARGET NEUTRALIZED!" with 🎯 icons.
+## Priority Assessment
 
----
+| Gap | Impact | Effort |
+|-----|--------|--------|
+| Fantasy mini-game visuals | HIGH — goblins in a spy mission | Medium (3 component updates) |
+| Victory/defeat text | LOW — generic text works | Tiny (10 lines) |
+| New agent mini-games | HIGH — differentiation | Large (new components) |
 
 ## Fix Plan
 
-### A. Theme-aware mini-game announcements (quick)
-**File: `RPGBattleArena.tsx`** — In the mini-game trigger function (~line 520), check `getStoredTheme() === 'agent'` and replace:
-- `'goblin_horde'` → `'🎯 HOSTILE SQUAD! Speak words to eliminate them! 🎯'`
-- `'fireball_defense'` → `'🚀 INCOMING MISSILES! 🚀'`
-- `'beast_swarm'` → `'deploys DRONE SWARM!'`
+### Phase 1: Theme-aware mini-game visuals (do now)
+Update the 3 existing mini-game components to accept a `theme` prop:
 
-### B. Theme-aware enemy transition (quick)
-**File: `RPGEnemyTransition.tsx`** — Accept a `theme` prop. When `'agent'`:
-- Replace "Next Enemy Approaches!" with "PRIORITY TARGET DETECTED!"
-- Replace ⭐ sparkles with 🎯 crosshairs
-- For boss types, show "⚠️ HIGH-VALUE TARGET!" with red/orange alert styling instead of dragon fire
+**`RPGGoblinHorde.tsx`**: When `theme === 'agent'`, replace `MiniGoblin` SVG with an `AgentOperative` SVG (dark tactical figure). Change "Goblin" labels to "Operative". Swap green/purple colors for slate/red tactical colors.
 
-### C. Theme-aware mastery/victory text (quick)
-**File: `RPGBattleArena.tsx`** — Swap `'⭐ WORD MASTERED!'` → `'🎯 INTEL DECODED!'` when agent theme.
+**`RPGBeastSwarm.tsx`**: When `theme === 'agent'`, replace beast types (`fire_imp` → `attack_drone`, `shadow_bat` → `recon_drone`, `frost_sprite` → `emp_drone`). Swap emojis (🔥→🤖, 🦇→📡, ❄️→⚡). Change gradient colors to tech blues/grays.
 
-### D. (Future — large effort) Agent-themed mini-game components
-Create agent reskins or new components:
-- `RPGHostileSquad` (replaces goblin_horde visuals — soldiers instead of goblins)
-- `RPGMissileDefense` (replaces fireball_defense — missiles instead of fireballs)
-- `RPGDroneSwarm` (replaces beast_swarm — drones instead of beasts)
-This is the biggest remaining immersion gap but requires building 3 new game components.
+**`RPGFireballDefense.tsx`**: When `theme === 'agent'`, render missiles instead of fireballs. Swap orange/red gradients for gray/steel colors. Change "fireball" labels to "missile".
 
----
+**`RPGBattleArena.tsx`**: Pass `theme={getStoredTheme()}` to all three components.
 
-## Files Modified (A-C only)
-1. `src/components/aura/game/rpg/RPGBattleArena.tsx` — agent mini-game announcements + mastery text
-2. `src/components/aura/game/rpg/RPGEnemyTransition.tsx` — agent-themed transitions
+### Phase 2: Victory/defeat text (do now)
+In `RPGBattleArena.tsx`, when agent theme:
+- Victory: "MISSION COMPLETE" instead of "VICTORY!", "Target neutralized" instead of "You defeated"
+- Defeat: "MISSION FAILED" instead of "DEFEAT", "Return to HQ" instead of "Return to Map"
 
-## Priority
-- A-C: Quick text/theming fixes (~30 lines total)
-- D: Large feature (3 new components) — next round
+### Phase 3: New agent mini-games (future round)
+Safe Breaker, Code Decrypt, Drone Intercept — entirely new game components for agent mode differentiation. This is too large for this round.
+
+## Files Modified
+1. `src/components/aura/game/rpg/RPGGoblinHorde.tsx` — agent operative reskin
+2. `src/components/aura/game/rpg/RPGBeastSwarm.tsx` — drone reskin
+3. `src/components/aura/game/rpg/RPGFireballDefense.tsx` — missile reskin
+4. `src/components/aura/game/rpg/RPGBattleArena.tsx` — pass theme to mini-games + victory/defeat text
+5. `src/components/aura/game/rpg/MiniGoblin.tsx` — add agent variant OR create new `MiniOperative.tsx`
 
