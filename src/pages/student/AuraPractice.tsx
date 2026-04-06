@@ -584,6 +584,10 @@ const AuraPractice = () => {
             setRpgView('world_map');
             setSelectedWorld(null);
           }}
+          onSwitchMode={() => {
+            const next: GameTheme = gameTheme === 'agent' ? 'classic' : 'agent';
+            setGameTheme(next);
+          }}
         />
       </div>
     );
