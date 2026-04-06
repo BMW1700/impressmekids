@@ -21,14 +21,16 @@ interface ImprovementTrackerProps {
   studentId: string;
   studentName: string;
   variant?: "simple" | "detailed";
+  gradeMode?: string;
 }
 
 export const ImprovementTracker = ({ 
   studentId, 
   studentName, 
-  variant = "simple" 
+  variant = "simple",
+  gradeMode
 }: ImprovementTrackerProps) => {
-  const { data: progress, isLoading } = useWeeklyProgress(studentId);
+  const { data: progress, isLoading } = useWeeklyProgress(studentId, 4, gradeMode);
 
   if (isLoading) {
     return (

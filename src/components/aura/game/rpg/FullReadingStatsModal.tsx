@@ -35,6 +35,7 @@ import {
   getFluencyLevelColor,
   getCurrentScreeningPeriod
 } from "@/lib/fluencyBenchmarks";
+import { getReadingJourneyLevel } from "@/lib/readingJourneyLevel";
 
 interface FullReadingStatsModalProps {
   isOpen: boolean;
@@ -131,19 +132,10 @@ export const FullReadingStatsModal = ({
     enabled: !!studentId && isOpen,
   });
 
-  // Calculate grade level from WPM using DIBELS benchmarks
-  const getGradeLevel = (wpm: number): { grade: string; level: number; nextGoal: number } => {
-    // DIBELS/Hasbrouck-Tindal end-of-year 50th percentile benchmarks
-    if (wpm < 23) return { grade: 'Pre-K', level: 0, nextGoal: 23 };
-    if (wpm < 53) return { grade: 'K', level: 1, nextGoal: 53 };
-    if (wpm < 82) return { grade: '1st', level: 2, nextGoal: 82 };
-    if (wpm < 104) return { grade: '2nd', level: 3, nextGoal: 104 };
-    if (wpm < 123) return { grade: '3rd', level: 4, nextGoal: 123 };
-    if (wpm < 139) return { grade: '4th', level: 5, nextGoal: 139 };
-    if (wpm < 150) return { grade: '5th', level: 6, nextGoal: 150 };
-    if (wpm < 162) return { grade: '6th', level: 7, nextGoal: 162 };
-    if (wpm < 177) return { grade: '7th', level: 8, nextGoal: 177 };
-    return { grade: '8th+', level: 9, nextGoal: 200 };
+  // Mode-aware grade level calculation
+  const getGradeLevel = (wpm: number) => {
+    const info = getReadingJourneyLevel(wpm, gradeMode);
+    return { grade: info.label, level: info.stepIndex, nextGoal: info.nextGoal, totalSteps: info.totalSteps, benchmarkGrade: info.benchmarkGrade };
   };
 
   if (!isOpen) return null;
@@ -158,7 +150,7 @@ export const FullReadingStatsModal = ({
 
   // Calculate benchmark status
   const period = getCurrentScreeningPeriod();
-  const benchmarkStatus = calculateBenchmarkStatus(currentWpm, gradeInfo.level + 1, period);
+  const benchmarkStatus = calculateBenchmarkStatus(currentWpm, gradeInfo.benchmarkGrade || (gradeInfo.level + 1), period);
   const benchmarkColors = getBenchmarkStatusColor(benchmarkStatus);
   
   // Calculate fluency level from accuracy
@@ -236,7 +228,7 @@ export const FullReadingStatsModal = ({
                       <div className="flex items-center gap-3">
                         <span className="text-4xl font-black text-white">{gradeInfo.grade}</span>
                         <div className="flex">
-                          {[...Array(Math.min(gradeInfo.level + 1, 5))].map((_, i) => (
+                          {[...Array(Math.min(gradeInfo.level + 1, gradeInfo.totalSteps))].map((_, i) => (
                             <Star key={i} className="w-5 h-5 text-yellow-400 fill-yellow-400" />
                           ))}
                         </div>
@@ -305,6 +297,7 @@ export const FullReadingStatsModal = ({
                       studentId={studentId} 
                       studentName={studentName}
                       variant="detailed"
+                      gradeMode={gradeMode}
                     />
                   </Card>
                 )}

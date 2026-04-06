@@ -6,6 +6,7 @@ import { BookOpen, TrendingUp, Star, Target, Zap, Award, ChevronRight } from "lu
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { FullReadingStatsModal } from "./FullReadingStatsModal";
+import { getReadingJourneyLevel } from "@/lib/readingJourneyLevel";
 
 interface ReadingProgressPanelProps {
   studentId: string;
@@ -43,21 +44,7 @@ export const ReadingProgressPanel = ({ studentId, studentName = "Reader", gradeM
         ? Math.round(sessions.reduce((sum, s) => sum + (s.accuracy_percent || 0), 0) / sessions.length)
         : 0;
 
-      // DIBELS-based grade level
-      const getGradeInfo = (wpm: number) => {
-        if (wpm < 23) return { grade: 'Pre-K', level: 0 };
-        if (wpm < 53) return { grade: 'K', level: 1 };
-        if (wpm < 82) return { grade: '1st', level: 2 };
-        if (wpm < 104) return { grade: '2nd', level: 3 };
-        if (wpm < 123) return { grade: '3rd', level: 4 };
-        if (wpm < 139) return { grade: '4th', level: 5 };
-        if (wpm < 150) return { grade: '5th', level: 6 };
-        if (wpm < 162) return { grade: '6th', level: 7 };
-        if (wpm < 177) return { grade: '7th', level: 8 };
-        return { grade: '8th+', level: 9 };
-      };
-
-      const gradeInfo = getGradeInfo(avgWpm);
+      const gradeInfo = getReadingJourneyLevel(avgWpm, gradeMode);
 
       let wpmTrend = 0;
       if (sessions && sessions.length >= 6) {
@@ -70,8 +57,9 @@ export const ReadingProgressPanel = ({ studentId, studentName = "Reader", gradeM
       const wordsMastered = Math.min(1000, Math.floor(totalWordsInSessions * (avgAccuracy / 100) / 3));
 
       return {
-        readingLevel: gradeInfo.level,
-        gradeLabel: gradeInfo.grade,
+        readingLevel: gradeInfo.stepIndex,
+        gradeLabel: gradeInfo.label,
+        totalSteps: gradeInfo.totalSteps,
         avgWpm,
         avgAccuracy,
         wpmTrend,
@@ -117,8 +105,8 @@ export const ReadingProgressPanel = ({ studentId, studentName = "Reader", gradeM
             <span className="text-xs text-purple-300">Reading Level</span>
             <span className="text-lg font-bold text-yellow-400">{stats.gradeLabel} Grade</span>
           </div>
-          <div className="flex gap-1">
-            {Array.from({ length: 10 }).map((_, i) => (
+         <div className="flex gap-1">
+            {Array.from({ length: stats.totalSteps }).map((_, i) => (
               <motion.div
                 key={i}
                 className={`h-2 flex-1 rounded-full ${i <= stats.readingLevel ? 'bg-gradient-to-r from-yellow-400 to-amber-500' : 'bg-purple-700/50'}`}
