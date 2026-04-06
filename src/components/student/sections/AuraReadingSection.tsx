@@ -725,7 +725,7 @@ export const AuraReadingSection = () => {
           {user?.id && (
             <>
               <ActiveMissionsPanel studentId={user.id} />
-              <ClassChallengeCard studentId={user.id} />
+              <ClassChallengeCard studentId={user.id} gradeMode={currentGradeMode} />
               <ClassroomLeaderboardWrapper studentId={user.id} />
             </>
           )}

@@ -1013,7 +1013,7 @@ const AuraPractice = () => {
                   <ActiveMissionsPanel studentId={user.id} />
                   
                   {/* Class Challenge - hide in game mode */}
-                  {!isGameMode && <ClassChallengeCard studentId={user.id} />}
+                  {!isGameMode && <ClassChallengeCard studentId={user.id} gradeMode={currentGradeMode} />}
                   
                   {/* Classroom Leaderboard - hide in game mode */}
                   {!isGameMode && <ClassroomLeaderboardWrapper studentId={user.id} />}
