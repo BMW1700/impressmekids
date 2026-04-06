@@ -87,7 +87,7 @@ const AuraAnalytics = () => {
 
   // NEW: Fetch reading_sessions data (this is where WordByWordReader saves data!)
   const { data: readingSessions } = useQuery({
-    queryKey: ['classroom-reading-sessions', classroomId],
+    queryKey: ['classroom-reading-sessions', classroomId, selectedGradeMode],
     queryFn: async () => {
       if (!students) return [];
 
@@ -96,6 +96,7 @@ const AuraAnalytics = () => {
         .from('reading_sessions')
         .select('*')
         .in('student_id', studentIds)
+        .eq('grade_mode', selectedGradeMode)
         .order('created_at', { ascending: false });
 
       if (error) {
