@@ -196,17 +196,19 @@ export const RPGRollingBoulders = ({
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-auto z-50">
       {/* Rocky background */}
+      {(() => { const t = getMinigameTheme('rollingBoulders'); const agent = isAgentMode(); return (
+      <>
       <motion.div
-        className="absolute inset-0 bg-gradient-to-b from-stone-800/70 via-amber-900/50 to-stone-900/80"
+        className={`absolute inset-0 bg-gradient-to-b ${agent ? 'from-slate-800/70 via-gray-900/50 to-slate-900/80' : 'from-stone-800/70 via-amber-900/50 to-stone-900/80'}`}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       />
 
-      {/* Dust clouds at bottom */}
+      {/* Dust/debris */}
       {[...Array(10)].map((_, i) => (
         <motion.div
           key={i}
-          className="absolute bottom-0 w-40 h-20 bg-amber-700/20 rounded-full blur-2xl"
+          className={`absolute bottom-0 w-40 h-20 ${agent ? 'bg-gray-700/20' : 'bg-amber-700/20'} rounded-full blur-2xl`}
           style={{ left: `${i * 12}%` }}
           animate={{
             y: [0, -20, 0],
@@ -226,10 +228,12 @@ export const RPGRollingBoulders = ({
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
       >
-        <div className="px-6 py-2 bg-stone-700/90 rounded-lg border-2 border-amber-600">
-          <span className="text-white font-black text-lg">🪨 ROLLING BOULDERS! Speak to shatter! 🪨</span>
+        <div className={`px-6 py-2 ${agent ? 'bg-gray-700/90' : 'bg-stone-700/90'} rounded-lg border-2 ${agent ? 'border-red-600' : 'border-amber-600'}`}>
+          <span className="text-white font-black text-lg">{t.emoji} {t.title} Speak to shatter! {t.emoji}</span>
         </div>
       </motion.div>
+      </>
+      ); })()}
 
       {/* Hero zone indicator */}
       <div className="absolute left-[8%] top-[20%] bottom-[20%] w-2 bg-red-500/50 rounded-full">

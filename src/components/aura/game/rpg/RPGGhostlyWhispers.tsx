@@ -187,8 +187,10 @@ export const RPGGhostlyWhispers = ({
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-auto z-50">
       {/* Dark misty background */}
+      {(() => { const t = getMinigameTheme('ghostlyWhispers'); const agent = isAgentMode(); return (
+      <>
       <motion.div
-        className="absolute inset-0 bg-gradient-to-b from-purple-950/80 via-slate-900/70 to-purple-900/60"
+        className={`absolute inset-0 bg-gradient-to-b ${t.bgGradient}`}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       />
@@ -197,7 +199,7 @@ export const RPGGhostlyWhispers = ({
       {[...Array(20)].map((_, i) => (
         <motion.div
           key={i}
-          className="absolute w-32 h-32 bg-purple-500/10 rounded-full blur-3xl"
+          className={`absolute w-32 h-32 ${agent ? 'bg-cyan-500/10' : 'bg-purple-500/10'} rounded-full blur-3xl`}
           style={{ left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%` }}
           animate={{
             x: [0, Math.random() * 100 - 50],
@@ -218,10 +220,12 @@ export const RPGGhostlyWhispers = ({
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
       >
-        <div className="px-6 py-2 bg-purple-900/90 rounded-lg border-2 border-purple-400">
-          <span className="text-white font-black text-lg">👻 GHOSTLY WHISPERS! Speak before they fade! 👻</span>
+        <div className={`px-6 py-2 ${agent ? 'bg-slate-800/90' : 'bg-purple-900/90'} rounded-lg border-2 ${t.accentColor}`}>
+          <span className="text-white font-black text-lg">{t.emoji} {t.title} {t.subtitle ? t.subtitle : ''} {t.emoji}</span>
         </div>
       </motion.div>
+      </>
+      ); })()}
 
       {/* Ghost words */}
       <AnimatePresence>

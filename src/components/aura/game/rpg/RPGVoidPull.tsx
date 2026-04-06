@@ -230,7 +230,7 @@ export const RPGVoidPull = ({
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="absolute inset-0 bg-gradient-radial from-purple-950/90 via-slate-950/95 to-black"
+        className={`absolute inset-0 ${isAgentMode() ? 'bg-gradient-radial from-slate-950/90 via-cyan-950/95 to-black' : 'bg-gradient-radial from-purple-950/90 via-slate-950/95 to-black'}`}
       />
       
       {/* Distant stars */}
