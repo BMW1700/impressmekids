@@ -6,28 +6,36 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Search, Filter, Sparkles, Sword, BookOpen, Crown, Brain } from "lucide-react";
 import { StoryCard } from "./StoryCard";
 import { curatedStories, CuratedStory } from "@/data/curatedStories";
+import { agentStories } from "@/data/agentStories";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import { motion } from "framer-motion";
 import { useMLContextSafe } from "@/components/ml/MLStatusProvider";
 import { rankStoriesByPhonemeNeed, extractStrugglingPhonemes } from "@/lib/adaptiveStoryRanking";
+import type { GradeMode } from "@/lib/gameTheme";
 
 interface StoryLibraryProps {
   onSelectStory: (story: CuratedStory) => void;
   onStartCampaign?: () => void;
   onStartRpgMode?: () => void;
   categoryFilter?: string | null;
+  gradeMode?: GradeMode;
 }
 
 const categories = ['all', 'animals', 'space', 'sports', 'fairy_tales', 'science', 'adventure', 'history'];
-const grades = ['all', 'K', '1', '2', '3', '4', '5'];
+const k5Grades = ['all', 'K', '1', '2', '3', '4', '5'];
+const middleHighGrades = ['all', '6', '7', '8', '9', '10', '11', '12'];
 
-export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, categoryFilter }: StoryLibraryProps) => {
+export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, categoryFilter, gradeMode = 'k5' }: StoryLibraryProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(categoryFilter || "all");
   const [selectedGrade, setSelectedGrade] = useState("all");
   const mlContext = useMLContextSafe();
+
+  // Use grade-appropriate stories and grade chips
+  const baseStories = gradeMode === '6to12' ? agentStories : curatedStories;
+  const grades = gradeMode === '6to12' ? middleHighGrades : k5Grades;
 
   // Fetch student's reading progress
   const { data: progressData } = useQuery({
