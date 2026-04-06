@@ -130,10 +130,16 @@ export const RPGVocabShield = ({ vocabWord, enemyName, onComplete }: RPGVocabShi
                 animate={!shieldBroken ? { scale: [1, 1.05, 1] } : {}}
                 transition={{ repeat: Infinity, duration: 1 }}
               >
-                <Shield className={`w-6 h-6 ${shieldBroken ? 'text-green-400' : 'text-red-400'}`} />
+                {(() => { const agent = isAgentMode(); return (
+                <>
+                {agent ? <Lock className={`w-6 h-6 ${shieldBroken ? 'text-green-400' : 'text-red-400'}`} /> : <Shield className={`w-6 h-6 ${shieldBroken ? 'text-green-400' : 'text-red-400'}`} />}
                 <span className={`text-lg font-black ${shieldBroken ? 'text-green-300' : 'text-red-300'}`}>
-                  {shieldBroken ? 'SHIELD SHATTERED!' : `${enemyName}'s WORD SHIELD!`}
+                  {shieldBroken 
+                    ? (agent ? 'ENCRYPTION BROKEN!' : 'SHIELD SHATTERED!')
+                    : (agent ? `${enemyName}'s ENCRYPTION LOCK!` : `${enemyName}'s WORD SHIELD!`)}
                 </span>
+                </>
+                ); })()}
               </motion.div>
 
               {/* Timer */}

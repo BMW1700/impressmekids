@@ -232,7 +232,7 @@ export const RPGInkSplash = ({
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="absolute inset-0 bg-gradient-to-b from-indigo-950/95 via-purple-950/90 to-slate-950/95"
+        className={`absolute inset-0 bg-gradient-to-b ${isAgentMode() ? 'from-slate-950/95 via-red-950/90 to-slate-950/95' : 'from-indigo-950/95 via-purple-950/90 to-slate-950/95'}`}
       />
 
       {/* Ink blot effects */}
