@@ -239,7 +239,7 @@ export const RPGCrystalPrison = ({
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="absolute inset-0 bg-gradient-to-b from-cyan-900/95 via-blue-950/90 to-indigo-950/95"
+        className={`absolute inset-0 bg-gradient-to-b ${isAgentMode() ? 'from-slate-900/95 via-emerald-950/90 to-slate-950/95' : 'from-cyan-900/95 via-blue-950/90 to-indigo-950/95'}`}
       />
       
       {/* Ice crystal effects */}
@@ -270,14 +270,16 @@ export const RPGCrystalPrison = ({
         animate={{ y: 0, opacity: 1 }}
         className="absolute top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-auto"
       >
-        <div className="bg-gradient-to-r from-cyan-600 to-blue-600 px-6 py-3 rounded-lg
-          shadow-[0_0_30px_rgba(6,182,212,0.6)] border border-cyan-400/50">
+        {(() => { const t = getMinigameTheme('crystalPrison'); const agent = isAgentMode(); return (
+        <div className={`bg-gradient-to-r ${agent ? 'from-emerald-600 to-green-600' : 'from-cyan-600 to-blue-600'} px-6 py-3 rounded-lg
+          shadow-lg border ${agent ? 'border-emerald-400/50' : 'border-cyan-400/50'}`}>
           <div className="flex items-center gap-3 text-white">
-            <Snowflake className="h-6 w-6 animate-spin" style={{ animationDuration: '3s' }} />
-            <span className="font-bold text-lg">CRYSTAL PRISON! Say words TWICE to break the ice!</span>
-            <Snowflake className="h-6 w-6 animate-spin" style={{ animationDuration: '3s' }} />
+            {agent ? <Battery className="h-6 w-6 animate-pulse" /> : <Snowflake className="h-6 w-6 animate-spin" style={{ animationDuration: '3s' }} />}
+            <span className="font-bold text-lg">{agent ? 'CONTAINMENT FIELD! Say words TWICE to disable!' : 'CRYSTAL PRISON! Say words TWICE to break the ice!'}</span>
+            {agent ? <Battery className="h-6 w-6 animate-pulse" /> : <Snowflake className="h-6 w-6 animate-spin" style={{ animationDuration: '3s' }} />}
           </div>
         </div>
+        ); })()}
       </motion.div>
 
       {/* Timer */}

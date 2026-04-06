@@ -285,7 +285,7 @@ export const RPGWordBarrage = ({
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="absolute inset-0 bg-gradient-to-r from-purple-900/30 via-black/40 to-red-900/50"
+        className={`absolute inset-0 bg-gradient-to-r ${isAgentMode() ? 'from-slate-900/30 via-black/40 to-cyan-900/50' : 'from-purple-900/30 via-black/40 to-red-900/50'}`}
       />
       
       {/* Direction indicator - arrows showing words moving toward heroes */}
@@ -326,14 +326,16 @@ export const RPGWordBarrage = ({
         animate={{ y: 0, opacity: 1 }}
         className="absolute top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-auto"
       >
-        <div className="bg-gradient-to-r from-red-600 to-purple-600 px-6 py-3 rounded-lg
-          shadow-[0_0_30px_rgba(239,68,68,0.5)] border border-red-400/50">
+        {(() => { const t = getMinigameTheme('wordBarrage'); const agent = isAgentMode(); return (
+        <div className={`bg-gradient-to-r ${agent ? 'from-cyan-600 to-teal-600' : 'from-red-600 to-purple-600'} px-6 py-3 rounded-lg
+          shadow-lg border ${agent ? 'border-cyan-400/50' : 'border-red-400/50'}`}>
           <div className="flex items-center gap-3 text-white">
             <Zap className="h-6 w-6 animate-pulse" />
-            <span className="font-bold text-lg">WORD BARRAGE! Click a word and speak it before it reaches you!</span>
+            <span className="font-bold text-lg">{t.title} Click a word and speak it before it reaches you!</span>
             <Zap className="h-6 w-6 animate-pulse" />
           </div>
         </div>
+        ); })()}
       </motion.div>
 
       {/* Floating Words - moving LEFT to RIGHT toward heroes */}

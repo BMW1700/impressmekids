@@ -303,14 +303,16 @@ export const RPGVoidPull = ({
         animate={{ y: 0, opacity: 1 }}
         className="absolute top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-auto"
       >
-        <div className="bg-gradient-to-r from-purple-600 to-violet-600 px-6 py-3 rounded-lg
-          shadow-[0_0_30px_rgba(139,92,246,0.6)] border border-purple-400/50">
+        {(() => { const t = getMinigameTheme('voidPull'); const agent = isAgentMode(); return (
+        <div className={`bg-gradient-to-r ${agent ? 'from-cyan-600 to-teal-600' : 'from-purple-600 to-violet-600'} px-6 py-3 rounded-lg
+          shadow-lg border ${agent ? 'border-cyan-400/50' : 'border-purple-400/50'}`}>
           <div className="flex items-center gap-3 text-white">
             <Circle className="h-6 w-6 animate-pulse" />
-            <span className="font-bold text-lg">VOID PULL! Speak to save words!</span>
+            <span className="font-bold text-lg">{t.title} Speak to save words!</span>
             <Circle className="h-6 w-6 animate-pulse" />
           </div>
         </div>
+        ); })()}
       </motion.div>
 
       {/* Void Words */}
