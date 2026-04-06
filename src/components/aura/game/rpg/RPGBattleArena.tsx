@@ -513,6 +513,7 @@ export const RPGBattleArena = ({
     setBarrageWords(availableWords.slice(0, wordCount));
     
     // Different announcements per mini-game
+    const isAgent = getStoredTheme() === 'agent';
     const announcements: Record<MiniGameType, string> = {
       'word_shield': `${enemy.name} charges a devastating attack!`,
       'spell_combo': `POWER SURGE! Chain a spell combo!`,
@@ -520,17 +521,17 @@ export const RPGBattleArena = ({
       'rhyme_chain': `RHYME TIME! Chain rhyming words!`,
       'speed_typist': `SPEED BLITZ! Read as fast as you can!`,
       'tug_of_war': `TUG OF WAR! Pull the rope with reading power!`,
-      'goblin_horde': `⚔️ GOBLIN HORDE! Speak words to defeat them! ⚔️`,
-      'fireball_defense': `🔥 ${enemy.name} UNLEASHES FIREBALLS! 🔥`,
-      'beast_swarm': `${enemy.name} summons BEAST SWARM!`,
-      'ice_crystal_barrage': `${enemy.name} unleashes ICE CRYSTAL BARRAGE!`,
-      'ghostly_whispers': `${enemy.name} summons GHOSTLY WHISPERS!`,
-      'rolling_boulders': `${enemy.name} triggers ROLLING BOULDERS!`,
-      'word_barrage': `${enemy.name} launches WORD BARRAGE!`,
-      'fireball_barrage': `🔥 ${enemy.name} unleashes FIREBALL BARRAGE! 🔥`,
-      'asteroid_barrage': `${enemy.name} summons WORD PRISON!`,
-      'ground_ripple': `🏔️ ${enemy.name} SMASHES THE GROUND! 🏔️`,
-      'web_trap': `🕸️ ${enemy.name} TRAPS YOU IN A WEB! 🕸️`,
+      'goblin_horde': isAgent ? `🎯 HOSTILE SQUAD! Speak words to eliminate them! 🎯` : `⚔️ GOBLIN HORDE! Speak words to defeat them! ⚔️`,
+      'fireball_defense': isAgent ? `🚀 ${enemy.name} LAUNCHES MISSILES! 🚀` : `🔥 ${enemy.name} UNLEASHES FIREBALLS! 🔥`,
+      'beast_swarm': isAgent ? `${enemy.name} deploys DRONE SWARM!` : `${enemy.name} summons BEAST SWARM!`,
+      'ice_crystal_barrage': isAgent ? `${enemy.name} deploys EMP PULSE!` : `${enemy.name} unleashes ICE CRYSTAL BARRAGE!`,
+      'ghostly_whispers': isAgent ? `${enemy.name} activates SIGNAL JAMMER!` : `${enemy.name} summons GHOSTLY WHISPERS!`,
+      'rolling_boulders': isAgent ? `${enemy.name} triggers CONCUSSION GRENADES!` : `${enemy.name} triggers ROLLING BOULDERS!`,
+      'word_barrage': isAgent ? `${enemy.name} launches DATA BARRAGE!` : `${enemy.name} launches WORD BARRAGE!`,
+      'fireball_barrage': isAgent ? `🚀 ${enemy.name} launches MISSILE BARRAGE! 🚀` : `🔥 ${enemy.name} unleashes FIREBALL BARRAGE! 🔥`,
+      'asteroid_barrage': isAgent ? `${enemy.name} activates CONTAINMENT FIELD!` : `${enemy.name} summons WORD PRISON!`,
+      'ground_ripple': isAgent ? `💥 ${enemy.name} DETONATES CHARGES! 💥` : `🏔️ ${enemy.name} SMASHES THE GROUND! 🏔️`,
+      'web_trap': isAgent ? `🔒 ${enemy.name} DEPLOYS SECURITY NET! 🔒` : `🕸️ ${enemy.name} TRAPS YOU IN A WEB! 🕸️`,
       // NEW mini-games
       'word_echo': `🗣️ WORD ECHO! Say each word TWICE! 🗣️`,
       'wind_chase': `💨 WIND CHASE! Catch the words! 💨`,
@@ -1207,7 +1208,7 @@ export const RPGBattleArena = ({
     const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 10);
     const swarmSelection = availableWords.slice(0, wordCount);
     setBarrageWords(swarmSelection);
-    setEnemyAbilityMessage(`${enemy.name} summons BEAST SWARM!`);
+    setEnemyAbilityMessage(getStoredTheme() === 'agent' ? `${enemy.name} deploys DRONE SWARM!` : `${enemy.name} summons BEAST SWARM!`);
     setTimeout(() => {
       setEnemyAbilityMessage(null);
       setPhase('beast_swarm');
@@ -1673,7 +1674,7 @@ export const RPGBattleArena = ({
         // Mastered word — 1.5x damage
         baseDamage = Math.floor(baseDamage * 1.5);
         setWordMasteryBonus({ word: cleanedWord, multiplier: 1.5 });
-        setComboAnnouncement('⭐ WORD MASTERED! ×1.5');
+        setComboAnnouncement(getStoredTheme() === 'agent' ? '🎯 INTEL DECODED! ×1.5' : '⭐ WORD MASTERED! ×1.5');
         setComboPowerLevel('ultra');
         setTimeout(() => { setComboAnnouncement(null); setWordMasteryBonus(null); }, 1200);
       } else if (totalCount >= 1) {
@@ -2127,6 +2128,7 @@ export const RPGBattleArena = ({
         defeatedEnemy={defeatedEnemy}
         nextEnemy={currentEnemyIndex < enemyQueue.length - 1 ? (() => { const t = getStoredTheme(); const ne = enemyQueue[currentEnemyIndex + 1]; return t === 'agent' ? (ne === 'boss' || ne === 'final_boss' ? getAgentBossForWorld(worldNumber) : getAgentEnemy(ne)) : getEnemyForBattle(ne); })() : null}
         onTransitionComplete={handleTransitionComplete}
+        theme={getStoredTheme() || 'classic'}
       />
 
       {/* Spell Effects Overlay */}
