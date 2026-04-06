@@ -56,14 +56,14 @@ const GameAnalytics = () => {
 
   // Fetch reading stats
   const { data: readingStats } = useQuery({
-    queryKey: ['game-reading-stats', user?.id, gradeMode],
+    queryKey: ['game-reading-stats', user?.id, currentGradeMode],
     queryFn: async () => {
       if (!user?.id) return null;
       let query = supabase
         .from('student_reading_stats')
         .select('*')
         .eq('student_id', user.id);
-      if (gradeMode) query = query.eq('grade_mode', gradeMode);
+      if (currentGradeMode) query = query.eq('grade_mode', currentGradeMode);
       const { data } = await query.maybeSingle();
       return data;
     },
