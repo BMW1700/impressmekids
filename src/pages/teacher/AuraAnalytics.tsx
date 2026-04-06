@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +25,29 @@ const AuraAnalytics = () => {
   const { classroomId } = useParams();
   const navigate = useNavigate();
   const [selectedGradeMode, setSelectedGradeMode] = useState<GradeMode>('k5');
+  const [hasLoadedDefault, setHasLoadedDefault] = useState(false);
+
+  // Load teacher's default grade mode
+  const { data: teacherProfile } = useQuery({
+    queryKey: ['teacher-default-grade-mode'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      const { data } = await supabase
+        .from('profiles')
+        .select('default_grade_mode')
+        .eq('id', user.id)
+        .single();
+      return data;
+    },
+  });
+
+  useEffect(() => {
+    if (!hasLoadedDefault && teacherProfile?.default_grade_mode) {
+      setSelectedGradeMode(teacherProfile.default_grade_mode as GradeMode);
+      setHasLoadedDefault(true);
+    }
+  }, [teacherProfile, hasLoadedDefault]);
 
   const { data: classrooms } = useQuery({
     queryKey: ['teacher-classrooms'],
