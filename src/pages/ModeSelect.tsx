@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, School, Gamepad2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 const ModeSelect = () => {
   const navigate = useNavigate();
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const location = useLocation();
+  const skipRedirect = (location.state as any)?.skipRedirect === true;
+  const [isCheckingAuth, setIsCheckingAuth] = useState(!skipRedirect);
 
   useEffect(() => {
+    if (skipRedirect) return;
     let cancelled = false;
 
     const hardTimeout = window.setTimeout(() => {
@@ -77,7 +80,7 @@ const ModeSelect = () => {
       cancelled = true;
       window.clearTimeout(hardTimeout);
     };
-  }, [navigate]);
+  }, [navigate, skipRedirect]);
 
   if (isCheckingAuth) {
     return (
