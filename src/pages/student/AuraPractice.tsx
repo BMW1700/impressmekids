@@ -712,6 +712,38 @@ const AuraPractice = () => {
             </Card>
           )}
 
+          {/* Grade Mode Selector */}
+          <div className="flex justify-center">
+            <div className="inline-flex items-center rounded-lg border bg-card p-1 gap-1">
+              <button
+                onClick={() => {
+                  setStoredTheme('classic');
+                  setGameTheme('classic');
+                }}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  currentGradeMode === 'k5'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                📚 Grades K-5
+              </button>
+              <button
+                onClick={() => {
+                  setStoredTheme('agent');
+                  setGameTheme('agent');
+                }}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  currentGradeMode === '6to12'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                🕵️ Grades 6-12
+              </button>
+            </div>
+          </div>
+
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="w-full flex justify-center overflow-x-auto">
               <TabsList className="inline-flex">
@@ -744,6 +776,7 @@ const AuraPractice = () => {
                 onStartCampaign={() => setIsCampaignMode(true)}
                 onStartRpgMode={() => setIsRpgMode(true)}
                 categoryFilter={categoryFilter}
+                gradeMode={currentGradeMode}
               />
             </TabsContent>
 
