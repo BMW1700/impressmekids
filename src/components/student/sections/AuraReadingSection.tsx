@@ -39,7 +39,7 @@ import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import type { EnemyType } from "@/lib/battleMechanics";
 import { curatedStories } from "@/data/curatedStories";
 import { agentStories } from "@/data/agentStories";
-import { getStoredTheme, setStoredTheme, type GameTheme } from "@/lib/gameTheme";
+import { getStoredTheme, setStoredTheme, type GameTheme, getGradeMode, type GradeMode } from "@/lib/gameTheme";
 import { ThemeSelector } from "@/components/aura/game/rpg/ThemeSelector";
 import type { CuratedStory as Story } from "@/data/curatedStories";
 
@@ -83,6 +83,7 @@ export const AuraReadingSection = () => {
   const [isReadingStory, setIsReadingStory] = useState(false);
   const [isCampaignMode, setIsCampaignMode] = useState(false);
   const [gameTheme, setGameTheme] = useState<GameTheme | null>(getStoredTheme());
+  const currentGradeMode: GradeMode = getGradeMode(gameTheme);
   
   // Theme-aware data sources
   const activeWorlds = gameTheme === 'agent' ? agentCampaignWorlds : campaignWorlds;
@@ -155,12 +156,12 @@ export const AuraReadingSection = () => {
   // Check for active screening period
   const { data: activeScreening } = useActiveScreeningPassage(user?.id);
 
-  // Campaign progress hook for RPG mode
+  // Campaign progress hook for RPG mode - scoped by grade mode
   const { 
     progress: campaignProgress, 
     startBattle, 
     completeBattle,
-  } = useCampaignProgress(user?.id);
+  } = useCampaignProgress(user?.id, currentGradeMode);
 
   const { data: records, refetch } = useQuery({
     queryKey: ['aura-records', user?.id],
@@ -597,6 +598,32 @@ export const AuraReadingSection = () => {
         </Card>
       )}
 
+      {/* Grade Mode Selector */}
+      <div className="flex justify-center">
+        <div className="inline-flex items-center rounded-lg border bg-card p-1 gap-1">
+          <button
+            onClick={() => { setStoredTheme('classic'); setGameTheme('classic'); }}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              currentGradeMode === 'k5'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            📚 Grades K-5
+          </button>
+          <button
+            onClick={() => { setStoredTheme('agent'); setGameTheme('agent'); }}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              currentGradeMode === '6to12'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            🕵️ Grades 6-12
+          </button>
+        </div>
+      </div>
+
       <Tabs defaultValue="stories" className="w-full">
         <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
           <TabsList className="inline-flex w-max md:grid md:w-full md:grid-cols-6 min-w-max">
@@ -628,6 +655,7 @@ export const AuraReadingSection = () => {
             onSelectStory={handleStorySelect} 
             onStartCampaign={() => setIsCampaignMode(true)}
             onStartRpgMode={() => setIsRpgMode(true)}
+            gradeMode={currentGradeMode}
           />
         </TabsContent>
 

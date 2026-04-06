@@ -1203,6 +1203,7 @@ export type Database = {
           enemy_current_hp: number
           enemy_max_hp: number
           enemy_type: string
+          grade_mode: string
           id: string
           longest_streak: number
           player_hp: number
@@ -1225,6 +1226,7 @@ export type Database = {
           enemy_current_hp?: number
           enemy_max_hp?: number
           enemy_type?: string
+          grade_mode?: string
           id?: string
           longest_streak?: number
           player_hp?: number
@@ -1247,6 +1249,7 @@ export type Database = {
           enemy_current_hp?: number
           enemy_max_hp?: number
           enemy_type?: string
+          grade_mode?: string
           id?: string
           longest_streak?: number
           player_hp?: number
@@ -1270,6 +1273,7 @@ export type Database = {
           created_at: string
           current_world: number
           equipped_pet_id: string | null
+          grade_mode: string
           grog_battles_won: number
           id: string
           last_login_date: string | null
@@ -1292,6 +1296,7 @@ export type Database = {
           created_at?: string
           current_world?: number
           equipped_pet_id?: string | null
+          grade_mode?: string
           grog_battles_won?: number
           id?: string
           last_login_date?: string | null
@@ -1314,6 +1319,7 @@ export type Database = {
           created_at?: string
           current_world?: number
           equipped_pet_id?: string | null
+          grade_mode?: string
           grog_battles_won?: number
           id?: string
           last_login_date?: string | null
@@ -4353,6 +4359,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          default_grade_mode: string
           district_id: string | null
           district_name: string | null
           email: string
@@ -4368,6 +4375,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          default_grade_mode?: string
           district_id?: string | null
           district_name?: string | null
           email: string
@@ -4383,6 +4391,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          default_grade_mode?: string
           district_id?: string | null
           district_name?: string | null
           email?: string
@@ -4865,6 +4874,7 @@ export type Database = {
           duration_seconds: number
           fluency_level: string | null
           fluency_score: number | null
+          grade_mode: string
           id: string
           miscue_analysis: Json | null
           passage_text: string
@@ -4887,6 +4897,7 @@ export type Database = {
           duration_seconds: number
           fluency_level?: string | null
           fluency_score?: number | null
+          grade_mode?: string
           id?: string
           miscue_analysis?: Json | null
           passage_text: string
@@ -4909,6 +4920,7 @@ export type Database = {
           duration_seconds?: number
           fluency_level?: string | null
           fluency_score?: number | null
+          grade_mode?: string
           id?: string
           miscue_analysis?: Json | null
           passage_text?: string
@@ -6296,6 +6308,7 @@ export type Database = {
           completed: boolean | null
           completed_at: string | null
           created_at: string | null
+          grade_mode: string
           id: string
           story_id: string
           student_id: string
@@ -6307,6 +6320,7 @@ export type Database = {
           completed?: boolean | null
           completed_at?: string | null
           created_at?: string | null
+          grade_mode?: string
           id?: string
           story_id: string
           student_id: string
@@ -6318,6 +6332,7 @@ export type Database = {
           completed?: boolean | null
           completed_at?: string | null
           created_at?: string | null
+          grade_mode?: string
           id?: string
           story_id?: string
           student_id?: string
@@ -6345,6 +6360,7 @@ export type Database = {
           badges_earned: string[] | null
           created_at: string | null
           current_streak_days: number | null
+          grade_mode: string
           id: string
           last_activity_date: string | null
           level: number | null
@@ -6359,6 +6375,7 @@ export type Database = {
           badges_earned?: string[] | null
           created_at?: string | null
           current_streak_days?: number | null
+          grade_mode?: string
           id?: string
           last_activity_date?: string | null
           level?: number | null
@@ -6373,6 +6390,7 @@ export type Database = {
           badges_earned?: string[] | null
           created_at?: string | null
           current_streak_days?: number | null
+          grade_mode?: string
           id?: string
           last_activity_date?: string | null
           level?: number | null
@@ -6387,7 +6405,7 @@ export type Database = {
           {
             foreignKeyName: "student_reading_stats_student_id_fkey"
             columns: ["student_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -8009,14 +8027,24 @@ export type Database = {
             Args: { p_district_id: string; p_user_id: string }
             Returns: undefined
           }
-      upsert_reading_stats: {
-        Args: {
-          p_student_id: string
-          p_words_read: number
-          p_xp_earned: number
-        }
-        Returns: undefined
-      }
+      upsert_reading_stats:
+        | {
+            Args: {
+              p_student_id: string
+              p_words_read: number
+              p_xp_earned: number
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_grade_mode?: string
+              p_student_id: string
+              p_words_read: number
+              p_xp_earned: number
+            }
+            Returns: undefined
+          }
       user_belongs_to_school: {
         Args: { _school_id: string; _user_id: string }
         Returns: boolean

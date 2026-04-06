@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { getMiscueInterventions } from "@/lib/miscueAnalysis";
 import { updateStudentReadingStats } from "@/lib/updateStudentReadingStats";
+import { getGradeModeFromGrade, type GradeMode } from "@/lib/gameTheme";
 
 interface GuidedReadingFlowProps {
   story: CuratedStory;
@@ -158,10 +159,12 @@ export const GuidedReadingFlow = ({
     
     // Update student_reading_stats (daily streak, total words, XP)
     // Only for SingleWordReader mode — WordByWordReader already updates stats internally
+    const storyGradeMode = getGradeModeFromGrade(story.grade_level);
     if (readingMode === 'word-by-word') {
       await updateStudentReadingStats(studentId, {
         wordsRead: stats.wordsRead || 0,
         xpEarned: stats.xpEarned || stats.wordsRead || 0,
+        gradeMode: storyGradeMode,
       });
     }
 

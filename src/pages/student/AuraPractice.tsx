@@ -16,7 +16,7 @@ import type { EnemyType } from "@/lib/battleMechanics";
 import KidFriendlyProgress from "@/components/aura/KidFriendlyProgress";
 import { curatedStories } from "@/data/curatedStories";
 import { agentStories } from "@/data/agentStories";
-import { getStoredTheme, setStoredTheme, type GameTheme } from "@/lib/gameTheme";
+import { getStoredTheme, setStoredTheme, type GameTheme, getGradeMode, getThemeFromGradeMode, type GradeMode } from "@/lib/gameTheme";
 import { ThemeSelector } from "@/components/aura/game/rpg/ThemeSelector";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -99,6 +99,7 @@ const AuraPractice = () => {
   const [presentationMetrics, setPresentationMetrics] = useState<PresentationMetrics | null>(null);
   const [presentationTranscript, setPresentationTranscript] = useState<string>('');
   const [gameTheme, setGameTheme] = useState<GameTheme | null>(getStoredTheme());
+  const currentGradeMode: GradeMode = getGradeMode(gameTheme);
   const [showThemeSelector, setShowThemeSelector] = useState(false);
   
   // Theme-aware data sources
@@ -189,13 +190,13 @@ const AuraPractice = () => {
   // Check for active screening period
   const { data: activeScreening } = useActiveScreeningPassage(user?.id);
 
-  // Campaign progress hook
+  // Campaign progress hook - scoped by grade mode
   const { 
     progress: campaignProgress, 
     startBattle, 
     completeBattle,
     initializeProgress 
-  } = useCampaignProgress(user?.id);
+  } = useCampaignProgress(user?.id, currentGradeMode);
   const { data: records, refetch } = useQuery({
     queryKey: ['aura-records', user?.id],
     queryFn: async () => {
@@ -711,6 +712,38 @@ const AuraPractice = () => {
             </Card>
           )}
 
+          {/* Grade Mode Selector */}
+          <div className="flex justify-center">
+            <div className="inline-flex items-center rounded-lg border bg-card p-1 gap-1">
+              <button
+                onClick={() => {
+                  setStoredTheme('classic');
+                  setGameTheme('classic');
+                }}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  currentGradeMode === 'k5'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                📚 Grades K-5
+              </button>
+              <button
+                onClick={() => {
+                  setStoredTheme('agent');
+                  setGameTheme('agent');
+                }}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  currentGradeMode === '6to12'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                🕵️ Grades 6-12
+              </button>
+            </div>
+          </div>
+
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="w-full flex justify-center overflow-x-auto">
               <TabsList className="inline-flex">
@@ -743,6 +776,7 @@ const AuraPractice = () => {
                 onStartCampaign={() => setIsCampaignMode(true)}
                 onStartRpgMode={() => setIsRpgMode(true)}
                 categoryFilter={categoryFilter}
+                gradeMode={currentGradeMode}
               />
             </TabsContent>
 

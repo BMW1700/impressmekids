@@ -6,28 +6,36 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Search, Filter, Sparkles, Sword, BookOpen, Crown, Brain } from "lucide-react";
 import { StoryCard } from "./StoryCard";
 import { curatedStories, CuratedStory } from "@/data/curatedStories";
+import { agentStories } from "@/data/agentStories";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import { motion } from "framer-motion";
 import { useMLContextSafe } from "@/components/ml/MLStatusProvider";
 import { rankStoriesByPhonemeNeed, extractStrugglingPhonemes } from "@/lib/adaptiveStoryRanking";
+import type { GradeMode } from "@/lib/gameTheme";
 
 interface StoryLibraryProps {
   onSelectStory: (story: CuratedStory) => void;
   onStartCampaign?: () => void;
   onStartRpgMode?: () => void;
   categoryFilter?: string | null;
+  gradeMode?: GradeMode;
 }
 
 const categories = ['all', 'animals', 'space', 'sports', 'fairy_tales', 'science', 'adventure', 'history'];
-const grades = ['all', 'K', '1', '2', '3', '4', '5'];
+const k5Grades = ['all', 'K', '1', '2', '3', '4', '5'];
+const middleHighGrades = ['all', '6', '7', '8', '9', '10', '11', '12'];
 
-export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, categoryFilter }: StoryLibraryProps) => {
+export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, categoryFilter, gradeMode = 'k5' }: StoryLibraryProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(categoryFilter || "all");
   const [selectedGrade, setSelectedGrade] = useState("all");
   const mlContext = useMLContextSafe();
+
+  // Use grade-appropriate stories and grade chips
+  const baseStories = gradeMode === '6to12' ? agentStories : curatedStories;
+  const grades = gradeMode === '6to12' ? middleHighGrades : k5Grades;
 
   // Fetch student's reading progress
   const { data: progressData } = useQuery({
@@ -54,6 +62,8 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
         .from('reading_library')
         .select('*')
         .eq('is_published', true)
+        .gte('grade_level', gradeMode === '6to12' ? 6 : 0)
+        .lte('grade_level', gradeMode === '6to12' ? 12 : 5)
         .order('is_featured', { ascending: false })
         .order('thumbs_up_count', { ascending: false });
 
@@ -83,15 +93,15 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
       isFromCommunity?: boolean;
     })[] = [];
 
-    // Add curated stories first
-    curatedStories.forEach(story => {
+    // Add grade-appropriate curated/agent stories first
+    baseStories.forEach(story => {
       stories.push({ ...story, isFromCommunity: false });
     });
 
     // Add community stories (avoid duplicates by title)
-    const curatedTitles = new Set(curatedStories.map(s => s.title.toLowerCase()));
+    const baseTitles = new Set(baseStories.map(s => s.title.toLowerCase()));
     communityStories?.forEach(story => {
-      if (!curatedTitles.has(story.title.toLowerCase())) {
+      if (!baseTitles.has(story.title.toLowerCase())) {
         stories.push({
           title: story.title,
           description: story.description || '',
@@ -115,7 +125,7 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
     });
 
     return stories;
-  }, [communityStories]);
+  }, [communityStories, baseStories]);
 
   // Filter stories
   const filteredStories = useMemo(() => {

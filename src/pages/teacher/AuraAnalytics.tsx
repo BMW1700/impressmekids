@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,10 +19,12 @@ import { Badge } from "@/components/ui/badge";
 import { BarChart3, ArrowLeft, Sparkles, TrendingUp, Brain, Users, Activity, BookOpen, Timer, Target, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MLStatusBadge } from "@/components/ml/MLStatusBadge";
+import type { GradeMode } from "@/lib/gameTheme";
 
 const AuraAnalytics = () => {
   const { classroomId } = useParams();
   const navigate = useNavigate();
+  const [selectedGradeMode, setSelectedGradeMode] = useState<GradeMode>('k5');
 
   const { data: classrooms } = useQuery({
     queryKey: ['teacher-classrooms'],
@@ -84,7 +87,7 @@ const AuraAnalytics = () => {
 
   // NEW: Fetch reading_sessions data (this is where WordByWordReader saves data!)
   const { data: readingSessions } = useQuery({
-    queryKey: ['classroom-reading-sessions', classroomId],
+    queryKey: ['classroom-reading-sessions', classroomId, selectedGradeMode],
     queryFn: async () => {
       if (!students) return [];
 
@@ -93,6 +96,7 @@ const AuraAnalytics = () => {
         .from('reading_sessions')
         .select('*')
         .in('student_id', studentIds)
+        .eq('grade_mode', selectedGradeMode)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -175,6 +179,15 @@ const AuraAnalytics = () => {
                     {classroom.name}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <Select value={selectedGradeMode} onValueChange={(v) => setSelectedGradeMode(v as GradeMode)}>
+              <SelectTrigger className="w-full md:w-64">
+                <SelectValue placeholder="Select grade mode" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="k5">Aura Reading – Grades K-5</SelectItem>
+                <SelectItem value="6to12">Aura Reading – Grades 6-12</SelectItem>
               </SelectContent>
             </Select>
           </div>

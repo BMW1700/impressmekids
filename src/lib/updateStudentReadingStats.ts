@@ -1,9 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { GradeMode } from "@/lib/gameTheme";
 
 interface PendingReadingStat {
   studentId: string;
   wordsRead: number;
   xpEarned: number;
+  gradeMode: GradeMode;
   timestamp: number;
 }
 
@@ -37,6 +39,7 @@ const flushPendingStats = async () => {
         p_student_id: entry.studentId,
         p_words_read: entry.wordsRead,
         p_xp_earned: entry.xpEarned,
+        p_grade_mode: entry.gradeMode || 'k5',
       });
       if (error) throw error;
       console.log("[ReadingStats] ✅ Flushed pending stat for", entry.studentId);
@@ -70,19 +73,23 @@ export const updateStudentReadingStats = async (
   sessionData: {
     wordsRead: number;
     xpEarned: number;
+    gradeMode?: GradeMode;
   }
 ) => {
   if (!studentId || sessionData.wordsRead === 0) return;
+
+  const gradeMode = sessionData.gradeMode || 'k5';
 
   try {
     const { error } = await supabase.rpc("upsert_reading_stats", {
       p_student_id: studentId,
       p_words_read: sessionData.wordsRead,
       p_xp_earned: sessionData.xpEarned,
+      p_grade_mode: gradeMode,
     });
 
     if (error) throw error;
-    console.log("[ReadingStats] ✅ Stats synced for", studentId);
+    console.log("[ReadingStats] ✅ Stats synced for", studentId, "mode:", gradeMode);
   } catch (err) {
     console.error("[ReadingStats] Failed, caching for retry:", err);
 
@@ -93,6 +100,7 @@ export const updateStudentReadingStats = async (
         studentId,
         wordsRead: sessionData.wordsRead,
         xpEarned: sessionData.xpEarned,
+        gradeMode,
         timestamp: Date.now(),
       });
       localStorage.setItem(PENDING_KEY, JSON.stringify(pending));
