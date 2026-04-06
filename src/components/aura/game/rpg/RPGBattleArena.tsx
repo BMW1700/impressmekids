@@ -324,7 +324,7 @@ export const RPGBattleArena = ({
   const [batchStartIndex, setBatchStartIndex] = useState(0); // Start of current 5-word batch (0, 5, 10, ...)
   const [lastSpokenGlobalIndex, setLastSpokenGlobalIndex] = useState(-1); // For attack display
   const [currentWordResult, setCurrentWordResult] = useState<boolean | null>(null);
-  const [attackType, setAttackType] = useState<'fire' | 'ice' | 'lightning' | 'slash' | 'nature' | 'heal' | 'wind'>('lightning');
+  const [attackType, setAttackType] = useState<'fire' | 'ice' | 'lightning' | 'slash' | 'nature' | 'heal' | 'wind' | 'data_burst'>('lightning');
   const [barrageWords, setBarrageWords] = useState<string[]>([]);
 
   // Animation states
@@ -337,7 +337,7 @@ export const RPGBattleArena = ({
   const [enemyAbilityMessage, setEnemyAbilityMessage] = useState<string | null>(null);
   
   // Spell effects state
-  const [activeSpell, setActiveSpell] = useState<'fire' | 'ice' | 'lightning' | 'slash' | 'nature' | 'heal' | 'wind' | null>(null);
+  const [activeSpell, setActiveSpell] = useState<'fire' | 'ice' | 'lightning' | 'slash' | 'nature' | 'heal' | 'wind' | 'data_burst' | null>(null);
   const [showSpellEffect, setShowSpellEffect] = useState(false);
   
   // Currency/rewards state
