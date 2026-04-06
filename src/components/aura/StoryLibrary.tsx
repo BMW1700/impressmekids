@@ -125,7 +125,7 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
     });
 
     return stories;
-  }, [communityStories]);
+  }, [communityStories, baseStories]);
 
   // Filter stories
   const filteredStories = useMemo(() => {
