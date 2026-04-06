@@ -89,6 +89,8 @@ interface WordByWordReaderProps {
   // Battle mode props - for challenging mode matching
   battleMode?: boolean;
   challengingMode?: boolean;
+  // Grade mode for data separation
+  gradeMode?: string;
 }
 
 interface ReadingSessionResult {
@@ -1403,6 +1405,7 @@ export const WordByWordReader = ({
         }, // ML OUTPUT: Per-phoneme accuracy scores + inference
         audio_url: audioUrl, // NEW: Path to audio recording for teacher playback
         reading_mode: battleMode ? 'rpg_battle' : screeningPeriodId ? 'screening' : assignmentId ? 'assignment' : 'word_by_word',
+        grade_mode: gradeMode || 'k5',
       } as any)
       .select()
       .single();
@@ -1842,6 +1845,7 @@ export const WordByWordReader = ({
         .from('student_reading_stats')
         .select('*')
         .eq('student_id', studentId)
+        .eq('grade_mode', gradeMode || 'k5')
         .maybeSingle();
 
       const today = new Date().toISOString().split('T')[0];
@@ -1885,7 +1889,8 @@ export const WordByWordReader = ({
             xp_points: (existingStats.xp_points || 0) + xpEarned,
             updated_at: new Date().toISOString(),
           })
-          .eq('student_id', studentId);
+          .eq('student_id', studentId)
+          .eq('grade_mode', gradeMode || 'k5');
       } else {
         await supabase
           .from('student_reading_stats')
@@ -1897,6 +1902,7 @@ export const WordByWordReader = ({
             longest_streak_days: 1,
             last_activity_date: today,
             xp_points: xpEarned,
+            grade_mode: gradeMode || 'k5',
           });
       }
       

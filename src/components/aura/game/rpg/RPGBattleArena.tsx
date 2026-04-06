@@ -1982,6 +1982,7 @@ export const RPGBattleArena = ({
           wcpm: Math.round(correctWords / (durationSeconds / 60)),
           fluency_level: accuracyPercent >= 95 ? 'independent' : accuracyPercent >= 90 ? 'instructional' : 'frustration',
           reading_mode: battleMode === 'tug_of_war' ? 'tug_of_war' : battleMode === 'balloon' ? 'balloon_battle' : 'rpg_battle',
+          grade_mode: gradeMode || 'k5',
         });
         
         if (error) {

@@ -135,6 +135,7 @@ export const RPGTugOfWar = ({
         fluency_score: fluencyScore,
         fluency_level: accuracyPercent >= 95 ? 'independent' : accuracyPercent >= 90 ? 'instructional' : 'frustration',
         reading_mode: 'tug_of_war',
+        grade_mode: gradeMode || 'k5',
       });
       
       if (error) {

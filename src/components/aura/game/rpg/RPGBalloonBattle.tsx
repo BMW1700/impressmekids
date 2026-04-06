@@ -157,6 +157,7 @@ export const RPGBalloonBattle = ({
         wcpm: wcpm,
         fluency_level: accuracyPercent >= 95 ? 'independent' : accuracyPercent >= 90 ? 'instructional' : 'frustration',
         reading_mode: 'balloon_battle',
+        grade_mode: gradeMode || 'k5',
       });
       
       if (error) {
