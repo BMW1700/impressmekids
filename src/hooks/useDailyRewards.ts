@@ -104,20 +104,20 @@ export const useDailyRewards = (studentId?: string, gradeMode?: string) => {
       if (rewardError) throw rewardError;
 
       // Update campaign_progress with new streak info — scoped by gradeMode
-      const upsertData: Record<string, any> = {
+      const upsertData = {
         student_id: studentId,
+        grade_mode: gradeMode || 'k5',
         login_streak: currentStreak,
         longest_login_streak: longestStreak,
         last_login_date: todayStr,
         total_gold: (streakInfo?.total_gold || 0) + totalGold,
       };
-      if (gradeMode) upsertData.grade_mode = gradeMode;
 
       const { error: progressError } = await supabase
         .from("campaign_progress")
         .upsert(upsertData, {
-          onConflict: gradeMode ? 'student_id,grade_mode' : 'student_id',
-        });
+          onConflict: 'student_id,grade_mode',
+        } as any);
 
       if (progressError) throw progressError;
 
