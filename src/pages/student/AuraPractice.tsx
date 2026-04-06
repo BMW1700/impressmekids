@@ -723,7 +723,7 @@ const AuraPractice = () => {
           )}
 
           {/* Grade Mode Selector */}
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center gap-1">
             <div className="inline-flex items-center rounded-lg border bg-card p-1 gap-1">
               <button
                 onClick={() => {
@@ -752,6 +752,20 @@ const AuraPractice = () => {
                 🕵️ Grades 6-12
               </button>
             </div>
+            {user?.id && profile?.default_grade_mode !== currentGradeMode && (
+              <button
+                onClick={async () => {
+                  await supabase
+                    .from('profiles')
+                    .update({ default_grade_mode: currentGradeMode } as any)
+                    .eq('id', user.id);
+                  toast({ title: `Default set to ${currentGradeMode === 'k5' ? 'Grades K-5' : 'Grades 6-12'}` });
+                }}
+                className="text-xs text-muted-foreground hover:text-primary transition-colors underline"
+              >
+                Set as my default
+              </button>
+            )}
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
