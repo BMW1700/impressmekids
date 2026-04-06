@@ -2278,6 +2278,7 @@ export const RPGBattleArena = ({
             words={barrageWords}
             heroName={playerCharacter.name}
             enemyName={enemy.name}
+            gradeMode={gradeMode}
             onComplete={handleTugOfWarComplete}
             onExit={onBack}
           />
@@ -2296,6 +2297,7 @@ export const RPGBattleArena = ({
             enemyName={enemy.name}
             studentId={studentId}
             storyTitle={story.title}
+            gradeMode={gradeMode}
             onComplete={handleBalloonBattleComplete}
           />
         )}

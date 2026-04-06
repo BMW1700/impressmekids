@@ -321,6 +321,7 @@ export const GuidedReadingFlow = ({
               screeningPassageId={screeningPassageId}
               screeningPassageTitle={screeningPassageTitle || story.title}
               screeningGradeLevel={screeningGradeLevel}
+              gradeMode={getGradeModeFromGrade(story.grade_level)}
             />
           </motion.div>
         )}

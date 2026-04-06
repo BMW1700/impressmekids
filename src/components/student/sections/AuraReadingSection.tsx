@@ -319,6 +319,7 @@ export const AuraReadingSection = () => {
           studentId={user.id}
           battleMode={selectedBattleMode}
           worldNumber={selectedWorld?.id || 1}
+          gradeMode={currentGradeMode}
           onBack={() => {
             setRpgView('level_select');
             setRpgStory(null);
