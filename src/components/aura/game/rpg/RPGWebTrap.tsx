@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bug, Mic, Volume2 } from "lucide-react";
+import { Bug, Mic, Volume2, Crosshair } from "lucide-react";
 import { speechManager } from "@/lib/speechRecognitionManager";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
+import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
 
 interface TrappedWord {
   id: number;
@@ -213,32 +214,38 @@ export const RPGWebTrap = ({
       className="fixed inset-0 z-50 overflow-hidden"
     >
       {/* Spider web background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-950 via-slate-900 to-violet-950">
-        {/* Web pattern overlay */}
+      {(() => { const agent = isAgentMode(); return (
+      <div className={`absolute inset-0 bg-gradient-to-br ${agent ? 'from-slate-950 via-red-900 to-slate-950' : 'from-purple-950 via-slate-900 to-violet-950'}`}>
+        {/* Web/laser pattern overlay */}
         <svg className="absolute inset-0 w-full h-full opacity-30" preserveAspectRatio="none">
           <defs>
             <pattern id="webPattern" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
-              <circle cx="50" cy="50" r="48" fill="none" stroke="#A78BFA" strokeWidth="0.5"/>
-              <circle cx="50" cy="50" r="35" fill="none" stroke="#A78BFA" strokeWidth="0.5"/>
-              <circle cx="50" cy="50" r="22" fill="none" stroke="#A78BFA" strokeWidth="0.5"/>
-              <circle cx="50" cy="50" r="10" fill="none" stroke="#A78BFA" strokeWidth="0.5"/>
-              <line x1="50" y1="0" x2="50" y2="100" stroke="#A78BFA" strokeWidth="0.3"/>
-              <line x1="0" y1="50" x2="100" y2="50" stroke="#A78BFA" strokeWidth="0.3"/>
-              <line x1="0" y1="0" x2="100" y2="100" stroke="#A78BFA" strokeWidth="0.3"/>
-              <line x1="100" y1="0" x2="0" y2="100" stroke="#A78BFA" strokeWidth="0.3"/>
+              <circle cx="50" cy="50" r="48" fill="none" stroke={agent ? '#EF4444' : '#A78BFA'} strokeWidth="0.5"/>
+              <circle cx="50" cy="50" r="35" fill="none" stroke={agent ? '#EF4444' : '#A78BFA'} strokeWidth="0.5"/>
+              <circle cx="50" cy="50" r="22" fill="none" stroke={agent ? '#EF4444' : '#A78BFA'} strokeWidth="0.5"/>
+              <circle cx="50" cy="50" r="10" fill="none" stroke={agent ? '#EF4444' : '#A78BFA'} strokeWidth="0.5"/>
+              <line x1="50" y1="0" x2="50" y2="100" stroke={agent ? '#EF4444' : '#A78BFA'} strokeWidth="0.3"/>
+              <line x1="0" y1="50" x2="100" y2="50" stroke={agent ? '#EF4444' : '#A78BFA'} strokeWidth="0.3"/>
+              <line x1="0" y1="0" x2="100" y2="100" stroke={agent ? '#EF4444' : '#A78BFA'} strokeWidth="0.3"/>
+              <line x1="100" y1="0" x2="0" y2="100" stroke={agent ? '#EF4444' : '#A78BFA'} strokeWidth="0.3"/>
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#webPattern)"/>
         </svg>
       </div>
+      ); })()}
 
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-20">
         <div className="flex items-center gap-3">
-          <Bug className="h-8 w-8 text-purple-400" />
-          <h1 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-            WEB TRAP!
+        {(() => { const t = getMinigameTheme('webTrap'); const agent = isAgentMode(); return (
+        <>
+          {agent ? <Crosshair className="h-8 w-8 text-red-400" /> : <Bug className="h-8 w-8 text-purple-400" />}
+          <h1 className={`text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r ${agent ? 'from-red-400 to-rose-400' : 'from-purple-400 to-pink-400'}`}>
+            {t.title}
           </h1>
+        </>
+        ); })()}
         </div>
         
         <div className="flex gap-4">

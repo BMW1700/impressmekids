@@ -1,8 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, Zap, Cloud } from "lucide-react";
+import { Mic, Zap, Cloud, Plug } from "lucide-react";
 import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { SoundEffects, unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
+import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
 
 interface LightningWord {
   id: string;
@@ -246,7 +247,7 @@ export const RPGLightningStorm = ({
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="absolute inset-0 bg-gradient-to-b from-slate-900/95 via-purple-950/90 to-slate-950/95"
+        className={`absolute inset-0 bg-gradient-to-b ${isAgentMode() ? 'from-slate-900/95 via-blue-950/90 to-slate-950/95' : 'from-slate-900/95 via-purple-950/90 to-slate-950/95'}`}
       />
       
       {/* Lightning flash */}
@@ -286,14 +287,16 @@ export const RPGLightningStorm = ({
         animate={{ y: 0, opacity: 1 }}
         className="absolute top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-auto"
       >
-        <div className="bg-gradient-to-r from-yellow-600 to-amber-600 px-6 py-3 rounded-lg
-          shadow-[0_0_30px_rgba(234,179,8,0.6)] border border-yellow-400/50">
+        {(() => { const t = getMinigameTheme('lightningStorm'); const agent = isAgentMode(); return (
+        <div className={`bg-gradient-to-r ${agent ? 'from-blue-600 to-cyan-600' : 'from-yellow-600 to-amber-600'} px-6 py-3 rounded-lg
+          shadow-lg border ${agent ? 'border-blue-400/50' : 'border-yellow-400/50'}`}>
           <div className="flex items-center gap-3 text-white">
-            <Zap className="h-6 w-6 animate-pulse" />
-            <span className="font-bold text-lg">LIGHTNING STORM! Speak FAST before it strikes!</span>
-            <Zap className="h-6 w-6 animate-pulse" />
+            {agent ? <Plug className="h-6 w-6 animate-pulse" /> : <Zap className="h-6 w-6 animate-pulse" />}
+            <span className="font-bold text-lg">{agent ? 'POWER SURGE! Speak FAST before the grid overloads!' : 'LIGHTNING STORM! Speak FAST before it strikes!'}</span>
+            {agent ? <Plug className="h-6 w-6 animate-pulse" /> : <Zap className="h-6 w-6 animate-pulse" />}
           </div>
         </div>
+        ); })()}
       </motion.div>
 
       {/* Progress bar */}

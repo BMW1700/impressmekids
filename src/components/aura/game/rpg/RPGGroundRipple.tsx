@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, MicOff, Mountain } from "lucide-react";
+import { Mic, MicOff, Mountain, Radio } from "lucide-react";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
+import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
 
 interface RippleMountain {
   id: number;
@@ -246,13 +247,15 @@ export const RPGGroundRipple = ({
       transition={{ duration: shakeScreen ? 0.3 : 0.2 }}
     >
       {/* Background - rocky canyon */}
-      <div className="absolute inset-0 bg-gradient-to-b from-amber-900 via-stone-800 to-stone-950" />
+      {(() => { const t = getMinigameTheme('groundRipple'); const agent = isAgentMode(); return (
+      <>
+      <div className={`absolute inset-0 bg-gradient-to-b ${t.bgGradient}`} />
       
       {/* Dust particles */}
       {[...Array(15)].map((_, i) => (
         <motion.div
           key={i}
-          className="absolute w-4 h-4 bg-amber-600/30 rounded-full blur-sm"
+          className={`absolute w-4 h-4 ${agent ? 'bg-cyan-600/30' : 'bg-amber-600/30'} rounded-full blur-sm`}
           style={{ 
             left: `${Math.random() * 100}%`, 
             bottom: `${15 + Math.random() * 30}%` 
@@ -270,8 +273,7 @@ export const RPGGroundRipple = ({
       ))}
       
       {/* Ground */}
-      <div className="absolute bottom-0 left-0 right-0 h-[20%] bg-gradient-to-t from-stone-900 via-amber-800 to-stone-700">
-        {/* Cracks in ground */}
+      <div className={`absolute bottom-0 left-0 right-0 h-[20%] bg-gradient-to-t ${agent ? 'from-slate-900 via-gray-800 to-slate-700' : 'from-stone-900 via-amber-800 to-stone-700'}`}>
         <svg className="absolute inset-0 w-full h-full opacity-40">
           <path d="M0 20 L50 15 L100 25 L150 10 L200 20" stroke="#3D2817" strokeWidth="2" fill="none"/>
           <path d="M100 0 L120 30 L110 50" stroke="#3D2817" strokeWidth="2" fill="none"/>
@@ -280,30 +282,34 @@ export const RPGGroundRipple = ({
       </div>
 
       {/* Hero zone */}
-      <div className="absolute left-0 bottom-[15%] w-[10%] h-[35%] bg-gradient-to-r from-blue-500/30 to-transparent border-r-2 border-blue-400/50 flex items-center justify-center">
-        <div className="text-5xl">🛡️</div>
+      <div className={`absolute left-0 bottom-[15%] w-[10%] h-[35%] ${agent ? 'bg-gradient-to-r from-cyan-500/30 to-transparent border-r-2 border-cyan-400/50' : 'bg-gradient-to-r from-blue-500/30 to-transparent border-r-2 border-blue-400/50'} flex items-center justify-center`}>
+        <div className="text-5xl">{agent ? '🎯' : '🛡️'}</div>
       </div>
 
       {/* Header */}
       <div className="absolute top-4 left-4 right-4 flex justify-between items-start z-20">
         <motion.div 
-          className="bg-stone-900/90 px-5 py-3 rounded-xl border-2 border-amber-600"
+          className={`${agent ? 'bg-slate-900/90' : 'bg-stone-900/90'} px-5 py-3 rounded-xl border-2 ${agent ? 'border-cyan-600' : 'border-amber-600'}`}
           initial={{ y: -50 }}
           animate={{ y: 0 }}
         >
           <div className="flex items-center gap-2">
-            <Mountain className="h-6 w-6 text-amber-400" />
-            <h2 className="text-xl font-black text-amber-400">GROUND RIPPLE!</h2>
+            {agent ? <Radio className="h-6 w-6 text-cyan-400" /> : <Mountain className="h-6 w-6 text-amber-400" />}
+            <h2 className={`text-xl font-black ${t.textColor}`}>{t.title}</h2>
           </div>
-          <p className="text-sm text-amber-300 mt-1">Grog smashes! Speak words to destroy the mountains!</p>
+          <p className={`text-sm ${agent ? 'text-cyan-300' : 'text-amber-300'} mt-1`}>
+            {agent ? 'Incoming shockwave! Speak words to absorb the pulse!' : 'Grog smashes! Speak words to destroy the mountains!'}
+          </p>
         </motion.div>
-        
-        <div className="bg-stone-900/90 px-4 py-2 rounded-xl border border-amber-500/50">
+      
+        <div className={`${agent ? 'bg-slate-900/90' : 'bg-stone-900/90'} px-4 py-2 rounded-xl border ${agent ? 'border-cyan-500/50' : 'border-amber-500/50'}`}>
           <span className="text-emerald-400 font-bold text-lg">{destroyed}</span>
           <span className="text-slate-400 mx-1">/</span>
           <span className="text-slate-300">{gameWordsRef.current.length}</span>
         </div>
       </div>
+      </>
+      ); })()}
 
       {/* Mountains with words */}
       <AnimatePresence>

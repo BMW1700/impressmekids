@@ -1,8 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, Volume2, Repeat } from "lucide-react";
+import { Mic, Volume2, Repeat, Radar } from "lucide-react";
 import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { SoundEffects, unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
+import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
 
 interface EchoWord {
   id: string;
@@ -213,7 +214,7 @@ export const RPGWordEcho = ({
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="absolute inset-0 bg-gradient-to-b from-stone-900/90 via-amber-950/80 to-stone-950/95"
+        className={`absolute inset-0 bg-gradient-to-b ${isAgentMode() ? 'from-slate-900/90 via-emerald-950/80 to-slate-950/95' : 'from-stone-900/90 via-amber-950/80 to-stone-950/95'}`}
       />
       
       {/* Echo wave effects */}
@@ -245,14 +246,16 @@ export const RPGWordEcho = ({
         animate={{ y: 0, opacity: 1 }}
         className="absolute top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-auto"
       >
-        <div className="bg-gradient-to-r from-amber-600 to-orange-600 px-6 py-3 rounded-lg
-          shadow-[0_0_30px_rgba(245,158,11,0.6)] border border-amber-400/50">
+        {(() => { const t = getMinigameTheme('wordEcho'); const agent = isAgentMode(); return (
+        <div className={`bg-gradient-to-r ${agent ? 'from-emerald-600 to-cyan-600' : 'from-amber-600 to-orange-600'} px-6 py-3 rounded-lg
+          shadow-lg border ${agent ? 'border-emerald-400/50' : 'border-amber-400/50'}`}>
           <div className="flex items-center gap-3 text-white">
-            <Repeat className="h-6 w-6 animate-pulse" />
-            <span className="font-bold text-lg">WORD ECHO! Say each word TWICE!</span>
-            <Repeat className="h-6 w-6 animate-pulse" />
+            {agent ? <Radar className="h-6 w-6 animate-pulse" /> : <Repeat className="h-6 w-6 animate-pulse" />}
+            <span className="font-bold text-lg">{t.title} Say each word TWICE!</span>
+            {agent ? <Radar className="h-6 w-6 animate-pulse" /> : <Repeat className="h-6 w-6 animate-pulse" />}
           </div>
         </div>
+        ); })()}
       </motion.div>
 
       {/* Timer */}

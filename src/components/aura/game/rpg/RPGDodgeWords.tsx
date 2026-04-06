@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, X } from "lucide-react";
+import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
 
 interface FlyingWord {
   id: number;
@@ -199,8 +200,10 @@ export const RPGDodgeWords = ({
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-auto z-50">
       {/* Background */}
+      {(() => { const t = getMinigameTheme('dodgeWords'); const agent = isAgentMode(); return (
+      <>
       <motion.div
-        className="absolute inset-0 bg-gradient-to-b from-indigo-950/80 via-slate-900/70 to-indigo-900/60"
+        className={`absolute inset-0 bg-gradient-to-b ${t.bgGradient}`}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       />
@@ -211,10 +214,12 @@ export const RPGDodgeWords = ({
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
       >
-        <div className="px-6 py-2 bg-indigo-600/90 rounded-lg border-2 border-indigo-300">
-          <span className="text-white font-black text-lg">⚔️ DODGE & SPEAK ⚔️</span>
+        <div className={`px-6 py-2 ${agent ? 'bg-red-800/90' : 'bg-indigo-600/90'} rounded-lg border-2 ${t.accentColor}`}>
+          <span className="text-white font-black text-lg">{t.emoji} {t.title} {t.emoji}</span>
         </div>
       </motion.div>
+      </>
+      ); })()}
 
       {/* Legend */}
       <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 flex gap-4">

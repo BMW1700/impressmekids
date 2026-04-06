@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Snowflake } from "lucide-react";
+import { Snowflake, Zap } from "lucide-react";
+import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
 
 interface IceCrystal {
   id: number;
@@ -164,13 +165,15 @@ export const RPGIceCrystalBarrage = ({
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-auto z-50">
       {/* Frozen background overlay */}
+      {(() => { const t = getMinigameTheme('iceCrystalBarrage'); const agent = isAgentMode(); return (
+      <>
       <motion.div
-        className="absolute inset-0 bg-gradient-to-b from-cyan-900/60 via-blue-900/40 to-transparent"
+        className={`absolute inset-0 bg-gradient-to-b ${t.bgGradient}`}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       />
 
-      {/* Snowflakes */}
+      {/* Snowflakes / particles */}
       {[...Array(30)].map((_, i) => (
         <motion.div
           key={i}
@@ -187,7 +190,7 @@ export const RPGIceCrystalBarrage = ({
             delay: Math.random() * 2,
           }}
         >
-          <Snowflake size={12 + Math.random() * 12} />
+          {agent ? <Zap size={12 + Math.random() * 12} /> : <Snowflake size={12 + Math.random() * 12} />}
         </motion.div>
       ))}
 
@@ -197,10 +200,12 @@ export const RPGIceCrystalBarrage = ({
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
       >
-        <div className="px-6 py-2 bg-cyan-600/90 rounded-lg border-2 border-cyan-300">
-          <span className="text-white font-black text-lg">❄️ ICE CRYSTAL BARRAGE ❄️</span>
+        <div className={`px-6 py-2 ${agent ? 'bg-blue-800/90' : 'bg-cyan-600/90'} rounded-lg border-2 ${t.accentColor}`}>
+          <span className="text-white font-black text-lg">{t.emoji} {t.title} {t.emoji}</span>
         </div>
       </motion.div>
+      </>
+      ); })()}
 
       {/* Progress indicator */}
       <motion.div

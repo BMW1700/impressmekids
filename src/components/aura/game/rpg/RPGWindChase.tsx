@@ -1,8 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, Wind, Cloud } from "lucide-react";
+import { Mic, Wind, Cloud, Crosshair } from "lucide-react";
 import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { SoundEffects, unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
+import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
 
 interface WindWord {
   id: string;
@@ -218,7 +219,7 @@ export const RPGWindChase = ({
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="absolute inset-0 bg-gradient-to-b from-sky-400/90 via-cyan-500/80 to-blue-600/90"
+        className={`absolute inset-0 bg-gradient-to-b ${isAgentMode() ? 'from-slate-800/90 via-amber-900/80 to-slate-900/90' : 'from-sky-400/90 via-cyan-500/80 to-blue-600/90'}`}
       />
       
       {/* Floating clouds */}
@@ -267,14 +268,16 @@ export const RPGWindChase = ({
         animate={{ y: 0, opacity: 1 }}
         className="absolute top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-auto"
       >
-        <div className="bg-gradient-to-r from-sky-600 to-cyan-600 px-6 py-3 rounded-lg
-          shadow-[0_0_30px_rgba(14,165,233,0.6)] border border-sky-400/50">
+        {(() => { const t = getMinigameTheme('windChase'); const agent = isAgentMode(); return (
+        <div className={`bg-gradient-to-r ${agent ? 'from-amber-600 to-orange-600' : 'from-sky-600 to-cyan-600'} px-6 py-3 rounded-lg
+          shadow-lg border ${agent ? 'border-amber-400/50' : 'border-sky-400/50'}`}>
           <div className="flex items-center gap-3 text-white">
-            <Wind className="h-6 w-6 animate-pulse" />
-            <span className="font-bold text-lg">WIND CHASE! Say the words to catch them!</span>
+            {agent ? <Crosshair className="h-6 w-6 animate-pulse" /> : <Wind className="h-6 w-6 animate-pulse" />}
+            <span className="font-bold text-lg">{agent ? 'PURSUIT MODE! Say the words to catch targets!' : 'WIND CHASE! Say the words to catch them!'}</span>
             <Mic className="h-6 w-6 animate-pulse" />
           </div>
         </div>
+        ); })()}
       </motion.div>
 
       {/* Listening indicator */}

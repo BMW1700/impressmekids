@@ -1,8 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, Shield, AlertTriangle } from "lucide-react";
+import { Mic, Shield, AlertTriangle, Database } from "lucide-react";
 import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { SoundEffects, unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
+import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
 
 interface Asteroid {
   id: string;
@@ -238,7 +239,7 @@ export const RPGAsteroidBarrage = ({
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="absolute inset-0 bg-gradient-to-b from-purple-950/90 via-slate-900/95 to-slate-950/90"
+        className={`absolute inset-0 bg-gradient-to-b ${isAgentMode() ? 'from-slate-950/90 via-cyan-900/95 to-slate-950/90' : 'from-purple-950/90 via-slate-900/95 to-slate-950/90'}`}
       />
       
       {/* Starfield background */}
@@ -275,14 +276,16 @@ export const RPGAsteroidBarrage = ({
         animate={{ y: 0, opacity: 1 }}
         className="absolute top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-auto"
       >
-        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-3 rounded-lg
-          shadow-[0_0_30px_rgba(147,51,234,0.6)] border border-purple-400/50">
+        {(() => { const t = getMinigameTheme('asteroidBarrage'); const agent = isAgentMode(); return (
+        <div className={`bg-gradient-to-r ${agent ? 'from-cyan-600 to-teal-600' : 'from-purple-600 to-indigo-600'} px-6 py-3 rounded-lg
+          shadow-lg border ${agent ? 'border-cyan-400/50' : 'border-purple-400/50'}`}>
           <div className="flex items-center gap-3 text-white">
             <AlertTriangle className="h-6 w-6 animate-pulse" />
-            <span className="font-bold text-lg">WORD PRISON! Click asteroids & speak to shatter!</span>
+            <span className="font-bold text-lg">{agent ? 'DATA BREACH! Click packets & speak to intercept!' : 'WORD PRISON! Click asteroids & speak to shatter!'}</span>
             <AlertTriangle className="h-6 w-6 animate-pulse" />
           </div>
         </div>
+        ); })()}
       </motion.div>
 
       {/* Asteroids */}

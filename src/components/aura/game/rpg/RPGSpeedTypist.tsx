@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Timer, Flame, Target } from "lucide-react";
+import { Zap, Timer, Flame, Target, Satellite } from "lucide-react";
 import { speechManager } from "@/lib/speechRecognitionManager";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
+import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
 
 interface SpeedWord {
   id: number;
@@ -220,14 +221,14 @@ export const RPGSpeedTypist = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 bg-gradient-to-br from-orange-900/95 via-red-900/95 to-yellow-900/95 flex flex-col"
+      className={`fixed inset-0 z-50 bg-gradient-to-br ${getMinigameTheme('speedTypist').bgGradient} flex flex-col`}
     >
       {/* Animated background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {Array.from({ length: 20 }).map((_, i) => (
           <motion.div
             key={i}
-            className="absolute w-1 h-8 bg-yellow-400/20"
+            className={`absolute w-1 h-8 ${isAgentMode() ? 'bg-cyan-400/20' : 'bg-yellow-400/20'}`}
             initial={{
               x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 500),
               y: -50,
@@ -245,15 +246,16 @@ export const RPGSpeedTypist = ({
       </div>
 
       {/* Header */}
+      {(() => { const t = getMinigameTheme('speedTypist'); const agent = isAgentMode(); return (
       <div className="p-4 flex justify-between items-center">
         <motion.div 
           className="flex items-center gap-3"
           initial={{ x: -50, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
         >
-          <Zap className="h-8 w-8 text-yellow-400" />
-          <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-400">
-            SPEED READING BLITZ!
+          {agent ? <Satellite className="h-8 w-8 text-amber-400" /> : <Zap className="h-8 w-8 text-yellow-400" />}
+          <h1 className={`text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r ${t.accentGradient}`}>
+            {t.title}
           </h1>
         </motion.div>
         
@@ -289,6 +291,7 @@ export const RPGSpeedTypist = ({
           )}
         </div>
       </div>
+      ); })()}
 
       {/* Progress bar */}
       <div className="px-4 mb-4">
@@ -434,7 +437,7 @@ export const RPGSpeedTypist = ({
               >
                 <Zap className="h-16 w-16 text-yellow-400 mx-auto mb-4" />
               </motion.div>
-              <h2 className="text-4xl font-black text-yellow-300 mb-6">BLITZ COMPLETE!</h2>
+              <h2 className={`text-4xl font-black ${isAgentMode() ? 'text-amber-300' : 'text-yellow-300'} mb-6`}>{getMinigameTheme('speedTypist').successMsg}</h2>
               <div className="flex gap-8 justify-center">
                 <div className="text-center">
                   <p className="text-5xl font-black text-green-400">{score}</p>
