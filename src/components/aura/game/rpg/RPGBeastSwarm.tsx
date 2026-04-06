@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { speechManager } from "@/lib/speechRecognitionManager";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
+import { getStoredTheme } from "@/lib/gameTheme";
 
 interface Beast {
   id: string;
@@ -30,10 +31,28 @@ const beastEmojis: Record<Beast['type'], string> = {
   frost_sprite: '❄️',
 };
 
+const agentEmojis: Record<Beast['type'], string> = {
+  fire_imp: '🤖',
+  shadow_bat: '📡',
+  frost_sprite: '⚡',
+};
+
 const beastColors: Record<Beast['type'], string> = {
   fire_imp: 'from-orange-500 to-red-600',
   shadow_bat: 'from-purple-600 to-indigo-800',
   frost_sprite: 'from-cyan-400 to-blue-600',
+};
+
+const agentColors: Record<Beast['type'], string> = {
+  fire_imp: 'from-red-600 to-red-900',
+  shadow_bat: 'from-slate-600 to-slate-900',
+  frost_sprite: 'from-cyan-600 to-blue-900',
+};
+
+const agentLabels: Record<Beast['type'], string> = {
+  fire_imp: 'ATTACK DRONE',
+  shadow_bat: 'RECON DRONE',
+  frost_sprite: 'EMP DRONE',
 };
 
 const soundEffects = new SoundEffects();
@@ -252,6 +271,10 @@ export const RPGBeastSwarm = ({
     };
   }, []);
 
+  const agent = getStoredTheme() === 'agent';
+  const emojis = agent ? agentEmojis : beastEmojis;
+  const colors = agent ? agentColors : beastColors;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -259,15 +282,17 @@ export const RPGBeastSwarm = ({
       exit={{ opacity: 0 }}
       className="absolute inset-0 z-50 overflow-hidden"
     >
-      {/* Dark overlay with swarm effect */}
-      <div className="absolute inset-0 bg-gradient-to-b from-purple-900/80 via-indigo-900/70 to-slate-900/80" />
+      {/* Dark overlay */}
+      <div className={`absolute inset-0 ${agent
+        ? 'bg-gradient-to-b from-slate-900/90 via-gray-900/80 to-slate-900/90'
+        : 'bg-gradient-to-b from-purple-900/80 via-indigo-900/70 to-slate-900/80'}`} />
       
       {/* Swarm particles */}
       <div className="absolute inset-0">
         {[...Array(20)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute w-2 h-2 bg-orange-500/30 rounded-full"
+            className={`absolute w-2 h-2 rounded-full ${agent ? 'bg-cyan-500/30' : 'bg-orange-500/30'}`}
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
@@ -292,14 +317,15 @@ export const RPGBeastSwarm = ({
         animate={{ y: 0 }}
         className="absolute top-4 left-1/2 -translate-x-1/2 z-60"
       >
-        <div className="bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 px-8 py-3 rounded-lg
-          border-2 border-purple-400 shadow-[0_0_30px_rgba(147,51,234,0.5)]">
+        <div className={`px-8 py-3 rounded-lg border-2 ${agent
+          ? 'bg-gradient-to-r from-slate-700 via-gray-700 to-slate-700 border-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.5)]'
+          : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 border-purple-400 shadow-[0_0_30px_rgba(147,51,234,0.5)]'}`}>
           <motion.span
             animate={{ scale: [1, 1.05, 1] }}
             transition={{ repeat: Infinity, duration: 0.5 }}
             className="text-white font-black text-2xl tracking-wider"
           >
-            🦇 BEAST SWARM! 🦇
+            {agent ? '📡 DRONE SWARM! 📡' : '🦇 BEAST SWARM! 🦇'}
           </motion.span>
         </div>
       </motion.div>
@@ -351,7 +377,7 @@ export const RPGBeastSwarm = ({
                 height: beast.size,
               }}
               className={`rounded-full flex flex-col items-center justify-center cursor-pointer
-                bg-gradient-to-br ${beastColors[beast.type]}
+                bg-gradient-to-br ${colors[beast.type]}
                 ${beast.selected ? 'ring-4 ring-yellow-400 ring-offset-4 ring-offset-purple-900 z-50' : 'z-40'}
                 shadow-[0_0_20px_rgba(139,92,246,0.5)] hover:scale-110 transition-transform
                 border-3 border-white/40`}
@@ -362,13 +388,15 @@ export const RPGBeastSwarm = ({
                 animate={{ 
                   boxShadow: beast.selected 
                     ? ['0 0 30px rgba(251,191,36,0.8)', '0 0 50px rgba(251,191,36,1)', '0 0 30px rgba(251,191,36,0.8)']
-                    : ['0 0 15px rgba(139,92,246,0.5)', '0 0 25px rgba(139,92,246,0.7)', '0 0 15px rgba(139,92,246,0.5)']
+                    : agent
+                      ? ['0 0 15px rgba(6,182,212,0.5)', '0 0 25px rgba(6,182,212,0.7)', '0 0 15px rgba(6,182,212,0.5)']
+                      : ['0 0 15px rgba(139,92,246,0.5)', '0 0 25px rgba(139,92,246,0.7)', '0 0 15px rgba(139,92,246,0.5)']
                 }}
                 transition={{ repeat: Infinity, duration: 0.6 }}
               />
               
-              {/* Beast emoji */}
-              <span className="text-3xl">{beastEmojis[beast.type]}</span>
+              {/* Beast/drone emoji */}
+              <span className="text-3xl">{emojis[beast.type]}</span>
               
               {/* Word in center */}
               <span 
@@ -380,20 +408,20 @@ export const RPGBeastSwarm = ({
                 {beast.word}
               </span>
               
-              {/* Wings animation */}
+              {/* Wings/propeller animation */}
               <motion.div
-                animate={{ rotate: [-20, 20, -20] }}
-                transition={{ repeat: Infinity, duration: 0.15 }}
+                animate={{ rotate: agent ? [0, 360] : [-20, 20, -20] }}
+                transition={{ repeat: Infinity, duration: agent ? 0.3 : 0.15 }}
                 className="absolute -left-3 top-1/2 -translate-y-1/2 text-xl opacity-70"
               >
-                ◀
+                {agent ? '⟐' : '◀'}
               </motion.div>
               <motion.div
-                animate={{ rotate: [20, -20, 20] }}
-                transition={{ repeat: Infinity, duration: 0.15 }}
+                animate={{ rotate: agent ? [360, 0] : [20, -20, 20] }}
+                transition={{ repeat: Infinity, duration: agent ? 0.3 : 0.15 }}
                 className="absolute -right-3 top-1/2 -translate-y-1/2 text-xl opacity-70"
               >
-                ▶
+                {agent ? '⟐' : '▶'}
               </motion.div>
             </motion.button>
           )
