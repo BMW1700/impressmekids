@@ -134,7 +134,7 @@ const GameDashboard = () => {
                     className="cursor-pointer transition-all duration-300 hover:scale-[1.03] bg-gradient-to-br from-amber-500/30 via-orange-500/20 to-red-500/30 border-amber-500/40 hover:border-amber-400/60 hover:shadow-lg hover:shadow-amber-500/10 h-full"
                     onClick={() => handleModeSelect('classic')}
                   >
-                    <CardContent className="p-6 text-center space-y-4">
+                    <CardContent className="p-6 text-center space-y-4 flex flex-col h-full justify-between">
                       <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500/30 to-red-500/20 flex items-center justify-center mx-auto border border-amber-500/30">
                         <Shield className="w-8 h-8 text-amber-400" />
                       </div>
@@ -165,7 +165,7 @@ const GameDashboard = () => {
                     className="cursor-pointer transition-all duration-300 hover:scale-[1.03] bg-gradient-to-br from-cyan-500/30 via-indigo-500/20 to-purple-500/30 border-cyan-500/40 hover:border-cyan-400/60 hover:shadow-lg hover:shadow-cyan-500/10 h-full"
                     onClick={() => handleModeSelect('agent')}
                   >
-                    <CardContent className="p-6 text-center space-y-4">
+                    <CardContent className="p-6 text-center space-y-4 flex flex-col h-full justify-between">
                       <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500/30 to-purple-500/20 flex items-center justify-center mx-auto border border-cyan-500/30">
                         <Search className="w-8 h-8 text-cyan-400" />
                       </div>
