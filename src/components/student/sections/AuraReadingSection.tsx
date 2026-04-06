@@ -44,7 +44,7 @@ import { ThemeSelector } from "@/components/aura/game/rpg/ThemeSelector";
 import type { CuratedStory as Story } from "@/data/curatedStories";
 
 // Helper component to get student's classroom and show leaderboard
-const ClassroomLeaderboardWrapper = ({ studentId }: { studentId: string }) => {
+const ClassroomLeaderboardWrapper = ({ studentId, gradeMode }: { studentId: string; gradeMode?: string }) => {
   const { data: enrollment, isLoading } = useQuery({
     queryKey: ['student-enrollment', studentId],
     queryFn: async () => {
@@ -54,22 +54,18 @@ const ClassroomLeaderboardWrapper = ({ studentId }: { studentId: string }) => {
         .eq('student_id', studentId)
         .limit(1)
         .maybeSingle();
-      
       if (error) throw error;
       return data;
     },
     enabled: !!studentId,
   });
-
-  if (isLoading || !enrollment?.classroom_id) {
-    return null;
-  }
-
+  if (isLoading || !enrollment?.classroom_id) return null;
   return (
     <LeaderboardCard 
       classroomId={enrollment.classroom_id} 
       currentStudentId={studentId}
       title="Class Leaderboard 🏆"
+      gradeMode={gradeMode}
     />
   );
 };
@@ -725,8 +721,8 @@ export const AuraReadingSection = () => {
           {user?.id && (
             <>
               <ActiveMissionsPanel studentId={user.id} />
-              <ClassChallengeCard studentId={user.id} />
-              <ClassroomLeaderboardWrapper studentId={user.id} />
+              <ClassChallengeCard studentId={user.id} gradeMode={currentGradeMode} />
+              <ClassroomLeaderboardWrapper studentId={user.id} gradeMode={currentGradeMode} />
             </>
           )}
         </TabsContent>

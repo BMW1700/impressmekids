@@ -26,7 +26,7 @@ export interface BossRushStats {
   longestStreak: number;
 }
 
-export const useBossRush = (studentId: string) => {
+export const useBossRush = (studentId: string, gradeMode?: string) => {
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [isActive, setIsActive] = useState(false);
   const [currentBossIndex, setCurrentBossIndex] = useState(0);
@@ -183,14 +183,17 @@ export const useBossRush = (studentId: string) => {
         return false;
       }
       
-      // Also update campaign_progress with boss rush stats
-      const { error: progressError } = await supabase
+      // Also update campaign_progress with boss rush stats — scoped by gradeMode
+      let updateQuery = supabase
         .from('campaign_progress')
         .update({
-          boss_rush_completions: supabase.rpc ? 1 : 1, // Increment would need RPC
+          boss_rush_completions: supabase.rpc ? 1 : 1,
           boss_rush_unlocked: true,
         })
         .eq('student_id', studentId);
+      if (gradeMode) updateQuery = updateQuery.eq('grade_mode', gradeMode);
+      
+      const { error: progressError } = await updateQuery;
       
       if (progressError) {
         console.warn('[useBossRush] Failed to update campaign progress:', progressError);
@@ -203,7 +206,7 @@ export const useBossRush = (studentId: string) => {
       console.error('[useBossRush] Error completing attempt:', err);
       return false;
     }
-  }, [attemptId, elapsedSeconds, studentId]);
+  }, [attemptId, elapsedSeconds, studentId, gradeMode]);
 
   // Fail Boss Rush (player defeated)
   const failBossRush = useCallback(async () => {

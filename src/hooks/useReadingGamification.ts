@@ -9,13 +9,6 @@ interface Achievement {
   metadata: Record<string, any>;
 }
 
-interface Streak {
-  id: string;
-  current_streak: number;
-  longest_streak: number;
-  last_reading_date: string | null;
-}
-
 interface Mission {
   id: string;
   mission_type: string;
@@ -27,7 +20,7 @@ interface Mission {
   expires_at?: string;
 }
 
-export const useReadingGamification = (studentId?: string) => {
+export const useReadingGamification = (studentId?: string, gradeMode?: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -47,15 +40,16 @@ export const useReadingGamification = (studentId?: string) => {
     enabled: !!studentId,
   });
 
-  // Fetch streak from student_reading_stats
+  // Fetch streak from student_reading_stats — scoped by gradeMode
   const { data: streak, isLoading: streakLoading } = useQuery({
-    queryKey: ["reading-streak", studentId],
+    queryKey: ["reading-streak", studentId, gradeMode],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("student_reading_stats")
         .select("current_streak_days, longest_streak_days, last_activity_date")
-        .eq("student_id", studentId!)
-        .maybeSingle();
+        .eq("student_id", studentId!);
+      if (gradeMode) query = query.eq("grade_mode", gradeMode);
+      const { data, error } = await query.maybeSingle();
 
       if (error) throw error;
       return data ? {
@@ -87,12 +81,10 @@ export const useReadingGamification = (studentId?: string) => {
   // Update streak - streak logic is handled by updateStudentStats in WordByWordReader
   const updateStreak = useMutation({
     mutationFn: async () => {
-      // Streak updates are handled automatically in updateStudentStats
-      // This just triggers a refetch of the data
       return Promise.resolve();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["reading-streak", studentId] });
+      queryClient.invalidateQueries({ queryKey: ["reading-streak", studentId, gradeMode] });
     },
   });
 

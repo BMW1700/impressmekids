@@ -14,7 +14,7 @@ interface DailyLoginReward {
   claimed_at: string;
 }
 
-export const useDailyRewards = (studentId?: string) => {
+export const useDailyRewards = (studentId?: string, gradeMode?: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -38,15 +38,16 @@ export const useDailyRewards = (studentId?: string) => {
     enabled: !!studentId,
   });
 
-  // Get current streak info from campaign_progress
+  // Get current streak info from campaign_progress — scoped by gradeMode
   const { data: streakInfo, isLoading: streakLoading } = useQuery({
-    queryKey: ["login-streak-info", studentId],
+    queryKey: ["login-streak-info", studentId, gradeMode],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("campaign_progress")
         .select("login_streak, longest_login_streak, last_login_date, total_gold")
-        .eq("student_id", studentId!)
-        .maybeSingle();
+        .eq("student_id", studentId!);
+      if (gradeMode) query = query.eq("grade_mode", gradeMode);
+      const { data, error } = await query.maybeSingle();
 
       if (error) throw error;
       return data || { login_streak: 0, longest_login_streak: 0, last_login_date: null, total_gold: 0 };
@@ -102,18 +103,21 @@ export const useDailyRewards = (studentId?: string) => {
 
       if (rewardError) throw rewardError;
 
-      // Update campaign_progress with new streak info
+      // Update campaign_progress with new streak info — scoped by gradeMode
+      const upsertData = {
+        student_id: studentId,
+        grade_mode: gradeMode || 'k5',
+        login_streak: currentStreak,
+        longest_login_streak: longestStreak,
+        last_login_date: todayStr,
+        total_gold: (streakInfo?.total_gold || 0) + totalGold,
+      };
+
       const { error: progressError } = await supabase
         .from("campaign_progress")
-        .upsert({
-          student_id: studentId,
-          login_streak: currentStreak,
-          longest_login_streak: longestStreak,
-          last_login_date: todayStr,
-          total_gold: (streakInfo?.total_gold || 0) + totalGold,
-        }, {
-          onConflict: 'student_id',
-        });
+        .upsert(upsertData, {
+          onConflict: 'student_id,grade_mode',
+        } as any);
 
       if (progressError) throw progressError;
 
@@ -128,7 +132,7 @@ export const useDailyRewards = (studentId?: string) => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["daily-login-history", studentId] });
-      queryClient.invalidateQueries({ queryKey: ["login-streak-info", studentId] });
+      queryClient.invalidateQueries({ queryKey: ["login-streak-info", studentId, gradeMode] });
       queryClient.invalidateQueries({ queryKey: ["campaign-progress", studentId] });
       
       let message = `Day ${data.streakDay} reward: +${data.gold} gold, +${data.xp} XP!`;

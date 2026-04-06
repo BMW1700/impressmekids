@@ -369,6 +369,7 @@ const AuraAnalytics = () => {
                     skillVectors={skillVectors}
                     classroomId={classroomId!}
                     classroomName={classrooms?.find(c => c.id === classroomId)?.name || "Classroom"}
+                    gradeMode={selectedGradeMode}
                   />
                 </TabsContent>
 
@@ -396,6 +397,7 @@ const AuraAnalytics = () => {
                     skillVectors={skillVectors || []}
                     auraRecords={auraRecords || []}
                     classroomId={classroomId}
+                    gradeMode={selectedGradeMode}
                   />
                   
                   <Card>

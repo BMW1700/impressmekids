@@ -7,12 +7,13 @@ import { Users, Target, Trophy, Sparkles } from "lucide-react";
 
 interface ClassChallengeCardProps {
   studentId: string;
+  gradeMode?: string;
 }
 
-export const ClassChallengeCard = ({ studentId }: ClassChallengeCardProps) => {
+export const ClassChallengeCard = ({ studentId, gradeMode }: ClassChallengeCardProps) => {
   // Get student's classrooms and class-wide reading stats
   const { data: challengeData, isLoading } = useQuery({
-    queryKey: ['class-challenge', studentId],
+    queryKey: ['class-challenge', studentId, gradeMode],
     queryFn: async () => {
       // Step 1: Get student's first classroom
       const { data: enrollments } = await supabase
@@ -51,21 +52,23 @@ export const ClassChallengeCard = ({ studentId }: ClassChallengeCardProps) => {
         };
       }
 
-      // Step 4: Get this week's reading sessions
+      // Step 4: Get this week's reading sessions — scoped by gradeMode
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
 
-      const { data: sessions } = await supabase
+      let sessionsQuery = supabase
         .from('reading_sessions')
         .select('student_id, words_read')
         .in('student_id', studentIds)
         .gte('created_at', weekAgo.toISOString())
         .limit(500);
+      if (gradeMode) sessionsQuery = sessionsQuery.eq('grade_mode', gradeMode);
+
+      const { data: sessions } = await sessionsQuery;
 
       // Aggregate locally
       const totalWordsThisWeek = sessions?.reduce((sum, s) => sum + (s.words_read || 0), 0) || 0;
       
-      // FIX: Count unique student_ids who read > 0 words (not the broken Set logic)
       const activeReaderSet = new Set<string>();
       sessions?.forEach(s => {
         if (s.words_read > 0 && s.student_id) {
@@ -74,7 +77,7 @@ export const ClassChallengeCard = ({ studentId }: ClassChallengeCardProps) => {
       });
       const activeReaders = activeReaderSet.size;
 
-      const weeklyGoal = 10000; // 10,000 words per week class goal
+      const weeklyGoal = 10000;
 
       return {
         classroomName,
@@ -87,7 +90,7 @@ export const ClassChallengeCard = ({ studentId }: ClassChallengeCardProps) => {
       };
     },
     enabled: !!studentId,
-    staleTime: 5 * 60 * 1000, // 5 min cache
+    staleTime: 5 * 60 * 1000,
   });
 
   if (isLoading || !challengeData) {

@@ -53,7 +53,7 @@ import { useActiveScreeningPassage, type ActiveScreening } from "@/hooks/useActi
 import type { CuratedStory as Story } from "@/data/curatedStories";
 
 // Helper component to get student's classroom and show leaderboard
-const ClassroomLeaderboardWrapper = ({ studentId }: { studentId: string }) => {
+const ClassroomLeaderboardWrapper = ({ studentId, gradeMode }: { studentId: string; gradeMode?: string }) => {
   const { data: enrollment, isLoading } = useQuery({
     queryKey: ['student-enrollment', studentId],
     queryFn: async () => {
@@ -63,22 +63,18 @@ const ClassroomLeaderboardWrapper = ({ studentId }: { studentId: string }) => {
         .eq('student_id', studentId)
         .limit(1)
         .maybeSingle();
-      
       if (error) throw error;
       return data;
     },
     enabled: !!studentId,
   });
-
-  if (isLoading || !enrollment?.classroom_id) {
-    return null;
-  }
-
+  if (isLoading || !enrollment?.classroom_id) return null;
   return (
     <LeaderboardCard 
       classroomId={enrollment.classroom_id} 
       currentStudentId={studentId}
       title="Class Leaderboard 🏆"
+      gradeMode={gradeMode}
     />
   );
 };
@@ -1013,10 +1009,10 @@ const AuraPractice = () => {
                   <ActiveMissionsPanel studentId={user.id} />
                   
                   {/* Class Challenge - hide in game mode */}
-                  {!isGameMode && <ClassChallengeCard studentId={user.id} />}
+                  {!isGameMode && <ClassChallengeCard studentId={user.id} gradeMode={currentGradeMode} />}
                   
                   {/* Classroom Leaderboard - hide in game mode */}
-                  {!isGameMode && <ClassroomLeaderboardWrapper studentId={user.id} />}
+                  {!isGameMode && <ClassroomLeaderboardWrapper studentId={user.id} gradeMode={currentGradeMode} />}
                 </>
               )}
             </TabsContent>
