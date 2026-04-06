@@ -39,7 +39,7 @@ import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import type { EnemyType } from "@/lib/battleMechanics";
 import { curatedStories } from "@/data/curatedStories";
 import { agentStories } from "@/data/agentStories";
-import { getStoredTheme, setStoredTheme, type GameTheme } from "@/lib/gameTheme";
+import { getStoredTheme, setStoredTheme, type GameTheme, getGradeMode, type GradeMode } from "@/lib/gameTheme";
 import { ThemeSelector } from "@/components/aura/game/rpg/ThemeSelector";
 import type { CuratedStory as Story } from "@/data/curatedStories";
 
@@ -83,6 +83,7 @@ export const AuraReadingSection = () => {
   const [isReadingStory, setIsReadingStory] = useState(false);
   const [isCampaignMode, setIsCampaignMode] = useState(false);
   const [gameTheme, setGameTheme] = useState<GameTheme | null>(getStoredTheme());
+  const currentGradeMode: GradeMode = getGradeMode(gameTheme);
   
   // Theme-aware data sources
   const activeWorlds = gameTheme === 'agent' ? agentCampaignWorlds : campaignWorlds;
@@ -155,12 +156,12 @@ export const AuraReadingSection = () => {
   // Check for active screening period
   const { data: activeScreening } = useActiveScreeningPassage(user?.id);
 
-  // Campaign progress hook for RPG mode
+  // Campaign progress hook for RPG mode - scoped by grade mode
   const { 
     progress: campaignProgress, 
     startBattle, 
     completeBattle,
-  } = useCampaignProgress(user?.id);
+  } = useCampaignProgress(user?.id, currentGradeMode);
 
   const { data: records, refetch } = useQuery({
     queryKey: ['aura-records', user?.id],
