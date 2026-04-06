@@ -1,12 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import type { GradeMode } from "@/lib/gameTheme";
 
 interface CampaignProgress {
   id: string;
   student_id: string;
   current_world: number;
-  world_progress: Record<string, string[]>; // world number -> array of rescued story titles
+  world_progress: Record<string, string[]>;
   total_damage_dealt: number;
   longest_streak: number;
   books_rescued: number;
@@ -14,13 +15,13 @@ interface CampaignProgress {
   total_xp_earned: number;
   created_at: string;
   updated_at: string;
-  // New addiction layer fields
   login_streak?: number;
   longest_login_streak?: number;
   last_login_date?: string;
   equipped_pet_id?: string;
   total_gold?: number;
   total_achievements?: number;
+  grade_mode?: string;
 }
 
 interface BattleSession {
@@ -45,13 +46,22 @@ interface BattleSession {
   ended_at: string | null;
 }
 
-export const useCampaignProgress = (studentId?: string) => {
+const DEFAULT_PROGRESS: Partial<CampaignProgress> = {
+  current_world: 1,
+  world_progress: { "1": [], "2": [], "3": [], "4": [] },
+  total_damage_dealt: 0,
+  longest_streak: 0,
+  books_rescued: 0,
+  grog_battles_won: 0,
+  total_xp_earned: 0,
+};
+
+export const useCampaignProgress = (studentId?: string, gradeMode: GradeMode = 'k5') => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch campaign progress
   const { data: progress, isLoading: progressLoading } = useQuery({
-    queryKey: ["campaign-progress", studentId],
+    queryKey: ["campaign-progress", studentId, gradeMode],
     queryFn: async () => {
       if (!studentId) return null;
 
@@ -59,31 +69,17 @@ export const useCampaignProgress = (studentId?: string) => {
         .from("campaign_progress")
         .select("*")
         .eq("student_id", studentId)
+        .eq("grade_mode", gradeMode)
         .maybeSingle();
 
       if (error) throw error;
-      
-      // If no progress exists, return default values
-      if (!data) {
-        return {
-          current_world: 1,
-          world_progress: { "1": [], "2": [], "3": [], "4": [] },
-          total_damage_dealt: 0,
-          longest_streak: 0,
-          books_rescued: 0,
-          grog_battles_won: 0,
-          total_xp_earned: 0,
-        } as Partial<CampaignProgress>;
-      }
-
-      return data as CampaignProgress;
+      return (data as CampaignProgress) || DEFAULT_PROGRESS;
     },
     enabled: !!studentId,
   });
 
-  // Fetch recent battle sessions
   const { data: recentBattles, isLoading: battlesLoading } = useQuery({
-    queryKey: ["campaign-battles", studentId],
+    queryKey: ["campaign-battles", studentId, gradeMode],
     queryFn: async () => {
       if (!studentId) return [];
 
@@ -91,6 +87,7 @@ export const useCampaignProgress = (studentId?: string) => {
         .from("campaign_battle_sessions")
         .select("*")
         .eq("student_id", studentId)
+        .eq("grade_mode", gradeMode)
         .order("created_at", { ascending: false })
         .limit(10);
 
@@ -100,7 +97,6 @@ export const useCampaignProgress = (studentId?: string) => {
     enabled: !!studentId,
   });
 
-  // Initialize or update campaign progress
   const initializeProgress = useMutation({
     mutationFn: async () => {
       if (!studentId) throw new Error("No student ID");
@@ -109,6 +105,7 @@ export const useCampaignProgress = (studentId?: string) => {
         .from("campaign_progress")
         .upsert({
           student_id: studentId,
+          grade_mode: gradeMode,
           current_world: 1,
           world_progress: { "1": [], "2": [], "3": [], "4": [] },
           total_damage_dealt: 0,
@@ -117,7 +114,7 @@ export const useCampaignProgress = (studentId?: string) => {
           grog_battles_won: 0,
           total_xp_earned: 0,
         }, {
-          onConflict: 'student_id',
+          onConflict: 'student_id,grade_mode',
         })
         .select()
         .single();
@@ -126,11 +123,10 @@ export const useCampaignProgress = (studentId?: string) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["campaign-progress", studentId] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-progress", studentId, gradeMode] });
     },
   });
 
-  // Start a new battle session
   const startBattle = useMutation({
     mutationFn: async ({
       storyTitle,
@@ -151,6 +147,7 @@ export const useCampaignProgress = (studentId?: string) => {
         .from("campaign_battle_sessions")
         .insert({
           student_id: studentId,
+          grade_mode: gradeMode,
           story_title: storyTitle,
           story_category: storyCategory,
           world_number: worldNumber,
@@ -168,11 +165,10 @@ export const useCampaignProgress = (studentId?: string) => {
       return data as BattleSession;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["campaign-battles", studentId] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-battles", studentId, gradeMode] });
     },
   });
 
-  // Update battle session
   const updateBattle = useMutation({
     mutationFn: async ({
       battleId,
@@ -192,11 +188,10 @@ export const useCampaignProgress = (studentId?: string) => {
       return data as BattleSession;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["campaign-battles", studentId] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-battles", studentId, gradeMode] });
     },
   });
 
-  // Complete a battle (victory or defeat)
   const completeBattle = useMutation({
     mutationFn: async ({
       battleId,
@@ -206,7 +201,7 @@ export const useCampaignProgress = (studentId?: string) => {
       longestStreak,
       storyTitle,
       worldNumber,
-      goldEarned = 0, // NEW: Accept gold from battle
+      goldEarned = 0,
     }: {
       battleId: string;
       victory: boolean;
@@ -215,11 +210,10 @@ export const useCampaignProgress = (studentId?: string) => {
       longestStreak: number;
       storyTitle: string;
       worldNumber: number;
-      goldEarned?: number; // NEW: Optional gold parameter
+      goldEarned?: number;
     }) => {
       if (!studentId) throw new Error("No student ID");
 
-      // Update battle session
       await supabase
         .from("campaign_battle_sessions")
         .update({
@@ -229,19 +223,17 @@ export const useCampaignProgress = (studentId?: string) => {
         })
         .eq("id", battleId);
 
-      // If victory, update campaign progress
       if (victory) {
-        // Get current progress
         const { data: currentProgress } = await supabase
           .from("campaign_progress")
           .select("*")
           .eq("student_id", studentId)
+          .eq("grade_mode", gradeMode)
           .maybeSingle();
 
         const worldProgress = (currentProgress?.world_progress as Record<string, string[]>) || { "1": [], "2": [], "3": [], "4": [] };
         const worldKey = worldNumber.toString();
         
-        // Add story to world progress if not already rescued
         if (!worldProgress[worldKey]?.includes(storyTitle)) {
           worldProgress[worldKey] = [...(worldProgress[worldKey] || []), storyTitle];
         }
@@ -252,7 +244,6 @@ export const useCampaignProgress = (studentId?: string) => {
         const newXpEarned = (currentProgress?.total_xp_earned || 0) + xpEarned;
         const newBattlesWon = (currentProgress?.grog_battles_won || 0) + 1;
 
-        // Check if should unlock next world
         let newCurrentWorld = currentProgress?.current_world || 1;
         const worldUnlockThresholds: Record<number, number> = { 2: 3, 3: 8, 4: 14 };
         
@@ -266,11 +257,11 @@ export const useCampaignProgress = (studentId?: string) => {
           }
         }
 
-        // Upsert campaign progress - NOW INCLUDES GOLD
         await supabase
           .from("campaign_progress")
           .upsert({
             student_id: studentId,
+            grade_mode: gradeMode,
             current_world: newCurrentWorld,
             world_progress: worldProgress,
             total_damage_dealt: newDamageDealt,
@@ -278,17 +269,17 @@ export const useCampaignProgress = (studentId?: string) => {
             books_rescued: newBooksRescued,
             grog_battles_won: newBattlesWon,
             total_xp_earned: newXpEarned,
-            total_gold: (currentProgress?.total_gold || 0) + goldEarned, // NEW: Sync gold to wallet
+            total_gold: (currentProgress?.total_gold || 0) + goldEarned,
           }, {
-            onConflict: 'student_id',
+            onConflict: 'student_id,grade_mode',
           });
       }
 
       return { victory, xpEarned };
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["campaign-progress", studentId] });
-      queryClient.invalidateQueries({ queryKey: ["campaign-battles", studentId] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-progress", studentId, gradeMode] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-battles", studentId, gradeMode] });
       
       if (data.victory) {
         toast({
