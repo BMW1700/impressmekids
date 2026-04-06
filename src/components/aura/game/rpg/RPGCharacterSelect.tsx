@@ -7,7 +7,7 @@ import { Shield, Sparkles, Flower2, Heart, Zap, Sword } from 'lucide-react';
 import { AgentCharacterSelect } from './AgentCharacterSelect';
 import { getStoredTheme } from '@/lib/gameTheme';
 
-export type PlayableCharacter = 'valor' | 'elara' | 'ella';
+export type PlayableCharacter = 'valor' | 'elara' | 'ella' | 'agent_x' | 'cipher' | 'shadow';
 
 interface RPGCharacterSelectProps {
   onSelect: (character: PlayableCharacter) => void;
