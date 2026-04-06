@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,10 +19,12 @@ import { Badge } from "@/components/ui/badge";
 import { BarChart3, ArrowLeft, Sparkles, TrendingUp, Brain, Users, Activity, BookOpen, Timer, Target, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MLStatusBadge } from "@/components/ml/MLStatusBadge";
+import type { GradeMode } from "@/lib/gameTheme";
 
 const AuraAnalytics = () => {
   const { classroomId } = useParams();
   const navigate = useNavigate();
+  const [selectedGradeMode, setSelectedGradeMode] = useState<GradeMode>('k5');
 
   const { data: classrooms } = useQuery({
     queryKey: ['teacher-classrooms'],
