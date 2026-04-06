@@ -49,7 +49,7 @@ export const usePlayerInventory = (studentId?: string) => {
   const ownedItems = inventory.map(item => item.item_id);
 
   // Get equipped skin for a character
-  const getEquippedSkin = (character: 'valor' | 'elara' | 'ella'): string | null => {
+  const getEquippedSkin = (character: string): string | null => {
     const equippedSkin = inventory.find(
       item => item.item_category === 'skin' && item.is_equipped
     );

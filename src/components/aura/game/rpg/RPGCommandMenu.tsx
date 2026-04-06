@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { BookOpen, Shield, Sparkles, Package } from "lucide-react";
+import { BookOpen, Shield, Sparkles, Package, Crosshair, Cpu, ShieldAlert, Briefcase } from "lucide-react";
 import { RPGSpellMenu, Spell, valorSpells, elaraSpells, ellaSpells, agentXSpells, cipherSpells, shadowSpells } from "./RPGSpellMenu";
 import { RPGItemMenu, Item } from "./RPGItemMenu";
+import { getStoredTheme } from "@/lib/gameTheme";
 
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
 type CharacterId = 'valor' | 'elara' | 'ella' | 'agent_x' | 'cipher' | 'shadow';
@@ -17,14 +18,21 @@ interface RPGCommandMenuProps {
   currentCommand?: CommandType | null;
   currentMp?: number;
   inventory?: { [itemId: string]: number };
-  selectedCharacter?: CharacterId | null; // New prop for character-specific spells
+  selectedCharacter?: CharacterId | null;
 }
 
-const commands: { id: CommandType; label: string; icon: typeof BookOpen; color: string }[] = [
+const classicCommands: { id: CommandType; label: string; icon: typeof BookOpen; color: string }[] = [
   { id: 'read', label: 'Read', icon: BookOpen, color: 'from-emerald-500 to-green-600' },
   { id: 'magic', label: 'Magic', icon: Sparkles, color: 'from-purple-500 to-indigo-600' },
   { id: 'defend', label: 'Defend', icon: Shield, color: 'from-blue-500 to-cyan-600' },
   { id: 'items', label: 'Items', icon: Package, color: 'from-amber-500 to-orange-600' },
+];
+
+const agentCommands: { id: CommandType; label: string; icon: typeof BookOpen; color: string }[] = [
+  { id: 'read', label: 'Brief', icon: Crosshair, color: 'from-emerald-500 to-teal-600' },
+  { id: 'magic', label: 'Tech', icon: Cpu, color: 'from-cyan-500 to-blue-600' },
+  { id: 'defend', label: 'Cover', icon: ShieldAlert, color: 'from-slate-500 to-zinc-600' },
+  { id: 'items', label: 'Gear', icon: Briefcase, color: 'from-amber-500 to-orange-600' },
 ];
 
 export const RPGCommandMenu = ({
@@ -42,6 +50,10 @@ export const RPGCommandMenu = ({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [showSpellMenu, setShowSpellMenu] = useState(false);
   const [showItemMenu, setShowItemMenu] = useState(false);
+
+  const theme = getStoredTheme();
+  const isAgent = theme === 'agent';
+  const commands = isAgent ? agentCommands : classicCommands;
 
   // Get character-specific spells
   const getCharacterSpells = (): Spell[] => {
@@ -64,7 +76,7 @@ export const RPGCommandMenu = ({
       case 'agent_x': return 'Tactics';
       case 'cipher': return 'Cyber Ops';
       case 'shadow': return 'Stealth Ops';
-      default: return 'Magic';
+      default: return isAgent ? 'Tech' : 'Magic';
     }
   };
 
@@ -140,14 +152,16 @@ export const RPGCommandMenu = ({
       )}
 
       {/* Classic RPG Panel Border */}
-      <div className="relative bg-gradient-to-b from-slate-900/95 to-slate-950/95 rounded-lg 
-        border-2 border-blue-400/50 shadow-[0_0_20px_rgba(59,130,246,0.3),inset_0_1px_0_rgba(255,255,255,0.1)]
-        backdrop-blur-sm overflow-hidden">
+      <div className={`relative bg-gradient-to-b from-slate-900/95 to-slate-950/95 rounded-lg 
+        border-2 ${isAgent ? 'border-cyan-400/50 shadow-[0_0_20px_rgba(6,182,212,0.3),inset_0_1px_0_rgba(255,255,255,0.1)]' : 'border-blue-400/50 shadow-[0_0_20px_rgba(59,130,246,0.3),inset_0_1px_0_rgba(255,255,255,0.1)]'}
+        backdrop-blur-sm overflow-hidden`}>
         
-        <div className="absolute inset-[2px] rounded-md border border-blue-500/20 pointer-events-none" />
+        <div className={`absolute inset-[2px] rounded-md border ${isAgent ? 'border-cyan-500/20' : 'border-blue-500/20'} pointer-events-none`} />
         
-        <div className="px-4 py-2 border-b border-blue-400/30 bg-gradient-to-r from-blue-900/50 to-indigo-900/50">
-          <h3 className="text-sm font-bold text-blue-200 tracking-wider uppercase">Command</h3>
+        <div className={`px-4 py-2 border-b ${isAgent ? 'border-cyan-400/30 bg-gradient-to-r from-cyan-900/50 to-slate-900/50' : 'border-blue-400/30 bg-gradient-to-r from-blue-900/50 to-indigo-900/50'}`}>
+          <h3 className={`text-sm font-bold tracking-wider uppercase ${isAgent ? 'text-cyan-200' : 'text-blue-200'}`}>
+            {isAgent ? 'Operations' : 'Command'}
+          </h3>
         </div>
 
         <div className="p-2 space-y-1">
@@ -186,8 +200,11 @@ export const RPGCommandMenu = ({
           })}
         </div>
 
-        <div className={`px-4 py-2 border-t border-blue-400/30 text-center text-xs font-medium ${isPlayerTurn ? 'text-emerald-400' : 'text-red-400'}`}>
-          {isPlayerTurn ? '✦ Your Turn ✦' : '⚔ Enemy Turn ⚔'}
+        <div className={`px-4 py-2 border-t ${isAgent ? 'border-cyan-400/30' : 'border-blue-400/30'} text-center text-xs font-medium ${isPlayerTurn ? 'text-emerald-400' : 'text-red-400'}`}>
+          {isPlayerTurn 
+            ? (isAgent ? '◆ Your Move ◆' : '✦ Your Turn ✦')
+            : (isAgent ? '⚠ Hostile Turn ⚠' : '⚔ Enemy Turn ⚔')
+          }
         </div>
       </div>
     </div>
