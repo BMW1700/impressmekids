@@ -1,70 +1,152 @@
 
 
-# Remaining Agent Mode Gaps — Brutally Honest
+# Split Aura Reading into K-5 / 6-12 Grade Modes — Full Finalized Plan
 
-## What's DONE ✓
-Hero/enemy sprites, health bars, backgrounds, spells, transitions, mini-game announcements, mastery text, dialogue, stories, comprehension questions, world map, boss silhouettes, character select — all agent-themed.
+## Summary
 
-## What's STILL Classic-Only
+Create two fully independent reading systems mapped to RPG modes, with separate data, scores, and analytics. Users can switch between them with tabs, and all analytics include a grade-mode dropdown.
 
-### 1. RPGWordPowerUp — "Power Word" label with fantasy styling
-`RPGWordPowerUp.tsx` shows a purple/indigo card with ✨ Sparkles icon and "Power Word" label. No theme awareness. In agent mode it should say "INTEL KEYWORD" or "DECODED TERM" with a cyan/slate tech aesthetic instead of purple fantasy glow.
+## Book Grade Mapping
 
-### 2. RPGCommandMenu — "Magic" and "Defend" labels
-Line 25: `label: 'Magic'` — in agent mode should be "Tech" or "Cyber". Line 26: `label: 'Defend'` — could be "Cover" or "Shield". These are hardcoded with no theme check. The sub-menu names (`getCharacterName`) ARE already themed (Tactics, Cyber Ops, Stealth Ops), but the top-level command buttons still say "Magic".
+- **Grades K-5 Mode**: Books with `grade_level` 0 (K), 1, 2, 3, 4, or 5 — sourced from `curatedStories`
+- **Grades 6-12 Mode**: Books with `grade_level` 6, 7, 8, 9, 10, 11, or 12 — sourced from `agentStories`
+- Community stories from DB (`reading_library`) filtered by `grade_level` range
 
-### 3. RPGStore — entirely fantasy-themed
-- `SkinCharacter` type is `'valor' | 'elara' | 'ella'` — no agent heroes
-- All store items are fantasy: "Fire Storm", "Blizzard", "Holy Light", "Golden Knight", "Shadow Wizard", "Dragon Slayer"
-- Skins are for `character: 'valor'` and `character: 'elara'` only
-- No agent skins (e.g., "Stealth Suit" for Agent X, "Holo-Visor" for Cipher)
-- No agent powers (e.g., "EMP Blast", "Drone Strike")
-- The store renders identically in both modes
+## RPG Mode Mapping
 
-### 4. RPGPlayerHUD — equipped skins only check valor/elara
-Line 41: `equippedSkins` hardcodes `{ valor: ..., elara: ... }` — no agent hero skins.
+- **Classic Adventure RPG** = Grades K-5 — shares all scores/progress
+- **Agent RPG** = Grades 6-12 — shares all scores/progress
+- Selecting a grade tab auto-syncs the RPG theme (`classic` ↔ `agent`)
 
-### 5. VocabularyTracker — "Power Words from your adventures"
-Line 410: `"Power Words from your adventures"` — should be "Decoded Intel from your missions" in agent mode. Line 528: `"Read stories to collect Power Words"` — should be "Complete missions to decode keywords".
+## Phase 1: Database Migration
 
-### 6. POWER_COSTS — fantasy ability names
-Line 176-189: `fireball`, `ice_shard`, `lightning`, `word_nova`, `healing_aura`, etc. These are internal IDs so less visible, but the names bleed through if shown anywhere.
+Add `grade_mode` column (text, default `'k5'`, validated via trigger to `'k5'` or `'6to12'`) to:
 
-## Priority Assessment
+| Table | Purpose |
+|-------|---------|
+| `reading_sessions` | Tag each reading session |
+| `campaign_progress` | Separate RPG progress per mode |
+| `student_reading_stats` | Separate stats per mode |
+| `student_reading_progress` | Separate book completion per mode |
+| `campaign_battle_sessions` | Tag battles by mode |
 
-| Gap | Immersion Impact | Effort |
-|-----|-----------------|--------|
-| Command menu labels | HIGH — visible every battle | Tiny (5 lines) |
-| Word PowerUp theming | MEDIUM — appears during reading | Small (15 lines) |
-| Vocabulary Tracker text | LOW — only seen in menu | Tiny (5 lines) |
-| Store items/skins | HIGH — entire store is fantasy | Large (new items + agent skin type) |
-| HUD equipped skins | LOW — follows from store fix | Small |
+Also:
+- `profiles` gets `default_grade_mode` column (text, default `'k5'`)
+- Drop existing `UNIQUE(student_id)` on `campaign_progress`, replace with `UNIQUE(student_id, grade_mode)`
+- Update `upsert_reading_stats` RPC to accept `p_grade_mode` parameter and upsert per `(student_id, grade_mode)`
 
-## Fix Plan
+## Phase 2: Core Infrastructure
 
-### Phase 1: Quick text/theme fixes (do now)
+**`src/lib/gameTheme.ts`**
+- Add `getGradeMode()`: returns `'k5'` when theme is `classic`, `'6to12'` when `agent`
+- Add `getGradeModeFromGrade(grade: number)`: returns `'k5'` for 0-5, `'6to12'` for 6-12
+- Add `gradeMode` type export
 
-**A. `RPGCommandMenu.tsx`** — Make command labels theme-aware. Import `getStoredTheme`. When agent: "Read" → "Brief", "Magic" → "Tech", "Defend" → "Cover", "Items" → "Gear".
+**`src/lib/updateStudentReadingStats.ts`**
+- Accept `gradeMode` parameter, pass `p_grade_mode` to the RPC
 
-**B. `RPGWordPowerUp.tsx`** — Import `getStoredTheme`. When agent: swap purple gradient for cyan/slate, change "Power Word" → "INTEL KEYWORD", change Sparkles icon to Crosshair/Target, change "+2 🪙" styling to tech blue, change "New word collected!" → "New keyword decoded!".
+**`src/hooks/useCampaignProgress.ts`**
+- Accept `gradeMode` parameter
+- All queries filter by `grade_mode`
+- All writes (`upsert`, `initializeProgress`, `completeBattle`) include `grade_mode`
+- Change `onConflict: 'student_id'` to `onConflict: 'student_id,grade_mode'`
+- Query key includes `gradeMode`
 
-**C. `VocabularyTracker.tsx`** — Import `getStoredTheme`. When agent: "Word Collection" → "Intel Database", "Power Words from your adventures" → "Keywords decoded from missions", "Read stories to collect Power Words" → "Complete missions to decode keywords".
+**`src/hooks/useReadingSessions.ts`**
+- Accept optional `gradeMode` filter, apply `.eq('grade_mode', gradeMode)` when set
 
-### Phase 2: Store theming (do now)
+## Phase 3: UI — Grade Mode Tabs on Reading Pages
 
-**D. `src/lib/gameEconomy.ts`** — Add `SkinCharacter` values for agent heroes: `'agent_x' | 'cipher' | 'shadow'`. Add agent store items:
-- Powers: "EMP Blast", "Drone Strike", "System Override", "Data Wipe"
-- Skins: "Stealth Suit" (Agent X), "Holo-Visor" (Cipher), "Shadow Cloak" (Shadow)
+**`src/components/aura/StoryLibrary.tsx`**
+- Add tab selector at top: "Grades K-5" | "Grades 6-12"
+- K-5 tab: show `curatedStories` + community stories with `grade_level` 0-5, grade filter chips `['K','1','2','3','4','5']`
+- 6-12 tab: show `agentStories` + community stories with `grade_level` 6-12, grade filter chips `['6','7','8','9','10','11','12']`
+- Tab selection syncs `gameTheme` (K-5 → classic, 6-12 → agent)
 
-**E. `RPGStore.tsx`** — Import `getStoredTheme`. Filter store items by theme: show fantasy items in classic, agent items in agent. Or show all but label sections appropriately.
+**`src/pages/student/AuraPractice.tsx`**
+- Add K-5 / 6-12 tab bar at the top level
+- Default tab from `profiles.default_grade_mode`
+- Tab switch sets `gameTheme` and passes `gradeMode` to all child components
 
-**F. `RPGPlayerHUD.tsx`** — When agent theme, populate `equippedSkins` with agent hero IDs instead of valor/elara.
+**`src/components/student/sections/AuraReadingSection.tsx`**
+- Same tab bar for the embedded student dashboard version
+
+## Phase 4: Data Writes — Tag Everything
+
+**`src/components/aura/GuidedReadingFlow.tsx`**
+- When saving to `reading_sessions`, include `grade_mode` derived from the story's `grade_level` using `getGradeModeFromGrade()`
+
+**`src/components/aura/game/rpg/RPGBattleArena.tsx`**
+- Battle completion writes include `grade_mode` from current theme
+
+**`src/hooks/useCampaignProgress.ts`** (already covered in Phase 2)
+
+## Phase 5: Analytics — Grade Mode Dropdown
+
+**`src/pages/teacher/AuraAnalytics.tsx`**
+- Add dropdown selector at top: "Aura Reading – Grades K-5" / "Aura Reading – Grades 6-12"
+- All data queries filter by selected `grade_mode`
+- Default selection from teacher's `default_grade_mode` preference
+
+**`src/components/aura/ReadingProgressDashboard.tsx`**
+- Accept `gradeMode` prop, filter `reading_sessions` query by it
+
+**Other analytics components** (`ClassroomAuraOverview`, `StudentAuraMetrics`, `KidFriendlyProgress`, `AuraProgressChart`, `WeeklyProgress`)
+- Accept and pass through `gradeMode` filter
+
+## Phase 6: Default Preference
+
+**Profile settings page**
+- Add "Default Reading Mode" selector (K-5 or 6-12)
+- Writes to `profiles.default_grade_mode`
+- On page load, all tabs and dropdowns auto-select the user's default
+
+## Data Flow
+
+```text
+User selects "Grades 6-12" tab
+  → gameTheme set to 'agent', gradeMode = '6to12'
+  → StoryLibrary shows agentStories (grades 6-12)
+  → RPG loads agent worlds/enemies/spells
+  → reading_sessions saved with grade_mode='6to12'
+  → campaign_progress row for (student_id, '6to12')
+  → student_reading_stats row for (student_id, '6to12')
+  → Analytics filtered by grade_mode='6to12'
+
+User selects "Grades K-5" tab
+  → gameTheme set to 'classic', gradeMode = 'k5'
+  → Completely independent data pipeline
+```
+
+## Score & Data Separation
+
+- K-5 and 6-12 are **completely independent** — no shared scores, progress, stats, or campaign data
+- A student can have progress in both modes simultaneously
+- Switching modes shows only that mode's data
 
 ## Files Modified
-1. `src/components/aura/game/rpg/RPGCommandMenu.tsx` — themed command labels
-2. `src/components/aura/game/rpg/RPGWordPowerUp.tsx` — themed power word card
-3. `src/components/aura/game/rpg/VocabularyTracker.tsx` — themed vocabulary text
-4. `src/lib/gameEconomy.ts` — agent store items + expanded SkinCharacter type
-5. `src/components/aura/game/rpg/RPGStore.tsx` — theme-filtered store
-6. `src/components/aura/game/rpg/RPGPlayerHUD.tsx` — agent equipped skins
+
+1. **Database migration** — `grade_mode` on 5 tables + update unique constraint + update RPC + profile preference
+2. `src/lib/gameTheme.ts` — `getGradeMode()`, `getGradeModeFromGrade()`, type exports
+3. `src/lib/updateStudentReadingStats.ts` — pass `grade_mode` to RPC
+4. `src/hooks/useCampaignProgress.ts` — filter + write `grade_mode`, update conflict key
+5. `src/hooks/useReadingSessions.ts` — filter by `grade_mode`
+6. `src/components/aura/StoryLibrary.tsx` — grade mode tabs, switch story sets + grade chips
+7. `src/pages/student/AuraPractice.tsx` — K-5/6-12 tab bar, default from profile
+8. `src/components/student/sections/AuraReadingSection.tsx` — same tab bar
+9. `src/components/aura/GuidedReadingFlow.tsx` — tag writes with `grade_mode`
+10. `src/components/aura/game/rpg/RPGBattleArena.tsx` — tag writes with `grade_mode`
+11. `src/pages/teacher/AuraAnalytics.tsx` — grade mode dropdown filter
+12. `src/components/aura/ReadingProgressDashboard.tsx` — filter by `grade_mode`
+13. Analytics sub-components — pass through `gradeMode`
+14. Profile settings — default mode selector
+
+## Execution Order
+
+1. Database migration (foundation)
+2. Core infrastructure (theme helpers, hooks)
+3. UI tabs on reading pages
+4. Tag all data writes
+5. Analytics filters
+6. Default preference
 
