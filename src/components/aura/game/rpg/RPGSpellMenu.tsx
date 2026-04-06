@@ -9,7 +9,7 @@ export interface Spell {
   mpCost: number;
   icon: LucideIcon;
   color: string;
-  effect: 'fire' | 'ice' | 'lightning' | 'slash' | 'nature' | 'heal' | 'wind';
+  effect: 'fire' | 'ice' | 'lightning' | 'slash' | 'nature' | 'heal' | 'wind' | 'data_burst';
   description?: string;
 }
 
