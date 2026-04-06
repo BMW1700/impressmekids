@@ -210,7 +210,7 @@ export const RPGRhymeChain = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 bg-gradient-to-br from-purple-900/95 via-pink-900/95 to-purple-900/95 flex flex-col items-center justify-center"
+      className={`fixed inset-0 z-50 bg-gradient-to-br ${getMinigameTheme('rhymeChain').bgGradient} flex flex-col items-center justify-center`}
     >
       {/* Background decorations */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -233,7 +233,7 @@ export const RPGRhymeChain = ({
               repeat: Infinity,
             }}
           >
-            🎵
+            {isAgentMode() ? '🔗' : '🎵'}
           </motion.div>
         ))}
       </div>
@@ -244,14 +244,20 @@ export const RPGRhymeChain = ({
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
       >
+        {(() => { const t = getMinigameTheme('rhymeChain'); const agent = isAgentMode(); return (
+        <>
         <div className="flex items-center justify-center gap-3 mb-2">
-          <Music className="h-8 w-8 text-pink-400" />
-          <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400">
-            RHYME CHAIN!
+          {agent ? <Link2 className="h-8 w-8 text-cyan-400" /> : <Music className="h-8 w-8 text-pink-400" />}
+          <h1 className={`text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r ${t.accentGradient}`}>
+            {t.title}
           </h1>
-          <Music className="h-8 w-8 text-purple-400" />
+          {agent ? <Link2 className="h-8 w-8 text-teal-400" /> : <Music className="h-8 w-8 text-purple-400" />}
         </div>
-        <p className="text-pink-200">Speak the word that RHYMES with each word!</p>
+        <p className={agent ? 'text-cyan-200' : 'text-pink-200'}>
+          {agent ? 'Match the code pattern for each word!' : 'Speak the word that RHYMES with each word!'}
+        </p>
+        </>
+        ); })()}
       </motion.div>
 
       {/* Timer & Score */}
@@ -340,7 +346,7 @@ export const RPGRhymeChain = ({
                   feedback === 'correct' ? 'text-green-400' : 'text-red-400'
                 }`}
               >
-                {feedback === 'correct' ? '✓ RHYME!' : '✗ TRY AGAIN!'}
+                {feedback === 'correct' ? (isAgentMode() ? '✓ PATTERN MATCH!' : '✓ RHYME!') : (isAgentMode() ? '✗ MISMATCH!' : '✗ TRY AGAIN!')}
               </motion.div>
             )}
           </AnimatePresence>
@@ -384,7 +390,7 @@ export const RPGRhymeChain = ({
             className="absolute inset-0 flex items-center justify-center bg-black/50"
           >
             <div className="text-center bg-purple-900/90 p-8 rounded-2xl border-2 border-purple-500">
-              <h2 className="text-4xl font-black text-purple-300 mb-4">CHAIN COMPLETE!</h2>
+              <h2 className={`text-4xl font-black ${isAgentMode() ? 'text-cyan-300' : 'text-purple-300'} mb-4`}>{isAgentMode() ? 'PATTERN COMPLETE!' : 'CHAIN COMPLETE!'}</h2>
               <div className="flex gap-6 justify-center">
                 <div>
                   <p className="text-5xl font-black text-green-400">{score}</p>
