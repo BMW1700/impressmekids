@@ -84,7 +84,7 @@ export const Header = ({ showAuthButtons = true, onSignOut, children, studentId 
             {/* Show Home button for authenticated users */}
             {shouldShowSignOut && (
               <Button variant="ghost" size="icon" asChild>
-                <Link to={getDashboardPath()} aria-label="Go to dashboard">
+                <Link to="/" aria-label="Go to mode selection">
                   <Home className="h-5 w-5" />
                 </Link>
               </Button>
