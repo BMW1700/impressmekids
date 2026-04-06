@@ -2,8 +2,10 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { speechManager } from "@/lib/speechRecognitionManager";
+import { getStoredTheme } from "@/lib/gameTheme";
 
 const battleSounds = new SoundEffects();
+const isAgent = () => getStoredTheme() === 'agent';
 
 interface Fireball {
   id: number;
@@ -226,19 +228,23 @@ export const RPGFireballDefense = ({
     }
   };
 
+  const agent = isAgent();
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 bg-gradient-to-r from-orange-950 via-red-900 to-yellow-900"
+      className={`fixed inset-0 z-50 ${agent
+        ? 'bg-gradient-to-r from-slate-950 via-gray-900 to-slate-950'
+        : 'bg-gradient-to-r from-orange-950 via-red-900 to-yellow-900'}`}
     >
-      {/* Fire particles background */}
+      {/* Particles background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {[...Array(30)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute w-2 h-2 bg-orange-500 rounded-full opacity-60"
+            className={`absolute w-2 h-2 rounded-full opacity-60 ${agent ? 'bg-cyan-500' : 'bg-orange-500'}`}
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
@@ -262,17 +268,23 @@ export const RPGFireballDefense = ({
         <motion.div
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="inline-block bg-red-900/80 border-2 border-red-500 px-6 py-3 rounded-lg"
+          className={`inline-block px-6 py-3 rounded-lg border-2 ${agent
+            ? 'bg-slate-800/80 border-cyan-500'
+            : 'bg-red-900/80 border-red-500'}`}
         >
-          <h2 className="text-2xl font-black text-red-300">🔥 FIREBALL ASSAULT! 🔥</h2>
-          <p className="text-red-200 text-sm">Tap a fireball and speak the word to destroy it!</p>
+          <h2 className={`text-2xl font-black ${agent ? 'text-cyan-300' : 'text-red-300'}`}>
+            {agent ? '🚀 INCOMING MISSILES! 🚀' : '🔥 FIREBALL ASSAULT! 🔥'}
+          </h2>
+          <p className={`text-sm ${agent ? 'text-cyan-200' : 'text-red-200'}`}>
+            {agent ? 'Tap a missile and speak the word to intercept!' : 'Tap a fireball and speak the word to destroy it!'}
+          </p>
         </motion.div>
       </div>
 
       {/* Stats */}
       <div className="absolute top-4 right-4 z-10 flex gap-4">
         <div className="bg-green-900/80 border border-green-500 px-4 py-2 rounded-lg">
-          <span className="text-green-300 font-bold">Blocked: {blocked}</span>
+          <span className="text-green-300 font-bold">{agent ? 'Intercepted' : 'Blocked'}: {blocked}</span>
         </div>
         <div className="bg-red-900/80 border border-red-500 px-4 py-2 rounded-lg">
           <span className="text-red-300 font-bold">Damage: {totalDamage}</span>
@@ -284,13 +296,15 @@ export const RPGFireballDefense = ({
         <motion.div
           animate={{ scale: [1, 1.05, 1] }}
           transition={{ repeat: Infinity, duration: 2 }}
-          className="w-24 h-32 bg-blue-600/30 border-2 border-blue-400 rounded-lg flex items-center justify-center"
+          className={`w-24 h-32 border-2 rounded-lg flex items-center justify-center ${agent
+            ? 'bg-cyan-600/30 border-cyan-400'
+            : 'bg-blue-600/30 border-blue-400'}`}
         >
-          <span className="text-6xl">🛡️</span>
+          <span className="text-6xl">{agent ? '🎯' : '🛡️'}</span>
         </motion.div>
       </div>
 
-      {/* Drake on the left */}
+      {/* Source on the left */}
       <div className="absolute left-8 top-1/2 -translate-y-1/2">
         <motion.div
           animate={{ 
@@ -300,7 +314,7 @@ export const RPGFireballDefense = ({
           transition={{ repeat: Infinity, duration: 2 }}
           className="text-8xl"
         >
-          🐉
+          {agent ? '🚀' : '🐉'}
         </motion.div>
       </div>
 
@@ -322,8 +336,10 @@ export const RPGFireballDefense = ({
             onClick={() => handleSelectFireball(fireball)}
             className={`absolute ${getFireballSize(fireball.size)} rounded-full cursor-pointer 
               ${fireball.isSelected ? 'ring-4 ring-yellow-400' : ''}
-              bg-gradient-to-br from-yellow-500 via-orange-600 to-red-700
-              flex items-center justify-center shadow-lg shadow-orange-500/50
+              ${agent
+                ? 'bg-gradient-to-br from-gray-400 via-slate-500 to-gray-700'
+                : 'bg-gradient-to-br from-yellow-500 via-orange-600 to-red-700'}
+              flex items-center justify-center shadow-lg ${agent ? 'shadow-cyan-500/50' : 'shadow-orange-500/50'}
               hover:scale-110 transition-transform`}
             style={{
               left: `${fireball.x}%`,
@@ -331,8 +347,10 @@ export const RPGFireballDefense = ({
               transform: 'translate(-50%, -50%)',
             }}
           >
-            {/* Fire glow */}
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-400 to-transparent opacity-50 animate-pulse" />
+            {/* Glow */}
+            <div className={`absolute inset-0 rounded-full opacity-50 animate-pulse ${agent
+              ? 'bg-gradient-to-br from-cyan-400 to-transparent'
+              : 'bg-gradient-to-br from-yellow-400 to-transparent'}`} />
             
             {/* Word */}
             <span className="relative z-10 font-bold text-white drop-shadow-lg text-center px-1">
@@ -352,9 +370,9 @@ export const RPGFireballDefense = ({
             className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20"
           >
             <div className={`bg-slate-900/95 border-2 rounded-xl p-6 min-w-[300px] text-center
-              ${feedback === 'correct' ? 'border-green-500' : feedback === 'incorrect' ? 'border-red-500' : 'border-orange-500'}`}>
-              <p className="text-slate-400 text-sm mb-2">Speak to destroy:</p>
-              <p className="text-3xl font-black text-orange-400 mb-4">{selectedFireball.word}</p>
+              ${feedback === 'correct' ? 'border-green-500' : feedback === 'incorrect' ? 'border-red-500' : agent ? 'border-cyan-500' : 'border-orange-500'}`}>
+              <p className="text-slate-400 text-sm mb-2">{agent ? 'Speak to intercept:' : 'Speak to destroy:'}</p>
+              <p className={`text-3xl font-black mb-4 ${agent ? 'text-cyan-400' : 'text-orange-400'}`}>{selectedFireball.word}</p>
               
               {isListening && (
                 <div className="flex items-center justify-center gap-2 text-yellow-400">
@@ -368,7 +386,7 @@ export const RPGFireballDefense = ({
               )}
               
               {feedback === 'correct' && (
-                <p className="text-green-400 font-bold">✓ DESTROYED!</p>
+                <p className="text-green-400 font-bold">{agent ? '✓ INTERCEPTED!' : '✓ DESTROYED!'}</p>
               )}
               {feedback === 'incorrect' && (
                 <p className="text-red-400 font-bold">✗ Try again!</p>
@@ -389,14 +407,16 @@ export const RPGFireballDefense = ({
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="bg-slate-900 border-2 border-orange-500 rounded-xl p-8 text-center"
+              className={`bg-slate-900 border-2 rounded-xl p-8 text-center ${agent ? 'border-cyan-500' : 'border-orange-500'}`}
             >
-              <h2 className="text-3xl font-black text-orange-400 mb-4">
-                {blocked > hit ? '🛡️ DEFENSE SUCCESS!' : '🔥 OVERWHELMED!'}
+              <h2 className={`text-3xl font-black mb-4 ${agent ? 'text-cyan-400' : 'text-orange-400'}`}>
+                {blocked > hit
+                  ? (agent ? '🎯 MISSILES INTERCEPTED!' : '🛡️ DEFENSE SUCCESS!')
+                  : (agent ? '💥 DEFENSES BREACHED!' : '🔥 OVERWHELMED!')}
               </h2>
               <div className="flex gap-8 justify-center">
                 <div>
-                  <p className="text-slate-400 text-sm">Fireballs Blocked</p>
+                  <p className="text-slate-400 text-sm">{agent ? 'Intercepted' : 'Fireballs Blocked'}</p>
                   <p className="text-2xl font-bold text-green-400">{blocked}</p>
                 </div>
                 <div>
