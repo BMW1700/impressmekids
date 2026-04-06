@@ -99,6 +99,7 @@ const AuraPractice = () => {
   const [presentationMetrics, setPresentationMetrics] = useState<PresentationMetrics | null>(null);
   const [presentationTranscript, setPresentationTranscript] = useState<string>('');
   const [gameTheme, setGameTheme] = useState<GameTheme | null>(getStoredTheme());
+  const [hasLoadedDefault, setHasLoadedDefault] = useState(false);
   const currentGradeMode: GradeMode = getGradeMode(gameTheme);
   const [showThemeSelector, setShowThemeSelector] = useState(false);
   
@@ -178,7 +179,7 @@ const AuraPractice = () => {
       if (!user?.id) return null;
       const { data, error } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, default_grade_mode')
         .eq('id', user.id)
         .single();
       if (error) return null;
