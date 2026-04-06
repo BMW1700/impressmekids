@@ -24,7 +24,7 @@ export interface ActiveUpgrades {
   defense_boost: number;
 }
 
-export const usePlayerInventory = (studentId?: string) => {
+export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -109,11 +109,13 @@ export const usePlayerInventory = (studentId?: string) => {
         if (existing) throw new Error("Already owned");
       }
 
-      // Deduct gold from campaign_progress
-      const { error: goldError } = await supabase
+      // Deduct gold from campaign_progress — scoped by gradeMode
+      let goldQuery = supabase
         .from("campaign_progress")
         .update({ total_gold: currentGold - item.price })
         .eq("student_id", studentId);
+      if (gradeMode) goldQuery = goldQuery.eq("grade_mode", gradeMode);
+      const { error: goldError } = await goldQuery;
       
       if (goldError) throw goldError;
 

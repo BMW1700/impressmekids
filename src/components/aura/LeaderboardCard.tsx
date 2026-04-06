@@ -10,6 +10,7 @@ interface LeaderboardCardProps {
   classroomId: string;
   currentStudentId?: string;
   title?: string;
+  gradeMode?: string;
 }
 
 interface ReadingLeaderboardEntry {
@@ -22,9 +23,9 @@ interface ReadingLeaderboardEntry {
   current_streak: number;
 }
 
-export const LeaderboardCard = ({ classroomId, currentStudentId, title = "Reading Leaderboard" }: LeaderboardCardProps) => {
+export const LeaderboardCard = ({ classroomId, currentStudentId, title = "Reading Leaderboard", gradeMode }: LeaderboardCardProps) => {
   const { data: leaderboard, isLoading } = useQuery({
-    queryKey: ['reading-leaderboard', classroomId],
+    queryKey: ['reading-leaderboard', classroomId, gradeMode],
     queryFn: async () => {
       // Get all students in the classroom
       const { data: students, error: studentsError } = await supabase
@@ -34,21 +35,25 @@ export const LeaderboardCard = ({ classroomId, currentStudentId, title = "Readin
 
       if (studentsError) throw studentsError;
 
-      // Get reading stats for all students
+      // Get reading stats for all students — scoped by gradeMode
       const studentIds = students?.map(s => s.student_id) || [];
       
-      const { data: stats, error: statsError } = await supabase
+      let statsQuery = supabase
         .from('student_reading_stats')
         .select('*')
         .in('student_id', studentIds);
+      if (gradeMode) statsQuery = statsQuery.eq('grade_mode', gradeMode);
+      const { data: stats, error: statsError } = await statsQuery;
 
       if (statsError) throw statsError;
 
-      // Get session averages for WPM and accuracy
-      const { data: sessions, error: sessionsError } = await supabase
+      // Get session averages for WPM and accuracy — scoped by gradeMode
+      let sessionsQuery = supabase
         .from('reading_sessions')
         .select('student_id, wpm, accuracy_percent')
         .in('student_id', studentIds);
+      if (gradeMode) sessionsQuery = sessionsQuery.eq('grade_mode', gradeMode);
+      const { data: sessions, error: sessionsError } = await sessionsQuery;
 
       if (sessionsError) throw sessionsError;
 
@@ -84,7 +89,7 @@ export const LeaderboardCard = ({ classroomId, currentStudentId, title = "Readin
       // Sort by total words read
       return leaderboardData.sort((a, b) => b.total_words_read - a.total_words_read).slice(0, 10);
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000,
   });
 
   const getRankIcon = (rank: number) => {

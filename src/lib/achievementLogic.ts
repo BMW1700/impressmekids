@@ -13,21 +13,24 @@ export const checkAndAwardAchievements = async (
     accuracy: number;
     wordsRead: number;
     isFirstSession?: boolean;
+    gradeMode?: string;
   }
 ): Promise<string[]> => {
   const newAchievements: string[] = [];
 
-  // Fetch existing achievements and stats
+  // Fetch existing achievements and stats — scope stats by gradeMode
+  let statsQuery = supabase
+    .from('student_reading_stats')
+    .select('*')
+    .eq('student_id', studentId);
+  if (sessionData.gradeMode) statsQuery = statsQuery.eq('grade_mode', sessionData.gradeMode);
+
   const [{ data: existingAchievements }, { data: stats }, { data: profileData }] = await Promise.all([
     supabase
       .from('reading_achievements')
       .select('achievement_type')
       .eq('student_id', studentId),
-    supabase
-      .from('student_reading_stats')
-      .select('*')
-      .eq('student_id', studentId)
-      .single(),
+    statsQuery.single(),
     supabase
       .from('profiles')
       .select('student_profiles(grade)')
@@ -120,7 +123,6 @@ const getGradeLevelBenchmark = (grade: number): number => {
 
 export const generateDailyMissions = async (studentId: string) => {
   const now = new Date();
-  const today = now.toISOString().split('T')[0];
   
   // First, mark any expired active missions as expired
   await supabase
@@ -258,7 +260,4 @@ export const updateMissionProgress = async (
 
   // Update word champion mission (tracks total words)
   await updateMission('word_champion', sessionData.wordsRead);
-
-  // Update phoneme hunter mission if applicable
-  await updateMission('phoneme_hunter', 1);
 };
