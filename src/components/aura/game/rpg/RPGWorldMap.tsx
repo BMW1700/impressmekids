@@ -40,6 +40,7 @@ interface RPGWorldMapProps {
   onSelectWorld: (world: CampaignWorld) => void;
   onBack: () => void;
   onStartBossRush?: () => void;
+  onSwitchMode?: () => void;
   studentId?: string;
   gold?: number;
   xp?: number;
@@ -202,6 +203,7 @@ export const RPGWorldMap = ({
   onSelectWorld,
   onBack,
   onStartBossRush,
+  onSwitchMode,
   studentId,
   gold = 0,
   xp = 0,
@@ -276,7 +278,11 @@ export const RPGWorldMap = ({
               const current = getStoredTheme();
               const next: GameTheme = current === 'agent' ? 'classic' : 'agent';
               setStoredTheme(next);
-              window.location.reload();
+              if (onSwitchMode) {
+                onSwitchMode();
+              } else {
+                window.location.reload();
+              }
             }}
           >
             {getStoredTheme() === 'agent' ? '🕵️ Agent Mode' : '⚔️ Classic'} — Switch
