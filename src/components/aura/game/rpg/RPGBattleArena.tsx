@@ -19,6 +19,7 @@ import { RPGGhostlyWhispers } from "./RPGGhostlyWhispers";
 import { RPGRollingBoulders } from "./RPGRollingBoulders";
 import { RPGEnemyTransition } from "./RPGEnemyTransition";
 import { RPGSpellEffects } from "./RPGSpellEffects";
+import { RPGDataBurstEffect } from "./RPGDataBurstEffect";
 import { RPGCoinDrop } from "./RPGCoinDrop";
 // NEW: Import the attack mini-games (Word Blitz removed - caused crashes)
 import { RPGWordShield } from "./RPGWordShield";
@@ -324,7 +325,7 @@ export const RPGBattleArena = ({
   const [batchStartIndex, setBatchStartIndex] = useState(0); // Start of current 5-word batch (0, 5, 10, ...)
   const [lastSpokenGlobalIndex, setLastSpokenGlobalIndex] = useState(-1); // For attack display
   const [currentWordResult, setCurrentWordResult] = useState<boolean | null>(null);
-  const [attackType, setAttackType] = useState<'fire' | 'ice' | 'lightning' | 'slash' | 'nature' | 'heal' | 'wind'>('lightning');
+  const [attackType, setAttackType] = useState<'fire' | 'ice' | 'lightning' | 'slash' | 'nature' | 'heal' | 'wind' | 'data_burst'>('lightning');
   const [barrageWords, setBarrageWords] = useState<string[]>([]);
 
   // Animation states
@@ -337,7 +338,7 @@ export const RPGBattleArena = ({
   const [enemyAbilityMessage, setEnemyAbilityMessage] = useState<string | null>(null);
   
   // Spell effects state
-  const [activeSpell, setActiveSpell] = useState<'fire' | 'ice' | 'lightning' | 'slash' | 'nature' | 'heal' | 'wind' | null>(null);
+  const [activeSpell, setActiveSpell] = useState<'fire' | 'ice' | 'lightning' | 'slash' | 'nature' | 'heal' | 'wind' | 'data_burst' | null>(null);
   const [showSpellEffect, setShowSpellEffect] = useState(false);
   
   // Currency/rewards state
@@ -1403,6 +1404,9 @@ export const RPGBattleArena = ({
       case 'wind':
         battleSounds.windGust();
         break;
+      case 'data_burst':
+        battleSounds.lightningCrack();
+        break;
     }
     
     // Trigger spell visual effect
@@ -2126,11 +2130,18 @@ export const RPGBattleArena = ({
       />
 
       {/* Spell Effects Overlay */}
-      <RPGSpellEffects
-        spellType={activeSpell}
-        isActive={showSpellEffect}
-        onComplete={handleSpellComplete}
-      />
+      {activeSpell === 'data_burst' ? (
+        <RPGDataBurstEffect
+          isActive={showSpellEffect}
+          onComplete={handleSpellComplete}
+        />
+      ) : (
+        <RPGSpellEffects
+          spellType={activeSpell}
+          isActive={showSpellEffect}
+          onComplete={handleSpellComplete}
+        />
+      )}
       
       {/* Coin Drop Animation */}
       {showCoinDrop && (

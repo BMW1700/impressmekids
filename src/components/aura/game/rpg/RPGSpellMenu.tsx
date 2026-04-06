@@ -9,7 +9,7 @@ export interface Spell {
   mpCost: number;
   icon: LucideIcon;
   color: string;
-  effect: 'fire' | 'ice' | 'lightning' | 'slash' | 'nature' | 'heal' | 'wind';
+  effect: 'fire' | 'ice' | 'lightning' | 'slash' | 'nature' | 'heal' | 'wind' | 'data_burst';
   description?: string;
 }
 
@@ -168,7 +168,7 @@ export const cipherSpells: Spell[] = [
     mpCost: 20,
     icon: Binary,
     color: 'from-cyan-400 to-teal-600',
-    effect: 'fire',
+    effect: 'data_burst',
     description: 'Plasma numbers blast the target!'
   },
   {
