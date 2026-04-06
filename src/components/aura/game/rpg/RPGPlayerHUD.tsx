@@ -35,6 +35,7 @@ export const RPGPlayerHUD = ({
   const { equippedPet, equippedPetData } = usePlayerPets(studentId);
   const { ownedItems, purchaseItem, equipSkin, getEquippedSkin } = usePlayerInventory(studentId);
 
+  const achievementStats = getTotalStats();
   const theme = getStoredTheme();
   const isAgent = theme === 'agent';
 
