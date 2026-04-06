@@ -14,17 +14,19 @@ const GameDashboard = () => {
   const navigate = useNavigate();
   const { user, session, profile } = useAuth();
 
-  const { progress } = useCampaignProgress(user?.id);
+  const gradeMode = getGradeMode(getStoredTheme());
+  const { progress } = useCampaignProgress(user?.id, gradeMode);
 
   const { data: readingStats } = useQuery({
-    queryKey: ['game-reading-stats', user?.id],
+    queryKey: ['game-reading-stats', user?.id, gradeMode],
     queryFn: async () => {
       if (!user?.id) return null;
-      const { data } = await supabase
+      let query = supabase
         .from('student_reading_stats')
         .select('*')
-        .eq('student_id', user.id)
-        .maybeSingle();
+        .eq('student_id', user.id);
+      if (gradeMode) query = query.eq('grade_mode', gradeMode);
+      const { data } = await query.maybeSingle();
       return data;
     },
     enabled: !!user?.id,

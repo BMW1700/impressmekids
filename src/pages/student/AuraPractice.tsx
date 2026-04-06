@@ -666,7 +666,7 @@ const AuraPractice = () => {
             </div>
             
             {/* Gamification Stats Header */}
-            {user?.id && <GamificationHeader studentId={user.id} />}
+            {user?.id && <GamificationHeader studentId={user.id} gradeMode={currentGradeMode} />}
           </div>
 
           <SmartNotifications onNavigate={(path) => navigate(path)} gradeMode={currentGradeMode} />

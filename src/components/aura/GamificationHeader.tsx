@@ -6,17 +6,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface GamificationHeaderProps {
   studentId: string;
+  gradeMode?: string;
 }
 
-export const GamificationHeader = ({ studentId }: GamificationHeaderProps) => {
+export const GamificationHeader = ({ studentId, gradeMode }: GamificationHeaderProps) => {
   const { data: stats, isLoading } = useQuery({
-    queryKey: ['gamification-stats', studentId],
+    queryKey: ['gamification-stats', studentId, gradeMode],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('student_reading_stats')
         .select('*')
-        .eq('student_id', studentId)
-        .maybeSingle();
+        .eq('student_id', studentId);
+      if (gradeMode) query = query.eq('grade_mode', gradeMode);
+      const { data, error } = await query.maybeSingle();
 
       if (error) throw error;
       return data;
