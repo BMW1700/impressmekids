@@ -1,75 +1,79 @@
 
 
-# Agent Mode Polish: Health Bars, Spells, Sprites & Story Fixes
+# Brutally Honest Assessment: Agent Mode vs Classic Mode
 
-## Problems Identified
+## What's WORKING ✓
+- **Hero data, enemy data, sprite wiring** — all correctly mapped end-to-end
+- **Em-dash word filter** — fixed, no more blank spaces in reader
+- **Agent-specific spells** — Agent X (Tactical), Cipher (Data Burst), Shadow (Stealth) all wired
+- **Agent dialogue** — mission-themed lines replace fantasy dialogue
+- **Story content** — 24 diverse, high-quality stories covering AI ethics, game theory, rhetoric, etc.
+- **Boss silhouettes, character select, world map** — all theme-aware
+- **Mini-games fire correctly** — HP-threshold system triggers from enemy `miniGames` arrays, which agent enemies define
 
-### 1. Enemy health bars missing
-Agent enemy sprites (`StreetThug`, `HiredGun`, `CyberHacker`, `DroneSentry`, `RogueAgent`, `Bodyguard`) have NO built-in health bar. The `RPGCharacter.tsx` component (line 651) hides the fallback HP bar when `usePremiumSprites=true`, assuming premium sprites render their own. Only boss sprites (`TheBroker`, `TheDirector`, `TheArchitect`) and hero sprites have health bars built in.
+## What's STILL NOT PERFECT
 
-### 2. No agent-specific spells/powers
-`RPGCommandMenu.tsx` line 47-53 only handles `valor`, `elara`, `ella` character IDs for spell selection. Agent heroes fall through to default `elaraSpells` (Lightning Bolt, Ice Shard, Fireball — fantasy spells). No agent-themed powers exist (e.g., Cipher's plasma number attack).
+### 1. Enemy health bars — STILL missing on 4 of 9 agent enemies
+`RPGCharacter.tsx` line 651 hides the fallback HP bar when `usePremiumSprites=true`. Boss sprites (`TheBroker`, `TheDirector`, `TheArchitect`) pass `showHealthBar={true}` — but **StreetThug, HiredGun, CyberHacker, DroneSentry, RogueAgent, Bodyguard do NOT** get `showHealthBar={true}` in their render calls (lines 370-467). Each component likely accepts the prop but it's not being passed. This means regular agent enemies have **invisible health bars** in battle.
 
-### 3. Sprites look childish
-Current agent enemy SVGs are simple with minimal detail — basic shapes, few gradients, minimal accessories, no ambient effects. They lack the polish of classic mode sprites like `GrogTheKing` or `DrakeTheDragon`.
+### 2. Mini-game names are still fantasy-themed
+Agent enemies reference mini-games like `'goblin_horde'`, `'beast_swarm'`, `'fireball_defense'`. The actual mini-game components (`RPGGoblinHorde`, `RPGBeastSwarm`, `RPGFireballDefense`) render fantasy visuals (goblins, beasts, fireballs). While functionally identical, seeing goblins charge at you during a Syndicate mission breaks immersion. These need either:
+- Agent-themed reskins, OR
+- New agent-specific mini-games (safe breaker, code decrypt, etc.)
 
-### 4. Stories have blank spaces where words should be
-The em-dash character `—` in story passages (used extensively in agent stories) gets treated as a word by `split(/\s+/)` in the word reader (line 460). When the player encounters `—` as a "word to read," it shows as a blank/unpronounceable token, breaking immersion. This affects stories like "Criminal Psychology" (line 21: `— the idea that`), "Civil Liberties" (line 45: `— that those who`), etc. Nearly every agent story contains em-dashes.
+### 3. Agent enemy `specialBarrage` doesn't have agent-specific branches
+`triggerSpecialBarrage()` (line 1150-1188) checks for `dragon`, `ice_golem`, `shadow_wraith`, `stone_guardian` — all classic enemy types. Agent enemies (`minion`, `guard`, `elite`) fall through to the default `"WORD PRISON"` (asteroid barrage). No agent-flavored attack names like "MALWARE UPLOAD" or "DRONE STRIKE" exist.
+
+### 4. Cipher's "Data Burst" plasma numbers don't have a custom visual effect
+The spell exists in `RPGSpellMenu.tsx` and triggers `effect: 'fire'`, which plays a generic fire animation via `RPGSpellEffects`. There's no actual "plasma numbers shooting at the enemy" visual — it just looks like a fireball. A custom spell effect component would sell the hacker fantasy.
+
+### 5. Elara-specific charge mechanic is hardcoded to `selectedCharacter === 'elara'`
+Lines 1682-1714: The 5-word charge → 3x plasma barrage is only for `'elara'`. Since Cipher maps to `'elara'` internally, this DOES work for Cipher. But the announcement says "⚡ CHARGING" and "⚡ PLASMA BARRAGE!" — not agent-themed text like "COMPILING DATA BURST" or "DATA BURST DEPLOYED." The mechanic works; the flavor text doesn't match.
+
+### 6. Item healing uses `heroKnight.maxHp` instead of `playerCharacter.maxHp`
+Line 1446: `setPlayerHp(prev => Math.min(heroKnight.maxHp, prev + item.value))` — always caps healing at classic knight's max HP, not the actual selected character's HP. Minor bug but worth fixing.
+
+### 7. Enemy ability messages use fantasy phrasing
+`checkLiteracyMiniGame()` (lines 1086-1130) shows messages like "raises a LAST STAND BARRIER!", "activates WORD SHIELD!", "casts WORD FOG!" — these are fantasy-flavored. In agent mode they should say things like "deploys FIREWALL!", "activates ENCRYPTION!", "jams COMMS!".
+
+### 8. No agent-themed world transition text
+When transitioning between enemies (`RPGEnemyTransition`), the component likely uses generic or fantasy text. Not verified but worth checking.
 
 ---
 
 ## Fix Plan
 
-### A. Add health bars to ALL agent enemy sprites (6 files)
-Add `showHealthBar` prop + built-in health bar rendering to: `StreetThug.tsx`, `HiredGun.tsx`, `CyberHacker.tsx`, `DroneSentry.tsx`, `RogueAgent.tsx`, `Bodyguard.tsx`. Follow the same pattern used in `Cipher.tsx` (lines 143-161) — a bottom-positioned bar with gradient color based on health percent + HP text.
+### A. Pass `showHealthBar={true}` to ALL agent enemy sprites
+**File: `RPGCharacter.tsx`** — Add `showHealthBar={true}` to the 6 non-boss agent enemy render calls (StreetThug, HiredGun, CyberHacker, DroneSentry, RogueAgent, Bodyguard). Single-line additions.
 
-### B. Create agent-specific spell sets (2 files)
-**`RPGSpellMenu.tsx`**: Add three new spell arrays:
-- `agentXSpells`: Tactical Strike (slash), Flashbang (lightning), Precision Shot (fire)
-- `cipherSpells`: **Data Burst** (plasma numbers — "fire" effect but themed), System Hack (lightning), Firewall (ice/shield)
-- `shadowSpells`: Shadow Strike (slash), Smoke Bomb (wind), Assassination (fire — high damage)
+### B. Agent-themed special barrage names
+**File: `RPGBattleArena.tsx`** — In `triggerSpecialBarrage()`, add agent enemy type branches:
+- When theme is agent and enemy is `minion`: "deploys PIPE BARRAGE!"
+- `guard`: "fires SUPPRESSION VOLLEY!"  
+- `elite`: "uploads MALWARE SWARM!"
+- `boss`/`final_boss`: "activates SCORCHED EARTH PROTOCOL!"
 
-**`RPGCommandMenu.tsx`**: Update `getCharacterSpells()` and `getCharacterName()` to handle agent character IDs and return agent spell sets. Detect agent theme and map accordingly.
+### C. Agent-themed Cipher charge text
+**File: `RPGBattleArena.tsx`** — In the Elara/Cipher charge logic, check theme and show "COMPILING 3/5" and "💻 DATA BURST DEPLOYED! ×3" instead of "⚡ CHARGING" and "⚡ PLASMA BARRAGE!".
 
-### C. Fix em-dash word splitting (1 file)
-**`RPGBattleArena.tsx`** line 460: Update the word split regex to strip em-dashes, en-dashes, and other non-word punctuation tokens before filtering:
-```
-story.passage_text.split(/\s+/).filter(w => w.length > 0 && !/^[\u2014\u2013\-—–]+$/.test(w))
-```
-This removes `—` tokens from the word queue so players never encounter unpronouceable blanks.
+### D. Agent-themed literacy mini-game messages
+**File: `RPGBattleArena.tsx`** — In `checkLiteracyMiniGame()`, check theme and use agent-flavored messages: "FIREWALL BARRIER" instead of "LAST STAND BARRIER", "ENCRYPTION" instead of "WORD SHIELD", "SIGNAL JAM" instead of "WORD FOG".
 
-### D. Upgrade agent enemy sprites for mature, polished look (6 files)
-Enhance each of the 6 agent enemy SVGs with:
-- More detailed SVG elements (gear, scars, accessories, weapon details)
-- Gradient fills and subtle glow effects
-- Ambient animated elements (breathing, aura shimmer)
-- Proportions more adult/realistic (taller, less round)
+### E. Fix item healing cap
+**File: `RPGBattleArena.tsx`** line 1446 — Change `heroKnight.maxHp` to `playerCharacter.maxHp`.
 
-### E. Upgrade agent hero sprites (3 files)
-Polish `AgentX.tsx`, `Cipher.tsx`, `Shadow.tsx` with:
-- More SVG detail (weapon holsters, tech accessories, insignias)
-- Cipher: Add floating holographic number particles in idle state
-- Better proportions matching the mature theme
+### F. (Future) Agent-specific mini-games
+Create agent-themed mini-game components (Safe Breaker, Code Decrypt, Drone Intercept) as replacements for fantasy-themed ones. This is a larger effort best done in a dedicated round.
+
+### G. (Future) Custom Cipher "Data Burst" visual effect
+Create a `RPGDataBurstEffect` component that shows plasma numbers (0, 1, 4, 7) shooting at the enemy instead of a generic fire animation.
 
 ---
 
 ## Files Modified
-1. `src/components/aura/game/characters/StreetThug.tsx` — health bar + visual upgrade
-2. `src/components/aura/game/characters/HiredGun.tsx` — health bar + visual upgrade
-3. `src/components/aura/game/characters/CyberHacker.tsx` — health bar + visual upgrade
-4. `src/components/aura/game/characters/DroneSentry.tsx` — health bar + visual upgrade
-5. `src/components/aura/game/characters/RogueAgent.tsx` — health bar + visual upgrade
-6. `src/components/aura/game/characters/Bodyguard.tsx` — health bar + visual upgrade
-7. `src/components/aura/game/characters/AgentX.tsx` — visual upgrade
-8. `src/components/aura/game/characters/Cipher.tsx` — visual upgrade + floating numbers
-9. `src/components/aura/game/characters/Shadow.tsx` — visual upgrade
-10. `src/components/aura/game/rpg/RPGSpellMenu.tsx` — agent spell arrays
-11. `src/components/aura/game/rpg/RPGCommandMenu.tsx` — agent spell routing
-12. `src/components/aura/game/rpg/RPGBattleArena.tsx` — em-dash word filter fix
+1. `src/components/aura/game/rpg/RPGCharacter.tsx` — showHealthBar on 6 enemy renders
+2. `src/components/aura/game/rpg/RPGBattleArena.tsx` — agent barrage names, Cipher charge text, literacy messages, item heal fix
 
-## Execution Order
-1. Fix em-dash bug (highest priority — breaks immersion)
-2. Add enemy health bars (critical gameplay bug)
-3. Add agent spells (gameplay completeness)
-4. Upgrade sprites (visual polish)
+## Priority
+A-E are quick fixes (under 100 lines total). F-G are larger features for the next round.
 
