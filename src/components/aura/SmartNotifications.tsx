@@ -6,6 +6,7 @@ import { useSmartNotifications } from "@/hooks/useSmartNotifications";
 
 interface SmartNotificationsProps {
   onNavigate?: (path: string) => void;
+  gradeMode?: string;
 }
 
 const notificationIcons: Record<string, any> = {
@@ -24,8 +25,8 @@ const notificationColors: Record<string, string> = {
   streak: "text-orange-600"
 };
 
-export const SmartNotifications = ({ onNavigate }: SmartNotificationsProps) => {
-  const { notifications, loading } = useSmartNotifications();
+export const SmartNotifications = ({ onNavigate, gradeMode }: SmartNotificationsProps) => {
+  const { notifications, loading } = useSmartNotifications(gradeMode);
 
   if (loading) {
     return (
