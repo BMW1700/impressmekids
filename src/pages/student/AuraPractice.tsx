@@ -577,6 +577,7 @@ const AuraPractice = () => {
           studentId={user.id}
           gold={campaignProgress?.total_gold || 0}
           xp={campaignProgress?.total_xp_earned || 0}
+          gradeMode={currentGradeMode}
           onSelectWorld={(world) => {
             setSelectedWorld(world);
             setRpgView('level_select');
@@ -667,7 +668,7 @@ const AuraPractice = () => {
             {user?.id && <GamificationHeader studentId={user.id} />}
           </div>
 
-          <SmartNotifications onNavigate={(path) => navigate(path)} />
+          <SmartNotifications onNavigate={(path) => navigate(path)} gradeMode={currentGradeMode} />
 
           {/* Active Screening Banner - school only */}
           {!isGameMode && activeScreening?.passage && (
@@ -805,7 +806,7 @@ const AuraPractice = () => {
             </TabsContent>
 
             <TabsContent value="bookshelf" className="mt-6">
-              <ReadingBookshelf />
+              <ReadingBookshelf gradeMode={currentGradeMode} />
             </TabsContent>
 
             <TabsContent value="practice" className="space-y-6 mt-6">

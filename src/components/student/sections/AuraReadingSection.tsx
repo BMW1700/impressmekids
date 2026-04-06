@@ -499,6 +499,7 @@ export const AuraReadingSection = () => {
           }}
           onBack={() => setIsRpgMode(false)}
           totalBooksRescued={campaignProgress?.books_rescued || 0}
+          gradeMode={currentGradeMode}
         />
       </div>
     );
@@ -554,7 +555,7 @@ export const AuraReadingSection = () => {
         {user?.id && <GamificationHeader studentId={user.id} />}
       </div>
 
-      <SmartNotifications onNavigate={(path) => navigate(path)} />
+      <SmartNotifications onNavigate={(path) => navigate(path)} gradeMode={currentGradeMode} />
 
       {/* Active Screening Banner */}
       {activeScreening?.passage && (
@@ -685,7 +686,7 @@ export const AuraReadingSection = () => {
         </TabsContent>
 
         <TabsContent value="bookshelf" className="mt-6">
-          <ReadingBookshelf />
+          <ReadingBookshelf gradeMode={currentGradeMode} />
         </TabsContent>
 
         <TabsContent value="practice" className="space-y-6 mt-6">
