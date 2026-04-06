@@ -39,7 +39,7 @@ import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import type { EnemyType } from "@/lib/battleMechanics";
 import { curatedStories } from "@/data/curatedStories";
 import { agentStories } from "@/data/agentStories";
-import { getStoredTheme, setStoredTheme, type GameTheme, getGradeMode, type GradeMode } from "@/lib/gameTheme";
+import { getStoredTheme, setStoredTheme, type GameTheme, getGradeMode, getThemeFromGradeMode, type GradeMode } from "@/lib/gameTheme";
 import { ThemeSelector } from "@/components/aura/game/rpg/ThemeSelector";
 import type { CuratedStory as Story } from "@/data/curatedStories";
 
@@ -83,6 +83,7 @@ export const AuraReadingSection = () => {
   const [isReadingStory, setIsReadingStory] = useState(false);
   const [isCampaignMode, setIsCampaignMode] = useState(false);
   const [gameTheme, setGameTheme] = useState<GameTheme | null>(getStoredTheme());
+  const [hasLoadedDefault, setHasLoadedDefault] = useState(false);
   const currentGradeMode: GradeMode = getGradeMode(gameTheme);
   
   // Theme-aware data sources
@@ -144,7 +145,7 @@ export const AuraReadingSection = () => {
       if (!user?.id) return null;
       const { data, error } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, default_grade_mode')
         .eq('id', user.id)
         .single();
       if (error) return null;
@@ -152,6 +153,16 @@ export const AuraReadingSection = () => {
     },
     enabled: !!user?.id,
   });
+
+  // Auto-select grade mode from profile default (only if no theme stored locally)
+  useEffect(() => {
+    if (!hasLoadedDefault && profile?.default_grade_mode && !getStoredTheme()) {
+      const defaultTheme = getThemeFromGradeMode(profile.default_grade_mode as GradeMode);
+      setGameTheme(defaultTheme);
+      setStoredTheme(defaultTheme);
+      setHasLoadedDefault(true);
+    }
+  }, [profile, hasLoadedDefault]);
 
   // Check for active screening period
   const { data: activeScreening } = useActiveScreeningPassage(user?.id);
@@ -707,7 +718,7 @@ export const AuraReadingSection = () => {
         <TabsContent value="progress" className="mt-6 space-y-6">
           {/* Kid-Friendly Progress - Simple and Fun! */}
           {user?.id && (
-            <KidFriendlyProgress studentId={user.id} />
+            <KidFriendlyProgress studentId={user.id} gradeMode={currentGradeMode} />
           )}
           
           {/* Week-by-Week Improvement Tracker */}

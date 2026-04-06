@@ -3,13 +3,15 @@ import { useClassroomReadingSessions } from "@/hooks/useReadingSessions";
 import { Loader2, TrendingUp, Target, Zap, Book } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { format } from "date-fns";
+import type { GradeMode } from "@/lib/gameTheme";
 
 interface ReadingProgressDashboardProps {
   classroomId: string;
+  gradeMode?: GradeMode;
 }
 
-export const ReadingProgressDashboard = ({ classroomId }: ReadingProgressDashboardProps) => {
-  const { data: sessions, isLoading } = useClassroomReadingSessions(classroomId);
+export const ReadingProgressDashboard = ({ classroomId, gradeMode }: ReadingProgressDashboardProps) => {
+  const { data: sessions, isLoading } = useClassroomReadingSessions(classroomId, gradeMode);
 
   if (isLoading) {
     return (

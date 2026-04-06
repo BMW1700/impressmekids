@@ -99,6 +99,7 @@ const AuraPractice = () => {
   const [presentationMetrics, setPresentationMetrics] = useState<PresentationMetrics | null>(null);
   const [presentationTranscript, setPresentationTranscript] = useState<string>('');
   const [gameTheme, setGameTheme] = useState<GameTheme | null>(getStoredTheme());
+  const [hasLoadedDefault, setHasLoadedDefault] = useState(false);
   const currentGradeMode: GradeMode = getGradeMode(gameTheme);
   const [showThemeSelector, setShowThemeSelector] = useState(false);
   
@@ -178,7 +179,7 @@ const AuraPractice = () => {
       if (!user?.id) return null;
       const { data, error } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, default_grade_mode')
         .eq('id', user.id)
         .single();
       if (error) return null;
@@ -187,7 +188,16 @@ const AuraPractice = () => {
     enabled: !!user?.id,
   });
 
-  // Check for active screening period
+  // Auto-select grade mode from profile default (only if no theme stored locally)
+  useEffect(() => {
+    if (!hasLoadedDefault && profile?.default_grade_mode && !getStoredTheme()) {
+      const defaultTheme = getThemeFromGradeMode(profile.default_grade_mode as GradeMode);
+      setGameTheme(defaultTheme);
+      setStoredTheme(defaultTheme);
+      setHasLoadedDefault(true);
+    }
+  }, [profile, hasLoadedDefault]);
+
   const { data: activeScreening } = useActiveScreeningPassage(user?.id);
 
   // Campaign progress hook - scoped by grade mode
@@ -997,7 +1007,7 @@ const AuraPractice = () => {
 
             <TabsContent value="progress" className="mt-6 space-y-6">
               {/* Kid-Friendly Progress at the top */}
-              {user?.id && <KidFriendlyProgress studentId={user.id} />}
+              {user?.id && <KidFriendlyProgress studentId={user.id} gradeMode={currentGradeMode} />}
               
               {!records || records.length === 0 ? (
                 <Card className="hover:scale-[1.01] transition-transform duration-200">
