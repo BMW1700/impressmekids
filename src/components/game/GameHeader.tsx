@@ -49,7 +49,7 @@ export const GameHeader = ({ children, studentId }: GameHeaderProps) => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/', { state: { skipRedirect: true } })}
                 className="text-muted-foreground hover:text-foreground"
               >
                 <Home className="w-4 h-4" />
@@ -69,7 +69,7 @@ export const GameHeader = ({ children, studentId }: GameHeaderProps) => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/', { state: { skipRedirect: true } })}
                 className="text-muted-foreground hover:text-foreground"
               >
                 <Home className="w-4 h-4" />
