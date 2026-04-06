@@ -1,19 +1,21 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { GameHeader } from "@/components/game/GameHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Swords, BookOpen, Gamepad2, BarChart3, Flame, Star, LogIn } from "lucide-react";
-import { motion } from "framer-motion";
+import { Swords, BookOpen, Gamepad2, BarChart3, Flame, Star, LogIn, Shield, Search, ArrowLeft } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import { RPGPlayerHUD } from "@/components/aura/game/rpg/RPGPlayerHUD";
-import { getStoredTheme, getGradeMode } from "@/lib/gameTheme";
+import { getStoredTheme, setStoredTheme, getGradeMode } from "@/lib/gameTheme";
 
 const GameDashboard = () => {
   const navigate = useNavigate();
   const { user, session, profile } = useAuth();
+  const [showModeSelect, setShowModeSelect] = useState(false);
 
   const currentGradeMode = getGradeMode(getStoredTheme());
   const { progress } = useCampaignProgress(user?.id, currentGradeMode);
@@ -37,6 +39,15 @@ const GameDashboard = () => {
   const xp = progress?.total_xp_earned ?? 0;
   const isSignedIn = !!session;
 
+  const handleModeSelect = (mode: 'classic' | 'agent') => {
+    setStoredTheme(mode);
+    if (isSignedIn) {
+      navigate('/game/play?tab=rpg');
+    } else {
+      navigate('/game/auth');
+    }
+  };
+
   const modeCards = [
     {
       title: "RPG Campaign",
@@ -47,7 +58,7 @@ const GameDashboard = () => {
       iconColor: "text-red-400",
       primary: true,
       requiresAuth: true,
-      onClick: () => isSignedIn ? navigate('/game/play?tab=rpg') : navigate('/game/auth'),
+      onClick: () => setShowModeSelect(true),
     },
     {
       title: "Story Library",
@@ -85,127 +96,225 @@ const GameDashboard = () => {
       </GameHeader>
 
       <main className="container mx-auto px-4 py-6 max-w-4xl">
-        {/* Welcome Section */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <h1 className="text-2xl sm:text-3xl font-bold">
-            {isSignedIn ? (
-              <>Welcome back, <span className="text-yellow-400">{profile?.full_name?.split(' ')[0] || 'Adventurer'}</span>! 🎮</>
-            ) : (
-              <>Welcome to <span className="text-yellow-400">NabuLearn</span>! 🎮</>
-            )}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {isSignedIn ? 'Choose your reading adventure' : 'Sign in to track your progress and play'}
-          </p>
-        </motion.div>
-
-        {/* Sign In CTA for unauthenticated users */}
-        {!isSignedIn && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8"
-          >
-            <Card className="bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border-yellow-500/30">
-              <CardContent className="flex items-center justify-between p-4">
-                <div>
-                  <h3 className="font-semibold">Sign in to start your adventure</h3>
-                  <p className="text-sm text-muted-foreground">Track your progress, earn XP, and battle enemies!</p>
-                </div>
-                <Button
-                  onClick={() => navigate('/game/auth')}
-                  className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
-                >
-                  <LogIn className="w-4 h-4 mr-1" />
-                  Sign In
-                </Button>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-
-        {/* Quick Stats — only for signed-in users */}
-        {isSignedIn && (
-          <div className="grid grid-cols-3 gap-3 mb-8">
-            <Card className="bg-gradient-to-br from-yellow-500/10 to-amber-500/10 border-yellow-500/20">
-              <CardContent className="p-3 text-center">
-                <Star className="w-5 h-5 text-yellow-400 mx-auto mb-1" />
-                <div className="text-lg font-bold text-yellow-400">{xp.toLocaleString()}</div>
-                <div className="text-xs text-muted-foreground">Total XP</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-gradient-to-br from-orange-500/10 to-red-500/10 border-orange-500/20">
-              <CardContent className="p-3 text-center">
-                <Flame className="w-5 h-5 text-orange-400 mx-auto mb-1" />
-                <div className="text-lg font-bold text-orange-400">{readingStats?.current_streak_days ?? 0}</div>
-                <div className="text-xs text-muted-foreground">Day Streak</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-gradient-to-br from-purple-500/10 to-violet-500/10 border-purple-500/20">
-              <CardContent className="p-3 text-center">
-                <BookOpen className="w-5 h-5 text-purple-400 mx-auto mb-1" />
-                <div className="text-lg font-bold text-purple-400">{readingStats?.total_words_read?.toLocaleString() ?? 0}</div>
-                <div className="text-xs text-muted-foreground">Words Read</div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Mode Cards */}
-        <div className="grid gap-4">
-          {modeCards.map((card, i) => (
+        <AnimatePresence mode="wait">
+          {showModeSelect ? (
             <motion.div
-              key={card.title}
+              key="mode-select"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
             >
-              <Card
-                className={`cursor-pointer transition-all duration-300 hover:scale-[1.02] bg-gradient-to-r ${card.color} ${card.borderColor} ${
-                  card.primary ? 'ring-2 ring-red-500/30' : ''
-                }`}
-                onClick={card.onClick}
-              >
-                <CardContent className={`flex items-center gap-4 ${card.primary ? 'p-6' : 'p-4'}`}>
-                  <div className={`${card.primary ? 'w-14 h-14' : 'w-10 h-10'} rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0`}>
-                    <card.icon className={`${card.primary ? 'w-7 h-7' : 'w-5 h-5'} ${card.iconColor}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className={`font-bold ${card.primary ? 'text-xl' : 'text-base'}`}>
-                      {card.title}
-                      {card.primary && <span className="ml-2 text-xs bg-red-500/30 text-red-300 px-2 py-0.5 rounded-full">Featured</span>}
-                      {card.requiresAuth && !isSignedIn && <span className="ml-2 text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Sign in required</span>}
-                    </h3>
-                    <p className="text-sm text-muted-foreground mt-0.5">{card.description}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowModeSelect(false)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-1" />
+                  Back
+                </Button>
+              </div>
 
-        {/* View Progress CTA — only for signed-in users */}
-        {isSignedIn && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="mt-8"
-          >
-            <Button
-              onClick={() => navigate('/game/analytics')}
-              variant="outline"
-              className="w-full border-white/20 hover:bg-white/10"
+              <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold mb-2">Choose Your Adventure</h2>
+                <p className="text-muted-foreground">Select a reading mode that matches your level</p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                {/* Classic Adventure Mode */}
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  <Card
+                    className="cursor-pointer transition-all duration-300 hover:scale-[1.03] bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-red-500/15 border-amber-500/40 hover:border-amber-400/60 hover:shadow-lg hover:shadow-amber-500/10"
+                    onClick={() => handleModeSelect('classic')}
+                  >
+                    <CardContent className="p-6 text-center space-y-4">
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500/30 to-red-500/20 flex items-center justify-center mx-auto border border-amber-500/30">
+                        <Shield className="w-8 h-8 text-amber-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold">Classic Adventure</h3>
+                        <span className="inline-block mt-1 text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-full">
+                          Grades K–5
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        Epic fantasy quests with knights, dragons, and magic. Perfect for younger readers building foundational skills.
+                      </p>
+                      <Button className="w-full bg-gradient-to-r from-amber-500 to-red-500 hover:from-amber-600 hover:to-red-600 text-white font-semibold">
+                        ⚔️ Start Classic
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+
+                {/* Agent Mode */}
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <Card
+                    className="cursor-pointer transition-all duration-300 hover:scale-[1.03] bg-gradient-to-br from-cyan-500/15 via-indigo-500/10 to-purple-500/15 border-cyan-500/40 hover:border-cyan-400/60 hover:shadow-lg hover:shadow-cyan-500/10"
+                    onClick={() => handleModeSelect('agent')}
+                  >
+                    <CardContent className="p-6 text-center space-y-4">
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500/30 to-purple-500/20 flex items-center justify-center mx-auto border border-cyan-500/30">
+                        <Search className="w-8 h-8 text-cyan-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold">Agent Mode</h3>
+                        <span className="inline-block mt-1 text-xs font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-3 py-1 rounded-full">
+                          Grades 6–12
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        Cyber spy missions with hacking, espionage, and strategy. Designed for advanced readers tackling complex texts.
+                      </p>
+                      <Button className="w-full bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white font-semibold">
+                        🕵️ Start Agent
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="main-dashboard"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, y: -20 }}
             >
-              <BarChart3 className="w-4 h-4 mr-2" />
-              View My Reading Progress
-            </Button>
-          </motion.div>
-        )}
+              {/* Welcome Section */}
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-8"
+              >
+                <h1 className="text-2xl sm:text-3xl font-bold">
+                  {isSignedIn ? (
+                    <>Welcome back, <span className="text-yellow-400">{profile?.full_name?.split(' ')[0] || 'Adventurer'}</span>! 🎮</>
+                  ) : (
+                    <>Welcome to <span className="text-yellow-400">NabuLearn</span>! 🎮</>
+                  )}
+                </h1>
+                <p className="text-muted-foreground mt-1">
+                  {isSignedIn ? 'Choose your reading adventure' : 'Sign in to track your progress and play'}
+                </p>
+              </motion.div>
+
+              {/* Sign In CTA for unauthenticated users */}
+              {!isSignedIn && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-8"
+                >
+                  <Card className="bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border-yellow-500/30">
+                    <CardContent className="flex items-center justify-between p-4">
+                      <div>
+                        <h3 className="font-semibold">Sign in to start your adventure</h3>
+                        <p className="text-sm text-muted-foreground">Track your progress, earn XP, and battle enemies!</p>
+                      </div>
+                      <Button
+                        onClick={() => navigate('/game/auth')}
+                        className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
+                      >
+                        <LogIn className="w-4 h-4 mr-1" />
+                        Sign In
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+
+              {/* Quick Stats — only for signed-in users */}
+              {isSignedIn && (
+                <div className="grid grid-cols-3 gap-3 mb-8">
+                  <Card className="bg-gradient-to-br from-yellow-500/10 to-amber-500/10 border-yellow-500/20">
+                    <CardContent className="p-3 text-center">
+                      <Star className="w-5 h-5 text-yellow-400 mx-auto mb-1" />
+                      <div className="text-lg font-bold text-yellow-400">{xp.toLocaleString()}</div>
+                      <div className="text-xs text-muted-foreground">Total XP</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-br from-orange-500/10 to-red-500/10 border-orange-500/20">
+                    <CardContent className="p-3 text-center">
+                      <Flame className="w-5 h-5 text-orange-400 mx-auto mb-1" />
+                      <div className="text-lg font-bold text-orange-400">{readingStats?.current_streak_days ?? 0}</div>
+                      <div className="text-xs text-muted-foreground">Day Streak</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-br from-purple-500/10 to-violet-500/10 border-purple-500/20">
+                    <CardContent className="p-3 text-center">
+                      <BookOpen className="w-5 h-5 text-purple-400 mx-auto mb-1" />
+                      <div className="text-lg font-bold text-purple-400">{readingStats?.total_words_read?.toLocaleString() ?? 0}</div>
+                      <div className="text-xs text-muted-foreground">Words Read</div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {/* Mode Cards */}
+              <div className="grid gap-4">
+                {modeCards.map((card, i) => (
+                  <motion.div
+                    key={card.title}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                  >
+                    <Card
+                      className={`cursor-pointer transition-all duration-300 hover:scale-[1.02] bg-gradient-to-r ${card.color} ${card.borderColor} ${
+                        card.primary ? 'ring-2 ring-red-500/30' : ''
+                      }`}
+                      onClick={card.onClick}
+                    >
+                      <CardContent className={`flex items-center gap-4 ${card.primary ? 'p-6' : 'p-4'}`}>
+                        <div className={`${card.primary ? 'w-14 h-14' : 'w-10 h-10'} rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0`}>
+                          <card.icon className={`${card.primary ? 'w-7 h-7' : 'w-5 h-5'} ${card.iconColor}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className={`font-bold ${card.primary ? 'text-xl' : 'text-base'}`}>
+                            {card.title}
+                            {card.primary && <span className="ml-2 text-xs bg-red-500/30 text-red-300 px-2 py-0.5 rounded-full">Featured</span>}
+                            {card.requiresAuth && !isSignedIn && <span className="ml-2 text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Sign in required</span>}
+                          </h3>
+                          <p className="text-sm text-muted-foreground mt-0.5">{card.description}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* View Progress CTA — only for signed-in users */}
+              {isSignedIn && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="mt-8"
+                >
+                  <Button
+                    onClick={() => navigate('/game/analytics')}
+                    variant="outline"
+                    className="w-full border-white/20 hover:bg-white/10"
+                  >
+                    <BarChart3 className="w-4 h-4 mr-2" />
+                    View My Reading Progress
+                  </Button>
+                </motion.div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
     </div>
   );
