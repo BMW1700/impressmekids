@@ -407,8 +407,8 @@ export const VocabularyTracker = ({
                 <BookOpen className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h2 className="text-xl font-black text-white">Word Collection</h2>
-                <p className="text-sm text-purple-300">Power Words from your adventures</p>
+                <h2 className="text-xl font-black text-white">{getStoredTheme() === 'agent' ? 'Intel Database' : 'Word Collection'}</h2>
+                <p className="text-sm text-purple-300">{getStoredTheme() === 'agent' ? 'Keywords decoded from missions' : 'Power Words from your adventures'}</p>
               </div>
             </div>
             {onClose && (
@@ -526,7 +526,7 @@ export const VocabularyTracker = ({
               <div className="text-center py-12">
                 <BookOpen className="w-12 h-12 text-slate-600 mx-auto mb-3" />
                 <p className="text-slate-400">No words collected yet!</p>
-                <p className="text-sm text-slate-500">Read stories to collect Power Words</p>
+                <p className="text-sm text-slate-500">{getStoredTheme() === 'agent' ? 'Complete missions to decode keywords' : 'Read stories to collect Power Words'}</p>
               </div>
             )}
           </ScrollArea>

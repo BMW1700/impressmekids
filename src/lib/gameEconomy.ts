@@ -8,7 +8,8 @@ export interface GameCurrency {
 }
 
 export type ItemRarity = 'common' | 'rare' | 'epic' | 'legendary';
-export type SkinCharacter = 'valor' | 'elara' | 'ella';
+export type SkinCharacter = 'valor' | 'elara' | 'ella' | 'agent_x' | 'cipher' | 'shadow';
+export type ItemTheme = 'classic' | 'agent' | 'shared';
 
 export interface StoreItem {
   id: string;
@@ -21,8 +22,9 @@ export interface StoreItem {
   value?: number;
   unlocked?: boolean;
   rarity: ItemRarity;
-  character?: SkinCharacter; // For skins - which character this is for
-  skinVariant?: string; // For skins - the variant key to use
+  character?: SkinCharacter;
+  skinVariant?: string;
+  theme?: ItemTheme; // 'classic', 'agent', or 'shared' (default shared for potions/upgrades)
 }
 
 export interface CoinDrop {
