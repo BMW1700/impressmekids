@@ -10,6 +10,7 @@ import { DailyRewardCalendar } from "./DailyRewardCalendar";
 import { AchievementShowcase } from "./AchievementShowcase";
 import { PetCompanionPanel } from "./PetCompanionPanel";
 import { RPGStore } from "./RPGStore";
+import { getStoredTheme } from "@/lib/gameTheme";
 
 interface RPGPlayerHUDProps {
   studentId: string;
@@ -34,13 +35,20 @@ export const RPGPlayerHUD = ({
   const { equippedPet, equippedPetData } = usePlayerPets(studentId);
   const { ownedItems, purchaseItem, equipSkin, getEquippedSkin } = usePlayerInventory(studentId);
 
-  const achievementStats = getTotalStats();
-  
+  const theme = getStoredTheme();
+  const isAgent = theme === 'agent';
+
   // Get equipped skins for character previews
-  const equippedSkins = {
-    valor: getEquippedSkin('valor') || undefined,
-    elara: getEquippedSkin('elara') || undefined,
-  };
+  const equippedSkins = isAgent
+    ? {
+        agent_x: getEquippedSkin('agent_x') || undefined,
+        cipher: getEquippedSkin('cipher') || undefined,
+        shadow: getEquippedSkin('shadow') || undefined,
+      }
+    : {
+        valor: getEquippedSkin('valor') || undefined,
+        elara: getEquippedSkin('elara') || undefined,
+      };
 
   return (
     <>
