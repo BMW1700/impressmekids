@@ -384,7 +384,6 @@ export const RPGCharacter = ({
             currentHp={currentHp}
             maxHp={character.maxHp}
             size="medium"
-            showHealthBar={true}
           />
         );
       }
@@ -396,7 +395,6 @@ export const RPGCharacter = ({
             currentHp={currentHp}
             maxHp={character.maxHp}
             size="medium"
-            showHealthBar={true}
           />
         );
       }
@@ -408,7 +406,6 @@ export const RPGCharacter = ({
             currentHp={currentHp}
             maxHp={character.maxHp}
             size="medium"
-            showHealthBar={true}
           />
         );
       }
@@ -444,7 +441,6 @@ export const RPGCharacter = ({
             currentHp={currentHp}
             maxHp={character.maxHp}
             size="medium"
-            showHealthBar={true}
           />
         );
       }
@@ -456,7 +452,6 @@ export const RPGCharacter = ({
             currentHp={currentHp}
             maxHp={character.maxHp}
             size="medium"
-            showHealthBar={true}
           />
         );
       }
@@ -468,7 +463,6 @@ export const RPGCharacter = ({
             currentHp={currentHp}
             maxHp={character.maxHp}
             size="medium"
-            showHealthBar={true}
           />
         );
       }
