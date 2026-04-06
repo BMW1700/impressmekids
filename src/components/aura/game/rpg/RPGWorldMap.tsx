@@ -43,6 +43,7 @@ interface RPGWorldMapProps {
   studentId?: string;
   gold?: number;
   xp?: number;
+  gradeMode?: string;
 }
 
 const worldIcons: Record<number, React.ReactNode> = {
@@ -204,6 +205,7 @@ export const RPGWorldMap = ({
   studentId,
   gold = 0,
   xp = 0,
+  gradeMode,
 }: RPGWorldMapProps) => {
   const [previousBookCount] = useState(totalBooksRescued);
 
@@ -559,14 +561,14 @@ export const RPGWorldMap = ({
       {/* Reading Progress Panel - Fixed position on left side */}
       {studentId && (
         <div className="fixed left-4 top-1/2 -translate-y-1/2 z-20 hidden lg:block">
-          <ReadingProgressPanel studentId={studentId} />
+          <ReadingProgressPanel studentId={studentId} gradeMode={gradeMode} />
         </div>
       )}
 
       {/* Mobile Reading Progress Panel */}
       {studentId && (
         <div className="lg:hidden mt-4 px-4 relative z-10">
-          <ReadingProgressPanel studentId={studentId} />
+          <ReadingProgressPanel studentId={studentId} gradeMode={gradeMode} />
         </div>
       )}
 

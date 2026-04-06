@@ -47,9 +47,9 @@ interface WeeklyProgressData {
   totalReadingTimeMinutes: number;
 }
 
-export const useWeeklyProgress = (studentId: string | undefined, weeksToFetch = 4) => {
+export const useWeeklyProgress = (studentId: string | undefined, weeksToFetch = 4, gradeMode?: string) => {
   return useQuery({
-    queryKey: ["weekly-progress", studentId, weeksToFetch],
+    queryKey: ["weekly-progress", studentId, weeksToFetch, gradeMode],
     queryFn: async (): Promise<WeeklyProgressData> => {
       if (!studentId) throw new Error("No student ID");
 
@@ -60,14 +60,16 @@ export const useWeeklyProgress = (studentId: string | undefined, weeksToFetch = 
 
       // Fetch ALL data in parallel with single queries per table
       // NOTE: Session IDs for word_readings are now derived from the date-bounded sessions query
-      const [sessionsResult, auraResult] = await Promise.all([
-        supabase
+      const sessionsQuery = supabase
           .from("reading_sessions")
           .select("id, wpm, accuracy_percent, fluency_score, words_read, phoneme_accuracy, created_at, duration_seconds, reading_mode")
           .eq("student_id", studentId)
           .gte("created_at", oldestWeekStart.toISOString())
-          .lte("created_at", newestWeekEnd.toISOString())
-          .limit(100), // Cap to prevent huge fetches
+          .lte("created_at", newestWeekEnd.toISOString());
+      if (gradeMode) sessionsQuery.eq("grade_mode", gradeMode);
+
+      const [sessionsResult, auraResult] = await Promise.all([
+        sessionsQuery.limit(100),
         supabase
           .from("aura_records")
           .select("clarity, confidence, wpm, created_at, duration_s")

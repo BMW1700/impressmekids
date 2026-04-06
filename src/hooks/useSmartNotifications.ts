@@ -11,9 +11,9 @@ interface SmartNotification {
   };
 }
 
-export const useSmartNotifications = () => {
+export const useSmartNotifications = (gradeMode?: string) => {
   const { data: notifications, isLoading } = useQuery({
-    queryKey: ['smart-notifications'],
+    queryKey: ['smart-notifications', gradeMode],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
@@ -21,11 +21,12 @@ export const useSmartNotifications = () => {
       const notifications: SmartNotification[] = [];
 
       // Fetch student reading stats
-      const { data: stats } = await supabase
+      let statsQuery = supabase
         .from('student_reading_stats')
         .select('*')
-        .eq('student_id', user.id)
-        .single();
+        .eq('student_id', user.id);
+      if (gradeMode) statsQuery = statsQuery.eq('grade_mode', gradeMode);
+      const { data: stats } = await statsQuery.single();
 
       if (!stats) return notifications;
 
@@ -62,10 +63,12 @@ export const useSmartNotifications = () => {
       }
 
       // Improvement Notification (WPM growth)
-      const { data: recentSessions } = await supabase
+      let sessionsQuery = supabase
         .from('reading_sessions')
         .select('wpm')
-        .eq('student_id', user.id)
+        .eq('student_id', user.id);
+      if (gradeMode) sessionsQuery = sessionsQuery.eq('grade_mode', gradeMode);
+      const { data: recentSessions } = await sessionsQuery
         .order('created_at', { ascending: false })
         .limit(10);
 
@@ -111,11 +114,13 @@ export const useSmartNotifications = () => {
       }
 
       // Category Completion Recommendation
-      const { data: progress } = await supabase
+      let progressQuery = supabase
         .from('student_reading_progress')
         .select('reading_library(category)')
         .eq('student_id', user.id)
         .eq('completed', true);
+      if (gradeMode) progressQuery = progressQuery.eq('grade_mode', gradeMode);
+      const { data: progress } = await progressQuery;
 
       if (progress) {
         const categoryCounts: Record<string, number> = {};

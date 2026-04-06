@@ -111,12 +111,15 @@ export const GuidedReadingFlow = ({
         }
         
         if (storyId) {
-          // Check for existing progress
+          const storyGradeMode = getGradeModeFromGrade(story.grade_level);
+          
+          // Check for existing progress scoped by grade_mode
           const { data: existingProgress } = await supabase
             .from('student_reading_progress')
             .select('*')
             .eq('student_id', studentId)
             .eq('story_id', storyId)
+            .eq('grade_mode', storyGradeMode)
             .single();
           
           if (existingProgress) {
@@ -133,7 +136,7 @@ export const GuidedReadingFlow = ({
               })
               .eq('id', existingProgress.id);
           } else {
-            // Create new progress
+            // Create new progress with grade_mode
             await supabase
               .from('student_reading_progress')
               .insert({
@@ -144,6 +147,7 @@ export const GuidedReadingFlow = ({
                 best_wpm: stats.wpm,
                 best_accuracy: stats.accuracy,
                 completed_at: new Date().toISOString(),
+                grade_mode: storyGradeMode,
               });
           }
           
