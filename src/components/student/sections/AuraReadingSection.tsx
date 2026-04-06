@@ -598,6 +598,32 @@ export const AuraReadingSection = () => {
         </Card>
       )}
 
+      {/* Grade Mode Selector */}
+      <div className="flex justify-center">
+        <div className="inline-flex items-center rounded-lg border bg-card p-1 gap-1">
+          <button
+            onClick={() => { setStoredTheme('classic'); setGameTheme('classic'); }}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              currentGradeMode === 'k5'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            📚 Grades K-5
+          </button>
+          <button
+            onClick={() => { setStoredTheme('agent'); setGameTheme('agent'); }}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              currentGradeMode === '6to12'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            🕵️ Grades 6-12
+          </button>
+        </div>
+      </div>
+
       <Tabs defaultValue="stories" className="w-full">
         <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
           <TabsList className="inline-flex w-max md:grid md:w-full md:grid-cols-6 min-w-max">
