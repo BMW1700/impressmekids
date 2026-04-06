@@ -43,6 +43,7 @@ interface RPGWorldMapProps {
   studentId?: string;
   gold?: number;
   xp?: number;
+  gradeMode?: string;
 }
 
 const worldIcons: Record<number, React.ReactNode> = {

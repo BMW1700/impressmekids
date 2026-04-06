@@ -10,24 +10,28 @@ import { FullReadingStatsModal } from "./FullReadingStatsModal";
 interface ReadingProgressPanelProps {
   studentId: string;
   studentName?: string;
+  gradeMode?: string;
 }
 
-export const ReadingProgressPanel = ({ studentId, studentName = "Reader" }: ReadingProgressPanelProps) => {
+export const ReadingProgressPanel = ({ studentId, studentName = "Reader", gradeMode }: ReadingProgressPanelProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const { data: stats, isLoading } = useQuery({
-    queryKey: ['reading-progress-panel', studentId],
+    queryKey: ['reading-progress-panel', studentId, gradeMode],
     queryFn: async () => {
-      const { data: readingStats } = await supabase
+      let statsQuery = supabase
         .from('student_reading_stats')
         .select('*')
-        .eq('student_id', studentId)
-        .maybeSingle();
+        .eq('student_id', studentId);
+      if (gradeMode) statsQuery = statsQuery.eq('grade_mode', gradeMode);
+      const { data: readingStats } = await statsQuery.maybeSingle();
 
-      const { data: sessions } = await supabase
+      let sessionsQuery = supabase
         .from('reading_sessions')
         .select('accuracy_percent, wpm, wcpm, words_read')
-        .eq('student_id', studentId)
+        .eq('student_id', studentId);
+      if (gradeMode) sessionsQuery = sessionsQuery.eq('grade_mode', gradeMode);
+      const { data: sessions } = await sessionsQuery
         .order('created_at', { ascending: false })
         .limit(20);
 

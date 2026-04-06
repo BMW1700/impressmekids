@@ -41,6 +41,7 @@ interface FullReadingStatsModalProps {
   onClose: () => void;
   studentId: string;
   studentName?: string;
+  gradeMode?: string;
 }
 
 import { ipaToEnglish, ipaToFriendlyLabel } from '@/lib/phonemeDisplayUtils';
@@ -60,22 +61,24 @@ export const FullReadingStatsModal = ({
   isOpen, 
   onClose, 
   studentId,
-  studentName = "Reader"
+  studentName = "Reader",
+  gradeMode
 }: FullReadingStatsModalProps) => {
   const [activeTab, setActiveTab] = useState("overview");
 
   // Fetch weekly progress data
-  const { data: progress, isLoading: progressLoading } = useWeeklyProgress(studentId, 8);
+  const { data: progress, isLoading: progressLoading } = useWeeklyProgress(studentId, 8, gradeMode);
 
   // Fetch campaign progress for RPG stats
   const { data: campaignProgress } = useQuery({
-    queryKey: ['campaign-progress-modal', studentId],
+    queryKey: ['campaign-progress-modal', studentId, gradeMode],
     queryFn: async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('campaign_progress')
         .select('*')
-        .eq('student_id', studentId)
-        .maybeSingle();
+        .eq('student_id', studentId);
+      if (gradeMode) query = query.eq('grade_mode', gradeMode);
+      const { data } = await query.maybeSingle();
       return data;
     },
     enabled: !!studentId && isOpen,
@@ -83,13 +86,14 @@ export const FullReadingStatsModal = ({
 
   // Fetch reading stats
   const { data: readingStats } = useQuery({
-    queryKey: ['reading-stats-modal', studentId],
+    queryKey: ['reading-stats-modal', studentId, gradeMode],
     queryFn: async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('student_reading_stats')
         .select('*')
-        .eq('student_id', studentId)
-        .maybeSingle();
+        .eq('student_id', studentId);
+      if (gradeMode) query = query.eq('grade_mode', gradeMode);
+      const { data } = await query.maybeSingle();
       return data;
     },
     enabled: !!studentId && isOpen,
@@ -112,12 +116,14 @@ export const FullReadingStatsModal = ({
 
   // Fetch recent sessions
   const { data: recentSessions } = useQuery({
-    queryKey: ['recent-sessions-modal', studentId],
+    queryKey: ['recent-sessions-modal', studentId, gradeMode],
     queryFn: async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('reading_sessions')
         .select('id, created_at, wpm, wcpm, accuracy_percent, fluency_score, words_read, reading_mode, fluency_level')
-        .eq('student_id', studentId)
+        .eq('student_id', studentId);
+      if (gradeMode) query = query.eq('grade_mode', gradeMode);
+      const { data } = await query
         .order('created_at', { ascending: false })
         .limit(10);
       return data || [];
