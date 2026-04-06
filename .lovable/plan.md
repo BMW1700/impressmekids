@@ -1,152 +1,65 @@
 
+Fix the grade-mode separation comprehensively, not just in one panel.
 
-# Split Aura Reading into K-5 / 6-12 Grade Modes — Full Finalized Plan
+1. Scope every affected read to the active mode
+- Update `ReadingProgressPanel` to accept `gradeMode` and filter both `student_reading_stats` and `reading_sessions` by it.
+- Pass `gradeMode` from `AuraPractice` and `AuraReadingSection` into `RPGWorldMap`, then into `ReadingProgressPanel`.
+- Update `FullReadingStatsModal` to accept `gradeMode` and filter:
+  - `campaign_progress`
+  - `student_reading_stats`
+  - `reading_sessions`
+  - weekly-progress hook input
+- Include `gradeMode` in all related React Query keys so caches stay separate.
 
-## Summary
+2. Fix the Bookshelf data leak
+- `ReadingBookshelf` is currently unfiltered and is almost certainly why both modes show the same books/stats.
+- Add a `gradeMode` prop and filter `student_reading_progress` by `grade_mode`.
+- Pass `currentGradeMode` from both `AuraPractice` and `AuraReadingSection` into `ReadingBookshelf`.
+- This ensures:
+  - K–5 shows only grades K/1/2/3/4/5 progress
+  - 6–12 shows only grades 6/7/8/9/10/11/12 progress
 
-Create two fully independent reading systems mapped to RPG modes, with separate data, scores, and analytics. Users can switch between them with tabs, and all analytics include a grade-mode dropdown.
+3. Fix Story Library completion / bookshelf indicators
+- In `StoryLibrary`, the student progress lookup currently reads all `student_reading_progress` rows for the user.
+- Filter that query by `grade_mode` too, so “completed”, “in bookshelf”, and related UI state are mode-specific.
+- Also pass the active `gradeMode` into `useCampaignProgress` there so campaign summaries match the selected mode.
 
-## Book Grade Mapping
+4. Fix weekly/history analytics inside the modal
+- `useWeeklyProgress` currently aggregates `reading_sessions` without mode filtering.
+- Extend it to accept optional `gradeMode` and filter `reading_sessions` by that mode.
+- Update all callers that are mode-specific to pass it, especially the RPG/reading stats modal.
+- Keep non-mode-specific callers unchanged by making the prop optional.
 
-- **Grades K-5 Mode**: Books with `grade_level` 0 (K), 1, 2, 3, 4, or 5 — sourced from `curatedStories`
-- **Grades 6-12 Mode**: Books with `grade_level` 6, 7, 8, 9, 10, 11, or 12 — sourced from `agentStories`
-- Community stories from DB (`reading_library`) filtered by `grade_level` range
+5. Verify write-side separation where needed
+- Ensure `student_reading_progress` writes in `GuidedReadingFlow` include the story’s computed grade mode on both insert and update matching.
+- If existing-progress lookup only matches `student_id + story_id`, change it to also include `grade_mode`, so the same story title/record cannot merge across modes.
+- Ensure any bookshelf add/remove actions in `StoryCard` also read/write/delete using the active `gradeMode`, otherwise saved-book state can still bleed between modes.
 
-## RPG Mode Mapping
+6. Fix remaining user-facing “mixed data” sources
+- `useSmartNotifications` currently reads unfiltered `student_reading_stats`, `reading_sessions`, and `student_reading_progress`; make it accept optional `gradeMode` and filter when used on mode-specific reading pages.
+- Review mode-specific game stats surfaces like `GameAnalytics` / `GameDashboard` and ensure any `student_reading_stats` reads shown in mode context use the active mode.
 
-- **Classic Adventure RPG** = Grades K-5 — shares all scores/progress
-- **Agent RPG** = Grades 6-12 — shares all scores/progress
-- Selecting a grade tab auto-syncs the RPG theme (`classic` ↔ `agent`)
+7. Protect against cache contamination
+- Any query that now depends on mode must include `gradeMode` in its query key.
+- This is important because even correct SQL filters can still show stale mixed results if React Query reuses a shared cache key.
 
-## Phase 1: Database Migration
+8. Expected outcome after the fix
+- Grades K–5 mode will only show data from books/stories with grade levels K, 1, 2, 3, 4, 5.
+- Grades 6–12 mode will only show data from books/stories with grade levels 6, 7, 8, 9, 10, 11, 12.
+- Bookshelf counts, reading stats, RPG sidebar stats, modal history, campaign summaries, and completion badges will all be independent per mode.
 
-Add `grade_mode` column (text, default `'k5'`, validated via trigger to `'k5'` or `'6to12'`) to:
-
-| Table | Purpose |
-|-------|---------|
-| `reading_sessions` | Tag each reading session |
-| `campaign_progress` | Separate RPG progress per mode |
-| `student_reading_stats` | Separate stats per mode |
-| `student_reading_progress` | Separate book completion per mode |
-| `campaign_battle_sessions` | Tag battles by mode |
-
-Also:
-- `profiles` gets `default_grade_mode` column (text, default `'k5'`)
-- Drop existing `UNIQUE(student_id)` on `campaign_progress`, replace with `UNIQUE(student_id, grade_mode)`
-- Update `upsert_reading_stats` RPC to accept `p_grade_mode` parameter and upsert per `(student_id, grade_mode)`
-
-## Phase 2: Core Infrastructure
-
-**`src/lib/gameTheme.ts`**
-- Add `getGradeMode()`: returns `'k5'` when theme is `classic`, `'6to12'` when `agent`
-- Add `getGradeModeFromGrade(grade: number)`: returns `'k5'` for 0-5, `'6to12'` for 6-12
-- Add `gradeMode` type export
-
-**`src/lib/updateStudentReadingStats.ts`**
-- Accept `gradeMode` parameter, pass `p_grade_mode` to the RPC
-
-**`src/hooks/useCampaignProgress.ts`**
-- Accept `gradeMode` parameter
-- All queries filter by `grade_mode`
-- All writes (`upsert`, `initializeProgress`, `completeBattle`) include `grade_mode`
-- Change `onConflict: 'student_id'` to `onConflict: 'student_id,grade_mode'`
-- Query key includes `gradeMode`
-
-**`src/hooks/useReadingSessions.ts`**
-- Accept optional `gradeMode` filter, apply `.eq('grade_mode', gradeMode)` when set
-
-## Phase 3: UI — Grade Mode Tabs on Reading Pages
-
-**`src/components/aura/StoryLibrary.tsx`**
-- Add tab selector at top: "Grades K-5" | "Grades 6-12"
-- K-5 tab: show `curatedStories` + community stories with `grade_level` 0-5, grade filter chips `['K','1','2','3','4','5']`
-- 6-12 tab: show `agentStories` + community stories with `grade_level` 6-12, grade filter chips `['6','7','8','9','10','11','12']`
-- Tab selection syncs `gameTheme` (K-5 → classic, 6-12 → agent)
-
-**`src/pages/student/AuraPractice.tsx`**
-- Add K-5 / 6-12 tab bar at the top level
-- Default tab from `profiles.default_grade_mode`
-- Tab switch sets `gameTheme` and passes `gradeMode` to all child components
-
-**`src/components/student/sections/AuraReadingSection.tsx`**
-- Same tab bar for the embedded student dashboard version
-
-## Phase 4: Data Writes — Tag Everything
-
-**`src/components/aura/GuidedReadingFlow.tsx`**
-- When saving to `reading_sessions`, include `grade_mode` derived from the story's `grade_level` using `getGradeModeFromGrade()`
-
-**`src/components/aura/game/rpg/RPGBattleArena.tsx`**
-- Battle completion writes include `grade_mode` from current theme
-
-**`src/hooks/useCampaignProgress.ts`** (already covered in Phase 2)
-
-## Phase 5: Analytics — Grade Mode Dropdown
-
-**`src/pages/teacher/AuraAnalytics.tsx`**
-- Add dropdown selector at top: "Aura Reading – Grades K-5" / "Aura Reading – Grades 6-12"
-- All data queries filter by selected `grade_mode`
-- Default selection from teacher's `default_grade_mode` preference
-
-**`src/components/aura/ReadingProgressDashboard.tsx`**
-- Accept `gradeMode` prop, filter `reading_sessions` query by it
-
-**Other analytics components** (`ClassroomAuraOverview`, `StudentAuraMetrics`, `KidFriendlyProgress`, `AuraProgressChart`, `WeeklyProgress`)
-- Accept and pass through `gradeMode` filter
-
-## Phase 6: Default Preference
-
-**Profile settings page**
-- Add "Default Reading Mode" selector (K-5 or 6-12)
-- Writes to `profiles.default_grade_mode`
-- On page load, all tabs and dropdowns auto-select the user's default
-
-## Data Flow
-
-```text
-User selects "Grades 6-12" tab
-  → gameTheme set to 'agent', gradeMode = '6to12'
-  → StoryLibrary shows agentStories (grades 6-12)
-  → RPG loads agent worlds/enemies/spells
-  → reading_sessions saved with grade_mode='6to12'
-  → campaign_progress row for (student_id, '6to12')
-  → student_reading_stats row for (student_id, '6to12')
-  → Analytics filtered by grade_mode='6to12'
-
-User selects "Grades K-5" tab
-  → gameTheme set to 'classic', gradeMode = 'k5'
-  → Completely independent data pipeline
-```
-
-## Score & Data Separation
-
-- K-5 and 6-12 are **completely independent** — no shared scores, progress, stats, or campaign data
-- A student can have progress in both modes simultaneously
-- Switching modes shows only that mode's data
-
-## Files Modified
-
-1. **Database migration** — `grade_mode` on 5 tables + update unique constraint + update RPC + profile preference
-2. `src/lib/gameTheme.ts` — `getGradeMode()`, `getGradeModeFromGrade()`, type exports
-3. `src/lib/updateStudentReadingStats.ts` — pass `grade_mode` to RPC
-4. `src/hooks/useCampaignProgress.ts` — filter + write `grade_mode`, update conflict key
-5. `src/hooks/useReadingSessions.ts` — filter by `grade_mode`
-6. `src/components/aura/StoryLibrary.tsx` — grade mode tabs, switch story sets + grade chips
-7. `src/pages/student/AuraPractice.tsx` — K-5/6-12 tab bar, default from profile
-8. `src/components/student/sections/AuraReadingSection.tsx` — same tab bar
-9. `src/components/aura/GuidedReadingFlow.tsx` — tag writes with `grade_mode`
-10. `src/components/aura/game/rpg/RPGBattleArena.tsx` — tag writes with `grade_mode`
-11. `src/pages/teacher/AuraAnalytics.tsx` — grade mode dropdown filter
-12. `src/components/aura/ReadingProgressDashboard.tsx` — filter by `grade_mode`
-13. Analytics sub-components — pass through `gradeMode`
-14. Profile settings — default mode selector
-
-## Execution Order
-
-1. Database migration (foundation)
-2. Core infrastructure (theme helpers, hooks)
-3. UI tabs on reading pages
-4. Tag all data writes
-5. Analytics filters
-6. Default preference
-
+Technical details
+- Key files to update:
+  - `src/components/aura/game/rpg/ReadingProgressPanel.tsx`
+  - `src/components/aura/game/rpg/RPGWorldMap.tsx`
+  - `src/components/aura/game/rpg/FullReadingStatsModal.tsx`
+  - `src/components/aura/ReadingBookshelf.tsx`
+  - `src/components/aura/StoryLibrary.tsx`
+  - `src/components/aura/StoryCard.tsx`
+  - `src/components/aura/GuidedReadingFlow.tsx`
+  - `src/hooks/useWeeklyProgress.ts`
+  - `src/hooks/useSmartNotifications.ts`
+  - `src/pages/student/AuraPractice.tsx`
+  - `src/components/student/sections/AuraReadingSection.tsx`
+- Data model already supports this: `student_reading_progress` and `student_reading_stats` both have `grade_mode`.
+- The real issue is incomplete propagation of `gradeMode` through read/write paths, not the database schema itself.
