@@ -1087,7 +1087,7 @@ export const RPGBattleArena = ({
     if (!bossGateTriggered && hpPercent <= 25 && hpPercent > 0 && 
         (enemy.type === 'boss' || enemy.type === 'final_boss' || enemy.type === 'elite')) {
       setBossGateTriggered(true);
-      setEnemyAbilityMessage(`${enemy.name} raises a LAST STAND BARRIER!`);
+      setEnemyAbilityMessage(`${enemy.name} ${getStoredTheme() === 'agent' ? 'deploys FIREWALL BARRIER!' : 'raises a LAST STAND BARRIER!'}`);
       battleSounds.miniGameStart();
       setTimeout(() => {
         setEnemyAbilityMessage(null);
@@ -1103,7 +1103,7 @@ export const RPGBattleArena = ({
       if (shieldData) {
         setTriggeredThresholds(prev => new Set([...prev, 65]));
         setVocabShieldData(shieldData);
-        setEnemyAbilityMessage(`${enemy.name} activates WORD SHIELD!`);
+        setEnemyAbilityMessage(`${enemy.name} ${getStoredTheme() === 'agent' ? 'activates ENCRYPTION!' : 'activates WORD SHIELD!'}`);
         battleSounds.miniGameStart();
         setTimeout(() => {
           setEnemyAbilityMessage(null);
@@ -1119,7 +1119,7 @@ export const RPGBattleArena = ({
       if (clueData) {
         setTriggeredThresholds(prev => new Set([...prev, 40]));
         setContextClueData(clueData);
-        setEnemyAbilityMessage(`${enemy.name} casts WORD FOG!`);
+        setEnemyAbilityMessage(`${enemy.name} ${getStoredTheme() === 'agent' ? 'jams COMMS SIGNAL!' : 'casts WORD FOG!'}`);
         battleSounds.miniGameStart();
         setTimeout(() => {
           setEnemyAbilityMessage(null);
@@ -1179,7 +1179,20 @@ export const RPGBattleArena = ({
         setPhase('rolling_boulders');
       }, 1000);
     } else {
-      setEnemyAbilityMessage(`${enemy.name} summons WORD PRISON!`);
+      const isAgent = getStoredTheme() === 'agent';
+      if (isAgent) {
+        const agentAttacks: Record<string, string> = {
+          minion: 'deploys PIPE BARRAGE!',
+          guard: 'fires SUPPRESSION VOLLEY!',
+          elite: 'uploads MALWARE SWARM!',
+          boss: 'activates SCORCHED EARTH PROTOCOL!',
+          final_boss: 'activates SCORCHED EARTH PROTOCOL!',
+        };
+        const msg = agentAttacks[currentEnemyType] || 'launches CYBER ASSAULT!';
+        setEnemyAbilityMessage(`${enemy.name} ${msg}`);
+      } else {
+        setEnemyAbilityMessage(`${enemy.name} summons WORD PRISON!`);
+      }
       setTimeout(() => {
         setEnemyAbilityMessage(null);
         setPhase('asteroid_barrage');
@@ -1443,7 +1456,7 @@ export const RPGBattleArena = ({
     setInventory(prev => ({ ...prev, [itemKey]: prev[itemKey] - 1 }));
     
     if (item.effect === 'heal_hp') {
-      setPlayerHp(prev => Math.min(heroKnight.maxHp, prev + item.value));
+      setPlayerHp(prev => Math.min(playerCharacter.maxHp, prev + item.value));
       // Clear poison on healing
       setIsPoisoned(false);
       setPoisonDamage(0);
@@ -1690,7 +1703,8 @@ export const RPGBattleArena = ({
           setDamageAmount(0);
           
           // Show charging indicator
-          setComboAnnouncement(`⚡ CHARGING ${newChargeCount}/5`);
+          const isAgentTheme = getStoredTheme() === 'agent';
+          setComboAnnouncement(isAgentTheme ? `💻 COMPILING ${newChargeCount}/5` : `⚡ CHARGING ${newChargeCount}/5`);
           setComboPowerLevel('power');
           setTimeout(() => setComboAnnouncement(null), 600);
         } else {
@@ -1702,7 +1716,8 @@ export const RPGBattleArena = ({
           setDamageAmount(actualDamage);
           
           // Epic announcement
-          setComboAnnouncement('⚡ PLASMA BARRAGE! ×3 ⚡');
+          const isAgentTheme = getStoredTheme() === 'agent';
+          setComboAnnouncement(isAgentTheme ? '💻 DATA BURST DEPLOYED! ×3 💻' : '⚡ PLASMA BARRAGE! ×3 ⚡');
           setComboPowerLevel('ultra');
           battleSounds.lightningCrack();
           battleSounds.comboSuccess();
