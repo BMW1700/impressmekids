@@ -182,6 +182,7 @@ export const ReadingProgressPanel = ({ studentId, studentName = "Reader", gradeM
         onClose={() => setIsModalOpen(false)}
         studentId={studentId}
         studentName={studentName}
+        gradeMode={gradeMode}
       />
     </>
   );
