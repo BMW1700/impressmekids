@@ -1,55 +1,84 @@
 
-The issue is not that the app “forgot” the active mode in this panel. The issue is that the leveling logic itself is still wrong.
 
-What is actually broken
-- `src/components/aura/game/rpg/ReadingProgressPanel.tsx`
-  - It correctly filters reading data by `gradeMode`.
-  - But then it converts WPM into a single global ladder:
-    - `Pre-K`, `K`, `1st` ... `8th+`
-  - That means Agent mode can still show `Pre-K Grade` if the student’s WPM is low.
-- `src/components/aura/game/rpg/FullReadingStatsModal.tsx`
-  - Same problem: it derives “Current Reading Level” from the same global WPM ladder instead of a mode-specific ladder.
-  - It also renders `ImprovementTracker` without passing `gradeMode`, so the chart inside that modal can still mix modes.
+# Plan: Agent Mode Minigame Customization
 
-What I would change
-1. Replace global leveling with mode-aware leveling
-- Create one shared utility for RPG reading journey labels/progress.
-- Behavior:
-  - `k5` mode can only map to K–5 labels
-  - `6to12` mode can only map to 6–12 labels
-- Even if WPM is low in Agent mode, the displayed label must still stay inside the 6–12 range.
+## Current State
+Out of ~20 minigames, only **RPGGoblinHorde** has agent-mode theming (swaps goblins for operatives). All other minigames use pure fantasy aesthetics — blue/purple gradients, "SHIELD," "SPELL," "MAGIC" labels, sparkle icons — regardless of mode.
 
-2. Use that shared utility everywhere the journey level is displayed
-- Update `ReadingProgressPanel.tsx`
-- Update `FullReadingStatsModal.tsx`
-- Remove the duplicated inline WPM→grade functions from both files
+## What Changes
 
-3. Fix the modal’s nested progress components
-- Pass `gradeMode` into `ImprovementTracker`
-- Update `ImprovementTracker` props to accept `gradeMode`
-- Forward that into `useWeeklyProgress(studentId, ..., gradeMode)`
+### 1. Create a shared minigame theme utility
+**New file: `src/lib/minigameTheme.ts`**
 
-4. Keep the visual progression aligned to each mode
-- Classic:
-  - show K/1/2/3/4/5 progression only
-- Agent:
-  - show 6/7/8/9/10/11/12 progression only
-- Adjust star/bar counts so they reflect the active mode’s range instead of the old shared 10-step ladder
+A single source of truth that maps each minigame to mode-specific:
+- **Title** (e.g. "Spell Combo" → "Hack Sequence")
+- **Subtitle/flavor text** (e.g. "Channel arcane energy!" → "Bypass encryption!")
+- **Color scheme** (fantasy purple/blue → tactical cyan/slate/red)
+- **Icon choice** (Sparkles/Shield → Crosshair/Terminal/Wifi)
+- **Success/failure messages** (e.g. "SPELL COMPLETE!" → "SYSTEM BREACHED!")
 
-Technical details
-- Root files:
-  - `src/components/aura/game/rpg/ReadingProgressPanel.tsx`
-  - `src/components/aura/game/rpg/FullReadingStatsModal.tsx`
-  - `src/components/shared/ImprovementTracker.tsx`
-- New shared utility should live somewhere like:
-  - `src/lib/readingJourneyLevel.ts`
-- Suggested utility shape:
-  - input: `{ wpm, gradeMode }`
-  - output: `{ label, displayLabel, stepIndex, totalSteps, nextGoal, benchmarkGrade }`
-- `benchmarkGrade` can remain a numeric grade used for fluency benchmark calculations, but the user-facing label must be constrained by mode.
+This keeps each component's diff small — they just import and branch on one `isAgent` flag.
 
-Expected result after implementation
-- Classic mode will never show 6–12 leveling labels
-- Agent mode will never show Pre-K/K/1st/2nd/3rd/4th/5th labels
-- “My Reading Journey” and the full stats modal will both stay visually and logically locked to the active mode
-- The modal’s progress chart will stop re-mixing data through the unscoped `ImprovementTracker`
+### 2. Re-skin each minigame component
+
+Every minigame gets the same pattern: `const isAgent = getStoredTheme() === 'agent';` at the top, then swap titles, gradient classes, icons, and feedback text.
+
+| Minigame | Classic Theme | Agent Theme |
+|---|---|---|
+| **WordShield** | "Word Shield" / blue-purple gradients / Shield icon | "Firewall" / cyan-slate gradients / Lock icon |
+| **SpellCombo** | "Spell Combo" / purple sparkles / magic chain | "Hack Sequence" / green terminal text / code chain |
+| **DodgeWords** | "Dodge!" / fantasy projectiles | "Evade Surveillance" / red laser grid |
+| **RhymeChain** | "Rhyme Chain" / music notes / pink-purple | "Code Pattern" / cipher links / cyan-teal |
+| **SpeedTypist** | "Speed Cast" / flame trail | "Rapid Decode" / digital countdown / amber-cyan |
+| **FireballDefense** | "Fireball Defense" / fire colors | "Missile Defense" / military red-orange |
+| **BeastSwarm** | "Beast Swarm" / forest creatures | "Drone Swarm" / mechanical drones |
+| **AsteroidBarrage** | "Asteroid Barrage" / space rocks | "Data Breach" / falling data packets |
+| **GroundRipple** | "Ground Ripple" / earth tones | "Shockwave" / tech pulse effect |
+| **GhostlyWhispers** | "Ghostly Whispers" / ethereal | "Intercepted Comms" / radio static |
+| **IceCrystalBarrage** | "Ice Crystal" / frost blue | "EMP Burst" / electric blue-white |
+| **RollingBoulders** | "Rolling Boulders" / brown-earth | "Incoming Ordnance" / military grey-red |
+| **VoidPull** | "Void Pull" / dark purple vortex | "Gravity Trap" / tech black-cyan |
+| **CrystalPrison** | "Crystal Prison" / ice blue | "Containment Field" / energy grid |
+| **WordBarrage** | "Word Barrage" / generic | "Intel Barrage" / tactical |
+| **VocabShield** | "Word Shield" / red glow | "Encryption Lock" / cyan glow |
+| **WordEcho** | "Word Echo" / cave echoes | "Signal Bounce" / radar ping |
+| **WindChase** | "Wind Chase" / breezy | "Pursuit Mode" / sprint tracker |
+| **InkSplash** | "Ink Splash" / underwater | "Redacted Files" / censored docs |
+| **LightningStorm** | "Lightning Storm" / electric | "Power Surge" / grid overload |
+| **WebTrap** | "Web Trap" / spider web | "Laser Grid" / security beams |
+
+### 3. Update gradient/color classes per mode
+
+- **Classic**: Keep existing gradients (blue, purple, amber, green palettes)
+- **Agent**: Use tactical palette — `slate-900`, `cyan-500`, `red-600`, `emerald-500` for success, dark backgrounds with neon accents
+
+### 4. Files to modify (~20 files)
+
+Each file gets a small diff (5-20 lines changed per file):
+- `src/components/aura/game/rpg/RPGWordShield.tsx`
+- `src/components/aura/game/rpg/RPGSpellCombo.tsx`
+- `src/components/aura/game/rpg/RPGDodgeWords.tsx`
+- `src/components/aura/game/rpg/RPGRhymeChain.tsx`
+- `src/components/aura/game/rpg/RPGSpeedTypist.tsx`
+- `src/components/aura/game/rpg/RPGFireballDefense.tsx`
+- `src/components/aura/game/rpg/RPGBeastSwarm.tsx`
+- `src/components/aura/game/rpg/RPGAsteroidBarrage.tsx`
+- `src/components/aura/game/rpg/RPGGroundRipple.tsx`
+- `src/components/aura/game/rpg/RPGGhostlyWhispers.tsx`
+- `src/components/aura/game/rpg/RPGIceCrystalBarrage.tsx`
+- `src/components/aura/game/rpg/RPGRollingBoulders.tsx`
+- `src/components/aura/game/rpg/RPGVoidPull.tsx`
+- `src/components/aura/game/rpg/RPGCrystalPrison.tsx`
+- `src/components/aura/game/rpg/RPGWordBarrage.tsx`
+- `src/components/aura/game/rpg/RPGVocabShield.tsx`
+- `src/components/aura/game/rpg/RPGWordEcho.tsx`
+- `src/components/aura/game/rpg/RPGWindChase.tsx`
+- `src/components/aura/game/rpg/RPGInkSplash.tsx`
+- `src/components/aura/game/rpg/RPGLightningStorm.tsx`
+- `src/components/aura/game/rpg/RPGWebTrap.tsx`
+- New: `src/lib/minigameTheme.ts`
+
+### 5. What stays the same
+- Game mechanics, timers, scoring, speech recognition — all unchanged
+- Only visual text, colors, icons, and flavor messages change per mode
+
