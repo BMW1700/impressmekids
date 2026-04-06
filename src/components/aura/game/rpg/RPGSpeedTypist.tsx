@@ -291,6 +291,7 @@ export const RPGSpeedTypist = ({
           )}
         </div>
       </div>
+      ); })()}
 
       {/* Progress bar */}
       <div className="px-4 mb-4">
