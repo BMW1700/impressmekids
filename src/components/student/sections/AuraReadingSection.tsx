@@ -83,6 +83,7 @@ export const AuraReadingSection = () => {
   const [isReadingStory, setIsReadingStory] = useState(false);
   const [isCampaignMode, setIsCampaignMode] = useState(false);
   const [gameTheme, setGameTheme] = useState<GameTheme | null>(getStoredTheme());
+  const [hasLoadedDefault, setHasLoadedDefault] = useState(false);
   const currentGradeMode: GradeMode = getGradeMode(gameTheme);
   
   // Theme-aware data sources
@@ -144,7 +145,7 @@ export const AuraReadingSection = () => {
       if (!user?.id) return null;
       const { data, error } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, default_grade_mode')
         .eq('id', user.id)
         .single();
       if (error) return null;
