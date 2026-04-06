@@ -203,6 +203,7 @@ export const STORE_ITEMS: StoreItem[] = [
     effect: 'fire',
     value: 50,
     rarity: 'epic',
+    theme: 'classic',
   },
   {
     id: 'healing_aura',
