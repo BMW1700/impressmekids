@@ -13,10 +13,12 @@ import { BarChart3, TrendingUp, Brain, BookOpen, Activity, Loader2 } from "lucid
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import { RPGPlayerHUD } from "@/components/aura/game/rpg/RPGPlayerHUD";
 import { MLStatusBadge } from "@/components/ml/MLStatusBadge";
+import { getStoredTheme, getGradeMode } from "@/lib/gameTheme";
 
 const GameAnalytics = () => {
   const { user, profile } = useAuth();
-  const { progress } = useCampaignProgress(user?.id);
+  const currentGradeMode = getGradeMode(getStoredTheme());
+  const { progress } = useCampaignProgress(user?.id, currentGradeMode);
 
   const gold = progress?.total_gold ?? 0;
   const xp = progress?.total_xp_earned ?? 0;
@@ -133,7 +135,7 @@ const GameAnalytics = () => {
         {/* Kid-Friendly Progress Overview */}
         {user?.id && (
           <div className="mb-6">
-            <KidFriendlyProgress studentId={user.id} />
+            <KidFriendlyProgress studentId={user.id} gradeMode={currentGradeMode} />
           </div>
         )}
 
