@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Snowflake } from "lucide-react";
+import { Snowflake, Zap } from "lucide-react";
+import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
 
 interface IceCrystal {
   id: number;

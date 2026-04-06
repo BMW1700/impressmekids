@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bug, Mic, Volume2 } from "lucide-react";
+import { Bug, Mic, Volume2, Crosshair } from "lucide-react";
 import { speechManager } from "@/lib/speechRecognitionManager";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
+import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
 
 interface TrappedWord {
   id: number;

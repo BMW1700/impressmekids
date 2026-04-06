@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, MicOff, Mountain } from "lucide-react";
+import { Mic, MicOff, Mountain, Radio } from "lucide-react";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
+import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
 
 interface RippleMountain {
   id: number;
