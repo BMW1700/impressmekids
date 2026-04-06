@@ -62,6 +62,8 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
         .from('reading_library')
         .select('*')
         .eq('is_published', true)
+        .gte('grade_level', gradeMode === '6to12' ? 6 : 0)
+        .lte('grade_level', gradeMode === '6to12' ? 12 : 5)
         .order('is_featured', { ascending: false })
         .order('thumbs_up_count', { ascending: false });
 
@@ -91,15 +93,15 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
       isFromCommunity?: boolean;
     })[] = [];
 
-    // Add curated stories first
-    curatedStories.forEach(story => {
+    // Add grade-appropriate curated/agent stories first
+    baseStories.forEach(story => {
       stories.push({ ...story, isFromCommunity: false });
     });
 
     // Add community stories (avoid duplicates by title)
-    const curatedTitles = new Set(curatedStories.map(s => s.title.toLowerCase()));
+    const baseTitles = new Set(baseStories.map(s => s.title.toLowerCase()));
     communityStories?.forEach(story => {
-      if (!curatedTitles.has(story.title.toLowerCase())) {
+      if (!baseTitles.has(story.title.toLowerCase())) {
         stories.push({
           title: story.title,
           description: story.description || '',
