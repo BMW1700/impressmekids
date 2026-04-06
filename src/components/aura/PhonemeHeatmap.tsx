@@ -14,6 +14,7 @@ interface PhonemeHeatmapProps {
   classroomId: string;
   classroomName: string;
   hideClassAverage?: boolean;
+  gradeMode?: string;
 }
 
 // All 44 phonemes with IPA symbols (matches database) and teacher-friendly labels
@@ -71,21 +72,23 @@ const COMMON_PHONEMES = [
   { symbol: "ɪɹ", label: "/ear/", example: "ear" },
 ];
 
-const PhonemeHeatmap = ({ students, skillVectors, classroomId, classroomName, hideClassAverage = false }: PhonemeHeatmapProps) => {
+const PhonemeHeatmap = ({ students, skillVectors, classroomId, classroomName, hideClassAverage = false, gradeMode }: PhonemeHeatmapProps) => {
   const [selectedCell, setSelectedCell] = useState<{ studentId: string; phoneme: string } | null>(null);
   const [reportDialogData, setReportDialogData] = useState<{ studentId: string; studentName: string } | null>(null);
 
-  // Fetch reading sessions with phoneme_accuracy for students
+  // Fetch reading sessions with phoneme_accuracy for students — scoped by gradeMode
   const studentIds = students.map(s => s.student_id);
   const { data: readingSessions, isLoading } = useQuery({
-    queryKey: ['reading-sessions-phonemes', studentIds],
+    queryKey: ['reading-sessions-phonemes', studentIds, gradeMode],
     queryFn: async () => {
       if (studentIds.length === 0) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from('reading_sessions')
         .select('student_id, phoneme_accuracy')
         .in('student_id', studentIds)
         .not('phoneme_accuracy', 'is', null);
+      if (gradeMode) query = query.eq('grade_mode', gradeMode);
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },

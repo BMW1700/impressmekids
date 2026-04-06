@@ -11,6 +11,7 @@ interface CrossModalScatterPlotProps {
   skillVectors: any[];
   auraRecords: any[];
   classroomId?: string;
+  gradeMode?: string;
 }
 
 interface StudentPoint {
@@ -24,19 +25,21 @@ interface StudentPoint {
   speakingSessions: number;
 }
 
-const CrossModalScatterPlot = ({ students, skillVectors, auraRecords, classroomId }: CrossModalScatterPlotProps) => {
+const CrossModalScatterPlot = ({ students, skillVectors, auraRecords, classroomId, gradeMode }: CrossModalScatterPlotProps) => {
   const [selectedStudent, setSelectedStudent] = useState<StudentPoint | null>(null);
 
-  // Fetch reading sessions to get READ-ALONG performance
+  // Fetch reading sessions to get READ-ALONG performance — scoped by gradeMode
   const studentIds = students.map(s => s.student_id);
   const { data: readingSessions, isLoading } = useQuery({
-    queryKey: ['cross-modal-reading-sessions', studentIds],
+    queryKey: ['cross-modal-reading-sessions', studentIds, gradeMode],
     queryFn: async () => {
       if (studentIds.length === 0) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from('reading_sessions')
         .select('student_id, accuracy_percent, wpm, fluency_score')
         .in('student_id', studentIds);
+      if (gradeMode) query = query.eq('grade_mode', gradeMode);
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
