@@ -263,8 +263,212 @@ export const theDirector: RPGEnemy = {
   signatureMiniGame: 'ground_ripple',
 };
 
+// World 5 Boss — The Warden (Military Black Site Commander)
+export const theWarden: RPGEnemy = {
+  id: 'the_warden',
+  name: 'The Warden',
+  type: 'boss',
+  maxHp: 1800,
+  attack: 32,
+  defense: 20,
+  wordDamageMultiplier: 0.32,
+  color: 'from-green-800 to-emerald-950',
+  dialogueIntro: [
+    "No one leaves my facility. No one.",
+    "You've breached the perimeter, agent. That was your last mistake.",
+  ],
+  dialogueAttack: [
+    "*activates containment protocols*",
+    "Lockdown initiated! You're trapped!",
+  ],
+  dialogueDefeat: [
+    "The facility... is compromised...",
+    "You'll find nothing but ashes in those servers...",
+  ],
+  specialAbilities: [
+    { id: 'lockdown', name: 'Facility Lockdown', damage: 24, effect: 'silence', description: 'Seals all exits', icon: '🔐' },
+    { id: 'shock_rod', name: 'Shock Rod', damage: 28, effect: 'lightning', description: 'High-voltage strike', icon: '⚡' },
+  ],
+  barrageWordCount: 8,
+  miniGames: ['fireball_defense', 'spell_combo', 'word_shield', 'dodge_words', 'speed_typist', 'beast_swarm'],
+  signatureMiniGame: 'fireball_defense',
+};
+
+// World 6 Boss — The Commander (Orbital Station Officer)
+export const theCommanderBoss: RPGEnemy = {
+  id: 'the_commander',
+  name: 'The Commander',
+  type: 'boss',
+  maxHp: 2200,
+  attack: 34,
+  defense: 22,
+  wordDamageMultiplier: 0.28,
+  color: 'from-indigo-700 to-indigo-950',
+  dialogueIntro: [
+    "From up here, I control everything. Every satellite. Every signal.",
+    "Welcome aboard Skyfall Station, agent. Enjoy the view — it's your last.",
+  ],
+  dialogueAttack: [
+    "*redirects orbital laser*",
+    "Deploying zero-G countermeasures!",
+  ],
+  dialogueDefeat: [
+    "The station... losing orbit...",
+    "You've won the sky, agent... but the ground war continues...",
+  ],
+  specialAbilities: [
+    { id: 'orbital_strike', name: 'Orbital Strike', damage: 30, effect: 'fireball_barrage', description: 'Satellite weapon fires', icon: '🛰️' },
+    { id: 'zero_g', name: 'Zero-G Field', damage: 0, effect: 'debuff', description: 'Disorients with weightlessness', icon: '🌀' },
+    { id: 'comm_jam', name: 'Comms Jammer', damage: 18, effect: 'silence', description: 'Blocks all communication', icon: '📡' },
+  ],
+  barrageWordCount: 9,
+  miniGames: ['fireball_defense', 'beast_swarm', 'spell_combo', 'word_shield', 'dodge_words', 'speed_typist', 'ice_crystal_barrage'],
+  signatureMiniGame: 'beast_swarm',
+};
+
+// World 7 Boss — The Phantom (Ghost Hacker)
+export const thePhantom: RPGEnemy = {
+  id: 'the_phantom',
+  name: 'The Phantom',
+  type: 'boss',
+  maxHp: 2600,
+  attack: 38,
+  defense: 16,
+  wordDamageMultiplier: 0.26,
+  color: 'from-teal-600 to-cyan-950',
+  dialogueIntro: [
+    "You can't catch what doesn't exist. I'm everywhere and nowhere.",
+    "I erased myself from every database on Earth. You're chasing a ghost.",
+  ],
+  dialogueAttack: [
+    "*deploys recursive malware*",
+    "Your firewalls are Swiss cheese!",
+  ],
+  dialogueDefeat: [
+    "How... you traced the untraceable...",
+    "My network... it's collapsing... all of it...",
+  ],
+  specialAbilities: [
+    { id: 'ghost_protocol', name: 'Ghost Protocol', damage: 26, effect: 'word_barrage', description: 'Attacks from hidden nodes', icon: '👻' },
+    { id: 'data_wipe', name: 'Data Wipe', damage: 32, effect: 'silence', description: 'Erases your intel', icon: '💀' },
+    { id: 'mirror_hack', name: 'Mirror Hack', damage: 22, effect: 'debuff', description: 'Turns your tools against you', icon: '🪞' },
+  ],
+  barrageWordCount: 10,
+  miniGames: ['fireball_defense', 'beast_swarm', 'spell_combo', 'word_shield', 'dodge_words', 'speed_typist', 'ground_ripple', 'ice_crystal_barrage'],
+  signatureMiniGame: 'ground_ripple',
+};
+
+// World 8 Final Boss — The Overseer (Syndicate Mastermind)
+export const theOverseer: RPGEnemy = {
+  id: 'the_overseer',
+  name: 'The Overseer',
+  type: 'final_boss',
+  maxHp: 3600,
+  attack: 42,
+  defense: 28,
+  wordDamageMultiplier: 0.22,
+  color: 'from-rose-800 to-red-950',
+  dialogueIntro: [
+    "Every agent, every mission, every betrayal — it all leads back to me.",
+    "The Syndicate was just one hand. I have a thousand more.",
+  ],
+  dialogueAttack: [
+    "*activates global override*",
+    "I've toppled governments, agent. You think you can stop me?",
+  ],
+  dialogueDefeat: [
+    "Impressive... truly impressive... but shadows never die...",
+    "You've ended the Syndicate... but you'll never end what I started...",
+  ],
+  specialAbilities: [
+    { id: 'global_override', name: 'Global Override', damage: 35, effect: 'word_barrage', description: 'Seizes control of all systems', icon: '🌐' },
+    { id: 'shadow_network', name: 'Shadow Network', damage: 0, effect: 'silence', description: 'Activates sleeper cells worldwide', icon: '🕸️' },
+    { id: 'endgame_protocol', name: 'Endgame Protocol', damage: 40, effect: 'fireball_barrage', description: 'Launches everything', icon: '☢️' },
+  ],
+  barrageWordCount: 11,
+  miniGames: ['fireball_defense', 'beast_swarm', 'spell_combo', 'word_shield', 'dodge_words', 'speed_typist', 'ground_ripple', 'fireball_barrage', 'ice_crystal_barrage'],
+  signatureMiniGame: 'fireball_barrage',
+};
+
 // Get agent enemy by campaign enemy type
 export const getAgentEnemy = (enemyType: string): RPGEnemy => {
+  switch (enemyType) {
+    case 'minion': return { ...streetThug };
+    case 'guard': return { ...hiredGun };
+    case 'elite': return { ...cyberHacker };
+    case 'dragon': return { ...cyberHacker };
+    case 'boss': return { ...theBroker };
+    case 'final_boss': return { ...theOverseer };
+    default: return { ...streetThug };
+  }
+};
+
+// Get agent enemy for specific world bosses
+export const getAgentBossForWorld = (worldId: number): RPGEnemy => {
+  switch (worldId) {
+    case 1: return { ...theBroker };
+    case 2: return { ...theArchitect };
+    case 3: return { ...theDoubleAgent };
+    case 4: return { ...theDirector };
+    case 5: return { ...theWarden };
+    case 6: return { ...theCommanderBoss };
+    case 7: return { ...thePhantom };
+    case 8: return { ...theOverseer };
+    default: return { ...theBroker };
+  }
+};
+
+// Get agent hero by character selection
+export const getAgentHero = (character: string): RPGCharacter => {
+  switch (character) {
+    case 'agent_x':
+    case 'valor': return { ...agentX };
+    case 'cipher':
+    case 'elara': return { ...cipher };
+    case 'shadow':
+    case 'ella': return { ...shadow };
+    default: return { ...agentX };
+  }
+};
+
+// Agent mode dialogue
+export const agentHeroDialogue = {
+  intro: [
+    "Stay sharp, team. Intel says this sector is hostile.",
+    "Mission active. Weapons hot.",
+    "We've trained for this. Let's move.",
+    "HQ confirms hostile presence. Engage on my mark.",
+  ],
+  attack: [
+    "Engaging target!",
+    "Contact! Taking the shot!",
+    "Target acquired!",
+  ],
+  victory: [
+    "Target neutralized. Area secured.",
+    "Mission complete. Moving to extraction.",
+    "Good work, team. One step closer to the Syndicate.",
+  ],
+};
+
+export const agentCompanionDialogue = {
+  intro: [
+    "Systems online. Scanning for threats.",
+    "I've got your six, agent. Let's do this.",
+    "Comms are clear. Ready when you are.",
+    "Running tactical analysis now.",
+  ],
+  attack: [
+    "Deploying countermeasures!",
+    "Hacking their defenses!",
+    "Overriding their systems!",
+  ],
+  victory: [
+    "All systems green. Nice work.",
+    "Threat eliminated. Uploading intel to HQ.",
+    "That's another one down.",
+  ],
+};
   switch (enemyType) {
     case 'minion': return { ...streetThug };
     case 'guard': return { ...hiredGun };

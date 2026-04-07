@@ -21,7 +21,7 @@ export const agentToClassicEnemyMap: Record<AgentEnemyType, CampaignEnemyType> =
   the_warden: 'boss',
   the_commander: 'boss',
   the_phantom: 'boss',
-  the_overseer: 'boss',
+  the_overseer: 'final_boss',
 };
 
 export const agentCampaignWorlds: CampaignWorld[] = [
