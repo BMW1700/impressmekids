@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Shield } from "lucide-react";
 import { RPGCharacter as RPGCharacterType, RPGEnemy } from "@/lib/rpgBattleData";
