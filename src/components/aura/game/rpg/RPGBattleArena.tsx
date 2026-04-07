@@ -1396,7 +1396,7 @@ export const RPGBattleArena = ({
       setShowSpellEffect(true);
       
       // Heal the player
-      setPlayerHp(prev => Math.min(playerCharacter.maxHp, prev + 25));
+      setPlayerHp(prev => Math.min(maxHpWithBoost, prev + 25));
       
       // Clear poison on healing
       setIsPoisoned(false);
