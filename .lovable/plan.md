@@ -1,46 +1,73 @@
 
 
-# Brutally Honest Audit: Store-to-Battle Wiring
+# Brutally Honest Audit: Week-by-Week Student Progress
 
-## What Works
-- `usePlayerInventory` is imported and called in `RPGBattleArena.tsx` — confirmed
-- `getActiveUpgrades()` is called and feeds into damage (`attack_boost`), HP (`health_boost`), MP (`mp_boost`), gold (`gold_boost`), and XP (`xp_boost`) calculations — confirmed
-- `battleInventory` reads real potion quantities from the database with a starter-kit fallback — confirmed
-- `usePotion.mutate()` is called when items are consumed in battle — confirmed
-- All 4 new bosses (Warden, Commander, Phantom, Overseer) have full battle data and correct world mapping — confirmed
+## What Already Exists (and works well)
 
-## What's Still Broken
+1. **`useWeeklyProgress` hook** — fully built, fetches reading_sessions + aura_records grouped by week, calculates WCPM trends, accuracy changes, phoneme strengths/weaknesses, mode breakdowns, and substitution patterns. Supports grade_mode filtering. This is genuinely solid infrastructure.
 
-### 1. Purchased Powers Never Appear in the Spell Menu (CRITICAL)
-The store sells 20+ purchasable powers (EMP Blast, Drone Strike, Arcane Blast, etc.) but the spell menu in `RPGSpellMenu.tsx` only ever shows the **hardcoded character spells** (e.g., `valorSpells`, `agentXSpells`). There is zero code that checks the player's inventory for purchased powers and adds them to the available spell list.
+2. **`ImprovementTracker` component** — renders week-by-week charts (WPM, accuracy, fluency lines) plus a weekly breakdown table with sessions count, WPM, accuracy, and words read per week. Has both "simple" (area chart) and "detailed" (multi-line chart + table) variants.
 
-A student buys "Drone Strike" for 600 gold → opens the Tech/Magic menu in battle → it's not there. That's a trust-destroying bug.
+3. **Where it's used:**
+   - Student dashboard (`AuraReadingSection.tsx`) — simple variant, grade_mode scoped
+   - Parent weekly report (`ParentWeeklyReport.tsx`) — both simple and detailed variants
+   - Student's Full Stats Modal (`FullReadingStatsModal.tsx`) — detailed variant
+   - **NOT in the teacher's Student Profile page** — this is the gap
 
-### 2. Purchased Skins Don't Render (MINOR)
-`RPGCharacter.tsx` has no prop or logic for skin variants. `getEquippedSkin()` exists in the hook but is never called by the battle arena or character renderer. Students equip a skin in the store → character looks the same in battle.
+## What's Missing
 
-### 3. Starter Kit Overlap Issue (MINOR)
-The starter kit logic gives every player `Math.max(dbQuantity, 2)` health potions. If a student has 1 health potion in the DB, they still see 2 in battle. This means potions appear to regenerate. Not game-breaking, but inconsistent.
+### 1. Teacher Student Profile Has No Reading Data (CRITICAL)
+
+`StudentProfile.tsx` (the teacher's view of an individual student) has 7 tabs: Overview, Readings, ML Insights, Phonemes, Progress, Timeline, Notes.
+
+- **Readings tab** — shows a flat list of individual sessions (date, WCPM, accuracy) but no aggregated trends or week-by-week comparison
+- **Progress tab** — shows ONLY a "Clarity Score Over Time" chart from `aura_records` (speaking exercises). Zero reading session data. No WCPM trend, no accuracy trend, no fluency trend, no weekly breakdown table.
+
+A teacher clicking "Progress" for a student sees speaking clarity only — not reading improvement. That's backwards for a reading product.
+
+### 2. No Classroom-Wide Weekly Breakdown
+
+`AuraAnalytics.tsx` shows aggregate stats (total sessions, avg accuracy, avg WPM, words read) but these are **all-time averages**, not week-by-week. A teacher cannot see "Week 1 avg WCPM was 85, Week 4 avg WCPM is 102, class improved 20%."
+
+### 3. Retention Metrics Don't Exist
+
+There is no tracking of:
+- Session frequency per student per week (are they reading more or less over time?)
+- Time-on-task per week (are sessions getting longer?)
+- Return rate (did the student come back this week after last week?)
+- Engagement decay detection (student was active weeks 1-3, dropped off week 4)
 
 ## The Fix
 
-### Phase 1: Wire purchased powers into the spell menu
-- In `RPGBattleArena.tsx`, query `playerInventory` for items with `category === 'power'`
-- Convert them to `Spell` objects (using `STORE_ITEMS` data for damage, mpCost, effect)
-- Merge them with the character's default spells before passing to `RPGCommandMenu`
-- In `RPGSpellMenu.tsx`, accept and render these additional spells (they already conform to the `Spell` interface)
+### Task 1: Add Week-by-Week Reading Progress to Teacher's Student Profile
+- Replace the Progress tab's "Clarity Score Over Time" with the existing `ImprovementTracker` component (detailed variant)
+- Add the student's `gradeMode` to scope correctly
+- Keep the clarity chart as a secondary section below
+- This is a ~15-line change — the component already exists
 
-### Phase 2: Wire equipped skins into character rendering
-- In `RPGBattleArena.tsx`, call `playerInventory.getEquippedSkin(characterId)` 
-- Pass the result as a `skinVariant` prop to `RPGCharacter`
-- In `RPGCharacter.tsx`, accept `skinVariant` prop and apply color/style overrides based on the variant
+### Task 2: Add Classroom-Wide Weekly Progress Table to AuraAnalytics
+- Create a new `ClassroomWeeklyBreakdown` component on the existing "Progress" tab
+- Query `reading_sessions` for all classroom students, group by week
+- Show: Week | Active Students | Avg WCPM | WCPM Change | Avg Accuracy | Total Words Read | Total Sessions
+- Highlight weeks with improvement in green, regression in red
+- Add a line chart showing class-avg WCPM trending over 4-8 weeks
 
-### Phase 3: Fix starter kit logic
-- Change from `Math.max(db, 2)` to additive: `db + starterBonus` only if player has never purchased potions, OR just give the starter kit once and track it
+### Task 3: Add Retention/Engagement Metrics
+- Add per-student engagement indicators to the existing StudentAuraMetrics overview:
+  - "Sessions This Week" vs "Sessions Last Week" (trend arrow)
+  - "Avg Session Duration" trend
+  - "Weeks Active (out of last 4)" badge
+- Add an "Engagement" column to the classroom overview table
+- Flag students who were active 2+ weeks ago but not this week as "At Risk of Disengaging"
 
 ### Files to modify
-- `src/components/aura/game/rpg/RPGBattleArena.tsx` — build purchased powers into spell list, pass skin variant
-- `src/components/aura/game/rpg/RPGSpellMenu.tsx` — accept dynamic spell lists (may already work if spells array is passed correctly)
-- `src/components/aura/game/rpg/RPGCharacter.tsx` — accept and apply `skinVariant` prop
-- `src/components/aura/game/rpg/RPGCommandMenu.tsx` — pass merged spell list through
+- `src/pages/teacher/StudentProfile.tsx` — import and add `ImprovementTracker` to Progress tab
+- `src/pages/teacher/AuraAnalytics.tsx` — add classroom weekly breakdown to Progress tab
+- `src/components/aura/StudentAuraMetrics.tsx` — add engagement/retention indicators per student
+- New file: `src/components/aura/ClassroomWeeklyBreakdown.tsx` — classroom-level weekly trend table + chart
+
+### What stays the same
+- `useWeeklyProgress` hook — already handles all the per-student weekly aggregation
+- `ImprovementTracker` component — already built, just needs to be imported in one more place
+- All existing analytics tabs, charts, and components remain untouched
 
