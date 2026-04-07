@@ -1,7 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, Flame } from "lucide-react";
+import { Mic, Flame, Crosshair } from "lucide-react";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
+import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
+
+const agentMode = isAgentMode();
+const theme = getMinigameTheme('fireballBarrage');
 
 interface Fireball {
   id: string;
@@ -247,12 +251,12 @@ export const RPGFireballBarrage = ({
         animate={{ y: 0, opacity: 1 }}
         className="absolute top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-auto"
       >
-        <div className="bg-gradient-to-r from-orange-600 to-red-600 px-6 py-3 rounded-lg
-          shadow-[0_0_30px_rgba(249,115,22,0.6)] border border-orange-400/50">
+        <div className={`bg-gradient-to-r ${agentMode ? 'from-cyan-600 to-slate-600' : 'from-orange-600 to-red-600'} px-6 py-3 rounded-lg
+          shadow-[0_0_30px_${agentMode ? 'rgba(6,182,212,0.6)' : 'rgba(249,115,22,0.6)'}] border ${agentMode ? 'border-cyan-400/50' : 'border-orange-400/50'}`}>
           <div className="flex items-center gap-3 text-white">
-            <Flame className="h-6 w-6 animate-pulse" />
-            <span className="font-bold text-lg">FIREBALL BARRAGE! Speak words to extinguish!</span>
-            <Flame className="h-6 w-6 animate-pulse" />
+            {agentMode ? <Crosshair className="h-6 w-6 animate-pulse" /> : <Flame className="h-6 w-6 animate-pulse" />}
+            <span className="font-bold text-lg">{agentMode ? 'INCOMING PROJECTILES! Speak words to intercept!' : 'FIREBALL BARRAGE! Speak words to extinguish!'}</span>
+            {agentMode ? <Crosshair className="h-6 w-6 animate-pulse" /> : <Flame className="h-6 w-6 animate-pulse" />}
           </div>
         </div>
       </motion.div>

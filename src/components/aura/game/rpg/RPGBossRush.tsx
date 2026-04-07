@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Swords, Timer, Trophy, Skull, Crown, Sparkles } from "lucide-react";
+import { ArrowLeft, Swords, Timer, Trophy, Skull, Crown, Sparkles, Crosshair } from "lucide-react";
+import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
 import { useBossRush } from "@/hooks/useBossRush";
 import { RPGBattleArena } from "./RPGBattleArena";
 import { curatedStories } from "@/data/curatedStories";
@@ -132,7 +133,7 @@ export const RPGBossRush = ({ studentId, onBack, onComplete }: RPGBossRushProps)
   // Intro Screen
   if (showIntro) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-purple-950 to-slate-900 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      <div className={`min-h-screen bg-gradient-to-b ${isAgentMode() ? 'from-slate-900 via-cyan-950 to-slate-900' : 'from-slate-900 via-purple-950 to-slate-900'} flex flex-col items-center justify-center p-4 relative overflow-hidden`}>
         {/* Animated background */}
         <div className="absolute inset-0 pointer-events-none">
           {Array.from({ length: 30 }).map((_, i) => (
@@ -184,11 +185,12 @@ export const RPGBossRush = ({ studentId, onBack, onComplete }: RPGBossRushProps)
             }}
             transition={{ duration: 2, repeat: Infinity }}
           >
-            <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 mb-4">
-              ⚔️ BOSS RUSH ⚔️
+            <h1 className={`text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r ${isAgentMode() ? 'from-cyan-400 via-teal-400 to-emerald-400' : 'from-purple-400 via-pink-400 to-red-400'} mb-4`}>
+              {isAgentMode() ? '🎯 OPERATION GAUNTLET 🎯' : '⚔️ BOSS RUSH ⚔️'}
             </h1>
           </motion.div>
-          <p className="text-purple-300 text-xl">The Ultimate Reading Challenge</p>
+          <p className={`${isAgentMode() ? 'text-cyan-300' : 'text-purple-300'} text-xl`}>
+            {isAgentMode() ? 'The Ultimate Field Test' : 'The Ultimate Reading Challenge'}</p>
         </motion.div>
 
         {/* Boss queue preview */}
