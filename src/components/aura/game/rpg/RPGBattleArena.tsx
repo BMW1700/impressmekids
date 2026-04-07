@@ -68,12 +68,13 @@ import {
 import { getAgentHero, getAgentEnemy, getAgentBossForWorld, agentHeroDialogue, agentCompanionDialogue } from "@/lib/agentBattleData";
 import { getStoredTheme } from "@/lib/gameTheme";
 import { CuratedStory } from "@/data/curatedStories";
-import { calculateGoldEarned, calculateXpEarned } from "@/lib/gameEconomy";
+import { calculateGoldEarned, calculateXpEarned, STORE_ITEMS } from "@/lib/gameEconomy";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { speechManager } from "@/lib/speechRecognitionManager";
 import { supabase } from "@/integrations/supabase/client";
 import { updateStudentReadingStats as updateSharedReadingStats } from "@/lib/updateStudentReadingStats";
 import { useMLIntegration } from "@/hooks/useMLIntegration";
+import { usePlayerInventory } from "@/hooks/usePlayerInventory";
 
 // Sound effects singleton
 const battleSounds = new SoundEffects();
@@ -81,7 +82,7 @@ const battleSounds = new SoundEffects();
 type EnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'goblin_shaman';
 // UPDATED: Added goblin_horde for Classic mode mini-game + quick_block for enemy attacks
 type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'word_shield' | 'spell_combo' | 'dodge_words' | 'rhyme_chain' | 'speed_typist' | 'tug_of_war' | 'balloon_battle' | 'goblin_horde' | 'fireball_defense' | 'quick_block' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat' | 'word_echo' | 'wind_chase' | 'ink_splash' | 'crystal_prison' | 'lightning_storm' | 'void_pull' | 'ground_ripple' | 'web_trap' | 'vocab_shield' | 'context_clue' | 'boss_gate';
-type InventoryKey = 'health_potion' | 'magic_potion';
+// InventoryKey removed — now uses string keys from store items
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
 
 export type BattleModeType = 'classic' | 'tug_of_war' | 'balloon';
@@ -118,6 +119,9 @@ export const RPGBattleArena = ({
 }: RPGBattleArenaProps) => {
   // ML Integration for saving training data
   const { saveToAuraRecords, triggerQLearningUpdate } = useMLIntegration();
+  // STORE INVENTORY: Read real purchased items from database
+  const playerInventory = usePlayerInventory(studentId, gradeMode);
+  const activeUpgrades = useMemo(() => playerInventory.getActiveUpgrades(), [playerInventory]);
   // Multi-enemy queue system
   const buildEnemyQueue = useCallback((primaryType: EnemyType): EnemyType[] => {
     // For certain levels, add Drake the Dragon after the primary enemy
@@ -273,9 +277,13 @@ export const RPGBattleArena = ({
   const [lastAttackCheck, setLastAttackCheck] = useState(0);
   const [quickBlockWords, setQuickBlockWords] = useState<string[]>([]);
   
-  // Combat stats - player HP initialized based on selected character
-  const [playerHp, setPlayerHp] = useState(heroKnight.maxHp);
-  const [wizardMp, setWizardMp] = useState(50);
+  // Combat stats - player HP initialized based on selected character + health_boost upgrade
+  const maxHpWithBoost = useMemo(() => {
+    const baseHp = playerCharacter?.maxHp || heroKnight.maxHp;
+    return baseHp + (activeUpgrades.health_boost || 0);
+  }, [playerCharacter?.maxHp, activeUpgrades.health_boost]);
+  const [playerHp, setPlayerHp] = useState(maxHpWithBoost);
+  const [wizardMp, setWizardMp] = useState(50 + (activeUpgrades.mp_boost || 0));
   const [enemyHp, setEnemyHp] = useState(enemy.maxHp);
   const [streak, setStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
@@ -289,7 +297,25 @@ export const RPGBattleArena = ({
   const longestStreakRef = useRef(0);
   const wordsReadRef = useRef(0);
   const correctWordsRef = useRef(0);
-  const [inventory, setInventory] = useState<Record<InventoryKey, number>>({ health_potion: 2, magic_potion: 1 });
+  
+  // REAL INVENTORY: Build from database instead of hardcoded values
+  // Potions from DB + 2 free health potions & 1 free magic potion as starter kit
+  const battleInventory = useMemo(() => {
+    const inv: Record<string, number> = {};
+    // Get all potion items from store
+    const potionItems = STORE_ITEMS.filter(item => item.category === 'potion');
+    potionItems.forEach(item => {
+      const qty = playerInventory.getItemQuantity(item.id);
+      if (qty > 0) inv[item.id] = qty;
+    });
+    // Starter kit: ensure at least 2 health potions and 1 magic potion for new players
+    if (!inv['health_potion']) inv['health_potion'] = 2;
+    else inv['health_potion'] = Math.max(inv['health_potion'], 2);
+    if (!inv['magic_potion']) inv['magic_potion'] = 1;
+    else inv['magic_potion'] = Math.max(inv['magic_potion'], 1);
+    return inv;
+  }, [playerInventory]);
+  const [inventory, setInventory] = useState<Record<string, number>>({});
   
   // Ref to track latest enemyHp for use in callbacks (prevents stale closure issues in mini-games)
   const enemyHpRef = useRef(enemyHp);
@@ -373,7 +399,13 @@ export const RPGBattleArena = ({
   const [bossGateTriggered, setBossGateTriggered] = useState(false);
   const [wordMasteryBonus, setWordMasteryBonus] = useState<{ word: string; multiplier: number } | null>(null);
   
-  // Cross-session word mastery: cache DB vocabulary on mount
+  // Sync inventory from DB when playerInventory loads
+  useEffect(() => {
+    if (!playerInventory.isLoading) {
+      setInventory(battleInventory);
+    }
+  }, [battleInventory, playerInventory.isLoading]);
+
   const knownWordsRef = useRef<Record<string, number>>({});
   useEffect(() => {
     if (!studentId) return;
@@ -495,9 +527,9 @@ export const RPGBattleArena = ({
     const randomCompanion = remaining[Math.floor(Math.random() * remaining.length)];
     setCompanionCharacter(randomCompanion);
     
-    // Set player HP based on selected character
+    // Set player HP based on selected character + health_boost upgrade
     const charData = getCharacterData(character);
-    setPlayerHp(charData.maxHp);
+    setPlayerHp(charData.maxHp + (activeUpgrades.health_boost || 0));
     
     // Hide selection and start battle
     setShowCharacterSelect(false);
@@ -1322,10 +1354,12 @@ export const RPGBattleArena = ({
       baseDamage = Math.floor(baseDamage * 0.7);
     }
     
-    const totalDamage = Math.floor((baseDamage + streakBonus + speedBonus) * accuracyMultiplier);
+    // Apply attack_boost from purchased upgrades
+    const attackBoost = activeUpgrades.attack_boost || 0;
+    const totalDamage = Math.floor((baseDamage + streakBonus + speedBonus + attackBoost) * accuracyMultiplier);
     
     return { damage: totalDamage, speedTier, isCritical, accuracyMultiplier };
-  }, [isDebuffed]);
+  }, [isDebuffed, activeUpgrades.attack_boost]);
 
   // Trigger screen shake
   const triggerScreenShake = () => {
@@ -1362,7 +1396,7 @@ export const RPGBattleArena = ({
       setShowSpellEffect(true);
       
       // Heal the player
-      setPlayerHp(prev => Math.min(playerCharacter.maxHp, prev + 25));
+      setPlayerHp(prev => Math.min(maxHpWithBoost, prev + 25));
       
       // Clear poison on healing
       setIsPoisoned(false);
@@ -1456,22 +1490,48 @@ export const RPGBattleArena = ({
     }, 400);
   }, [wizardMp, playerCharacter.maxHp]);
 
-  // Handle item usage
+  // Handle item usage - WIRED TO DATABASE
   const handleUseItem = useCallback((item: Item) => {
-    const itemKey = item.id as InventoryKey;
+    const itemKey = item.id;
     if (!inventory[itemKey] || inventory[itemKey] <= 0) return;
     
-    setInventory(prev => ({ ...prev, [itemKey]: prev[itemKey] - 1 }));
+    // Deduct from local state immediately for responsive UI
+    setInventory(prev => ({ ...prev, [itemKey]: (prev[itemKey] || 0) - 1 }));
     
-    if (item.effect === 'heal_hp') {
-      setPlayerHp(prev => Math.min(playerCharacter.maxHp, prev + item.value));
-      // Clear poison on healing
-      setIsPoisoned(false);
-      setPoisonDamage(0);
-    } else if (item.effect === 'restore_mp') {
-      setWizardMp(prev => Math.min(50, prev + item.value));
+    // Deduct from database via usePlayerInventory hook
+    playerInventory.usePotion.mutate(itemKey);
+    
+    const maxHp = maxHpWithBoost;
+    const maxMp = 50 + (activeUpgrades.mp_boost || 0);
+    
+    switch (item.effect) {
+      case 'heal_hp':
+        setPlayerHp(prev => Math.min(maxHp, prev + item.value));
+        setIsPoisoned(false);
+        setPoisonDamage(0);
+        break;
+      case 'restore_mp':
+        setWizardMp(prev => Math.min(maxMp, prev + item.value));
+        break;
+      case 'heal_full':
+        setPlayerHp(maxHp);
+        setIsPoisoned(false);
+        setPoisonDamage(0);
+        break;
+      case 'mp_full':
+        setWizardMp(maxMp);
+        break;
+      case 'defense':
+        // Handled via UI buff indicator
+        break;
+      case 'rage':
+        // +100% damage, -20% HP
+        setPlayerHp(prev => Math.max(1, prev - Math.floor(maxHp * 0.2)));
+        break;
+      default:
+        break;
     }
-  }, [inventory]);
+  }, [inventory, playerInventory.usePotion, maxHpWithBoost, activeUpgrades.mp_boost]);
 
   // Enemy turn logic - with failsafe to prevent stuck state
   // UPDATED: Uses setPhaseSafe and scheduleTimeout for terminal state safety
@@ -1742,11 +1802,13 @@ export const RPGBattleArena = ({
       const goldAmount = calculateGoldEarned({ 
         wordCorrect: true, 
         streak: newStreak, 
-        wordLength: word.length || 5 
+        wordLength: word.length || 5,
+        goldBoostPercent: activeUpgrades.gold_boost || 0,
       });
       const xpAmount = calculateXpEarned({ 
         wordCorrect: true, 
-        streak: newStreak 
+        streak: newStreak,
+        xpBoostPercent: activeUpgrades.xp_boost || 0,
       });
       
       // Trigger coin drop animation
@@ -1874,7 +1936,7 @@ export const RPGBattleArena = ({
   const handleRetrySuccess = useCallback((wordIndex: number) => {
     const healAmount = Math.floor(enemy.attack * 0.125);
     if (healAmount > 0) {
-      setPlayerHp(prev => Math.min(playerCharacter.maxHp, prev + healAmount));
+      setPlayerHp(prev => Math.min(maxHpWithBoost, prev + healAmount));
       
       // Show floating heal number (green with heart)
       setFloatingDamages(prev => [...prev, {
@@ -2766,10 +2828,10 @@ export const RPGBattleArena = ({
                         { 
                           name: playerCharacter.name, 
                           currentHp: playerHp, 
-                          maxHp: playerCharacter.maxHp, 
+                          maxHp: maxHpWithBoost, 
                           isDefending: currentCommand === 'defend',
                           currentMp: (selectedCharacter === 'elara' || selectedCharacter === 'cipher') ? wizardMp : undefined,
-                          maxMp: (selectedCharacter === 'elara' || selectedCharacter === 'cipher') ? 50 : undefined,
+                          maxMp: (selectedCharacter === 'elara' || selectedCharacter === 'cipher') ? (50 + (activeUpgrades.mp_boost || 0)) : undefined,
                         },
                       ]}
                       streak={streak}
