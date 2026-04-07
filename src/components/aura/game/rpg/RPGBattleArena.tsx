@@ -119,6 +119,9 @@ export const RPGBattleArena = ({
 }: RPGBattleArenaProps) => {
   // ML Integration for saving training data
   const { saveToAuraRecords, triggerQLearningUpdate } = useMLIntegration();
+  // STORE INVENTORY: Read real purchased items from database
+  const playerInventory = usePlayerInventory(studentId, gradeMode);
+  const activeUpgrades = useMemo(() => playerInventory.getActiveUpgrades(), [playerInventory]);
   // Multi-enemy queue system
   const buildEnemyQueue = useCallback((primaryType: EnemyType): EnemyType[] => {
     // For certain levels, add Drake the Dragon after the primary enemy
