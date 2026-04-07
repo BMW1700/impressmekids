@@ -35,6 +35,9 @@ import { DroneSentry, DroneSentryState } from "../characters/DroneSentry";
 import { RogueAgent, RogueAgentState } from "../characters/RogueAgent";
 import { Bodyguard, BodyguardState } from "../characters/Bodyguard";
 import { TheArchitect, TheArchitectState } from "../characters/TheArchitect";
+import { Operative, OperativeState } from "../characters/Operative";
+import { Enforcer, EnforcerState } from "../characters/Enforcer";
+import { TheDoubleAgent, TheDoubleAgentState } from "../characters/TheDoubleAgent";
 import { getStoredTheme } from "@/lib/gameTheme";
 
 interface RPGCharacterProps {
@@ -53,7 +56,7 @@ interface RPGCharacterProps {
 }
 
 // Map character/enemy types to sprite types - EXTENDED with all new enemies
-type SpriteType = 'knight' | 'wizard' | 'princess' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'grog_king' | 'cave_troll' | 'crystal_spider' | 'storm_harpy' | 'cloud_giant' | 'wind_lord' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'echo_wraith' | 'agent_x' | 'cipher' | 'shadow_agent' | 'street_thug_agent' | 'hired_gun_agent' | 'cyber_hacker_agent' | 'the_broker_agent' | 'the_director_agent' | 'drone_sentry_agent' | 'rogue_agent_agent' | 'bodyguard_agent' | 'the_architect_agent';
+type SpriteType = 'knight' | 'wizard' | 'princess' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'grog_king' | 'cave_troll' | 'crystal_spider' | 'storm_harpy' | 'cloud_giant' | 'wind_lord' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'echo_wraith' | 'agent_x' | 'cipher' | 'shadow_agent' | 'street_thug_agent' | 'hired_gun_agent' | 'cyber_hacker_agent' | 'the_broker_agent' | 'the_director_agent' | 'drone_sentry_agent' | 'rogue_agent_agent' | 'bodyguard_agent' | 'the_architect_agent' | 'operative_agent' | 'enforcer_agent' | 'the_double_agent_agent';
 
 const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean): SpriteType => {
   if (isEnemy) {
@@ -80,11 +83,11 @@ const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean)
       'drone_sentry': 'drone_sentry_agent',
       'rogue_agent': 'rogue_agent_agent',
       'bodyguard': 'bodyguard_agent',
-      'operative': 'rogue_agent_agent',
-      'enforcer': 'bodyguard_agent',
+      'operative': 'operative_agent',
+      'enforcer': 'enforcer_agent',
       'the_broker': 'the_broker_agent',
       'the_architect': 'the_architect_agent',
-      'the_double_agent': 'rogue_agent_agent',
+      'the_double_agent': 'the_double_agent_agent',
       'the_director': 'the_director_agent',
     };
     if (idMap[enemy.id]) return idMap[enemy.id];
@@ -475,6 +478,39 @@ export const RPGCharacter = ({
             maxHp={character.maxHp}
             size="large"
             showHealthBar={true}
+          />
+        );
+      }
+      if (spriteType === 'operative_agent') {
+        return (
+          <Operative
+            state={commonState as OperativeState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      if (spriteType === 'enforcer_agent') {
+        return (
+          <Enforcer
+            state={commonState as EnforcerState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="medium"
+          />
+        );
+      }
+      if (spriteType === 'the_double_agent_agent') {
+        return (
+          <TheDoubleAgent
+            state={commonState as TheDoubleAgentState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="large"
           />
         );
       }

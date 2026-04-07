@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
 import { Trophy, Skull, Coins, Star, Timer, Volume2, Pause, Play, Mic, AlertCircle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
@@ -490,9 +491,9 @@ export const RPGTugOfWar = ({
       {/* Header */}
       <div className="relative z-10 p-4 text-center">
         <h2 className="text-3xl font-black text-white drop-shadow-lg" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
-          TUG OF WAR
+          {isAgentMode() ? 'NETWORK TUG' : 'TUG OF WAR'}
         </h2>
-        <p className="text-white/90 text-sm drop-shadow">Read words to pull the rope!</p>
+        <p className="text-white/90 text-sm drop-shadow">{isAgentMode() ? 'Read intel to seize the connection!' : 'Read words to pull the rope!'}</p>
       </div>
 
       {/* Rewards & Timer Display */}

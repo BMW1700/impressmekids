@@ -1,8 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, Swords, Zap } from "lucide-react";
+import { Shield, Swords, Zap, Lock } from "lucide-react";
 import { speechManager } from "@/lib/speechRecognitionManager";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
+import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
+
+const agentMode = isAgentMode();
+const theme = getMinigameTheme('quickBlock');
 
 interface QuickBlockWord {
   id: number;
@@ -198,9 +202,8 @@ export const RPGQuickBlock = ({ words, onComplete }: RPGQuickBlockProps) => {
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-50">
-      {/* Dramatic red overlay */}
       <motion.div
-        className="absolute inset-0 bg-gradient-to-b from-red-950/90 via-orange-900/80 to-red-950/90"
+        className={`absolute inset-0 bg-gradient-to-b ${theme.bgGradient}`}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       />
@@ -227,15 +230,15 @@ export const RPGQuickBlock = ({ words, onComplete }: RPGQuickBlockProps) => {
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ repeat: Infinity, duration: 0.3 }}
             >
-              <span className="text-white font-black text-xl md:text-3xl">⚠️ INCOMING ATTACK! ⚠️</span>
+              <span className="text-white font-black text-xl md:text-3xl">{agentMode ? '⚠️ INCOMING HACK! ⚠️' : '⚠️ INCOMING ATTACK! ⚠️'}</span>
             </motion.div>
             
             <motion.p
-              className="mt-4 text-xl text-red-200 font-bold"
+              className={`mt-4 text-xl ${theme.textColor} font-bold`}
               animate={{ opacity: [0.5, 1, 0.5] }}
               transition={{ repeat: Infinity, duration: 0.5 }}
             >
-              Speak the words to BLOCK!
+              {agentMode ? 'Speak the codes to COUNTER!' : 'Speak the words to BLOCK!'}
             </motion.p>
           </motion.div>
         )}
@@ -251,10 +254,10 @@ export const RPGQuickBlock = ({ words, onComplete }: RPGQuickBlockProps) => {
             animate={{ y: 0, opacity: 1 }}
           >
             <div className="flex items-center gap-6">
-              <div className="px-6 py-3 bg-gradient-to-r from-orange-600 via-red-500 to-orange-600 rounded-xl border-2 border-orange-300">
+              <div className={`px-6 py-3 bg-gradient-to-r ${theme.accentGradient} rounded-xl border-2 ${theme.accentColor}`}>
                 <span className="text-white font-black text-xl flex items-center gap-2">
-                  <Shield className="w-6 h-6" />
-                  QUICK BLOCK!
+                  {agentMode ? <Lock className="w-6 h-6" /> : <Shield className="w-6 h-6" />}
+                  {theme.title}
                 </span>
               </div>
               

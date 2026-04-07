@@ -7,6 +7,7 @@ import { ensureMicrophoneAccess } from "@/lib/micDiagnostics";
 import { MicTroubleshooterModal } from "@/components/mic/MicTroubleshooterModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useMLIntegration } from "@/hooks/useMLIntegration";
+import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
 
 interface RPGBalloonBattleProps {
   words: string[];
@@ -21,13 +22,21 @@ interface RPGBalloonBattleProps {
 
 const soundEffects = new SoundEffects();
 
-// Hero balloons - colorful with cute faces
-const HERO_BALLOON_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#a855f7'];
-const HERO_FACES = ['⚔️', '🛡️', '🏹', '✨', '💫'];
+// Theme-aware constants
+const agentMode = isAgentMode();
+const theme = getMinigameTheme('balloonBattle');
 
-// Enemy balloons - dark with menacing faces
-const ENEMY_BALLOON_COLOR = '#1f2937';
-const ENEMY_FACES = ['👹', '💀', '🦇', '👻', '🐲'];
+const HERO_BALLOON_COLORS = agentMode
+  ? ['#0EA5E9', '#06B6D4', '#14B8A6', '#22D3EE', '#0891B2']
+  : ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#a855f7'];
+const HERO_FACES = agentMode
+  ? ['🎯', '🔒', '📡', '💻', '⚡']
+  : ['⚔️', '🛡️', '🏹', '✨', '💫'];
+
+const ENEMY_BALLOON_COLOR = agentMode ? '#0F172A' : '#1f2937';
+const ENEMY_FACES = agentMode
+  ? ['💣', '🚀', '☠️', '🔴', '⚠️']
+  : ['👹', '💀', '🦇', '👻', '🐲'];
 
 interface Balloon {
   id: number;
@@ -524,36 +533,54 @@ export const RPGBalloonBattle = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-b from-sky-400 via-sky-300 to-sky-200 flex flex-col">
+    <div className={`fixed inset-0 z-50 ${agentMode ? 'bg-gradient-to-b from-slate-900 via-slate-800 to-gray-900' : 'bg-gradient-to-b from-sky-400 via-sky-300 to-sky-200'} flex flex-col`}>
       {/* V2 Badge */}
-      <div className="absolute top-2 left-2 z-50 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded shadow-lg">
-        Balloon v2 • Pause/Resume Mic
+      <div className={`absolute top-2 left-2 z-50 ${agentMode ? 'bg-cyan-600' : 'bg-blue-500'} text-white text-xs font-bold px-2 py-1 rounded shadow-lg`}>
+        {agentMode ? 'Payload v2 • Pause/Resume Mic' : 'Balloon v2 • Pause/Resume Mic'}
       </div>
       
-      {/* Clouds background */}
+      {/* Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(5)].map((_, i) => (
-          <motion.div
-            key={`cloud-${i}`}
-            className="absolute bg-white/60 rounded-full blur-md"
-            style={{
-              width: 100 + Math.random() * 100,
-              height: 40 + Math.random() * 30,
-              top: `${10 + Math.random() * 30}%`,
-              left: `${-10 + i * 25}%`,
-            }}
-            animate={{ x: [0, 50, 0] }}
-            transition={{ duration: 20 + i * 5, repeat: Infinity }}
-          />
-        ))}
+        {agentMode ? (
+          /* Tactical grid for agent mode */
+          [...Array(8)].map((_, i) => (
+            <motion.div
+              key={`grid-${i}`}
+              className="absolute bg-cyan-500/10 rounded"
+              style={{
+                width: 2,
+                height: '100%',
+                left: `${12.5 * (i + 1)}%`,
+              }}
+            />
+          ))
+        ) : (
+          /* Clouds for classic */
+          [...Array(5)].map((_, i) => (
+            <motion.div
+              key={`cloud-${i}`}
+              className="absolute bg-white/60 rounded-full blur-md"
+              style={{
+                width: 100 + Math.random() * 100,
+                height: 40 + Math.random() * 30,
+                top: `${10 + Math.random() * 30}%`,
+                left: `${-10 + i * 25}%`,
+              }}
+              animate={{ x: [0, 50, 0] }}
+              transition={{ duration: 20 + i * 5, repeat: Infinity }}
+            />
+          ))
+        )}
       </div>
 
       {/* Header */}
       <div className="p-4 text-center relative z-10">
         <h2 className="text-2xl font-black text-white drop-shadow-lg flex items-center justify-center gap-2">
-          🎈 BALLOON BONANZA 🎈
+          {theme.title}
         </h2>
-        <p className="text-white/80 text-sm drop-shadow">Pop all enemy balloons! Don't lose yours!</p>
+        <p className={`${agentMode ? 'text-cyan-300/80' : 'text-white/80'} text-sm drop-shadow`}>
+          {agentMode ? 'Neutralize all enemy payloads! Protect yours!' : 'Pop all enemy balloons! Don\'t lose yours!'}
+        </p>
       </div>
 
       {/* Rewards Display */}
