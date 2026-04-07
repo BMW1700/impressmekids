@@ -399,7 +399,13 @@ export const RPGBattleArena = ({
   const [bossGateTriggered, setBossGateTriggered] = useState(false);
   const [wordMasteryBonus, setWordMasteryBonus] = useState<{ word: string; multiplier: number } | null>(null);
   
-  // Cross-session word mastery: cache DB vocabulary on mount
+  // Sync inventory from DB when playerInventory loads
+  useEffect(() => {
+    if (!playerInventory.isLoading) {
+      setInventory(battleInventory);
+    }
+  }, [battleInventory, playerInventory.isLoading]);
+
   const knownWordsRef = useRef<Record<string, number>>({});
   useEffect(() => {
     if (!studentId) return;
