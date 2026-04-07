@@ -2758,6 +2758,7 @@ export const RPGBattleArena = ({
                       currentMp={wizardMp}
                       inventory={inventory}
                       selectedCharacter={selectedCharacter}
+                      extraSpells={purchasedPowerSpells}
                     />
                   </div>
 
