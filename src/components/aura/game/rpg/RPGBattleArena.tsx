@@ -2693,6 +2693,7 @@ export const RPGBattleArena = ({
                 currentStreak={streak}
                 usePremiumSprites={true}
                 showHealthBar={true}
+                skinVariant={playerInventory.getEquippedSkin(selectedCharacter || 'valor') || undefined}
               />
               {/* Companion - NO health bar */}
               {companionCharacter && (

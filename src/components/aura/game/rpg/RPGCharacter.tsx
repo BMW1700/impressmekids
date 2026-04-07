@@ -57,6 +57,7 @@ interface RPGCharacterProps {
   usePremiumSprites?: boolean;
   currentStreak?: number;
   showHealthBar?: boolean;
+  skinVariant?: string;
 }
 
 // Map character/enemy types to sprite types - EXTENDED with all new enemies
