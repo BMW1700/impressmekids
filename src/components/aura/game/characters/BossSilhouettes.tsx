@@ -857,6 +857,133 @@ export const DirectorSilhouette = ({ isUnlocked, size = 'medium' }: SilhouettePr
   );
 };
 
+// The Warden Silhouette (Agent World 5 - military commander)
+export const WardenSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteProps) => {
+  const { width, height } = sizeConfig[size];
+  return (
+    <motion.div className="relative"
+      animate={isUnlocked ? { filter: ['drop-shadow(0 0 4px rgba(16, 185, 129, 0.5))', 'drop-shadow(0 0 12px rgba(16, 185, 129, 0.8))', 'drop-shadow(0 0 4px rgba(16, 185, 129, 0.5))'] } : {}}
+      transition={{ duration: 2, repeat: Infinity }}>
+      <svg width={width} height={height} viewBox="0 0 80 80" fill="none">
+        <defs>
+          <linearGradient id="wardenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={isUnlocked ? "#065F46" : "#475569"} stopOpacity="0.9" />
+            <stop offset="100%" stopColor={isUnlocked ? "#022C22" : "#1E293B"} stopOpacity="0.9" />
+          </linearGradient>
+        </defs>
+        <path d="M28 25 L52 25 L58 75 L22 75 Z" fill="url(#wardenGrad)" />
+        <circle cx="40" cy="18" r="10" fill="url(#wardenGrad)" />
+        <ellipse cx="40" cy="12" rx="14" ry="5" fill={isUnlocked ? "#065F46" : "#475569"} />
+        <rect x="15" y="28" width="12" height="30" rx="3" fill="url(#wardenGrad)" />
+        <rect x="53" y="28" width="12" height="30" rx="3" fill="url(#wardenGrad)" />
+        {isUnlocked && (
+          <>
+            <motion.rect x="32" y="16" width="16" height="4" rx="1" fill="#10B981" opacity="0.6"
+              animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ duration: 1.5, repeat: Infinity }} />
+            <rect x="16" y="28" width="10" height="3" rx="1" fill="#D97706" opacity="0.8" />
+          </>
+        )}
+      </svg>
+    </motion.div>
+  );
+};
+
+// The Commander Silhouette (Agent World 6 - space commander)
+export const CommanderSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteProps) => {
+  const { width, height } = sizeConfig[size];
+  return (
+    <motion.div className="relative"
+      animate={isUnlocked ? { filter: ['drop-shadow(0 0 4px rgba(129, 140, 248, 0.5))', 'drop-shadow(0 0 12px rgba(129, 140, 248, 0.8))', 'drop-shadow(0 0 4px rgba(129, 140, 248, 0.5))'] } : {}}
+      transition={{ duration: 2, repeat: Infinity }}>
+      <svg width={width} height={height} viewBox="0 0 80 80" fill="none">
+        <defs>
+          <linearGradient id="commanderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={isUnlocked ? "#312E81" : "#475569"} stopOpacity="0.9" />
+            <stop offset="100%" stopColor={isUnlocked ? "#1E1B4B" : "#1E293B"} stopOpacity="0.9" />
+          </linearGradient>
+        </defs>
+        <path d="M28 28 L22 75 L58 75 L52 28" fill="url(#commanderGrad)" />
+        <circle cx="40" cy="20" r="11" fill="url(#commanderGrad)" />
+        <rect x="15" y="30" width="12" height="28" rx="4" fill="url(#commanderGrad)" />
+        <rect x="53" y="30" width="12" height="28" rx="4" fill="url(#commanderGrad)" />
+        {isUnlocked && (
+          <>
+            <rect x="16" y="30" width="3" height="10" rx="1" fill="#F59E0B" opacity="0.8" />
+            <rect x="21" y="30" width="3" height="10" rx="1" fill="#F59E0B" opacity="0.8" />
+            <motion.polygon points="40,50 43,55 49,55 44,58 46,64 40,60 34,64 36,58 31,55 37,55" fill="#F59E0B"
+              animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 2, repeat: Infinity }} />
+          </>
+        )}
+      </svg>
+    </motion.div>
+  );
+};
+
+// The Phantom Silhouette (Agent World 7 - hooded hacker ghost)
+export const PhantomSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteProps) => {
+  const { width, height } = sizeConfig[size];
+  return (
+    <motion.div className="relative"
+      animate={isUnlocked ? { filter: ['drop-shadow(0 0 4px rgba(74, 222, 128, 0.5))', 'drop-shadow(0 0 12px rgba(74, 222, 128, 0.8))', 'drop-shadow(0 0 4px rgba(74, 222, 128, 0.5))'] } : {}}
+      transition={{ duration: 2, repeat: Infinity }}>
+      <svg width={width} height={height} viewBox="0 0 80 80" fill="none">
+        <defs>
+          <linearGradient id="phantomGradS" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={isUnlocked ? "#14532D" : "#475569"} stopOpacity="0.8" />
+            <stop offset="100%" stopColor={isUnlocked ? "#022C22" : "#1E293B"} stopOpacity="0.7" />
+          </linearGradient>
+        </defs>
+        <path d="M40 12 L15 40 L12 75 L35 72 L40 70 L45 72 L68 75 L65 40 Z" fill="url(#phantomGradS)" />
+        <path d="M28 20 Q40 8 52 20 Q54 35 40 38 Q26 35 28 20" fill={isUnlocked ? "#064E3B" : "#334155"} />
+        {isUnlocked && (
+          <>
+            <motion.circle cx="35" cy="28" r="2.5" fill="#4ADE80"
+              animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }} />
+            <motion.circle cx="45" cy="28" r="2.5" fill="#4ADE80"
+              animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }} />
+          </>
+        )}
+      </svg>
+    </motion.div>
+  );
+};
+
+// The Overseer Silhouette (Agent World 8 - elegant mastermind, final boss)
+export const OverseerSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteProps) => {
+  const { width, height } = sizeConfig[size];
+  return (
+    <motion.div className="relative"
+      animate={isUnlocked ? { filter: ['drop-shadow(0 0 4px rgba(244, 63, 94, 0.5))', 'drop-shadow(0 0 15px rgba(244, 63, 94, 0.9))', 'drop-shadow(0 0 4px rgba(244, 63, 94, 0.5))'] } : {}}
+      transition={{ duration: 2, repeat: Infinity }}>
+      <svg width={width} height={height} viewBox="0 0 80 80" fill="none">
+        <defs>
+          <linearGradient id="overseerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={isUnlocked ? "#1C1917" : "#475569"} stopOpacity="0.95" />
+            <stop offset="100%" stopColor={isUnlocked ? "#000000" : "#1E293B"} stopOpacity="0.95" />
+          </linearGradient>
+        </defs>
+        <path d="M27 22 L53 22 L58 55 L55 75 L25 75 L22 55 Z" fill="url(#overseerGrad)" />
+        <circle cx="40" cy="16" r="11" fill="url(#overseerGrad)" />
+        <path d="M38 22 L36 45 L40 65 L44 45 L42 22" fill={isUnlocked ? "#BE123C" : "#475569"} opacity="0.8" />
+        <rect x="13" y="25" width="16" height="32" rx="4" fill="url(#overseerGrad)" />
+        <rect x="51" y="25" width="16" height="32" rx="4" fill="url(#overseerGrad)" />
+        {isUnlocked && (
+          <>
+            <motion.circle cx="36" cy="15" r="2" fill="#F43F5E"
+              animate={{ opacity: [0.4, 1, 0.4], filter: ['drop-shadow(0 0 2px #F43F5E)', 'drop-shadow(0 0 6px #F43F5E)', 'drop-shadow(0 0 2px #F43F5E)'] }}
+              transition={{ duration: 1, repeat: Infinity }} />
+            <motion.circle cx="44" cy="15" r="2" fill="#F43F5E"
+              animate={{ opacity: [0.4, 1, 0.4], filter: ['drop-shadow(0 0 2px #F43F5E)', 'drop-shadow(0 0 6px #F43F5E)', 'drop-shadow(0 0 2px #F43F5E)'] }}
+              transition={{ duration: 1, repeat: Infinity, delay: 0.2 }} />
+            <motion.rect x="36" y="45" width="8" height="2" rx="1" fill="#F59E0B"
+              animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ duration: 2, repeat: Infinity }} />
+          </>
+        )}
+      </svg>
+    </motion.div>
+  );
+};
+
 // Combined export for convenience
 export const BossSilhouettes = {
   Drake: DrakeSilhouette,
@@ -872,4 +999,8 @@ export const BossSilhouettes = {
   Architect: ArchitectSilhouette,
   DoubleAgent: DoubleAgentSilhouette,
   Director: DirectorSilhouette,
+  Warden: WardenSilhouette,
+  Commander: CommanderSilhouette,
+  Phantom: PhantomSilhouette,
+  Overseer: OverseerSilhouette,
 };
