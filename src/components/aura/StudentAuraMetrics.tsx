@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronDown, ChevronUp, TrendingUp, TrendingDown, BookOpen, Mic, Brain, Target } from "lucide-react";
-import { format } from "date-fns";
+import { ChevronDown, ChevronUp, TrendingUp, TrendingDown, BookOpen, Mic, Brain, Target, AlertTriangle, Calendar } from "lucide-react";
+import { format, differenceInDays, startOfWeek, parseISO } from "date-fns";
 
 interface StudentAuraMetricsProps {
   students: any[];
@@ -63,6 +63,38 @@ const StudentAuraMetrics = ({ students, records, readingSessions = [] }: Student
         olderReadings.reduce((sum, r) => sum + (r.accuracy_percent || 0), 0) / olderReadings.length
       : 0;
 
+    // Engagement metrics
+    const now = new Date();
+    const allSessions = [...studentReadingSessions, ...studentRecords].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+    const lastActivityDate = allSessions.length > 0 ? new Date(allSessions[0].created_at) : null;
+    const daysSinceLastActivity = lastActivityDate ? differenceInDays(now, lastActivityDate) : null;
+
+    // Weeks active (out of last 4)
+    const fourWeeksAgo = new Date(now);
+    fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+    const recentWeeks = new Set<string>();
+    allSessions.forEach((s) => {
+      const d = new Date(s.created_at);
+      if (d >= fourWeeksAgo) {
+        recentWeeks.add(format(startOfWeek(d, { weekStartsOn: 1 }), "yyyy-MM-dd"));
+      }
+    });
+    const weeksActive = recentWeeks.size;
+
+    // Sessions this week vs last week
+    const thisWeekStart = startOfWeek(now, { weekStartsOn: 1 });
+    const lastWeekStart = new Date(thisWeekStart);
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+    const sessionsThisWeek = allSessions.filter((s) => new Date(s.created_at) >= thisWeekStart).length;
+    const sessionsLastWeek = allSessions.filter(
+      (s) => new Date(s.created_at) >= lastWeekStart && new Date(s.created_at) < thisWeekStart
+    ).length;
+
+    // At risk: was active 2+ weeks ago but not this week
+    const isAtRisk = daysSinceLastActivity !== null && daysSinceLastActivity >= 14 && weeksActive >= 1;
+
     return {
       avgGrade,
       avgPronunciation,
@@ -78,6 +110,12 @@ const StudentAuraMetrics = ({ students, records, readingSessions = [] }: Student
       readingSessionCount: studentReadingSessions.length,
       readingTrend,
       recentReadingSessions: studentReadingSessions.slice(0, 5),
+      // Engagement data
+      daysSinceLastActivity,
+      weeksActive,
+      sessionsThisWeek,
+      sessionsLastWeek,
+      isAtRisk,
     };
   };
 
