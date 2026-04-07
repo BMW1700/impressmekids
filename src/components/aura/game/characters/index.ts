@@ -37,6 +37,9 @@ export { DroneSentry, type DroneSentryState } from './DroneSentry';
 export { RogueAgent, type RogueAgentState } from './RogueAgent';
 export { Bodyguard, type BodyguardState } from './Bodyguard';
 export { TheArchitect, type TheArchitectState } from './TheArchitect';
+export { Operative, type OperativeState } from './Operative';
+export { Enforcer, type EnforcerState } from './Enforcer';
+export { TheDoubleAgent, type TheDoubleAgentState } from './TheDoubleAgent';
 
 // Export boss silhouettes for world map
 export { 
