@@ -1,47 +1,53 @@
 
 
-# Brutally Honest Audit: What's Broken
+# Brutally Honest Assessment: Is Agent Mode Launch-Ready?
 
-## Critical Bug — Worlds 5-8 Bosses Cannot Appear
+## The Big Problem: The Store Is a Dead End
 
-The 4 new boss **sprites** (TheWarden, TheCommander, ThePhantom, TheOverseer) exist as visual components, but they have **no battle data** — no HP, no attack stats, no dialogue, no abilities, no miniGame pools. They are hollow shells.
+**The store UI looks great. Purchasing works. But nothing you buy actually does anything in battle.**
 
-`getAgentBossForWorld()` in `agentBattleData.ts` only handles worlds 1-4 and falls back to **The Broker** for everything else. So if a student reaches World 5+, every boss fight is The Broker with World 1 stats. That's a game-breaking bug.
+Line 292 of `RPGBattleArena.tsx` tells the whole story:
+```
+const [inventory, setInventory] = useState({ health_potion: 2, magic_potion: 1 });
+```
 
-Additionally, `the_overseer` is mapped as `'boss'` instead of `'final_boss'` in `agentToClassicEnemyMap`, so even once fixed, The Overseer won't get final-boss-level treatment.
+Every battle starts with the same hardcoded 2 health potions and 1 magic potion — regardless of what the student has purchased from the store. The `usePlayerInventory` hook (which reads the real database) is **never imported or used** in the battle arena.
 
-## What's Actually Working
+This means:
+- **Purchased powers** (EMP Blast, Drone Strike, etc.) — never appear in the spell menu
+- **Purchased potions** — never show up in battle inventory
+- **Purchased upgrades** (attack boost, health boost, etc.) — `getActiveUpgrades()` is never called; damage/HP calculations ignore them
+- **Purchased skins** — the equip system works in the store UI, but `RPGCharacter.tsx` doesn't read equipped skins to change character appearance
 
-- All 25 minigames are themed correctly for agent mode
-- All 12 standard enemy/boss sprites render correctly in `RPGCharacter.tsx`
-- 53 stories exist (more than the 52 needed)
-- 9 worlds with proper level configs exist in `agentCampaignData.ts`
-- Hero characters (Agent X, Cipher, Shadow) are fully wired
+**Students spend gold → buy items → items vanish into the void.** This will destroy trust immediately. A high schooler who grinds 1000 gold for "Drone Strike" and never sees it in combat will quit.
 
-## The Fix — `agentBattleData.ts`
+## Would Schools Pilot This?
 
-### 1. Create 4 missing boss enemy data objects
-Add `theWarden`, `theCommander`, `thePhantom`, and `theOverseer` as full `RPGEnemy` objects in `agentBattleData.ts` with:
-- Unique HP/attack/defense stats (scaling up per world difficulty)
-- Unique dialogue lines (intro, attack, defeat) matching their character
-- Unique special abilities (2-3 each)
-- Appropriate miniGame pools
-- Correct enemy IDs matching the sprite mapping (`the_warden`, `the_commander`, `the_phantom`, `the_overseer`)
+**Honest answer: The reading mechanics are genuinely strong.** AURA's speech recognition, WCPM tracking, prosody scoring, and the "fluency controls combat damage" loop are real pedagogical innovation. The 25 minigames provide excellent variety. The story content is age-appropriate and academically framed. Teachers would see value in the core reading engine.
 
-### 2. Fix `getAgentBossForWorld()` 
-Add cases for worlds 5-8:
-- World 5 → `theWarden`
-- World 6 → `theCommander`  
-- World 7 → `thePhantom`
-- World 8 → `theOverseer`
+**But the broken store economy is a consumer-readiness problem, not a pedagogy problem.** Schools evaluating this will have students report "I bought stuff and nothing happened." That's a bug that makes the whole product feel unfinished.
 
-### 3. Fix `agentToClassicEnemyMap` in `agentCampaignData.ts`
-Change `the_overseer: 'boss'` → `the_overseer: 'final_boss'`
+## What Needs to Happen Before Launch
+
+### Critical (blocks launch)
+1. **Wire the store to battle** — Import `usePlayerInventory` into `RPGBattleArena`, replace the hardcoded inventory with real database inventory, feed `getActiveUpgrades()` into damage/HP calculations, and populate the spell menu with purchased powers
+2. **Make skins actually render** — Pass equipped skin variants from `usePlayerInventory` into `RPGCharacter` so purchased skins visually change the character
+
+### Important (should fix)
+3. **Add potion consumption feedback** — When a potion is used in battle, call `usePotion.mutate()` to actually deduct it from the database, not just local state
+
+## What You Do NOT Need
+- More enemy characters — 12 unique sprites is plenty
+- More minigames — 25 is more than enough variety
+- More stories — 53 stories across 9 worlds is solid
+- More character powers — 10 agent powers in the store is a good roster, they just need to actually work
+
+## Summary
+
+The reading engine is school-ready. The game economy is broken. Fix the store-to-battle connection (one file change in `RPGBattleArena.tsx` + minor `RPGCharacter.tsx` update) and you have a launchable product.
 
 ### Files to modify
-- `src/lib/agentBattleData.ts` — add 4 boss objects + fix world mapping
-- `src/lib/agentCampaignData.ts` — fix overseer type mapping
-
-### What stays the same
-Everything else — sprites, minigame themes, stories, campaign levels, hero data — is all correct and working.
+- `src/components/aura/game/rpg/RPGBattleArena.tsx` — import `usePlayerInventory`, replace hardcoded inventory, apply upgrades to damage/HP, populate spell menu with purchased powers
+- `src/components/aura/game/rpg/RPGCharacter.tsx` — accept and apply equipped skin variants
+- `src/components/aura/game/rpg/RPGSpellMenu.tsx` — show purchased powers alongside default spells
 
