@@ -527,9 +527,9 @@ export const RPGBattleArena = ({
     const randomCompanion = remaining[Math.floor(Math.random() * remaining.length)];
     setCompanionCharacter(randomCompanion);
     
-    // Set player HP based on selected character
+    // Set player HP based on selected character + health_boost upgrade
     const charData = getCharacterData(character);
-    setPlayerHp(charData.maxHp);
+    setPlayerHp(charData.maxHp + (activeUpgrades.health_boost || 0));
     
     // Hide selection and start battle
     setShowCharacterSelect(false);
