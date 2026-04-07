@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { getIPAPronunciation } from "@/lib/cmuDictWrapper";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Flame, Trophy, Skull, Star, AlertTriangle, Coins, Volume2, VolumeX } from "lucide-react";
+import { ArrowLeft, Flame, Trophy, Skull, Star, AlertTriangle, Coins, Volume2, VolumeX, Snowflake, Zap, Sword, Flower2, Heart, Wind as WindIcon, Binary, Shield as ShieldIcon, Bomb, Target } from "lucide-react";
 import { RPGBattleBackground } from "./RPGBattleBackground";
 import { RPGCharacter } from "./RPGCharacter";
 import { RPGDialogueBox } from "./RPGDialogueBox";
