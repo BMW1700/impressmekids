@@ -777,18 +777,20 @@ export const RPGCharacter = ({
         )}
       </motion.div>
 
-      {/* Character Sprite */}
+      {/* Character Sprite — with optional skin color override */}
       {showSprite && (
-        usePremiumSprites ? renderPremiumSprite() : (
-          <RPGCharacterSprite
-            type={(['princess', 'agent_x', 'cipher', 'shadow_agent'].includes(spriteType)) ? 'knight' : spriteType as 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian'}
-            isEnemy={isEnemy}
-            isAttacking={isAttacking}
-            isTakingDamage={isTakingDamage}
-            isDefending={isDefending}
-            size="lg"
-          />
-        )
+        <div style={skinColorStyle}>
+          {usePremiumSprites ? renderPremiumSprite() : (
+            <RPGCharacterSprite
+              type={(['princess', 'agent_x', 'cipher', 'shadow_agent'].includes(spriteType)) ? 'knight' : spriteType as 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian'}
+              isEnemy={isEnemy}
+              isAttacking={isAttacking}
+              isTakingDamage={isTakingDamage}
+              isDefending={isDefending}
+              size="lg"
+            />
+          )}
+        </div>
       )}
 
       {/* Magical particles for boss enemies */}
