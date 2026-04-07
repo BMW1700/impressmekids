@@ -46,6 +46,7 @@ export const RPGCommandMenu = ({
   currentMp = 0,
   inventory = {},
   selectedCharacter = null,
+  extraSpells = [],
 }: RPGCommandMenuProps) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -56,17 +57,22 @@ export const RPGCommandMenu = ({
   const isAgent = theme === 'agent';
   const commands = isAgent ? agentCommands : classicCommands;
 
-  // Get character-specific spells
+  // Get character-specific spells + purchased powers
   const getCharacterSpells = (): Spell[] => {
+    let base: Spell[];
     switch (selectedCharacter) {
-      case 'valor': return valorSpells;
-      case 'elara': return elaraSpells;
-      case 'ella': return ellaSpells;
-      case 'agent_x': return agentXSpells;
-      case 'cipher': return cipherSpells;
-      case 'shadow': return shadowSpells;
-      default: return elaraSpells;
+      case 'valor': base = valorSpells; break;
+      case 'elara': base = elaraSpells; break;
+      case 'ella': base = ellaSpells; break;
+      case 'agent_x': base = agentXSpells; break;
+      case 'cipher': base = cipherSpells; break;
+      case 'shadow': base = shadowSpells; break;
+      default: base = elaraSpells;
     }
+    // Merge purchased powers (avoid duplicates by id)
+    const baseIds = new Set(base.map(s => s.id));
+    const extras = extraSpells.filter(s => !baseIds.has(s.id));
+    return [...base, ...extras];
   };
 
   const getCharacterName = (): string => {
