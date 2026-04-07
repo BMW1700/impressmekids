@@ -298,23 +298,61 @@ export const RPGBattleArena = ({
   const wordsReadRef = useRef(0);
   const correctWordsRef = useRef(0);
   
-  // REAL INVENTORY: Build from database instead of hardcoded values
-  // Potions from DB + 2 free health potions & 1 free magic potion as starter kit
+  // REAL INVENTORY: Build from database — no regenerating starter kit
   const battleInventory = useMemo(() => {
     const inv: Record<string, number> = {};
-    // Get all potion items from store
     const potionItems = STORE_ITEMS.filter(item => item.category === 'potion');
     potionItems.forEach(item => {
       const qty = playerInventory.getItemQuantity(item.id);
       if (qty > 0) inv[item.id] = qty;
     });
-    // Starter kit: ensure at least 2 health potions and 1 magic potion for new players
-    if (!inv['health_potion']) inv['health_potion'] = 2;
-    else inv['health_potion'] = Math.max(inv['health_potion'], 2);
-    if (!inv['magic_potion']) inv['magic_potion'] = 1;
-    else inv['magic_potion'] = Math.max(inv['magic_potion'], 1);
+    // Starter kit ONLY if player has zero potions of any kind
+    const totalPotions = Object.values(inv).reduce((s, v) => s + v, 0);
+    if (totalPotions === 0) {
+      inv['health_potion'] = 2;
+      inv['magic_potion'] = 1;
+    }
     return inv;
   }, [playerInventory]);
+
+  // PURCHASED POWERS: Convert store power items in inventory to Spell objects
+  const purchasedPowerSpells: Spell[] = useMemo(() => {
+    const theme = getStoredTheme();
+    const powerItems = STORE_ITEMS.filter(item => 
+      item.category === 'power' && 
+      playerInventory.ownedItems.includes(item.id) &&
+      (item.theme === theme || item.theme === 'shared')
+    );
+    // Map store effect strings to Spell effect types
+    const effectMap: Record<string, Spell['effect']> = {
+      fire: 'fire', ice: 'ice', lightning: 'lightning', earth: 'slash',
+      holy: 'nature', shadow: 'slash', nature: 'nature', wind: 'wind',
+      arcane: 'lightning', nova: 'fire', time: 'ice', heal: 'heal',
+      emp: 'lightning', drone: 'fire', hack: 'ice', data_wipe: 'data_burst',
+      flash: 'lightning', shield: 'heal', jam: 'data_burst', plasma: 'fire',
+      neural: 'lightning',
+    };
+    // Map effects to lucide icons
+    const { Flame, Snowflake, Zap, Sword, Flower2, Heart, Wind: WindIcon, Binary, Shield: ShieldIcon, Bomb, Target } = require('lucide-react');
+    const iconMap: Record<string, any> = {
+      fire: Flame, ice: Snowflake, lightning: Zap, earth: Sword,
+      holy: Flower2, shadow: Sword, nature: Flower2, wind: WindIcon,
+      arcane: Zap, nova: Flame, time: Snowflake, heal: Heart,
+      emp: Zap, drone: Target, hack: Binary, data_wipe: Binary,
+      flash: Zap, shield: ShieldIcon, jam: Binary, plasma: Bomb,
+      neural: Zap,
+    };
+    return powerItems.map(item => ({
+      id: item.id,
+      name: item.name,
+      damage: item.value || 0,
+      mpCost: Math.max(15, Math.floor((item.price || 300) / 20)),
+      icon: iconMap[item.effect || 'fire'] || Flame,
+      color: theme === 'agent' ? 'from-cyan-500 to-teal-600' : 'from-purple-500 to-indigo-600',
+      effect: effectMap[item.effect || 'fire'] || 'fire',
+      description: item.description,
+    })) as Spell[];
+  }, [playerInventory.ownedItems]);
   const [inventory, setInventory] = useState<Record<string, number>>({});
   
   // Ref to track latest enemyHp for use in callbacks (prevents stale closure issues in mini-games)
