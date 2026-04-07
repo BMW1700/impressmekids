@@ -332,8 +332,6 @@ export const RPGBattleArena = ({
       flash: 'lightning', shield: 'heal', jam: 'data_burst', plasma: 'fire',
       neural: 'lightning',
     };
-    // Map effects to lucide icons
-    const { Flame, Snowflake, Zap, Sword, Flower2, Heart, Wind: WindIcon, Binary, Shield: ShieldIcon, Bomb, Target } = require('lucide-react');
     const iconMap: Record<string, any> = {
       fire: Flame, ice: Snowflake, lightning: Zap, earth: Sword,
       holy: Flower2, shadow: Sword, nature: Flower2, wind: WindIcon,
