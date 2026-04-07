@@ -2,7 +2,7 @@ import { type CampaignLevel, type CampaignWorld, type CampaignEnemyType } from '
 
 // Agent mode enemy types mapped to classic enemy type system
 // We reuse the CampaignEnemyType union but map agent enemies to existing types for battle engine compatibility
-export type AgentEnemyType = 'street_thug' | 'hired_gun' | 'cyber_hacker' | 'drone_sentry' | 'rogue_agent' | 'bodyguard' | 'operative' | 'enforcer' | 'the_broker' | 'the_architect' | 'the_double_agent' | 'the_director';
+export type AgentEnemyType = 'street_thug' | 'hired_gun' | 'cyber_hacker' | 'drone_sentry' | 'rogue_agent' | 'bodyguard' | 'operative' | 'enforcer' | 'the_broker' | 'the_architect' | 'the_double_agent' | 'the_director' | 'the_warden' | 'the_commander' | 'the_phantom' | 'the_overseer';
 
 // Map agent enemy types to classic engine types for battle compatibility
 export const agentToClassicEnemyMap: Record<AgentEnemyType, CampaignEnemyType> = {
@@ -18,6 +18,10 @@ export const agentToClassicEnemyMap: Record<AgentEnemyType, CampaignEnemyType> =
   the_architect: 'boss',
   the_double_agent: 'boss',
   the_director: 'final_boss',
+  the_warden: 'boss',
+  the_commander: 'boss',
+  the_phantom: 'boss',
+  the_overseer: 'boss',
 };
 
 export const agentCampaignWorlds: CampaignWorld[] = [
@@ -115,6 +119,90 @@ export const agentCampaignWorlds: CampaignWorld[] = [
       { id: 5, storyIndex: 21, enemies: ['elite', 'elite'], isBossLevel: false, starThresholds: [45, 65, 80] },
       { id: 6, storyIndex: 22, enemies: ['boss'], isBossLevel: false, starThresholds: [45, 65, 80] },
       { id: 7, storyIndex: 23, enemies: ['final_boss'], isBossLevel: true, starThresholds: [40, 60, 80] },
+    ],
+  },
+  {
+    id: 5,
+    name: 'The Black Site',
+    description: 'Infiltrate a classified military research facility.',
+    gradient: 'from-emerald-600 via-green-700 to-teal-900',
+    bgColor: 'bg-emerald-900/20',
+    enemyTypes: ['guard', 'elite'],
+    requiredGradeLevel: 10,
+    storyCount: 6,
+    unlockRequirement: 14,
+    lore: 'Deep in the desert, a decommissioned military base hides a terrible secret. The Syndicate has reactivated the facility — codenamed BLACK SITE — to develop experimental weapons. The Warden runs the compound with an iron fist. Your mission: breach the perimeter, gather evidence, and neutralize the operation.',
+    levels: [
+      { id: 1, storyIndex: 24, enemies: ['guard', 'guard'], isBossLevel: false, starThresholds: [55, 75, 90] },
+      { id: 2, storyIndex: 25, enemies: ['elite'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 3, storyIndex: 26, enemies: ['elite', 'guard'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 4, storyIndex: 27, enemies: ['elite', 'elite'], isBossLevel: false, starThresholds: [45, 65, 80] },
+      { id: 5, storyIndex: 28, enemies: ['elite', 'elite'], isBossLevel: false, starThresholds: [45, 65, 80] },
+      { id: 6, storyIndex: 29, enemies: ['boss'], isBossLevel: true, starThresholds: [40, 60, 80] },
+    ],
+  },
+  {
+    id: 6,
+    name: 'Skyfall Station',
+    description: 'Board a rogue orbital satellite before it deploys.',
+    gradient: 'from-indigo-500 via-violet-600 to-purple-800',
+    bgColor: 'bg-indigo-900/20',
+    enemyTypes: ['guard', 'elite', 'boss'],
+    requiredGradeLevel: 11,
+    storyCount: 7,
+    unlockRequirement: 18,
+    lore: 'The Syndicate has seized control of a decommissioned military satellite — Skyfall Station — and is repurposing it as a global surveillance platform. Commander Voss, a disgraced space program director, oversees the operation from low orbit. You must board the station, disable the uplink, and bring Voss to justice before the network goes live.',
+    levels: [
+      { id: 1, storyIndex: 30, enemies: ['guard', 'elite'], isBossLevel: false, starThresholds: [55, 75, 90] },
+      { id: 2, storyIndex: 31, enemies: ['elite', 'guard'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 3, storyIndex: 32, enemies: ['elite', 'elite'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 4, storyIndex: 33, enemies: ['elite', 'elite'], isBossLevel: false, starThresholds: [45, 65, 80] },
+      { id: 5, storyIndex: 34, enemies: ['boss', 'guard'], isBossLevel: false, starThresholds: [45, 65, 80] },
+      { id: 6, storyIndex: 35, enemies: ['boss', 'elite'], isBossLevel: false, starThresholds: [40, 60, 75] },
+      { id: 7, storyIndex: 36, enemies: ['boss'], isBossLevel: true, starThresholds: [40, 60, 80] },
+    ],
+  },
+  {
+    id: 7,
+    name: 'The Deep Web',
+    description: 'Hunt a ghost hacker collective in the digital underworld.',
+    gradient: 'from-lime-500 via-green-600 to-emerald-800',
+    bgColor: 'bg-lime-900/20',
+    enemyTypes: ['elite', 'boss'],
+    requiredGradeLevel: 11,
+    storyCount: 7,
+    unlockRequirement: 22,
+    lore: 'The Syndicate\'s most elusive division operates entirely online — a hacker collective known as the Phantom Network. Their leader, a figure known only as The Phantom, has never been seen in person. They are selling stolen government secrets on encrypted markets. You must navigate the deep web, trace their digital footprints, and unmask The Phantom before critical infrastructure is compromised.',
+    levels: [
+      { id: 1, storyIndex: 37, enemies: ['elite', 'guard'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 2, storyIndex: 38, enemies: ['elite', 'elite'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 3, storyIndex: 39, enemies: ['boss', 'guard'], isBossLevel: false, starThresholds: [45, 65, 80] },
+      { id: 4, storyIndex: 40, enemies: ['elite', 'elite'], isBossLevel: false, starThresholds: [45, 65, 80] },
+      { id: 5, storyIndex: 41, enemies: ['boss', 'elite'], isBossLevel: false, starThresholds: [40, 60, 75] },
+      { id: 6, storyIndex: 42, enemies: ['boss', 'boss'], isBossLevel: false, starThresholds: [40, 60, 75] },
+      { id: 7, storyIndex: 43, enemies: ['boss'], isBossLevel: true, starThresholds: [35, 55, 75] },
+    ],
+  },
+  {
+    id: 8,
+    name: 'Operation Endgame',
+    description: 'The final arc — stop a global crisis.',
+    gradient: 'from-rose-500 via-pink-600 to-fuchsia-800',
+    bgColor: 'bg-rose-900/20',
+    enemyTypes: ['elite', 'boss', 'final_boss'],
+    requiredGradeLevel: 12,
+    storyCount: 8,
+    unlockRequirement: 28,
+    lore: 'The Syndicate\'s ultimate plan is in motion — Operation Endgame. The Overseer, a shadowy figure who has been pulling strings from behind every Syndicate cell you\'ve dismantled, intends to destabilize the global economy and reshape the world order. Every agent, every resource, every skill you\'ve developed has led to this moment. There is no backup. There is no second chance. End this.',
+    levels: [
+      { id: 1, storyIndex: 44, enemies: ['boss', 'elite'], isBossLevel: false, starThresholds: [50, 70, 85] },
+      { id: 2, storyIndex: 45, enemies: ['boss', 'boss'], isBossLevel: false, starThresholds: [45, 65, 80] },
+      { id: 3, storyIndex: 46, enemies: ['boss', 'elite', 'guard'], isBossLevel: false, starThresholds: [45, 65, 80] },
+      { id: 4, storyIndex: 47, enemies: ['boss', 'boss'], isBossLevel: false, starThresholds: [40, 60, 75] },
+      { id: 5, storyIndex: 48, enemies: ['boss', 'elite', 'elite'], isBossLevel: false, starThresholds: [40, 60, 75] },
+      { id: 6, storyIndex: 49, enemies: ['boss', 'boss', 'elite'], isBossLevel: false, starThresholds: [35, 55, 70] },
+      { id: 7, storyIndex: 50, enemies: ['final_boss'], isBossLevel: false, starThresholds: [35, 55, 70] },
+      { id: 8, storyIndex: 51, enemies: ['final_boss'], isBossLevel: true, starThresholds: [30, 50, 70] },
     ],
   },
 ];
