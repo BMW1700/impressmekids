@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { BarChart3, ArrowLeft, Sparkles, TrendingUp, Brain, Users, Activity, BookOpen, Timer, Target, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MLStatusBadge } from "@/components/ml/MLStatusBadge";
+import ClassroomWeeklyBreakdown from "@/components/aura/ClassroomWeeklyBreakdown";
 import type { GradeMode } from "@/lib/gameTheme";
 
 const AuraAnalytics = () => {
@@ -486,6 +487,12 @@ const AuraAnalytics = () => {
                 </TabsContent>
 
                 <TabsContent value="transfer" className="mt-6 space-y-6">
+                  {/* Classroom Weekly Reading Breakdown */}
+                  <ClassroomWeeklyBreakdown 
+                    readingSessions={readingSessions || []}
+                    students={students || []}
+                  />
+
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">

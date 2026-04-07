@@ -17,6 +17,7 @@ import { ipaToEnglish } from "@/lib/phonemeDisplayUtils";
 import MLInsightsDashboard from "@/components/aura/MLInsightsDashboard";
 import { ReadingSessionsList } from "@/components/aura/ReadingSessionsList";
 import { AudioPlaybackButton } from "@/components/aura/AudioPlaybackButton";
+import { ImprovementTracker } from "@/components/shared/ImprovementTracker";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -458,12 +459,20 @@ export default function StudentProfile() {
               </div>
             </TabsContent>
 
-            <TabsContent value="progress" className="mt-6">
+            <TabsContent value="progress" className="mt-6 space-y-6">
+              {/* Week-by-Week Reading Progress */}
+              <ImprovementTracker
+                studentId={studentId!}
+                studentName={profile?.full_name || "Student"}
+                variant="detailed"
+              />
+
+              {/* Speaking Clarity (secondary) */}
               {longitudinalMetrics && clarityChartData.length > 0 ? (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Clarity Score Over Time</CardTitle>
-                    <CardDescription>Track speaking clarity improvement</CardDescription>
+                    <CardTitle>Speaking Clarity Over Time</CardTitle>
+                    <CardDescription>Track speaking clarity improvement (secondary metric)</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <ResponsiveContainer width="100%" height={300}>
@@ -487,7 +496,7 @@ export default function StudentProfile() {
               ) : (
                 <Card className="p-12 text-center">
                   <p className="text-muted-foreground">
-                    Not enough data to display charts yet. Student needs to complete more speaking sessions.
+                    Not enough speaking data yet for clarity trends.
                   </p>
                 </Card>
               )}
