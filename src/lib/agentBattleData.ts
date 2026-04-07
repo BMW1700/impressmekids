@@ -287,7 +287,7 @@ export const theWarden: RPGEnemy = {
   ],
   specialAbilities: [
     { id: 'lockdown', name: 'Facility Lockdown', damage: 24, effect: 'silence', description: 'Seals all exits', icon: '🔐' },
-    { id: 'shock_rod', name: 'Shock Rod', damage: 28, effect: 'lightning', description: 'High-voltage strike', icon: '⚡' },
+    { id: 'shock_rod', name: 'Shock Rod', damage: 28, effect: 'debuff', description: 'High-voltage strike', icon: '⚡' },
   ],
   barrageWordCount: 8,
   miniGames: ['fireball_defense', 'spell_combo', 'word_shield', 'dodge_words', 'speed_typist', 'beast_swarm'],
