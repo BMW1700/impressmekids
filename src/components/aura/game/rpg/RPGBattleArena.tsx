@@ -68,12 +68,13 @@ import {
 import { getAgentHero, getAgentEnemy, getAgentBossForWorld, agentHeroDialogue, agentCompanionDialogue } from "@/lib/agentBattleData";
 import { getStoredTheme } from "@/lib/gameTheme";
 import { CuratedStory } from "@/data/curatedStories";
-import { calculateGoldEarned, calculateXpEarned } from "@/lib/gameEconomy";
+import { calculateGoldEarned, calculateXpEarned, STORE_ITEMS } from "@/lib/gameEconomy";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { speechManager } from "@/lib/speechRecognitionManager";
 import { supabase } from "@/integrations/supabase/client";
 import { updateStudentReadingStats as updateSharedReadingStats } from "@/lib/updateStudentReadingStats";
 import { useMLIntegration } from "@/hooks/useMLIntegration";
+import { usePlayerInventory } from "@/hooks/usePlayerInventory";
 
 // Sound effects singleton
 const battleSounds = new SoundEffects();
