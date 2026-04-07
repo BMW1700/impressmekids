@@ -38,6 +38,10 @@ import { TheArchitect, TheArchitectState } from "../characters/TheArchitect";
 import { Operative, OperativeState } from "../characters/Operative";
 import { Enforcer, EnforcerState } from "../characters/Enforcer";
 import { TheDoubleAgent, TheDoubleAgentState } from "../characters/TheDoubleAgent";
+import { TheWarden, TheWardenState } from "../characters/TheWarden";
+import { TheCommander, TheCommanderState } from "../characters/TheCommander";
+import { ThePhantom, ThePhantomState } from "../characters/ThePhantom";
+import { TheOverseer, TheOverseerState } from "../characters/TheOverseer";
 import { getStoredTheme } from "@/lib/gameTheme";
 
 interface RPGCharacterProps {
@@ -56,7 +60,7 @@ interface RPGCharacterProps {
 }
 
 // Map character/enemy types to sprite types - EXTENDED with all new enemies
-type SpriteType = 'knight' | 'wizard' | 'princess' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'grog_king' | 'cave_troll' | 'crystal_spider' | 'storm_harpy' | 'cloud_giant' | 'wind_lord' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'echo_wraith' | 'agent_x' | 'cipher' | 'shadow_agent' | 'street_thug_agent' | 'hired_gun_agent' | 'cyber_hacker_agent' | 'the_broker_agent' | 'the_director_agent' | 'drone_sentry_agent' | 'rogue_agent_agent' | 'bodyguard_agent' | 'the_architect_agent' | 'operative_agent' | 'enforcer_agent' | 'the_double_agent_agent';
+type SpriteType = 'knight' | 'wizard' | 'princess' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'grog_king' | 'cave_troll' | 'crystal_spider' | 'storm_harpy' | 'cloud_giant' | 'wind_lord' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'echo_wraith' | 'agent_x' | 'cipher' | 'shadow_agent' | 'street_thug_agent' | 'hired_gun_agent' | 'cyber_hacker_agent' | 'the_broker_agent' | 'the_director_agent' | 'drone_sentry_agent' | 'rogue_agent_agent' | 'bodyguard_agent' | 'the_architect_agent' | 'operative_agent' | 'enforcer_agent' | 'the_double_agent_agent' | 'the_warden_agent' | 'the_commander_agent' | 'the_phantom_agent' | 'the_overseer_agent';
 
 const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean): SpriteType => {
   if (isEnemy) {
@@ -89,6 +93,10 @@ const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean)
       'the_architect': 'the_architect_agent',
       'the_double_agent': 'the_double_agent_agent',
       'the_director': 'the_director_agent',
+      'the_warden': 'the_warden_agent',
+      'the_commander': 'the_commander_agent',
+      'the_phantom': 'the_phantom_agent',
+      'the_overseer': 'the_overseer_agent',
     };
     if (idMap[enemy.id]) return idMap[enemy.id];
     
