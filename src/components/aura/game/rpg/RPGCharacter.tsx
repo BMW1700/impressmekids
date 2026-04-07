@@ -522,6 +522,50 @@ export const RPGCharacter = ({
           />
         );
       }
+      if (spriteType === 'the_warden_agent') {
+        return (
+          <TheWarden
+            state={commonState as TheWardenState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="large"
+          />
+        );
+      }
+      if (spriteType === 'the_commander_agent') {
+        return (
+          <TheCommander
+            state={commonState as TheCommanderState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="large"
+          />
+        );
+      }
+      if (spriteType === 'the_phantom_agent') {
+        return (
+          <ThePhantom
+            state={commonState as ThePhantomState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="large"
+          />
+        );
+      }
+      if (spriteType === 'the_overseer_agent') {
+        return (
+          <TheOverseer
+            state={commonState as TheOverseerState}
+            healthPercent={hpPercentage}
+            currentHp={currentHp}
+            maxHp={character.maxHp}
+            size="large"
+          />
+        );
+      }
       // Goblin types - fallback
       return (
         <GoblinGuard
