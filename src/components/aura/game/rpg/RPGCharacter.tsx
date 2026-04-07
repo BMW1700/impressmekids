@@ -511,7 +511,6 @@ export const RPGCharacter = ({
             currentHp={currentHp}
             maxHp={character.maxHp}
             size="large"
-            showHealthBar={true}
           />
         );
       }
