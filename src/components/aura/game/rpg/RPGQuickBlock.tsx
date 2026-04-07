@@ -7,8 +7,6 @@ import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
 
 const agentMode = isAgentMode();
 const theme = getMinigameTheme('quickBlock');
-import { speechManager } from "@/lib/speechRecognitionManager";
-import { SoundEffects } from "@/lib/pronunciationPlayer";
 
 interface QuickBlockWord {
   id: number;
