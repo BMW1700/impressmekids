@@ -154,6 +154,31 @@ const StudentAuraMetrics = ({ students, records, readingSessions = [] }: Student
                     <h4 className="font-semibold">{student.profiles?.full_name || 'Unknown'}</h4>
                     {data && (
                       <>
+                        {/* At Risk flag */}
+                        {data.isAtRisk && (
+                          <Badge variant="destructive" className="flex items-center gap-1">
+                            <AlertTriangle className="h-3 w-3" />
+                            At Risk
+                          </Badge>
+                        )}
+                        {/* Engagement: weeks active */}
+                        <Badge variant="outline" className="flex items-center gap-1 text-xs">
+                          <Calendar className="h-3 w-3" />
+                          {data.weeksActive}/4 wks
+                        </Badge>
+                        {/* Sessions this week vs last */}
+                        {(data.sessionsThisWeek > 0 || data.sessionsLastWeek > 0) && (
+                          <span className={`text-xs flex items-center gap-1 ${
+                            data.sessionsThisWeek >= data.sessionsLastWeek ? 'text-green-600' : 'text-amber-600'
+                          }`}>
+                            {data.sessionsThisWeek >= data.sessionsLastWeek ? (
+                              <TrendingUp className="h-3 w-3" />
+                            ) : (
+                              <TrendingDown className="h-3 w-3" />
+                            )}
+                            {data.sessionsThisWeek} this wk
+                          </span>
+                        )}
                         {/* Reading Badge (primary - from WordByWordReader) */}
                         {data.readingAccuracy !== null && (
                           <Badge variant="outline" className={`${getGradeColor(data.readingAccuracy)} flex items-center gap-1`}>
