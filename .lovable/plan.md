@@ -1,84 +1,48 @@
 
 
-# Plan: Agent Mode Minigame Customization
+# Honest Assessment: Agent Mode Completeness
 
-## Current State
-Out of ~20 minigames, only **RPGGoblinHorde** has agent-mode theming (swaps goblins for operatives). All other minigames use pure fantasy aesthetics — blue/purple gradients, "SHIELD," "SPELL," "MAGIC" labels, sparkle icons — regardless of mode.
+## Current Inventory
 
-## What Changes
+| Area | Classic Mode | Agent Mode | Gap |
+|---|---|---|---|
+| Worlds | 9 (Tutorial + 8) | 5 (Tutorial + 4) | **4 worlds missing** |
+| Story levels | 49 | 25 | **24 levels missing** |
+| Stories (data) | ~50 stories (611 lines) | ~24 stories (312 lines) | **~26 stories missing** |
+| Minigames themed | N/A (default) | 19 of ~25 done | **~6 unthemed** |
+| Enemy sprites | 10+ unique | 9 unique + 3 aliased | **3 missing sprites** |
 
-### 1. Create a shared minigame theme utility
-**New file: `src/lib/minigameTheme.ts`**
+## My Recommendation: Rebrand First, Then Expand
 
-A single source of truth that maps each minigame to mode-specific:
-- **Title** (e.g. "Spell Combo" → "Hack Sequence")
-- **Subtitle/flavor text** (e.g. "Channel arcane energy!" → "Bypass encryption!")
-- **Color scheme** (fantasy purple/blue → tactical cyan/slate/red)
-- **Icon choice** (Sparkles/Shield → Crosshair/Terminal/Wifi)
-- **Success/failure messages** (e.g. "SPELL COMPLETE!" → "SYSTEM BREACHED!")
+**Rebranding the remaining ~6 unthemed minigames is dramatically easier** than creating new ones. Each rebrand is 10-20 lines of diff using the existing `minigameTheme.ts` pattern. Creating a brand new minigame from scratch is 300-600 lines of game logic, animations, speech integration, and battle engine wiring.
 
-This keeps each component's diff small — they just import and branch on one `isAgent` flag.
+**Do both, in this order:**
 
-### 2. Re-skin each minigame component
+### Phase 1 — Fix gaps (get to "not buggy")
+1. **Theme the remaining 6 unthemed minigames**: `RPGBalloonBattle`, `RPGTugOfWar`, `RPGQuickBlock`, `RPGWordCannon`, `RPGFireballBarrage`, `RPGBossRush` — add `getMinigameTheme` calls, swap labels/colors/icons
+2. **Create the 3 missing enemy sprites**: `Operative`, `Enforcer`, `TheDoubleAgent` — currently aliased to `RogueAgent` and `Bodyguard` which means two different enemies look identical in battle
 
-Every minigame gets the same pattern: `const isAgent = getStoredTheme() === 'agent';` at the top, then swap titles, gradient classes, icons, and feedback text.
+### Phase 2 — Content parity (get to "professional")
+3. **Add 4 more agent worlds** (worlds 5-8) with unique themes fitting the spy narrative — suggestions:
+   - World 5: "The Black Site" — military facility, classified experiments
+   - World 6: "Skyfall Station" — orbital satellite base
+   - World 7: "The Deep Web" — underground hacker collective
+   - World 8: "Operation Endgame" — global crisis, final arc
+4. **Write ~26 more agent stories** to fill those worlds — maintaining the academic-topic-in-spy-frame pattern (AI ethics, quantum physics, climate science, cryptography, etc.)
+5. **Add unique boss enemies** for each new world (4 new boss sprites + silhouettes)
 
-| Minigame | Classic Theme | Agent Theme |
-|---|---|---|
-| **WordShield** | "Word Shield" / blue-purple gradients / Shield icon | "Firewall" / cyan-slate gradients / Lock icon |
-| **SpellCombo** | "Spell Combo" / purple sparkles / magic chain | "Hack Sequence" / green terminal text / code chain |
-| **DodgeWords** | "Dodge!" / fantasy projectiles | "Evade Surveillance" / red laser grid |
-| **RhymeChain** | "Rhyme Chain" / music notes / pink-purple | "Code Pattern" / cipher links / cyan-teal |
-| **SpeedTypist** | "Speed Cast" / flame trail | "Rapid Decode" / digital countdown / amber-cyan |
-| **FireballDefense** | "Fireball Defense" / fire colors | "Missile Defense" / military red-orange |
-| **BeastSwarm** | "Beast Swarm" / forest creatures | "Drone Swarm" / mechanical drones |
-| **AsteroidBarrage** | "Asteroid Barrage" / space rocks | "Data Breach" / falling data packets |
-| **GroundRipple** | "Ground Ripple" / earth tones | "Shockwave" / tech pulse effect |
-| **GhostlyWhispers** | "Ghostly Whispers" / ethereal | "Intercepted Comms" / radio static |
-| **IceCrystalBarrage** | "Ice Crystal" / frost blue | "EMP Burst" / electric blue-white |
-| **RollingBoulders** | "Rolling Boulders" / brown-earth | "Incoming Ordnance" / military grey-red |
-| **VoidPull** | "Void Pull" / dark purple vortex | "Gravity Trap" / tech black-cyan |
-| **CrystalPrison** | "Crystal Prison" / ice blue | "Containment Field" / energy grid |
-| **WordBarrage** | "Word Barrage" / generic | "Intel Barrage" / tactical |
-| **VocabShield** | "Word Shield" / red glow | "Encryption Lock" / cyan glow |
-| **WordEcho** | "Word Echo" / cave echoes | "Signal Bounce" / radar ping |
-| **WindChase** | "Wind Chase" / breezy | "Pursuit Mode" / sprint tracker |
-| **InkSplash** | "Ink Splash" / underwater | "Redacted Files" / censored docs |
-| **LightningStorm** | "Lightning Storm" / electric | "Power Surge" / grid overload |
-| **WebTrap** | "Web Trap" / spider web | "Laser Grid" / security beams |
+### Phase 3 — Polish (get to "consumer-ready")
+6. Ensure agent mode battle backgrounds match world themes
+7. Add agent-specific victory/defeat screens if not already done
+8. QA the full agent campaign end-to-end
 
-### 3. Update gradient/color classes per mode
+## What I Would NOT Do
+- **Don't create brand new agent-only minigame types.** The existing ~25 minigames provide excellent variety. Reskinning them is the right call — students get the same proven mechanics with age-appropriate aesthetics.
+- **Don't add more enemy types beyond what's needed.** The current roster (street_thug, hired_gun, cyber_hacker, drone_sentry, rogue_agent, bodyguard, operative, enforcer + 4 bosses) is a solid lineup. Just give the 3 aliased ones their own sprites.
 
-- **Classic**: Keep existing gradients (blue, purple, amber, green palettes)
-- **Agent**: Use tactical palette — `slate-900`, `cyan-500`, `red-600`, `emerald-500` for success, dark backgrounds with neon accents
+## Summary
 
-### 4. Files to modify (~20 files)
+The honest answer: **rebrand the remaining 6 minigames first** (small effort, big consistency win), **then build the 3 missing sprites** (medium effort), **then expand to 4 more worlds with stories** (largest effort but necessary for parity). This gets agent mode from "80% done" to "professional and complete."
 
-Each file gets a small diff (5-20 lines changed per file):
-- `src/components/aura/game/rpg/RPGWordShield.tsx`
-- `src/components/aura/game/rpg/RPGSpellCombo.tsx`
-- `src/components/aura/game/rpg/RPGDodgeWords.tsx`
-- `src/components/aura/game/rpg/RPGRhymeChain.tsx`
-- `src/components/aura/game/rpg/RPGSpeedTypist.tsx`
-- `src/components/aura/game/rpg/RPGFireballDefense.tsx`
-- `src/components/aura/game/rpg/RPGBeastSwarm.tsx`
-- `src/components/aura/game/rpg/RPGAsteroidBarrage.tsx`
-- `src/components/aura/game/rpg/RPGGroundRipple.tsx`
-- `src/components/aura/game/rpg/RPGGhostlyWhispers.tsx`
-- `src/components/aura/game/rpg/RPGIceCrystalBarrage.tsx`
-- `src/components/aura/game/rpg/RPGRollingBoulders.tsx`
-- `src/components/aura/game/rpg/RPGVoidPull.tsx`
-- `src/components/aura/game/rpg/RPGCrystalPrison.tsx`
-- `src/components/aura/game/rpg/RPGWordBarrage.tsx`
-- `src/components/aura/game/rpg/RPGVocabShield.tsx`
-- `src/components/aura/game/rpg/RPGWordEcho.tsx`
-- `src/components/aura/game/rpg/RPGWindChase.tsx`
-- `src/components/aura/game/rpg/RPGInkSplash.tsx`
-- `src/components/aura/game/rpg/RPGLightningStorm.tsx`
-- `src/components/aura/game/rpg/RPGWebTrap.tsx`
-- New: `src/lib/minigameTheme.ts`
-
-### 5. What stays the same
-- Game mechanics, timers, scoring, speech recognition — all unchanged
-- Only visual text, colors, icons, and flavor messages change per mode
+Want me to start with Phase 1 (theme the 6 remaining minigames + create 3 enemy sprites)?
 
