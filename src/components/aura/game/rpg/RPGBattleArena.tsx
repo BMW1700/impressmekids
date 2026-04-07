@@ -2828,10 +2828,10 @@ export const RPGBattleArena = ({
                         { 
                           name: playerCharacter.name, 
                           currentHp: playerHp, 
-                          maxHp: playerCharacter.maxHp, 
+                          maxHp: maxHpWithBoost, 
                           isDefending: currentCommand === 'defend',
                           currentMp: (selectedCharacter === 'elara' || selectedCharacter === 'cipher') ? wizardMp : undefined,
-                          maxMp: (selectedCharacter === 'elara' || selectedCharacter === 'cipher') ? 50 : undefined,
+                          maxMp: (selectedCharacter === 'elara' || selectedCharacter === 'cipher') ? (50 + (activeUpgrades.mp_boost || 0)) : undefined,
                         },
                       ]}
                       streak={streak}
