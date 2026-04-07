@@ -35,6 +35,9 @@ import { DroneSentry, DroneSentryState } from "../characters/DroneSentry";
 import { RogueAgent, RogueAgentState } from "../characters/RogueAgent";
 import { Bodyguard, BodyguardState } from "../characters/Bodyguard";
 import { TheArchitect, TheArchitectState } from "../characters/TheArchitect";
+import { Operative, OperativeState } from "../characters/Operative";
+import { Enforcer, EnforcerState } from "../characters/Enforcer";
+import { TheDoubleAgent, TheDoubleAgentState } from "../characters/TheDoubleAgent";
 import { getStoredTheme } from "@/lib/gameTheme";
 
 interface RPGCharacterProps {
@@ -80,11 +83,11 @@ const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean)
       'drone_sentry': 'drone_sentry_agent',
       'rogue_agent': 'rogue_agent_agent',
       'bodyguard': 'bodyguard_agent',
-      'operative': 'rogue_agent_agent',
-      'enforcer': 'bodyguard_agent',
+      'operative': 'operative_agent',
+      'enforcer': 'enforcer_agent',
       'the_broker': 'the_broker_agent',
       'the_architect': 'the_architect_agent',
-      'the_double_agent': 'rogue_agent_agent',
+      'the_double_agent': 'the_double_agent_agent',
       'the_director': 'the_director_agent',
     };
     if (idMap[enemy.id]) return idMap[enemy.id];
