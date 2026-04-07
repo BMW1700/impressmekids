@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Shield } from "lucide-react";
 import { RPGCharacter as RPGCharacterType, RPGEnemy } from "@/lib/rpgBattleData";
@@ -57,6 +58,7 @@ interface RPGCharacterProps {
   usePremiumSprites?: boolean;
   currentStreak?: number;
   showHealthBar?: boolean;
+  skinVariant?: string;
 }
 
 // Map character/enemy types to sprite types - EXTENDED with all new enemies
@@ -183,7 +185,8 @@ export const RPGCharacter = ({
   showSprite = true,
   usePremiumSprites = true,
   currentStreak = 0,
-  showHealthBar = true, // Default to showing health bar
+  showHealthBar = true,
+  skinVariant,
 }: RPGCharacterProps) => {
   const hpPercentage = (currentHp / character.maxHp) * 100;
   const hpColor = hpPercentage > 50 ? 'from-emerald-400 to-green-500' : 
@@ -191,6 +194,23 @@ export const RPGCharacter = ({
                   'from-red-400 to-rose-500';
 
   const spriteType = getSpriteType(character, isEnemy);
+
+  // Skin variant color overrides for hero sprites
+  const skinColorStyle = useMemo(() => {
+    if (!skinVariant || isEnemy) return {};
+    const skinStyles: Record<string, React.CSSProperties> = {
+      golden: { filter: 'sepia(0.6) saturate(2) hue-rotate(-10deg) brightness(1.2)' },
+      shadow: { filter: 'brightness(0.6) contrast(1.3) saturate(0.8)' },
+      fire: { filter: 'sepia(0.4) saturate(2.5) hue-rotate(-30deg)' },
+      ice: { filter: 'saturate(0.5) brightness(1.1) hue-rotate(180deg)' },
+      dark: { filter: 'brightness(0.5) contrast(1.4) saturate(1.2)' },
+      neon: { filter: 'saturate(2) brightness(1.3) contrast(1.1)' },
+      stealth: { filter: 'brightness(0.7) saturate(0.3) contrast(1.2)' },
+      chrome: { filter: 'saturate(0.2) brightness(1.4) contrast(1.3)' },
+      phantom: { filter: 'opacity(0.8) brightness(1.2) hue-rotate(270deg)' },
+    };
+    return skinStyles[skinVariant] || {};
+  }, [skinVariant, isEnemy]);
 
   // Render premium sprite based on type
   const renderPremiumSprite = () => {
@@ -757,18 +777,20 @@ export const RPGCharacter = ({
         )}
       </motion.div>
 
-      {/* Character Sprite */}
+      {/* Character Sprite — with optional skin color override */}
       {showSprite && (
-        usePremiumSprites ? renderPremiumSprite() : (
-          <RPGCharacterSprite
-            type={(['princess', 'agent_x', 'cipher', 'shadow_agent'].includes(spriteType)) ? 'knight' : spriteType as 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian'}
-            isEnemy={isEnemy}
-            isAttacking={isAttacking}
-            isTakingDamage={isTakingDamage}
-            isDefending={isDefending}
-            size="lg"
-          />
-        )
+        <div style={skinColorStyle}>
+          {usePremiumSprites ? renderPremiumSprite() : (
+            <RPGCharacterSprite
+              type={(['princess', 'agent_x', 'cipher', 'shadow_agent'].includes(spriteType)) ? 'knight' : spriteType as 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian'}
+              isEnemy={isEnemy}
+              isAttacking={isAttacking}
+              isTakingDamage={isTakingDamage}
+              isDefending={isDefending}
+              size="lg"
+            />
+          )}
+        </div>
       )}
 
       {/* Magical particles for boss enemies */}
