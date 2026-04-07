@@ -277,9 +277,13 @@ export const RPGBattleArena = ({
   const [lastAttackCheck, setLastAttackCheck] = useState(0);
   const [quickBlockWords, setQuickBlockWords] = useState<string[]>([]);
   
-  // Combat stats - player HP initialized based on selected character
-  const [playerHp, setPlayerHp] = useState(heroKnight.maxHp);
-  const [wizardMp, setWizardMp] = useState(50);
+  // Combat stats - player HP initialized based on selected character + health_boost upgrade
+  const maxHpWithBoost = useMemo(() => {
+    const baseHp = playerCharacter?.maxHp || heroKnight.maxHp;
+    return baseHp + (activeUpgrades.health_boost || 0);
+  }, [playerCharacter?.maxHp, activeUpgrades.health_boost]);
+  const [playerHp, setPlayerHp] = useState(maxHpWithBoost);
+  const [wizardMp, setWizardMp] = useState(50 + (activeUpgrades.mp_boost || 0));
   const [enemyHp, setEnemyHp] = useState(enemy.maxHp);
   const [streak, setStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
@@ -293,7 +297,25 @@ export const RPGBattleArena = ({
   const longestStreakRef = useRef(0);
   const wordsReadRef = useRef(0);
   const correctWordsRef = useRef(0);
-  const [inventory, setInventory] = useState<Record<InventoryKey, number>>({ health_potion: 2, magic_potion: 1 });
+  
+  // REAL INVENTORY: Build from database instead of hardcoded values
+  // Potions from DB + 2 free health potions & 1 free magic potion as starter kit
+  const battleInventory = useMemo(() => {
+    const inv: Record<string, number> = {};
+    // Get all potion items from store
+    const potionItems = STORE_ITEMS.filter(item => item.category === 'potion');
+    potionItems.forEach(item => {
+      const qty = playerInventory.getItemQuantity(item.id);
+      if (qty > 0) inv[item.id] = qty;
+    });
+    // Starter kit: ensure at least 2 health potions and 1 magic potion for new players
+    if (!inv['health_potion']) inv['health_potion'] = 2;
+    else inv['health_potion'] = Math.max(inv['health_potion'], 2);
+    if (!inv['magic_potion']) inv['magic_potion'] = 1;
+    else inv['magic_potion'] = Math.max(inv['magic_potion'], 1);
+    return inv;
+  }, [playerInventory]);
+  const [inventory, setInventory] = useState<Record<string, number>>({});
   
   // Ref to track latest enemyHp for use in callbacks (prevents stale closure issues in mini-games)
   const enemyHpRef = useRef(enemyHp);
