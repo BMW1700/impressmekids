@@ -1,53 +1,46 @@
 
 
-# Brutally Honest Assessment: Is Agent Mode Launch-Ready?
+# Brutally Honest Audit: Store-to-Battle Wiring
 
-## The Big Problem: The Store Is a Dead End
+## What Works
+- `usePlayerInventory` is imported and called in `RPGBattleArena.tsx` — confirmed
+- `getActiveUpgrades()` is called and feeds into damage (`attack_boost`), HP (`health_boost`), MP (`mp_boost`), gold (`gold_boost`), and XP (`xp_boost`) calculations — confirmed
+- `battleInventory` reads real potion quantities from the database with a starter-kit fallback — confirmed
+- `usePotion.mutate()` is called when items are consumed in battle — confirmed
+- All 4 new bosses (Warden, Commander, Phantom, Overseer) have full battle data and correct world mapping — confirmed
 
-**The store UI looks great. Purchasing works. But nothing you buy actually does anything in battle.**
+## What's Still Broken
 
-Line 292 of `RPGBattleArena.tsx` tells the whole story:
-```
-const [inventory, setInventory] = useState({ health_potion: 2, magic_potion: 1 });
-```
+### 1. Purchased Powers Never Appear in the Spell Menu (CRITICAL)
+The store sells 20+ purchasable powers (EMP Blast, Drone Strike, Arcane Blast, etc.) but the spell menu in `RPGSpellMenu.tsx` only ever shows the **hardcoded character spells** (e.g., `valorSpells`, `agentXSpells`). There is zero code that checks the player's inventory for purchased powers and adds them to the available spell list.
 
-Every battle starts with the same hardcoded 2 health potions and 1 magic potion — regardless of what the student has purchased from the store. The `usePlayerInventory` hook (which reads the real database) is **never imported or used** in the battle arena.
+A student buys "Drone Strike" for 600 gold → opens the Tech/Magic menu in battle → it's not there. That's a trust-destroying bug.
 
-This means:
-- **Purchased powers** (EMP Blast, Drone Strike, etc.) — never appear in the spell menu
-- **Purchased potions** — never show up in battle inventory
-- **Purchased upgrades** (attack boost, health boost, etc.) — `getActiveUpgrades()` is never called; damage/HP calculations ignore them
-- **Purchased skins** — the equip system works in the store UI, but `RPGCharacter.tsx` doesn't read equipped skins to change character appearance
+### 2. Purchased Skins Don't Render (MINOR)
+`RPGCharacter.tsx` has no prop or logic for skin variants. `getEquippedSkin()` exists in the hook but is never called by the battle arena or character renderer. Students equip a skin in the store → character looks the same in battle.
 
-**Students spend gold → buy items → items vanish into the void.** This will destroy trust immediately. A high schooler who grinds 1000 gold for "Drone Strike" and never sees it in combat will quit.
+### 3. Starter Kit Overlap Issue (MINOR)
+The starter kit logic gives every player `Math.max(dbQuantity, 2)` health potions. If a student has 1 health potion in the DB, they still see 2 in battle. This means potions appear to regenerate. Not game-breaking, but inconsistent.
 
-## Would Schools Pilot This?
+## The Fix
 
-**Honest answer: The reading mechanics are genuinely strong.** AURA's speech recognition, WCPM tracking, prosody scoring, and the "fluency controls combat damage" loop are real pedagogical innovation. The 25 minigames provide excellent variety. The story content is age-appropriate and academically framed. Teachers would see value in the core reading engine.
+### Phase 1: Wire purchased powers into the spell menu
+- In `RPGBattleArena.tsx`, query `playerInventory` for items with `category === 'power'`
+- Convert them to `Spell` objects (using `STORE_ITEMS` data for damage, mpCost, effect)
+- Merge them with the character's default spells before passing to `RPGCommandMenu`
+- In `RPGSpellMenu.tsx`, accept and render these additional spells (they already conform to the `Spell` interface)
 
-**But the broken store economy is a consumer-readiness problem, not a pedagogy problem.** Schools evaluating this will have students report "I bought stuff and nothing happened." That's a bug that makes the whole product feel unfinished.
+### Phase 2: Wire equipped skins into character rendering
+- In `RPGBattleArena.tsx`, call `playerInventory.getEquippedSkin(characterId)` 
+- Pass the result as a `skinVariant` prop to `RPGCharacter`
+- In `RPGCharacter.tsx`, accept `skinVariant` prop and apply color/style overrides based on the variant
 
-## What Needs to Happen Before Launch
-
-### Critical (blocks launch)
-1. **Wire the store to battle** — Import `usePlayerInventory` into `RPGBattleArena`, replace the hardcoded inventory with real database inventory, feed `getActiveUpgrades()` into damage/HP calculations, and populate the spell menu with purchased powers
-2. **Make skins actually render** — Pass equipped skin variants from `usePlayerInventory` into `RPGCharacter` so purchased skins visually change the character
-
-### Important (should fix)
-3. **Add potion consumption feedback** — When a potion is used in battle, call `usePotion.mutate()` to actually deduct it from the database, not just local state
-
-## What You Do NOT Need
-- More enemy characters — 12 unique sprites is plenty
-- More minigames — 25 is more than enough variety
-- More stories — 53 stories across 9 worlds is solid
-- More character powers — 10 agent powers in the store is a good roster, they just need to actually work
-
-## Summary
-
-The reading engine is school-ready. The game economy is broken. Fix the store-to-battle connection (one file change in `RPGBattleArena.tsx` + minor `RPGCharacter.tsx` update) and you have a launchable product.
+### Phase 3: Fix starter kit logic
+- Change from `Math.max(db, 2)` to additive: `db + starterBonus` only if player has never purchased potions, OR just give the starter kit once and track it
 
 ### Files to modify
-- `src/components/aura/game/rpg/RPGBattleArena.tsx` — import `usePlayerInventory`, replace hardcoded inventory, apply upgrades to damage/HP, populate spell menu with purchased powers
-- `src/components/aura/game/rpg/RPGCharacter.tsx` — accept and apply equipped skin variants
-- `src/components/aura/game/rpg/RPGSpellMenu.tsx` — show purchased powers alongside default spells
+- `src/components/aura/game/rpg/RPGBattleArena.tsx` — build purchased powers into spell list, pass skin variant
+- `src/components/aura/game/rpg/RPGSpellMenu.tsx` — accept dynamic spell lists (may already work if spells array is passed correctly)
+- `src/components/aura/game/rpg/RPGCharacter.tsx` — accept and apply `skinVariant` prop
+- `src/components/aura/game/rpg/RPGCommandMenu.tsx` — pass merged spell list through
 
