@@ -40,6 +40,10 @@ export { TheArchitect, type TheArchitectState } from './TheArchitect';
 export { Operative, type OperativeState } from './Operative';
 export { Enforcer, type EnforcerState } from './Enforcer';
 export { TheDoubleAgent, type TheDoubleAgentState } from './TheDoubleAgent';
+export { TheWarden, type TheWardenState } from './TheWarden';
+export { TheCommander, type TheCommanderState } from './TheCommander';
+export { ThePhantom, type ThePhantomState } from './ThePhantom';
+export { TheOverseer, type TheOverseerState } from './TheOverseer';
 
 // Export boss silhouettes for world map
 export { 
@@ -52,5 +56,9 @@ export {
   ArchitectSilhouette,
   DoubleAgentSilhouette,
   DirectorSilhouette,
+  WardenSilhouette,
+  CommanderSilhouette,
+  PhantomSilhouette,
+  OverseerSilhouette,
   BossSilhouettes 
 } from './BossSilhouettes';
