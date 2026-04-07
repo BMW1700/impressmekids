@@ -1354,10 +1354,12 @@ export const RPGBattleArena = ({
       baseDamage = Math.floor(baseDamage * 0.7);
     }
     
-    const totalDamage = Math.floor((baseDamage + streakBonus + speedBonus) * accuracyMultiplier);
+    // Apply attack_boost from purchased upgrades
+    const attackBoost = activeUpgrades.attack_boost || 0;
+    const totalDamage = Math.floor((baseDamage + streakBonus + speedBonus + attackBoost) * accuracyMultiplier);
     
     return { damage: totalDamage, speedTier, isCritical, accuracyMultiplier };
-  }, [isDebuffed]);
+  }, [isDebuffed, activeUpgrades.attack_boost]);
 
   // Trigger screen shake
   const triggerScreenShake = () => {
@@ -1488,22 +1490,48 @@ export const RPGBattleArena = ({
     }, 400);
   }, [wizardMp, playerCharacter.maxHp]);
 
-  // Handle item usage
+  // Handle item usage - WIRED TO DATABASE
   const handleUseItem = useCallback((item: Item) => {
-    const itemKey = item.id as InventoryKey;
+    const itemKey = item.id;
     if (!inventory[itemKey] || inventory[itemKey] <= 0) return;
     
-    setInventory(prev => ({ ...prev, [itemKey]: prev[itemKey] - 1 }));
+    // Deduct from local state immediately for responsive UI
+    setInventory(prev => ({ ...prev, [itemKey]: (prev[itemKey] || 0) - 1 }));
     
-    if (item.effect === 'heal_hp') {
-      setPlayerHp(prev => Math.min(playerCharacter.maxHp, prev + item.value));
-      // Clear poison on healing
-      setIsPoisoned(false);
-      setPoisonDamage(0);
-    } else if (item.effect === 'restore_mp') {
-      setWizardMp(prev => Math.min(50, prev + item.value));
+    // Deduct from database via usePlayerInventory hook
+    playerInventory.usePotion.mutate(itemKey);
+    
+    const maxHp = maxHpWithBoost;
+    const maxMp = 50 + (activeUpgrades.mp_boost || 0);
+    
+    switch (item.effect) {
+      case 'heal_hp':
+        setPlayerHp(prev => Math.min(maxHp, prev + item.value));
+        setIsPoisoned(false);
+        setPoisonDamage(0);
+        break;
+      case 'restore_mp':
+        setWizardMp(prev => Math.min(maxMp, prev + item.value));
+        break;
+      case 'heal_full':
+        setPlayerHp(maxHp);
+        setIsPoisoned(false);
+        setPoisonDamage(0);
+        break;
+      case 'mp_full':
+        setWizardMp(maxMp);
+        break;
+      case 'defense':
+        // Handled via UI buff indicator
+        break;
+      case 'rage':
+        // +100% damage, -20% HP
+        setPlayerHp(prev => Math.max(1, prev - Math.floor(maxHp * 0.2)));
+        break;
+      default:
+        break;
     }
-  }, [inventory]);
+  }, [inventory, playerInventory.usePotion, maxHpWithBoost, activeUpgrades.mp_boost]);
 
   // Enemy turn logic - with failsafe to prevent stuck state
   // UPDATED: Uses setPhaseSafe and scheduleTimeout for terminal state safety
@@ -1774,11 +1802,13 @@ export const RPGBattleArena = ({
       const goldAmount = calculateGoldEarned({ 
         wordCorrect: true, 
         streak: newStreak, 
-        wordLength: word.length || 5 
+        wordLength: word.length || 5,
+        goldBoostPercent: activeUpgrades.gold_boost || 0,
       });
       const xpAmount = calculateXpEarned({ 
         wordCorrect: true, 
-        streak: newStreak 
+        streak: newStreak,
+        xpBoostPercent: activeUpgrades.xp_boost || 0,
       });
       
       // Trigger coin drop animation
