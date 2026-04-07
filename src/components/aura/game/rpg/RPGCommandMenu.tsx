@@ -19,6 +19,7 @@ interface RPGCommandMenuProps {
   currentMp?: number;
   inventory?: { [itemId: string]: number };
   selectedCharacter?: CharacterId | null;
+  extraSpells?: Spell[];
 }
 
 const classicCommands: { id: CommandType; label: string; icon: typeof BookOpen; color: string }[] = [
