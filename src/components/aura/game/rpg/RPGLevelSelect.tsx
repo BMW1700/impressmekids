@@ -19,7 +19,14 @@ export type CampaignEnemyType =
   | 'fire_elemental' | 'lava_hound' | 'ember_drake'
   | 'crystal_knight' | 'prism_mage' | 'crystal_queen'
   | 'star_sprite' | 'comet_wolf' | 'nova_titan'
-  | 'tome_golem' | 'page_wraith' | 'the_librarian';
+  | 'tome_golem' | 'page_wraith' | 'the_librarian'
+  | 'vault_sentinel' | 'vault_drone' | 'the_vault_keeper'
+  | 'shadow_operative' | 'shadow_drone' | 'the_shadow_broker'
+  | 'frost_trooper' | 'ice_drone' | 'the_frostbite'
+  | 'maze_runner' | 'tunnel_rat' | 'the_minotaur'
+  | 'lab_guard' | 'bio_drone' | 'the_catalyst'
+  | 'omega_soldier' | 'omega_elite' | 'the_omega'
+  | 'final_boss';
 
 export interface CampaignLevel {
   id: number;

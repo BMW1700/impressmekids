@@ -101,6 +101,40 @@ const getEnemyTier = (enemyType: EnemyType): 'minion' | 'guard' | 'elite' | 'bos
     tome_golem: 'guard',
     page_wraith: 'elite',
     the_librarian: 'boss',
+    // Agent World 9 - The Vault
+    vault_sentinel: 'guard',
+    vault_drone: 'minion',
+    the_vault_keeper: 'boss',
+    // Agent World 10 - Shadow Protocol
+    shadow_operative: 'guard',
+    shadow_drone: 'minion',
+    the_shadow_broker: 'boss',
+    // Agent World 11 - Arctic Outpost
+    frost_trooper: 'guard',
+    ice_drone: 'minion',
+    the_frostbite: 'boss',
+    // Agent World 12 - The Labyrinth
+    maze_runner: 'guard',
+    tunnel_rat: 'minion',
+    the_minotaur: 'boss',
+    // Agent World 13 - Project Zero
+    lab_guard: 'guard',
+    bio_drone: 'minion',
+    the_catalyst: 'boss',
+    // Agent World 14 - Omega Directive
+    omega_soldier: 'guard',
+    omega_elite: 'elite',
+    the_omega: 'boss',
+    prism_mage: 'elite',
+    crystal_queen: 'boss',
+    // World 11 - Starfall Peaks
+    star_sprite: 'minion',
+    comet_wolf: 'elite',
+    nova_titan: 'boss',
+    // World 12 - Eternal Archive
+    tome_golem: 'guard',
+    page_wraith: 'elite',
+    the_librarian: 'boss',
   };
   return tierMap[enemyType] || 'minion';
 };
