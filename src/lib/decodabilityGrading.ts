@@ -255,63 +255,48 @@ export const getWordGradeLevel = (word: string): number => {
  * Returns 0 (no boost) or a grade 6–12.
  */
 const computeSentenceComplexityGrade = (text: string): number => {
-  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 5);
+  const sentences = text.split(/[.!?;]+/).filter(s => s.trim().length > 5);
   if (sentences.length < 2) return 0;
 
   const words = text.split(/\s+/).filter(w => /[a-zA-Z]/.test(w));
-  if (words.length < 10) return 0;
+  if (words.length < 20) return 0;
 
   const avgSentLen = words.length / sentences.length;
   const totalCharLen = words.reduce((sum, w) => sum + w.replace(/[^a-zA-Z]/g, '').length, 0);
   const avgWordLen = totalCharLen / words.length;
 
-  const commas = (text.match(/,/g) || []).length;
-  const commaDensity = commas / sentences.length;
-  const semicolons = (text.match(/[;:—–]/g) || []).length;
+  // Gate: text must have at least moderate vocabulary to qualify
+  if (avgWordLen < 4.3 || avgSentLen < 10) return 0;
 
-  // Count long words (7+ chars, excluding sight words)
-  const longWords = words.filter(w => {
-    const c = w.replace(/[^a-zA-Z]/g, '').toLowerCase();
-    return c.length >= 7 && !SIGHT_WORDS.has(c);
-  });
-  const longWordPct = longWords.length / words.length;
+  // Sentence length component → grade
+  let sg = 0;
+  if (avgSentLen >= 32) sg = 12;
+  else if (avgSentLen >= 27) sg = 11;
+  else if (avgSentLen >= 23) sg = 10;
+  else if (avgSentLen >= 20) sg = 9;
+  else if (avgSentLen >= 17) sg = 8;
+  else if (avgSentLen >= 15) sg = 7;
+  else if (avgSentLen >= 13) sg = 6;
 
-  let score = 0;
+  // Word length component → grade
+  let wg = 0;
+  if (avgWordLen >= 8.0) wg = 12;
+  else if (avgWordLen >= 7.2) wg = 11;
+  else if (avgWordLen >= 6.5) wg = 10;
+  else if (avgWordLen >= 6.0) wg = 9;
+  else if (avgWordLen >= 5.5) wg = 8;
+  else if (avgWordLen >= 5.1) wg = 7;
+  else if (avgWordLen >= 4.7) wg = 6;
 
-  // Sentence length scoring
-  if (avgSentLen >= 30) score += 4;
-  else if (avgSentLen >= 25) score += 3;
-  else if (avgSentLen >= 21) score += 2;
-  else if (avgSentLen >= 17) score += 1;
+  // Both zero → no complexity boost
+  if (sg === 0 && wg === 0) return 0;
 
-  // Word length scoring
-  if (avgWordLen >= 6.5) score += 4;
-  else if (avgWordLen >= 5.8) score += 3;
-  else if (avgWordLen >= 5.2) score += 2;
-  else if (avgWordLen >= 4.7) score += 1;
+  // If only one dimension qualifies, penalize by 2 grades
+  if (sg === 0) return Math.max(6, wg - 2);
+  if (wg === 0) return Math.max(6, sg - 2);
 
-  // Clause density scoring
-  if (commaDensity >= 4.0) score += 3;
-  else if (commaDensity >= 3.0) score += 2;
-  else if (commaDensity >= 2.0) score += 1;
-
-  // Long word density
-  if (longWordPct >= 0.35) score += 3;
-  else if (longWordPct >= 0.25) score += 2;
-  else if (longWordPct >= 0.15) score += 1;
-
-  // Semicolons/colons/dashes (complex syntax markers)
-  if (semicolons >= 3) score += 1;
-
-  // Map score → grade (0–15 possible)
-  if (score >= 13) return 12;
-  if (score >= 11) return 11;
-  if (score >= 9) return 10;
-  if (score >= 7) return 9;
-  if (score >= 5) return 8;
-  if (score >= 4) return 7;
-  if (score >= 3) return 6;
-  return 0;
+  // Both qualify → average
+  return Math.round((sg + wg) / 2);
 };
 
 // ─── Passage / Story Grade Level ────────────────────────────────────────────
