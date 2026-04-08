@@ -476,22 +476,30 @@ const AuraPractice = () => {
         ice_golem: 'ice_golem',
         shadow_wraith: 'shadow_wraith',
         stone_guardian: 'stone_guardian',
-        // World 5 - Whispering Caverns
         cave_troll: 'cave_troll',
         crystal_spider: 'crystal_spider',
         echo_wraith: 'echo_wraith',
-        // World 6 - Floating Isles
         storm_harpy: 'storm_harpy',
         cloud_giant: 'cloud_giant',
         zephyr: 'zephyr',
-        // World 7 - Sunken Library
         ink_kraken: 'ink_kraken',
         reef_guardian: 'reef_guardian',
         leviathan: 'leviathan',
-        // World 8 - The Void
         void_phantom: 'void_phantom',
         reality_shifter: 'reality_shifter',
         word_eater: 'word_eater',
+        fire_elemental: 'fire_elemental',
+        lava_hound: 'lava_hound',
+        ember_drake: 'ember_drake',
+        crystal_knight: 'crystal_knight',
+        prism_mage: 'prism_mage',
+        crystal_queen: 'crystal_queen',
+        star_sprite: 'star_sprite',
+        comet_wolf: 'comet_wolf',
+        nova_titan: 'nova_titan',
+        tome_golem: 'tome_golem',
+        page_wraith: 'page_wraith',
+        the_librarian: 'the_librarian',
       };
       setRpgEnemyType(enemyMap[primaryEnemy] || 'minion');
       

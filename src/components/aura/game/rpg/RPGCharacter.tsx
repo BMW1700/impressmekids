@@ -24,6 +24,18 @@ import { VoidPhantom, VoidPhantomState } from "../characters/VoidPhantom";
 import { RealityShifter, RealityShifterState } from "../characters/RealityShifter";
 import { WordEater, WordEaterState } from "../characters/WordEater";
 import { EchoWraith, EchoWraithState } from "../characters/EchoWraith";
+import { FireElemental, FireElementalState } from "../characters/FireElemental";
+import { LavaHound, LavaHoundState } from "../characters/LavaHound";
+import { EmberDrake, EmberDrakeState } from "../characters/EmberDrake";
+import { CrystalKnight, CrystalKnightState } from "../characters/CrystalKnight";
+import { PrismMage, PrismMageState } from "../characters/PrismMage";
+import { CrystalQueen, CrystalQueenState } from "../characters/CrystalQueen";
+import { StarSprite, StarSpriteState } from "../characters/StarSprite";
+import { CometWolf, CometWolfState } from "../characters/CometWolf";
+import { NovaTitan, NovaTitanState } from "../characters/NovaTitan";
+import { TomeGolem, TomeGolemState } from "../characters/TomeGolem";
+import { PageWraith, PageWraithState } from "../characters/PageWraith";
+import { TheLibrarian, TheLibrarianState } from "../characters/TheLibrarian";
 import { AgentX, AgentXState } from "../characters/AgentX";
 import { Cipher, CipherState } from "../characters/Cipher";
 import { Shadow, ShadowState } from "../characters/Shadow";
@@ -62,7 +74,7 @@ interface RPGCharacterProps {
 }
 
 // Map character/enemy types to sprite types - EXTENDED with all new enemies
-type SpriteType = 'knight' | 'wizard' | 'princess' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'grog_king' | 'cave_troll' | 'crystal_spider' | 'storm_harpy' | 'cloud_giant' | 'wind_lord' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'echo_wraith' | 'agent_x' | 'cipher' | 'shadow_agent' | 'street_thug_agent' | 'hired_gun_agent' | 'cyber_hacker_agent' | 'the_broker_agent' | 'the_director_agent' | 'drone_sentry_agent' | 'rogue_agent_agent' | 'bodyguard_agent' | 'the_architect_agent' | 'operative_agent' | 'enforcer_agent' | 'the_double_agent_agent' | 'the_warden_agent' | 'the_commander_agent' | 'the_phantom_agent' | 'the_overseer_agent';
+type SpriteType = 'knight' | 'wizard' | 'princess' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'grog_king' | 'cave_troll' | 'crystal_spider' | 'storm_harpy' | 'cloud_giant' | 'wind_lord' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'echo_wraith' | 'agent_x' | 'cipher' | 'shadow_agent' | 'street_thug_agent' | 'hired_gun_agent' | 'cyber_hacker_agent' | 'the_broker_agent' | 'the_director_agent' | 'drone_sentry_agent' | 'rogue_agent_agent' | 'bodyguard_agent' | 'the_architect_agent' | 'operative_agent' | 'enforcer_agent' | 'the_double_agent_agent' | 'the_warden_agent' | 'the_commander_agent' | 'the_phantom_agent' | 'the_overseer_agent' | 'fire_elemental' | 'lava_hound' | 'ember_drake' | 'crystal_knight' | 'prism_mage' | 'crystal_queen' | 'star_sprite' | 'comet_wolf' | 'nova_titan' | 'tome_golem' | 'page_wraith' | 'the_librarian';
 
 const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean): SpriteType => {
   if (isEnemy) {
@@ -82,6 +94,18 @@ const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean)
       'reality_shifter': 'reality_shifter',
       'word_eater': 'word_eater',
       'echo_wraith': 'echo_wraith',
+      'fire_elemental': 'fire_elemental',
+      'lava_hound': 'lava_hound',
+      'ember_drake': 'ember_drake',
+      'crystal_knight': 'crystal_knight',
+      'prism_mage': 'prism_mage',
+      'crystal_queen': 'crystal_queen',
+      'star_sprite': 'star_sprite',
+      'comet_wolf': 'comet_wolf',
+      'nova_titan': 'nova_titan',
+      'tome_golem': 'tome_golem',
+      'page_wraith': 'page_wraith',
+      'the_librarian': 'the_librarian',
       // Agent mode enemies - unique agent sprites
       'street_thug': 'street_thug_agent',
       'hired_gun': 'hired_gun_agent',
@@ -405,6 +429,43 @@ export const RPGCharacter = ({
             size="medium"
           />
         );
+      }
+      // World 9-12 enemy sprites
+      if (spriteType === 'fire_elemental') {
+        return <FireElemental state={commonState as FireElementalState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'lava_hound') {
+        return <LavaHound state={commonState as LavaHoundState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'ember_drake') {
+        return <EmberDrake state={commonState as EmberDrakeState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="large" />;
+      }
+      if (spriteType === 'crystal_knight') {
+        return <CrystalKnight state={commonState as CrystalKnightState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'prism_mage') {
+        return <PrismMage state={commonState as PrismMageState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'crystal_queen') {
+        return <CrystalQueen state={commonState as CrystalQueenState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="large" />;
+      }
+      if (spriteType === 'star_sprite') {
+        return <StarSprite state={commonState as StarSpriteState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'comet_wolf') {
+        return <CometWolf state={commonState as CometWolfState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'nova_titan') {
+        return <NovaTitan state={commonState as NovaTitanState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="large" />;
+      }
+      if (spriteType === 'tome_golem') {
+        return <TomeGolem state={commonState as TomeGolemState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'page_wraith') {
+        return <PageWraith state={commonState as PageWraithState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'the_librarian') {
+        return <TheLibrarian state={commonState as TheLibrarianState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="large" />;
       }
       // Agent mode enemy sprites
       if (spriteType === 'street_thug_agent') {

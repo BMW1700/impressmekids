@@ -984,6 +984,67 @@ export const OverseerSilhouette = ({ isUnlocked, size = 'medium' }: SilhouettePr
   );
 };
 
+// Ember Drake Silhouette (World 9 boss)
+export const EmberDrakeSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteProps) => {
+  const { width, height } = sizeConfig[size];
+  return (
+    <motion.div className="relative" animate={isUnlocked ? { filter: ['drop-shadow(0 0 4px rgba(239, 68, 68, 0.5))', 'drop-shadow(0 0 12px rgba(249, 115, 22, 0.8))', 'drop-shadow(0 0 4px rgba(239, 68, 68, 0.5))'] } : {}} transition={{ duration: 2, repeat: Infinity }}>
+      <svg width={width} height={height} viewBox="0 0 80 80" fill="none">
+        <defs><linearGradient id="emberDrakeSilGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor={isUnlocked ? "#DC2626" : "#475569"} /><stop offset="100%" stopColor={isUnlocked ? "#92400E" : "#1E293B"} /></linearGradient></defs>
+        <path d="M40 10 L55 25 L70 20 L60 35 L65 55 L50 50 L40 65 L30 50 L15 55 L20 35 L10 20 L25 25 Z" fill="url(#emberDrakeSilGrad)" />
+        {isUnlocked && (<><motion.circle cx="35" cy="30" r="2" fill="#FCD34D" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }} /><motion.circle cx="45" cy="30" r="2" fill="#FCD34D" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }} /></>)}
+      </svg>
+    </motion.div>
+  );
+};
+
+// Crystal Queen Silhouette (World 10 boss)
+export const CrystalQueenSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteProps) => {
+  const { width, height } = sizeConfig[size];
+  return (
+    <motion.div className="relative" animate={isUnlocked ? { filter: ['drop-shadow(0 0 4px rgba(192, 132, 252, 0.5))', 'drop-shadow(0 0 12px rgba(232, 121, 249, 0.8))', 'drop-shadow(0 0 4px rgba(192, 132, 252, 0.5))'] } : {}} transition={{ duration: 2, repeat: Infinity }}>
+      <svg width={width} height={height} viewBox="0 0 80 80" fill="none">
+        <defs><linearGradient id="crystalQueenSilGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor={isUnlocked ? "#C084FC" : "#475569"} /><stop offset="100%" stopColor={isUnlocked ? "#E879F9" : "#1E293B"} /></linearGradient></defs>
+        <path d="M28 25 L53 25 L58 60 L55 75 L25 75 L22 60 Z" fill="url(#crystalQueenSilGrad)" />
+        <circle cx="40" cy="18" r="10" fill="url(#crystalQueenSilGrad)" />
+        <path d="M30 12 L33 2 L37 9 L40 0 L43 9 L47 2 L50 12" fill={isUnlocked ? "#FCD34D" : "#475569"} />
+        {isUnlocked && (<><motion.circle cx="36" cy="17" r="2" fill="#E879F9" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }} /><motion.circle cx="44" cy="17" r="2" fill="#E879F9" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }} /></>)}
+      </svg>
+    </motion.div>
+  );
+};
+
+// Nova Titan Silhouette (World 11 boss)
+export const NovaTitanSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteProps) => {
+  const { width, height } = sizeConfig[size];
+  return (
+    <motion.div className="relative" animate={isUnlocked ? { filter: ['drop-shadow(0 0 4px rgba(253, 230, 138, 0.5))', 'drop-shadow(0 0 12px rgba(253, 230, 138, 0.9))', 'drop-shadow(0 0 4px rgba(253, 230, 138, 0.5))'] } : {}} transition={{ duration: 2, repeat: Infinity }}>
+      <svg width={width} height={height} viewBox="0 0 80 80" fill="none">
+        <defs><linearGradient id="novaTitanSilGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor={isUnlocked ? "#312E81" : "#475569"} /><stop offset="100%" stopColor={isUnlocked ? "#4338CA" : "#1E293B"} /></linearGradient></defs>
+        <path d="M28 22 L52 22 L58 55 L55 75 L25 75 L22 55 Z" fill="url(#novaTitanSilGrad)" />
+        <circle cx="40" cy="16" r="11" fill="url(#novaTitanSilGrad)" />
+        <path d="M30 10 L33 2 L36 8 L40 0 L44 8 L47 2 L50 10" fill={isUnlocked ? "#FDE68A" : "#475569"} />
+        {isUnlocked && (<><motion.circle cx="36" cy="15" r="2" fill="#FDE68A" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }} /><motion.circle cx="44" cy="15" r="2" fill="#FDE68A" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }} /><motion.circle cx="40" cy="45" r="4" fill="#FDE68A" opacity="0.4" animate={{ opacity: [0.2, 0.6, 0.2] }} transition={{ duration: 2, repeat: Infinity }} /></>)}
+      </svg>
+    </motion.div>
+  );
+};
+
+// The Librarian Silhouette (World 12 final boss)
+export const LibrarianSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteProps) => {
+  const { width, height } = sizeConfig[size];
+  return (
+    <motion.div className="relative" animate={isUnlocked ? { filter: ['drop-shadow(0 0 4px rgba(34, 197, 94, 0.5))', 'drop-shadow(0 0 15px rgba(34, 197, 94, 0.9))', 'drop-shadow(0 0 4px rgba(34, 197, 94, 0.5))'] } : {}} transition={{ duration: 2, repeat: Infinity }}>
+      <svg width={width} height={height} viewBox="0 0 80 80" fill="none">
+        <defs><linearGradient id="librarianSilGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor={isUnlocked ? "#1C1917" : "#475569"} /><stop offset="100%" stopColor={isUnlocked ? "#292524" : "#1E293B"} /></linearGradient></defs>
+        <path d="M30 28 Q40 15 50 28 Q52 40 40 42 Q28 40 30 28" fill={isUnlocked ? "#292524" : "#334155"} />
+        <path d="M27 25 L53 25 L58 55 L55 75 L25 75 L22 55 Z" fill="url(#librarianSilGrad)" />
+        {isUnlocked && (<><motion.circle cx="36" cy="32" r="2.5" fill="#22C55E" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }} /><motion.circle cx="44" cy="32" r="2.5" fill="#22C55E" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }} /><motion.rect x="55" y="35" width="8" height="10" rx="1" fill="#92400E" opacity="0.7" animate={{ y: [35, 30, 35] }} transition={{ duration: 2, repeat: Infinity }} /></>)}
+      </svg>
+    </motion.div>
+  );
+};
+
 // Combined export for convenience
 export const BossSilhouettes = {
   Drake: DrakeSilhouette,
@@ -1003,4 +1064,8 @@ export const BossSilhouettes = {
   Commander: CommanderSilhouette,
   Phantom: PhantomSilhouette,
   Overseer: OverseerSilhouette,
+  EmberDrake: EmberDrakeSilhouette,
+  CrystalQueen: CrystalQueenSilhouette,
+  NovaTitan: NovaTitanSilhouette,
+  Librarian: LibrarianSilhouette,
 };
