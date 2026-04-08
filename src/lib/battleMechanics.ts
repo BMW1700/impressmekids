@@ -97,14 +97,18 @@ const getEnemyTier = (enemyType: EnemyType): 'minion' | 'guard' | 'elite' | 'bos
 export const getEnemyStats = (worldNumber: number, enemyType: EnemyType): { hp: number; attackPower: number } => {
   // DOUBLED HP: Makes battles harder - enemies survive longer
   const baseHpByWorld: Record<number, number> = {
-    1: 800,   // Enchanted Forest - Easy (4x)
-    2: 1600,  // Dark Caves - Medium (4x)
-    3: 2800,  // Goblin Mountain - Hard (4x)
-    4: 4000,  // Throne Room - Boss (4x)
-    5: 2000,  // Whispering Caverns (4x)
-    6: 2400,  // Floating Isles (4x)
-    7: 3000,  // Sunken Library (4x)
-    8: 4800,  // The Void - Hardest (4x)
+    1: 800,
+    2: 1600,
+    3: 2800,
+    4: 4000,
+    5: 2000,
+    6: 2400,
+    7: 3000,
+    8: 4800,
+    9: 3200,
+    10: 3600,
+    11: 4000,
+    12: 5200,
   };
 
   const tier = getEnemyTier(enemyType);
