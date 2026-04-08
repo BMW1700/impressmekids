@@ -934,8 +934,134 @@ export const wordEater: RPGEnemy = {
   signatureMiniGame: 'void_pull', // THE ULTIMATE SIGNATURE - VOID PULL at 50%
 };
 
+// World 9 - Ember Highlands enemies
+export const fireElemental: RPGEnemy = {
+  id: 'fire_elemental', name: 'Fire Elemental', type: 'elite', maxHp: 800, attack: 22, defense: 10,
+  wordDamageMultiplier: 0.35, color: 'from-red-600 via-orange-500 to-amber-500',
+  dialogueIntro: ['*flames crackle*', 'You dare enter the Ember Highlands?'],
+  dialogueAttack: ['*fire erupts*', 'BURN!'], dialogueDefeat: ['*sizzles out*'],
+  specialAbilities: [{ id: 'flame_burst', name: 'Flame Burst', damage: 18, effect: 'earthquake', description: 'Fiery explosion', icon: '🔥' }],
+  barrageWordCount: 5, miniGames: ['fireball_barrage', 'fireball_defense', 'speed_typist'], signatureMiniGame: 'fireball_barrage',
+};
+
+export const lavaHound: RPGEnemy = {
+  id: 'lava_hound', name: 'Lava Hound', type: 'minion', maxHp: 500, attack: 15, defense: 5,
+  wordDamageMultiplier: 0.45, color: 'from-red-800 via-red-600 to-orange-500',
+  dialogueIntro: ['*growls menacingly*', 'The hound smells intruders!'],
+  dialogueAttack: ['*lunges with molten jaws*'], dialogueDefeat: ['*whimpers and retreats*'],
+  specialAbilities: [{ id: 'lava_bite', name: 'Lava Bite', damage: 12, effect: 'debuff', description: 'Burning bite', icon: '🐕' }],
+  barrageWordCount: 4, miniGames: ['beast_swarm', 'fireball_barrage', 'ground_ripple'], signatureMiniGame: 'beast_swarm',
+};
+
+export const emberDrake: RPGEnemy = {
+  id: 'ember_drake', name: 'Inferno the Ember Drake', type: 'boss', maxHp: 1800, attack: 35, defense: 18,
+  wordDamageMultiplier: 0.25, color: 'from-red-900 via-orange-600 to-amber-400',
+  dialogueIntro: ['*massive wings unfurl*', 'I am Inferno!', 'The Ember Highlands are MINE!'],
+  dialogueAttack: ['*breathes fire*', 'FEEL MY FLAMES!'], dialogueDefeat: ['The fire... dies...', 'You have bested me...'],
+  specialAbilities: [
+    { id: 'inferno_breath', name: 'Inferno Breath', damage: 30, effect: 'earthquake', description: 'Devastating fire breath', icon: '🐲' },
+    { id: 'wing_gust', name: 'Wing Gust', damage: 20, effect: 'debuff', description: 'Scorching wind', icon: '🌪️' },
+  ],
+  barrageWordCount: 8, miniGames: ['fireball_barrage', 'fireball_defense', 'speed_typist', 'asteroid_barrage', 'ground_ripple'], signatureMiniGame: 'fireball_barrage',
+};
+
+// World 10 - Crystal Citadel enemies
+export const crystalKnight: RPGEnemy = {
+  id: 'crystal_knight', name: 'Crystal Knight', type: 'guard', maxHp: 700, attack: 20, defense: 15,
+  wordDamageMultiplier: 0.35, color: 'from-violet-400 via-fuchsia-400 to-pink-400',
+  dialogueIntro: ['*crystal armor gleams*', 'None shall pass!'],
+  dialogueAttack: ['*crystal blade swings*'], dialogueDefeat: ['*shatters into shards*'],
+  specialAbilities: [{ id: 'crystal_slash', name: 'Crystal Slash', damage: 16, effect: 'debuff', description: 'Prismatic blade attack', icon: '💎' }],
+  barrageWordCount: 5, miniGames: ['word_shield', 'crystal_prison', 'spell_combo'], signatureMiniGame: 'crystal_prison',
+};
+
+export const prismMage: RPGEnemy = {
+  id: 'prism_mage', name: 'Prism Mage', type: 'elite', maxHp: 900, attack: 25, defense: 8,
+  wordDamageMultiplier: 0.32, color: 'from-purple-500 via-pink-500 to-fuchsia-500',
+  dialogueIntro: ['*light refracts wildly*', 'My crystals see all!'],
+  dialogueAttack: ['*prismatic beam fires*', 'Light BENDS to my will!'], dialogueDefeat: ['The prism... fades...'],
+  specialAbilities: [{ id: 'prism_beam', name: 'Prism Beam', damage: 20, effect: 'earthquake', description: 'Focused light beam', icon: '🔮' }],
+  barrageWordCount: 6, miniGames: ['crystal_prison', 'lightning_storm', 'speed_typist', 'spell_combo'], signatureMiniGame: 'crystal_prison',
+};
+
+export const crystalQueen: RPGEnemy = {
+  id: 'crystal_queen', name: 'Diamante the Crystal Queen', type: 'boss', maxHp: 2000, attack: 38, defense: 20,
+  wordDamageMultiplier: 0.23, color: 'from-purple-600 via-fuchsia-500 to-pink-400',
+  dialogueIntro: ['*a thousand crystals float around her*', 'I am the Crystal Queen!', 'My citadel is ETERNAL!'],
+  dialogueAttack: ['*crystals rain down*', 'SHATTER before me!'], dialogueDefeat: ['My crystals... crumble...', 'Knowledge... outlasts crystal...'],
+  specialAbilities: [
+    { id: 'crystal_storm', name: 'Crystal Storm', damage: 28, effect: 'asteroid_barrage', description: 'Raining crystal shards', icon: '👸' },
+    { id: 'diamond_shield', name: 'Diamond Shield', damage: 0, effect: 'shield', description: 'Impervious barrier', icon: '🛡️' },
+  ],
+  barrageWordCount: 9, miniGames: ['crystal_prison', 'lightning_storm', 'speed_typist', 'spell_combo', 'asteroid_barrage', 'ink_splash'], signatureMiniGame: 'crystal_prison',
+};
+
+// World 11 - Starfall Peaks enemies
+export const starSprite: RPGEnemy = {
+  id: 'star_sprite', name: 'Star Sprite', type: 'minion', maxHp: 600, attack: 18, defense: 5,
+  wordDamageMultiplier: 0.4, color: 'from-yellow-300 via-amber-400 to-orange-400',
+  dialogueIntro: ['*twinkles brightly*', 'A shooting star approaches!'],
+  dialogueAttack: ['*zips and zaps*'], dialogueDefeat: ['*fades to stardust*'],
+  specialAbilities: [{ id: 'star_bolt', name: 'Star Bolt', damage: 14, effect: 'debuff', description: 'Starlight zap', icon: '⭐' }],
+  barrageWordCount: 4, miniGames: ['wind_chase', 'lightning_storm', 'balloon_battle'], signatureMiniGame: 'wind_chase',
+};
+
+export const cometWolf: RPGEnemy = {
+  id: 'comet_wolf', name: 'Streak the Comet Wolf', type: 'elite', maxHp: 1000, attack: 28, defense: 12,
+  wordDamageMultiplier: 0.3, color: 'from-indigo-800 via-purple-600 to-violet-500',
+  dialogueIntro: ['*cosmic howl echoes*', 'The comet trails across the sky!'],
+  dialogueAttack: ['*lunges at light speed*', 'COSMIC STRIKE!'], dialogueDefeat: ['The comet... fades...'],
+  specialAbilities: [{ id: 'comet_strike', name: 'Comet Strike', damage: 22, effect: 'earthquake', description: 'Light-speed charge', icon: '🐺' }],
+  barrageWordCount: 6, miniGames: ['wind_chase', 'beast_swarm', 'speed_typist', 'asteroid_barrage'], signatureMiniGame: 'wind_chase',
+};
+
+export const novaTitan: RPGEnemy = {
+  id: 'nova_titan', name: 'Solaris the Nova Titan', type: 'boss', maxHp: 2200, attack: 40, defense: 22,
+  wordDamageMultiplier: 0.22, color: 'from-indigo-950 via-blue-800 to-yellow-400',
+  dialogueIntro: ['*the sky ignites*', 'I AM SOLARIS!', 'The power of a SUPERNOVA flows through me!'],
+  dialogueAttack: ['*nova energy surges*', 'FEEL THE FORCE OF A STAR!'], dialogueDefeat: ['The nova... dims...', 'Your light... shines brighter...'],
+  specialAbilities: [
+    { id: 'nova_blast', name: 'Nova Blast', damage: 35, effect: 'earthquake', description: 'Supernova explosion', icon: '💫' },
+    { id: 'gravity_well', name: 'Gravity Well', damage: 0, effect: 'debuff', description: 'Crushes with gravity', icon: '🌑' },
+  ],
+  barrageWordCount: 10, miniGames: ['asteroid_barrage', 'lightning_storm', 'speed_typist', 'wind_chase', 'void_pull', 'fireball_defense'], signatureMiniGame: 'asteroid_barrage',
+};
+
+// World 12 - Eternal Archive enemies
+export const tomeGolem: RPGEnemy = {
+  id: 'tome_golem', name: 'Codex the Tome Golem', type: 'guard', maxHp: 800, attack: 22, defense: 18,
+  wordDamageMultiplier: 0.33, color: 'from-amber-800 via-amber-600 to-yellow-500',
+  dialogueIntro: ['*pages rustle menacingly*', 'The Archive does not welcome intruders!'],
+  dialogueAttack: ['*hurls ancient tomes*'], dialogueDefeat: ['*collapses into pages*'],
+  specialAbilities: [{ id: 'tome_slam', name: 'Tome Slam', damage: 18, effect: 'earthquake', description: 'Crushing book strike', icon: '📚' }],
+  barrageWordCount: 5, miniGames: ['word_shield', 'rolling_boulders', 'ink_splash', 'ground_ripple'], signatureMiniGame: 'ink_splash',
+};
+
+export const pageWraith: RPGEnemy = {
+  id: 'page_wraith', name: 'Whisper the Page Wraith', type: 'elite', maxHp: 900, attack: 25, defense: 8,
+  wordDamageMultiplier: 0.3, color: 'from-stone-300 via-stone-400 to-stone-500',
+  dialogueIntro: ['*whispers fill the air*', 'The forgotten pages... seek revenge...'],
+  dialogueAttack: ['*paper cuts through the air*', 'Read... or be consumed...'], dialogueDefeat: ['*dissolves into blank pages*'],
+  specialAbilities: [{ id: 'paper_storm', name: 'Paper Storm', damage: 20, effect: 'asteroid_barrage', description: 'Razor-sharp pages', icon: '📄' }],
+  barrageWordCount: 6, miniGames: ['ghostly_whispers', 'word_echo', 'ink_splash', 'web_trap'], signatureMiniGame: 'ghostly_whispers',
+};
+
+export const theLibrarian: RPGEnemy = {
+  id: 'the_librarian', name: 'The Eternal Librarian', type: 'final_boss', maxHp: 2800, attack: 45, defense: 25,
+  wordDamageMultiplier: 0.2, color: 'from-stone-900 via-stone-800 to-emerald-900',
+  dialogueIntro: ['*ancient eyes glow green*', 'I am the Keeper of ALL Knowledge.', 'Every word written... belongs to ME.', 'You seek to free these books? You must PROVE your mastery!'],
+  dialogueAttack: ['*summons ancient text*', 'KNOWLEDGE IS POWER!', '*the archive trembles*'],
+  dialogueDefeat: ['You have... proven worthy...', 'The books... are free at last...', 'Go forth, Master Reader... the world awaits your words.'],
+  specialAbilities: [
+    { id: 'knowledge_blast', name: 'Knowledge Blast', damage: 35, effect: 'earthquake', description: 'Ancient wisdom unleashed', icon: '📖' },
+    { id: 'silence_spell', name: 'Silence Spell', damage: 0, effect: 'silence', description: 'Silences all abilities', icon: '🔇' },
+    { id: 'archive_crush', name: 'Archive Crush', damage: 40, effect: 'asteroid_barrage', description: 'The weight of all books', icon: '📚' },
+  ],
+  barrageWordCount: 12, miniGames: ['ink_splash', 'ghostly_whispers', 'speed_typist', 'word_echo', 'void_pull', 'crystal_prison', 'ground_ripple', 'lightning_storm'], signatureMiniGame: 'ink_splash',
+};
+
 // Get enemy by type for battle - UPDATED with all new enemies
-export type EnemyTypeKey = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'goblin_shaman';
+export type EnemyTypeKey = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'goblin_shaman' | 'fire_elemental' | 'lava_hound' | 'ember_drake' | 'crystal_knight' | 'prism_mage' | 'crystal_queen' | 'star_sprite' | 'comet_wolf' | 'nova_titan' | 'tome_golem' | 'page_wraith' | 'the_librarian';
 
 export const getEnemyForBattle = (enemyType: EnemyTypeKey): RPGEnemy => {
   switch (enemyType) {
@@ -961,7 +1087,6 @@ export const getEnemyForBattle = (enemyType: EnemyTypeKey): RPGEnemy => {
       return shadowWraith;
     case 'stone_guardian':
       return stoneGuardian;
-    // NEW enemies
     case 'cave_troll':
       return caveTroll;
     case 'crystal_spider':
@@ -986,6 +1111,31 @@ export const getEnemyForBattle = (enemyType: EnemyTypeKey): RPGEnemy => {
       return realityShifter;
     case 'word_eater':
       return wordEater;
+    // World 9-12
+    case 'fire_elemental':
+      return fireElemental;
+    case 'lava_hound':
+      return lavaHound;
+    case 'ember_drake':
+      return emberDrake;
+    case 'crystal_knight':
+      return crystalKnight;
+    case 'prism_mage':
+      return prismMage;
+    case 'crystal_queen':
+      return crystalQueen;
+    case 'star_sprite':
+      return starSprite;
+    case 'comet_wolf':
+      return cometWolf;
+    case 'nova_titan':
+      return novaTitan;
+    case 'tome_golem':
+      return tomeGolem;
+    case 'page_wraith':
+      return pageWraith;
+    case 'the_librarian':
+      return theLibrarian;
     default:
       return goblinMinion;
   }
