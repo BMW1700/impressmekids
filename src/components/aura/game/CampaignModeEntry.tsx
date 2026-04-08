@@ -569,10 +569,10 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
                 const isBoss = index >= totalStories * 0.75;
                 const isElite = !isBoss && index >= totalStories * 0.5;
                 
-                // Check if this story is completed
+                // Check if this story is completed - check ALL worlds for reshuffled stories
                 const worldProgress = (progress?.world_progress as Record<string, string[]>) || {};
-                const completedStories = worldProgress[selectedWorld.toString()] || [];
-                const isCompleted = completedStories.includes(story.title);
+                const allCompleted = new Set(Object.values(worldProgress).flat());
+                const isCompleted = allCompleted.has(story.title);
                 
                 return (
                   <Card

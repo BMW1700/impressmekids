@@ -69,6 +69,17 @@ export const RPGWordShield = ({
     return () => clearTimeout(timer);
   }, [words]);
 
+  // Auto-complete when all words are spoken
+  useEffect(() => {
+    if (phase !== 'building') return;
+    if (shieldWords.length > 0 && currentWordIndex >= shieldWords.length) {
+      speechManager.stop('shield');
+      setAttackStarted(true);
+      setPhase('impact');
+      setTimeLeft(0);
+    }
+  }, [currentWordIndex, shieldWords.length, phase]);
+
   // Countdown timer
   useEffect(() => {
     if (phase !== 'building') return;

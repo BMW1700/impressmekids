@@ -417,9 +417,11 @@ const AuraPractice = () => {
 
   // RPG Mode - Level Select
   if (isRpgMode && rpgView === 'level_select' && selectedWorld && user?.id) {
-    // Get world progress from campaign data
+    // Get world progress from campaign data - check ALL worlds for completed titles (handles story reshuffling)
     const worldProgressData = campaignProgress?.world_progress as Record<string, string[]> || {};
-    const completedStories = worldProgressData[selectedWorld.id.toString()] || [];
+    const completedStoriesInWorld = worldProgressData[selectedWorld.id.toString()] || [];
+    const allCompletedStories = new Set(Object.values(worldProgressData).flat());
+    const completedStories = completedStoriesInWorld;
     
     // Generate levels from world's level data + curated stories
     const levels: CampaignLevel[] = selectedWorld.levels.map((levelData, idx) => {
@@ -440,12 +442,12 @@ const AuraPractice = () => {
           }
         : (activeStories[levelData.storyIndex] || activeStories[idx % activeStories.length]);
       
-      const isCompleted = completedStories.includes(story.title);
+      const isCompleted = completedStories.includes(story.title) || allCompletedStories.has(story.title);
       
       // Unlock logic: first level always unlocked, subsequent levels unlock when previous is completed
-      const isUnlocked = idx === 0 || completedStories.includes(
-        activeStories[selectedWorld.levels[idx - 1]?.storyIndex]?.title || ''
-      ) || completedStories.length >= idx;
+      const prevStoryTitle = activeStories[selectedWorld.levels[idx - 1]?.storyIndex]?.title || '';
+      const isPrevCompleted = completedStories.includes(prevStoryTitle) || allCompletedStories.has(prevStoryTitle);
+      const isUnlocked = idx === 0 || isPrevCompleted || completedStories.length >= idx;
       
       return {
         id: levelData.id,
@@ -552,17 +554,23 @@ const AuraPractice = () => {
     // Calculate world progress from campaign data
     const worldProgressData = campaignProgress?.world_progress as Record<string, string[]> || {};
     const totalBooksRescued = campaignProgress?.books_rescued || 0;
+    const allCompletedTitles = new Set(Object.values(worldProgressData).flat());
     
     const worldProgress: WorldProgress[] = activeWorlds.map(w => {
-      const worldStories = worldProgressData[w.id.toString()] || [];
+      const worldStoriesInDB = worldProgressData[w.id.toString()] || [];
+      // Count stories completed for this world's levels (checking all worlds for reshuffled stories)
+      const worldLevelTitles = w.levels.map(l => activeStories[l.storyIndex]?.title).filter(Boolean);
+      const levelsCompleted = worldLevelTitles.filter(t => allCompletedTitles.has(t)).length || worldStoriesInDB.length;
       const totalLevels = w.levels.length;
-      const levelsCompleted = worldStories.length;
       
-      // World unlock logic based on previous world completion
+      // World unlock logic based on previous world completion (check reshuffled stories too)
       let isUnlocked = w.id === 1;
       if (w.id > 1) {
-        const prevWorldStories = worldProgressData[(w.id - 1).toString()] || [];
-        isUnlocked = prevWorldStories.length >= w.unlockRequirement;
+        const prevWorld = activeWorlds.find(pw => pw.id === w.id - 1);
+        const prevWorldStoriesInDB = worldProgressData[(w.id - 1).toString()] || [];
+        const prevWorldLevelTitles = prevWorld?.levels.map(l => activeStories[l.storyIndex]?.title).filter(Boolean) || [];
+        const prevCompleted = prevWorldLevelTitles.filter(t => allCompletedTitles.has(t)).length || prevWorldStoriesInDB.length;
+        isUnlocked = prevCompleted >= w.unlockRequirement;
       }
       
       return {
