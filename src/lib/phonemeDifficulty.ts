@@ -9,6 +9,7 @@
  */
 
 import { getIPAPronunciation } from './cmuDictWrapper';
+import { getPassageGradeLevel, getPassageDifficultyLevel, getWordGradeLevel, analyzePassageDecodability } from './decodabilityGrading';
 
 // IPA phoneme difficulty scores (1-10)
 // Based on age of acquisition in typically developing children
