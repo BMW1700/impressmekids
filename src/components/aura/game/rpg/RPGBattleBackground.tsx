@@ -36,6 +36,10 @@ const worldNames: Record<number, string> = {
   6: 'Floating Isles',
   7: 'Sunken Library',
   8: 'The Void',
+  9: 'Ember Highlands',
+  10: 'Crystal Citadel',
+  11: 'Starfall Peaks',
+  12: 'Eternal Archive',
 };
 
 const agentWorldNames: Record<number, string> = {
@@ -309,6 +313,42 @@ export const RPGBattleBackground = ({
           particles: 'bg-red-400',
           ambientColor: 'rgba(239, 68, 68, 0.25)',
           specialElements: 'shadows',
+        };
+      case 'ember_highlands':
+        return {
+          sky: 'from-red-950 via-orange-900 to-amber-900',
+          ground: 'from-stone-800 to-red-950',
+          accent: 'bg-orange-500/30',
+          particles: 'bg-orange-400',
+          ambientColor: 'rgba(249, 115, 22, 0.3)',
+          specialElements: 'lava',
+        };
+      case 'crystal_citadel':
+        return {
+          sky: 'from-violet-950 via-fuchsia-900 to-purple-900',
+          ground: 'from-purple-800 to-violet-950',
+          accent: 'bg-fuchsia-400/25',
+          particles: 'bg-fuchsia-300',
+          ambientColor: 'rgba(232, 121, 249, 0.3)',
+          specialElements: 'crystals',
+        };
+      case 'starfall_peaks':
+        return {
+          sky: 'from-indigo-950 via-blue-950 to-violet-950',
+          ground: 'from-indigo-900 to-slate-950',
+          accent: 'bg-yellow-400/20',
+          particles: 'bg-yellow-200',
+          ambientColor: 'rgba(253, 230, 138, 0.25)',
+          specialElements: 'void',
+        };
+      case 'eternal_archive':
+        return {
+          sky: 'from-stone-950 via-amber-950 to-yellow-950',
+          ground: 'from-stone-900 to-amber-950',
+          accent: 'bg-emerald-500/20',
+          particles: 'bg-emerald-300',
+          ambientColor: 'rgba(34, 197, 94, 0.2)',
+          specialElements: 'torches',
         };
       case 'forest':
       default:
