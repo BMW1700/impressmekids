@@ -1,7 +1,574 @@
 import type { CuratedStory } from './curatedStories';
 
-// Agent Mode stories — 9-12th grade reading level, diverse academic topics with spy/thriller narrative frame
+// Agent Mode stories — 6-12th grade reading level, diverse academic topics with spy/thriller narrative frame
 export const agentStories: CuratedStory[] = [
+  // ═══════════════════════════════════════════════════════════════
+  // GRADE 6 STORIES — ~800-900 Lexile, clear academic vocabulary,
+  // moderate sentence complexity, spy-themed framing
+  // ═══════════════════════════════════════════════════════════════
+  {
+    title: "The Missing Signal",
+    description: "A young recruit tracks a mysterious radio signal",
+    passage_text: "Agent Reyes was new to the agency. Her first mission was simple: find the source of a strange radio signal coming from an old warehouse near the harbor. She packed her gear and drove to the location. The warehouse was dark and dusty. She used a flashlight to look around. In the corner, she found a small device blinking with a red light. It was sending coded messages every thirty seconds. She carefully removed it and placed it in a signal-proof bag. Back at headquarters, the tech team decoded the messages. They contained shipping routes for stolen medical supplies. Agent Reyes had uncovered a smuggling operation on her very first day.",
+    grade_level: 6,
+    category: "adventure",
+    target_phonemes: ["str", "pr", "bl", "gr"],
+    word_count: 120,
+    reading_time_minutes: 2,
+    difficulty_level: 6,
+    cover_gradient: "from-slate-500 to-zinc-700"
+  },
+  {
+    title: "Code Name: Falcon",
+    description: "An agent learns to decode enemy messages",
+    passage_text: "Every spy needs to understand codes. Agent Torres spent three weeks learning how to break simple ciphers at the training academy. A cipher works by replacing each letter with a different one. For example, the letter A might become the letter D, and B might become E. This is called a shift cipher. The enemy used these codes to hide their plans. Torres practiced breaking codes every day until he could solve them in minutes. His instructor was impressed. She told him that real-world codes are much harder, using computers and complex math. But understanding the basics was the first step. Torres was ready for his first field assignment.",
+    grade_level: 6,
+    category: "science",
+    target_phonemes: ["sp", "tr", "bl", "cr"],
+    word_count: 115,
+    reading_time_minutes: 2,
+    difficulty_level: 6,
+    cover_gradient: "from-cyan-600 to-slate-700"
+  },
+  {
+    title: "The Safe House",
+    description: "Agents protect a witness in a hidden location",
+    passage_text: "A safe house is a secret location where agencies hide important people. Agent Park was assigned to guard a witness named Dr. Chen, who had information about a dangerous group. The safe house was a small cabin in the mountains. Park checked the doors and windows every hour. He set up cameras around the property. Dr. Chen was nervous but cooperative. She spent her time writing notes about what she had seen. Park cooked meals and kept watch through the night. On the third day, a suspicious car drove past twice. Park called for backup immediately. Within an hour, a full security team arrived. The witness was moved to a new location. Park had done his job perfectly.",
+    grade_level: 6,
+    category: "adventure",
+    target_phonemes: ["ch", "sh", "pr", "st"],
+    word_count: 125,
+    reading_time_minutes: 2,
+    difficulty_level: 6,
+    cover_gradient: "from-emerald-600 to-teal-800"
+  },
+  {
+    title: "Satellite Watch",
+    description: "A team monitors the world from space technology",
+    passage_text: "High above the earth, satellites orbit at incredible speeds. The intelligence agency uses these satellites to watch events around the globe. Agent Kim worked in the satellite monitoring room, a large space filled with screens showing live images from space. Her job was to spot anything unusual. One morning, she noticed large trucks moving equipment to a remote island in the Pacific Ocean. The trucks were carrying materials that could be used to build weapons. Kim flagged the images and sent them to her commander. A team of analysts confirmed her discovery. The agency launched an investigation that prevented the weapons from being completed. Kim's sharp eyes had made a real difference.",
+    grade_level: 6,
+    category: "science",
+    target_phonemes: ["sp", "st", "tr", "gr"],
+    word_count: 122,
+    reading_time_minutes: 2,
+    difficulty_level: 6,
+    cover_gradient: "from-blue-600 to-indigo-800"
+  },
+  {
+    title: "The Double Agent Test",
+    description: "A recruit faces a test of loyalty and trust",
+    passage_text: "During training, every recruit faces the loyalty test. Agent Wu sat in a small room with two senior officers. They asked her questions for three hours. Some questions were easy: her birthday, her favorite subject in school, where she grew up. Other questions were tricky. They tried to confuse her by asking the same question in different ways. They watched her body language and listened to her tone of voice. After the test, Wu waited nervously for the results. The next morning, her instructor told her she had passed with the highest score in her class. The test was designed to find people who could stay calm under pressure and tell the truth even when it was difficult.",
+    grade_level: 6,
+    category: "adventure",
+    target_phonemes: ["tr", "str", "pr", "cl"],
+    word_count: 125,
+    reading_time_minutes: 2,
+    difficulty_level: 6,
+    cover_gradient: "from-amber-600 to-orange-800"
+  },
+  {
+    title: "Tracking the Courier",
+    description: "An agent follows a suspect through a busy city",
+    passage_text: "Agent Lopez had been watching the train station for two days. Her target was a courier who carried secret documents for a criminal network. The courier always wore a gray jacket and carried a brown leather bag. On Tuesday morning, Lopez spotted him stepping off the 9:15 train. She followed at a safe distance, blending in with the crowd. The courier walked six blocks, stopped at a coffee shop, and left a package under a bench outside. Five minutes later, another person picked it up. Lopez photographed everything. She now had evidence of how the network passed information. Her report would help the agency map the entire criminal chain.",
+    grade_level: 6,
+    category: "adventure",
+    target_phonemes: ["cr", "bl", "st", "tr"],
+    word_count: 120,
+    reading_time_minutes: 2,
+    difficulty_level: 6,
+    cover_gradient: "from-stone-500 to-neutral-700"
+  },
+  {
+    title: "The Listening Post",
+    description: "A team intercepts enemy communications",
+    passage_text: "Hidden in the basement of an ordinary-looking office building was one of the agency's most important facilities: a listening post. Agent Nakamura worked the night shift, wearing headphones and monitoring radio frequencies. Most of what she heard was normal chatter — taxi dispatchers, weather reports, shipping companies. But she was trained to notice patterns. One night, she heard the same phrase repeated on three different frequencies within ten minutes. This was not a coincidence. She recorded the transmissions and ran them through a pattern analysis program. The software confirmed that the messages were coordinated. Someone was using public radio channels to send hidden instructions. Nakamura's discovery led to the capture of a spy ring operating inside the country.",
+    grade_level: 6,
+    category: "science",
+    target_phonemes: ["fr", "sh", "tr", "pr"],
+    word_count: 128,
+    reading_time_minutes: 2,
+    difficulty_level: 6,
+    cover_gradient: "from-violet-600 to-purple-800"
+  },
+  {
+    title: "Escape from the Embassy",
+    description: "An agent must leave a foreign country quickly",
+    passage_text: "Agent Diaz received an emergency message on his phone: his cover had been blown. The foreign government now knew he was a spy. He had less than two hours to leave the country. Diaz destroyed his laptop and burned his fake passport. He put on different clothes and changed his appearance with a hat and glasses. He took a taxi to the embassy, where friendly staff were waiting. They gave him a new passport with a different name. A car drove him to a private airfield outside the city. A small plane was ready. As Diaz climbed aboard, he looked back at the city he had called home for two years. The plane took off into the night sky, heading toward safety.",
+    grade_level: 6,
+    category: "adventure",
+    target_phonemes: ["bl", "cr", "fl", "pr"],
+    word_count: 130,
+    reading_time_minutes: 2,
+    difficulty_level: 6,
+    cover_gradient: "from-red-600 to-rose-800"
+  },
+  {
+    title: "The Forged Passport",
+    description: "Learning how agents detect fake documents",
+    passage_text: "Every country issues passports to its citizens. These documents contain security features that are very hard to copy: holograms, watermarks, special inks, and microprinting so tiny that you need a magnifying glass to read it. Agent Foster worked in the document analysis lab. Her job was to examine passports and determine if they were real or fake. One afternoon, she received a passport that looked perfect at first glance. But under ultraviolet light, she noticed the hologram was slightly off-center. She checked the microprinting and found three letters that were wrong. The passport was an excellent forgery, but not perfect. Foster traced the printing technique to a known counterfeiting operation in Eastern Europe.",
+    grade_level: 6,
+    category: "science",
+    target_phonemes: ["pr", "str", "fr", "ch"],
+    word_count: 122,
+    reading_time_minutes: 2,
+    difficulty_level: 6,
+    cover_gradient: "from-teal-600 to-cyan-800"
+  },
+  {
+    title: "Night Vision",
+    description: "A training exercise in darkness",
+    passage_text: "The training exercise began at midnight. Agent Chen and her team had to navigate through a dense forest using only night-vision goggles. The goggles made everything appear in shades of green. Trees, rocks, and animals all glowed with an eerie light. The team moved slowly, communicating with hand signals instead of voices. Their objective was to reach a checkpoint three miles away without being detected by the opposing team. Chen led her squad along a stream, using the sound of water to mask their footsteps. After two hours of careful movement, they reached the checkpoint. The instructor was surprised — most teams took at least three hours. Chen's knowledge of the terrain and her steady leadership had made the difference.",
+    grade_level: 6,
+    category: "adventure",
+    target_phonemes: ["str", "gr", "cr", "kn"],
+    word_count: 128,
+    reading_time_minutes: 2,
+    difficulty_level: 6,
+    cover_gradient: "from-gray-700 to-zinc-900"
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // GRADE 7 STORIES — ~900-1000 Lexile, more abstract concepts,
+  // longer sentences, developing academic register
+  // ═══════════════════════════════════════════════════════════════
+  {
+    title: "The Encryption Dilemma",
+    description: "An agent confronts the ethics of breaking encryption",
+    passage_text: "Encryption protects private communication by converting readable text into scrambled data that only authorized recipients can decode. Agent Morales faced an ethical dilemma when she was ordered to break the encryption on a journalist's laptop. The journalist had published stories exposing government corruption, and someone in power wanted to identify her sources. Morales understood the technical process — she could exploit a vulnerability in the encryption software within hours. But she also understood the principle at stake: press freedom depends on source confidentiality. If journalists cannot protect their sources, whistleblowers will stop coming forward, and corruption will go unreported. Morales reported the order to the inspector general's office instead. The investigation revealed that a senior official had abused his authority to target the journalist.",
+    grade_level: 7,
+    category: "science",
+    target_phonemes: ["kr", "pr", "str", "sp"],
+    word_count: 135,
+    reading_time_minutes: 3,
+    difficulty_level: 7,
+    cover_gradient: "from-slate-600 to-gray-800"
+  },
+  {
+    title: "Biological Threat Assessment",
+    description: "Analysts evaluate a potential biological weapon",
+    passage_text: "The intelligence report described an unauthorized laboratory operating in a converted factory. Satellite imagery showed ventilation systems consistent with biosafety protocols, suggesting experiments with dangerous organisms. Agent Okafor was assigned to assess the biological threat level. She reviewed shipping records and found purchases of laboratory equipment including centrifuges, incubators, and specialized growth media. The materials were consistent with both legitimate pharmaceutical research and potential weapons development. This ambiguity is a central challenge in biological intelligence: the same equipment and knowledge used to develop vaccines can be repurposed to create devastating pathogens. Okafor's report recommended continued surveillance and diplomatic engagement rather than military intervention, noting that premature action could destroy evidence and trigger an international incident.",
+    grade_level: 7,
+    category: "science",
+    target_phonemes: ["bl", "pr", "tr", "sp"],
+    word_count: 130,
+    reading_time_minutes: 3,
+    difficulty_level: 7,
+    cover_gradient: "from-emerald-700 to-green-900"
+  },
+  {
+    title: "The Propaganda Machine",
+    description: "Understanding how misinformation spreads online",
+    passage_text: "Modern propaganda does not require printing presses or radio towers — it requires only internet access and an understanding of human psychology. Agent Rivera investigated a network of fake social media accounts that were spreading false information about an upcoming election. The accounts were designed to look like ordinary citizens sharing their opinions. In reality, they were controlled by a coordinated team operating from a foreign country. The false stories were crafted to trigger emotional reactions — fear, anger, outrage — because emotional content spreads faster than factual reporting. Rivera mapped the network using metadata analysis, identifying patterns in posting times, language use, and account creation dates. Her investigation revealed over four thousand coordinated accounts reaching millions of voters with fabricated stories designed to undermine trust in democratic institutions.",
+    grade_level: 7,
+    category: "history",
+    target_phonemes: ["pr", "sp", "cr", "tr"],
+    word_count: 140,
+    reading_time_minutes: 3,
+    difficulty_level: 7,
+    cover_gradient: "from-red-700 to-rose-900"
+  },
+  {
+    title: "The Cyber Intrusion",
+    description: "A team responds to a hack on critical systems",
+    passage_text: "At 3:47 AM, automated monitoring systems detected unauthorized access to the power grid's control network. Agent Petrov led the cyber response team. Their first priority was containment — isolating the compromised systems before the intruders could cause physical damage. Modern power grids are managed by industrial control systems that were originally designed for reliability, not security. Many of these systems were built decades ago, before cyber threats were a serious concern. The intruders had exploited this vulnerability, gaining access through an outdated software component that had not been updated. Petrov's team traced the intrusion to a state-sponsored hacking group known for targeting critical infrastructure. They patched the vulnerability, restored system integrity, and documented the attack methodology. The incident highlighted a growing concern: the infrastructure that modern society depends upon remains dangerously vulnerable to sophisticated cyber attacks.",
+    grade_level: 7,
+    category: "science",
+    target_phonemes: ["kr", "str", "pr", "tr"],
+    word_count: 145,
+    reading_time_minutes: 3,
+    difficulty_level: 7,
+    cover_gradient: "from-cyan-700 to-blue-900"
+  },
+  {
+    title: "Interrogation Techniques",
+    description: "The science behind effective questioning",
+    passage_text: "Contrary to popular belief, the most effective interrogation techniques do not involve intimidation or physical pressure. Research consistently demonstrates that rapport-based approaches yield more reliable information. Agent Hernandez was trained in the cognitive interview method, which encourages subjects to mentally recreate the context of events they witnessed. Instead of asking direct questions that can be answered with a simple yes or no, she asked open-ended questions that required detailed responses. She paid attention to inconsistencies — not as evidence of deception, but as areas requiring clarification. Cognitive psychology research shows that memory is reconstructive rather than reproductive: people do not replay events like video recordings but instead rebuild memories from fragments, sometimes filling gaps with assumptions. Understanding this process helps skilled interrogators distinguish between genuine uncertainty and deliberate dishonesty.",
+    grade_level: 7,
+    category: "science",
+    target_phonemes: ["str", "pr", "cr", "gr"],
+    word_count: 138,
+    reading_time_minutes: 3,
+    difficulty_level: 7,
+    cover_gradient: "from-amber-700 to-yellow-900"
+  },
+  {
+    title: "Border Security Operations",
+    description: "How agents monitor and protect national borders",
+    passage_text: "Securing a national border involves far more than physical barriers. Agent Yusuf managed a section of border that included mountains, desert, and a river crossing. His team used a combination of technology and human intelligence to monitor the area. Ground sensors detected vibrations from vehicles and footsteps, while thermal cameras identified body heat signatures at night. Drone patrols covered areas that were difficult to reach on foot. However, the most valuable intelligence came from local communities. Residents who lived near the border often noticed unusual activity before any technology could detect it. Yusuf maintained relationships with community leaders, treating them as partners rather than suspects. This combination of technological surveillance and community cooperation proved more effective than either approach alone, resulting in a significant reduction in illegal crossings and smuggling activity.",
+    grade_level: 7,
+    category: "adventure",
+    target_phonemes: ["bl", "cr", "gr", "str"],
+    word_count: 140,
+    reading_time_minutes: 3,
+    difficulty_level: 7,
+    cover_gradient: "from-stone-600 to-neutral-800"
+  },
+  {
+    title: "The Arms Deal",
+    description: "An undercover operation to stop weapons trafficking",
+    passage_text: "Agent Kowalski spent six months building a cover identity as an international arms dealer. The operation required extensive preparation: a complete false identity with verifiable employment history, financial records, and social connections. He attended legitimate defense industry conferences to establish credibility within the weapons trade community. His target was a network that supplied military-grade weapons to conflict zones, prolonging wars and increasing civilian casualties. The challenge of undercover work is psychological as much as operational. Agents must maintain their false identity constantly while managing the stress of potential exposure. Kowalski carefully documented every transaction and communication, building a legal case that would withstand judicial scrutiny. After six months, the agency had enough evidence to coordinate simultaneous arrests across four countries, dismantling the network and seizing weapons valued at over fifty million dollars.",
+    grade_level: 7,
+    category: "adventure",
+    target_phonemes: ["str", "pr", "cr", "tr"],
+    word_count: 142,
+    reading_time_minutes: 3,
+    difficulty_level: 7,
+    cover_gradient: "from-orange-700 to-red-900"
+  },
+  {
+    title: "Satellite Reconnaissance",
+    description: "Using space technology to gather intelligence",
+    passage_text: "Intelligence satellites orbit Earth at altitudes ranging from two hundred to thirty-six thousand kilometers, depending on their mission. Low-orbit satellites provide detailed imagery but cover limited areas and pass over each location only a few times per day. Geostationary satellites remain fixed above one point, offering continuous coverage but less resolution. Agent Singh analyzed satellite imagery to monitor military installations in regions of geopolitical tension. She compared images taken weeks apart, looking for changes: new construction, vehicle movements, or equipment deployments that might indicate preparations for conflict. The interpretation of satellite imagery requires specialized training because context matters enormously. A row of tanks might represent a threatening military buildup — or a routine training exercise. Singh's analytical reports informed diplomatic decisions that helped prevent two potential conflicts from escalating into armed confrontations.",
+    grade_level: 7,
+    category: "science",
+    target_phonemes: ["str", "pr", "sp", "tr"],
+    word_count: 140,
+    reading_time_minutes: 3,
+    difficulty_level: 7,
+    cover_gradient: "from-indigo-700 to-violet-900"
+  },
+  {
+    title: "The Money Trail",
+    description: "Following financial transactions to find criminals",
+    passage_text: "Financial intelligence is often more revealing than any other form of espionage. Every criminal operation requires money — to pay operatives, purchase equipment, and fund logistics. Agent Tanaka specialized in tracking financial flows through the global banking system. She looked for patterns that indicated money laundering: large transactions broken into smaller amounts to avoid reporting requirements, funds moving rapidly between accounts in different countries, or businesses that reported revenue inconsistent with their actual operations. The challenge is that legitimate international commerce involves billions of transactions daily, and distinguishing criminal activity from normal business requires both technical expertise and institutional knowledge. Tanaka's investigation of a charitable organization revealed that it was secretly channeling donations to fund extremist activities, leading to the freezing of accounts worth several million dollars.",
+    grade_level: 7,
+    category: "science",
+    target_phonemes: ["tr", "fr", "str", "pr"],
+    word_count: 138,
+    reading_time_minutes: 3,
+    difficulty_level: 7,
+    cover_gradient: "from-green-700 to-teal-900"
+  },
+  {
+    title: "The Extraction Plan",
+    description: "Rescuing a trapped agent from hostile territory",
+    passage_text: "When an agent's cover is compromised in hostile territory, extraction becomes the highest priority. Agent Delgado received a distress signal from a colleague trapped in a city controlled by an authoritarian regime. The compromised agent could not reach the embassy or any official safe house. Delgado assembled a three-person extraction team and developed multiple escape routes, each with backup contingencies. The primary plan involved disguising the agent as a medical worker and transporting her to a border crossing in an ambulance. The secondary plan used a fishing boat to reach international waters. The team rehearsed both scenarios repeatedly. On the night of the operation, a military checkpoint blocked the primary route. Without hesitation, they switched to the secondary plan. Twelve hours later, the rescued agent was safely aboard a ship in international waters.",
+    grade_level: 7,
+    category: "adventure",
+    target_phonemes: ["str", "cr", "pr", "tr"],
+    word_count: 142,
+    reading_time_minutes: 3,
+    difficulty_level: 7,
+    cover_gradient: "from-rose-700 to-pink-900"
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // GRADE 8 STORIES — ~1000-1100 Lexile, abstract reasoning,
+  // complex sentence structures, academic vocabulary
+  // ═══════════════════════════════════════════════════════════════
+  {
+    title: "The Ethics of Surveillance",
+    description: "Examining the moral boundaries of state monitoring",
+    passage_text: "Democratic societies face a fundamental tension between security and privacy. Surveillance technologies — facial recognition, metadata collection, communications interception — provide powerful tools for preventing terrorism and organized crime. However, these same technologies enable authoritarian control when deployed without oversight. Agent Vasquez participated in an internal review committee examining whether the agency's surveillance practices complied with constitutional protections. The Fourth Amendment prohibits unreasonable searches, but courts have struggled to apply eighteenth-century legal principles to twenty-first-century technology. Does collecting metadata about phone calls constitute a search? Is facial recognition in public spaces an invasion of privacy? Vasquez argued that the agency should adopt a proportionality framework: surveillance measures should be proportional to the threat being addressed, subject to independent judicial review, and limited in duration. Without such safeguards, she warned, the tools designed to protect democracy could ultimately undermine it.",
+    grade_level: 8,
+    category: "history",
+    target_phonemes: ["str", "pr", "cr", "sp"],
+    word_count: 148,
+    reading_time_minutes: 3,
+    difficulty_level: 8,
+    cover_gradient: "from-slate-700 to-zinc-900"
+  },
+  {
+    title: "Nuclear Proliferation",
+    description: "The challenge of preventing the spread of nuclear weapons",
+    passage_text: "The Treaty on the Non-Proliferation of Nuclear Weapons, signed in 1968, established a framework intended to prevent the spread of nuclear weapons technology beyond the five nations that possessed them at that time. More than fifty years later, the proliferation challenge has evolved considerably. Agent Okonkwo monitored intelligence related to nuclear materials trafficking — the illicit trade in enriched uranium, centrifuge components, and weapons design information. The fundamental difficulty is dual-use technology: the same enrichment processes that produce fuel for nuclear power plants can, with further processing, produce weapons-grade material. International inspectors from the IAEA conduct regular assessments, but their access depends on the cooperation of sovereign nations. Okonkwo's analysis revealed that a smuggling network had offered centrifuge blueprints to three different governments. Her report triggered a coordinated international response that shut down the network and secured the materials.",
+    grade_level: 8,
+    category: "science",
+    target_phonemes: ["pr", "tr", "str", "kr"],
+    word_count: 150,
+    reading_time_minutes: 3,
+    difficulty_level: 8,
+    cover_gradient: "from-red-800 to-orange-950"
+  },
+  {
+    title: "Cognitive Warfare",
+    description: "How adversaries target the human mind",
+    passage_text: "Traditional warfare targets physical infrastructure — bridges, communications, military installations. Cognitive warfare targets something far more fundamental: the way people think, perceive, and make decisions. Agent Lindqvist studied adversarial influence operations that exploited cognitive biases — systematic patterns in human thinking that produce predictable errors. Confirmation bias leads people to accept information that supports existing beliefs while dismissing contradictory evidence. The availability heuristic causes people to overestimate the probability of events they can easily imagine. Anchoring bias means that initial information disproportionately shapes subsequent judgments. Foreign intelligence services design influence campaigns that deliberately exploit these vulnerabilities, crafting narratives that feel intuitively correct even when factually false. Lindqvist developed training programs to help analysts recognize when their own cognitive biases might be compromising their analytical objectivity, a process known as structured analytic techniques.",
+    grade_level: 8,
+    category: "science",
+    target_phonemes: ["str", "kr", "pr", "sp"],
+    word_count: 145,
+    reading_time_minutes: 3,
+    difficulty_level: 8,
+    cover_gradient: "from-purple-800 to-violet-950"
+  },
+  {
+    title: "The Geneva Conventions",
+    description: "Understanding the laws that govern armed conflict",
+    passage_text: "The Geneva Conventions represent humanity's attempt to impose legal and ethical constraints on the conduct of warfare. Ratified by virtually every nation, these treaties establish protections for wounded soldiers, prisoners of war, and civilian populations during armed conflict. Agent Blackwell investigated allegations that a foreign government was violating these conventions by deliberately targeting civilian infrastructure. The investigation required navigating complex legal distinctions: international humanitarian law permits attacks on military objectives even when civilian casualties are anticipated, provided the military advantage is proportional. This proportionality assessment involves subjective judgments that are frequently contested. Blackwell's team gathered evidence including satellite imagery, intercepted communications, and witness testimony from refugees. Their findings demonstrated a systematic pattern of targeting hospitals and schools with no military justification — evidence that was subsequently presented to the International Criminal Court for prosecution.",
+    grade_level: 8,
+    category: "history",
+    target_phonemes: ["kr", "pr", "str", "tr"],
+    word_count: 148,
+    reading_time_minutes: 3,
+    difficulty_level: 8,
+    cover_gradient: "from-blue-800 to-indigo-950"
+  },
+  {
+    title: "Artificial Intelligence in Espionage",
+    description: "How AI is transforming intelligence work",
+    passage_text: "Artificial intelligence is fundamentally reshaping the intelligence profession. Machine learning algorithms can process satellite imagery thousands of times faster than human analysts, identifying changes in military deployments or construction activity across vast geographic areas. Natural language processing enables automated monitoring of open-source intelligence — news articles, social media posts, government publications — in hundreds of languages simultaneously. Agent Nazari worked in the AI integration division, where her role was to evaluate the reliability of machine-generated intelligence assessments. The challenge is that AI systems excel at pattern recognition but lack contextual understanding. An algorithm might correctly identify a military convoy but incorrectly assess its significance because it cannot understand the political context. Nazari developed validation protocols requiring human analysts to review and contextualize AI findings before they entered the intelligence reporting chain, ensuring that technological efficiency did not compromise analytical accuracy.",
+    grade_level: 8,
+    category: "science",
+    target_phonemes: ["str", "pr", "tr", "kr"],
+    word_count: 148,
+    reading_time_minutes: 3,
+    difficulty_level: 8,
+    cover_gradient: "from-cyan-800 to-teal-950"
+  },
+  {
+    title: "Diplomatic Immunity",
+    description: "When diplomats are suspected of espionage",
+    passage_text: "The Vienna Convention on Diplomatic Relations grants foreign diplomats immunity from prosecution in their host country. This legal protection serves an essential function: it ensures that diplomatic communications remain confidential and that diplomats can perform their duties without fear of arrest. However, intelligence services have historically exploited diplomatic immunity to conduct espionage operations. A diplomat suspected of spying cannot be arrested — only declared persona non grata and expelled from the country. Agent Fitzgerald investigated a foreign embassy employee suspected of recruiting agents within the host nation's government. Surveillance confirmed that the diplomat was meeting clandestinely with a government official who had access to classified defense information. Fitzgerald could not arrest the diplomat but documented sufficient evidence to justify expulsion. The incident triggered a diplomatic crisis that required careful management to prevent escalation while protecting national security interests.",
+    grade_level: 8,
+    category: "history",
+    target_phonemes: ["pr", "str", "cr", "sp"],
+    word_count: 150,
+    reading_time_minutes: 3,
+    difficulty_level: 8,
+    cover_gradient: "from-amber-800 to-yellow-950"
+  },
+  {
+    title: "Chemical Weapons Detection",
+    description: "Identifying and neutralizing toxic agents",
+    passage_text: "The Chemical Weapons Convention prohibits the development, production, stockpiling, and use of chemical weapons. Despite this international agreement, several state and non-state actors continue to pursue chemical weapons capabilities. Agent Dominguez specialized in chemical threat assessment, analyzing intelligence reports for indicators of chemical weapons programs. These indicators include procurement of precursor chemicals — substances that are individually harmless but can be combined to create lethal agents — along with construction of specialized production facilities and development of delivery systems. Detection is complicated by the fact that many precursor chemicals have legitimate industrial applications. The same substances used in pesticide manufacturing can potentially be diverted to weapons production. Dominguez collaborated with international inspectors to develop improved detection methodologies that could distinguish between legitimate chemical industry and covert weapons programs based on procurement patterns, facility design, and personnel backgrounds.",
+    grade_level: 8,
+    category: "science",
+    target_phonemes: ["kr", "pr", "str", "sp"],
+    word_count: 148,
+    reading_time_minutes: 3,
+    difficulty_level: 8,
+    cover_gradient: "from-green-800 to-emerald-950"
+  },
+  {
+    title: "The Refugee Crisis Intelligence",
+    description: "Gathering intelligence while protecting vulnerable populations",
+    passage_text: "Mass displacement events create both humanitarian emergencies and intelligence challenges. When millions of people flee conflict zones, intelligence agencies face the delicate task of gathering information about security threats without exploiting vulnerable populations. Agent Khoury was deployed to a refugee processing center where her official role was coordinating security screening. She understood that among the thousands of genuine refugees, adversaries might attempt to embed operatives. However, she was equally aware that aggressive screening could traumatize people who had already survived war and persecution. Khoury developed a screening approach that combined security effectiveness with humanitarian sensitivity: trained interviewers conducted conversations rather than interrogations, focusing on establishing narrative consistency through open-ended dialogue. This approach proved more effective than confrontational techniques because genuine refugees could share their experiences comfortably, while individuals with fabricated backgrounds were more likely to reveal inconsistencies when not on the defensive.",
+    grade_level: 8,
+    category: "history",
+    target_phonemes: ["kr", "str", "pr", "tr"],
+    word_count: 152,
+    reading_time_minutes: 3,
+    difficulty_level: 8,
+    cover_gradient: "from-rose-800 to-red-950"
+  },
+  {
+    title: "Space-Based Intelligence",
+    description: "The strategic importance of space assets",
+    passage_text: "Space has become the ultimate high ground in intelligence gathering. Nations that control sophisticated space assets possess significant strategic advantages: they can monitor military movements, intercept communications, and detect missile launches anywhere on Earth. Agent Nakamura analyzed threats to orbital intelligence infrastructure, including anti-satellite weapons capable of destroying reconnaissance satellites and ground-based laser systems designed to temporarily blind optical sensors. The vulnerability of space assets presents a strategic paradox: the nations most dependent on satellite intelligence are also the most vulnerable to its disruption. Nakamura's assessment concluded that the increasing militarization of space represented one of the most significant emerging threats to international stability. She recommended investing in resilient satellite architectures — smaller, more numerous satellites that are harder to target — and developing international agreements to prevent the weaponization of orbital space before an arms race becomes irreversible.",
+    grade_level: 8,
+    category: "science",
+    target_phonemes: ["sp", "str", "kr", "pr"],
+    word_count: 150,
+    reading_time_minutes: 3,
+    difficulty_level: 8,
+    cover_gradient: "from-indigo-800 to-blue-950"
+  },
+  {
+    title: "The Whistleblower Protocol",
+    description: "Protecting those who expose wrongdoing from within",
+    passage_text: "Every intelligence agency must balance secrecy with accountability. Whistleblower protections exist because history demonstrates that organizations operating in secrecy can develop institutional pathologies: illegal surveillance programs, unauthorized covert operations, and systematic violations of civil liberties. Agent Walsh served on the internal compliance board responsible for investigating allegations of misconduct. She reviewed cases where employees reported concerns through official channels rather than leaking information to the media. The distinction matters: authorized disclosures to inspectors general preserve security while enabling oversight, whereas unauthorized public disclosures may expose sources and methods that protect ongoing operations. Walsh advocated for strengthening internal reporting mechanisms, arguing that employees who believe internal channels are ineffective will inevitably seek external alternatives. Her proposal included anonymous reporting systems, guaranteed protection from retaliation, and mandatory follow-up timelines to ensure that legitimate concerns received genuine investigation rather than institutional suppression.",
+    grade_level: 8,
+    category: "history",
+    target_phonemes: ["str", "pr", "cr", "sp"],
+    word_count: 152,
+    reading_time_minutes: 3,
+    difficulty_level: 8,
+    cover_gradient: "from-teal-800 to-emerald-950"
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // GRADE 9 STORIES — ~1100-1200 Lexile, sophisticated analysis,
+  // nuanced argumentation, advanced academic register
+  // ═══════════════════════════════════════════════════════════════
+  {
+    title: "Game Theory and Deterrence",
+    description: "Mathematical models of strategic decision-making",
+    passage_text: "Nuclear deterrence theory rests on a game-theoretic foundation that John von Neumann and other mathematicians formalized during the Cold War. The concept of mutually assured destruction represents a Nash equilibrium — a stable state in which neither player can improve their position by unilaterally changing strategy. Agent Volkov studied how adversarial nations apply game theory to military strategy, analyzing scenarios through the lens of the prisoner's dilemma: two rational actors, each possessing the ability to destroy the other, must choose between cooperation and aggression without knowing the other's decision in advance. The mathematical models suggest that rational actors should always prefer cooperation, yet historical evidence reveals that miscalculation, incomplete information, and domestic political pressures frequently drive nations toward confrontation. Volkov's analysis demonstrated that deterrence stability depends not on the mathematical elegance of equilibrium models but on the quality of communication channels between adversaries and their mutual confidence in each other's decision-making rationality.",
+    grade_level: 9,
+    category: "science",
+    target_phonemes: ["str", "kr", "pr", "sp"],
+    word_count: 160,
+    reading_time_minutes: 4,
+    difficulty_level: 9,
+    cover_gradient: "from-slate-800 to-gray-950"
+  },
+  {
+    title: "The Psychology of Radicalization",
+    description: "Understanding how extremist ideologies recruit followers",
+    passage_text: "Radicalization — the process by which individuals adopt increasingly extreme political, social, or religious ideologies — follows identifiable psychological pathways that intelligence agencies seek to understand and disrupt. Agent Ibrahim studied radicalization patterns across multiple extremist movements, finding remarkable consistency regardless of ideological content. The process typically begins with a personal crisis — loss of identity, social marginalization, perceived injustice — that creates psychological vulnerability. Recruiters exploit this vulnerability by offering a simplified explanatory framework that attributes all suffering to a clearly identified enemy. The group provides belonging, purpose, and certainty in exchange for ideological commitment. Critically, Ibrahim's research demonstrated that radicalization is not primarily an intellectual process but an emotional one: individuals do not typically reason their way into extremism but are drawn in through social bonds and emotional manipulation. This insight has profound implications for counter-radicalization strategies, suggesting that addressing underlying psychological needs may be more effective than attempting to refute extremist arguments through rational discourse.",
+    grade_level: 9,
+    category: "science",
+    target_phonemes: ["kr", "str", "pr", "sp"],
+    word_count: 162,
+    reading_time_minutes: 4,
+    difficulty_level: 9,
+    cover_gradient: "from-red-800 to-rose-950"
+  },
+  {
+    title: "Geopolitics of Energy",
+    description: "How energy resources shape international power dynamics",
+    passage_text: "The geopolitical significance of energy resources has shaped international relations for over a century. Agent Petersen analyzed how the global transition from fossil fuels to renewable energy sources is restructuring traditional power dynamics. Nations whose geopolitical influence derived primarily from petroleum exports — Saudi Arabia, Russia, Venezuela — face diminishing strategic relevance as solar, wind, and battery technologies reduce global dependence on hydrocarbon fuels. Simultaneously, control over critical minerals essential for renewable energy technology — lithium, cobalt, rare earth elements — is creating new geopolitical dependencies. China's dominant position in rare earth mineral processing gives it potential leverage analogous to OPEC's historical influence over oil markets. Petersen's strategic assessment argued that the energy transition, while environmentally essential, will not eliminate resource-based geopolitical competition but rather transform it. Nations that develop diversified supply chains for critical minerals and invest in domestic processing capacity will possess significant strategic advantages in the emerging geopolitical landscape.",
+    grade_level: 9,
+    category: "science",
+    target_phonemes: ["str", "pr", "cr", "sp"],
+    word_count: 158,
+    reading_time_minutes: 4,
+    difficulty_level: 9,
+    cover_gradient: "from-amber-800 to-orange-950"
+  },
+  {
+    title: "Constitutional Limits on Intelligence",
+    description: "Legal boundaries that constrain intelligence operations",
+    passage_text: "The relationship between intelligence agencies and constitutional governance represents one of democracy's most challenging paradoxes. Effective intelligence operations require secrecy, compartmentalization, and operational flexibility — qualities that inherently conflict with democratic principles of transparency, accountability, and the rule of law. Agent Crawford served as the agency's liaison to the congressional oversight committee, responsible for ensuring that legislative representatives received sufficient information to fulfill their constitutional oversight role without compromising operational security. The tension became acute when the committee requested detailed briefings on a covert action program operating in a politically sensitive region. Crawford recognized that full disclosure might compromise sources who had risked their lives to provide intelligence, while insufficient transparency could enable the kind of unchecked executive authority that the oversight framework was designed to prevent. She developed a tiered briefing protocol that provided the committee with enough information to assess the program's legality and strategic justification while protecting the identities of specific human sources.",
+    grade_level: 9,
+    category: "history",
+    target_phonemes: ["kr", "str", "pr", "tr"],
+    word_count: 165,
+    reading_time_minutes: 4,
+    difficulty_level: 9,
+    cover_gradient: "from-blue-800 to-indigo-950"
+  },
+  {
+    title: "Quantum Computing and Cryptography",
+    description: "The looming threat to current encryption systems",
+    passage_text: "Modern cryptographic systems protect everything from military communications to financial transactions, and nearly all of them rely on the mathematical difficulty of factoring extremely large numbers. A conventional computer would require thousands of years to factor a number large enough to crack current encryption standards. However, quantum computers exploit the principles of quantum mechanics — superposition and entanglement — to perform certain calculations exponentially faster than classical machines. Agent Yamamoto assessed the national security implications of quantum computing development. A sufficiently powerful quantum computer could theoretically decrypt any communication protected by current public-key cryptography, rendering decades of encrypted intelligence intercepts suddenly readable. This prospect, known as the quantum threat, has prompted a global race to develop quantum-resistant encryption algorithms — mathematical problems that remain computationally intractable even for quantum processors. Yamamoto's assessment concluded that the nation possessing the first operationally capable quantum computer would hold a temporary but potentially decisive intelligence advantage.",
+    grade_level: 9,
+    category: "science",
+    target_phonemes: ["kr", "str", "pr", "sp"],
+    word_count: 155,
+    reading_time_minutes: 4,
+    difficulty_level: 9,
+    cover_gradient: "from-violet-800 to-purple-950"
+  },
+  {
+    title: "The Informant Paradox",
+    description: "The moral complexity of using human intelligence sources",
+    passage_text: "Human intelligence — information gathered through interpersonal relationships with sources inside adversary organizations — remains the most valuable and most ethically problematic form of intelligence collection. Agent Romero managed a network of informants embedded within a transnational criminal organization. Each informant relationship presented a moral calculus: these individuals provided intelligence that prevented violence and saved lives, but they also continued participating in criminal activities to maintain their access and credibility. Romero wrestled with the paradox that her most productive sources were, by definition, individuals engaged in ongoing criminal conduct. The legal framework attempted to address this through proportionality guidelines — the intelligence value provided must substantially outweigh the criminal activity permitted — but such calculations are inherently subjective. More troubling was the relational dimension: informants frequently developed genuine trust in their handlers, creating emotional bonds that complicated professional objectivity. Romero recognized that the ethical management of human sources required not just legal compliance but ongoing moral reflection about the human costs of intelligence work.",
+    grade_level: 9,
+    category: "adventure",
+    target_phonemes: ["kr", "str", "pr", "tr"],
+    word_count: 162,
+    reading_time_minutes: 4,
+    difficulty_level: 9,
+    cover_gradient: "from-emerald-800 to-green-950"
+  },
+  {
+    title: "Information Warfare Doctrine",
+    description: "How nations weaponize information in modern conflict",
+    passage_text: "The distinction between war and peace has become increasingly blurred in the information age. Nations now engage in sustained campaigns of information warfare that operate below the threshold of armed conflict but above the level of ordinary diplomatic competition. Agent Sato analyzed an adversary nation's information warfare doctrine, which conceptualized information operations as a continuous strategic activity rather than a wartime measure. The doctrine described a spectrum of operations: intelligence collection through cyber espionage, influence campaigns targeting public opinion in rival nations, disruption of critical information infrastructure, and the strategic use of economic leverage to shape media narratives. What distinguished this approach from traditional propaganda was its integration with military planning and its exploitation of the interconnected nature of modern information systems. A single coordinated operation might simultaneously steal classified documents, amplify social divisions through fake social media accounts, and degrade confidence in electoral systems — achieving strategic effects comparable to military operations without triggering the international response that armed aggression would provoke.",
+    grade_level: 9,
+    category: "history",
+    target_phonemes: ["str", "kr", "pr", "sp"],
+    word_count: 168,
+    reading_time_minutes: 4,
+    difficulty_level: 9,
+    cover_gradient: "from-gray-800 to-stone-950"
+  },
+  {
+    title: "Counterintelligence Operations",
+    description: "Defending against foreign espionage within your own ranks",
+    passage_text: "Counterintelligence — the practice of detecting, preventing, and neutralizing foreign intelligence threats — is often described as the most intellectually demanding discipline within the intelligence profession. Agent Novak led a counterintelligence investigation triggered by an anomaly in classified information patterns: specific operational details were appearing in adversary communications within days of being distributed internally. This suggested a mole — a foreign intelligence agent operating within the organization. The investigation required extraordinary methodological discipline. Novak could not simply surveil all personnel with access to the compromised information, as this would violate the civil liberties of innocent employees. Instead, she employed a technique known as a barium meal: deliberately providing different versions of a classified document to different distribution channels, then monitoring which version appeared in adversary communications. The technique identified the source within three months, revealing a veteran analyst who had been recruited by a foreign intelligence service through a combination of financial inducement and ideological sympathy cultivated over several years of patient relationship building.",
+    grade_level: 9,
+    category: "adventure",
+    target_phonemes: ["kr", "str", "pr", "tr"],
+    word_count: 170,
+    reading_time_minutes: 4,
+    difficulty_level: 9,
+    cover_gradient: "from-teal-800 to-cyan-950"
+  },
+  {
+    title: "The Sanctions Regime",
+    description: "Economic pressure as an alternative to military force",
+    passage_text: "International economic sanctions represent a middle ground between diplomatic protest and military intervention, applying economic pressure to alter the behavior of states that violate international norms. Agent Beaumont analyzed the effectiveness of sanctions programs targeting nations involved in nuclear proliferation, human rights violations, and territorial aggression. The historical record reveals mixed results. Comprehensive sanctions — broad trade restrictions affecting entire economies — frequently impose devastating costs on civilian populations while authoritarian governments redirect resources to maintain their power structures. Targeted sanctions — asset freezes and travel bans directed at specific individuals and entities — are more precise but often less impactful, as targets develop evasion strategies including shell corporations, cryptocurrency transactions, and third-country intermediaries. Beaumont's research concluded that sanctions are most effective when they are multilateral, precisely targeted, linked to specific behavioral changes, and accompanied by diplomatic engagement that provides the sanctioned party with a credible pathway toward sanctions relief. Unilateral sanctions imposed without clear objectives or diplomatic off-ramps frequently become permanent fixtures of foreign policy rather than effective tools of coercion.",
+    grade_level: 9,
+    category: "history",
+    target_phonemes: ["str", "kr", "pr", "sp"],
+    word_count: 172,
+    reading_time_minutes: 4,
+    difficulty_level: 9,
+    cover_gradient: "from-orange-800 to-amber-950"
+  },
+  {
+    title: "Autonomous Weapons Ethics",
+    description: "The moral implications of machines making lethal decisions",
+    passage_text: "The development of autonomous weapons systems — machines capable of selecting and engaging targets without human intervention — represents perhaps the most consequential ethical challenge in modern warfare. Agent Kowalski evaluated intelligence regarding several nations' autonomous weapons programs, finding that technological capability has outpaced ethical and legal frameworks. Current international humanitarian law requires that decisions to use lethal force satisfy principles of distinction, proportionality, and military necessity — judgments that presuppose human moral reasoning. Can an algorithm meaningfully distinguish between a combatant and a civilian farmer carrying an agricultural tool? Can a machine assess whether the anticipated military advantage of a strike is proportional to expected civilian casualties? Proponents argue that autonomous systems may eventually make more accurate targeting decisions than stressed, fatigued human operators. Critics counter that delegating life-and-death decisions to machines fundamentally violates human dignity, regardless of accuracy. Kowalski's assessment recommended that the agency advocate for international regulations requiring meaningful human control over all lethal targeting decisions, while simultaneously preparing for the possibility that adversaries may deploy fully autonomous systems regardless of international consensus.",
+    grade_level: 9,
+    category: "science",
+    target_phonemes: ["str", "kr", "pr", "tr"],
+    word_count: 175,
+    reading_time_minutes: 4,
+    difficulty_level: 9,
+    cover_gradient: "from-rose-800 to-red-950"
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // GRADE 10 ADDITIONAL STORIES (5 new to reach 10 total)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    title: "The Deepfake Threat",
+    description: "How synthetic media undermines trust in evidence",
+    passage_text: "Deepfake technology — artificial intelligence systems capable of generating convincingly realistic video and audio of real people saying and doing things they never actually did — represents a fundamental threat to evidentiary integrity. Agent Marchetti investigated a deepfake video purporting to show a foreign head of state ordering a military attack. The video was technically sophisticated, with accurate lip synchronization, natural vocal cadence, and contextually appropriate background details. Traditional forensic analysis methods — examining compression artifacts, lighting inconsistencies, and facial geometry — proved inconclusive against this generation of synthesis technology. Marchetti's team developed a novel authentication approach combining metadata forensics with provenance tracking: establishing an unbroken chain of custody from original recording device to distribution platform. The broader implications troubled her profoundly. In a world where any video can be fabricated, the concept of visual evidence loses its epistemic authority. Paradoxically, deepfake technology threatens not only through the false content it creates but through the universal doubt it casts on all authentic recordings.",
+    grade_level: 10,
+    category: "science",
+    target_phonemes: ["str", "kr", "pr", "sp"],
+    word_count: 165,
+    reading_time_minutes: 4,
+    difficulty_level: 10,
+    cover_gradient: "from-purple-700 to-violet-900"
+  },
+  {
+    title: "Proxy Wars and Sovereignty",
+    description: "How great powers fight through smaller nations",
+    passage_text: "Proxy warfare — the practice of great powers pursuing strategic objectives through local allies, mercenary forces, or non-state actors rather than direct military engagement — has defined geopolitical competition since the Cold War. Agent Oduya analyzed a contemporary proxy conflict in which three major powers were simultaneously supporting different factions within a single civil war, each pursuing incompatible strategic objectives. The complexity of proxy dynamics creates a peculiar form of strategic ambiguity: participating nations can escalate their involvement incrementally while maintaining plausible deniability about their role. This ambiguity serves domestic political purposes — governments can pursue aggressive foreign policies without acknowledging the human and financial costs to their own citizens — but it also creates dangerous escalation risks when proxy forces take actions that their sponsors did not authorize or anticipate. Oduya's assessment highlighted the fundamental tension between state sovereignty and great-power competition: proxy wars systematically violate the sovereignty of the nations in which they are fought, transforming local conflicts into theaters of global strategic rivalry.",
+    grade_level: 10,
+    category: "history",
+    target_phonemes: ["str", "pr", "kr", "sp"],
+    word_count: 168,
+    reading_time_minutes: 4,
+    difficulty_level: 10,
+    cover_gradient: "from-amber-700 to-red-900"
+  },
+  {
+    title: "Biosurveillance Networks",
+    description: "Detecting biological threats before they become pandemics",
+    passage_text: "The intelligence community's approach to biological threats underwent fundamental transformation following successive pandemic events that demonstrated how infectious disease outbreaks could destabilize economies, overwhelm healthcare systems, and alter geopolitical dynamics more rapidly than any conventional military threat. Agent Krishnamurthy directed a biosurveillance program that integrated signals intelligence, open-source monitoring, and cooperative relationships with international public health organizations. The program analyzed patterns in pharmaceutical procurement, hospital admission rates, social media reports of unusual symptoms, and satellite imagery of facility construction to identify potential biological events before they were officially reported. The analytical challenge was distinguishing genuine emerging threats from the enormous background noise of routine seasonal illness and localized outbreaks. Krishnamurthy's most significant contribution was developing a probabilistic framework that weighted multiple independent indicators, reducing false alarm rates while maintaining sensitivity to genuine threats that might represent either natural pandemic emergence or deliberate biological weapon deployment.",
+    grade_level: 10,
+    category: "science",
+    target_phonemes: ["kr", "str", "pr", "tr"],
+    word_count: 158,
+    reading_time_minutes: 4,
+    difficulty_level: 10,
+    cover_gradient: "from-green-700 to-emerald-900"
+  },
+  {
+    title: "The Architecture of Secrecy",
+    description: "How classification systems protect and obscure information",
+    passage_text: "Every intelligence organization operates through a classification architecture that determines who may access what information and under what circumstances. Agent Thornton served on a review panel evaluating whether the existing classification framework adequately balanced security requirements against the democratic imperative of informed public discourse. The United States classification system operates on three primary levels — Confidential, Secret, and Top Secret — supplemented by compartmented access programs that further restrict distribution. Critics argue that systematic overclassification has become endemic: officials classify information not because disclosure would genuinely damage national security but because classification prevents embarrassment, shields policy decisions from public scrutiny, and consolidates bureaucratic power. Thornton's review found that approximately forty percent of classified documents contained information that was already publicly available through open sources, suggesting that the classification system had expanded well beyond its legitimate security function. Her recommendations included mandatory declassification timelines, reduced classification authority, and penalties for officials who demonstrably classified information to avoid accountability rather than protect genuine security interests.",
+    grade_level: 10,
+    category: "history",
+    target_phonemes: ["kr", "str", "pr", "sp"],
+    word_count: 170,
+    reading_time_minutes: 4,
+    difficulty_level: 10,
+    cover_gradient: "from-slate-700 to-stone-900"
+  },
+  {
+    title: "Cryptocurrency and Illicit Finance",
+    description: "How digital currencies challenge financial intelligence",
+    passage_text: "The emergence of decentralized cryptocurrency systems has created unprecedented challenges for financial intelligence operations. Traditional anti-money-laundering frameworks depend on regulated financial institutions — banks, brokerages, money transfer services — that are legally required to monitor transactions and report suspicious activity. Cryptocurrencies circumvent this architecture entirely, enabling peer-to-peer value transfer without institutional intermediaries. Agent Volkov investigated a ransomware syndicate that extorted payments in cryptocurrency from hospitals, municipalities, and critical infrastructure operators. The technical challenge was formidable: while blockchain transactions are publicly recorded, connecting cryptocurrency addresses to real-world identities requires sophisticated chain analysis — tracing the flow of funds through thousands of intermediate transactions until they reach an exchange where identity verification occurs. Volkov's investigation demonstrated that cryptocurrency, despite its reputation for anonymity, leaves a permanent and immutable transaction record that, with sufficient analytical resources, can ultimately be traced. Her work resulted in the identification and prosecution of the syndicate's leadership, recovering approximately sixty percent of the extorted funds.",
+    grade_level: 10,
+    category: "science",
+    target_phonemes: ["kr", "str", "pr", "tr"],
+    word_count: 170,
+    reading_time_minutes: 4,
+    difficulty_level: 10,
+    cover_gradient: "from-cyan-700 to-blue-900"
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // GRADE 10-12 STORIES (original content below)
+  // ═══════════════════════════════════════════════════════════════
   // World 1: The Underground (stories 0-5) — Urban sociology, psychology, economics, journalism, civil liberties
   {
     title: "The Economics of Shadow Markets",
