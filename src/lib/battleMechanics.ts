@@ -133,18 +133,8 @@ const getEnemyTier = (enemyType: EnemyType): 'minion' | 'guard' | 'elite' | 'bos
 export const getEnemyStats = (worldNumber: number, enemyType: EnemyType): { hp: number; attackPower: number } => {
   // DOUBLED HP: Makes battles harder - enemies survive longer
   const baseHpByWorld: Record<number, number> = {
-    1: 800,
-    2: 1600,
-    3: 2800,
-    4: 4000,
-    5: 2000,
-    6: 2400,
-    7: 3000,
-    8: 4800,
-    9: 3200,
-    10: 3600,
-    11: 4000,
-    12: 5200,
+    1: 800, 2: 1600, 3: 2800, 4: 4000, 5: 2000, 6: 2400, 7: 3000, 8: 4800,
+    9: 3200, 10: 3600, 11: 4000, 12: 5200, 13: 5600, 14: 6000,
   };
 
   const tier = getEnemyTier(enemyType);

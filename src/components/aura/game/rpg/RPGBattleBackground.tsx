@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ImageIcon, Palette } from "lucide-react";
 import { getStoredTheme } from "@/lib/gameTheme";
 
-type BackgroundTheme = 'castle' | 'dungeon' | 'forest' | 'throne' | 'volcano' | 'ice_cave' | 'ruins' | 'shadow_realm' | 'caverns' | 'sky_isles' | 'sunken_library' | 'void' | 'underground' | 'neon_district' | 'embassy' | 'syndicate_hq' | 'ember_highlands' | 'crystal_citadel' | 'starfall_peaks' | 'eternal_archive';
+type BackgroundTheme = 'castle' | 'dungeon' | 'forest' | 'throne' | 'volcano' | 'ice_cave' | 'ruins' | 'shadow_realm' | 'caverns' | 'sky_isles' | 'sunken_library' | 'void' | 'underground' | 'neon_district' | 'embassy' | 'syndicate_hq' | 'ember_highlands' | 'crystal_citadel' | 'starfall_peaks' | 'eternal_archive' | 'vault' | 'shadow_protocol' | 'arctic_outpost' | 'labyrinth' | 'project_zero' | 'omega_directive';
 
 interface RPGBattleBackgroundProps {
   theme?: BackgroundTheme;
@@ -48,10 +48,16 @@ const agentWorldNames: Record<number, string> = {
   2: 'Neon District',
   3: 'The Embassy',
   4: 'Syndicate HQ',
-  5: 'The Underground',
-  6: 'Neon District',
-  7: 'The Embassy',
-  8: 'Syndicate HQ',
+  5: 'The Black Site',
+  6: 'Skyfall Station',
+  7: 'The Deep Web',
+  8: 'Operation Endgame',
+  9: 'The Vault',
+  10: 'Shadow Protocol',
+  11: 'Arctic Outpost',
+  12: 'The Labyrinth',
+  13: 'Project Zero',
+  14: 'Omega Directive',
 };
 
 export const RPGBattleBackground = ({ 
@@ -85,15 +91,9 @@ export const RPGBattleBackground = ({
 
   // Agent mode world-to-DB mapping (IDs 10-14)
   const agentWorldToDbId: Record<number, number> = {
-    0: 10, // Training Facility
-    1: 11, // The Underground
-    2: 12, // Neon District
-    3: 13, // The Embassy
-    4: 14, // Syndicate HQ
-    5: 11,
-    6: 12,
-    7: 13,
-    8: 14,
+    0: 10, 1: 11, 2: 12, 3: 13, 4: 14,
+    5: 15, 6: 16, 7: 17, 8: 18,
+    9: 19, 10: 20, 11: 21, 12: 22, 13: 23, 14: 24,
   };
 
   // Fetch AI-generated background from database
@@ -141,6 +141,12 @@ export const RPGBattleBackground = ({
         6: 'neon_district',
         7: 'embassy',
         8: 'syndicate_hq',
+        9: 'vault',
+        10: 'shadow_protocol',
+        11: 'arctic_outpost',
+        12: 'labyrinth',
+        13: 'project_zero',
+        14: 'omega_directive',
       };
       return agentWorldThemes[worldNumber] || 'underground';
     }
