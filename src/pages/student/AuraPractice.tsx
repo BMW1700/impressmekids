@@ -442,12 +442,12 @@ const AuraPractice = () => {
           }
         : (activeStories[levelData.storyIndex] || activeStories[idx % activeStories.length]);
       
-      const isCompleted = completedStories.includes(story.title);
+      const isCompleted = completedStories.includes(story.title) || allCompletedStories.has(story.title);
       
       // Unlock logic: first level always unlocked, subsequent levels unlock when previous is completed
-      const isUnlocked = idx === 0 || completedStories.includes(
-        activeStories[selectedWorld.levels[idx - 1]?.storyIndex]?.title || ''
-      ) || completedStories.length >= idx;
+      const prevStoryTitle = activeStories[selectedWorld.levels[idx - 1]?.storyIndex]?.title || '';
+      const isPrevCompleted = completedStories.includes(prevStoryTitle) || allCompletedStories.has(prevStoryTitle);
+      const isUnlocked = idx === 0 || isPrevCompleted || completedStories.length >= idx;
       
       return {
         id: levelData.id,
