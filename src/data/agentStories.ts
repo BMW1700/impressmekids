@@ -503,7 +503,71 @@ export const agentStories: CuratedStory[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // GRADE 10-12 STORIES (existing content below)
+  // GRADE 10 ADDITIONAL STORIES (5 new to reach 10 total)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    title: "The Deepfake Threat",
+    description: "How synthetic media undermines trust in evidence",
+    passage_text: "Deepfake technology — artificial intelligence systems capable of generating convincingly realistic video and audio of real people saying and doing things they never actually did — represents a fundamental threat to evidentiary integrity. Agent Marchetti investigated a deepfake video purporting to show a foreign head of state ordering a military attack. The video was technically sophisticated, with accurate lip synchronization, natural vocal cadence, and contextually appropriate background details. Traditional forensic analysis methods — examining compression artifacts, lighting inconsistencies, and facial geometry — proved inconclusive against this generation of synthesis technology. Marchetti's team developed a novel authentication approach combining metadata forensics with provenance tracking: establishing an unbroken chain of custody from original recording device to distribution platform. The broader implications troubled her profoundly. In a world where any video can be fabricated, the concept of visual evidence loses its epistemic authority. Paradoxically, deepfake technology threatens not only through the false content it creates but through the universal doubt it casts on all authentic recordings.",
+    grade_level: 10,
+    category: "science",
+    target_phonemes: ["str", "kr", "pr", "sp"],
+    word_count: 165,
+    reading_time_minutes: 4,
+    difficulty_level: 10,
+    cover_gradient: "from-purple-700 to-violet-900"
+  },
+  {
+    title: "Proxy Wars and Sovereignty",
+    description: "How great powers fight through smaller nations",
+    passage_text: "Proxy warfare — the practice of great powers pursuing strategic objectives through local allies, mercenary forces, or non-state actors rather than direct military engagement — has defined geopolitical competition since the Cold War. Agent Oduya analyzed a contemporary proxy conflict in which three major powers were simultaneously supporting different factions within a single civil war, each pursuing incompatible strategic objectives. The complexity of proxy dynamics creates a peculiar form of strategic ambiguity: participating nations can escalate their involvement incrementally while maintaining plausible deniability about their role. This ambiguity serves domestic political purposes — governments can pursue aggressive foreign policies without acknowledging the human and financial costs to their own citizens — but it also creates dangerous escalation risks when proxy forces take actions that their sponsors did not authorize or anticipate. Oduya's assessment highlighted the fundamental tension between state sovereignty and great-power competition: proxy wars systematically violate the sovereignty of the nations in which they are fought, transforming local conflicts into theaters of global strategic rivalry.",
+    grade_level: 10,
+    category: "history",
+    target_phonemes: ["str", "pr", "kr", "sp"],
+    word_count: 168,
+    reading_time_minutes: 4,
+    difficulty_level: 10,
+    cover_gradient: "from-amber-700 to-red-900"
+  },
+  {
+    title: "Biosurveillance Networks",
+    description: "Detecting biological threats before they become pandemics",
+    passage_text: "The intelligence community's approach to biological threats underwent fundamental transformation following successive pandemic events that demonstrated how infectious disease outbreaks could destabilize economies, overwhelm healthcare systems, and alter geopolitical dynamics more rapidly than any conventional military threat. Agent Krishnamurthy directed a biosurveillance program that integrated signals intelligence, open-source monitoring, and cooperative relationships with international public health organizations. The program analyzed patterns in pharmaceutical procurement, hospital admission rates, social media reports of unusual symptoms, and satellite imagery of facility construction to identify potential biological events before they were officially reported. The analytical challenge was distinguishing genuine emerging threats from the enormous background noise of routine seasonal illness and localized outbreaks. Krishnamurthy's most significant contribution was developing a probabilistic framework that weighted multiple independent indicators, reducing false alarm rates while maintaining sensitivity to genuine threats that might represent either natural pandemic emergence or deliberate biological weapon deployment.",
+    grade_level: 10,
+    category: "science",
+    target_phonemes: ["kr", "str", "pr", "tr"],
+    word_count: 158,
+    reading_time_minutes: 4,
+    difficulty_level: 10,
+    cover_gradient: "from-green-700 to-emerald-900"
+  },
+  {
+    title: "The Architecture of Secrecy",
+    description: "How classification systems protect and obscure information",
+    passage_text: "Every intelligence organization operates through a classification architecture that determines who may access what information and under what circumstances. Agent Thornton served on a review panel evaluating whether the existing classification framework adequately balanced security requirements against the democratic imperative of informed public discourse. The United States classification system operates on three primary levels — Confidential, Secret, and Top Secret — supplemented by compartmented access programs that further restrict distribution. Critics argue that systematic overclassification has become endemic: officials classify information not because disclosure would genuinely damage national security but because classification prevents embarrassment, shields policy decisions from public scrutiny, and consolidates bureaucratic power. Thornton's review found that approximately forty percent of classified documents contained information that was already publicly available through open sources, suggesting that the classification system had expanded well beyond its legitimate security function. Her recommendations included mandatory declassification timelines, reduced classification authority, and penalties for officials who demonstrably classified information to avoid accountability rather than protect genuine security interests.",
+    grade_level: 10,
+    category: "history",
+    target_phonemes: ["kr", "str", "pr", "sp"],
+    word_count: 170,
+    reading_time_minutes: 4,
+    difficulty_level: 10,
+    cover_gradient: "from-slate-700 to-stone-900"
+  },
+  {
+    title: "Cryptocurrency and Illicit Finance",
+    description: "How digital currencies challenge financial intelligence",
+    passage_text: "The emergence of decentralized cryptocurrency systems has created unprecedented challenges for financial intelligence operations. Traditional anti-money-laundering frameworks depend on regulated financial institutions — banks, brokerages, money transfer services — that are legally required to monitor transactions and report suspicious activity. Cryptocurrencies circumvent this architecture entirely, enabling peer-to-peer value transfer without institutional intermediaries. Agent Volkov investigated a ransomware syndicate that extorted payments in cryptocurrency from hospitals, municipalities, and critical infrastructure operators. The technical challenge was formidable: while blockchain transactions are publicly recorded, connecting cryptocurrency addresses to real-world identities requires sophisticated chain analysis — tracing the flow of funds through thousands of intermediate transactions until they reach an exchange where identity verification occurs. Volkov's investigation demonstrated that cryptocurrency, despite its reputation for anonymity, leaves a permanent and immutable transaction record that, with sufficient analytical resources, can ultimately be traced. Her work resulted in the identification and prosecution of the syndicate's leadership, recovering approximately sixty percent of the extorted funds.",
+    grade_level: 10,
+    category: "science",
+    target_phonemes: ["kr", "str", "pr", "tr"],
+    word_count: 170,
+    reading_time_minutes: 4,
+    difficulty_level: 10,
+    cover_gradient: "from-cyan-700 to-blue-900"
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // GRADE 10-12 STORIES (original content below)
   // ═══════════════════════════════════════════════════════════════
   // World 1: The Underground (stories 0-5) — Urban sociology, psychology, economics, journalism, civil liberties
   {
