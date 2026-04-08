@@ -265,8 +265,8 @@ const computeSentenceComplexityGrade = (text: string): number => {
   const totalCharLen = words.reduce((sum, w) => sum + w.replace(/[^a-zA-Z]/g, '').length, 0);
   const avgWordLen = totalCharLen / words.length;
 
-  // Gate: text must have at least moderate vocabulary to qualify
-  if (avgWordLen < 4.3 || avgSentLen < 10) return 0;
+  // Gate: text must have at least moderate sentence length to qualify
+  if (avgSentLen < 10) return 0;
 
   // Sentence length component → grade
   let sg = 0;
