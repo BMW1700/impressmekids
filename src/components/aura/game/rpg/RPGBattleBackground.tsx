@@ -4,11 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { ImageIcon, Palette } from "lucide-react";
 import { getStoredTheme } from "@/lib/gameTheme";
 
-type BackgroundTheme = 'castle' | 'dungeon' | 'forest' | 'throne' | 'volcano' | 'ice_cave' | 'ruins' | 'shadow_realm' | 'caverns' | 'sky_isles' | 'sunken_library' | 'void' | 'underground' | 'neon_district' | 'embassy' | 'syndicate_hq';
+type BackgroundTheme = 'castle' | 'dungeon' | 'forest' | 'throne' | 'volcano' | 'ice_cave' | 'ruins' | 'shadow_realm' | 'caverns' | 'sky_isles' | 'sunken_library' | 'void' | 'underground' | 'neon_district' | 'embassy' | 'syndicate_hq' | 'ember_highlands' | 'crystal_citadel' | 'starfall_peaks' | 'eternal_archive';
 
 interface RPGBattleBackgroundProps {
   theme?: BackgroundTheme;
-  enemyType?: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'goblin_shaman' | 'street_thug' | 'hired_gun' | 'cyber_hacker' | 'drone_sentry' | 'rogue_agent' | 'bodyguard' | 'operative' | 'enforcer' | 'the_broker' | 'the_architect' | 'the_double_agent' | 'the_director';
+  enemyType?: string;
   worldNumber?: number;
 }
 
@@ -163,6 +163,10 @@ export const RPGBattleBackground = ({
       case 'void_phantom': return 'void';
       case 'reality_shifter': return 'void';
       case 'word_eater': return 'void';
+      case 'fire_elemental': case 'lava_hound': case 'ember_drake': return 'ember_highlands';
+      case 'crystal_knight': case 'prism_mage': case 'crystal_queen': return 'crystal_citadel';
+      case 'star_sprite': case 'comet_wolf': case 'nova_titan': return 'starfall_peaks';
+      case 'tome_golem': case 'page_wraith': case 'the_librarian': return 'eternal_archive';
       default: return 'forest';
     }
   }, [enemyType, worldNumber]);
