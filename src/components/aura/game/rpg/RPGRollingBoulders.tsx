@@ -53,6 +53,7 @@ export const RPGRollingBoulders = ({
       destroyed: false,
     }));
     setBoulders(initialBoulders);
+    bouldersRef.current = initialBoulders;
   }, [words]);
 
   // Rolling animation
@@ -94,9 +95,13 @@ export const RPGRollingBoulders = ({
 
   // Handle boulder destruction
   const handleBoulderDestroy = useCallback((boulderId: number) => {
-    setBoulders(prev => prev.map(b => 
-      b.id === boulderId ? { ...b, destroyed: true } : b
-    ));
+    setBoulders(prev => {
+      const updated = prev.map(b => 
+        b.id === boulderId ? { ...b, destroyed: true } : b
+      );
+      bouldersRef.current = updated;
+      return updated;
+    });
     destroyedRef.current += 1;
     setDestroyed(destroyedRef.current);
     soundEffects.correctWord();
