@@ -56,36 +56,30 @@ const GRADE_K_PHONEMES = new Set([
 ]);
 
 // Grade 1: remaining consonants, all short vowels, digraphs
-const GRADE_1_PHONEMES = new Set([
-  ...GRADE_K_PHONEMES,
+const GRADE_1_PHONEMES = new Set(Array.from(GRADE_K_PHONEMES).concat([
   'f','ɡ','h','dʒ','l','ɹ','v','w','j','z',
   'ɛ','ɪ','ɑ','ʌ','ɔ',   // remaining short vowels
   'ʃ','tʃ','θ','ð','ŋ',   // digraphs
-]);
+]));
 
 // Grade 2: long vowels, vowel teams
-const GRADE_2_PHONEMES = new Set([
-  ...GRADE_1_PHONEMES,
+const GRADE_2_PHONEMES = new Set(Array.from(GRADE_1_PHONEMES).concat([
   'eɪ','i','aɪ','oʊ','u', // long vowels
-]);
+]));
 
 // Grade 3: diphthongs, R-controlled vowels
-const GRADE_3_PHONEMES = new Set([
-  ...GRADE_2_PHONEMES,
+const GRADE_3_PHONEMES = new Set(Array.from(GRADE_2_PHONEMES).concat([
   'ɔɪ','aʊ',              // diphthongs
   'ɑɹ','ɔɹ','ɝ','ɛɹ','ɪɹ', // R-controlled
-]);
+]));
 
 // Grade 4-5: remaining phonemes
-const GRADE_4_PHONEMES = new Set([
-  ...GRADE_3_PHONEMES,
+const GRADE_4_PHONEMES = new Set(Array.from(GRADE_3_PHONEMES).concat([
   'ʊ','ʒ',                // variant vowel + /zh/
-]);
+]));
 
 // Grade 6+: all phonemes — nothing new
-const ALL_PHONEMES = new Set([
-  ...GRADE_4_PHONEMES,
-]);
+const ALL_PHONEMES = new Set(Array.from(GRADE_4_PHONEMES));
 
 const GRADE_PHONEME_SETS: Set<string>[] = [
   GRADE_K_PHONEMES,   // 0 = K
