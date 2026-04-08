@@ -1357,8 +1357,8 @@ const rawStories: CuratedStory[] = [
   },
   {
     title: "The Geography Project",
-    description: "Students explore geography and biology through a telescope",
-    passage_text: "The class had a geography project. They would photograph different plants and study the biology of each one. Maria brought a telescope to look at the stars. She made a graph of what she found. The teacher told them to write an autobiography of their work. Each student had to describe their methods. They used a microscope to look at small things. The project helped them understand how the world works.",
+    description: "Students explore geography and biology through microscopes and telescopes",
+    passage_text: "Professor Martin assigned a geography project combining biology and photography. Students would photograph microscopic organisms using powerful microscopes. Roberto discovered interesting microstructures inside plant specimens. His telescope revealed atmospheric patterns affecting local geography. The autobiography requirement demanded structured paragraphs describing experimental procedures. Photographs documented biological interactions between different organisms. Geographic measurements confirmed temperature variations across microclimates. The professor examined photographic evidence demonstrating ecological relationships. Biographical research connected historical geographers with modern scientific methodology. Roberto presented spectacular photographs alongside geographic and biological descriptions.",
     grade_level: 4,
     category: "science",
     target_phonemes: ["dʒ", "ɹ", "f", "ɡ"],
