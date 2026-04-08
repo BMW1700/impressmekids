@@ -38,6 +38,7 @@ export const RPGRollingBoulders = ({
   const isListeningRef = useRef(false);
   const destroyedRef = useRef(0);
   const missedRef = useRef(0);
+  const bouldersRef = useRef<Boulder[]>([]);
 
   // Initialize boulders
   useEffect(() => {
