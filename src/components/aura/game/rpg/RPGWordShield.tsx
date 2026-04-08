@@ -75,6 +75,73 @@ export const RPGWordShield = ({
     onComplete(finalShieldPower, damage);
   }, [onComplete]);
 
+  // Start recognition using manager
+  const startListening = useCallback(() => {
+    speechManager.start({
+      owner: 'shield',
+      continuous: true,
+      interimResults: true,
+      onStart: () => {
+        if (isMountedRef.current) {
+          setIsListening(true);
+        }
+      },
+      onEnd: () => {
+        if (isMountedRef.current) {
+          setIsListening(false);
+        }
+      },
+      onResult: (transcript) => {
+        if (!isMountedRef.current || phaseRef.current !== 'building') return;
+
+        const spoken = transcript.toLowerCase().trim();
+        setLastRecognized(spoken);
+        const spokenWords = spoken.split(' ');
+
+        for (const spokenWord of spokenWords) {
+          if (completionTriggeredRef.current) break;
+
+          const cleanSpoken = spokenWord.replace(/[^a-z]/g, '');
+          if (cleanSpoken.length < 2) continue;
+
+          const currentIdx = currentWordIndexRef.current;
+          const wordsToSpeak = shieldWordsRef.current;
+
+          if (currentIdx < wordsToSpeak.length) {
+            const targetWord = wordsToSpeak[currentIdx]?.word.toLowerCase().replace(/[^a-z]/g, '');
+
+            if (
+              cleanSpoken === targetWord ||
+              cleanSpoken.includes(targetWord) ||
+              targetWord.includes(cleanSpoken) ||
+              (cleanSpoken.length >= 3 && targetWord.startsWith(cleanSpoken.slice(0, 3)))
+            ) {
+              sounds.correctWord();
+              setShieldWords(prev => prev.map((w, idx) =>
+                idx === currentIdx ? { ...w, spoken: true } : w
+              ));
+
+              const nextIndex = currentIdx + 1;
+              const nextShieldPower = Math.min(100, Math.round((nextIndex / wordsToSpeak.length) * 100));
+
+              currentWordIndexRef.current = nextIndex;
+              setCurrentWordIndex(nextIndex);
+              setShieldPower(nextShieldPower);
+
+              if (nextIndex >= wordsToSpeak.length) {
+                completeShield(nextIndex);
+                break;
+              }
+            }
+          }
+        }
+      },
+      onError: (error) => {
+        console.log('[WordShield] Recognition error:', error);
+      },
+    });
+  }, [completeShield]);
+
   // Initialize words
   useEffect(() => {
     completionTriggeredRef.current = false;
@@ -133,72 +200,6 @@ export const RPGWordShield = ({
 
     return () => clearInterval(interval);
   }, [phase, completeShield]);
-
-  // Start recognition using manager
-  const startListening = useCallback(() => {
-    speechManager.start({
-      owner: 'shield',
-      continuous: true,
-      interimResults: true,
-      onStart: () => {
-        if (isMountedRef.current) {
-          setIsListening(true);
-        }
-      },
-      onEnd: () => {
-        if (isMountedRef.current) {
-          setIsListening(false);
-        }
-      },
-      onResult: (transcript) => {
-        if (!isMountedRef.current || phaseRef.current !== 'building') return;
-        
-        const spoken = transcript.toLowerCase().trim();
-        setLastRecognized(spoken);
-        const spokenWords = spoken.split(' ');
-        
-        for (const spokenWord of spokenWords) {
-          if (completionTriggeredRef.current) break;
-
-          const cleanSpoken = spokenWord.replace(/[^a-z]/g, '');
-          if (cleanSpoken.length < 2) return;
-          
-          const currentIdx = currentWordIndexRef.current;
-          const wordsToSpeak = shieldWordsRef.current;
-          
-          if (currentIdx < wordsToSpeak.length) {
-            const targetWord = wordsToSpeak[currentIdx]?.word.toLowerCase().replace(/[^a-z]/g, '');
-            
-            // More lenient matching
-            if (cleanSpoken === targetWord || 
-                cleanSpoken.includes(targetWord) || 
-                targetWord.includes(cleanSpoken) ||
-                (cleanSpoken.length >= 3 && targetWord.startsWith(cleanSpoken.slice(0, 3)))) {
-              // Word matched!
-              sounds.correctWord();
-              setShieldWords(prev => prev.map((w, idx) => 
-                idx === currentIdx ? { ...w, spoken: true } : w
-              ));
-              const nextIndex = currentIdx + 1;
-              const nextShieldPower = Math.min(100, Math.round((nextIndex / wordsToSpeak.length) * 100));
-
-              currentWordIndexRef.current = nextIndex;
-              setCurrentWordIndex(nextIndex);
-              setShieldPower(nextShieldPower);
-
-              if (nextIndex >= wordsToSpeak.length) {
-                completeShield(nextIndex);
-                break;
-              }
-            }
-          }
-        }
-      },
-      onError: (error) => {
-        console.log('[WordShield] Recognition error:', error);
-      },
-    });
-  }, [completeShield]);
 
   // Cleanup on unmount
   useEffect(() => {
