@@ -62,7 +62,7 @@ interface RPGCharacterProps {
 }
 
 // Map character/enemy types to sprite types - EXTENDED with all new enemies
-type SpriteType = 'knight' | 'wizard' | 'princess' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'grog_king' | 'cave_troll' | 'crystal_spider' | 'storm_harpy' | 'cloud_giant' | 'wind_lord' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'echo_wraith' | 'agent_x' | 'cipher' | 'shadow_agent' | 'street_thug_agent' | 'hired_gun_agent' | 'cyber_hacker_agent' | 'the_broker_agent' | 'the_director_agent' | 'drone_sentry_agent' | 'rogue_agent_agent' | 'bodyguard_agent' | 'the_architect_agent' | 'operative_agent' | 'enforcer_agent' | 'the_double_agent_agent' | 'the_warden_agent' | 'the_commander_agent' | 'the_phantom_agent' | 'the_overseer_agent';
+type SpriteType = 'knight' | 'wizard' | 'princess' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'grog_king' | 'cave_troll' | 'crystal_spider' | 'storm_harpy' | 'cloud_giant' | 'wind_lord' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'echo_wraith' | 'agent_x' | 'cipher' | 'shadow_agent' | 'street_thug_agent' | 'hired_gun_agent' | 'cyber_hacker_agent' | 'the_broker_agent' | 'the_director_agent' | 'drone_sentry_agent' | 'rogue_agent_agent' | 'bodyguard_agent' | 'the_architect_agent' | 'operative_agent' | 'enforcer_agent' | 'the_double_agent_agent' | 'the_warden_agent' | 'the_commander_agent' | 'the_phantom_agent' | 'the_overseer_agent' | 'fire_elemental' | 'lava_hound' | 'ember_drake' | 'crystal_knight' | 'prism_mage' | 'crystal_queen' | 'star_sprite' | 'comet_wolf' | 'nova_titan' | 'tome_golem' | 'page_wraith' | 'the_librarian';
 
 const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean): SpriteType => {
   if (isEnemy) {
@@ -82,6 +82,18 @@ const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean)
       'reality_shifter': 'reality_shifter',
       'word_eater': 'word_eater',
       'echo_wraith': 'echo_wraith',
+      'fire_elemental': 'fire_elemental',
+      'lava_hound': 'lava_hound',
+      'ember_drake': 'ember_drake',
+      'crystal_knight': 'crystal_knight',
+      'prism_mage': 'prism_mage',
+      'crystal_queen': 'crystal_queen',
+      'star_sprite': 'star_sprite',
+      'comet_wolf': 'comet_wolf',
+      'nova_titan': 'nova_titan',
+      'tome_golem': 'tome_golem',
+      'page_wraith': 'page_wraith',
+      'the_librarian': 'the_librarian',
       // Agent mode enemies - unique agent sprites
       'street_thug': 'street_thug_agent',
       'hired_gun': 'hired_gun_agent',
