@@ -1,73 +1,104 @@
 
 
-# Brutally Honest Audit: Week-by-Week Student Progress
+# Plan: Decodability-Based Grade Level System
 
-## What Already Exists (and works well)
+## The Problem
 
-1. **`useWeeklyProgress` hook** — fully built, fetches reading_sessions + aura_records grouped by week, calculates WCPM trends, accuracy changes, phoneme strengths/weaknesses, mode breakdowns, and substitution patterns. Supports grade_mode filtering. This is genuinely solid infrastructure.
+The current `phonemeDifficulty.ts` grades text by averaging phoneme "difficulty scores" (1-10 based on age of acquisition). This is fundamentally wrong for literacy grading because:
 
-2. **`ImprovementTracker` component** — renders week-by-week charts (WPM, accuracy, fluency lines) plus a weekly breakdown table with sessions count, WPM, accuracy, and words read per week. Has both "simple" (area chart) and "detailed" (multi-line chart + table) variants.
-
-3. **Where it's used:**
-   - Student dashboard (`AuraReadingSection.tsx`) — simple variant, grade_mode scoped
-   - Parent weekly report (`ParentWeeklyReport.tsx`) — both simple and detailed variants
-   - Student's Full Stats Modal (`FullReadingStatsModal.tsx`) — detailed variant
-   - **NOT in the teacher's Student Profile page** — this is the gap
-
-## What's Missing
-
-### 1. Teacher Student Profile Has No Reading Data (CRITICAL)
-
-`StudentProfile.tsx` (the teacher's view of an individual student) has 7 tabs: Overview, Readings, ML Insights, Phonemes, Progress, Timeline, Notes.
-
-- **Readings tab** — shows a flat list of individual sessions (date, WCPM, accuracy) but no aggregated trends or week-by-week comparison
-- **Progress tab** — shows ONLY a "Clarity Score Over Time" chart from `aura_records` (speaking exercises). Zero reading session data. No WCPM trend, no accuracy trend, no fluency trend, no weekly breakdown table.
-
-A teacher clicking "Progress" for a student sees speaking clarity only — not reading improvement. That's backwards for a reading product.
-
-### 2. No Classroom-Wide Weekly Breakdown
-
-`AuraAnalytics.tsx` shows aggregate stats (total sessions, avg accuracy, avg WPM, words read) but these are **all-time averages**, not week-by-week. A teacher cannot see "Week 1 avg WCPM was 85, Week 4 avg WCPM is 102, class improved 20%."
-
-### 3. Retention Metrics Don't Exist
-
-There is no tracking of:
-- Session frequency per student per week (are they reading more or less over time?)
-- Time-on-task per week (are sessions getting longer?)
-- Return rate (did the student come back this week after last week?)
-- Engagement decay detection (student was active weeks 1-3, dropped off week 4)
+- A single word with /ʒ/ (grade 4-5 phoneme) in an otherwise all-CVC passage **should** bump the grade up, but averaging dilutes it
+- It ignores **phonics patterns** entirely (CVC vs. blends vs. vowel teams vs. silent-e)
+- It ignores **word structure** (syllable count, morphological complexity)
+- It doesn't enforce the "decodability percentage" requirement (K-1 texts must be 90-100% decodable at that level)
 
 ## The Fix
 
-### Task 1: Add Week-by-Week Reading Progress to Teacher's Student Profile
-- Replace the Progress tab's "Clarity Score Over Time" with the existing `ImprovementTracker` component (detailed variant)
-- Add the student's `gradeMode` to scope correctly
-- Keep the clarity chart as a secondary section below
-- This is a ~15-line change — the component already exists
+Replace the averaging approach with a decodability analysis engine that mirrors real curriculum phoneme/phonics scope-and-sequence.
 
-### Task 2: Add Classroom-Wide Weekly Progress Table to AuraAnalytics
-- Create a new `ClassroomWeeklyBreakdown` component on the existing "Progress" tab
-- Query `reading_sessions` for all classroom students, group by week
-- Show: Week | Active Students | Avg WCPM | WCPM Change | Avg Accuracy | Total Words Read | Total Sessions
-- Highlight weeks with improvement in green, regression in red
-- Add a line chart showing class-avg WCPM trending over 4-8 weeks
+### New file: `src/lib/decodabilityGrading.ts`
 
-### Task 3: Add Retention/Engagement Metrics
-- Add per-student engagement indicators to the existing StudentAuraMetrics overview:
-  - "Sessions This Week" vs "Sessions Last Week" (trend arrow)
-  - "Avg Session Duration" trend
-  - "Weeks Active (out of last 4)" badge
-- Add an "Engagement" column to the classroom overview table
-- Flag students who were active 2+ weeks ago but not this week as "At Risk of Disengaging"
+**Grade-level phoneme sets** — define exactly which IPA phonemes are "introduced" at each grade:
 
-### Files to modify
-- `src/pages/teacher/StudentProfile.tsx` — import and add `ImprovementTracker` to Progress tab
-- `src/pages/teacher/AuraAnalytics.tsx` — add classroom weekly breakdown to Progress tab
-- `src/components/aura/StudentAuraMetrics.tsx` — add engagement/retention indicators per student
-- New file: `src/components/aura/ClassroomWeeklyBreakdown.tsx` — classroom-level weekly trend table + chart
+```text
+K:  /m/ /s/ /t/ /p/ /k/ /b/ /d/ /n/ + /æ/ (short a only)
+1:  + /f/ /ɡ/ /h/ /dʒ/ /l/ /ɹ/ /v/ /w/ /j/ /z/ + /ɛ/ /ɪ/ /ɑ/ /ʌ/ + digraphs /ʃ/ /tʃ/ /θ/ /ð/ /ŋ/
+2:  + long vowels /eɪ/ /i/ /aɪ/ /oʊ/ /u/ + vowel teams
+3:  + diphthongs /ɔɪ/ /aʊ/ + R-controlled /ɑɹ/ /ɔɹ/ /ɝ/ /ɛɹ/ /ɪɹ/
+4-5: + /ʊ/ /ʒ/ + all remaining
+6+: All 44 phonemes mastered
+```
 
-### What stays the same
-- `useWeeklyProgress` hook — already handles all the per-student weekly aggregation
-- `ImprovementTracker` component — already built, just needs to be imported in one more place
-- All existing analytics tabs, charts, and components remain untouched
+**Phonics pattern detection** — analyze each word's structure:
+- CVC (grade K)
+- Consonant blends (grade 1)
+- Digraphs (grade 1)
+- Silent-e / CVCe (grade 2)
+- Vowel teams (grade 2)
+- Multisyllabic with affixes (grade 3)
+- Greek/Latin roots (grade 4-5)
+- Morphological complexity (grade 6+)
+
+**Grading algorithm:**
+
+1. For each word, find the **minimum grade at which it is fully decodable** (all its phonemes are introduced AND its phonics pattern is taught)
+2. Track decodability percentage at each grade level
+3. The passage grade = the **lowest grade where ≥90% of words are decodable** (for K-1) or ≥80% (for 2-3) or natural language (4+)
+4. Hard floor: if ANY word requires grade N phonemes, passage grade ≥ N (weighted by frequency)
+
+**High-frequency word list** — common sight words ("the", "is", "said", "was") are excluded from decodability checks since they're memorized at all levels.
+
+### Modify: `src/lib/phonemeDifficulty.ts`
+
+- Keep `getPhonemeDifficulty()` (still used by ML/RL systems)
+- Replace `getStoryGradeLevel()` internals to call the new decodability engine
+- Replace `getStoryDifficultyLevel()` to use new grade mapping
+- Keep `getWordDifficulty()` for backward compatibility but add `getWordGradeLevel()` as the primary API
+
+### No changes needed to:
+- `src/data/curatedStories.ts` — still calls `getStoryGradeLevel()` / `getStoryDifficultyLevel()`, just gets better results
+- `src/lib/cmuDictWrapper.ts` — phoneme lookup stays the same
+- Any UI components — they consume grade levels, not the internals
+
+## Technical Detail
+
+### Word Analysis Pipeline
+
+```text
+word → CMU Dict → IPA phonemes → [phoneme grade check] → min grade for phonemes
+                                → [pattern detection]   → min grade for pattern
+                                → max(phoneme grade, pattern grade) = word grade
+```
+
+### Syllable/Pattern Detection
+
+Use the IPA phoneme sequence to detect:
+- **CVC**: consonant + vowel + consonant (3 phonemes)
+- **Blends**: two consonants adjacent at onset/coda
+- **Digraphs**: /ʃ/, /tʃ/, /θ/, /ð/ (detected directly from phonemes)
+- **Silent-e**: check spelling for final-e + long vowel phoneme
+- **Vowel teams**: long vowel phonemes with spelling patterns like "ai", "ee", "oa"
+- **Multisyllabic**: count vowel phonemes > 2
+- **Affixes**: check for common prefix/suffix letter patterns
+
+### Decodability Scoring
+
+```text
+For each candidate grade G (0 through 12):
+  decodable_count = words where word_grade <= G
+  decodability_pct = decodable_count / total_words
+
+Passage grade = lowest G where:
+  - G <= 1: decodability_pct >= 0.90
+  - G <= 3: decodability_pct >= 0.80
+  - G >= 4: decodability_pct >= 0.70
+```
+
+### High-Frequency Sight Words
+
+~100 words exempt from decodability checks: "the", "a", "is", "are", "was", "were", "said", "have", "has", "do", "does", "you", "your", "they", "their", "there", "what", "where", "when", "who", "why", "how", "could", "would", "should", etc.
+
+## Files
+
+- **New**: `src/lib/decodabilityGrading.ts` — grade-level phoneme sets, phonics pattern detection, decodability percentage calculation, sight word list
+- **Modified**: `src/lib/phonemeDifficulty.ts` — rewire `getStoryGradeLevel()` and `getStoryDifficultyLevel()` to use new engine; add `getWordGradeLevel()` export
 
