@@ -623,7 +623,7 @@ const rawStories: CuratedStory[] = [
   {
     title: "A Bad Map",
     description: "A man and a bad map",
-    passage_text: "A man had a map. The map was bad. The man sat and sat. He can not pass. He can tap the map. The man had a plan. He sat on a mat and had a nap. The man can pass at last! The man ran and ran past the dam.",
+    passage_text: "A man had a map. The map was bad. The man sat and sat. He can not go. He can tap the map. The man sat on a mat and had a nap. A cat sat on the map. The man got up. The man can go! The man is at the dam.",
     grade_level: 0,
     category: "adventure",
     target_phonemes: ["m", "æ", "p", "b"],
@@ -635,7 +635,7 @@ const rawStories: CuratedStory[] = [
   {
     title: "Dan and the Cab",
     description: "Dan takes a cab to the dam",
-    passage_text: "Dan had a tan cab. The cab can pass the dam. Dan sat in the cab. The cab ran fast. Dan can tap the cab. The cab had a bad pad. Dan sat on the pad. The cab can pass! Dan is at the dam at last.",
+    passage_text: "Dan had a tan cab. The cab is big. Dan sat in the cab. Dan can tap the cab. The cab had a bad pad. Dan sat on the pad. The cab can go! Dan is at the dam. Dan sat and had a nap on the mat.",
     grade_level: 0,
     category: "adventure",
     target_phonemes: ["d", "æ", "k", "b"],
