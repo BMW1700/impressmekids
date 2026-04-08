@@ -1,7 +1,8 @@
 import type { CuratedStory } from './curatedStories';
+import { getStoryGradeLevel, getStoryDifficultyLevel } from '@/lib/phonemeDifficulty';
 
 // Agent Mode stories — 6-12th grade reading level, diverse academic topics with spy/thriller narrative frame
-export const agentStories: CuratedStory[] = [
+const rawAgentStories: CuratedStory[] = [
   // ═══════════════════════════════════════════════════════════════
   // GRADE 6 STORIES — ~800-900 Lexile, clear academic vocabulary,
   // moderate sentence complexity, spy-themed framing
@@ -10,120 +11,120 @@ export const agentStories: CuratedStory[] = [
     title: "The Missing Signal",
     description: "A young recruit tracks a mysterious radio signal",
     passage_text: "Agent Reyes was new to the agency. Her first mission was simple: find the source of a strange radio signal coming from an old warehouse near the harbor. She packed her gear and drove to the location. The warehouse was dark and dusty. She used a flashlight to look around. In the corner, she found a small device blinking with a red light. It was sending coded messages every thirty seconds. She carefully removed it and placed it in a signal-proof bag. Back at headquarters, the tech team decoded the messages. They contained shipping routes for stolen medical supplies. Agent Reyes had uncovered a smuggling operation on her very first day.",
-    grade_level: 6,
+    grade_level: 0, // computed at export
     category: "adventure",
     target_phonemes: ["str", "pr", "bl", "gr"],
     word_count: 120,
     reading_time_minutes: 2,
-    difficulty_level: 6,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-slate-500 to-zinc-700"
   },
   {
     title: "Code Name: Falcon",
     description: "An agent learns to decode enemy messages",
     passage_text: "Every spy needs to understand codes. Agent Torres spent three weeks learning how to break simple ciphers at the training academy. A cipher works by replacing each letter with a different one. For example, the letter A might become the letter D, and B might become E. This is called a shift cipher. The enemy used these codes to hide their plans. Torres practiced breaking codes every day until he could solve them in minutes. His instructor was impressed. She told him that real-world codes are much harder, using computers and complex math. But understanding the basics was the first step. Torres was ready for his first field assignment.",
-    grade_level: 6,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["sp", "tr", "bl", "cr"],
     word_count: 115,
     reading_time_minutes: 2,
-    difficulty_level: 6,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-cyan-600 to-slate-700"
   },
   {
     title: "The Safe House",
     description: "Agents protect a witness in a hidden location",
     passage_text: "A safe house is a secret location where agencies hide important people. Agent Park was assigned to guard a witness named Dr. Chen, who had information about a dangerous group. The safe house was a small cabin in the mountains. Park checked the doors and windows every hour. He set up cameras around the property. Dr. Chen was nervous but cooperative. She spent her time writing notes about what she had seen. Park cooked meals and kept watch through the night. On the third day, a suspicious car drove past twice. Park called for backup immediately. Within an hour, a full security team arrived. The witness was moved to a new location. Park had done his job perfectly.",
-    grade_level: 6,
+    grade_level: 0, // computed at export
     category: "adventure",
     target_phonemes: ["ch", "sh", "pr", "st"],
     word_count: 125,
     reading_time_minutes: 2,
-    difficulty_level: 6,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-emerald-600 to-teal-800"
   },
   {
     title: "Satellite Watch",
     description: "A team monitors the world from space technology",
     passage_text: "High above the earth, satellites orbit at incredible speeds. The intelligence agency uses these satellites to watch events around the globe. Agent Kim worked in the satellite monitoring room, a large space filled with screens showing live images from space. Her job was to spot anything unusual. One morning, she noticed large trucks moving equipment to a remote island in the Pacific Ocean. The trucks were carrying materials that could be used to build weapons. Kim flagged the images and sent them to her commander. A team of analysts confirmed her discovery. The agency launched an investigation that prevented the weapons from being completed. Kim's sharp eyes had made a real difference.",
-    grade_level: 6,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["sp", "st", "tr", "gr"],
     word_count: 122,
     reading_time_minutes: 2,
-    difficulty_level: 6,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-blue-600 to-indigo-800"
   },
   {
     title: "The Double Agent Test",
     description: "A recruit faces a test of loyalty and trust",
     passage_text: "During training, every recruit faces the loyalty test. Agent Wu sat in a small room with two senior officers. They asked her questions for three hours. Some questions were easy: her birthday, her favorite subject in school, where she grew up. Other questions were tricky. They tried to confuse her by asking the same question in different ways. They watched her body language and listened to her tone of voice. After the test, Wu waited nervously for the results. The next morning, her instructor told her she had passed with the highest score in her class. The test was designed to find people who could stay calm under pressure and tell the truth even when it was difficult.",
-    grade_level: 6,
+    grade_level: 0, // computed at export
     category: "adventure",
     target_phonemes: ["tr", "str", "pr", "cl"],
     word_count: 125,
     reading_time_minutes: 2,
-    difficulty_level: 6,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-amber-600 to-orange-800"
   },
   {
     title: "Tracking the Courier",
     description: "An agent follows a suspect through a busy city",
     passage_text: "Agent Lopez had been watching the train station for two days. Her target was a courier who carried secret documents for a criminal network. The courier always wore a gray jacket and carried a brown leather bag. On Tuesday morning, Lopez spotted him stepping off the 9:15 train. She followed at a safe distance, blending in with the crowd. The courier walked six blocks, stopped at a coffee shop, and left a package under a bench outside. Five minutes later, another person picked it up. Lopez photographed everything. She now had evidence of how the network passed information. Her report would help the agency map the entire criminal chain.",
-    grade_level: 6,
+    grade_level: 0, // computed at export
     category: "adventure",
     target_phonemes: ["cr", "bl", "st", "tr"],
     word_count: 120,
     reading_time_minutes: 2,
-    difficulty_level: 6,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-stone-500 to-neutral-700"
   },
   {
     title: "The Listening Post",
     description: "A team intercepts enemy communications",
     passage_text: "Hidden in the basement of an ordinary-looking office building was one of the agency's most important facilities: a listening post. Agent Nakamura worked the night shift, wearing headphones and monitoring radio frequencies. Most of what she heard was normal chatter — taxi dispatchers, weather reports, shipping companies. But she was trained to notice patterns. One night, she heard the same phrase repeated on three different frequencies within ten minutes. This was not a coincidence. She recorded the transmissions and ran them through a pattern analysis program. The software confirmed that the messages were coordinated. Someone was using public radio channels to send hidden instructions. Nakamura's discovery led to the capture of a spy ring operating inside the country.",
-    grade_level: 6,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["fr", "sh", "tr", "pr"],
     word_count: 128,
     reading_time_minutes: 2,
-    difficulty_level: 6,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-violet-600 to-purple-800"
   },
   {
     title: "Escape from the Embassy",
     description: "An agent must leave a foreign country quickly",
     passage_text: "Agent Diaz received an emergency message on his phone: his cover had been blown. The foreign government now knew he was a spy. He had less than two hours to leave the country. Diaz destroyed his laptop and burned his fake passport. He put on different clothes and changed his appearance with a hat and glasses. He took a taxi to the embassy, where friendly staff were waiting. They gave him a new passport with a different name. A car drove him to a private airfield outside the city. A small plane was ready. As Diaz climbed aboard, he looked back at the city he had called home for two years. The plane took off into the night sky, heading toward safety.",
-    grade_level: 6,
+    grade_level: 0, // computed at export
     category: "adventure",
     target_phonemes: ["bl", "cr", "fl", "pr"],
     word_count: 130,
     reading_time_minutes: 2,
-    difficulty_level: 6,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-red-600 to-rose-800"
   },
   {
     title: "The Forged Passport",
     description: "Learning how agents detect fake documents",
     passage_text: "Every country issues passports to its citizens. These documents contain security features that are very hard to copy: holograms, watermarks, special inks, and microprinting so tiny that you need a magnifying glass to read it. Agent Foster worked in the document analysis lab. Her job was to examine passports and determine if they were real or fake. One afternoon, she received a passport that looked perfect at first glance. But under ultraviolet light, she noticed the hologram was slightly off-center. She checked the microprinting and found three letters that were wrong. The passport was an excellent forgery, but not perfect. Foster traced the printing technique to a known counterfeiting operation in Eastern Europe.",
-    grade_level: 6,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["pr", "str", "fr", "ch"],
     word_count: 122,
     reading_time_minutes: 2,
-    difficulty_level: 6,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-teal-600 to-cyan-800"
   },
   {
     title: "Night Vision",
     description: "A training exercise in darkness",
     passage_text: "The training exercise began at midnight. Agent Chen and her team had to navigate through a dense forest using only night-vision goggles. The goggles made everything appear in shades of green. Trees, rocks, and animals all glowed with an eerie light. The team moved slowly, communicating with hand signals instead of voices. Their objective was to reach a checkpoint three miles away without being detected by the opposing team. Chen led her squad along a stream, using the sound of water to mask their footsteps. After two hours of careful movement, they reached the checkpoint. The instructor was surprised — most teams took at least three hours. Chen's knowledge of the terrain and her steady leadership had made the difference.",
-    grade_level: 6,
+    grade_level: 0, // computed at export
     category: "adventure",
     target_phonemes: ["str", "gr", "cr", "kn"],
     word_count: 128,
     reading_time_minutes: 2,
-    difficulty_level: 6,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-gray-700 to-zinc-900"
   },
 
@@ -135,120 +136,120 @@ export const agentStories: CuratedStory[] = [
     title: "The Encryption Dilemma",
     description: "An agent confronts the ethics of breaking encryption",
     passage_text: "Encryption protects private communication by converting readable text into scrambled data that only authorized recipients can decode. Agent Morales faced an ethical dilemma when she was ordered to break the encryption on a journalist's laptop. The journalist had published stories exposing government corruption, and someone in power wanted to identify her sources. Morales understood the technical process — she could exploit a vulnerability in the encryption software within hours. But she also understood the principle at stake: press freedom depends on source confidentiality. If journalists cannot protect their sources, whistleblowers will stop coming forward, and corruption will go unreported. Morales reported the order to the inspector general's office instead. The investigation revealed that a senior official had abused his authority to target the journalist.",
-    grade_level: 7,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["kr", "pr", "str", "sp"],
     word_count: 135,
     reading_time_minutes: 3,
-    difficulty_level: 7,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-slate-600 to-gray-800"
   },
   {
     title: "Biological Threat Assessment",
     description: "Analysts evaluate a potential biological weapon",
     passage_text: "The intelligence report described an unauthorized laboratory operating in a converted factory. Satellite imagery showed ventilation systems consistent with biosafety protocols, suggesting experiments with dangerous organisms. Agent Okafor was assigned to assess the biological threat level. She reviewed shipping records and found purchases of laboratory equipment including centrifuges, incubators, and specialized growth media. The materials were consistent with both legitimate pharmaceutical research and potential weapons development. This ambiguity is a central challenge in biological intelligence: the same equipment and knowledge used to develop vaccines can be repurposed to create devastating pathogens. Okafor's report recommended continued surveillance and diplomatic engagement rather than military intervention, noting that premature action could destroy evidence and trigger an international incident.",
-    grade_level: 7,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["bl", "pr", "tr", "sp"],
     word_count: 130,
     reading_time_minutes: 3,
-    difficulty_level: 7,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-emerald-700 to-green-900"
   },
   {
     title: "The Propaganda Machine",
     description: "Understanding how misinformation spreads online",
     passage_text: "Modern propaganda does not require printing presses or radio towers — it requires only internet access and an understanding of human psychology. Agent Rivera investigated a network of fake social media accounts that were spreading false information about an upcoming election. The accounts were designed to look like ordinary citizens sharing their opinions. In reality, they were controlled by a coordinated team operating from a foreign country. The false stories were crafted to trigger emotional reactions — fear, anger, outrage — because emotional content spreads faster than factual reporting. Rivera mapped the network using metadata analysis, identifying patterns in posting times, language use, and account creation dates. Her investigation revealed over four thousand coordinated accounts reaching millions of voters with fabricated stories designed to undermine trust in democratic institutions.",
-    grade_level: 7,
+    grade_level: 0, // computed at export
     category: "history",
     target_phonemes: ["pr", "sp", "cr", "tr"],
     word_count: 140,
     reading_time_minutes: 3,
-    difficulty_level: 7,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-red-700 to-rose-900"
   },
   {
     title: "The Cyber Intrusion",
     description: "A team responds to a hack on critical systems",
     passage_text: "At 3:47 AM, automated monitoring systems detected unauthorized access to the power grid's control network. Agent Petrov led the cyber response team. Their first priority was containment — isolating the compromised systems before the intruders could cause physical damage. Modern power grids are managed by industrial control systems that were originally designed for reliability, not security. Many of these systems were built decades ago, before cyber threats were a serious concern. The intruders had exploited this vulnerability, gaining access through an outdated software component that had not been updated. Petrov's team traced the intrusion to a state-sponsored hacking group known for targeting critical infrastructure. They patched the vulnerability, restored system integrity, and documented the attack methodology. The incident highlighted a growing concern: the infrastructure that modern society depends upon remains dangerously vulnerable to sophisticated cyber attacks.",
-    grade_level: 7,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["kr", "str", "pr", "tr"],
     word_count: 145,
     reading_time_minutes: 3,
-    difficulty_level: 7,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-cyan-700 to-blue-900"
   },
   {
     title: "Interrogation Techniques",
     description: "The science behind effective questioning",
     passage_text: "Contrary to popular belief, the most effective interrogation techniques do not involve intimidation or physical pressure. Research consistently demonstrates that rapport-based approaches yield more reliable information. Agent Hernandez was trained in the cognitive interview method, which encourages subjects to mentally recreate the context of events they witnessed. Instead of asking direct questions that can be answered with a simple yes or no, she asked open-ended questions that required detailed responses. She paid attention to inconsistencies — not as evidence of deception, but as areas requiring clarification. Cognitive psychology research shows that memory is reconstructive rather than reproductive: people do not replay events like video recordings but instead rebuild memories from fragments, sometimes filling gaps with assumptions. Understanding this process helps skilled interrogators distinguish between genuine uncertainty and deliberate dishonesty.",
-    grade_level: 7,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "pr", "cr", "gr"],
     word_count: 138,
     reading_time_minutes: 3,
-    difficulty_level: 7,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-amber-700 to-yellow-900"
   },
   {
     title: "Border Security Operations",
     description: "How agents monitor and protect national borders",
     passage_text: "Securing a national border involves far more than physical barriers. Agent Yusuf managed a section of border that included mountains, desert, and a river crossing. His team used a combination of technology and human intelligence to monitor the area. Ground sensors detected vibrations from vehicles and footsteps, while thermal cameras identified body heat signatures at night. Drone patrols covered areas that were difficult to reach on foot. However, the most valuable intelligence came from local communities. Residents who lived near the border often noticed unusual activity before any technology could detect it. Yusuf maintained relationships with community leaders, treating them as partners rather than suspects. This combination of technological surveillance and community cooperation proved more effective than either approach alone, resulting in a significant reduction in illegal crossings and smuggling activity.",
-    grade_level: 7,
+    grade_level: 0, // computed at export
     category: "adventure",
     target_phonemes: ["bl", "cr", "gr", "str"],
     word_count: 140,
     reading_time_minutes: 3,
-    difficulty_level: 7,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-stone-600 to-neutral-800"
   },
   {
     title: "The Arms Deal",
     description: "An undercover operation to stop weapons trafficking",
     passage_text: "Agent Kowalski spent six months building a cover identity as an international arms dealer. The operation required extensive preparation: a complete false identity with verifiable employment history, financial records, and social connections. He attended legitimate defense industry conferences to establish credibility within the weapons trade community. His target was a network that supplied military-grade weapons to conflict zones, prolonging wars and increasing civilian casualties. The challenge of undercover work is psychological as much as operational. Agents must maintain their false identity constantly while managing the stress of potential exposure. Kowalski carefully documented every transaction and communication, building a legal case that would withstand judicial scrutiny. After six months, the agency had enough evidence to coordinate simultaneous arrests across four countries, dismantling the network and seizing weapons valued at over fifty million dollars.",
-    grade_level: 7,
+    grade_level: 0, // computed at export
     category: "adventure",
     target_phonemes: ["str", "pr", "cr", "tr"],
     word_count: 142,
     reading_time_minutes: 3,
-    difficulty_level: 7,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-orange-700 to-red-900"
   },
   {
     title: "Satellite Reconnaissance",
     description: "Using space technology to gather intelligence",
     passage_text: "Intelligence satellites orbit Earth at altitudes ranging from two hundred to thirty-six thousand kilometers, depending on their mission. Low-orbit satellites provide detailed imagery but cover limited areas and pass over each location only a few times per day. Geostationary satellites remain fixed above one point, offering continuous coverage but less resolution. Agent Singh analyzed satellite imagery to monitor military installations in regions of geopolitical tension. She compared images taken weeks apart, looking for changes: new construction, vehicle movements, or equipment deployments that might indicate preparations for conflict. The interpretation of satellite imagery requires specialized training because context matters enormously. A row of tanks might represent a threatening military buildup — or a routine training exercise. Singh's analytical reports informed diplomatic decisions that helped prevent two potential conflicts from escalating into armed confrontations.",
-    grade_level: 7,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "pr", "sp", "tr"],
     word_count: 140,
     reading_time_minutes: 3,
-    difficulty_level: 7,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-indigo-700 to-violet-900"
   },
   {
     title: "The Money Trail",
     description: "Following financial transactions to find criminals",
     passage_text: "Financial intelligence is often more revealing than any other form of espionage. Every criminal operation requires money — to pay operatives, purchase equipment, and fund logistics. Agent Tanaka specialized in tracking financial flows through the global banking system. She looked for patterns that indicated money laundering: large transactions broken into smaller amounts to avoid reporting requirements, funds moving rapidly between accounts in different countries, or businesses that reported revenue inconsistent with their actual operations. The challenge is that legitimate international commerce involves billions of transactions daily, and distinguishing criminal activity from normal business requires both technical expertise and institutional knowledge. Tanaka's investigation of a charitable organization revealed that it was secretly channeling donations to fund extremist activities, leading to the freezing of accounts worth several million dollars.",
-    grade_level: 7,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["tr", "fr", "str", "pr"],
     word_count: 138,
     reading_time_minutes: 3,
-    difficulty_level: 7,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-green-700 to-teal-900"
   },
   {
     title: "The Extraction Plan",
     description: "Rescuing a trapped agent from hostile territory",
     passage_text: "When an agent's cover is compromised in hostile territory, extraction becomes the highest priority. Agent Delgado received a distress signal from a colleague trapped in a city controlled by an authoritarian regime. The compromised agent could not reach the embassy or any official safe house. Delgado assembled a three-person extraction team and developed multiple escape routes, each with backup contingencies. The primary plan involved disguising the agent as a medical worker and transporting her to a border crossing in an ambulance. The secondary plan used a fishing boat to reach international waters. The team rehearsed both scenarios repeatedly. On the night of the operation, a military checkpoint blocked the primary route. Without hesitation, they switched to the secondary plan. Twelve hours later, the rescued agent was safely aboard a ship in international waters.",
-    grade_level: 7,
+    grade_level: 0, // computed at export
     category: "adventure",
     target_phonemes: ["str", "cr", "pr", "tr"],
     word_count: 142,
     reading_time_minutes: 3,
-    difficulty_level: 7,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-rose-700 to-pink-900"
   },
 
@@ -260,120 +261,120 @@ export const agentStories: CuratedStory[] = [
     title: "The Ethics of Surveillance",
     description: "Examining the moral boundaries of state monitoring",
     passage_text: "Democratic societies face a fundamental tension between security and privacy. Surveillance technologies — facial recognition, metadata collection, communications interception — provide powerful tools for preventing terrorism and organized crime. However, these same technologies enable authoritarian control when deployed without oversight. Agent Vasquez participated in an internal review committee examining whether the agency's surveillance practices complied with constitutional protections. The Fourth Amendment prohibits unreasonable searches, but courts have struggled to apply eighteenth-century legal principles to twenty-first-century technology. Does collecting metadata about phone calls constitute a search? Is facial recognition in public spaces an invasion of privacy? Vasquez argued that the agency should adopt a proportionality framework: surveillance measures should be proportional to the threat being addressed, subject to independent judicial review, and limited in duration. Without such safeguards, she warned, the tools designed to protect democracy could ultimately undermine it.",
-    grade_level: 8,
+    grade_level: 0, // computed at export
     category: "history",
     target_phonemes: ["str", "pr", "cr", "sp"],
     word_count: 148,
     reading_time_minutes: 3,
-    difficulty_level: 8,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-slate-700 to-zinc-900"
   },
   {
     title: "Nuclear Proliferation",
     description: "The challenge of preventing the spread of nuclear weapons",
     passage_text: "The Treaty on the Non-Proliferation of Nuclear Weapons, signed in 1968, established a framework intended to prevent the spread of nuclear weapons technology beyond the five nations that possessed them at that time. More than fifty years later, the proliferation challenge has evolved considerably. Agent Okonkwo monitored intelligence related to nuclear materials trafficking — the illicit trade in enriched uranium, centrifuge components, and weapons design information. The fundamental difficulty is dual-use technology: the same enrichment processes that produce fuel for nuclear power plants can, with further processing, produce weapons-grade material. International inspectors from the IAEA conduct regular assessments, but their access depends on the cooperation of sovereign nations. Okonkwo's analysis revealed that a smuggling network had offered centrifuge blueprints to three different governments. Her report triggered a coordinated international response that shut down the network and secured the materials.",
-    grade_level: 8,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["pr", "tr", "str", "kr"],
     word_count: 150,
     reading_time_minutes: 3,
-    difficulty_level: 8,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-red-800 to-orange-950"
   },
   {
     title: "Cognitive Warfare",
     description: "How adversaries target the human mind",
     passage_text: "Traditional warfare targets physical infrastructure — bridges, communications, military installations. Cognitive warfare targets something far more fundamental: the way people think, perceive, and make decisions. Agent Lindqvist studied adversarial influence operations that exploited cognitive biases — systematic patterns in human thinking that produce predictable errors. Confirmation bias leads people to accept information that supports existing beliefs while dismissing contradictory evidence. The availability heuristic causes people to overestimate the probability of events they can easily imagine. Anchoring bias means that initial information disproportionately shapes subsequent judgments. Foreign intelligence services design influence campaigns that deliberately exploit these vulnerabilities, crafting narratives that feel intuitively correct even when factually false. Lindqvist developed training programs to help analysts recognize when their own cognitive biases might be compromising their analytical objectivity, a process known as structured analytic techniques.",
-    grade_level: 8,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "kr", "pr", "sp"],
     word_count: 145,
     reading_time_minutes: 3,
-    difficulty_level: 8,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-purple-800 to-violet-950"
   },
   {
     title: "The Geneva Conventions",
     description: "Understanding the laws that govern armed conflict",
     passage_text: "The Geneva Conventions represent humanity's attempt to impose legal and ethical constraints on the conduct of warfare. Ratified by virtually every nation, these treaties establish protections for wounded soldiers, prisoners of war, and civilian populations during armed conflict. Agent Blackwell investigated allegations that a foreign government was violating these conventions by deliberately targeting civilian infrastructure. The investigation required navigating complex legal distinctions: international humanitarian law permits attacks on military objectives even when civilian casualties are anticipated, provided the military advantage is proportional. This proportionality assessment involves subjective judgments that are frequently contested. Blackwell's team gathered evidence including satellite imagery, intercepted communications, and witness testimony from refugees. Their findings demonstrated a systematic pattern of targeting hospitals and schools with no military justification — evidence that was subsequently presented to the International Criminal Court for prosecution.",
-    grade_level: 8,
+    grade_level: 0, // computed at export
     category: "history",
     target_phonemes: ["kr", "pr", "str", "tr"],
     word_count: 148,
     reading_time_minutes: 3,
-    difficulty_level: 8,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-blue-800 to-indigo-950"
   },
   {
     title: "Artificial Intelligence in Espionage",
     description: "How AI is transforming intelligence work",
     passage_text: "Artificial intelligence is fundamentally reshaping the intelligence profession. Machine learning algorithms can process satellite imagery thousands of times faster than human analysts, identifying changes in military deployments or construction activity across vast geographic areas. Natural language processing enables automated monitoring of open-source intelligence — news articles, social media posts, government publications — in hundreds of languages simultaneously. Agent Nazari worked in the AI integration division, where her role was to evaluate the reliability of machine-generated intelligence assessments. The challenge is that AI systems excel at pattern recognition but lack contextual understanding. An algorithm might correctly identify a military convoy but incorrectly assess its significance because it cannot understand the political context. Nazari developed validation protocols requiring human analysts to review and contextualize AI findings before they entered the intelligence reporting chain, ensuring that technological efficiency did not compromise analytical accuracy.",
-    grade_level: 8,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "pr", "tr", "kr"],
     word_count: 148,
     reading_time_minutes: 3,
-    difficulty_level: 8,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-cyan-800 to-teal-950"
   },
   {
     title: "Diplomatic Immunity",
     description: "When diplomats are suspected of espionage",
     passage_text: "The Vienna Convention on Diplomatic Relations grants foreign diplomats immunity from prosecution in their host country. This legal protection serves an essential function: it ensures that diplomatic communications remain confidential and that diplomats can perform their duties without fear of arrest. However, intelligence services have historically exploited diplomatic immunity to conduct espionage operations. A diplomat suspected of spying cannot be arrested — only declared persona non grata and expelled from the country. Agent Fitzgerald investigated a foreign embassy employee suspected of recruiting agents within the host nation's government. Surveillance confirmed that the diplomat was meeting clandestinely with a government official who had access to classified defense information. Fitzgerald could not arrest the diplomat but documented sufficient evidence to justify expulsion. The incident triggered a diplomatic crisis that required careful management to prevent escalation while protecting national security interests.",
-    grade_level: 8,
+    grade_level: 0, // computed at export
     category: "history",
     target_phonemes: ["pr", "str", "cr", "sp"],
     word_count: 150,
     reading_time_minutes: 3,
-    difficulty_level: 8,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-amber-800 to-yellow-950"
   },
   {
     title: "Chemical Weapons Detection",
     description: "Identifying and neutralizing toxic agents",
     passage_text: "The Chemical Weapons Convention prohibits the development, production, stockpiling, and use of chemical weapons. Despite this international agreement, several state and non-state actors continue to pursue chemical weapons capabilities. Agent Dominguez specialized in chemical threat assessment, analyzing intelligence reports for indicators of chemical weapons programs. These indicators include procurement of precursor chemicals — substances that are individually harmless but can be combined to create lethal agents — along with construction of specialized production facilities and development of delivery systems. Detection is complicated by the fact that many precursor chemicals have legitimate industrial applications. The same substances used in pesticide manufacturing can potentially be diverted to weapons production. Dominguez collaborated with international inspectors to develop improved detection methodologies that could distinguish between legitimate chemical industry and covert weapons programs based on procurement patterns, facility design, and personnel backgrounds.",
-    grade_level: 8,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["kr", "pr", "str", "sp"],
     word_count: 148,
     reading_time_minutes: 3,
-    difficulty_level: 8,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-green-800 to-emerald-950"
   },
   {
     title: "The Refugee Crisis Intelligence",
     description: "Gathering intelligence while protecting vulnerable populations",
     passage_text: "Mass displacement events create both humanitarian emergencies and intelligence challenges. When millions of people flee conflict zones, intelligence agencies face the delicate task of gathering information about security threats without exploiting vulnerable populations. Agent Khoury was deployed to a refugee processing center where her official role was coordinating security screening. She understood that among the thousands of genuine refugees, adversaries might attempt to embed operatives. However, she was equally aware that aggressive screening could traumatize people who had already survived war and persecution. Khoury developed a screening approach that combined security effectiveness with humanitarian sensitivity: trained interviewers conducted conversations rather than interrogations, focusing on establishing narrative consistency through open-ended dialogue. This approach proved more effective than confrontational techniques because genuine refugees could share their experiences comfortably, while individuals with fabricated backgrounds were more likely to reveal inconsistencies when not on the defensive.",
-    grade_level: 8,
+    grade_level: 0, // computed at export
     category: "history",
     target_phonemes: ["kr", "str", "pr", "tr"],
     word_count: 152,
     reading_time_minutes: 3,
-    difficulty_level: 8,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-rose-800 to-red-950"
   },
   {
     title: "Space-Based Intelligence",
     description: "The strategic importance of space assets",
     passage_text: "Space has become the ultimate high ground in intelligence gathering. Nations that control sophisticated space assets possess significant strategic advantages: they can monitor military movements, intercept communications, and detect missile launches anywhere on Earth. Agent Nakamura analyzed threats to orbital intelligence infrastructure, including anti-satellite weapons capable of destroying reconnaissance satellites and ground-based laser systems designed to temporarily blind optical sensors. The vulnerability of space assets presents a strategic paradox: the nations most dependent on satellite intelligence are also the most vulnerable to its disruption. Nakamura's assessment concluded that the increasing militarization of space represented one of the most significant emerging threats to international stability. She recommended investing in resilient satellite architectures — smaller, more numerous satellites that are harder to target — and developing international agreements to prevent the weaponization of orbital space before an arms race becomes irreversible.",
-    grade_level: 8,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["sp", "str", "kr", "pr"],
     word_count: 150,
     reading_time_minutes: 3,
-    difficulty_level: 8,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-indigo-800 to-blue-950"
   },
   {
     title: "The Whistleblower Protocol",
     description: "Protecting those who expose wrongdoing from within",
     passage_text: "Every intelligence agency must balance secrecy with accountability. Whistleblower protections exist because history demonstrates that organizations operating in secrecy can develop institutional pathologies: illegal surveillance programs, unauthorized covert operations, and systematic violations of civil liberties. Agent Walsh served on the internal compliance board responsible for investigating allegations of misconduct. She reviewed cases where employees reported concerns through official channels rather than leaking information to the media. The distinction matters: authorized disclosures to inspectors general preserve security while enabling oversight, whereas unauthorized public disclosures may expose sources and methods that protect ongoing operations. Walsh advocated for strengthening internal reporting mechanisms, arguing that employees who believe internal channels are ineffective will inevitably seek external alternatives. Her proposal included anonymous reporting systems, guaranteed protection from retaliation, and mandatory follow-up timelines to ensure that legitimate concerns received genuine investigation rather than institutional suppression.",
-    grade_level: 8,
+    grade_level: 0, // computed at export
     category: "history",
     target_phonemes: ["str", "pr", "cr", "sp"],
     word_count: 152,
     reading_time_minutes: 3,
-    difficulty_level: 8,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-teal-800 to-emerald-950"
   },
 
@@ -385,120 +386,120 @@ export const agentStories: CuratedStory[] = [
     title: "Game Theory and Deterrence",
     description: "Mathematical models of strategic decision-making",
     passage_text: "Nuclear deterrence theory rests on a game-theoretic foundation that John von Neumann and other mathematicians formalized during the Cold War. The concept of mutually assured destruction represents a Nash equilibrium — a stable state in which neither player can improve their position by unilaterally changing strategy. Agent Volkov studied how adversarial nations apply game theory to military strategy, analyzing scenarios through the lens of the prisoner's dilemma: two rational actors, each possessing the ability to destroy the other, must choose between cooperation and aggression without knowing the other's decision in advance. The mathematical models suggest that rational actors should always prefer cooperation, yet historical evidence reveals that miscalculation, incomplete information, and domestic political pressures frequently drive nations toward confrontation. Volkov's analysis demonstrated that deterrence stability depends not on the mathematical elegance of equilibrium models but on the quality of communication channels between adversaries and their mutual confidence in each other's decision-making rationality.",
-    grade_level: 9,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "kr", "pr", "sp"],
     word_count: 160,
     reading_time_minutes: 4,
-    difficulty_level: 9,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-slate-800 to-gray-950"
   },
   {
     title: "The Psychology of Radicalization",
     description: "Understanding how extremist ideologies recruit followers",
     passage_text: "Radicalization — the process by which individuals adopt increasingly extreme political, social, or religious ideologies — follows identifiable psychological pathways that intelligence agencies seek to understand and disrupt. Agent Ibrahim studied radicalization patterns across multiple extremist movements, finding remarkable consistency regardless of ideological content. The process typically begins with a personal crisis — loss of identity, social marginalization, perceived injustice — that creates psychological vulnerability. Recruiters exploit this vulnerability by offering a simplified explanatory framework that attributes all suffering to a clearly identified enemy. The group provides belonging, purpose, and certainty in exchange for ideological commitment. Critically, Ibrahim's research demonstrated that radicalization is not primarily an intellectual process but an emotional one: individuals do not typically reason their way into extremism but are drawn in through social bonds and emotional manipulation. This insight has profound implications for counter-radicalization strategies, suggesting that addressing underlying psychological needs may be more effective than attempting to refute extremist arguments through rational discourse.",
-    grade_level: 9,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["kr", "str", "pr", "sp"],
     word_count: 162,
     reading_time_minutes: 4,
-    difficulty_level: 9,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-red-800 to-rose-950"
   },
   {
     title: "Geopolitics of Energy",
     description: "How energy resources shape international power dynamics",
     passage_text: "The geopolitical significance of energy resources has shaped international relations for over a century. Agent Petersen analyzed how the global transition from fossil fuels to renewable energy sources is restructuring traditional power dynamics. Nations whose geopolitical influence derived primarily from petroleum exports — Saudi Arabia, Russia, Venezuela — face diminishing strategic relevance as solar, wind, and battery technologies reduce global dependence on hydrocarbon fuels. Simultaneously, control over critical minerals essential for renewable energy technology — lithium, cobalt, rare earth elements — is creating new geopolitical dependencies. China's dominant position in rare earth mineral processing gives it potential leverage analogous to OPEC's historical influence over oil markets. Petersen's strategic assessment argued that the energy transition, while environmentally essential, will not eliminate resource-based geopolitical competition but rather transform it. Nations that develop diversified supply chains for critical minerals and invest in domestic processing capacity will possess significant strategic advantages in the emerging geopolitical landscape.",
-    grade_level: 9,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "pr", "cr", "sp"],
     word_count: 158,
     reading_time_minutes: 4,
-    difficulty_level: 9,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-amber-800 to-orange-950"
   },
   {
     title: "Constitutional Limits on Intelligence",
     description: "Legal boundaries that constrain intelligence operations",
     passage_text: "The relationship between intelligence agencies and constitutional governance represents one of democracy's most challenging paradoxes. Effective intelligence operations require secrecy, compartmentalization, and operational flexibility — qualities that inherently conflict with democratic principles of transparency, accountability, and the rule of law. Agent Crawford served as the agency's liaison to the congressional oversight committee, responsible for ensuring that legislative representatives received sufficient information to fulfill their constitutional oversight role without compromising operational security. The tension became acute when the committee requested detailed briefings on a covert action program operating in a politically sensitive region. Crawford recognized that full disclosure might compromise sources who had risked their lives to provide intelligence, while insufficient transparency could enable the kind of unchecked executive authority that the oversight framework was designed to prevent. She developed a tiered briefing protocol that provided the committee with enough information to assess the program's legality and strategic justification while protecting the identities of specific human sources.",
-    grade_level: 9,
+    grade_level: 0, // computed at export
     category: "history",
     target_phonemes: ["kr", "str", "pr", "tr"],
     word_count: 165,
     reading_time_minutes: 4,
-    difficulty_level: 9,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-blue-800 to-indigo-950"
   },
   {
     title: "Quantum Computing and Cryptography",
     description: "The looming threat to current encryption systems",
     passage_text: "Modern cryptographic systems protect everything from military communications to financial transactions, and nearly all of them rely on the mathematical difficulty of factoring extremely large numbers. A conventional computer would require thousands of years to factor a number large enough to crack current encryption standards. However, quantum computers exploit the principles of quantum mechanics — superposition and entanglement — to perform certain calculations exponentially faster than classical machines. Agent Yamamoto assessed the national security implications of quantum computing development. A sufficiently powerful quantum computer could theoretically decrypt any communication protected by current public-key cryptography, rendering decades of encrypted intelligence intercepts suddenly readable. This prospect, known as the quantum threat, has prompted a global race to develop quantum-resistant encryption algorithms — mathematical problems that remain computationally intractable even for quantum processors. Yamamoto's assessment concluded that the nation possessing the first operationally capable quantum computer would hold a temporary but potentially decisive intelligence advantage.",
-    grade_level: 9,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["kr", "str", "pr", "sp"],
     word_count: 155,
     reading_time_minutes: 4,
-    difficulty_level: 9,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-violet-800 to-purple-950"
   },
   {
     title: "The Informant Paradox",
     description: "The moral complexity of using human intelligence sources",
     passage_text: "Human intelligence — information gathered through interpersonal relationships with sources inside adversary organizations — remains the most valuable and most ethically problematic form of intelligence collection. Agent Romero managed a network of informants embedded within a transnational criminal organization. Each informant relationship presented a moral calculus: these individuals provided intelligence that prevented violence and saved lives, but they also continued participating in criminal activities to maintain their access and credibility. Romero wrestled with the paradox that her most productive sources were, by definition, individuals engaged in ongoing criminal conduct. The legal framework attempted to address this through proportionality guidelines — the intelligence value provided must substantially outweigh the criminal activity permitted — but such calculations are inherently subjective. More troubling was the relational dimension: informants frequently developed genuine trust in their handlers, creating emotional bonds that complicated professional objectivity. Romero recognized that the ethical management of human sources required not just legal compliance but ongoing moral reflection about the human costs of intelligence work.",
-    grade_level: 9,
+    grade_level: 0, // computed at export
     category: "adventure",
     target_phonemes: ["kr", "str", "pr", "tr"],
     word_count: 162,
     reading_time_minutes: 4,
-    difficulty_level: 9,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-emerald-800 to-green-950"
   },
   {
     title: "Information Warfare Doctrine",
     description: "How nations weaponize information in modern conflict",
     passage_text: "The distinction between war and peace has become increasingly blurred in the information age. Nations now engage in sustained campaigns of information warfare that operate below the threshold of armed conflict but above the level of ordinary diplomatic competition. Agent Sato analyzed an adversary nation's information warfare doctrine, which conceptualized information operations as a continuous strategic activity rather than a wartime measure. The doctrine described a spectrum of operations: intelligence collection through cyber espionage, influence campaigns targeting public opinion in rival nations, disruption of critical information infrastructure, and the strategic use of economic leverage to shape media narratives. What distinguished this approach from traditional propaganda was its integration with military planning and its exploitation of the interconnected nature of modern information systems. A single coordinated operation might simultaneously steal classified documents, amplify social divisions through fake social media accounts, and degrade confidence in electoral systems — achieving strategic effects comparable to military operations without triggering the international response that armed aggression would provoke.",
-    grade_level: 9,
+    grade_level: 0, // computed at export
     category: "history",
     target_phonemes: ["str", "kr", "pr", "sp"],
     word_count: 168,
     reading_time_minutes: 4,
-    difficulty_level: 9,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-gray-800 to-stone-950"
   },
   {
     title: "Counterintelligence Operations",
     description: "Defending against foreign espionage within your own ranks",
     passage_text: "Counterintelligence — the practice of detecting, preventing, and neutralizing foreign intelligence threats — is often described as the most intellectually demanding discipline within the intelligence profession. Agent Novak led a counterintelligence investigation triggered by an anomaly in classified information patterns: specific operational details were appearing in adversary communications within days of being distributed internally. This suggested a mole — a foreign intelligence agent operating within the organization. The investigation required extraordinary methodological discipline. Novak could not simply surveil all personnel with access to the compromised information, as this would violate the civil liberties of innocent employees. Instead, she employed a technique known as a barium meal: deliberately providing different versions of a classified document to different distribution channels, then monitoring which version appeared in adversary communications. The technique identified the source within three months, revealing a veteran analyst who had been recruited by a foreign intelligence service through a combination of financial inducement and ideological sympathy cultivated over several years of patient relationship building.",
-    grade_level: 9,
+    grade_level: 0, // computed at export
     category: "adventure",
     target_phonemes: ["kr", "str", "pr", "tr"],
     word_count: 170,
     reading_time_minutes: 4,
-    difficulty_level: 9,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-teal-800 to-cyan-950"
   },
   {
     title: "The Sanctions Regime",
     description: "Economic pressure as an alternative to military force",
     passage_text: "International economic sanctions represent a middle ground between diplomatic protest and military intervention, applying economic pressure to alter the behavior of states that violate international norms. Agent Beaumont analyzed the effectiveness of sanctions programs targeting nations involved in nuclear proliferation, human rights violations, and territorial aggression. The historical record reveals mixed results. Comprehensive sanctions — broad trade restrictions affecting entire economies — frequently impose devastating costs on civilian populations while authoritarian governments redirect resources to maintain their power structures. Targeted sanctions — asset freezes and travel bans directed at specific individuals and entities — are more precise but often less impactful, as targets develop evasion strategies including shell corporations, cryptocurrency transactions, and third-country intermediaries. Beaumont's research concluded that sanctions are most effective when they are multilateral, precisely targeted, linked to specific behavioral changes, and accompanied by diplomatic engagement that provides the sanctioned party with a credible pathway toward sanctions relief. Unilateral sanctions imposed without clear objectives or diplomatic off-ramps frequently become permanent fixtures of foreign policy rather than effective tools of coercion.",
-    grade_level: 9,
+    grade_level: 0, // computed at export
     category: "history",
     target_phonemes: ["str", "kr", "pr", "sp"],
     word_count: 172,
     reading_time_minutes: 4,
-    difficulty_level: 9,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-orange-800 to-amber-950"
   },
   {
     title: "Autonomous Weapons Ethics",
     description: "The moral implications of machines making lethal decisions",
     passage_text: "The development of autonomous weapons systems — machines capable of selecting and engaging targets without human intervention — represents perhaps the most consequential ethical challenge in modern warfare. Agent Kowalski evaluated intelligence regarding several nations' autonomous weapons programs, finding that technological capability has outpaced ethical and legal frameworks. Current international humanitarian law requires that decisions to use lethal force satisfy principles of distinction, proportionality, and military necessity — judgments that presuppose human moral reasoning. Can an algorithm meaningfully distinguish between a combatant and a civilian farmer carrying an agricultural tool? Can a machine assess whether the anticipated military advantage of a strike is proportional to expected civilian casualties? Proponents argue that autonomous systems may eventually make more accurate targeting decisions than stressed, fatigued human operators. Critics counter that delegating life-and-death decisions to machines fundamentally violates human dignity, regardless of accuracy. Kowalski's assessment recommended that the agency advocate for international regulations requiring meaningful human control over all lethal targeting decisions, while simultaneously preparing for the possibility that adversaries may deploy fully autonomous systems regardless of international consensus.",
-    grade_level: 9,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "kr", "pr", "tr"],
     word_count: 175,
     reading_time_minutes: 4,
-    difficulty_level: 9,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-rose-800 to-red-950"
   },
 
@@ -509,60 +510,60 @@ export const agentStories: CuratedStory[] = [
     title: "The Deepfake Threat",
     description: "How synthetic media undermines trust in evidence",
     passage_text: "Deepfake technology — artificial intelligence systems capable of generating convincingly realistic video and audio of real people saying and doing things they never actually did — represents a fundamental threat to evidentiary integrity. Agent Marchetti investigated a deepfake video purporting to show a foreign head of state ordering a military attack. The video was technically sophisticated, with accurate lip synchronization, natural vocal cadence, and contextually appropriate background details. Traditional forensic analysis methods — examining compression artifacts, lighting inconsistencies, and facial geometry — proved inconclusive against this generation of synthesis technology. Marchetti's team developed a novel authentication approach combining metadata forensics with provenance tracking: establishing an unbroken chain of custody from original recording device to distribution platform. The broader implications troubled her profoundly. In a world where any video can be fabricated, the concept of visual evidence loses its epistemic authority. Paradoxically, deepfake technology threatens not only through the false content it creates but through the universal doubt it casts on all authentic recordings.",
-    grade_level: 10,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "kr", "pr", "sp"],
     word_count: 165,
     reading_time_minutes: 4,
-    difficulty_level: 10,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-purple-700 to-violet-900"
   },
   {
     title: "Proxy Wars and Sovereignty",
     description: "How great powers fight through smaller nations",
     passage_text: "Proxy warfare — the practice of great powers pursuing strategic objectives through local allies, mercenary forces, or non-state actors rather than direct military engagement — has defined geopolitical competition since the Cold War. Agent Oduya analyzed a contemporary proxy conflict in which three major powers were simultaneously supporting different factions within a single civil war, each pursuing incompatible strategic objectives. The complexity of proxy dynamics creates a peculiar form of strategic ambiguity: participating nations can escalate their involvement incrementally while maintaining plausible deniability about their role. This ambiguity serves domestic political purposes — governments can pursue aggressive foreign policies without acknowledging the human and financial costs to their own citizens — but it also creates dangerous escalation risks when proxy forces take actions that their sponsors did not authorize or anticipate. Oduya's assessment highlighted the fundamental tension between state sovereignty and great-power competition: proxy wars systematically violate the sovereignty of the nations in which they are fought, transforming local conflicts into theaters of global strategic rivalry.",
-    grade_level: 10,
+    grade_level: 0, // computed at export
     category: "history",
     target_phonemes: ["str", "pr", "kr", "sp"],
     word_count: 168,
     reading_time_minutes: 4,
-    difficulty_level: 10,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-amber-700 to-red-900"
   },
   {
     title: "Biosurveillance Networks",
     description: "Detecting biological threats before they become pandemics",
     passage_text: "The intelligence community's approach to biological threats underwent fundamental transformation following successive pandemic events that demonstrated how infectious disease outbreaks could destabilize economies, overwhelm healthcare systems, and alter geopolitical dynamics more rapidly than any conventional military threat. Agent Krishnamurthy directed a biosurveillance program that integrated signals intelligence, open-source monitoring, and cooperative relationships with international public health organizations. The program analyzed patterns in pharmaceutical procurement, hospital admission rates, social media reports of unusual symptoms, and satellite imagery of facility construction to identify potential biological events before they were officially reported. The analytical challenge was distinguishing genuine emerging threats from the enormous background noise of routine seasonal illness and localized outbreaks. Krishnamurthy's most significant contribution was developing a probabilistic framework that weighted multiple independent indicators, reducing false alarm rates while maintaining sensitivity to genuine threats that might represent either natural pandemic emergence or deliberate biological weapon deployment.",
-    grade_level: 10,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["kr", "str", "pr", "tr"],
     word_count: 158,
     reading_time_minutes: 4,
-    difficulty_level: 10,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-green-700 to-emerald-900"
   },
   {
     title: "The Architecture of Secrecy",
     description: "How classification systems protect and obscure information",
     passage_text: "Every intelligence organization operates through a classification architecture that determines who may access what information and under what circumstances. Agent Thornton served on a review panel evaluating whether the existing classification framework adequately balanced security requirements against the democratic imperative of informed public discourse. The United States classification system operates on three primary levels — Confidential, Secret, and Top Secret — supplemented by compartmented access programs that further restrict distribution. Critics argue that systematic overclassification has become endemic: officials classify information not because disclosure would genuinely damage national security but because classification prevents embarrassment, shields policy decisions from public scrutiny, and consolidates bureaucratic power. Thornton's review found that approximately forty percent of classified documents contained information that was already publicly available through open sources, suggesting that the classification system had expanded well beyond its legitimate security function. Her recommendations included mandatory declassification timelines, reduced classification authority, and penalties for officials who demonstrably classified information to avoid accountability rather than protect genuine security interests.",
-    grade_level: 10,
+    grade_level: 0, // computed at export
     category: "history",
     target_phonemes: ["kr", "str", "pr", "sp"],
     word_count: 170,
     reading_time_minutes: 4,
-    difficulty_level: 10,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-slate-700 to-stone-900"
   },
   {
     title: "Cryptocurrency and Illicit Finance",
     description: "How digital currencies challenge financial intelligence",
     passage_text: "The emergence of decentralized cryptocurrency systems has created unprecedented challenges for financial intelligence operations. Traditional anti-money-laundering frameworks depend on regulated financial institutions — banks, brokerages, money transfer services — that are legally required to monitor transactions and report suspicious activity. Cryptocurrencies circumvent this architecture entirely, enabling peer-to-peer value transfer without institutional intermediaries. Agent Volkov investigated a ransomware syndicate that extorted payments in cryptocurrency from hospitals, municipalities, and critical infrastructure operators. The technical challenge was formidable: while blockchain transactions are publicly recorded, connecting cryptocurrency addresses to real-world identities requires sophisticated chain analysis — tracing the flow of funds through thousands of intermediate transactions until they reach an exchange where identity verification occurs. Volkov's investigation demonstrated that cryptocurrency, despite its reputation for anonymity, leaves a permanent and immutable transaction record that, with sufficient analytical resources, can ultimately be traced. Her work resulted in the identification and prosecution of the syndicate's leadership, recovering approximately sixty percent of the extorted funds.",
-    grade_level: 10,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["kr", "str", "pr", "tr"],
     word_count: 170,
     reading_time_minutes: 4,
-    difficulty_level: 10,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-cyan-700 to-blue-900"
   },
 
@@ -574,72 +575,72 @@ export const agentStories: CuratedStory[] = [
     title: "The Economics of Shadow Markets",
     description: "An intelligence briefing on underground economies",
     passage_text: "Every functioning economy operates on the principles of supply, demand, and scarcity — including illegal ones. The underground economy, sometimes called the shadow economy, encompasses all market transactions that occur outside government regulation and taxation. Economists estimate that shadow economies account for between eight and thirty percent of global GDP, depending on the region. These markets emerge when legal frameworks create artificial scarcity — prohibition of substances, excessive taxation, or bureaucratic barriers to legitimate commerce. Participants develop sophisticated substitute institutions: reputation systems replace consumer protection laws, violence substitutes for contract enforcement, and encrypted communication channels replace regulated banking. Understanding these parallel economic structures provides insight into fundamental market dynamics that textbooks often abstract away. The persistence of underground markets across every civilization in recorded history suggests they represent an inevitable response to economic friction rather than a problem with simple regulatory solutions.",
-    grade_level: 10,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["kr", "sp", "st", "pr"],
     word_count: 145,
     reading_time_minutes: 3,
-    difficulty_level: 10,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-slate-600 to-zinc-800"
   },
   {
     title: "Criminal Psychology",
     description: "Understanding the psychology behind criminal behavior",
     passage_text: "The question of why individuals commit crimes has occupied psychologists, sociologists, and philosophers for centuries. Early theories attributed criminal behavior to moral deficiency or biological determinism — the idea that some people are simply born predisposed to deviance. Modern criminology recognizes a far more complex interplay of factors. Social learning theory, developed by Albert Bandura, suggests that criminal behavior is acquired through observation and reinforcement within social networks. Strain theory, proposed by Robert Merton, argues that crime emerges when society promotes goals — wealth, status, success — but restricts legitimate pathways to achieving them for certain populations. Environmental factors including poverty, childhood trauma, peer influence, and community disorganization interact with individual psychological characteristics such as impulse control, empathy development, and cognitive distortion patterns. The most effective crime prevention strategies address these root causes rather than relying exclusively on punitive deterrence.",
-    grade_level: 10,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "pr", "bl", "gr"],
     word_count: 142,
     reading_time_minutes: 3,
-    difficulty_level: 10,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-stone-600 to-neutral-800"
   },
   {
     title: "Investigative Journalism",
     description: "How reporters uncover hidden truths",
     passage_text: "Investigative journalism operates at the intersection of public interest and institutional accountability. Unlike daily news reporting, which covers events as they unfold, investigative journalism requires sustained, methodical research to expose information that powerful entities would prefer to keep hidden. The process begins with a hypothesis — a suspicion that official narratives diverge from reality — followed by systematic evidence gathering through public records requests, confidential source cultivation, and documentary analysis. The Pentagon Papers, Watergate, and the Panama Papers represent landmark investigations that reshaped public understanding of institutional behavior. Modern investigative reporters face unprecedented challenges: declining newsroom budgets reduce the resources available for long-term projects, digital surveillance makes source protection increasingly difficult, and coordinated disinformation campaigns attempt to undermine journalistic credibility. Despite these obstacles, investigative journalism remains essential to democratic governance, providing the transparency that enables informed citizen participation.",
-    grade_level: 10,
+    grade_level: 0, // computed at export
     category: "history",
     target_phonemes: ["sh", "th", "pr", "tr"],
     word_count: 148,
     reading_time_minutes: 3,
-    difficulty_level: 10,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-amber-700 to-yellow-900"
   },
   {
     title: "Civil Liberties Under Pressure",
     description: "The tension between security and freedom",
     passage_text: "Democratic societies perpetually navigate the tension between collective security and individual liberty. Following the September 11th attacks, the United States enacted the PATRIOT Act, dramatically expanding government surveillance capabilities. Supporters argued that national security necessitated monitoring communications to prevent future attacks. Critics contended that bulk data collection violated Fourth Amendment protections against unreasonable searches and represented precisely the kind of government overreach the Constitution was designed to prevent. This debate reflects a broader philosophical question: can a society that sacrifices fundamental freedoms in the name of security truly remain free? Benjamin Franklin's famous observation — that those who would give up essential liberty to purchase temporary safety deserve neither — encapsulates one perspective. The opposing view holds that rights become meaningless if citizens cannot survive to exercise them. Courts, legislatures, and citizens continue to negotiate this boundary, with each generation confronting new technologies that redefine what surveillance means and what privacy requires.",
-    grade_level: 11,
+    grade_level: 0, // computed at export
     category: "history",
     target_phonemes: ["st", "pr", "kr", "bl"],
     word_count: 155,
     reading_time_minutes: 3,
-    difficulty_level: 11,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-gray-600 to-slate-800"
   },
   {
     title: "Urban Sociology",
     description: "How cities shape human behavior and identity",
     passage_text: "Cities are laboratories of human interaction, concentrating diverse populations in shared physical space and generating social dynamics impossible in rural settings. Sociologist Georg Simmel argued that urban life produces a distinctive psychological orientation — the blasé attitude — as residents develop protective indifference to the overwhelming sensory stimulation of metropolitan environments. Jane Jacobs challenged urban planning orthodoxy by demonstrating that vibrant, safe neighborhoods emerge not from top-down design but from the organic complexity of mixed-use development, pedestrian traffic, and community surveillance she termed 'eyes on the street.' Contemporary urban sociology examines how physical infrastructure perpetuates inequality: highway placement that bisects minority neighborhoods, zoning laws that enforce economic segregation, and public transit systems designed to serve commuters rather than connect communities. Understanding these patterns reveals that cities are not neutral containers for human activity but actively constructed environments that shape opportunity, identity, and social connection.",
-    grade_level: 11,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["br", "kr", "str", "pr"],
     word_count: 152,
     reading_time_minutes: 3,
-    difficulty_level: 11,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-amber-600 to-orange-900"
   },
   {
     title: "The Broker's Network",
     description: "Intelligence report on The Broker's criminal empire",
     passage_text: "TARGET PROFILE — CODENAME: THE BROKER. Classification: Priority Alpha. The individual known as The Broker operates the largest underground intelligence marketplace in the eastern seaboard. Unlike traditional criminal enterprises that deal in physical contraband, The Broker trades exclusively in information — corporate secrets, government communications, diplomatic cables, and military logistics. The network employs a cellular structure where operatives rarely know more than two contacts, making infiltration extraordinarily difficult. Financial transactions utilize cryptocurrency laundering through a series of shell corporations registered in multiple jurisdictions. The Broker's personal identity remains unknown to all but the innermost circle. Psychological profiling suggests a highly intelligent individual with advanced education in economics and game theory, motivated by power rather than financial gain.",
-    grade_level: 10,
+    grade_level: 0, // computed at export
     category: "adventure",
     target_phonemes: ["br", "kr", "str", "pr"],
     word_count: 132,
     reading_time_minutes: 2,
-    difficulty_level: 10,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-amber-600 to-orange-900"
   },
 
@@ -648,72 +649,72 @@ export const agentStories: CuratedStory[] = [
     title: "The Ethics of Artificial Intelligence",
     description: "Moral questions surrounding autonomous decision-making",
     passage_text: "When a self-driving vehicle encounters an unavoidable accident, how should its algorithm decide between protecting its passenger and minimizing harm to pedestrians? This variation of the trolley problem illustrates the profound ethical challenges embedded in artificial intelligence development. Unlike human decision-makers who rely on intuition, emotion, and contextual judgment, AI systems execute predetermined rules — someone must decide those rules in advance. The question of algorithmic bias reveals equally troubling dimensions: facial recognition systems trained predominantly on lighter-skinned faces demonstrate significantly higher error rates when identifying people of color. Hiring algorithms fed historical data perpetuate existing discrimination patterns by treating past prejudice as predictive signal. The European Union's AI Act represents the first comprehensive attempt to regulate artificial intelligence by risk category, but critics argue that regulation consistently lags behind technological capability. The fundamental question persists: who bears moral responsibility when an autonomous system causes harm — the developer, the deployer, or the algorithm itself?",
-    grade_level: 11,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["kr", "pr", "str", "kw"],
     word_count: 160,
     reading_time_minutes: 3,
-    difficulty_level: 11,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-cyan-500 to-blue-800"
   },
   {
     title: "Social Media and the Attention Economy",
     description: "How platforms engineer engagement and shape perception",
     passage_text: "Social media platforms are not communication tools — they are attention harvesting machines designed to maximize engagement time. Every feature, from infinite scrolling to notification badges to algorithmically curated feeds, reflects deliberate engineering choices optimized through A/B testing on billions of users. The business model is straightforward: platforms sell access to human attention to advertisers, creating economic incentives that fundamentally conflict with user wellbeing. Former platform designers have publicly acknowledged that features were designed to exploit dopamine-driven feedback loops — the same neurological mechanisms targeted by slot machines. The consequences extend beyond individual psychology: algorithmic amplification of emotionally provocative content distorts public discourse, filter bubbles reinforce existing beliefs while reducing exposure to contradicting perspectives, and the velocity of information sharing outpaces institutional capacity for verification. Media literacy in the digital age requires understanding not just what information is being consumed, but how the delivery mechanism itself shapes perception and behavior.",
-    grade_level: 10,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["sh", "kr", "pr", "st"],
     word_count: 155,
     reading_time_minutes: 3,
-    difficulty_level: 10,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-purple-600 to-indigo-800"
   },
   {
     title: "Quantum Computing Explained",
     description: "The revolutionary technology that could change everything",
     passage_text: "Classical computers process information using bits — binary units that exist in one of two states: zero or one. Quantum computers exploit the counterintuitive properties of quantum mechanics to process information using qubits, which can exist in multiple states simultaneously through a phenomenon called superposition. When qubits become entangled, measuring one instantaneously determines the state of another, regardless of physical distance — what Einstein famously dismissed as 'spooky action at a distance.' These properties enable quantum computers to evaluate enormous numbers of possibilities simultaneously rather than sequentially. For certain problem categories — drug molecule simulation, cryptographic analysis, logistics optimization — quantum computers promise exponential speedups over classical systems. Current quantum computers remain fragile, requiring temperatures near absolute zero to maintain coherence, and are susceptible to errors from environmental interference. The race between nations and corporations to achieve quantum supremacy carries profound implications for cybersecurity, as sufficiently powerful quantum computers could break the encryption protocols that currently protect global financial systems and government communications.",
-    grade_level: 11,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["kr", "str", "pr", "tr"],
     word_count: 162,
     reading_time_minutes: 3,
-    difficulty_level: 11,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-teal-600 to-cyan-800"
   },
   {
     title: "The Neuroscience of Decision-Making",
     description: "How the brain processes choices under pressure",
     passage_text: "Every decision you make involves a competition between two neural systems operating on fundamentally different principles. The prefrontal cortex — the brain's executive center — enables deliberate, rational analysis: weighing evidence, considering consequences, and planning long-term strategies. The amygdala, part of the limbic system, generates rapid emotional responses based on pattern recognition — threat detection, reward anticipation, and social evaluation. Under normal conditions, these systems collaborate effectively. Under stress, however, cortisol and adrenaline shift the balance toward the amygdala, producing faster but less nuanced responses. This explains why individuals make demonstrably worse decisions under pressure: the deliberative system is literally being suppressed by neurochemistry designed for physical survival, not complex analysis. Understanding this mechanism has practical implications: military training programs deliberately expose personnel to controlled stress to develop tolerance, and cognitive behavioral techniques can strengthen prefrontal regulation of emotional responses. The ability to maintain analytical thinking under pressure represents one of the most trainable cognitive skills.",
-    grade_level: 11,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["pr", "str", "kr", "sk"],
     word_count: 158,
     reading_time_minutes: 3,
-    difficulty_level: 11,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-blue-600 to-violet-800"
   },
   {
     title: "Digital Privacy in the Modern Age",
     description: "What your data reveals and who has access",
     passage_text: "Every digital interaction generates data — timestamps, geolocation coordinates, browsing histories, purchase records, biometric measurements, and communication metadata. Individually, these data points seem insignificant. Aggregated and analyzed through machine learning algorithms, they construct detailed psychological profiles capable of predicting behavior with unsettling accuracy. Research demonstrates that analysis of Facebook likes alone can predict personality traits more accurately than assessments by friends, family members, or romantic partners. Data brokers compile and sell these profiles to advertisers, employers, insurance companies, and government agencies, often without meaningful consent from the individuals being profiled. The distinction between surveillance and convenience has become increasingly blurred: the same smartphone that provides navigation, communication, and entertainment simultaneously functions as a tracking device that records movement patterns, social connections, and daily routines. Privacy advocates argue that meaningful consent requires understanding what data is collected, how it is used, and who benefits — conditions rarely met by current terms-of-service agreements.",
-    grade_level: 11,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["kr", "str", "pr", "tr"],
     word_count: 160,
     reading_time_minutes: 3,
-    difficulty_level: 11,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-slate-700 to-gray-900"
   },
   {
     title: "The Architect's Blueprint",
     description: "Intelligence dossier on The Architect's cyber empire",
     passage_text: "TARGET PROFILE — CODENAME: THE ARCHITECT. Classification: Priority Alpha. The Architect commands the Syndicate's entire digital infrastructure from the Neon District — a section of the city so saturated with surveillance technology that conventional counter-intelligence methods prove ineffective. Former systems engineer for a multinational defense contractor, The Architect leveraged proprietary knowledge of government communication systems to construct an impenetrable digital fortress. The network operates through a distributed architecture with no single point of failure; disabling individual nodes merely redirects traffic through alternative pathways. Intercepted communications suggest The Architect has developed an artificial intelligence capable of autonomous cyber-attacks — adapting strategies in real-time without human oversight. Recommended approach: physical infiltration of the central server facility, located beneath the district's primary telecommunications hub.",
-    grade_level: 11,
+    grade_level: 0, // computed at export
     category: "adventure",
     target_phonemes: ["str", "kr", "pr", "sk"],
     word_count: 138,
     reading_time_minutes: 3,
-    difficulty_level: 11,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-indigo-600 to-blue-900"
   },
 
@@ -722,72 +723,72 @@ export const agentStories: CuratedStory[] = [
     title: "Constitutional Interpretation",
     description: "How courts give meaning to founding documents",
     passage_text: "The United States Constitution, ratified in 1788, contains approximately 4,543 words — yet those words have generated over two centuries of continuous legal interpretation. The document's deliberately broad language — 'due process,' 'equal protection,' 'cruel and unusual punishment' — requires each generation to determine how eighteenth-century principles apply to contemporary circumstances the framers could never have anticipated. Originalists argue that constitutional provisions must be interpreted according to their meaning at the time of ratification, preserving democratic legitimacy by limiting judicial discretion. Living constitutionalists contend that the document was designed to evolve, that interpreting 'unreasonable searches' without reference to digital surveillance or 'free speech' without considering social media platforms produces outcomes the framers would find absurd. This debate extends beyond academic philosophy: Supreme Court decisions regarding privacy rights, gun regulation, executive authority, and criminal procedure depend fundamentally on which interpretive framework justices employ. The Constitution's genius — and its perpetual challenge — lies in establishing principles enduring enough to outlast the specific conditions of their creation.",
-    grade_level: 11,
+    grade_level: 0, // computed at export
     category: "history",
     target_phonemes: ["pr", "kr", "str", "pl"],
     word_count: 165,
     reading_time_minutes: 3,
-    difficulty_level: 11,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-amber-500 to-yellow-800"
   },
   {
     title: "The Art of Rhetoric",
     description: "How language persuades, manipulates, and inspires",
     passage_text: "Aristotle identified three modes of persuasion that remain foundational to communication theory: ethos, the speaker's credibility and character; pathos, the emotional response evoked in the audience; and logos, the logical structure of the argument itself. Effective rhetoric integrates all three, though the balance shifts according to context. Political campaigns emphasize ethos and pathos — voters respond to perceived trustworthiness and emotional resonance more readily than policy analysis. Scientific communication privileges logos — evidence, methodology, and reproducibility. Advertising operates almost exclusively through pathos, associating products with emotional states rather than rational evaluation. Understanding these mechanisms serves a dual purpose: it enables more effective communication and, perhaps more importantly, provides defense against manipulation. Propaganda and disinformation campaigns exploit the same rhetorical principles, using emotional appeals to bypass critical analysis and authority signals to suppress skepticism. Media literacy begins with recognizing which persuasive mode is being employed and evaluating whether the technique is appropriate to the claim being advanced.",
-    grade_level: 11,
+    grade_level: 0, // computed at export
     category: "history",
     target_phonemes: ["kr", "str", "br", "pr"],
     word_count: 162,
     reading_time_minutes: 3,
-    difficulty_level: 11,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-emerald-600 to-green-900"
   },
   {
     title: "Moral Philosophy: The Trolley Problem and Beyond",
     description: "Ethical frameworks for impossible choices",
     passage_text: "Imagine a runaway trolley hurtling toward five workers on the tracks. You stand beside a switch that could divert the trolley to a side track, where only one worker stands. Do you pull the switch? Most people say yes — saving five lives at the cost of one seems mathematically obvious. Now imagine you stand on a bridge above the tracks. The only way to stop the trolley is to push a large stranger off the bridge and onto the tracks below. The arithmetic is identical — one death to prevent five — yet most people recoil from this version. This inconsistency reveals the tension between consequentialist ethics, which evaluate actions by their outcomes, and deontological ethics, which hold that certain actions are inherently wrong regardless of consequences. Virtue ethics, a third major framework attributed to Aristotle, asks not 'what should I do?' but 'what kind of person should I be?' — shifting the focus from individual decisions to character development. These competing frameworks illuminate why reasonable people reach fundamentally different conclusions about contentious moral questions from capital punishment to economic redistribution.",
-    grade_level: 11,
+    grade_level: 0, // computed at export
     category: "history",
     target_phonemes: ["str", "pr", "kr", "bl"],
     word_count: 170,
     reading_time_minutes: 3,
-    difficulty_level: 11,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-orange-500 to-red-800"
   },
   {
     title: "Revolutions: Patterns of Political Upheaval",
     description: "What history reveals about how societies transform",
     passage_text: "Revolutions appear to erupt spontaneously, but historians identify recurring preconditions that make societies vulnerable to radical transformation. Crane Brinton's comparative analysis of the English, American, French, and Russian revolutions identified a consistent pattern: a prosperous society experiences relative economic decline; intellectuals withdraw support from the existing regime; the government fails to address legitimate grievances; and a triggering event catalyzes latent discontent into collective action. The revolution itself typically progresses through stages — initial moderate reform gives way to radical intensification as extremist factions outmaneuver moderates, followed by a period of reaction and consolidation, often under authoritarian leadership that preserves some revolutionary changes while abandoning others. The Arab Spring of 2011 demonstrated both the pattern's persistence and its limitations: social media accelerated mobilization but could not substitute for organizational infrastructure capable of governing after existing regimes collapsed. Understanding revolutionary dynamics remains essential for both preventing unnecessary violence and recognizing when institutional reform has become genuinely impossible.",
-    grade_level: 12,
+    grade_level: 0, // computed at export
     category: "history",
     target_phonemes: ["str", "pr", "kr", "bl"],
     word_count: 165,
     reading_time_minutes: 3,
-    difficulty_level: 12,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-red-600 to-rose-900"
   },
   {
     title: "International Relations Theory",
     description: "Understanding power dynamics between nations",
     passage_text: "International relations scholars have developed competing theoretical frameworks to explain why nations behave as they do. Realism, the dominant paradigm since Thucydides, posits that states are rational actors operating in an anarchic system where survival requires the accumulation and projection of power. Liberalism challenges this pessimistic view, arguing that institutions, trade interdependence, and democratic governance create cooperative incentives that can mitigate conflict. Constructivism shifts focus entirely, suggesting that international behavior is shaped not by material power or institutional structures but by shared ideas, norms, and identities — nations act according to their conception of who they are, not merely what they have. Each framework illuminates different aspects of international behavior while remaining blind to others. The rise of China as a global power, for example, appears threatening through a realist lens, manageable through a liberal institutional framework, and contingent on identity formation through a constructivist perspective. Sophisticated analysis requires facility with multiple frameworks rather than rigid adherence to any single theory.",
-    grade_level: 12,
+    grade_level: 0, // computed at export
     category: "history",
     target_phonemes: ["kr", "str", "pr", "bl"],
     word_count: 165,
     reading_time_minutes: 3,
-    difficulty_level: 12,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-sky-600 to-blue-900"
   },
   {
     title: "The Double Agent Exposed",
     description: "Intelligence report on The Double Agent's betrayal",
     passage_text: "TARGET PROFILE — CODENAME: THE DOUBLE AGENT. Classification: Priority Omega. For the past seven years, an individual operating under deep cover within our own intelligence apparatus has been funneling classified material to the Syndicate. Analysis of compromised operations reveals a pattern consistent with someone possessing Level 4 security clearance and access to the Central Intelligence Database. The mole has demonstrated extraordinary patience and discipline, only transmitting intelligence that would not immediately reveal their position within the organization. Behavioral analysis of personnel with matching access profiles has narrowed the suspect pool to fourteen individuals. The Double Agent likely maintains a sophisticated compartmentalization system — separating their operational and personal identities through rigorous psychological discipline. Approach with extreme caution: this individual has survived internal reviews for seven years and will not be easily deceived.",
-    grade_level: 11,
+    grade_level: 0, // computed at export
     category: "adventure",
     target_phonemes: ["kr", "str", "pr", "bl"],
     word_count: 145,
     reading_time_minutes: 3,
-    difficulty_level: 11,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-yellow-600 to-amber-900"
   },
 
@@ -796,84 +797,84 @@ export const agentStories: CuratedStory[] = [
     title: "Game Theory and Strategic Thinking",
     description: "The mathematics of competition and cooperation",
     passage_text: "Game theory — the mathematical study of strategic interaction — provides frameworks for analyzing situations where the outcome of your decision depends on the decisions of others. The Prisoner's Dilemma, perhaps the most famous game-theoretic model, demonstrates why rational individuals might fail to cooperate even when mutual cooperation produces the best collective outcome. Two suspects, interrogated separately, each face a choice: cooperate with the other suspect by remaining silent, or defect by betraying them. If both cooperate, both receive light sentences. If both defect, both receive moderate sentences. But if one defects while the other cooperates, the defector goes free while the cooperator receives the harshest penalty. Rational self-interest drives both toward defection, producing a collectively suboptimal result. This model illuminates phenomena ranging from arms races to climate change negotiations to market competition. The key insight: systems designed to encourage cooperation must alter the incentive structure rather than merely appealing to participants' better nature. Repeated interactions, reputation systems, and enforceable agreements transform the strategic calculus.",
-    grade_level: 11,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "kr", "pr", "bl"],
     word_count: 168,
     reading_time_minutes: 3,
-    difficulty_level: 11,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-red-700 to-rose-900"
   },
   {
     title: "The Psychology of Leadership",
     description: "What distinguishes effective leaders from authoritarian ones",
     passage_text: "Leadership research has evolved from the 'great man' theory — the belief that leaders possess innate, extraordinary qualities — toward more nuanced models that emphasize context, behavior, and relational dynamics. Transformational leadership, identified by James MacGregor Burns, inspires followers to transcend self-interest for collective goals through intellectual stimulation, individualized consideration, and articulation of a compelling vision. Authoritarian leadership achieves compliance through coercion, surveillance, and punishment — effective for short-term control but corrosive to organizational capacity for innovation and adaptation. Research on psychological safety, pioneered by Amy Edmondson at Harvard Business School, demonstrates that teams perform best when members feel safe to take risks, admit mistakes, and challenge prevailing assumptions without fear of retribution. The most dangerous leadership pathology is not incompetence but the combination of charisma and moral disengagement — leaders who inspire genuine devotion while pursuing destructive objectives. Understanding these dynamics enables both the development of effective leadership practices and recognition of manipulative ones.",
-    grade_level: 12,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["pr", "str", "kr", "bl"],
     word_count: 162,
     reading_time_minutes: 3,
-    difficulty_level: 12,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-violet-700 to-purple-900"
   },
   {
     title: "Whistleblower Ethics",
     description: "When loyalty to truth conflicts with institutional obligation",
     passage_text: "Whistleblowing — the act of exposing wrongdoing within an organization to parties capable of effecting change — occupies one of ethics' most contested territories. The whistleblower simultaneously violates obligations of loyalty, confidentiality, and institutional trust while fulfilling obligations to truth, public welfare, and personal conscience. Daniel Ellsberg's release of the Pentagon Papers revealed systematic government deception about the Vietnam War. Edward Snowden's disclosure of mass surveillance programs exposed constitutional violations by intelligence agencies. Chelsea Manning's transmission of classified military documents documented civilian casualties. Each case generated fierce debate: were these individuals principled truth-tellers serving democratic accountability, or reckless violators of legitimate secrecy whose actions endangered national security? Legal protections for whistleblowers remain inconsistent — federal law provides remedies for some categories of disclosure while criminalizing others, creating uncertainty about whether any given act of conscience will result in protection or prosecution. The ethical evaluation ultimately depends on whether one prioritizes institutional stability or individual moral responsibility.",
-    grade_level: 12,
+    grade_level: 0, // computed at export
     category: "history",
     target_phonemes: ["kr", "str", "pr", "tr"],
     word_count: 163,
     reading_time_minutes: 3,
-    difficulty_level: 12,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-slate-600 to-gray-900"
   },
   {
     title: "Statistical Reasoning and Misinformation",
     description: "How numbers deceive when context is removed",
     passage_text: "Statistics do not lie, but they can be presented in ways that systematically mislead. Consider a pharmaceutical company reporting that its new drug reduces heart attack risk by fifty percent. This sounds dramatic until you learn the baseline: risk dropped from two in ten thousand to one in ten thousand. The relative reduction is indeed fifty percent, but the absolute reduction is one in ten thousand — a distinction with profound implications for whether the drug merits its cost and side effects. Simpson's Paradox demonstrates an even more counterintuitive phenomenon: a trend that appears in separate groups of data can reverse when the groups are combined. A university might demonstrate that each department admits women at higher rates than men, yet the overall institutional admission rate for women is lower — because women disproportionately apply to more competitive departments. Understanding base rates, selection bias, confounding variables, and the distinction between correlation and causation represents essential cognitive armor against manipulation. In an information environment saturated with competing statistical claims, the ability to evaluate methodology matters more than the ability to recall conclusions.",
-    grade_level: 11,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "kr", "pr", "bl"],
     word_count: 175,
     reading_time_minutes: 3,
-    difficulty_level: 11,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-rose-700 to-red-900"
   },
   {
     title: "Media Literacy in the Disinformation Age",
     description: "Evaluating information in a post-truth landscape",
     passage_text: "The term 'fake news' has become so politically weaponized that it now obscures more than it reveals. A more useful framework distinguishes between misinformation — false content shared without malicious intent — and disinformation — deliberately fabricated content designed to deceive. Both exploit cognitive biases that evolution optimized for survival rather than accuracy: confirmation bias leads us to accept information that reinforces existing beliefs while scrutinizing contradicting evidence; the availability heuristic causes us to overestimate the frequency of vivid, emotionally charged events; and social proof encourages us to adopt beliefs that appear popular within our reference groups. Effective media literacy extends beyond simple fact-checking to encompass source evaluation, methodology assessment, and recognition of emotional manipulation techniques. The SIFT method — Stop, Investigate the source, Find better coverage, Trace claims to their origin — provides a practical framework for evaluating information encountered online. Perhaps most importantly, media literacy requires intellectual humility: the recognition that our own perception is vulnerable to the same biases we identify in others.",
-    grade_level: 12,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "pr", "kr", "th"],
     word_count: 170,
     reading_time_minutes: 3,
-    difficulty_level: 12,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-zinc-600 to-stone-800"
   },
   {
     title: "The Final Briefing",
     description: "Mission parameters for the assault on Syndicate HQ",
     passage_text: "OPERATION BLACKOUT — FINAL MISSION BRIEFING. Classification: Eyes Only. The Syndicate's headquarters occupies the top fifteen floors of the Meridian Tower — a commercial skyscraper in the financial district. Satellite imagery and intercepted communications indicate the facility houses approximately two hundred personnel, including a dedicated security force equipped with military-grade weaponry. The Director maintains a command center on the penthouse level, protected by biometric locks, electromagnetic shielding, and a personal detail of twelve former special operations soldiers. Your primary objective: reach the penthouse, secure the Director, and extract the Syndicate's complete operational database from the central server. Secondary objective: neutralize the facility's communication array to prevent the activation of contingency protocols that would alert Syndicate cells worldwide. Mission window: four hours from initial breach. The intelligence you've gathered across every operation — economics, psychology, technology, diplomacy — converges here. Everything you've learned has prepared you for this moment.",
-    grade_level: 11,
+    grade_level: 0, // computed at export
     category: "adventure",
     target_phonemes: ["str", "kr", "pr", "bl"],
     word_count: 155,
     reading_time_minutes: 3,
-    difficulty_level: 11,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-red-600 to-red-950"
   },
   {
     title: "The Director Unmasked",
     description: "Final intelligence dossier on The Director",
     passage_text: "TARGET PROFILE — CODENAME: THE DIRECTOR. Classification: Priority Omega Supreme. The Director — identity confirmed as former Deputy Director of National Intelligence Marcus Webb — orchestrated the Syndicate's creation following his forced retirement amid allegations of unauthorized surveillance programs. Leveraging two decades of intelligence community contacts and intimate knowledge of global security architectures, Webb constructed an organization that operates as a shadow intelligence service, selling capabilities to the highest bidder regardless of ideological alignment. Psychological assessment indicates a narcissistic personality structure driven by a perceived betrayal by the system he served. Webb possesses encyclopedic knowledge of intelligence tradecraft, maintains personal relationships with senior officials across multiple governments, and has demonstrated willingness to employ extreme measures to preserve operational security. He represents the most dangerous adversary this agency has confronted. Approach assumes maximum threat posture.",
-    grade_level: 12,
+    grade_level: 0, // computed at export
     category: "adventure",
     target_phonemes: ["str", "kr", "pr", "sk"],
     word_count: 147,
     reading_time_minutes: 3,
-    difficulty_level: 12,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-red-800 to-red-950"
   },
   // World 5: The Black Site (stories 24-29) — Bioethics, military science, environmental science, nuclear physics, genetic engineering, arms control
@@ -881,72 +882,72 @@ export const agentStories: CuratedStory[] = [
     title: "Bioethics Under Siege",
     description: "Classified research files on experimental programs",
     passage_text: "The intersection of military research and bioethics represents one of the most contentious domains in modern science. Historical examples — from Unit 731 to Project MKUltra — demonstrate that governments have repeatedly crossed ethical boundaries in pursuit of strategic advantage. The Nuremberg Code, established in 1947, attempted to codify basic principles of ethical human experimentation, including voluntary consent and the right to withdraw. Yet enforcement mechanisms remain weak, particularly in classified programs shielded from public oversight. Contemporary debates focus on emerging biotechnologies: gene drives that could alter entire species, cognitive enhancement drugs for soldiers, and autonomous weapon systems with biological components. The challenge lies in balancing legitimate national security interests against fundamental human rights, a calculus that becomes exponentially more complex as technology outpaces regulatory frameworks.",
-    grade_level: 11,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "kr", "pr", "bl"],
     word_count: 140,
     reading_time_minutes: 3,
-    difficulty_level: 11,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-emerald-600 to-teal-900"
   },
   {
     title: "Electromagnetic Pulse Theory",
     description: "Technical briefing on EMP weapons and defense",
     passage_text: "An electromagnetic pulse — commonly abbreviated EMP — is a burst of electromagnetic energy capable of disrupting or destroying electronic equipment across a wide area. Nuclear EMP effects were first observed during the 1962 Starfish Prime nuclear test, when a 1.4-megaton warhead detonated at 400 kilometers altitude knocked out streetlights in Hawaii, nearly 1,500 kilometers away. The physics involves three distinct components: E1, an extremely fast pulse that damages microelectronics; E2, similar to lightning; and E3, a slow pulse that can overload power grid transformers. Modern civilization's dependence on interconnected electronic systems — power grids, communications networks, financial systems, water treatment facilities — creates unprecedented vulnerability. Military planners must balance offensive EMP capability development against the need to harden their own infrastructure, a paradox that defines contemporary electromagnetic warfare doctrine.",
-    grade_level: 11,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "bl", "kr", "sp"],
     word_count: 152,
     reading_time_minutes: 3,
-    difficulty_level: 11,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-green-600 to-emerald-900"
   },
   {
     title: "Environmental Warfare",
     description: "Intelligence report on ecological manipulation tactics",
     passage_text: "Environmental modification techniques — known in military parlance as ENMOD — encompass deliberate manipulation of natural processes to achieve strategic objectives. The concept is not theoretical: during the Vietnam War, Operation Popeye extended the monsoon season over the Ho Chi Minh Trail through cloud seeding, causing landslides that disrupted supply lines. The Environmental Modification Convention of 1976 prohibits military use of environmental modification techniques having widespread, long-lasting, or severe effects. However, the treaty's vague definitions create exploitable ambiguities. Contemporary concerns focus on climate engineering technologies — stratospheric aerosol injection, marine cloud brightening, ocean iron fertilization — that could theoretically be weaponized. The dual-use nature of these technologies means that legitimate climate research could inadvertently provide the scientific foundation for environmental warfare, creating a governance challenge that existing international frameworks are poorly equipped to address.",
-    grade_level: 11,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "pr", "kr", "sp"],
     word_count: 148,
     reading_time_minutes: 3,
-    difficulty_level: 11,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-teal-600 to-green-900"
   },
   {
     title: "Genetic Surveillance",
     description: "Briefing on DNA databases and privacy implications",
     passage_text: "The expansion of genetic databases has created powerful tools for law enforcement — and equally powerful mechanisms for surveillance. Forensic genealogy, the technique used to identify the Golden State Killer in 2018, works by matching crime scene DNA to genetic profiles uploaded by relatives to consumer databases like GEDmatch. While this approach has solved numerous cold cases, it raises profound privacy questions: individuals who never consented to law enforcement use of their DNA can be identified through relatives' voluntary submissions. China has constructed the world's largest forensic DNA database, containing profiles of over 100 million citizens, with particular focus on ethnic minorities in Xinjiang province. The intersection of genetic data, facial recognition technology, and artificial intelligence creates surveillance capabilities that previous generations could not have imagined. Legal frameworks protecting genetic privacy vary enormously between jurisdictions, creating a patchwork of protections that sophisticated actors can exploit.",
-    grade_level: 11,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["kr", "pr", "str", "bl"],
     word_count: 155,
     reading_time_minutes: 3,
-    difficulty_level: 11,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-emerald-700 to-teal-950"
   },
   {
     title: "Nuclear Proliferation Networks",
     description: "Analysis of illicit nuclear supply chains",
     passage_text: "The proliferation of nuclear weapons technology represents perhaps the gravest long-term security threat facing civilization. The A.Q. Khan network — operated by Pakistani metallurgist Abdul Qadeer Khan — demonstrated how a single determined individual could distribute centrifuge blueprints, component specifications, and enrichment expertise to Libya, Iran, North Korea, and potentially other states. Khan exploited the inherently dual-use nature of nuclear technology: the same centrifuge cascade that produces reactor-grade uranium can, with additional processing, yield weapons-grade material. International safeguards administered by the International Atomic Energy Agency rely on state declarations and periodic inspections, creating detection gaps that sophisticated programs can exploit. The emergence of compact modular reactors and advances in laser enrichment technology threaten to lower technical barriers further, democratizing access to nuclear capability in ways that existing nonproliferation frameworks were never designed to address.",
-    grade_level: 12,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "pr", "kr", "sp"],
     word_count: 150,
     reading_time_minutes: 3,
-    difficulty_level: 12,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-green-700 to-emerald-950"
   },
   {
     title: "The Warden's Protocol",
     description: "Final dossier on the Black Site commander",
     passage_text: "TARGET PROFILE — CODENAME: THE WARDEN. Classification: Priority Alpha. Colonel Elena Vasquez, formerly of the Defense Advanced Research Projects Agency, was recruited by the Syndicate following the cancellation of her classified biodefense program. Vasquez possesses expertise in chemical and biological weapons defense systems, dual-use research methodology, and advanced facility security architecture. Intelligence indicates she operates the Black Site compound with military precision: biometric access controls, electromagnetic shielding against surveillance, and a deadman's switch linked to the facility's data servers. Psychological profile suggests intense loyalty driven not by ideology but by professional resentment — Vasquez views the Syndicate as the only organization willing to fund research the legitimate defense establishment deemed too dangerous. Approach with extreme caution: Vasquez has demonstrated tactical proficiency in both conventional and asymmetric engagement scenarios.",
-    grade_level: 12,
+    grade_level: 0, // computed at export
     category: "adventure",
     target_phonemes: ["str", "kr", "pr", "bl"],
     word_count: 148,
     reading_time_minutes: 3,
-    difficulty_level: 12,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-emerald-800 to-green-950"
   },
   // World 6: Skyfall Station (stories 30-36) — Astrophysics, orbital mechanics, satellite tech, space law, telecommunications, cybersecurity
@@ -954,84 +955,84 @@ export const agentStories: CuratedStory[] = [
     title: "Orbital Mechanics and Warfare",
     description: "Intelligence briefing on space-based weapon platforms",
     passage_text: "The militarization of space, long considered science fiction, has become a strategic reality. The Outer Space Treaty of 1967 prohibits stationing nuclear weapons in orbit, but it says nothing about conventional kinetic weapons, directed energy systems, or electronic warfare platforms. The concept of 'rods from God' — tungsten projectiles dropped from orbital platforms that achieve devastating kinetic energy through gravitational acceleration — has been studied by military planners since the 1950s. Anti-satellite weapons have been successfully tested by the United States, Russia, China, and India, generating debris clouds that threaten all orbital assets. The physics of orbital mechanics means that any object in low Earth orbit is inherently vulnerable: a handful of ball bearings released in a retrograde orbit becomes an impassable barrier of hypervelocity projectiles. Space has become the ultimate high ground, and the nation that controls it controls the electromagnetic spectrum upon which modern civilization depends.",
-    grade_level: 11,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "pr", "kr", "sp"],
     word_count: 158,
     reading_time_minutes: 3,
-    difficulty_level: 11,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-indigo-600 to-violet-900"
   },
   {
     title: "Satellite Surveillance Architecture",
     description: "Technical analysis of global monitoring networks",
     passage_text: "Modern intelligence agencies operate constellations of reconnaissance satellites capable of imaging any point on Earth's surface with sub-meter resolution. The National Reconnaissance Office, which managed a classified budget exceeding ten billion dollars annually, deploys optical imaging satellites in sun-synchronous orbits, synthetic aperture radar platforms that can see through clouds and darkness, and signals intelligence collectors that intercept electronic communications across the electromagnetic spectrum. Commercial satellite imagery, pioneered by companies like Maxar and Planet Labs, has democratized overhead surveillance — any organization with sufficient funding can now purchase imagery comparable to what was classified top secret a generation ago. The proliferation of small satellite technology, enabled by miniaturized electronics and reduced launch costs, means that persistent global surveillance is no longer the exclusive domain of superpowers.",
-    grade_level: 11,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "kr", "sp", "bl"],
     word_count: 142,
     reading_time_minutes: 3,
-    difficulty_level: 11,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-violet-600 to-purple-900"
   },
   {
     title: "Quantum Communication",
     description: "Briefing on unbreakable encryption technology",
     passage_text: "Quantum key distribution represents the holy grail of secure communication — a method of exchanging encryption keys that is provably secure against any computational attack, including those from future quantum computers. The technology exploits a fundamental principle of quantum mechanics: observing a quantum state necessarily disturbs it. If an eavesdropper attempts to intercept quantum-encoded photons, the act of measurement introduces detectable errors in the transmission. China launched the world's first quantum communication satellite, Micius, in 2016, and has since constructed a 2,000-kilometer quantum communication backbone between Beijing and Shanghai. The strategic implications are profound: a nation with operational quantum communication infrastructure could conduct diplomatic and military communications that no adversary could intercept or decrypt, regardless of their computational resources. The race to deploy quantum networks has become one of the most consequential technology competitions of the twenty-first century.",
-    grade_level: 11,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["kr", "str", "pr", "bl"],
     word_count: 155,
     reading_time_minutes: 3,
-    difficulty_level: 11,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-purple-600 to-indigo-900"
   },
   {
     title: "Space Debris Crisis",
     description: "Analysis of the Kessler Syndrome threat",
     passage_text: "In 1978, NASA scientist Donald Kessler proposed a scenario that has haunted space agencies ever since: a cascading chain reaction of collisions in orbit that renders entire altitude bands unusable. The Kessler Syndrome, as it became known, describes how a single collision between two objects generates fragments that collide with other objects, creating exponentially more debris. There are currently over 36,000 objects larger than ten centimeters tracked in Earth orbit, along with an estimated one million objects between one and ten centimeters — each capable of destroying a functioning satellite. The 2009 collision between the Iridium 33 and Cosmos 2251 satellites generated over 2,000 trackable fragments, demonstrating that Kessler's scenario is not hypothetical. Active debris removal technologies — including robotic capture, laser ablation, and electromagnetic tethers — remain experimental. The irony is stark: our exploitation of space may ultimately deny us access to it.",
-    grade_level: 12,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "kr", "sp", "bl"],
     word_count: 160,
     reading_time_minutes: 3,
-    difficulty_level: 12,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-indigo-700 to-violet-950"
   },
   {
     title: "Signal Intelligence in the Digital Age",
     description: "How modern SIGINT operations work",
     passage_text: "Signals intelligence — SIGINT — has evolved from intercepting Morse code transmissions to processing petabytes of digital communications daily. The Five Eyes alliance — comprising the intelligence agencies of the United States, United Kingdom, Canada, Australia, and New Zealand — operates a global signals collection network that monitors satellite communications, undersea fiber optic cables, and wireless networks. The Edward Snowden disclosures of 2013 revealed the scale of these operations: programs like PRISM collected data directly from technology companies, while TEMPORA tapped transatlantic fiber optic cables carrying internet traffic. Modern SIGINT faces a fundamental paradox: the explosion of digital communication provides vastly more intelligence to collect, but encryption technologies make an increasing fraction of that communication unreadable. The resulting 'going dark' problem has driven intelligence agencies to invest heavily in quantum computing, metadata analysis, and human intelligence methods that circumvent encryption entirely.",
-    grade_level: 12,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "kr", "pr", "bl"],
     word_count: 157,
     reading_time_minutes: 3,
-    difficulty_level: 12,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-violet-700 to-purple-950"
   },
   {
     title: "Zero Gravity Combat",
     description: "Tactical doctrine for orbital engagement",
     passage_text: "Combat in microgravity environments presents unique tactical challenges that terrestrial military training cannot fully simulate. Newton's third law becomes immediately lethal: firing a conventional weapon generates recoil that sends the shooter tumbling uncontrollably. Every action produces an equal and opposite reaction, meaning that hand-to-hand combat techniques must be entirely reimagined. Spatial orientation is compromised without gravitational reference — there is no 'up' or 'down,' and the vestibular system, evolved for planetary environments, frequently produces debilitating motion sickness. Fluid dynamics change dramatically: blood pools in the thorax rather than the extremities, wounds bleed differently, and fire suppression systems designed for gravity-dependent convection fail entirely. The psychological effects of prolonged microgravity exposure — including cognitive impairment, bone density loss, and muscle atrophy — further complicate operational planning. Any military force capable of effective orbital combat operations would require training and equipment fundamentally different from anything currently deployed.",
-    grade_level: 12,
+    grade_level: 0, // computed at export
     category: "adventure",
     target_phonemes: ["kr", "str", "pr", "sp"],
     word_count: 162,
     reading_time_minutes: 3,
-    difficulty_level: 12,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-purple-700 to-indigo-950"
   },
   {
     title: "Commander Voss Dossier",
     description: "Final intelligence on the Skyfall Station commander",
     passage_text: "TARGET PROFILE — CODENAME: THE COMMANDER. Classification: Priority Alpha Supreme. Dr. Yuri Voss, former director of the European Space Agency's classified military programs division, was discharged after unauthorized modifications to the Galileo satellite constellation were discovered during a routine audit. Voss possesses unparalleled expertise in orbital mechanics, satellite system architecture, and space-based communications infrastructure. He designed the Skyfall Station's primary systems from repurposed military satellite components, demonstrating engineering capability that intelligence analysts describe as 'exceptional.' Psychological evaluation indicates a grandiose personality driven by the conviction that space-based surveillance is essential for preventing global conflict — a belief that conveniently rationalizes selling access to the highest bidder. Voss maintains a small but fiercely loyal crew of former military and aerospace personnel. Physical approach to the station requires precise orbital insertion — any miscalculation results in mission failure.",
-    grade_level: 12,
+    grade_level: 0, // computed at export
     category: "adventure",
     target_phonemes: ["str", "kr", "pr", "sp"],
     word_count: 150,
     reading_time_minutes: 3,
-    difficulty_level: 12,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-indigo-800 to-purple-950"
   },
   // World 7: The Deep Web (stories 37-43) — Cryptography, AI ethics, data privacy, digital forensics, cybercrime, social engineering
@@ -1039,84 +1040,84 @@ export const agentStories: CuratedStory[] = [
     title: "The Architecture of Anonymity",
     description: "Technical analysis of anonymous network infrastructure",
     passage_text: "The Tor network — originally developed by the United States Naval Research Laboratory — routes internet traffic through a series of volunteer-operated relays, encrypting data at each hop to obscure the origin and destination of communications. This 'onion routing' architecture, named for its layered encryption scheme, provides anonymity by ensuring that no single relay knows both the source and destination of any transmission. The dark web, accessible only through specialized browsers, hosts an ecosystem of hidden services that range from legitimate whistleblowing platforms to illicit marketplaces. Law enforcement agencies have developed sophisticated de-anonymization techniques: traffic analysis, timing correlation attacks, and exploitation of operational security failures by site administrators. The fundamental tension between privacy and security manifests acutely in anonymous networks — the same technology that protects dissidents in authoritarian regimes also shields criminal enterprises from accountability.",
-    grade_level: 11,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "kr", "pr", "bl"],
     word_count: 148,
     reading_time_minutes: 3,
-    difficulty_level: 11,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-lime-600 to-emerald-900"
   },
   {
     title: "Artificial Intelligence Ethics",
     description: "The moral implications of autonomous decision systems",
     passage_text: "The deployment of artificial intelligence in high-stakes decision-making — criminal sentencing, medical diagnosis, military targeting, loan approvals — raises ethical questions that philosophy has debated for centuries but now demands immediate practical answers. The trolley problem, long a thought experiment, becomes concrete when programming autonomous vehicle collision algorithms. Algorithmic bias, embedded through training data that reflects historical inequities, can perpetuate discrimination at scale while appearing objective. The opacity of deep learning systems — often called the 'black box problem' — means that even their creators cannot fully explain how specific decisions are reached. The European Union's AI Act represents the first comprehensive attempt to regulate artificial intelligence by risk category, but the technology evolves faster than legislative processes can adapt. The fundamental question remains unresolved: can a machine make moral decisions, or does the very concept of morality require consciousness and intentionality that silicon cannot possess?",
-    grade_level: 11,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "kr", "pr", "sp"],
     word_count: 155,
     reading_time_minutes: 3,
-    difficulty_level: 11,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-green-600 to-lime-900"
   },
   {
     title: "Digital Forensics Methodology",
     description: "How investigators trace digital evidence",
     passage_text: "Digital forensics — the science of recovering and analyzing evidence from electronic devices — follows a rigorous methodology designed to preserve the integrity of evidence for legal proceedings. The process begins with acquisition: creating a bit-for-bit forensic image of the target device using write-blocking hardware that prevents any modification of the original data. Analysis proceeds through multiple layers: file system examination reveals deleted files recoverable from unallocated disk space; metadata extraction provides timestamps, geolocation data, and device identifiers; network traffic analysis reconstructs communication patterns; and memory forensics captures volatile data that exists only while a device is powered on. The legal framework surrounding digital evidence varies by jurisdiction — some countries require warrants for accessing encrypted data, while others compel suspects to provide decryption keys. The emergence of cloud storage, ephemeral messaging applications, and client-side encryption has created significant challenges for forensic investigators accustomed to recovering evidence from physical devices.",
-    grade_level: 11,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "kr", "pr", "bl"],
     word_count: 160,
     reading_time_minutes: 3,
-    difficulty_level: 11,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-emerald-600 to-green-900"
   },
   {
     title: "Cryptocurrency and Crime",
     description: "How digital currencies enable and expose criminal networks",
     passage_text: "Cryptocurrencies occupy a paradoxical position in criminal finance: they provide pseudonymity that facilitates illicit transactions while simultaneously recording every transaction on an immutable public ledger. Bitcoin, the first major cryptocurrency, was initially perceived as untraceable — a perception that fueled its adoption on dark web marketplaces like Silk Road. Blockchain analysis firms such as Chainalysis and Elliptic have since demonstrated that sophisticated graph analysis can link seemingly anonymous wallet addresses to real-world identities through patterns of transactions, exchange interactions, and known address clusters. The emergence of privacy-focused cryptocurrencies like Monero, which uses ring signatures and stealth addresses to obscure transaction details, represents a genuine challenge for law enforcement. Regulatory responses range from comprehensive frameworks in the European Union to outright prohibition in countries like China, creating jurisdictional arbitrage opportunities that sophisticated criminal organizations systematically exploit.",
-    grade_level: 12,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["kr", "str", "pr", "bl"],
     word_count: 152,
     reading_time_minutes: 3,
-    difficulty_level: 12,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-lime-700 to-green-950"
   },
   {
     title: "Social Engineering Attacks",
     description: "The psychology of human-targeted hacking",
     passage_text: "The most sophisticated firewall, the most robust encryption, the most secure authentication system — all become irrelevant when an attacker can simply persuade a human being to bypass them. Social engineering exploits cognitive biases and social norms that evolution has embedded deeply in human psychology. Authority bias causes employees to comply with requests that appear to come from senior management. Urgency creates time pressure that bypasses critical evaluation. Reciprocity — the instinct to return favors — makes targets vulnerable to pretextual kindness. Phishing attacks have evolved from obvious grammatical errors to pixel-perfect replicas of legitimate communications, complete with domain names that differ by a single character. Spear phishing targets specific individuals using information gathered from social media profiles, corporate websites, and data breaches. The most devastating social engineering attacks combine technical sophistication with psychological manipulation, creating scenarios so convincing that even security-trained professionals have been compromised.",
-    grade_level: 12,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "kr", "sp", "pr"],
     word_count: 155,
     reading_time_minutes: 3,
-    difficulty_level: 12,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-green-700 to-emerald-950"
   },
   {
     title: "Zero-Day Exploits",
     description: "The underground market for software vulnerabilities",
     passage_text: "A zero-day exploit — a software vulnerability unknown to the vendor and therefore unpatched — represents the most valuable commodity in the cybersecurity marketplace. The name derives from the fact that developers have had zero days to address the flaw. Governments, criminal organizations, and legitimate security researchers compete for these vulnerabilities, creating a complex ecosystem with divergent incentives. The United States government's Vulnerabilities Equities Process determines whether discovered zero-days should be disclosed to vendors for patching or retained for intelligence and military operations. Private brokers like Zerodium offer bounties exceeding two million dollars for exploits affecting widely-used platforms, while state-sponsored programs employ teams of researchers to discover vulnerabilities in strategic targets. The ethical dimension is significant: every zero-day retained for offensive use leaves millions of systems vulnerable to the same attack by other actors who independently discover the same flaw.",
-    grade_level: 12,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "kr", "pr", "sp"],
     word_count: 158,
     reading_time_minutes: 3,
-    difficulty_level: 12,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-lime-800 to-emerald-950"
   },
   {
     title: "The Phantom Unmasked",
     description: "Final intelligence on the deep web ghost hacker",
     passage_text: "TARGET PROFILE — CODENAME: THE PHANTOM. Classification: Priority Omega. The individual known as The Phantom has operated without physical identification for over eight years, communicating exclusively through encrypted channels and dead drops. Digital forensic analysis of coding patterns, linguistic markers, and operational timing has narrowed attribution to Dr. Priya Mehta, a former computer science professor at MIT who specialized in distributed systems and anonymity networks. Mehta disappeared during a sabbatical in Iceland four years ago, and no physical trace has been detected since. Her academic work on Byzantine fault tolerance and homomorphic encryption provides the theoretical foundation for the Phantom Network's architecture. Intelligence suggests she operates from a mobile command center, never remaining in any jurisdiction longer than seventy-two hours. Psychological assessment: extreme introversion combined with a missionary conviction that information should be universally accessible regardless of classification. She is brilliant, paranoid, and utterly committed to her cause.",
-    grade_level: 12,
+    grade_level: 0, // computed at export
     category: "adventure",
     target_phonemes: ["str", "kr", "pr", "bl"],
     word_count: 160,
     reading_time_minutes: 3,
-    difficulty_level: 12,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-emerald-800 to-lime-950"
   },
   // World 8: Operation Endgame (stories 44-51) — Geopolitics, economics, information warfare, diplomacy, existential risk, global systems
@@ -1124,96 +1125,103 @@ export const agentStories: CuratedStory[] = [
     title: "Information Warfare Doctrine",
     description: "How nations weaponize information",
     passage_text: "Information warfare — the deliberate use of information and communication to gain strategic advantage — has emerged as the primary domain of conflict in the twenty-first century. Unlike kinetic warfare, information operations can be conducted below the threshold of armed conflict, creating plausible deniability while achieving strategic objectives. Russia's Internet Research Agency demonstrated the power of coordinated inauthentic behavior during the 2016 election cycle, deploying thousands of fake social media accounts to amplify societal divisions. China's 'Three Warfares' doctrine — psychological warfare, media warfare, and legal warfare — represents a systematic approach to shaping the information environment without firing a single shot. Deepfake technology, powered by generative adversarial networks, threatens to eliminate the evidentiary value of video and audio recordings entirely. The fundamental challenge for democratic societies is defending against information attacks without adopting the censorship mechanisms that characterize the authoritarian regimes conducting them.",
-    grade_level: 12,
+    grade_level: 0, // computed at export
     category: "history",
     target_phonemes: ["str", "kr", "pr", "sp"],
     word_count: 158,
     reading_time_minutes: 3,
-    difficulty_level: 12,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-rose-600 to-pink-900"
   },
   {
     title: "Economic Destabilization Tactics",
     description: "How hostile actors attack financial systems",
     passage_text: "The global financial system's interconnectedness, while enabling unprecedented economic growth, creates systemic vulnerabilities that sophisticated actors can exploit for strategic advantage. Currency manipulation through coordinated selling can destabilize developing economies; the 1997 Asian Financial Crisis demonstrated how speculative attacks on the Thai baht triggered cascading failures across Southeast Asian markets. Sanctions evasion networks, often utilizing front companies, cryptocurrency exchanges, and complicit financial institutions, allow targeted states and organizations to circumvent economic restrictions. Cyber attacks on financial infrastructure — such as the 2016 Bangladesh Bank heist, which exploited SWIFT messaging systems to steal 81 million dollars — reveal the fragility of systems that process trillions of dollars daily. The Syndicate's ultimate objective appears to be the simultaneous disruption of multiple critical financial systems, creating a cascade of failures that would undermine confidence in the international monetary order itself.",
-    grade_level: 12,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "kr", "pr", "bl"],
     word_count: 155,
     reading_time_minutes: 3,
-    difficulty_level: 12,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-pink-600 to-fuchsia-900"
   },
   {
     title: "Diplomatic Manipulation",
     description: "The art of weaponizing international relations",
     passage_text: "Diplomacy, historically the primary mechanism for resolving international disputes without violence, has itself become a weapon in the arsenal of sophisticated adversaries. The concept of 'sharp power' — distinct from both hard power and soft power — describes the use of diplomatic channels, cultural exchanges, and institutional engagement to manipulate rather than persuade. Kompromat, the Russian practice of collecting compromising material on foreign officials, creates leverage that can influence policy decisions for decades. Treaty exploitation involves technically complying with agreement terms while violating their spirit — maintaining weapons programs under civilian research cover, for example, or using peacekeeping mandates to establish forward military positions. The Syndicate has demonstrated mastery of these techniques, cultivating relationships with officials across multiple governments who may not even realize they are serving the organization's interests. In the realm of modern intelligence, the most dangerous weapon is not a bomb or a bullet — it is a relationship built on carefully constructed trust.",
-    grade_level: 12,
+    grade_level: 0, // computed at export
     category: "history",
     target_phonemes: ["str", "kr", "pr", "sp"],
     word_count: 165,
     reading_time_minutes: 3,
-    difficulty_level: 12,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-fuchsia-600 to-rose-900"
   },
   {
     title: "Critical Infrastructure Vulnerabilities",
     description: "Assessment of society's systemic weak points",
     passage_text: "Modern civilization depends on interconnected critical infrastructure systems — power generation, water treatment, telecommunications, transportation, healthcare, and financial services — that were designed for efficiency rather than resilience. The 2021 Colonial Pipeline ransomware attack demonstrated that a single compromised password could shut down fuel distribution across the eastern United States. The interconnected nature of these systems creates cascade effects: a prolonged power outage disables water treatment, which disrupts healthcare, which overwhelms emergency services. Industrial control systems, originally designed for isolated networks, have been connected to the internet for remote management, exposing systems that control physical processes — dam spillways, chemical plant operations, nuclear reactor cooling systems — to cyber attack. The Stuxnet worm, discovered in 2010, proved that software could cause physical destruction by manipulating centrifuge rotation speeds in Iran's uranium enrichment facility. Protecting these systems requires a fundamental rethinking of the relationship between connectivity and security.",
-    grade_level: 12,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "kr", "pr", "bl"],
     word_count: 162,
     reading_time_minutes: 3,
-    difficulty_level: 12,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-rose-700 to-pink-950"
   },
   {
     title: "Existential Risk Assessment",
     description: "Evaluating threats to civilization itself",
     passage_text: "Existential risk — the probability of events that could permanently curtail humanity's potential — has transitioned from philosophical speculation to a field of serious academic study. The Cambridge Centre for the Study of Existential Risk, the Future of Humanity Institute at Oxford, and the Global Catastrophic Risk Institute apply rigorous analytical frameworks to threats including artificial superintelligence, engineered pandemics, nuclear war, asteroid impacts, and climate tipping points. What distinguishes existential risks from conventional threats is their irreversibility: a nuclear winter cannot be undone, a released engineered pathogen cannot be recalled, and a misaligned artificial superintelligence cannot be unplugged once it has achieved sufficient capability. The probability of any individual existential risk materializing in a given decade may be small, but the expected value calculation — probability multiplied by the magnitude of consequence — yields figures that demand serious attention. The Syndicate's plans, if successful, would not destroy civilization — but they would fundamentally alter the distribution of global power in ways that could amplify other existential risks.",
-    grade_level: 12,
+    grade_level: 0, // computed at export
     category: "science",
     target_phonemes: ["str", "kr", "pr", "sp"],
     word_count: 170,
     reading_time_minutes: 4,
-    difficulty_level: 12,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-pink-700 to-fuchsia-950"
   },
   {
     title: "Endgame Protocols",
     description: "Final mission briefing — everything leads here",
     passage_text: "CLASSIFIED — OPERATION ENDGAME FINAL BRIEFING. All previous operations — The Underground, the Neon District, The Embassy, Syndicate HQ, the Black Site, Skyfall Station, the Deep Web — have been leading to this moment. Intelligence synthesis reveals the Syndicate's endgame: a coordinated strike on global financial infrastructure timed to coincide with a manufactured diplomatic crisis, designed to create sufficient chaos for the Overseer to position Syndicate assets as the only viable stabilizing force. The operation requires simultaneous disruption of SWIFT payment networks, targeted manipulation of sovereign debt markets, and the release of compromising intelligence on key government officials through the Phantom Network's channels. Your mission objective is threefold: neutralize the financial attack infrastructure, secure evidence of the Overseer's identity and network, and ensure the intelligence community has sufficient documentation to dismantle remaining Syndicate cells globally. This is not a mission of destruction — it is a mission of preservation. Everything you have learned, every skill you have developed, has prepared you for this.",
-    grade_level: 12,
+    grade_level: 0, // computed at export
     category: "adventure",
     target_phonemes: ["str", "kr", "pr", "sp"],
     word_count: 168,
     reading_time_minutes: 4,
-    difficulty_level: 12,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-fuchsia-700 to-rose-950"
   },
   {
     title: "The Syndicate Exposed",
     description: "Tearing down the network piece by piece",
     passage_text: "Dismantling a transnational criminal organization requires more than arresting its leaders — it demands systematic destruction of the institutional knowledge, financial infrastructure, and operational relationships that sustain it. The Syndicate's cellular structure, designed to limit exposure from any single compromise, means that neutralizing one cell does not significantly degrade others. Financial disruption targeting cryptocurrency reserves, shell company networks, and correspondent banking relationships can deny operational funding. Legal strategies utilizing international cooperation frameworks — mutual legal assistance treaties, Interpol red notices, asset forfeiture proceedings — can impose costs that make continued operations uneconomical. Perhaps most critically, intelligence operations can sow distrust within the organization itself by revealing the extent of penetration achieved by law enforcement. When every member suspects every other member might be compromised, the trust networks that hold criminal organizations together begin to fragment. The Syndicate is powerful, but it is not invincible — and its greatest vulnerability is the human relationships upon which it depends.",
-    grade_level: 12,
+    grade_level: 0, // computed at export
     category: "adventure",
     target_phonemes: ["str", "kr", "pr", "bl"],
     word_count: 165,
     reading_time_minutes: 4,
-    difficulty_level: 12,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-rose-800 to-fuchsia-950"
   },
   {
     title: "The Overseer Unmasked",
     description: "Final dossier — the mastermind behind everything",
     passage_text: "TARGET PROFILE — CODENAME: THE OVERSEER. Classification: Priority Omega Supreme. The Overseer's true identity has been the intelligence community's most closely guarded mystery for a decade. Analysis of decision patterns, resource allocation, and strategic timing across all Syndicate operations reveals a mind of extraordinary capability operating at the intersection of finance, technology, and geopolitics. Final identification: Dr. Alexander Crane, former chair of the World Economic Forum's Global Security Advisory Council, a position that provided unparalleled access to heads of state, central bank governors, and intelligence chiefs worldwide. Crane's public persona as a benevolent advocate for international cooperation provided perfect cover for constructing the Syndicate's architecture. His motivation, articulated in encrypted communications recovered from the Phantom Network: the conviction that democratic governance is fundamentally incapable of addressing existential threats, and that an enlightened shadow authority is necessary to ensure civilization's survival. He is wrong. But he is dangerous precisely because he believes he is right. This ends now.",
-    grade_level: 12,
+    grade_level: 0, // computed at export
     category: "adventure",
     target_phonemes: ["str", "kr", "pr", "sp"],
     word_count: 170,
     reading_time_minutes: 4,
-    difficulty_level: 12,
+    difficulty_level: 0, // computed at export
     cover_gradient: "from-rose-900 to-red-950"
   },
 ];
+
+// Compute grade_level and difficulty_level from decodability engine
+export const agentStories: CuratedStory[] = rawAgentStories.map(story => ({
+  ...story,
+  grade_level: getStoryGradeLevel(story.passage_text),
+  difficulty_level: getStoryDifficultyLevel(story.passage_text),
+}));
