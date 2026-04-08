@@ -1342,6 +1342,30 @@ const rawStories: CuratedStory[] = [
     reading_time_minutes: 2,
     difficulty_level: 5,
     cover_gradient: "from-blue-800 to-cyan-900"
+  },
+  {
+    title: "The Frog on the Log",
+    description: "A frog hops from log to log",
+    passage_text: "A frog sat on a log. The log was wet. The frog can hop and jump. He went from log to log. Then he hit a rock. Thud! The frog fell in the mud. The mud was thick. The frog sat still. Then he got up and ran back to his log. He sat and had a rest.",
+    grade_level: 1,
+    category: "animals",
+    target_phonemes: ["f", "ɹ", "ɑ", "dʒ", "ʌ"],
+    word_count: 55,
+    reading_time_minutes: 1,
+    difficulty_level: 1,
+    cover_gradient: "from-green-400 to-lime-500"
+  },
+  {
+    title: "The Geography Project",
+    description: "Students explore geography and biology through a telescope",
+    passage_text: "The class had a geography project. They would photograph different plants and study the biology of each one. Maria brought a telescope to look at the stars. She made a graph of what she found. The teacher told them to write an autobiography of their work. Each student had to describe their methods. They used a microscope to look at small things. The project helped them understand how the world works.",
+    grade_level: 4,
+    category: "science",
+    target_phonemes: ["dʒ", "ɹ", "f", "ɡ"],
+    word_count: 78,
+    reading_time_minutes: 2,
+    difficulty_level: 4,
+    cover_gradient: "from-teal-500 to-emerald-600"
   }
 ];
 
