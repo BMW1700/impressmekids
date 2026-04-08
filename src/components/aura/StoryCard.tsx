@@ -241,7 +241,7 @@ export const StoryCard = ({
               <Clock className="h-3 w-3" />
               {reading_time_minutes} min
             </div>
-
+          </div>
           {/* Progress Info */}
           {times_read > 0 && (
             <div className="text-xs text-muted-foreground">
