@@ -241,15 +241,6 @@ export const StoryCard = ({
               <Clock className="h-3 w-3" />
               {reading_time_minutes} min
             </div>
-            <div className="flex items-center gap-1">
-              {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  className={`h-3 w-3 ${i < difficulty_level ? 'fill-yellow-500 text-yellow-500' : 'text-gray-300'}`}
-                />
-              ))}
-            </div>
-          </div>
 
           {/* Progress Info */}
           {times_read > 0 && (
