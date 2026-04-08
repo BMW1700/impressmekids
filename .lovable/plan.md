@@ -1,105 +1,43 @@
 
 
-# Plan: Expand Classic RPG to 12 Worlds with Grade-Aligned Stories
+# Plan: Remove Hardcoded Grade Levels, Use Decoded Grades Everywhere
 
-## Summary
+## The Problem
 
-Restructure the 8 existing Classic RPG worlds into 12 worlds, reassign stories by grade level (K–5, split into pairs per grade), add 4 new worlds (9–12) with new enemy types, sprites, battle backgrounds, and battle data.
+Two story files handle grade levels differently:
 
-## Current State
+- **`curatedStories.ts`** — already overrides hardcoded `grade_level` with the decodability engine ✅
+- **`agentStories.ts`** — exports hardcoded `grade_level` values directly (6, 7, 8, etc.) with **no decodability override** ❌
 
-- **8 worlds** (IDs 1–8) + tutorial (ID 0), using `storyIndex` into `curatedStories[]`
-- **110 stories** in `curatedStories`: K=18, 1=19, 2=18, 3=18, 4=19, 5=18
-- Story indices by grade: K→0-7,48-57 | 1→8-15,58-67,108 | 2→16-23,68-77 | 3→24-31,78-87 | 4→32-39,88-97,109 | 5→40-47,98-107
+The hardcoded values in `rawStories` inside `curatedStories.ts` are also still present (even though they're overridden), which creates confusion about which values are actually used.
 
-## New World Structure
+## Changes
 
-| World | Name | Grade | Stories (count) | Enemies | Status |
-|-------|------|-------|-----------------|---------|--------|
-| 0 | Tutorial | — | Tutorial text (1) | minion | Keep as-is |
-| 1 | The Enchanted Forest | K | First 5 Grade-K stories | minion (existing) | Reassign storyIndex only |
-| 2 | The Frozen Depths | K | Next 5 Grade-K stories | minion, guard, ice_golem (existing) | Reassign storyIndex only |
-| 3 | The Ancient Ruins | 1 | First 5 Grade-1 stories | guard, elite, stone_guardian (existing) | Reassign storyIndex only |
-| 4 | The Throne Room | 1 | Next 5 Grade-1 stories | elite, boss, final_boss (existing) | Reassign storyIndex only |
-| 5 | The Whispering Caverns | 2 | First 6 Grade-2 stories | cave_troll, crystal_spider, echo_wraith (existing) | Reassign storyIndex only |
-| 6 | The Floating Isles | 2 | Next 6 Grade-2 stories | storm_harpy, cloud_giant, zephyr (existing) | Reassign storyIndex only |
-| 7 | The Sunken Library | 3 | First 7 Grade-3 stories | ink_kraken, reef_guardian, leviathan (existing) | Reassign storyIndex only |
-| 8 | The Void Between | 3 | Next 7 Grade-3 stories | void_phantom, reality_shifter, word_eater (existing) | Reassign storyIndex only |
-| 9 | **The Ember Highlands** | 4 | First 5 Grade-4 stories | **fire_elemental, lava_hound, ember_drake** | **NEW** |
-| 10 | **The Crystal Citadel** | 4 | Next 5 Grade-4 stories | **crystal_knight, prism_mage, crystal_queen** | **NEW** |
-| 11 | **The Starfall Peaks** | 5 | First 6 Grade-5 stories | **star_sprite, comet_wolf, nova_titan** | **NEW** |
-| 12 | **The Eternal Archive** | 5 | Next 5 Grade-5 stories | **tome_golem, page_wraith, the_librarian** | **NEW** |
+### 1. `src/data/agentStories.ts`
+- Import `getStoryGradeLevel` and `getStoryDifficultyLevel` from `@/lib/phonemeDifficulty`
+- Change the export from a direct array to the same override pattern used in `curatedStories.ts`:
+  ```typescript
+  const rawAgentStories: CuratedStory[] = [ ... ];
+  export const agentStories = rawAgentStories.map(story => ({
+    ...story,
+    grade_level: getStoryGradeLevel(story.passage_text),
+    difficulty_level: getStoryDifficultyLevel(story.passage_text),
+  }));
+  ```
 
-## What Changes
+### 2. `src/data/curatedStories.ts`
+- Remove the hardcoded `grade_level` and `difficulty_level` values from every story object in `rawStories`, replacing them with placeholder `0` values and a comment noting they are computed at export time
+- Keep the existing override at lines 1372-1377 (already correct)
 
-### 1. New Enemy Types & Sprites (12 new enemies across 4 worlds)
+### 3. `src/lib/decodabilityGrading.ts` — no changes needed
+The engine already handles grades 0-8+, which covers both K-5 and 6-12 texts.
 
-Create 12 new SVG sprite components following the existing pattern (state type + animated SVG):
-- **World 9**: `FireElemental`, `LavaHound`, `EmberDrake` (boss)
-- **World 10**: `CrystalKnight`, `PrismMage`, `CrystalQueen` (boss)
-- **World 11**: `StarSprite`, `CometWolf`, `NovaTitan` (boss)
-- **World 12**: `TomeGolem`, `PageWraith`, `TheLibrarian` (final boss)
+## What stays the same
+- The decodability engine logic
+- All story text content
+- The `CuratedStory` interface (keeps `grade_level` field)
+- All components that read `grade_level` from stories — they'll just get decoded values now
 
-### 2. Update `campaignData.ts`
-- Add 12 new enemy types to `CampaignEnemyType` union
-- Reassign all `storyIndex` values in worlds 1–8 to use grade-appropriate story indices
-- Add worlds 9–12 with proper level data, lore, gradients, enemy compositions
-- Last level in each world = boss battle (`isBossLevel: true`)
-
-### 3. Update `battleMechanics.ts`
-- Add 12 new types to `EnemyType` union
-- Add tier mappings for new enemies (fire_elemental→guard, lava_hound→minion, ember_drake→boss, etc.)
-- Add base HP for worlds 9–12 in `baseHpByWorld`
-
-### 4. Update `RPGBattleBackground.tsx`
-- Add enemy type to props union
-- Add 4 new background themes: `ember_highlands`, `crystal_citadel`, `starfall_peaks`, `eternal_archive`
-- Map new enemy types → background themes
-- Add theme gradient styles for each
-
-### 5. Update `RPGCharacter.tsx`
-- Import 12 new sprite components
-- Add sprite types and mappings
-- Add render cases for each new enemy
-
-### 6. Update `RPGBattleArena.tsx`
-- Add new enemy types to `EnemyType` union
-- Add new battle phases/mini-games if needed (or reuse existing ones)
-
-### 7. Update `RPGLevelSelect.tsx`
-- Add emoji icons for 12 new enemy types in `enemyIcons`
-
-### 8. Update `AuraPractice.tsx`
-- Add new enemy types to `enemyMap`
-
-### 9. Update character `index.ts` exports
-- Export all 12 new sprite components
-
-### 10. Update `BossSilhouettes.tsx`
-- Add silhouettes for 4 new bosses (EmberDrake, CrystalQueen, NovaTitan, TheLibrarian)
-
-### Files to create
-- `src/components/aura/game/characters/FireElemental.tsx`
-- `src/components/aura/game/characters/LavaHound.tsx`
-- `src/components/aura/game/characters/EmberDrake.tsx`
-- `src/components/aura/game/characters/CrystalKnight.tsx`
-- `src/components/aura/game/characters/PrismMage.tsx`
-- `src/components/aura/game/characters/CrystalQueen.tsx`
-- `src/components/aura/game/characters/StarSprite.tsx`
-- `src/components/aura/game/characters/CometWolf.tsx`
-- `src/components/aura/game/characters/NovaTitan.tsx`
-- `src/components/aura/game/characters/TomeGolem.tsx`
-- `src/components/aura/game/characters/PageWraith.tsx`
-- `src/components/aura/game/characters/TheLibrarian.tsx`
-
-### Files to modify
-- `src/lib/campaignData.ts`
-- `src/lib/battleMechanics.ts`
-- `src/components/aura/game/rpg/RPGBattleBackground.tsx`
-- `src/components/aura/game/rpg/RPGCharacter.tsx`
-- `src/components/aura/game/rpg/RPGBattleArena.tsx`
-- `src/components/aura/game/rpg/RPGLevelSelect.tsx`
-- `src/pages/student/AuraPractice.tsx`
-- `src/components/aura/game/characters/index.ts`
-- `src/components/aura/game/characters/BossSilhouettes.tsx`
+## Risk
+Agent stories (grades 6-12) may get reclassified by the decodability engine. Since the engine caps at grade 8 and uses phoneme/pattern complexity, some stories written for grade 10-12 might cluster at grade 6-8. This is expected — the engine grades by decoding difficulty, not content maturity.
 
