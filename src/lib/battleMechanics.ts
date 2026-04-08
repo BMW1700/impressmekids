@@ -125,16 +125,6 @@ const getEnemyTier = (enemyType: EnemyType): 'minion' | 'guard' | 'elite' | 'bos
     omega_soldier: 'guard',
     omega_elite: 'elite',
     the_omega: 'boss',
-    prism_mage: 'elite',
-    crystal_queen: 'boss',
-    // World 11 - Starfall Peaks
-    star_sprite: 'minion',
-    comet_wolf: 'elite',
-    nova_titan: 'boss',
-    // World 12 - Eternal Archive
-    tome_golem: 'guard',
-    page_wraith: 'elite',
-    the_librarian: 'boss',
   };
   return tierMap[enemyType] || 'minion';
 };
