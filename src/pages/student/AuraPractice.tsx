@@ -554,11 +554,14 @@ const AuraPractice = () => {
     // Calculate world progress from campaign data
     const worldProgressData = campaignProgress?.world_progress as Record<string, string[]> || {};
     const totalBooksRescued = campaignProgress?.books_rescued || 0;
+    const allCompletedTitles = new Set(Object.values(worldProgressData).flat());
     
     const worldProgress: WorldProgress[] = activeWorlds.map(w => {
-      const worldStories = worldProgressData[w.id.toString()] || [];
+      const worldStoriesInDB = worldProgressData[w.id.toString()] || [];
+      // Count stories completed for this world's levels (checking all worlds for reshuffled stories)
+      const worldLevelTitles = w.levels.map(l => activeStories[l.storyIndex]?.title).filter(Boolean);
+      const levelsCompleted = worldLevelTitles.filter(t => allCompletedTitles.has(t)).length || worldStoriesInDB.length;
       const totalLevels = w.levels.length;
-      const levelsCompleted = worldStories.length;
       
       // World unlock logic based on previous world completion
       let isUnlocked = w.id === 1;
