@@ -18,7 +18,19 @@ export type EnemyType =
   // World 11 - Starfall Peaks
   | 'star_sprite' | 'comet_wolf' | 'nova_titan'
   // World 12 - Eternal Archive
-  | 'tome_golem' | 'page_wraith' | 'the_librarian';
+  | 'tome_golem' | 'page_wraith' | 'the_librarian'
+  // Agent World 9 - The Vault
+  | 'vault_sentinel' | 'vault_drone' | 'the_vault_keeper'
+  // Agent World 10 - Shadow Protocol
+  | 'shadow_operative' | 'shadow_drone' | 'the_shadow_broker'
+  // Agent World 11 - Arctic Outpost
+  | 'frost_trooper' | 'ice_drone' | 'the_frostbite'
+  // Agent World 12 - The Labyrinth
+  | 'maze_runner' | 'tunnel_rat' | 'the_minotaur'
+  // Agent World 13 - Project Zero
+  | 'lab_guard' | 'bio_drone' | 'the_catalyst'
+  // Agent World 14 - Omega Directive
+  | 'omega_soldier' | 'omega_elite' | 'the_omega';
 
 export type BattleStatus = 'in_progress' | 'victory' | 'defeat';
 
