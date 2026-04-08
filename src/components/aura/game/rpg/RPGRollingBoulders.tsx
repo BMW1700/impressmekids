@@ -38,6 +38,7 @@ export const RPGRollingBoulders = ({
   const isListeningRef = useRef(false);
   const destroyedRef = useRef(0);
   const missedRef = useRef(0);
+  const bouldersRef = useRef<Boulder[]>([]);
 
   // Initialize boulders
   useEffect(() => {
@@ -52,6 +53,7 @@ export const RPGRollingBoulders = ({
       destroyed: false,
     }));
     setBoulders(initialBoulders);
+    bouldersRef.current = initialBoulders;
   }, [words]);
 
   // Rolling animation
@@ -84,6 +86,7 @@ export const RPGRollingBoulders = ({
           setTimeout(() => onComplete(destroyedRef.current, missedRef.current), 500);
         }
         
+        bouldersRef.current = updated;
         return updated;
       });
     }, 50);
@@ -93,9 +96,13 @@ export const RPGRollingBoulders = ({
 
   // Handle boulder destruction
   const handleBoulderDestroy = useCallback((boulderId: number) => {
-    setBoulders(prev => prev.map(b => 
-      b.id === boulderId ? { ...b, destroyed: true } : b
-    ));
+    setBoulders(prev => {
+      const updated = prev.map(b => 
+        b.id === boulderId ? { ...b, destroyed: true } : b
+      );
+      bouldersRef.current = updated;
+      return updated;
+    });
     destroyedRef.current += 1;
     setDestroyed(destroyedRef.current);
     soundEffects.correctWord();
@@ -125,32 +132,29 @@ export const RPGRollingBoulders = ({
           const transcript = event.results[i][0].transcript.toLowerCase().trim();
           const spokenWords = transcript.split(/\s+/);
 
-          // Check against all active boulders - super lenient matching
-          setBoulders(prev => {
-            const activeBoulders = prev.filter(b => !b.destroyed);
+          // Check against all active boulders using ref (not nested setState)
+          const activeBoulders = bouldersRef.current.filter(b => !b.destroyed);
+          
+          for (const boulder of activeBoulders) {
+            const targetWord = boulder.word.toLowerCase();
             
-            for (const boulder of activeBoulders) {
-              const targetWord = boulder.word.toLowerCase();
+            for (const spoken of spokenWords) {
+              const cleanSpoken = spoken.replace(/[^a-z]/g, '');
               
-              for (const spoken of spokenWords) {
-                const cleanSpoken = spoken.replace(/[^a-z]/g, '');
+              if (cleanSpoken.length >= 2) {
+                const startsWithMatch = targetWord.startsWith(cleanSpoken.slice(0, 2)) || 
+                                        cleanSpoken.startsWith(targetWord.slice(0, 2));
+                const containsMatch = targetWord.includes(cleanSpoken) || 
+                                      cleanSpoken.includes(targetWord);
+                const exactMatch = cleanSpoken === targetWord;
                 
-                if (cleanSpoken.length >= 2) {
-                  const startsWithMatch = targetWord.startsWith(cleanSpoken.slice(0, 2)) || 
-                                          cleanSpoken.startsWith(targetWord.slice(0, 2));
-                  const containsMatch = targetWord.includes(cleanSpoken) || 
-                                        cleanSpoken.includes(targetWord);
-                  const exactMatch = cleanSpoken === targetWord;
-                  
-                  if (exactMatch || startsWithMatch || containsMatch) {
-                    handleBoulderDestroy(boulder.id);
-                    return prev;
-                  }
+                if (exactMatch || startsWithMatch || containsMatch) {
+                  handleBoulderDestroy(boulder.id);
+                  break;
                 }
               }
             }
-            return prev;
-          });
+          }
         }
       };
 

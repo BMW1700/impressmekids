@@ -57,7 +57,13 @@ export const RPGGoblinHorde = ({
   const rewardIdRef = useRef(0);
   const processingRef = useRef(false);
   const gameWordsRef = useRef<string[]>([]);
+  const goblinsRef = useRef<GoblinWord[]>([]);
   const spawnIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Keep goblinsRef in sync
+  useEffect(() => {
+    goblinsRef.current = goblins;
+  }, [goblins]);
 
   // Initialize words and spawn goblins
   useEffect(() => {
@@ -202,33 +208,30 @@ export const RPGGoblinHorde = ({
           const transcript = event.results[i][0].transcript.toLowerCase().trim();
           const spokenWords = transcript.split(/\s+/);
 
-          // Check against all active goblins - VERY lenient matching
-          setGoblins(prev => {
-            const activeGoblins = prev.filter(g => !g.defeated);
+          // Read current goblins snapshot without nesting setGoblins
+          const currentGoblins = goblinsRef.current;
+          const activeGoblins = currentGoblins.filter(g => !g.defeated);
+          
+          for (const goblin of activeGoblins) {
+            const targetWord = goblin.word.toLowerCase();
             
-            for (const goblin of activeGoblins) {
-              const targetWord = goblin.word.toLowerCase();
+            for (const spoken of spokenWords) {
+              const cleanSpoken = spoken.replace(/[^a-z]/g, '');
               
-              for (const spoken of spokenWords) {
-                const cleanSpoken = spoken.replace(/[^a-z]/g, '');
+              if (cleanSpoken.length >= 2) {
+                const startsWithMatch = targetWord.startsWith(cleanSpoken.slice(0, 2)) || 
+                                        cleanSpoken.startsWith(targetWord.slice(0, 2));
+                const containsMatch = targetWord.includes(cleanSpoken) || 
+                                      cleanSpoken.includes(targetWord);
+                const exactMatch = cleanSpoken === targetWord;
                 
-                // Super lenient: first 2 chars match OR sounds similar
-                if (cleanSpoken.length >= 2) {
-                  const startsWithMatch = targetWord.startsWith(cleanSpoken.slice(0, 2)) || 
-                                          cleanSpoken.startsWith(targetWord.slice(0, 2));
-                  const containsMatch = targetWord.includes(cleanSpoken) || 
-                                        cleanSpoken.includes(targetWord);
-                  const exactMatch = cleanSpoken === targetWord;
-                  
-                  if (exactMatch || startsWithMatch || containsMatch) {
-                    handleGoblinDefeat(goblin.id, goblin.word);
-                    return prev;
-                  }
+                if (exactMatch || startsWithMatch || containsMatch) {
+                  handleGoblinDefeat(goblin.id, goblin.word);
+                  break;
                 }
               }
             }
-            return prev;
-          });
+          }
         }
       };
 
