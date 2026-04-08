@@ -356,6 +356,19 @@ export const RPGBattleBackground = ({
           ambientColor: 'rgba(34, 197, 94, 0.2)',
           specialElements: 'torches',
         };
+      // Agent new world themes
+      case 'vault':
+        return { sky: 'from-yellow-950 via-amber-900 to-stone-950', ground: 'from-stone-800 to-amber-950', accent: 'bg-yellow-500/20', particles: 'bg-yellow-300', ambientColor: 'rgba(234, 179, 8, 0.2)', specialElements: 'torches' };
+      case 'shadow_protocol':
+        return { sky: 'from-slate-950 via-gray-950 to-black', ground: 'from-gray-900 to-black', accent: 'bg-slate-500/15', particles: 'bg-slate-400', ambientColor: 'rgba(100, 116, 139, 0.15)', specialElements: 'shadows' };
+      case 'arctic_outpost':
+        return { sky: 'from-blue-300 via-cyan-500 to-blue-800', ground: 'from-blue-200/30 to-cyan-900', accent: 'bg-cyan-300/25', particles: 'bg-white', ambientColor: 'rgba(165, 243, 252, 0.3)', specialElements: 'crystals' };
+      case 'labyrinth':
+        return { sky: 'from-stone-950 via-amber-950 to-stone-900', ground: 'from-stone-800 to-amber-950', accent: 'bg-amber-500/15', particles: 'bg-amber-200', ambientColor: 'rgba(217, 119, 6, 0.15)', specialElements: 'torches' };
+      case 'project_zero':
+        return { sky: 'from-green-950 via-emerald-900 to-teal-950', ground: 'from-emerald-900 to-teal-950', accent: 'bg-emerald-400/25', particles: 'bg-emerald-300', ambientColor: 'rgba(52, 211, 153, 0.25)', specialElements: 'bubbles' };
+      case 'omega_directive':
+        return { sky: 'from-red-950 via-orange-900 to-yellow-950', ground: 'from-red-900 to-orange-950', accent: 'bg-orange-500/30', particles: 'bg-orange-400', ambientColor: 'rgba(249, 115, 22, 0.3)', specialElements: 'lava' };
       case 'forest':
       default:
         return {
