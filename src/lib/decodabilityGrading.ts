@@ -265,8 +265,8 @@ const computeSentenceComplexityGrade = (text: string): number => {
   const totalCharLen = words.reduce((sum, w) => sum + w.replace(/[^a-zA-Z]/g, '').length, 0);
   const avgWordLen = totalCharLen / words.length;
 
-  // Gate: text must have at least moderate vocabulary to qualify
-  if (avgWordLen < 4.3 || avgSentLen < 10) return 0;
+  // Gate: text must have at least moderate sentence length to qualify
+  if (avgSentLen < 10) return 0;
 
   // Sentence length component → grade
   let sg = 0;
@@ -291,9 +291,12 @@ const computeSentenceComplexityGrade = (text: string): number => {
   // Both zero → no complexity boost
   if (sg === 0 && wg === 0) return 0;
 
-  // If only one dimension qualifies, penalize by 2 grades
+  // If only one dimension qualifies, use graduated mapping
   if (sg === 0) return Math.max(6, wg - 2);
-  if (wg === 0) return Math.max(6, sg - 2);
+  if (wg === 0) {
+    // Simple vocabulary + complex sentences: sg 6-7 → grade 6, sg 8+ → grade 7
+    return sg <= 7 ? 6 : 7;
+  }
 
   // Both qualify → average
   return Math.round((sg + wg) / 2);
