@@ -18,7 +18,19 @@ export type EnemyType =
   // World 11 - Starfall Peaks
   | 'star_sprite' | 'comet_wolf' | 'nova_titan'
   // World 12 - Eternal Archive
-  | 'tome_golem' | 'page_wraith' | 'the_librarian';
+  | 'tome_golem' | 'page_wraith' | 'the_librarian'
+  // Agent World 9 - The Vault
+  | 'vault_sentinel' | 'vault_drone' | 'the_vault_keeper'
+  // Agent World 10 - Shadow Protocol
+  | 'shadow_operative' | 'shadow_drone' | 'the_shadow_broker'
+  // Agent World 11 - Arctic Outpost
+  | 'frost_trooper' | 'ice_drone' | 'the_frostbite'
+  // Agent World 12 - The Labyrinth
+  | 'maze_runner' | 'tunnel_rat' | 'the_minotaur'
+  // Agent World 13 - Project Zero
+  | 'lab_guard' | 'bio_drone' | 'the_catalyst'
+  // Agent World 14 - Omega Directive
+  | 'omega_soldier' | 'omega_elite' | 'the_omega';
 
 export type BattleStatus = 'in_progress' | 'victory' | 'defeat';
 
@@ -89,6 +101,30 @@ const getEnemyTier = (enemyType: EnemyType): 'minion' | 'guard' | 'elite' | 'bos
     tome_golem: 'guard',
     page_wraith: 'elite',
     the_librarian: 'boss',
+    // Agent World 9 - The Vault
+    vault_sentinel: 'guard',
+    vault_drone: 'minion',
+    the_vault_keeper: 'boss',
+    // Agent World 10 - Shadow Protocol
+    shadow_operative: 'guard',
+    shadow_drone: 'minion',
+    the_shadow_broker: 'boss',
+    // Agent World 11 - Arctic Outpost
+    frost_trooper: 'guard',
+    ice_drone: 'minion',
+    the_frostbite: 'boss',
+    // Agent World 12 - The Labyrinth
+    maze_runner: 'guard',
+    tunnel_rat: 'minion',
+    the_minotaur: 'boss',
+    // Agent World 13 - Project Zero
+    lab_guard: 'guard',
+    bio_drone: 'minion',
+    the_catalyst: 'boss',
+    // Agent World 14 - Omega Directive
+    omega_soldier: 'guard',
+    omega_elite: 'elite',
+    the_omega: 'boss',
   };
   return tierMap[enemyType] || 'minion';
 };
@@ -97,18 +133,8 @@ const getEnemyTier = (enemyType: EnemyType): 'minion' | 'guard' | 'elite' | 'bos
 export const getEnemyStats = (worldNumber: number, enemyType: EnemyType): { hp: number; attackPower: number } => {
   // DOUBLED HP: Makes battles harder - enemies survive longer
   const baseHpByWorld: Record<number, number> = {
-    1: 800,
-    2: 1600,
-    3: 2800,
-    4: 4000,
-    5: 2000,
-    6: 2400,
-    7: 3000,
-    8: 4800,
-    9: 3200,
-    10: 3600,
-    11: 4000,
-    12: 5200,
+    1: 800, 2: 1600, 3: 2800, 4: 4000, 5: 2000, 6: 2400, 7: 3000, 8: 4800,
+    9: 3200, 10: 3600, 11: 4000, 12: 5200, 13: 5600, 14: 6000,
   };
 
   const tier = getEnemyTier(enemyType);

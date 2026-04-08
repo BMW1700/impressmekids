@@ -2097,11 +2097,26 @@ const rawAgentStories: CuratedStory[] = [
     difficulty_level: 0,
     cover_gradient: "from-gray-900 to-slate-950"
   },
+  // Additional Grade 7 story to reach 12 total
+  {
+    title: "The Intercepted Broadcast",
+    description: "Agents decode a suspicious international broadcast signal",
+    passage_text: "The monitoring division intercepted an unusual broadcast originating from a temporary transmission station near the southern coastline. Senior analyst Rodriguez immediately recognized the encoding pattern as belonging to a network previously linked to industrial espionage operations targeting pharmaceutical research facilities throughout the region. The broadcast contained coordinates embedded within seemingly innocent weather forecasting data that required specialized decryption protocols to properly extract and interpret. Rodriguez assembled a response team consisting of field operatives and technical specialists who could investigate the transmission source before the operators dismantled their equipment and relocated to another position. Within several hours the team had triangulated the broadcast origin to an abandoned lighthouse situated on a rocky peninsula accessible only during periods of low tide. The reconnaissance revealed sophisticated antenna equipment concealed within the lighthouse structure along with computing hardware capable of processing encrypted communications from multiple international sources simultaneously. The discovery provided investigators with substantial evidence connecting several previously unrelated intelligence cases into a single coordinated espionage operation spanning multiple countries and involving dozens of compromised corporate employees.",
+    grade_level: 0,
+    category: "adventure",
+    target_phonemes: ["str", "pr", "sp", "tr"],
+    word_count: 175,
+    reading_time_minutes: 3,
+    difficulty_level: 0,
+    cover_gradient: "from-slate-600 to-blue-800"
+  },
 ];
 
-// Compute grade_level and difficulty_level from decodability engine
-export const agentStories: CuratedStory[] = rawAgentStories.map(story => ({
-  ...story,
-  grade_level: getStoryGradeLevel(story.passage_text),
-  difficulty_level: getStoryDifficultyLevel(story.passage_text),
-}));
+// Compute grade_level and difficulty_level from decodability engine, then sort by grade
+export const agentStories: CuratedStory[] = rawAgentStories
+  .map(story => ({
+    ...story,
+    grade_level: getStoryGradeLevel(story.passage_text),
+    difficulty_level: getStoryDifficultyLevel(story.passage_text),
+  }))
+  .sort((a, b) => a.grade_level - b.grade_level);

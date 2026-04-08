@@ -1061,7 +1061,7 @@ export const theLibrarian: RPGEnemy = {
 };
 
 // Get enemy by type for battle - UPDATED with all new enemies
-export type EnemyTypeKey = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'goblin_shaman' | 'fire_elemental' | 'lava_hound' | 'ember_drake' | 'crystal_knight' | 'prism_mage' | 'crystal_queen' | 'star_sprite' | 'comet_wolf' | 'nova_titan' | 'tome_golem' | 'page_wraith' | 'the_librarian';
+export type EnemyTypeKey = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'goblin_shaman' | 'fire_elemental' | 'lava_hound' | 'ember_drake' | 'crystal_knight' | 'prism_mage' | 'crystal_queen' | 'star_sprite' | 'comet_wolf' | 'nova_titan' | 'tome_golem' | 'page_wraith' | 'the_librarian' | 'vault_sentinel' | 'vault_drone' | 'the_vault_keeper' | 'shadow_operative' | 'shadow_drone' | 'the_shadow_broker' | 'frost_trooper' | 'ice_drone' | 'the_frostbite' | 'maze_runner' | 'tunnel_rat' | 'the_minotaur' | 'lab_guard' | 'bio_drone' | 'the_catalyst' | 'omega_soldier' | 'omega_elite' | 'the_omega';
 
 export const getEnemyForBattle = (enemyType: EnemyTypeKey): RPGEnemy => {
   switch (enemyType) {

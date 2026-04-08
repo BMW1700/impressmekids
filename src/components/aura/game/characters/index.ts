@@ -59,6 +59,26 @@ export { TheCommander, type TheCommanderState } from './TheCommander';
 export { ThePhantom, type ThePhantomState } from './ThePhantom';
 export { TheOverseer, type TheOverseerState } from './TheOverseer';
 
+// Agent Mode new world enemy sprites (Worlds 9-14)
+export { VaultSentinel, type VaultSentinelState } from './VaultSentinel';
+export { VaultDrone, type VaultDroneState } from './VaultDrone';
+export { TheVaultKeeper, type TheVaultKeeperState } from './TheVaultKeeper';
+export { ShadowOperative, type ShadowOperativeState } from './ShadowOperative';
+export { ShadowDrone, type ShadowDroneState } from './ShadowDrone';
+export { TheShadowBroker, type TheShadowBrokerState } from './TheShadowBroker';
+export { FrostTrooper, type FrostTrooperState } from './FrostTrooper';
+export { IceDrone, type IceDroneState } from './IceDrone';
+export { TheFrostbite, type TheFrostbiteState } from './TheFrostbite';
+export { MazeRunner, type MazeRunnerState } from './MazeRunner';
+export { TunnelRat, type TunnelRatState } from './TunnelRat';
+export { TheMinotaur, type TheMinotaurState } from './TheMinotaur';
+export { LabGuard, type LabGuardState } from './LabGuard';
+export { BioDrone, type BioDroneState } from './BioDrone';
+export { TheCatalyst, type TheCatalystState } from './TheCatalyst';
+export { OmegaSoldier, type OmegaSoldierState } from './OmegaSoldier';
+export { OmegaElite, type OmegaEliteState } from './OmegaElite';
+export { TheOmega, type TheOmegaState } from './TheOmega';
+
 // Export boss silhouettes for world map
 export { 
   DrakeSilhouette, 

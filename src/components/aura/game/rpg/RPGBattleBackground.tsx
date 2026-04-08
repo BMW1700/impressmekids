@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ImageIcon, Palette } from "lucide-react";
 import { getStoredTheme } from "@/lib/gameTheme";
 
-type BackgroundTheme = 'castle' | 'dungeon' | 'forest' | 'throne' | 'volcano' | 'ice_cave' | 'ruins' | 'shadow_realm' | 'caverns' | 'sky_isles' | 'sunken_library' | 'void' | 'underground' | 'neon_district' | 'embassy' | 'syndicate_hq' | 'ember_highlands' | 'crystal_citadel' | 'starfall_peaks' | 'eternal_archive';
+type BackgroundTheme = 'castle' | 'dungeon' | 'forest' | 'throne' | 'volcano' | 'ice_cave' | 'ruins' | 'shadow_realm' | 'caverns' | 'sky_isles' | 'sunken_library' | 'void' | 'underground' | 'neon_district' | 'embassy' | 'syndicate_hq' | 'ember_highlands' | 'crystal_citadel' | 'starfall_peaks' | 'eternal_archive' | 'vault' | 'shadow_protocol' | 'arctic_outpost' | 'labyrinth' | 'project_zero' | 'omega_directive';
 
 interface RPGBattleBackgroundProps {
   theme?: BackgroundTheme;
@@ -48,10 +48,16 @@ const agentWorldNames: Record<number, string> = {
   2: 'Neon District',
   3: 'The Embassy',
   4: 'Syndicate HQ',
-  5: 'The Underground',
-  6: 'Neon District',
-  7: 'The Embassy',
-  8: 'Syndicate HQ',
+  5: 'The Black Site',
+  6: 'Skyfall Station',
+  7: 'The Deep Web',
+  8: 'Operation Endgame',
+  9: 'The Vault',
+  10: 'Shadow Protocol',
+  11: 'Arctic Outpost',
+  12: 'The Labyrinth',
+  13: 'Project Zero',
+  14: 'Omega Directive',
 };
 
 export const RPGBattleBackground = ({ 
@@ -85,15 +91,9 @@ export const RPGBattleBackground = ({
 
   // Agent mode world-to-DB mapping (IDs 10-14)
   const agentWorldToDbId: Record<number, number> = {
-    0: 10, // Training Facility
-    1: 11, // The Underground
-    2: 12, // Neon District
-    3: 13, // The Embassy
-    4: 14, // Syndicate HQ
-    5: 11,
-    6: 12,
-    7: 13,
-    8: 14,
+    0: 10, 1: 11, 2: 12, 3: 13, 4: 14,
+    5: 15, 6: 16, 7: 17, 8: 18,
+    9: 19, 10: 20, 11: 21, 12: 22, 13: 23, 14: 24,
   };
 
   // Fetch AI-generated background from database
@@ -141,6 +141,12 @@ export const RPGBattleBackground = ({
         6: 'neon_district',
         7: 'embassy',
         8: 'syndicate_hq',
+        9: 'vault',
+        10: 'shadow_protocol',
+        11: 'arctic_outpost',
+        12: 'labyrinth',
+        13: 'project_zero',
+        14: 'omega_directive',
       };
       return agentWorldThemes[worldNumber] || 'underground';
     }
@@ -350,6 +356,19 @@ export const RPGBattleBackground = ({
           ambientColor: 'rgba(34, 197, 94, 0.2)',
           specialElements: 'torches',
         };
+      // Agent new world themes
+      case 'vault':
+        return { sky: 'from-yellow-950 via-amber-900 to-stone-950', ground: 'from-stone-800 to-amber-950', accent: 'bg-yellow-500/20', particles: 'bg-yellow-300', ambientColor: 'rgba(234, 179, 8, 0.2)', specialElements: 'torches' };
+      case 'shadow_protocol':
+        return { sky: 'from-slate-950 via-gray-950 to-black', ground: 'from-gray-900 to-black', accent: 'bg-slate-500/15', particles: 'bg-slate-400', ambientColor: 'rgba(100, 116, 139, 0.15)', specialElements: 'shadows' };
+      case 'arctic_outpost':
+        return { sky: 'from-blue-300 via-cyan-500 to-blue-800', ground: 'from-blue-200/30 to-cyan-900', accent: 'bg-cyan-300/25', particles: 'bg-white', ambientColor: 'rgba(165, 243, 252, 0.3)', specialElements: 'crystals' };
+      case 'labyrinth':
+        return { sky: 'from-stone-950 via-amber-950 to-stone-900', ground: 'from-stone-800 to-amber-950', accent: 'bg-amber-500/15', particles: 'bg-amber-200', ambientColor: 'rgba(217, 119, 6, 0.15)', specialElements: 'torches' };
+      case 'project_zero':
+        return { sky: 'from-green-950 via-emerald-900 to-teal-950', ground: 'from-emerald-900 to-teal-950', accent: 'bg-emerald-400/25', particles: 'bg-emerald-300', ambientColor: 'rgba(52, 211, 153, 0.25)', specialElements: 'bubbles' };
+      case 'omega_directive':
+        return { sky: 'from-red-950 via-orange-900 to-yellow-950', ground: 'from-red-900 to-orange-950', accent: 'bg-orange-500/30', particles: 'bg-orange-400', ambientColor: 'rgba(249, 115, 22, 0.3)', specialElements: 'lava' };
       case 'forest':
       default:
         return {
