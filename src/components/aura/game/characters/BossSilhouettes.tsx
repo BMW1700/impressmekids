@@ -1045,6 +1045,101 @@ export const LibrarianSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteP
   );
 };
 
+// Agent Worlds 9-14 Boss Silhouettes
+
+export const VaultKeeperSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteProps) => {
+  const { width, height } = sizeConfig[size];
+  return (
+    <motion.div className="relative" animate={isUnlocked ? { filter: ['drop-shadow(0 0 4px rgba(217, 119, 6, 0.5))', 'drop-shadow(0 0 12px rgba(217, 119, 6, 0.8))', 'drop-shadow(0 0 4px rgba(217, 119, 6, 0.5))'] } : {}} transition={{ duration: 2, repeat: Infinity }}>
+      <svg width={width} height={height} viewBox="0 0 80 80" fill="none">
+        <defs><linearGradient id="vaultKeeperGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor={isUnlocked ? "#D97706" : "#475569"} /><stop offset="100%" stopColor={isUnlocked ? "#78350F" : "#1E293B"} /></linearGradient></defs>
+        <path d="M25 22 L55 22 L60 55 L55 75 L25 75 L20 55 Z" fill="url(#vaultKeeperGrad)" />
+        <rect x="28" y="8" width="24" height="18" rx="3" fill="url(#vaultKeeperGrad)" />
+        <rect x="15" y="25" width="14" height="30" rx="4" fill="url(#vaultKeeperGrad)" />
+        <rect x="51" y="25" width="14" height="30" rx="4" fill="url(#vaultKeeperGrad)" />
+        {isUnlocked && (<><motion.circle cx="36" cy="16" r="2" fill="#F59E0B" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }} /><motion.circle cx="44" cy="16" r="2" fill="#F59E0B" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }} /><motion.rect x="33" y="45" width="14" height="14" rx="2" stroke="#F59E0B" strokeWidth="1.5" fill="none" animate={{ opacity: [0.3, 0.8, 0.3] }} transition={{ duration: 2, repeat: Infinity }} /></>)}
+      </svg>
+    </motion.div>
+  );
+};
+
+export const ShadowBrokerSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteProps) => {
+  const { width, height } = sizeConfig[size];
+  return (
+    <motion.div className="relative" animate={isUnlocked ? { filter: ['drop-shadow(0 0 4px rgba(100, 116, 139, 0.5))', 'drop-shadow(0 0 12px rgba(100, 116, 139, 0.8))', 'drop-shadow(0 0 4px rgba(100, 116, 139, 0.5))'] } : {}} transition={{ duration: 2, repeat: Infinity }}>
+      <svg width={width} height={height} viewBox="0 0 80 80" fill="none">
+        <defs><linearGradient id="shadowBrokerGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor={isUnlocked ? "#1E293B" : "#475569"} /><stop offset="100%" stopColor={isUnlocked ? "#020617" : "#1E293B"} /></linearGradient></defs>
+        <path d="M40 12 L18 35 L15 75 L40 70 L65 75 L62 35 Z" fill="url(#shadowBrokerGrad)" />
+        <circle cx="40" cy="18" r="10" fill="url(#shadowBrokerGrad)" />
+        {isUnlocked && (<><motion.circle cx="36" cy="17" r="2" fill="#22C55E" animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.2, repeat: Infinity }} /><motion.circle cx="44" cy="17" r="2" fill="#22C55E" animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.2, repeat: Infinity, delay: 0.2 }} /></>)}
+      </svg>
+    </motion.div>
+  );
+};
+
+export const FrostbiteSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteProps) => {
+  const { width, height } = sizeConfig[size];
+  return (
+    <motion.div className="relative" animate={isUnlocked ? { filter: ['drop-shadow(0 0 4px rgba(56, 189, 248, 0.5))', 'drop-shadow(0 0 12px rgba(56, 189, 248, 0.8))', 'drop-shadow(0 0 4px rgba(56, 189, 248, 0.5))'] } : {}} transition={{ duration: 2, repeat: Infinity }}>
+      <svg width={width} height={height} viewBox="0 0 80 80" fill="none">
+        <defs><linearGradient id="frostbiteGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor={isUnlocked ? "#38BDF8" : "#475569"} /><stop offset="100%" stopColor={isUnlocked ? "#0C4A6E" : "#1E293B"} /></linearGradient></defs>
+        <path d="M25 15 L55 15 L65 40 L55 75 L25 75 L15 40 Z" fill="url(#frostbiteGrad)" />
+        <path d="M15 40 L5 30 L10 45" fill="url(#frostbiteGrad)" />
+        <path d="M65 40 L75 30 L70 45" fill="url(#frostbiteGrad)" />
+        {isUnlocked && (<><motion.circle cx="35" cy="30" r="3" fill="#BAE6FD" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }} /><motion.circle cx="45" cy="30" r="3" fill="#BAE6FD" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }} /></>)}
+      </svg>
+    </motion.div>
+  );
+};
+
+export const MinotaurSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteProps) => {
+  const { width, height } = sizeConfig[size];
+  return (
+    <motion.div className="relative" animate={isUnlocked ? { filter: ['drop-shadow(0 0 4px rgba(180, 83, 9, 0.5))', 'drop-shadow(0 0 12px rgba(180, 83, 9, 0.8))', 'drop-shadow(0 0 4px rgba(180, 83, 9, 0.5))'] } : {}} transition={{ duration: 2, repeat: Infinity }}>
+      <svg width={width} height={height} viewBox="0 0 80 80" fill="none">
+        <defs><linearGradient id="minotaurGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor={isUnlocked ? "#B45309" : "#475569"} /><stop offset="100%" stopColor={isUnlocked ? "#78350F" : "#1E293B"} /></linearGradient></defs>
+        <path d="M25 20 L55 20 L62 55 L55 75 L25 75 L18 55 Z" fill="url(#minotaurGrad)" />
+        <circle cx="40" cy="16" r="11" fill="url(#minotaurGrad)" />
+        <path d="M29 12 L20 2 L28 15" fill="url(#minotaurGrad)" />
+        <path d="M51 12 L60 2 L52 15" fill="url(#minotaurGrad)" />
+        {isUnlocked && (<><motion.circle cx="36" cy="15" r="2" fill="#F59E0B" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1, repeat: Infinity }} /><motion.circle cx="44" cy="15" r="2" fill="#F59E0B" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1, repeat: Infinity, delay: 0.2 }} /></>)}
+      </svg>
+    </motion.div>
+  );
+};
+
+export const CatalystSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteProps) => {
+  const { width, height } = sizeConfig[size];
+  return (
+    <motion.div className="relative" animate={isUnlocked ? { filter: ['drop-shadow(0 0 4px rgba(16, 185, 129, 0.5))', 'drop-shadow(0 0 12px rgba(16, 185, 129, 0.8))', 'drop-shadow(0 0 4px rgba(16, 185, 129, 0.5))'] } : {}} transition={{ duration: 2, repeat: Infinity }}>
+      <svg width={width} height={height} viewBox="0 0 80 80" fill="none">
+        <defs><linearGradient id="catalystGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor={isUnlocked ? "#10B981" : "#475569"} /><stop offset="100%" stopColor={isUnlocked ? "#064E3B" : "#1E293B"} /></linearGradient></defs>
+        <path d="M28 25 L52 25 L58 55 L55 75 L25 75 L22 55 Z" fill="url(#catalystGrad)" />
+        <circle cx="40" cy="18" r="10" fill="url(#catalystGrad)" />
+        <circle cx="40" cy="15" r="13" stroke={isUnlocked ? "#34D399" : "#475569"} strokeWidth="1" fill="none" />
+        {isUnlocked && (<><motion.circle cx="36" cy="17" r="2" fill="#6EE7B7" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }} /><motion.circle cx="44" cy="17" r="2" fill="#6EE7B7" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }} /><motion.circle cx="40" cy="45" r="6" stroke="#34D399" strokeWidth="1" fill="none" animate={{ r: [6, 9, 6], opacity: [0.3, 0.7, 0.3] }} transition={{ duration: 2, repeat: Infinity }} /></>)}
+      </svg>
+    </motion.div>
+  );
+};
+
+export const OmegaSilhouette = ({ isUnlocked, size = 'medium' }: SilhouetteProps) => {
+  const { width, height } = sizeConfig[size];
+  return (
+    <motion.div className="relative" animate={isUnlocked ? { filter: ['drop-shadow(0 0 4px rgba(239, 68, 68, 0.5))', 'drop-shadow(0 0 15px rgba(239, 68, 68, 0.9))', 'drop-shadow(0 0 4px rgba(239, 68, 68, 0.5))'] } : {}} transition={{ duration: 2, repeat: Infinity }}>
+      <svg width={width} height={height} viewBox="0 0 80 80" fill="none">
+        <defs><linearGradient id="omegaGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor={isUnlocked ? "#EF4444" : "#475569"} /><stop offset="100%" stopColor={isUnlocked ? "#7F1D1D" : "#1E293B"} /></linearGradient></defs>
+        <path d="M25 20 L55 20 L62 55 L55 75 L25 75 L18 55 Z" fill="url(#omegaGrad)" />
+        <circle cx="40" cy="15" r="12" fill="url(#omegaGrad)" />
+        <path d="M28 20 L40 8 L52 20" fill={isUnlocked ? "#7F1D1D" : "#475569"} />
+        <rect x="13" y="25" width="16" height="32" rx="4" fill="url(#omegaGrad)" />
+        <rect x="51" y="25" width="16" height="32" rx="4" fill="url(#omegaGrad)" />
+        {isUnlocked && (<><motion.circle cx="36" cy="14" r="2.5" fill="#FCA5A5" animate={{ opacity: [0.4, 1, 0.4], filter: ['drop-shadow(0 0 2px #FCA5A5)', 'drop-shadow(0 0 8px #FCA5A5)', 'drop-shadow(0 0 2px #FCA5A5)'] }} transition={{ duration: 1, repeat: Infinity }} /><motion.circle cx="44" cy="14" r="2.5" fill="#FCA5A5" animate={{ opacity: [0.4, 1, 0.4], filter: ['drop-shadow(0 0 2px #FCA5A5)', 'drop-shadow(0 0 8px #FCA5A5)', 'drop-shadow(0 0 2px #FCA5A5)'] }} transition={{ duration: 1, repeat: Infinity, delay: 0.2 }} /><motion.text x="40" y="52" textAnchor="middle" fill="#FCA5A5" fontSize="16" fontWeight="bold" animate={{ opacity: [0.3, 0.8, 0.3] }} transition={{ duration: 2, repeat: Infinity }}>Ω</motion.text></>)}
+      </svg>
+    </motion.div>
+  );
+};
+
 // Combined export for convenience
 export const BossSilhouettes = {
   Drake: DrakeSilhouette,
@@ -1068,4 +1163,10 @@ export const BossSilhouettes = {
   CrystalQueen: CrystalQueenSilhouette,
   NovaTitan: NovaTitanSilhouette,
   Librarian: LibrarianSilhouette,
+  VaultKeeper: VaultKeeperSilhouette,
+  ShadowBroker: ShadowBrokerSilhouette,
+  Frostbite: FrostbiteSilhouette,
+  Minotaur: MinotaurSilhouette,
+  Catalyst: CatalystSilhouette,
+  Omega: OmegaSilhouette,
 };

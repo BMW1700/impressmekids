@@ -98,5 +98,11 @@ export {
   CrystalQueenSilhouette,
   NovaTitanSilhouette,
   LibrarianSilhouette,
+  VaultKeeperSilhouette,
+  ShadowBrokerSilhouette,
+  FrostbiteSilhouette,
+  MinotaurSilhouette,
+  CatalystSilhouette,
+  OmegaSilhouette,
   BossSilhouettes 
 } from './BossSilhouettes';
