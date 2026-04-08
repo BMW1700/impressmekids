@@ -1,7 +1,8 @@
 import type { CuratedStory } from './curatedStories';
+import { getStoryGradeLevel, getStoryDifficultyLevel } from '@/lib/phonemeDifficulty';
 
 // Agent Mode stories — 6-12th grade reading level, diverse academic topics with spy/thriller narrative frame
-export const agentStories: CuratedStory[] = [
+const rawAgentStories: CuratedStory[] = [
   // ═══════════════════════════════════════════════════════════════
   // GRADE 6 STORIES — ~800-900 Lexile, clear academic vocabulary,
   // moderate sentence complexity, spy-themed framing
@@ -1217,3 +1218,10 @@ export const agentStories: CuratedStory[] = [
     cover_gradient: "from-rose-900 to-red-950"
   },
 ];
+
+// Compute grade_level and difficulty_level from decodability engine
+export const agentStories: CuratedStory[] = rawAgentStories.map(story => ({
+  ...story,
+  grade_level: getStoryGradeLevel(story.passage_text),
+  difficulty_level: getStoryDifficultyLevel(story.passage_text),
+}));
