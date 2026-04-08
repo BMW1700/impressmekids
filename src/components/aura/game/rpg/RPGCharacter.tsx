@@ -55,6 +55,24 @@ import { TheWarden, TheWardenState } from "../characters/TheWarden";
 import { TheCommander, TheCommanderState } from "../characters/TheCommander";
 import { ThePhantom, ThePhantomState } from "../characters/ThePhantom";
 import { TheOverseer, TheOverseerState } from "../characters/TheOverseer";
+import { VaultSentinel, VaultSentinelState } from "../characters/VaultSentinel";
+import { VaultDrone, VaultDroneState } from "../characters/VaultDrone";
+import { TheVaultKeeper, TheVaultKeeperState } from "../characters/TheVaultKeeper";
+import { ShadowOperative, ShadowOperativeState } from "../characters/ShadowOperative";
+import { ShadowDrone, ShadowDroneState } from "../characters/ShadowDrone";
+import { TheShadowBroker, TheShadowBrokerState } from "../characters/TheShadowBroker";
+import { FrostTrooper, FrostTrooperState } from "../characters/FrostTrooper";
+import { IceDrone, IceDroneState } from "../characters/IceDrone";
+import { TheFrostbite, TheFrostbiteState } from "../characters/TheFrostbite";
+import { MazeRunner, MazeRunnerState } from "../characters/MazeRunner";
+import { TunnelRat, TunnelRatState } from "../characters/TunnelRat";
+import { TheMinotaur, TheMinotaurState } from "../characters/TheMinotaur";
+import { LabGuard, LabGuardState } from "../characters/LabGuard";
+import { BioDrone, BioDroneState } from "../characters/BioDrone";
+import { TheCatalyst, TheCatalystState } from "../characters/TheCatalyst";
+import { OmegaSoldier, OmegaSoldierState } from "../characters/OmegaSoldier";
+import { OmegaElite, OmegaEliteState } from "../characters/OmegaElite";
+import { TheOmega, TheOmegaState } from "../characters/TheOmega";
 import { getStoredTheme } from "@/lib/gameTheme";
 
 interface RPGCharacterProps {
@@ -74,7 +92,7 @@ interface RPGCharacterProps {
 }
 
 // Map character/enemy types to sprite types - EXTENDED with all new enemies
-type SpriteType = 'knight' | 'wizard' | 'princess' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'grog_king' | 'cave_troll' | 'crystal_spider' | 'storm_harpy' | 'cloud_giant' | 'wind_lord' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'echo_wraith' | 'agent_x' | 'cipher' | 'shadow_agent' | 'street_thug_agent' | 'hired_gun_agent' | 'cyber_hacker_agent' | 'the_broker_agent' | 'the_director_agent' | 'drone_sentry_agent' | 'rogue_agent_agent' | 'bodyguard_agent' | 'the_architect_agent' | 'operative_agent' | 'enforcer_agent' | 'the_double_agent_agent' | 'the_warden_agent' | 'the_commander_agent' | 'the_phantom_agent' | 'the_overseer_agent' | 'fire_elemental' | 'lava_hound' | 'ember_drake' | 'crystal_knight' | 'prism_mage' | 'crystal_queen' | 'star_sprite' | 'comet_wolf' | 'nova_titan' | 'tome_golem' | 'page_wraith' | 'the_librarian';
+type SpriteType = 'knight' | 'wizard' | 'princess' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'grog_king' | 'cave_troll' | 'crystal_spider' | 'storm_harpy' | 'cloud_giant' | 'wind_lord' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'echo_wraith' | 'agent_x' | 'cipher' | 'shadow_agent' | 'street_thug_agent' | 'hired_gun_agent' | 'cyber_hacker_agent' | 'the_broker_agent' | 'the_director_agent' | 'drone_sentry_agent' | 'rogue_agent_agent' | 'bodyguard_agent' | 'the_architect_agent' | 'operative_agent' | 'enforcer_agent' | 'the_double_agent_agent' | 'the_warden_agent' | 'the_commander_agent' | 'the_phantom_agent' | 'the_overseer_agent' | 'fire_elemental' | 'lava_hound' | 'ember_drake' | 'crystal_knight' | 'prism_mage' | 'crystal_queen' | 'star_sprite' | 'comet_wolf' | 'nova_titan' | 'tome_golem' | 'page_wraith' | 'the_librarian' | 'vault_sentinel_agent' | 'vault_drone_agent' | 'the_vault_keeper_agent' | 'shadow_operative_agent' | 'shadow_drone_agent' | 'the_shadow_broker_agent' | 'frost_trooper_agent' | 'ice_drone_agent' | 'the_frostbite_agent' | 'maze_runner_agent' | 'tunnel_rat_agent' | 'the_minotaur_agent' | 'lab_guard_agent' | 'bio_drone_agent' | 'the_catalyst_agent' | 'omega_soldier_agent' | 'omega_elite_agent' | 'the_omega_agent';
 
 const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean): SpriteType => {
   if (isEnemy) {
@@ -123,6 +141,24 @@ const getSpriteType = (character: RPGCharacterType | RPGEnemy, isEnemy: boolean)
       'the_commander': 'the_commander_agent',
       'the_phantom': 'the_phantom_agent',
       'the_overseer': 'the_overseer_agent',
+      'vault_sentinel': 'vault_sentinel_agent',
+      'vault_drone': 'vault_drone_agent',
+      'the_vault_keeper': 'the_vault_keeper_agent',
+      'shadow_operative': 'shadow_operative_agent',
+      'shadow_drone': 'shadow_drone_agent',
+      'the_shadow_broker': 'the_shadow_broker_agent',
+      'frost_trooper': 'frost_trooper_agent',
+      'ice_drone': 'ice_drone_agent',
+      'the_frostbite': 'the_frostbite_agent',
+      'maze_runner': 'maze_runner_agent',
+      'tunnel_rat': 'tunnel_rat_agent',
+      'the_minotaur': 'the_minotaur_agent',
+      'lab_guard': 'lab_guard_agent',
+      'bio_drone': 'bio_drone_agent',
+      'the_catalyst': 'the_catalyst_agent',
+      'omega_soldier': 'omega_soldier_agent',
+      'omega_elite': 'omega_elite_agent',
+      'the_omega': 'the_omega_agent',
     };
     if (idMap[enemy.id]) return idMap[enemy.id];
     
@@ -646,6 +682,61 @@ export const RPGCharacter = ({
             size="large"
           />
         );
+      }
+      // Agent Worlds 9-14 enemy sprites
+      if (spriteType === 'vault_sentinel_agent') {
+        return <VaultSentinel state={commonState as VaultSentinelState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'vault_drone_agent') {
+        return <VaultDrone state={commonState as VaultDroneState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'the_vault_keeper_agent') {
+        return <TheVaultKeeper state={commonState as TheVaultKeeperState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="large" />;
+      }
+      if (spriteType === 'shadow_operative_agent') {
+        return <ShadowOperative state={commonState as ShadowOperativeState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'shadow_drone_agent') {
+        return <ShadowDrone state={commonState as ShadowDroneState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'the_shadow_broker_agent') {
+        return <TheShadowBroker state={commonState as TheShadowBrokerState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="large" />;
+      }
+      if (spriteType === 'frost_trooper_agent') {
+        return <FrostTrooper state={commonState as FrostTrooperState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'ice_drone_agent') {
+        return <IceDrone state={commonState as IceDroneState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'the_frostbite_agent') {
+        return <TheFrostbite state={commonState as TheFrostbiteState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="large" />;
+      }
+      if (spriteType === 'maze_runner_agent') {
+        return <MazeRunner state={commonState as MazeRunnerState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'tunnel_rat_agent') {
+        return <TunnelRat state={commonState as TunnelRatState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'the_minotaur_agent') {
+        return <TheMinotaur state={commonState as TheMinotaurState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="large" />;
+      }
+      if (spriteType === 'lab_guard_agent') {
+        return <LabGuard state={commonState as LabGuardState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'bio_drone_agent') {
+        return <BioDrone state={commonState as BioDroneState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'the_catalyst_agent') {
+        return <TheCatalyst state={commonState as TheCatalystState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="large" />;
+      }
+      if (spriteType === 'omega_soldier_agent') {
+        return <OmegaSoldier state={commonState as OmegaSoldierState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'omega_elite_agent') {
+        return <OmegaElite state={commonState as OmegaEliteState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'the_omega_agent') {
+        return <TheOmega state={commonState as TheOmegaState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="large" />;
       }
       // Goblin types - fallback
       return (
