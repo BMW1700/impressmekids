@@ -22,6 +22,20 @@ export { RealityShifter, type RealityShifterState } from './RealityShifter';
 export { WordEater, type WordEaterState } from './WordEater';
 export { EchoWraith, type EchoWraithState } from './EchoWraith';
 
+// World 9-12 enemy sprites
+export { FireElemental, type FireElementalState } from './FireElemental';
+export { LavaHound, type LavaHoundState } from './LavaHound';
+export { EmberDrake, type EmberDrakeState } from './EmberDrake';
+export { CrystalKnight, type CrystalKnightState } from './CrystalKnight';
+export { PrismMage, type PrismMageState } from './PrismMage';
+export { CrystalQueen, type CrystalQueenState } from './CrystalQueen';
+export { StarSprite, type StarSpriteState } from './StarSprite';
+export { CometWolf, type CometWolfState } from './CometWolf';
+export { NovaTitan, type NovaTitanState } from './NovaTitan';
+export { TomeGolem, type TomeGolemState } from './TomeGolem';
+export { PageWraith, type PageWraithState } from './PageWraith';
+export { TheLibrarian, type TheLibrarianState } from './TheLibrarian';
+
 // Agent Mode characters
 export { AgentX, type AgentXState } from './AgentX';
 export { Cipher, type CipherState } from './Cipher';
@@ -60,5 +74,9 @@ export {
   CommanderSilhouette,
   PhantomSilhouette,
   OverseerSilhouette,
+  EmberDrakeSilhouette,
+  CrystalQueenSilhouette,
+  NovaTitanSilhouette,
+  LibrarianSilhouette,
   BossSilhouettes 
 } from './BossSilhouettes';

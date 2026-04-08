@@ -10,7 +10,15 @@ export type EnemyType =
   // World 7 - Sunken Library
   | 'ink_kraken' | 'reef_guardian' | 'leviathan'
   // World 8 - The Void
-  | 'void_phantom' | 'reality_shifter' | 'word_eater';
+  | 'void_phantom' | 'reality_shifter' | 'word_eater'
+  // World 9 - Ember Highlands
+  | 'fire_elemental' | 'lava_hound' | 'ember_drake'
+  // World 10 - Crystal Citadel
+  | 'crystal_knight' | 'prism_mage' | 'crystal_queen'
+  // World 11 - Starfall Peaks
+  | 'star_sprite' | 'comet_wolf' | 'nova_titan'
+  // World 12 - Eternal Archive
+  | 'tome_golem' | 'page_wraith' | 'the_librarian';
 
 export type BattleStatus = 'in_progress' | 'victory' | 'defeat';
 
@@ -65,6 +73,22 @@ const getEnemyTier = (enemyType: EnemyType): 'minion' | 'guard' | 'elite' | 'bos
     void_phantom: 'guard',
     reality_shifter: 'elite',
     word_eater: 'boss',
+    // World 9 - Ember Highlands
+    fire_elemental: 'guard',
+    lava_hound: 'minion',
+    ember_drake: 'boss',
+    // World 10 - Crystal Citadel
+    crystal_knight: 'guard',
+    prism_mage: 'elite',
+    crystal_queen: 'boss',
+    // World 11 - Starfall Peaks
+    star_sprite: 'minion',
+    comet_wolf: 'elite',
+    nova_titan: 'boss',
+    // World 12 - Eternal Archive
+    tome_golem: 'guard',
+    page_wraith: 'elite',
+    the_librarian: 'boss',
   };
   return tierMap[enemyType] || 'minion';
 };
@@ -253,6 +277,18 @@ export const getEnemyName = (enemyType: EnemyType, worldNumber: number): string 
     void_phantom: 'Shade the Void Phantom',
     reality_shifter: 'Flux the Reality Shifter',
     word_eater: 'Terminus the Word Eater',
+    fire_elemental: 'Blaze the Fire Elemental',
+    lava_hound: 'Scorch the Lava Hound',
+    ember_drake: 'Inferno the Ember Drake',
+    crystal_knight: 'Facet the Crystal Knight',
+    prism_mage: 'Refract the Prism Mage',
+    crystal_queen: 'Diamante the Crystal Queen',
+    star_sprite: 'Twinkle the Star Sprite',
+    comet_wolf: 'Streak the Comet Wolf',
+    nova_titan: 'Solaris the Nova Titan',
+    tome_golem: 'Codex the Tome Golem',
+    page_wraith: 'Whisper the Page Wraith',
+    the_librarian: 'The Eternal Librarian',
   };
 
   if (namedEnemies[enemyType]) {
@@ -270,6 +306,10 @@ export const getEnemyName = (enemyType: EnemyType, worldNumber: number): string 
     6: { minion: 'Cloud Sprite', guard: 'Sky Sentinel', elite: 'Storm Rider', boss: 'Zephyr' },
     7: { minion: 'Ink Blob', guard: 'Reef Warden', elite: 'Deep Diver', boss: 'Leviathan' },
     8: { minion: 'Void Wisp', guard: 'Reality Guard', elite: 'Word Hunter', boss: 'Terminus' },
+    9: { minion: 'Flame Wisp', guard: 'Fire Sentry', elite: 'Lava Knight', boss: 'Ember Drake' },
+    10: { minion: 'Shard Sprite', guard: 'Crystal Guard', elite: 'Prism Sentinel', boss: 'Crystal Queen' },
+    11: { minion: 'Star Mote', guard: 'Comet Guard', elite: 'Nova Sentinel', boss: 'Nova Titan' },
+    12: { minion: 'Bookmark', guard: 'Scroll Guard', elite: 'Chapter Knight', boss: 'The Librarian' },
   };
 
   return names[worldNumber]?.[tier] || 'Goblin Minion';

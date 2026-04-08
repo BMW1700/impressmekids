@@ -15,7 +15,11 @@ export type CampaignEnemyType =
   | 'cave_troll' | 'crystal_spider' | 'echo_wraith'
   | 'storm_harpy' | 'cloud_giant' | 'zephyr'
   | 'ink_kraken' | 'reef_guardian' | 'leviathan'
-  | 'void_phantom' | 'reality_shifter' | 'word_eater';
+  | 'void_phantom' | 'reality_shifter' | 'word_eater'
+  | 'fire_elemental' | 'lava_hound' | 'ember_drake'
+  | 'crystal_knight' | 'prism_mage' | 'crystal_queen'
+  | 'star_sprite' | 'comet_wolf' | 'nova_titan'
+  | 'tome_golem' | 'page_wraith' | 'the_librarian';
 
 export interface CampaignLevel {
   id: number;
@@ -60,6 +64,22 @@ const enemyIcons: Record<string, React.ReactNode> = {
   void_phantom: <span className="text-lg">💀</span>,
   reality_shifter: <span className="text-lg">🌀</span>,
   word_eater: <span className="text-lg">👁️</span>,
+  // World 9 - Ember Highlands
+  fire_elemental: <span className="text-lg">🔥</span>,
+  lava_hound: <span className="text-lg">🐕</span>,
+  ember_drake: <span className="text-lg">🐲</span>,
+  // World 10 - Crystal Citadel
+  crystal_knight: <span className="text-lg">💎</span>,
+  prism_mage: <span className="text-lg">🔮</span>,
+  crystal_queen: <span className="text-lg">👸</span>,
+  // World 11 - Starfall Peaks
+  star_sprite: <span className="text-lg">⭐</span>,
+  comet_wolf: <span className="text-lg">🐺</span>,
+  nova_titan: <span className="text-lg">💫</span>,
+  // World 12 - Eternal Archive
+  tome_golem: <span className="text-lg">📚</span>,
+  page_wraith: <span className="text-lg">📄</span>,
+  the_librarian: <span className="text-lg">📖</span>,
 };
 
 export const RPGLevelSelect = ({
