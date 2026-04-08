@@ -294,10 +294,8 @@ const computeSentenceComplexityGrade = (text: string): number => {
   // If only one dimension qualifies, use graduated mapping
   if (sg === 0) return Math.max(6, wg - 2);
   if (wg === 0) {
-    // Simple vocabulary + complex sentences: map sg to accessible grade range
-    if (sg <= 7) return 6;
-    if (sg <= 11) return 7;
-    return 8;
+    // Simple vocabulary + complex sentences: sg 6-7 → grade 6, sg 8+ → grade 7
+    return sg <= 7 ? 6 : 7;
   }
 
   // Both qualify → average
