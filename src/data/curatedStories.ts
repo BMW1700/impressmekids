@@ -410,7 +410,7 @@ const rawStories: CuratedStory[] = [
   {
     title: "The Invention Competition",
     description: "Students compete to create useful inventions",
-    passage_text: "The annual Young Inventors Competition attracted students from all over the state. Each participant had to design and build something original that solved a real problem. Twelve-year-old Aisha noticed that her elderly neighbor had trouble reaching items on high shelves. This inspired her invention: a voice-activated mechanical arm that could be mounted on a walker. When her neighbor said 'reach,' the arm would extend upward. Aisha spent months perfecting her design, learning about motors, circuits, and programming. On competition day, she demonstrated her invention. The judges were impressed by how she identified a real need and created a practical solution. Aisha won first place and a scholarship.",
+    passage_text: "The annual Young Inventors Competition attracted students from across the state. Each participant designed something to solve a real problem. Twelve-year-old Aisha used a microscope to study the structure of plants. She wanted to photograph how roots absorb water through a special process. Her project combined biology and geography, exploring how different microclimates affect plant growth. She built a telescope attachment to capture images of tiny organisms. The judges examined her photographs and were impressed by the scientific method she used. Her autobiography of the project described months of careful observation. Aisha won first place and a scholarship for her work in natural science.",
     grade_level: 4,
     category: "science",
     target_phonemes: ["v", "m", "pr", "d"],
