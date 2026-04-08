@@ -1,104 +1,43 @@
 
 
-# Plan: Decodability-Based Grade Level System
+# Plan: Generate 60 New Decodability-Aligned Stories (10 per Grade, K–5)
 
-## The Problem
+## What We're Building
 
-The current `phonemeDifficulty.ts` grades text by averaging phoneme "difficulty scores" (1-10 based on age of acquisition). This is fundamentally wrong for literacy grading because:
+60 new stories added to `src/data/curatedStories.ts`, strictly following the phoneme/phonics progression from the decodability grading system. Each grade level gets exactly 10 new stories.
 
-- A single word with /ʒ/ (grade 4-5 phoneme) in an otherwise all-CVC passage **should** bump the grade up, but averaging dilutes it
-- It ignores **phonics patterns** entirely (CVC vs. blends vs. vowel teams vs. silent-e)
-- It ignores **word structure** (syllable count, morphological complexity)
-- It doesn't enforce the "decodability percentage" requirement (K-1 texts must be 90-100% decodable at that level)
+## Decodability Rules Per Grade
 
-## The Fix
+| Grade | Allowed Phonemes | Allowed Patterns | Word Count | Example Words |
+|---|---|---|---|---|
+| K | /m/ /s/ /t/ /p/ /k/ /b/ /d/ /n/ + short /a/ only | CVC only (cat, sat, map) | 40–60 | cat, mat, bat, nap, tap |
+| 1 | + /f/ /g/ /h/ /j/ /l/ /r/ /v/ /w/ /y/ /z/ + all short vowels + digraphs /sh/ /ch/ /th/ /ng/ | CVC + blends + digraphs | 60–80 | ship, chat, frog, clap, thin |
+| 2 | + long vowels + vowel teams (ai, ee, oa, silent-e) | Silent-e, vowel teams, 2-syllable | 80–110 | cake, rain, boat, teacher | 
+| 3 | + diphthongs /oi/ /ou/ + R-controlled /ar/ /or/ /er/ | Multisyllabic, affixes (-ing, -ed, un-, re-) | 100–130 | explore, adventure, morning |
+| 4 | + /oo/ /ʒ/ (measure) | Greek/Latin roots, complex multisyllabic | 120–150 | photograph, microscope |
+| 5 | All 44 phonemes mastered | Morphological decoding, academic vocab | 140–170 | civilization, photosynthesis |
 
-Replace the averaging approach with a decodability analysis engine that mirrors real curriculum phoneme/phonics scope-and-sequence.
+## Story Generation Approach
 
-### New file: `src/lib/decodabilityGrading.ts`
+I'll use the AI gateway to generate stories that strictly conform to each grade's phoneme constraints. Each story will be crafted with:
 
-**Grade-level phoneme sets** — define exactly which IPA phonemes are "introduced" at each grade:
+- **K stories**: Only CVC words with /m,s,t,p,k,b,d,n/ + short /a/. Sight words allowed. Extremely controlled vocabulary.
+- **1st grade stories**: Add remaining consonants, all short vowels, blends, digraphs. No long vowels or vowel teams.
+- **2nd grade stories**: Introduce silent-e and vowel team words. Two-syllable words OK.
+- **3rd grade stories**: Diphthongs, R-controlled vowels, prefixes/suffixes, 3+ syllable words.
+- **4th grade stories**: Greek/Latin roots, variant vowels, complex vocabulary.
+- **5th grade stories**: Full academic language, morphological complexity.
 
-```text
-K:  /m/ /s/ /t/ /p/ /k/ /b/ /d/ /n/ + /æ/ (short a only)
-1:  + /f/ /ɡ/ /h/ /dʒ/ /l/ /ɹ/ /v/ /w/ /j/ /z/ + /ɛ/ /ɪ/ /ɑ/ /ʌ/ + digraphs /ʃ/ /tʃ/ /θ/ /ð/ /ŋ/
-2:  + long vowels /eɪ/ /i/ /aɪ/ /oʊ/ /u/ + vowel teams
-3:  + diphthongs /ɔɪ/ /aʊ/ + R-controlled /ɑɹ/ /ɔɹ/ /ɝ/ /ɛɹ/ /ɪɹ/
-4-5: + /ʊ/ /ʒ/ + all remaining
-6+: All 44 phonemes mastered
-```
+Categories will be distributed across: animals, space, sports, fairy_tales, science, adventure, history.
 
-**Phonics pattern detection** — analyze each word's structure:
-- CVC (grade K)
-- Consonant blends (grade 1)
-- Digraphs (grade 1)
-- Silent-e / CVCe (grade 2)
-- Vowel teams (grade 2)
-- Multisyllabic with affixes (grade 3)
-- Greek/Latin roots (grade 4-5)
-- Morphological complexity (grade 6+)
+## File Modified
 
-**Grading algorithm:**
+- `src/data/curatedStories.ts` — append 60 new story objects to the `rawStories` array
 
-1. For each word, find the **minimum grade at which it is fully decodable** (all its phonemes are introduced AND its phonics pattern is taught)
-2. Track decodability percentage at each grade level
-3. The passage grade = the **lowest grade where ≥90% of words are decodable** (for K-1) or ≥80% (for 2-3) or natural language (4+)
-4. Hard floor: if ANY word requires grade N phonemes, passage grade ≥ N (weighted by frequency)
+## What Stays the Same
 
-**High-frequency word list** — common sight words ("the", "is", "said", "was") are excluded from decodability checks since they're memorized at all levels.
-
-### Modify: `src/lib/phonemeDifficulty.ts`
-
-- Keep `getPhonemeDifficulty()` (still used by ML/RL systems)
-- Replace `getStoryGradeLevel()` internals to call the new decodability engine
-- Replace `getStoryDifficultyLevel()` to use new grade mapping
-- Keep `getWordDifficulty()` for backward compatibility but add `getWordGradeLevel()` as the primary API
-
-### No changes needed to:
-- `src/data/curatedStories.ts` — still calls `getStoryGradeLevel()` / `getStoryDifficultyLevel()`, just gets better results
-- `src/lib/cmuDictWrapper.ts` — phoneme lookup stays the same
-- Any UI components — they consume grade levels, not the internals
-
-## Technical Detail
-
-### Word Analysis Pipeline
-
-```text
-word → CMU Dict → IPA phonemes → [phoneme grade check] → min grade for phonemes
-                                → [pattern detection]   → min grade for pattern
-                                → max(phoneme grade, pattern grade) = word grade
-```
-
-### Syllable/Pattern Detection
-
-Use the IPA phoneme sequence to detect:
-- **CVC**: consonant + vowel + consonant (3 phonemes)
-- **Blends**: two consonants adjacent at onset/coda
-- **Digraphs**: /ʃ/, /tʃ/, /θ/, /ð/ (detected directly from phonemes)
-- **Silent-e**: check spelling for final-e + long vowel phoneme
-- **Vowel teams**: long vowel phonemes with spelling patterns like "ai", "ee", "oa"
-- **Multisyllabic**: count vowel phonemes > 2
-- **Affixes**: check for common prefix/suffix letter patterns
-
-### Decodability Scoring
-
-```text
-For each candidate grade G (0 through 12):
-  decodable_count = words where word_grade <= G
-  decodability_pct = decodable_count / total_words
-
-Passage grade = lowest G where:
-  - G <= 1: decodability_pct >= 0.90
-  - G <= 3: decodability_pct >= 0.80
-  - G >= 4: decodability_pct >= 0.70
-```
-
-### High-Frequency Sight Words
-
-~100 words exempt from decodability checks: "the", "a", "is", "are", "was", "were", "said", "have", "has", "do", "does", "you", "your", "they", "their", "there", "what", "where", "when", "who", "why", "how", "could", "would", "should", etc.
-
-## Files
-
-- **New**: `src/lib/decodabilityGrading.ts` — grade-level phoneme sets, phonics pattern detection, decodability percentage calculation, sight word list
-- **Modified**: `src/lib/phonemeDifficulty.ts` — rewire `getStoryGradeLevel()` and `getStoryDifficultyLevel()` to use new engine; add `getWordGradeLevel()` export
+- Story interface (`CuratedStory`) — unchanged
+- Grade level computation at export — the decodability engine will validate these stories automatically
+- All existing 48 stories — kept as-is
+- Agent mode stories — untouched
 
