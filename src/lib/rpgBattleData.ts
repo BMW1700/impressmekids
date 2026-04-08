@@ -991,7 +991,7 @@ export const crystalQueen: RPGEnemy = {
   dialogueAttack: ['*crystals rain down*', 'SHATTER before me!'], dialogueDefeat: ['My crystals... crumble...', 'Knowledge... outlasts crystal...'],
   specialAbilities: [
     { id: 'crystal_storm', name: 'Crystal Storm', damage: 28, effect: 'asteroid_barrage', description: 'Raining crystal shards', icon: '👸' },
-    { id: 'diamond_shield', name: 'Diamond Shield', damage: 0, effect: 'shield', description: 'Impervious barrier', icon: '🛡️' },
+    { id: 'diamond_shield', name: 'Diamond Shield', damage: 0, effect: 'debuff', description: 'Impervious barrier', icon: '🛡️' },
   ],
   barrageWordCount: 9, miniGames: ['crystal_prison', 'lightning_storm', 'speed_typist', 'spell_combo', 'asteroid_barrage', 'ink_splash'], signatureMiniGame: 'crystal_prison',
 };
@@ -1003,7 +1003,7 @@ export const starSprite: RPGEnemy = {
   dialogueIntro: ['*twinkles brightly*', 'A shooting star approaches!'],
   dialogueAttack: ['*zips and zaps*'], dialogueDefeat: ['*fades to stardust*'],
   specialAbilities: [{ id: 'star_bolt', name: 'Star Bolt', damage: 14, effect: 'debuff', description: 'Starlight zap', icon: '⭐' }],
-  barrageWordCount: 4, miniGames: ['wind_chase', 'lightning_storm', 'balloon_battle'], signatureMiniGame: 'wind_chase',
+  barrageWordCount: 4, miniGames: ['wind_chase', 'lightning_storm', 'speed_typist'], signatureMiniGame: 'wind_chase',
 };
 
 export const cometWolf: RPGEnemy = {
