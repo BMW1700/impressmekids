@@ -388,10 +388,10 @@ export const AuraReadingSection = () => {
           }
         : (activeStories[levelData.storyIndex] || activeStories[idx % activeStories.length]);
       
-      const isCompleted = completedStories.includes(story.title);
-      const isUnlocked = idx === 0 || completedStories.includes(
-        activeStories[selectedWorld.levels[idx - 1]?.storyIndex]?.title || ''
-      ) || completedStories.length >= idx;
+      const isCompleted = completedStories.includes(story.title) || allCompletedStories.has(story.title);
+      const prevStoryTitle = activeStories[selectedWorld.levels[idx - 1]?.storyIndex]?.title || '';
+      const isPrevCompleted = completedStories.includes(prevStoryTitle) || allCompletedStories.has(prevStoryTitle);
+      const isUnlocked = idx === 0 || isPrevCompleted || completedStories.length >= idx;
       
       return {
         id: levelData.id,
