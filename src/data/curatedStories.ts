@@ -734,35 +734,35 @@ const rawStories: CuratedStory[] = [
   {
     title: "The Red Hen",
     description: "A red hen helps her chicks find food",
-    passage_text: "The red hen had six chicks. The chicks were small and soft. The hen led them to a big hill. On the hill, the chicks dug in the mud. They got bugs and grubs. The chicks ate well. The hen clucked and the chicks ran back to the nest. The nest was warm. The hen and her chicks had a long rest.",
+    passage_text: "The red hen had six chicks. The chicks sat in the nest. The hen fed them bugs. The chicks got big and strong. The hen led them up the hill. On the hill the chicks dug in mud. They got grubs. The hen sat and the chicks ran back to the nest. The nest was warm and soft.",
     grade_level: 1,
     category: "animals",
     target_phonemes: ["ɛ", "ɪ", "tʃ", "ʌ"],
-    word_count: 65,
+    word_count: 60,
     reading_time_minutes: 1,
     difficulty_level: 1,
     cover_gradient: "from-red-400 to-rose-500"
   },
   {
-    title: "The Ship on the Dock",
+    title: "The Ship at the Dock",
     description: "A ship sets off from the dock",
-    passage_text: "A big ship sat on the dock. The men got on the ship. The ship had a flag on top. The wind blew and the ship left the dock. The ship went fast. The men sang a song on the ship. The ship hit big waves. The men held on. At last the ship got to land. The men were glad.",
+    passage_text: "A big ship sat at the dock. The men got on the ship. The ship had a flag on top. The wind hit the ship and it went fast. The men held on. The ship cut through mist and fog. At last the ship got to land. The men got off. They were glad to be on land.",
     grade_level: 1,
     category: "adventure",
     target_phonemes: ["ʃ", "ɑ", "ɪ", "ŋ"],
-    word_count: 63,
+    word_count: 58,
     reading_time_minutes: 1,
     difficulty_level: 1,
     cover_gradient: "from-blue-400 to-indigo-500"
   },
   {
-    title: "The Fox and the Fish",
+    title: "The Fox at the Pond",
     description: "A fox tries to catch a fish",
-    passage_text: "A fox went to the pond. The fox sat on a rock. He saw a big fish swim by. The fox stuck his paw in. Splash! The fish swam fast. The fox tried again. This time, the fox got the fish! He held it up and grinned. The fox had a big lunch by the pond.",
+    passage_text: "A fox sat on a rock at the pond. He saw a fat fish swim past. The fox stuck his paw in. Splash! The fish got off. The fox sat still and then struck. This time the fox got the fish. He held it up with a grin. The fox had a big lunch by the pond.",
     grade_level: 1,
     category: "animals",
     target_phonemes: ["f", "ɪ", "ʃ", "ɑ"],
-    word_count: 60,
+    word_count: 58,
     reading_time_minutes: 1,
     difficulty_level: 1,
     cover_gradient: "from-orange-400 to-red-500"
@@ -770,11 +770,11 @@ const rawStories: CuratedStory[] = [
   {
     title: "Chips and Dip",
     description: "Friends share chips and dip at a picnic",
-    passage_text: "Jill and Bill went on a trip. They sat on the grass and set up a cloth. Jill had chips. Bill had dip. They sat and dipped the chips. Crunch! The chips were crisp. A thin bug crept on the cloth. Bill brushed it off. Jill and Bill ate all the chips and dip. What a fun trip!",
+    passage_text: "Jill and Bill sat on the grass. Jill had chips. Bill had dip. They dipped the chips. Crunch! The chips were crisp and fresh. A thin bug crept on the cloth. Bill brushed it off. Jill and Bill ate all the chips and dip. What a fun snack on the grass!",
     grade_level: 1,
     category: "adventure",
     target_phonemes: ["tʃ", "ɪ", "ɛ", "dʒ"],
-    word_count: 62,
+    word_count: 55,
     reading_time_minutes: 1,
     difficulty_level: 1,
     cover_gradient: "from-yellow-400 to-amber-500"
@@ -782,11 +782,11 @@ const rawStories: CuratedStory[] = [
   {
     title: "The Frog on the Log",
     description: "A frog jumps from log to log",
-    passage_text: "A frog sat on a log in the pond. The frog was green and slick. It went hop, hop, hop! The frog jumped to the next log. Splash! It fell in. The frog swam and got back on the log. A dragonfly buzzed by. The frog snapped at it. Yum! The frog was full and happy.",
+    passage_text: "A frog sat on a log in the pond. The frog was slick and wet. It went hop, hop, hop to the next log. Splash! It fell in. The frog swam and got back on the log. A bug buzzed past. The frog snapped at it. Yum! The frog was full and glad.",
     grade_level: 1,
     category: "animals",
     target_phonemes: ["f", "ɹ", "ɑ", "ɡ"],
-    word_count: 62,
+    word_count: 55,
     reading_time_minutes: 1,
     difficulty_level: 1,
     cover_gradient: "from-green-400 to-lime-500"
@@ -794,11 +794,11 @@ const rawStories: CuratedStory[] = [
   {
     title: "The Sled Run",
     description: "Kids sled down a snowy hill",
-    passage_text: "The hill was thick with fresh snow. Chad got his sled. He ran up the hill. Then he jumped on the sled. Zip! The sled went fast. Chad yelled with glee! He slid to the bottom. His pal Shawn ran up next. Shawn got on the sled and went just as fast. They did run after run until the sun set.",
+    passage_text: "The hill was thick with fresh snow. Chad got his sled and ran up the hill. Then he got on the sled. Zip! The sled went fast. Chad grinned. He slid to the end. His pal got on next. He went just as fast. They did run on run till the sun set. What a fun day in the snow!",
     grade_level: 1,
     category: "sports",
     target_phonemes: ["s", "l", "ɛ", "ʃ"],
-    word_count: 66,
+    word_count: 62,
     reading_time_minutes: 1,
     difficulty_level: 1,
     cover_gradient: "from-sky-300 to-blue-500"
@@ -806,7 +806,7 @@ const rawStories: CuratedStory[] = [
   {
     title: "This and That",
     description: "A child picks things for show and tell",
-    passage_text: "Beth had to bring something for class. She checked her shelf. This shell? No, that is dull. This rock? It was shiny! Beth put the rock in her bag. At class, she held it up. The rock had thin red bands in it. Her friends clapped. Beth felt glad. She put the rock back on her shelf with a grin.",
+    passage_text: "Beth had to bring a thing for class. She checked her shelf. This shell? No, it is dull. This rock? It is shiny! Beth put the rock in her bag. At class, she held it up. The rock had thin red bands in it. Her pals clapped. Beth felt glad. She put the rock back on her shelf with a grin.",
     grade_level: 1,
     category: "science",
     target_phonemes: ["θ", "ð", "ʃ", "ɛ"],
@@ -818,11 +818,11 @@ const rawStories: CuratedStory[] = [
   {
     title: "The Drum Club",
     description: "Kids start a drum club at school",
-    passage_text: "Greg and Josh loved drums. They asked Miss Hill if they could start a club. She said yes! Greg hit the big drum. Thump, thump! Josh hit the small drum. Tap, tap! The rest of the class clapped along. They stomped and hummed. The band got loud. Miss Hill grinned. The drum club met every single day.",
+    passage_text: "Greg and Josh hit drums. They asked Miss Hill if they could start a club. She said yes! Greg hit the big drum. Thump, thump! Josh hit the small drum. Tap, tap! The rest of the class clapped. They stomped and then the band got loud. Miss Hill grinned. The drum club met on and on.",
     grade_level: 1,
     category: "sports",
     target_phonemes: ["d", "ɹ", "ʌ", "ŋ"],
-    word_count: 64,
+    word_count: 60,
     reading_time_minutes: 1,
     difficulty_level: 1,
     cover_gradient: "from-amber-400 to-orange-600"
@@ -830,11 +830,11 @@ const rawStories: CuratedStory[] = [
   {
     title: "A Wish at the Well",
     description: "A girl makes a wish at a well",
-    passage_text: "Meg went to the old well on the hill. She held a penny in her fist. She shut her eyes and made a wish. Plop! The penny fell in the well. Meg wished for a pet. The next day, a small pup sat on her step! Meg hugged the pup. Her wish had come true. Meg and the pup were best friends.",
+    passage_text: "Meg went to the old well on the hill. She held a rock in her fist. She shut her eyes and tossed it in. Plop! The rock fell in the well. Meg wished for a pet. The next day, a small pup sat on her step! Meg held the pup. Her wish had come true. Meg and the pup were best pals.",
     grade_level: 1,
     category: "fairy_tales",
     target_phonemes: ["w", "ɛ", "ʃ", "ɪ"],
-    word_count: 68,
+    word_count: 65,
     reading_time_minutes: 1,
     difficulty_level: 1,
     cover_gradient: "from-teal-400 to-emerald-500"
@@ -842,11 +842,11 @@ const rawStories: CuratedStory[] = [
   {
     title: "The Nest in the Bush",
     description: "Children discover a bird nest",
-    passage_text: "Tom and Jen went for a walk. They went past a big bush. Tom stopped. He saw something in the bush. It was a nest! The nest had three eggs in it. The eggs were blue with brown spots. A robin sat on a branch and chirped. Tom and Jen were very still. They did not want to scare the bird. They crept away and smiled.",
+    passage_text: "Tom and Jen went for a walk. They went past a big bush. Tom stopped. He saw a nest in the bush! The nest had eggs in it. The eggs were blue with red spots. A bird sat on a branch. Tom and Jen were still. They did not want to scare the bird. They crept off and were glad they saw it.",
     grade_level: 1,
     category: "science",
     target_phonemes: ["n", "ɛ", "ʃ", "tʃ"],
-    word_count: 68,
+    word_count: 62,
     reading_time_minutes: 1,
     difficulty_level: 1,
     cover_gradient: "from-emerald-400 to-green-600"
