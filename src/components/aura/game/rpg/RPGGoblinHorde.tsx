@@ -57,7 +57,13 @@ export const RPGGoblinHorde = ({
   const rewardIdRef = useRef(0);
   const processingRef = useRef(false);
   const gameWordsRef = useRef<string[]>([]);
+  const goblinsRef = useRef<GoblinWord[]>([]);
   const spawnIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Keep goblinsRef in sync
+  useEffect(() => {
+    goblinsRef.current = goblins;
+  }, [goblins]);
 
   // Initialize words and spawn goblins
   useEffect(() => {
