@@ -129,14 +129,32 @@ const getPatternGrade = (word: string, phonemes: string[]): number => {
   const consonants = phonemes.filter(isConsonant);
   let patternGrade = 0;
 
-  // Check for Greek/Latin roots → grade 4-5
-  if (GRECO_LATIN.some(root => cleaned.includes(root)) && cleaned.length >= 6) {
+  // Check for Greek/Latin roots
+  const hasGrecoLatin = GRECO_LATIN.some(root => cleaned.includes(root)) && cleaned.length >= 6;
+
+  // Check for complex affixes
+  const hasPrefix = PREFIXES.some(p => cleaned.startsWith(p) && cleaned.length > p.length + 2);
+  const hasSuffix = SUFFIXES.some(s => cleaned.endsWith(s) && cleaned.length > s.length + 2);
+
+  // Morphological complexity (word length 12+, 5+ vowels) → grade 6
+  if (cleaned.length >= 12 && vowelCount >= 5) {
+    patternGrade = Math.max(patternGrade, 6);
+  }
+
+  // Grade 5: Greek/Latin root + affix combo, OR 10-11 chars with 4+ vowels
+  if (hasGrecoLatin && (hasPrefix || hasSuffix)) {
+    patternGrade = Math.max(patternGrade, 5);
+  }
+  if (cleaned.length >= 10 && vowelCount >= 4 && cleaned.length < 12) {
+    patternGrade = Math.max(patternGrade, 5);
+  }
+
+  // Grade 4: Greek/Latin roots alone
+  if (hasGrecoLatin) {
     patternGrade = Math.max(patternGrade, 4);
   }
 
   // Check for complex affixes → grade 3
-  const hasPrefix = PREFIXES.some(p => cleaned.startsWith(p) && cleaned.length > p.length + 2);
-  const hasSuffix = SUFFIXES.some(s => cleaned.endsWith(s) && cleaned.length > s.length + 2);
   if (hasPrefix || hasSuffix) {
     patternGrade = Math.max(patternGrade, 3);
   }
@@ -176,11 +194,6 @@ const getPatternGrade = (word: string, phonemes: string[]): number => {
       patternGrade = Math.max(patternGrade, 1);
       break;
     }
-  }
-
-  // Morphological complexity (word length 10+) → grade 6
-  if (cleaned.length >= 10 && vowelCount >= 4) {
-    patternGrade = Math.max(patternGrade, 6);
   }
 
   return patternGrade;
