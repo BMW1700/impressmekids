@@ -366,7 +366,9 @@ export const AuraReadingSection = () => {
   // RPG Mode - Level Select
   if (isRpgMode && rpgView === 'level_select' && selectedWorld && user?.id) {
     const worldProgressData = campaignProgress?.world_progress as Record<string, string[]> || {};
-    const completedStories = worldProgressData[selectedWorld.id.toString()] || [];
+    const completedStoriesInWorld = worldProgressData[selectedWorld.id.toString()] || [];
+    const allCompletedStories = new Set(Object.values(worldProgressData).flat());
+    const completedStories = completedStoriesInWorld;
     
     const levels: CampaignLevel[] = selectedWorld.levels.map((levelData, idx) => {
       // Tutorial world uses a special story

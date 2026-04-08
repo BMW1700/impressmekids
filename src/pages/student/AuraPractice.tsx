@@ -417,9 +417,11 @@ const AuraPractice = () => {
 
   // RPG Mode - Level Select
   if (isRpgMode && rpgView === 'level_select' && selectedWorld && user?.id) {
-    // Get world progress from campaign data
+    // Get world progress from campaign data - check ALL worlds for completed titles (handles story reshuffling)
     const worldProgressData = campaignProgress?.world_progress as Record<string, string[]> || {};
-    const completedStories = worldProgressData[selectedWorld.id.toString()] || [];
+    const completedStoriesInWorld = worldProgressData[selectedWorld.id.toString()] || [];
+    const allCompletedStories = new Set(Object.values(worldProgressData).flat());
+    const completedStories = completedStoriesInWorld;
     
     // Generate levels from world's level data + curated stories
     const levels: CampaignLevel[] = selectedWorld.levels.map((levelData, idx) => {
