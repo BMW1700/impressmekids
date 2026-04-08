@@ -659,7 +659,7 @@ const rawStories: CuratedStory[] = [
   {
     title: "Pat and the Pan",
     description: "Pat taps a pan and has a snack",
-    passage_text: "Pat had a pan. Pat can tap the pan. Tap, tap, tap! The pan is on a mat. Pat sat and had a snack. The snack is in the pan. Pat can pass the pan back. Pat sat on the mat and had a nap.",
+    passage_text: "Pat had a pan. Pat can tap the pan. Tap, tap, tap! The pan is on a mat. Pat sat and had a bit. The bit is in the pan. Pat can put the pan back. Pat sat on the mat and had a nap.",
     grade_level: 0,
     category: "adventure",
     target_phonemes: ["p", "æ", "t", "n"],
@@ -671,7 +671,7 @@ const rawStories: CuratedStory[] = [
   {
     title: "A Cat and a Bat",
     description: "A cat and a bat become pals",
-    passage_text: "A cat sat on a mat. A bat sat on a cap. The cat can see the bat. The bat can see the cat. The cat ran to the bat. The bat sat back. The cat and the bat sat on the mat. The cat and the bat are pals!",
+    passage_text: "A cat sat on a mat. A bat sat on a cap. The cat can see the bat. The bat can see the cat. The cat got up. The bat sat back. The cat and the bat sat on the mat. The cat and the bat nap.",
     grade_level: 0,
     category: "animals",
     target_phonemes: ["k", "b", "æ", "t"],
