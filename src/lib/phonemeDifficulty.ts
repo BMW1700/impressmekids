@@ -9,6 +9,7 @@
  */
 
 import { getIPAPronunciation } from './cmuDictWrapper';
+import { getPassageGradeLevel, getPassageDifficultyLevel, getWordGradeLevel, analyzePassageDecodability } from './decodabilityGrading';
 
 // IPA phoneme difficulty scores (1-10)
 // Based on age of acquisition in typically developing children
@@ -100,29 +101,10 @@ export const getWordDifficulty = (word: string): number => {
 
 /**
  * Compute a grade level (0-8) for a passage of text.
- * Based on the average word difficulty of all words.
+ * Uses decodability-based analysis (phoneme introduction order + phonics patterns).
  */
 export const getStoryGradeLevel = (passageText: string): number => {
-  const words = passageText.split(/\s+/).filter(w => /[a-zA-Z]/.test(w));
-  if (words.length === 0) return 0;
-
-  const totalDifficulty = words.reduce(
-    (sum, word) => sum + getWordDifficulty(word), 0
-  );
-  const avgDifficulty = totalDifficulty / words.length;
-
-  // Map average word difficulty to grade level
-  // Thresholds calibrated so simple CVC stories → grade 0,
-  // complex multi-syllable stories → grade 6-8
-  if (avgDifficulty < 2.0) return 0;  // Pre-K / Kindergarten
-  if (avgDifficulty < 2.3) return 1;  // 1st grade
-  if (avgDifficulty < 2.6) return 2;  // 2nd grade
-  if (avgDifficulty < 2.9) return 3;  // 3rd grade
-  if (avgDifficulty < 3.2) return 4;  // 4th grade
-  if (avgDifficulty < 3.5) return 5;  // 5th grade
-  if (avgDifficulty < 4.0) return 6;  // 6th grade
-  if (avgDifficulty < 4.8) return 7;  // 7th grade
-  return 8;                            // 8th grade+
+  return getPassageGradeLevel(passageText);
 };
 
 /**
@@ -130,10 +112,8 @@ export const getStoryGradeLevel = (passageText: string): number => {
  * Simpler scale for UI display.
  */
 export const getStoryDifficultyLevel = (passageText: string): number => {
-  const grade = getStoryGradeLevel(passageText);
-  if (grade <= 1) return 1;
-  if (grade <= 3) return 2;
-  if (grade <= 5) return 3;
-  if (grade <= 6) return 4;
-  return 5;
+  return getPassageDifficultyLevel(passageText);
 };
+
+// Re-export decodability utilities for direct use
+export { getWordGradeLevel, analyzePassageDecodability } from './decodabilityGrading';
