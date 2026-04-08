@@ -430,6 +430,43 @@ export const RPGCharacter = ({
           />
         );
       }
+      // World 9-12 enemy sprites
+      if (spriteType === 'fire_elemental') {
+        return <FireElemental state={commonState as FireElementalState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'lava_hound') {
+        return <LavaHound state={commonState as LavaHoundState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'ember_drake') {
+        return <EmberDrake state={commonState as EmberDrakeState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="large" />;
+      }
+      if (spriteType === 'crystal_knight') {
+        return <CrystalKnight state={commonState as CrystalKnightState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'prism_mage') {
+        return <PrismMage state={commonState as PrismMageState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'crystal_queen') {
+        return <CrystalQueen state={commonState as CrystalQueenState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="large" />;
+      }
+      if (spriteType === 'star_sprite') {
+        return <StarSprite state={commonState as StarSpriteState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'comet_wolf') {
+        return <CometWolf state={commonState as CometWolfState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'nova_titan') {
+        return <NovaTitan state={commonState as NovaTitanState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="large" />;
+      }
+      if (spriteType === 'tome_golem') {
+        return <TomeGolem state={commonState as TomeGolemState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'page_wraith') {
+        return <PageWraith state={commonState as PageWraithState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="medium" />;
+      }
+      if (spriteType === 'the_librarian') {
+        return <TheLibrarian state={commonState as TheLibrarianState} healthPercent={hpPercentage} currentHp={currentHp} maxHp={character.maxHp} size="large" />;
+      }
       // Agent mode enemy sprites
       if (spriteType === 'street_thug_agent') {
         return (
