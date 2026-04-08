@@ -563,11 +563,14 @@ const AuraPractice = () => {
       const levelsCompleted = worldLevelTitles.filter(t => allCompletedTitles.has(t)).length || worldStoriesInDB.length;
       const totalLevels = w.levels.length;
       
-      // World unlock logic based on previous world completion
+      // World unlock logic based on previous world completion (check reshuffled stories too)
       let isUnlocked = w.id === 1;
       if (w.id > 1) {
-        const prevWorldStories = worldProgressData[(w.id - 1).toString()] || [];
-        isUnlocked = prevWorldStories.length >= w.unlockRequirement;
+        const prevWorld = activeWorlds.find(pw => pw.id === w.id - 1);
+        const prevWorldStoriesInDB = worldProgressData[(w.id - 1).toString()] || [];
+        const prevWorldLevelTitles = prevWorld?.levels.map(l => activeStories[l.storyIndex]?.title).filter(Boolean) || [];
+        const prevCompleted = prevWorldLevelTitles.filter(t => allCompletedTitles.has(t)).length || prevWorldStoriesInDB.length;
+        isUnlocked = prevCompleted >= w.unlockRequirement;
       }
       
       return {
