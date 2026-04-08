@@ -86,6 +86,7 @@ export const RPGRollingBoulders = ({
           setTimeout(() => onComplete(destroyedRef.current, missedRef.current), 500);
         }
         
+        bouldersRef.current = updated;
         return updated;
       });
     }, 50);
