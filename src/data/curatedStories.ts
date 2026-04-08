@@ -410,7 +410,7 @@ const rawStories: CuratedStory[] = [
   {
     title: "The Invention Competition",
     description: "Students compete to create useful inventions",
-    passage_text: "The annual Young Inventors Competition attracted students from all over the state. Each participant had to design and build something original that solved a real problem. Twelve-year-old Aisha noticed that her elderly neighbor had trouble reaching items on high shelves. This inspired her invention: a voice-activated mechanical arm that could be mounted on a walker. When her neighbor said 'reach,' the arm would extend upward. Aisha spent months perfecting her design, learning about motors, circuits, and programming. On competition day, she demonstrated her invention. The judges were impressed by how she identified a real need and created a practical solution. Aisha won first place and a scholarship.",
+    passage_text: "The annual Young Inventors Competition attracted students from across the state. Each participant designed something to solve a real problem. Twelve-year-old Aisha used a microscope to study the structure of plants. She wanted to photograph how roots absorb water through a special process. Her project combined biology and geography, exploring how different microclimates affect plant growth. She built a telescope attachment to capture images of tiny organisms. The judges examined her photographs and were impressed by the scientific method she used. Her autobiography of the project described months of careful observation. Aisha won first place and a scholarship for her work in natural science.",
     grade_level: 4,
     category: "science",
     target_phonemes: ["v", "m", "pr", "d"],
@@ -623,7 +623,7 @@ const rawStories: CuratedStory[] = [
   {
     title: "A Bad Map",
     description: "A man and a bad map",
-    passage_text: "A man had a map. The map was bad. The man sat and sat. He can not pass. He can tap the map. The man had a plan. He sat on a mat and had a nap. The man can pass at last! The man ran and ran past the dam.",
+    passage_text: "A man had a map. The map was bad. The man sat and sat. He can not go. He can tap the map. The man sat on a mat and had a nap. A cat sat on the map. The man got up. The man can go! The man is at the dam.",
     grade_level: 0,
     category: "adventure",
     target_phonemes: ["m", "æ", "p", "b"],
@@ -635,7 +635,7 @@ const rawStories: CuratedStory[] = [
   {
     title: "Dan and the Cab",
     description: "Dan takes a cab to the dam",
-    passage_text: "Dan had a tan cab. The cab can pass the dam. Dan sat in the cab. The cab ran fast. Dan can tap the cab. The cab had a bad pad. Dan sat on the pad. The cab can pass! Dan is at the dam at last.",
+    passage_text: "Dan had a tan cab. The cab is big. Dan sat in the cab. Dan can tap the cab. The cab had a bad pad. Dan sat on the pad. The cab can go! Dan is at the dam. Dan sat and had a nap on the mat.",
     grade_level: 0,
     category: "adventure",
     target_phonemes: ["d", "æ", "k", "b"],
@@ -659,7 +659,7 @@ const rawStories: CuratedStory[] = [
   {
     title: "Pat and the Pan",
     description: "Pat taps a pan and has a snack",
-    passage_text: "Pat had a pan. Pat can tap the pan. Tap, tap, tap! The pan is on a mat. Pat sat and had a snack. The snack is in the pan. Pat can pass the pan back. Pat sat on the mat and had a nap.",
+    passage_text: "Pat had a pan. Pat can tap the pan. Tap, tap, tap! The pan is on a mat. Pat sat and had a bit. The bit is in the pan. Pat can put the pan back. Pat sat on the mat and had a nap.",
     grade_level: 0,
     category: "adventure",
     target_phonemes: ["p", "æ", "t", "n"],
@@ -671,7 +671,7 @@ const rawStories: CuratedStory[] = [
   {
     title: "A Cat and a Bat",
     description: "A cat and a bat become pals",
-    passage_text: "A cat sat on a mat. A bat sat on a cap. The cat can see the bat. The bat can see the cat. The cat ran to the bat. The bat sat back. The cat and the bat sat on the mat. The cat and the bat are pals!",
+    passage_text: "A cat sat on a mat. A bat sat on a cap. The cat can see the bat. The bat can see the cat. The cat got up. The bat sat back. The cat and the bat sat on the mat. The cat and the bat nap.",
     grade_level: 0,
     category: "animals",
     target_phonemes: ["k", "b", "æ", "t"],
@@ -1342,6 +1342,30 @@ const rawStories: CuratedStory[] = [
     reading_time_minutes: 2,
     difficulty_level: 5,
     cover_gradient: "from-blue-800 to-cyan-900"
+  },
+  {
+    title: "The Frog on the Log",
+    description: "A frog hops from log to log",
+    passage_text: "A frog sat on a log. The log was wet. The frog can hop and jump. He went from log to log. Then he hit a rock. Thud! The frog fell in the mud. The mud was thick. The frog sat still. Then he got up and ran back to his log. He sat and had a rest.",
+    grade_level: 1,
+    category: "animals",
+    target_phonemes: ["f", "ɹ", "ɑ", "dʒ", "ʌ"],
+    word_count: 55,
+    reading_time_minutes: 1,
+    difficulty_level: 1,
+    cover_gradient: "from-green-400 to-lime-500"
+  },
+  {
+    title: "The Geography Project",
+    description: "Students explore geography and biology through microscopes and telescopes",
+    passage_text: "The geography textbook described how biology and photography connect. Roberto used a telescope and microscope to photograph tiny organisms. His biography project explored the phonograph and telegraph inventions. Geographic photographs documented the structure of different microphones. The autobiography described how telegraph technology transformed communication. Roberto studied the biography of a geographer who used photography and telescopes. Each photograph captured geographic features and biological specimens.",
+    grade_level: 4,
+    category: "science",
+    target_phonemes: ["dʒ", "ɹ", "f", "ɡ"],
+    word_count: 78,
+    reading_time_minutes: 2,
+    difficulty_level: 4,
+    cover_gradient: "from-teal-500 to-emerald-600"
   }
 ];
 
