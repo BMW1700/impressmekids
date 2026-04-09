@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Snowflake, Zap } from "lucide-react";
+import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
+import { speechManager } from "@/lib/speechRecognitionManager";
 
 interface IceCrystal {
   id: number;
@@ -31,11 +33,35 @@ export const RPGIceCrystalBarrage = ({
   const [destroyed, setDestroyed] = useState(0);
   const [missed, setMissed] = useState(0);
   const [gameComplete, setGameComplete] = useState(false);
-  const recognitionRef = useRef<any>(null);
   const freezeStartRef = useRef<number>(Date.now());
+  const destroyedRef = useRef(0);
+  const missedRef = useRef(0);
+  const currentCrystalIndexRef = useRef(0);
+  const crystalsRef = useRef<IceCrystal[]>([]);
+  const completionTriggeredRef = useRef(false);
+  const gameCompleteRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  const onWordHitRef = useRef(onWordHit);
+
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
+  useEffect(() => { onWordHitRef.current = onWordHit; }, [onWordHit]);
+  useEffect(() => { currentCrystalIndexRef.current = currentCrystalIndex; }, [currentCrystalIndex]);
+  useEffect(() => { crystalsRef.current = crystals; }, [crystals]);
 
   // Initialize crystals - each with random positions
   useEffect(() => {
+    completionTriggeredRef.current = false;
+    gameCompleteRef.current = false;
+    destroyedRef.current = 0;
+    missedRef.current = 0;
+    setDestroyed(0);
+    setMissed(0);
+    setCurrentCrystalIndex(0);
+    currentCrystalIndexRef.current = 0;
+    setGameComplete(false);
+    setIsListening(false);
+    speechManager.stop('ice_crystal');
+
     const initialCrystals: IceCrystal[] = words.map((word, i) => ({
       id: i,
       word,
@@ -47,44 +73,76 @@ export const RPGIceCrystalBarrage = ({
       selected: false,
     }));
     setCrystals(initialCrystals);
+    crystalsRef.current = initialCrystals;
     freezeStartRef.current = Date.now();
   }, [words]);
 
   const currentCrystal = crystals[currentCrystalIndex];
 
+  const completeGame = useCallback(() => {
+    if (completionTriggeredRef.current) return;
+    completionTriggeredRef.current = true;
+    gameCompleteRef.current = true;
+    speechManager.stop('ice_crystal');
+    setIsListening(false);
+    setGameComplete(true);
+    setTimeout(() => {
+      onCompleteRef.current(destroyedRef.current, missedRef.current);
+    }, 500);
+  }, []);
+
   // Move to next crystal
   const advanceToNextCrystal = useCallback((wasDestroyed: boolean) => {
+    if (gameCompleteRef.current || completionTriggeredRef.current) return;
+
+    speechManager.stop('ice_crystal');
+    setIsListening(false);
+
+    const activeIndex = currentCrystalIndexRef.current;
+
     if (wasDestroyed) {
-      setDestroyed(d => d + 1);
+      destroyedRef.current += 1;
+      setDestroyed(destroyedRef.current);
     } else {
-      setMissed(m => m + 1);
-      onWordHit(8);
+      missedRef.current += 1;
+      setMissed(missedRef.current);
+      onWordHitRef.current(8);
     }
 
     // Mark current crystal as destroyed
-    setCrystals(prev => prev.map((c, idx) => 
-      idx === currentCrystalIndex ? { ...c, destroyed: true } : c
-    ));
+    setCrystals(prev => {
+      const updated = prev.map((c, idx) => 
+        idx === activeIndex ? { ...c, destroyed: true, selected: false } : c
+      );
+      crystalsRef.current = updated;
+      return updated;
+    });
 
     // Move to next
-    const nextIndex = currentCrystalIndex + 1;
-    if (nextIndex >= crystals.length) {
-      // Game complete
-      setGameComplete(true);
+    const nextIndex = activeIndex + 1;
+    if (nextIndex >= crystalsRef.current.length) {
+      completeGame();
     } else {
+      currentCrystalIndexRef.current = nextIndex;
       setCurrentCrystalIndex(nextIndex);
       freezeStartRef.current = Date.now();
       // Randomize position for the next crystal
-      setCrystals(prev => prev.map((c, idx) => 
-        idx === nextIndex ? { 
-          ...c, 
-          x: 20 + Math.random() * 60,
-          y: 25 + Math.random() * 30,
-          rotation: Math.random() * 30 - 15
-        } : c
-      ));
+      setCrystals(prev => {
+        const updated = prev.map((c, idx) => 
+          idx === nextIndex ? { 
+            ...c, 
+            x: 20 + Math.random() * 60,
+            y: 25 + Math.random() * 30,
+            rotation: Math.random() * 30 - 15,
+            freezeProgress: 0,
+            selected: false,
+          } : c
+        );
+        crystalsRef.current = updated;
+        return updated;
+      });
     }
-  }, [currentCrystalIndex, crystals.length, onWordHit]);
+  }, [completeGame]);
 
   // Freeze progress animation - only for current crystal
   useEffect(() => {
@@ -108,59 +166,63 @@ export const RPGIceCrystalBarrage = ({
     return () => clearInterval(interval);
   }, [currentCrystalIndex, gameComplete, currentCrystal, advanceToNextCrystal]);
 
-  // Complete callback
-  useEffect(() => {
-    if (gameComplete) {
-      setTimeout(() => onComplete(destroyed, missed), 500);
-    }
-  }, [gameComplete, destroyed, missed, onComplete]);
-
   // Handle crystal selection (auto-select current one)
   const handleSelectCrystal = useCallback(() => {
-    if (!currentCrystal || currentCrystal.destroyed || isListening) return;
+    const activeIndex = currentCrystalIndexRef.current;
+    const activeCrystal = crystalsRef.current[activeIndex];
+    if (!activeCrystal || activeCrystal.destroyed || gameCompleteRef.current) return;
     
-    setCrystals(prev => prev.map((c, idx) => ({
-      ...c,
-      selected: idx === currentCrystalIndex
-    })));
+    setCrystals(prev => {
+      const updated = prev.map((c, idx) => ({
+        ...c,
+        selected: idx === activeIndex,
+      }));
+      crystalsRef.current = updated;
+      return updated;
+    });
     startListening();
-  }, [currentCrystal, currentCrystalIndex, isListening]);
+  }, []);
 
   // Start speech recognition
   const startListening = useCallback(() => {
-    if (!currentCrystal) return;
+    const activeCrystal = crystalsRef.current[currentCrystalIndexRef.current];
+    if (!activeCrystal || activeCrystal.destroyed || gameCompleteRef.current) return;
 
-    const SpeechRecognitionAPI = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    if (!SpeechRecognitionAPI) return;
+    speechManager.start({
+      owner: 'ice_crystal',
+      continuous: true,
+      interimResults: true,
+      onStart: () => setIsListening(true),
+      onEnd: () => setIsListening(false),
+      onResult: (transcript, alternatives) => {
+        const crystal = crystalsRef.current[currentCrystalIndexRef.current];
+        if (!crystal || crystal.destroyed || gameCompleteRef.current) return;
 
-    recognitionRef.current = new SpeechRecognitionAPI();
-    recognitionRef.current.continuous = false;
-    recognitionRef.current.interimResults = false;
+        const targetWord = crystal.word.toLowerCase().replace(/[^a-z']/g, '');
+        const matched = [transcript, ...alternatives].some((candidate) =>
+          candidate
+            .toLowerCase()
+            .trim()
+            .split(/\s+/)
+            .some((spoken) => {
+              const cleanSpoken = spoken.replace(/[^a-z']/g, '');
+              return cleanSpoken.length >= 1 && isWordMatchLenient(cleanSpoken, targetWord);
+            })
+        );
 
-    recognitionRef.current.onstart = () => setIsListening(true);
-    recognitionRef.current.onend = () => {
-      setIsListening(false);
-      // Clear selection
-      setCrystals(prev => prev.map(c => ({ ...c, selected: false })));
+        if (matched) {
+          advanceToNextCrystal(true);
+        }
+      },
+      onError: () => setIsListening(false),
+    });
+  }, [advanceToNextCrystal]);
+
+  useEffect(() => {
+    return () => {
+      speechManager.abort('ice_crystal');
     };
-
-    recognitionRef.current.onresult = (event: any) => {
-      const spoken = event.results[0][0].transcript.toLowerCase().trim();
-      const expected = currentCrystal.word.toLowerCase().replace(/[^a-z]/g, '');
-      
-      if (spoken.includes(expected) || expected.includes(spoken)) {
-        // Success - shatter crystal
-        advanceToNextCrystal(true);
-      }
-    };
-
-    recognitionRef.current.onerror = () => {
-      setIsListening(false);
-      setCrystals(prev => prev.map(c => ({ ...c, selected: false })));
-    };
-
-    recognitionRef.current.start();
-  }, [currentCrystal, advanceToNextCrystal]);
+  }, []);
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-auto z-50">

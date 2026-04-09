@@ -4,6 +4,7 @@ import { Mic, Snowflake, Sparkles, Battery } from "lucide-react";
 import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { SoundEffects, unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
 import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
+import { speechManager } from "@/lib/speechRecognitionManager";
 
 interface CrystalWord {
   id: string;
@@ -31,25 +32,66 @@ export const RPGCrystalPrison = ({
   onWordHit,
 }: RPGCrystalPrisonProps) => {
   const [crystalWords, setCrystalWords] = useState<CrystalWord[]>([]);
-  const [selectedWord, setSelectedWord] = useState<CrystalWord | null>(null);
+  const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [spokenText, setSpokenText] = useState("");
   const [wordsFreed, setWordsFreed] = useState(0);
   const [wordsFailed, setWordsFailed] = useState(0);
   const [isActive, setIsActive] = useState(true);
   const [meltTimer, setMeltTimer] = useState(45);
-  const recognitionRef = useRef<any>(null);
   const freedRef = useRef(0);
   const failedRef = useRef(0);
-  const selectedWordRef = useRef<CrystalWord | null>(null);
+  const crystalWordsRef = useRef<CrystalWord[]>([]);
+  const selectedWordIdRef = useRef<string | null>(null);
+  const completionTriggeredRef = useRef(false);
+  const nextMatchAllowedAtRef = useRef(0);
   const onCompleteRef = useRef(onComplete);
   const onWordHitRef = useRef(onWordHit);
 
   useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
   useEffect(() => { onWordHitRef.current = onWordHit; }, [onWordHit]);
+  useEffect(() => { crystalWordsRef.current = crystalWords; }, [crystalWords]);
+
+  const selectedWord = selectedWordId
+    ? crystalWords.find((word) => word.id === selectedWordId) ?? null
+    : null;
+
+  const finishGame = useCallback(() => {
+    if (completionTriggeredRef.current) return;
+    completionTriggeredRef.current = true;
+    speechManager.stop('ice_crystal');
+    setIsListening(false);
+    setIsActive(false);
+    setSelectedWordId(null);
+    selectedWordIdRef.current = null;
+    setTimeout(() => {
+      onCompleteRef.current(freedRef.current, failedRef.current);
+    }, 500);
+  }, []);
+
+  const checkForCompletion = useCallback((updatedWords?: CrystalWord[]) => {
+    const wordsToCheck = updatedWords ?? crystalWordsRef.current;
+    if (wordsToCheck.length > 0 && wordsToCheck.every((word) => word.freed || word.failed)) {
+      finishGame();
+    }
+  }, [finishGame]);
 
   // Initialize crystal words
   useEffect(() => {
+    completionTriggeredRef.current = false;
+    freedRef.current = 0;
+    failedRef.current = 0;
+    nextMatchAllowedAtRef.current = 0;
+    setWordsFreed(0);
+    setWordsFailed(0);
+    setMeltTimer(45);
+    setIsActive(true);
+    setIsListening(false);
+    setSpokenText("");
+    setSelectedWordId(null);
+    selectedWordIdRef.current = null;
+    speechManager.stop('ice_crystal');
+
     const positions = [
       { x: 15, y: 25 }, { x: 45, y: 20 }, { x: 75, y: 25 },
       { x: 20, y: 50 }, { x: 50, y: 45 }, { x: 80, y: 50 },
@@ -67,15 +109,17 @@ export const RPGCrystalPrison = ({
       y: positions[index % positions.length].y,
     }));
     setCrystalWords(initialWords);
+    crystalWordsRef.current = initialWords;
   }, [words]);
 
   // Melt timer - words take damage if not freed in time
   useEffect(() => {
-    if (!isActive || meltTimer <= 0) return;
+    if (!isActive || meltTimer <= 0 || completionTriggeredRef.current) return;
     
     const timer = setInterval(() => {
       setMeltTimer(prev => {
         if (prev <= 1) {
+          if (completionTriggeredRef.current) return 0;
           // Time's up - count remaining frozen words as failed
           setCrystalWords(current => {
             const remaining = current.filter(w => !w.freed && !w.failed);
@@ -84,14 +128,13 @@ export const RPGCrystalPrison = ({
               onWordHitRef.current(10);
             });
             setWordsFailed(failedRef.current);
-            return current.map(w => 
+            const updated = current.map(w => 
               !w.freed && !w.failed ? { ...w, failed: true } : w
             );
+            crystalWordsRef.current = updated;
+            return updated;
           });
-          setIsActive(false);
-          setTimeout(() => {
-            onCompleteRef.current(freedRef.current, failedRef.current);
-          }, 500);
+          finishGame();
           return 0;
         }
         return prev - 1;
@@ -99,142 +142,154 @@ export const RPGCrystalPrison = ({
     }, 1000);
     
     return () => clearInterval(timer);
-  }, [isActive, meltTimer]);
+  }, [finishGame, isActive, meltTimer]);
 
   const resetListeningState = useCallback(() => {
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch (e) {}
-      recognitionRef.current = null;
-    }
+    speechManager.stop('ice_crystal');
     setIsListening(false);
     setSpokenText("");
-    setSelectedWord(null);
-    selectedWordRef.current = null;
-    setCrystalWords(prev => prev.map(w => ({ ...w, selected: false })));
+    setSelectedWordId(null);
+    selectedWordIdRef.current = null;
+    nextMatchAllowedAtRef.current = 0;
+    setCrystalWords(prev => {
+      const updated = prev.map(w => ({ ...w, selected: false }));
+      crystalWordsRef.current = updated;
+      return updated;
+    });
   }, []);
 
   const handleSelectWord = useCallback((crystalWord: CrystalWord) => {
-    if (crystalWord.freed || crystalWord.failed) return;
+    if (!isActive || crystalWord.freed || crystalWord.failed) return;
     
     resetListeningState();
     
-    setCrystalWords(prev => prev.map(w => ({ ...w, selected: w.id === crystalWord.id })));
-    setSelectedWord(crystalWord);
-    selectedWordRef.current = crystalWord;
-    startListening(crystalWord);
-  }, [resetListeningState]);
+    setCrystalWords(prev => {
+      const updated = prev.map(w => ({ ...w, selected: w.id === crystalWord.id }));
+      crystalWordsRef.current = updated;
+      return updated;
+    });
+    setSelectedWordId(crystalWord.id);
+    selectedWordIdRef.current = crystalWord.id;
+    startListening(crystalWord.id);
+  }, [isActive, resetListeningState]);
 
-  const startListening = useCallback((crystalWord: CrystalWord) => {
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch (e) {}
-      recognitionRef.current = null;
-    }
-    
+  const startListening = useCallback((wordId: string) => {
     unlockSpeechSynthesis();
-    
-    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    if (!SpeechRecognition) {
+
+    const selectedCrystal = crystalWordsRef.current.find((word) => word.id === wordId);
+    if (!selectedCrystal) {
       resetListeningState();
       return;
     }
 
-    const lockedWord = crystalWord;
-    selectedWordRef.current = crystalWord;
+    speechManager.start({
+      owner: 'ice_crystal',
+      continuous: true,
+      interimResults: true,
+      onStart: () => {
+        setIsListening(true);
+        setSpokenText("");
+      },
+      onEnd: () => {
+        setIsListening(false);
+      },
+      onResult: (transcript, alternatives, isFinal) => {
+        if (!isActive || completionTriggeredRef.current) return;
 
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-    recognition.maxAlternatives = 5;
+        const activeWordId = selectedWordIdRef.current;
+        if (!activeWordId) return;
 
-    recognition.onstart = () => {
-      setIsListening(true);
-      setSpokenText("");
-    };
+        const activeWord = crystalWordsRef.current.find((word) => word.id === activeWordId);
+        if (!activeWord || activeWord.freed || activeWord.failed) return;
 
-    recognition.onresult = (event: any) => {
-      const result = event.results[0];
-      const transcript = result[0].transcript.trim().toLowerCase();
-      setSpokenText(transcript);
+        const heardText = transcript.trim().toLowerCase();
+        setSpokenText(heardText);
 
-      if (result.isFinal) {
-        const targetWord = lockedWord.word;
-        let matched = false;
-        
-        for (let i = 0; i < result.length && !matched; i++) {
-          const alt = result[i]?.transcript?.trim().toLowerCase() || '';
-          const altWords = alt.split(/\s+/);
-          for (const spoken of altWords) {
-            if (isWordMatchLenient(spoken, targetWord)) {
-              matched = true;
-              break;
-            }
-          }
+        if (Date.now() < nextMatchAllowedAtRef.current) {
+          return;
         }
 
+        const allTranscripts = [transcript, ...alternatives];
+        const matched = allTranscripts.some((candidate) =>
+          candidate
+            .toLowerCase()
+            .trim()
+            .split(/\s+/)
+            .some((spoken) => {
+              const cleanSpoken = spoken.replace(/[^a-z']/g, '');
+              return cleanSpoken.length >= 1 && isWordMatchLenient(cleanSpoken, activeWord.word);
+            })
+        );
+
         if (matched) {
+          nextMatchAllowedAtRef.current = Date.now() + 700;
           soundEffects.iceShimmer();
-          
-          // Increase crack level
+
+          let updatedWords: CrystalWord[] = crystalWordsRef.current;
+          let freedWord = false;
+
           setCrystalWords(prev => {
-            return prev.map(w => {
-              if (w.id === lockedWord.id) {
-                const newCrackLevel = w.crackLevel + 1;
-                if (newCrackLevel >= 2) {
-                  // Word is freed!
-                  freedRef.current += 1;
-                  setWordsFreed(freedRef.current);
-                  soundEffects.correctWord();
-                  return { ...w, crackLevel: newCrackLevel, freed: true, frozen: false, selected: false };
-                }
-                return { ...w, crackLevel: newCrackLevel };
+            updatedWords = prev.map((word) => {
+              if (word.id !== activeWord.id) return word;
+
+              const newCrackLevel = Math.min(2, word.crackLevel + 1);
+              if (newCrackLevel >= 2) {
+                freedWord = true;
+                return { ...word, crackLevel: newCrackLevel, freed: true, frozen: false, selected: false };
               }
-              return w;
+
+              return { ...word, crackLevel: newCrackLevel, selected: true };
             });
+
+            crystalWordsRef.current = updatedWords;
+            return updatedWords;
           });
-        } else {
+
+          if (freedWord) {
+            freedRef.current += 1;
+            setWordsFreed(freedRef.current);
+            soundEffects.correctWord();
+            setSelectedWordId(null);
+            selectedWordIdRef.current = null;
+            setSpokenText("");
+            speechManager.stop('ice_crystal');
+            checkForCompletion(updatedWords);
+          }
+
+          return;
+        }
+
+        if (isFinal && heardText) {
           soundEffects.incorrectWord();
           onWordHitRef.current(15);
           failedRef.current += 1;
           setWordsFailed(failedRef.current);
-          
-          setCrystalWords(prev => 
-            prev.map(w => w.id === lockedWord.id ? { ...w, failed: true, selected: false } : w)
-          );
-        }
 
-        resetListeningState();
-        
-        // Check completion
-        setTimeout(() => {
-          setCrystalWords(current => {
-            const allDone = current.every(w => w.freed || w.failed);
-            if (allDone && isActive) {
-              setIsActive(false);
-              setTimeout(() => {
-                onCompleteRef.current(freedRef.current, failedRef.current);
-              }, 500);
-            }
-            return current;
+          let updatedWords: CrystalWord[] = crystalWordsRef.current;
+          setCrystalWords(prev => {
+            updatedWords = prev.map((word) =>
+              word.id === activeWord.id ? { ...word, failed: true, selected: false } : word
+            );
+            crystalWordsRef.current = updatedWords;
+            return updatedWords;
           });
-        }, 300);
-      }
-    };
 
-    recognition.onerror = () => resetListeningState();
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
-    recognitionRef.current = recognition;
-    try { recognition.start(); } catch (e) { resetListeningState(); }
-  }, [isActive, resetListeningState]);
+          setSelectedWordId(null);
+          selectedWordIdRef.current = null;
+          setSpokenText(heardText);
+          speechManager.stop('ice_crystal');
+          checkForCompletion(updatedWords);
+        }
+      },
+      onError: () => {
+        setIsListening(false);
+      },
+    });
+  }, [checkForCompletion, isActive, resetListeningState]);
 
   useEffect(() => {
     return () => {
-      if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch (e) {}
-      }
+      speechManager.abort('ice_crystal');
     };
   }, []);
 
