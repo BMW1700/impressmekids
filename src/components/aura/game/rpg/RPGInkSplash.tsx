@@ -4,6 +4,7 @@ import { Mic, Droplet, Eye, FileSearch } from "lucide-react";
 import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
+import { speechManager } from "@/lib/speechRecognitionManager";
 
 interface InkWord {
   id: string;
@@ -45,16 +46,18 @@ export const RPGInkSplash = ({
   const [isMicActive, setIsMicActive] = useState(false);
   const [wordsRevealed, setWordsRevealed] = useState(0);
   const [wordsFailed, setWordsFailed] = useState(0);
-  const [isActive, setIsActive] = useState(true);
   const [timeLeft, setTimeLeft] = useState(40);
   const [spokenText, setSpokenText] = useState("");
 
-  const recognitionRef = useRef<any>(null);
-  const isListeningRef = useRef(false);
+  const isMountedRef = useRef(true);
   const revealedRef = useRef(0);
   const failedRef = useRef(0);
   const inkWordsRef = useRef<InkWord[]>([]);
-  const isActiveRef = useRef(true);
+  const completionTriggeredRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
 
   // Initialize ink words
   useEffect(() => {
@@ -64,32 +67,44 @@ export const RPGInkSplash = ({
       obscureLevel: 1 + (index % 3),
       revealed: false,
       failed: false,
-      active: index === 0, // First word auto-selected
+      active: index === 0,
     }));
     setInkWords(initialWords);
     inkWordsRef.current = initialWords;
   }, [words]);
 
-  // Countdown timer - game ONLY ends when timer expires
-  useEffect(() => {
-    if (!isActive || timeLeft <= 0) return;
+  const completeGame = useCallback(() => {
+    if (completionTriggeredRef.current) return;
+    completionTriggeredRef.current = true;
+    speechManager.stop('ink_splash');
+    setIsMicActive(false);
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    setTimeout(() => {
+      if (isMountedRef.current) {
+        onCompleteRef.current(revealedRef.current, failedRef.current);
+      }
+    }, 500);
+  }, []);
 
-    const timer = setInterval(() => {
+  // Countdown timer
+  useEffect(() => {
+    if (completionTriggeredRef.current) return;
+
+    timerRef.current = setInterval(() => {
+      if (completionTriggeredRef.current) return;
       setTimeLeft(prev => {
         if (prev <= 1) {
-          isActiveRef.current = false;
-          setIsActive(false);
-          setTimeout(() => {
-            onComplete(revealedRef.current, failedRef.current);
-          }, 500);
+          completeGame();
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [isActive, timeLeft, onComplete]);
+    return () => {
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    };
+  }, [completeGame]);
 
   // Auto-advance to next unprocessed word
   const advanceToNextWord = useCallback(() => {
@@ -102,117 +117,88 @@ export const RPGInkSplash = ({
     }
   }, []);
 
-  // Continuous speech recognition (like Fireball Barrage pattern)
+  // Start listening via speechManager
   const startListening = useCallback(() => {
-    if (typeof window === 'undefined') return;
+    if (completionTriggeredRef.current) return;
 
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+    const didStart = speechManager.start({
+      owner: 'ink_splash',
+      continuous: true,
+      interimResults: true,
+      onStart: () => { if (isMountedRef.current) setIsMicActive(true); },
+      onEnd: () => { if (isMountedRef.current) setIsMicActive(false); },
+      onResult: (transcript, alternatives, isFinal) => {
+        if (!isMountedRef.current || completionTriggeredRef.current) return;
+        setSpokenText(transcript);
 
-    try {
-      if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch {}
-      }
+        const activeWord = inkWordsRef.current.find(w => w.active && !w.revealed && !w.failed);
+        if (!activeWord) return;
 
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-      recognition.maxAlternatives = 5;
-      recognitionRef.current = recognition;
+        const targetWord = activeWord.word.toLowerCase();
 
-      recognition.onresult = (event: any) => {
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const result = event.results[i];
-          const transcript = result[0].transcript.toLowerCase().trim();
-          setSpokenText(transcript);
-
-          // Find the currently active word
-          const activeWord = inkWordsRef.current.find(w => w.active && !w.revealed && !w.failed);
-          if (!activeWord) continue;
-
-          const targetWord = activeWord.word.toLowerCase();
-
-          // Check all alternatives for a match
-          let matched = false;
-          for (let alt = 0; alt < result.length && !matched; alt++) {
-            const altText = result[alt]?.transcript?.toLowerCase().trim() || '';
-            const spokenWords = altText.split(/\s+/);
-
-            for (const spoken of spokenWords) {
-              if (isWordMatchLenient(spoken, targetWord)) {
-                matched = true;
-                break;
-              }
+        // Check all alternatives for a match
+        let matched = false;
+        const allTranscripts = [transcript, ...alternatives];
+        for (const alt of allTranscripts) {
+          const spokenWords = alt.toLowerCase().trim().split(/\s+/);
+          for (const spoken of spokenWords) {
+            if (isWordMatchLenient(spoken, targetWord)) {
+              matched = true;
+              break;
             }
           }
+          if (matched) break;
+        }
 
-          if (result.isFinal) {
-            if (matched) {
-              soundEffects.correctWord();
-              revealedRef.current += 1;
-              setWordsRevealed(revealedRef.current);
-              const updated = inkWordsRef.current.map(w =>
-                w.id === activeWord.id ? { ...w, revealed: true, active: false } : w
-              );
-              setInkWords(updated);
-              inkWordsRef.current = updated;
-              // Auto-advance to next word
-              setTimeout(() => advanceToNextWord(), 300);
-            } else {
-              soundEffects.incorrectWord();
-              onWordHit(18);
-              failedRef.current += 1;
-              setWordsFailed(failedRef.current);
-              const updated = inkWordsRef.current.map(w =>
-                w.id === activeWord.id ? { ...w, failed: true, active: false } : w
-              );
-              setInkWords(updated);
-              inkWordsRef.current = updated;
-              // Auto-advance to next word
-              setTimeout(() => advanceToNextWord(), 300);
-            }
-            setSpokenText("");
+        if (isFinal) {
+          if (matched) {
+            soundEffects.correctWord();
+            revealedRef.current += 1;
+            setWordsRevealed(revealedRef.current);
+            const updated = inkWordsRef.current.map(w =>
+              w.id === activeWord.id ? { ...w, revealed: true, active: false } : w
+            );
+            setInkWords(updated);
+            inkWordsRef.current = updated;
+            setTimeout(() => advanceToNextWord(), 300);
+          } else {
+            soundEffects.incorrectWord();
+            onWordHit(18);
+            failedRef.current += 1;
+            setWordsFailed(failedRef.current);
+            const updated = inkWordsRef.current.map(w =>
+              w.id === activeWord.id ? { ...w, failed: true, active: false } : w
+            );
+            setInkWords(updated);
+            inkWordsRef.current = updated;
+            setTimeout(() => advanceToNextWord(), 300);
           }
+          setSpokenText("");
         }
-      };
+      },
+      onError: (error) => {
+        console.log('[InkSplash] Recognition error:', error);
+      },
+    });
 
-      recognition.onerror = () => {
-        if (isListeningRef.current && isActiveRef.current) {
-          setTimeout(() => startListening(), 200);
-        }
-      };
-
-      recognition.onend = () => {
-        if (isListeningRef.current && isActiveRef.current) {
-          setTimeout(() => startListening(), 100);
-        }
-      };
-
-      recognition.start();
-    } catch {}
-  }, [advanceToNextWord, onWordHit]);
-
-  const startMic = useCallback(() => {
-    setIsMicActive(true);
-    isListeningRef.current = true;
-    startListening();
-  }, [startListening]);
-
-  const stopMic = useCallback(() => {
-    setIsMicActive(false);
-    isListeningRef.current = false;
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch {}
+    if (!didStart) {
+      setIsMicActive(false);
     }
-  }, []);
+  }, [advanceToNextWord, onWordHit]);
 
   // Auto-start mic on mount
   useEffect(() => {
-    const timer = setTimeout(() => startMic(), 500);
+    const timer = setTimeout(() => startListening(), 500);
+    return () => clearTimeout(timer);
+  }, [startListening]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
     return () => {
-      clearTimeout(timer);
-      stopMic();
+      isMountedRef.current = false;
+      speechManager.abort('ink_splash');
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     };
   }, []);
 
@@ -260,7 +246,7 @@ export const RPGInkSplash = ({
         animate={{ y: 0, opacity: 1 }}
         className="absolute top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-auto"
       >
-        {(() => { const t = getMinigameTheme('inkSplash'); const agent = isAgentMode(); return (
+        {(() => { const agent = isAgentMode(); return (
         <div className={`bg-gradient-to-r ${agent ? 'from-red-600 to-rose-600' : 'from-indigo-600 to-purple-600'} px-6 py-3 rounded-lg
           shadow-lg border ${agent ? 'border-red-400/50' : 'border-indigo-400/50'}`}>
           <div className="flex items-center gap-3 text-white">
@@ -382,7 +368,14 @@ export const RPGInkSplash = ({
           }`}
           animate={isMicActive ? { scale: [1, 1.1, 1] } : {}}
           transition={{ duration: 0.5, repeat: Infinity }}
-          onClick={() => isMicActive ? stopMic() : startMic()}
+          onClick={() => {
+            if (isMicActive) {
+              speechManager.stop('ink_splash');
+              setIsMicActive(false);
+            } else {
+              startListening();
+            }
+          }}
         >
           <Mic className={`h-8 w-8 ${isMicActive ? 'text-white' : 'text-slate-400'}`} />
         </motion.div>

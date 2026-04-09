@@ -6,6 +6,7 @@ import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { MiniGoblin } from "./MiniGoblin";
 import { MiniOperative } from "./MiniOperative";
 import { getStoredTheme } from "@/lib/gameTheme";
+import { speechManager } from "@/lib/speechRecognitionManager";
 
 interface GoblinWord {
   id: number;
@@ -42,9 +43,7 @@ export const RPGGoblinHorde = ({
   onWordResult,
 }: RPGGoblinHordeProps) => {
   const [goblins, setGoblins] = useState<GoblinWord[]>([]);
-  const [currentGoblinIndex, setCurrentGoblinIndex] = useState(0);
   const [isMicActive, setIsMicActive] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [defeatedCount, setDefeatedCount] = useState(0);
   const [escapedCount, setEscapedCount] = useState(0);
@@ -54,38 +53,52 @@ export const RPGGoblinHorde = ({
   const [totalXp, setTotalXp] = useState(0);
   const wordsKey = useMemo(() => words.join('|'), [words]);
 
-  const recognitionRef = useRef<any>(null);
-  const isListeningRef = useRef(false);
+  const isMountedRef = useRef(true);
   const rewardIdRef = useRef(0);
-  const processingRef = useRef(false);
   const gameWordsRef = useRef<string[]>([]);
   const goblinsRef = useRef<GoblinWord[]>([]);
   const spawnIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const initializedWordsKeyRef = useRef<string | null>(null);
+  const completionTriggeredRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  const defeatedRef = useRef(0);
+  const escapedRef = useRef(0);
+
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
 
   // Keep goblinsRef in sync
   useEffect(() => {
     goblinsRef.current = goblins;
   }, [goblins]);
 
+  const completeGame = useCallback((defeated: number, escaped: number) => {
+    if (completionTriggeredRef.current) return;
+    completionTriggeredRef.current = true;
+    setGameOver(true);
+    speechManager.stop('goblin_horde');
+    setIsMicActive(false);
+    if (spawnIntervalRef.current) { clearInterval(spawnIntervalRef.current); spawnIntervalRef.current = null; }
+
+    const totalGoblins = gameWordsRef.current.length;
+    const success = defeated >= Math.ceil(totalGoblins * 0.5);
+    setTimeout(() => {
+      if (isMountedRef.current) {
+        onCompleteRef.current({ success, wordsSpoken: defeated, totalWords: totalGoblins });
+      }
+    }, 1500);
+  }, []);
+
   // Initialize words and spawn goblins
   useEffect(() => {
     if (initializedWordsKeyRef.current === wordsKey) return;
-
     initializedWordsKeyRef.current = wordsKey;
+    completionTriggeredRef.current = false;
+    defeatedRef.current = 0;
+    escapedRef.current = 0;
 
-    if (spawnIntervalRef.current) {
-      clearInterval(spawnIntervalRef.current);
-      spawnIntervalRef.current = null;
-    }
+    if (spawnIntervalRef.current) { clearInterval(spawnIntervalRef.current); spawnIntervalRef.current = null; }
+    speechManager.abort('goblin_horde');
 
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch {}
-      recognitionRef.current = null;
-    }
-
-    isListeningRef.current = false;
-    processingRef.current = false;
     setIsMicActive(false);
     setFeedback(null);
     setDefeatedCount(0);
@@ -111,7 +124,6 @@ export const RPGGoblinHorde = ({
     // Spawn first goblin immediately
     spawnGoblin(0);
 
-    // Spawn goblins one at a time with delays
     let index = 1;
     spawnIntervalRef.current = setInterval(() => {
       if (index < gameWordsRef.current.length) {
@@ -120,7 +132,14 @@ export const RPGGoblinHorde = ({
       } else {
         if (spawnIntervalRef.current) clearInterval(spawnIntervalRef.current);
       }
-    }, 1800); // Faster spawn interval
+    }, 1800);
+
+    // Start listening
+    setTimeout(() => {
+      if (isMountedRef.current && !completionTriggeredRef.current) {
+        startListening();
+      }
+    }, 500);
 
     return () => {
       if (spawnIntervalRef.current) clearInterval(spawnIntervalRef.current);
@@ -136,7 +155,7 @@ export const RPGGoblinHorde = ({
       word: word.toLowerCase(),
       x: 100,
       defeated: false,
-      speed: 0.18 + Math.random() * 0.07, // Faster goblins
+      speed: 0.18 + Math.random() * 0.07,
     };
 
     setGoblins(prev => {
@@ -149,44 +168,34 @@ export const RPGGoblinHorde = ({
   // Move goblins and check for escapes
   useEffect(() => {
     const moveInterval = setInterval(() => {
+      if (completionTriggeredRef.current) return;
       setGoblins(prev => {
         const updated = prev.map(g => {
           if (g.defeated) return g;
           const newX = g.x - g.speed;
           
-          // Goblin escaped!
           if (newX <= 5) {
-            setEscapedCount(c => c + 1);
+            escapedRef.current += 1;
+            setEscapedCount(escapedRef.current);
             return { ...g, x: newX, defeated: true };
           }
           
           return { ...g, x: newX };
         });
         goblinsRef.current = updated;
+
+        // Check completion
+        const totalGoblins = gameWordsRef.current.length;
+        if (totalGoblins > 0 && defeatedRef.current + escapedRef.current >= totalGoblins) {
+          completeGame(defeatedRef.current, escapedRef.current);
+        }
+
         return updated;
       });
     }, 50);
 
     return () => clearInterval(moveInterval);
-  }, []);
-
-  // Check for game over
-  useEffect(() => {
-    const totalGoblins = gameWordsRef.current.length;
-    if (totalGoblins > 0 && defeatedCount + escapedCount >= totalGoblins && !gameOver) {
-      setGameOver(true);
-      stopMic();
-      
-      const success = defeatedCount >= Math.ceil(totalGoblins * 0.5);
-      setTimeout(() => {
-        onComplete({
-          success,
-          wordsSpoken: defeatedCount,
-          totalWords: totalGoblins,
-        });
-      }, 1500);
-    }
-  }, [defeatedCount, escapedCount, gameOver, onComplete]);
+  }, [completeGame]);
 
   const showFloatingReward = useCallback((type: 'gold' | 'xp', amount: number, x: number) => {
     const id = ++rewardIdRef.current;
@@ -201,6 +210,7 @@ export const RPGGoblinHorde = ({
   }, []);
 
   const handleGoblinDefeat = useCallback((goblinId: number, word: string) => {
+    if (completionTriggeredRef.current) return;
     const targetGoblin = goblinsRef.current.find(g => g.id === goblinId);
     if (!targetGoblin || targetGoblin.defeated) return;
 
@@ -211,7 +221,8 @@ export const RPGGoblinHorde = ({
     goblinsRef.current = nextGoblins;
     setGoblins(nextGoblins);
     
-    setDefeatedCount(c => c + 1);
+    defeatedRef.current += 1;
+    setDefeatedCount(defeatedRef.current);
     setFeedback({ text: "Got 'em!", type: 'success' });
     battleSounds.correctWord();
     
@@ -225,93 +236,54 @@ export const RPGGoblinHorde = ({
     setTimeout(() => setFeedback(null), 600);
   }, [onWordResult, showFloatingReward]);
 
-  const startListeningForGoblin = useCallback(() => {
-    if (typeof window === 'undefined') return;
-    
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+  const startListening = useCallback(() => {
+    if (completionTriggeredRef.current) return;
 
-    try {
-      if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch {}
-      }
+    speechManager.start({
+      owner: 'goblin_horde',
+      continuous: true,
+      interimResults: true,
+      onStart: () => { if (isMountedRef.current) setIsMicActive(true); },
+      onEnd: () => { if (isMountedRef.current) setIsMicActive(false); },
+      onResult: (transcript, alternatives) => {
+        if (completionTriggeredRef.current) return;
 
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-      recognitionRef.current = recognition;
+        const allTranscripts = [transcript, ...alternatives];
+        const spokenWords = new Set<string>();
 
-      recognition.onresult = (event: any) => {
-        if (processingRef.current) return;
+        for (const t of allTranscripts) {
+          t.toLowerCase().trim().split(/\s+/).forEach((spoken: string) => {
+            const cleanSpoken = spoken.replace(/[^a-z]/g, '');
+            if (cleanSpoken.length >= 2) spokenWords.add(cleanSpoken);
+          });
+        }
 
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const result = event.results[i];
-          const spokenWords = new Set<string>();
-
-          for (let j = 0; j < result.length; j++) {
-            const transcript = result[j]?.transcript?.toLowerCase().trim() || '';
-            transcript.split(/\s+/).forEach((spoken: string) => {
-              const cleanSpoken = spoken.replace(/[^a-z]/g, '');
-              if (cleanSpoken.length >= 2) {
-                spokenWords.add(cleanSpoken);
-              }
-            });
-          }
-
-          for (const spoken of spokenWords) {
-            const activeGoblins = goblinsRef.current.filter(g => !g.defeated);
-            const matchedGoblin = activeGoblins.find(goblin => isWordMatchLenient(spoken, goblin.word));
-
-            if (matchedGoblin) {
-              handleGoblinDefeat(matchedGoblin.id, matchedGoblin.word);
-            }
+        for (const spoken of spokenWords) {
+          const activeGoblins = goblinsRef.current.filter(g => !g.defeated);
+          const matchedGoblin = activeGoblins.find(goblin => isWordMatchLenient(spoken, goblin.word));
+          if (matchedGoblin) {
+            handleGoblinDefeat(matchedGoblin.id, matchedGoblin.word);
           }
         }
-      };
+      },
+      onError: (error) => {
+        console.log('[GoblinHorde] Recognition error:', error);
+      },
+    });
+  }, [handleGoblinDefeat]);
 
-      recognition.onerror = () => {
-        if (isListeningRef.current && !gameOver) {
-          setTimeout(() => startListeningForGoblin(), 200);
-        }
-      };
-
-      recognition.onend = () => {
-        if (isListeningRef.current && !gameOver) {
-          setTimeout(() => startListeningForGoblin(), 100);
-        }
-      };
-
-      recognition.start();
-    } catch {}
-  }, [gameOver, handleGoblinDefeat]);
-
-  const startMic = useCallback(() => {
-    setIsMicActive(true);
-    isListeningRef.current = true;
-    startListeningForGoblin();
-  }, [startListeningForGoblin]);
-
-  const stopMic = useCallback(() => {
-    setIsMicActive(false);
-    isListeningRef.current = false;
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch {}
-    }
-  }, []);
-
-  // Auto-start mic
+  // Cleanup on unmount
   useEffect(() => {
-    const timer = setTimeout(() => startMic(), 500);
+    isMountedRef.current = true;
     return () => {
-      clearTimeout(timer);
-      stopMic();
+      isMountedRef.current = false;
+      speechManager.abort('goblin_horde');
+      if (spawnIntervalRef.current) clearInterval(spawnIntervalRef.current);
     };
-  }, [wordsKey, startMic, stopMic]);
+  }, []);
 
   const agent = isAgent();
 
-  // Render goblin/operative sprite
   const renderGoblin = (goblin: GoblinWord) => {
     if (goblin.defeated) {
       return (
@@ -368,7 +340,7 @@ export const RPGGoblinHorde = ({
 
   if (gameOver) {
     const totalGoblins = gameWordsRef.current.length;
-    const success = defeatedCount >= Math.ceil(totalGoblins * 0.5);
+    const success = defeatedRef.current >= Math.ceil(totalGoblins * 0.5);
     
     return (
       <motion.div 
@@ -499,37 +471,37 @@ export const RPGGoblinHorde = ({
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1.2, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
           >
             {feedback.text}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Mic control */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20">
+      {/* Mic indicator */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 pointer-events-auto">
         <motion.div
-          className={`p-6 rounded-full ${
-            isMicActive 
-              ? 'bg-green-600 shadow-[0_0_30px_rgba(34,197,94,0.5)]' 
+          className={`p-5 rounded-full ${
+            isMicActive
+              ? 'bg-green-600 shadow-[0_0_30px_rgba(22,163,74,0.6)]'
               : 'bg-slate-700'
           }`}
           animate={isMicActive ? { scale: [1, 1.1, 1] } : {}}
           transition={{ duration: 0.5, repeat: Infinity }}
-          onClick={() => isMicActive ? stopMic() : startMic()}
         >
           {isMicActive ? (
-            <Mic className="h-10 w-10 text-white" />
+            <Mic className="h-8 w-8 text-white" />
           ) : (
-            <MicOff className="h-10 w-10 text-slate-400" />
+            <MicOff className="h-8 w-8 text-slate-400" />
           )}
         </motion.div>
         {isMicActive && (
-          <motion.p 
-            className="text-center text-green-300 mt-2 font-medium"
+          <motion.p
+            className="text-center text-green-300 mt-2 font-medium text-sm"
             animate={{ opacity: [0.5, 1, 0.5] }}
             transition={{ duration: 1.5, repeat: Infinity }}
           >
-            🎤 Listening...
+            🎤 Speak to defeat!
           </motion.p>
         )}
       </div>
