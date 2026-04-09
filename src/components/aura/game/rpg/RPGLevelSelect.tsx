@@ -7,6 +7,7 @@ import { CampaignWorld } from "@/lib/campaignData";
 import { CuratedStory } from "@/data/curatedStories";
 import { RPGBattleModeSelector, BattleMode } from "./RPGBattleModeSelector";
 import { RPGTutorial } from "./RPGTutorial";
+import { getGradeTitle } from "@/lib/gradeUtils";
 
 // All possible enemy types in the campaign
 export type CampaignEnemyType = 
@@ -177,7 +178,7 @@ export const RPGLevelSelect = ({
           </div>
         ) : (
           <div className={`inline-block px-4 py-1 rounded-full bg-gradient-to-r ${world.gradient} text-white text-sm font-bold mb-2`}>
-            World {world.id}
+            World {world.id} — {getGradeTitle(world.requiredGradeLevel)}
           </div>
         )}
         <h1 className={`text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r ${world.gradient} mb-2`}>
