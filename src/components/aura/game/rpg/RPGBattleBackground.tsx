@@ -516,11 +516,11 @@ export const RPGBattleBackground = ({
                   bottom: `${10 + Math.random() * 15}%`,
                 }}
                 animate={{
-                  opacity: [0.3, 0.8, 0.3],
+                  opacity: [0.4, 0.7, 0.4],
                 }}
                 transition={{
-                  duration: 3 + Math.random() * 2,
-                  delay: i * 0.5,
+                  duration: 6 + Math.random() * 4,
+                  delay: i * 0.8,
                   repeat: Infinity,
                   ease: "easeInOut",
                 }}

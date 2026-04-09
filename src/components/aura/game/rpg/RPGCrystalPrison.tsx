@@ -42,6 +42,11 @@ export const RPGCrystalPrison = ({
   const freedRef = useRef(0);
   const failedRef = useRef(0);
   const selectedWordRef = useRef<CrystalWord | null>(null);
+  const onCompleteRef = useRef(onComplete);
+  const onWordHitRef = useRef(onWordHit);
+
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
+  useEffect(() => { onWordHitRef.current = onWordHit; }, [onWordHit]);
 
   // Initialize crystal words
   useEffect(() => {
@@ -76,7 +81,7 @@ export const RPGCrystalPrison = ({
             const remaining = current.filter(w => !w.freed && !w.failed);
             remaining.forEach(() => {
               failedRef.current += 1;
-              onWordHit(10);
+              onWordHitRef.current(10);
             });
             setWordsFailed(failedRef.current);
             return current.map(w => 
@@ -85,7 +90,7 @@ export const RPGCrystalPrison = ({
           });
           setIsActive(false);
           setTimeout(() => {
-            onComplete(freedRef.current, failedRef.current);
+            onCompleteRef.current(freedRef.current, failedRef.current);
           }, 500);
           return 0;
         }
@@ -94,7 +99,7 @@ export const RPGCrystalPrison = ({
     }, 1000);
     
     return () => clearInterval(timer);
-  }, [isActive, meltTimer, onComplete, onWordHit]);
+  }, [isActive, meltTimer]);
 
   const resetListeningState = useCallback(() => {
     if (recognitionRef.current) {
@@ -189,7 +194,7 @@ export const RPGCrystalPrison = ({
           });
         } else {
           soundEffects.incorrectWord();
-          onWordHit(15);
+          onWordHitRef.current(15);
           failedRef.current += 1;
           setWordsFailed(failedRef.current);
           
@@ -207,7 +212,7 @@ export const RPGCrystalPrison = ({
             if (allDone && isActive) {
               setIsActive(false);
               setTimeout(() => {
-                onComplete(freedRef.current, failedRef.current);
+                onCompleteRef.current(freedRef.current, failedRef.current);
               }, 500);
             }
             return current;
@@ -223,7 +228,7 @@ export const RPGCrystalPrison = ({
 
     recognitionRef.current = recognition;
     try { recognition.start(); } catch (e) { resetListeningState(); }
-  }, [isActive, onComplete, onWordHit, resetListeningState]);
+  }, [isActive, resetListeningState]);
 
   useEffect(() => {
     return () => {
