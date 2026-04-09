@@ -33,6 +33,8 @@ export const RPGQuickBlock = ({ words, onComplete }: RPGQuickBlockProps) => {
   const isMountedRef = useRef(true);
   const currentWordIndexRef = useRef(0);
   const blockWordsRef = useRef<QuickBlockWord[]>([]);
+  const completionTriggeredRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
   const phaseRef = useRef<'warning' | 'blocking' | 'result'>('warning');
 
   // Keep refs in sync
