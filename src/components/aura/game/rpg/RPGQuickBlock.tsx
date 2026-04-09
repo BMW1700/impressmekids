@@ -39,6 +39,10 @@ export const RPGQuickBlock = ({ words, onComplete }: RPGQuickBlockProps) => {
 
   // Keep refs in sync
   useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  useEffect(() => {
     currentWordIndexRef.current = currentWordIndex;
   }, [currentWordIndex]);
 
@@ -95,17 +99,15 @@ export const RPGQuickBlock = ({ words, onComplete }: RPGQuickBlockProps) => {
   // Handle result phase
   useEffect(() => {
     if (phase !== 'result') return;
+    if (completionTriggeredRef.current) return;
+    completionTriggeredRef.current = true;
     
     const blocked = blockedCount;
     const total = blockWords.length;
     
-    // Perfect block (3/3) = counter attack damage
-    // Partial block (2/3) = 50% damage reduction
-    // Weak block (1/3) = 25% damage reduction
-    // Failed (0/3) = full damage
     const counterDamage = blocked === total ? 20 : 0;
     
-    // Play appropriate sound
+    // Play appropriate sound exactly once
     if (blocked === total) {
       sounds.shieldBlock();
       sounds.comboSuccess();
@@ -117,12 +119,12 @@ export const RPGQuickBlock = ({ words, onComplete }: RPGQuickBlockProps) => {
     
     const timer = setTimeout(() => {
       if (isMountedRef.current) {
-        onComplete(blocked, total, counterDamage);
+        onCompleteRef.current(blocked, total, counterDamage);
       }
     }, 1500);
 
     return () => clearTimeout(timer);
-  }, [phase, blockedCount, blockWords.length, onComplete]);
+  }, [phase, blockedCount, blockWords.length]);
 
   // Start speech recognition
   const startListening = useCallback(() => {
@@ -181,9 +183,11 @@ export const RPGQuickBlock = ({ words, onComplete }: RPGQuickBlockProps) => {
   // Cleanup on unmount
   useEffect(() => {
     isMountedRef.current = true;
+    completionTriggeredRef.current = false;
     
     return () => {
       isMountedRef.current = false;
+      completionTriggeredRef.current = false;
       speechManager.abort('quickblock');
     };
   }, []);
