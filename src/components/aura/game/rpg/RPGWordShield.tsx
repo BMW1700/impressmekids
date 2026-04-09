@@ -69,10 +69,18 @@ export const RPGWordShield = ({
     setShieldPower(finalShieldPower);
     setTimeLeft(0);
     setAttackStarted(true);
-    setPhase('done');
+    setPhase('impact');
+    phaseRef.current = 'impact';
     setIsListening(false);
 
-    onComplete(finalShieldPower, damage);
+    // Show impact animation for 1.5s, then call onComplete and mark done
+    setTimeout(() => {
+      if (isMountedRef.current) {
+        setPhase('done');
+        phaseRef.current = 'done';
+        onComplete(finalShieldPower, damage);
+      }
+    }, 1500);
   }, [onComplete]);
 
   // Start recognition using manager
