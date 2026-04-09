@@ -128,6 +128,7 @@ export const RPGWordReader = ({
   
   // Emoji pop state
   const [emojiPopups, setEmojiPopups] = useState<LocalEmojiPopup[]>([]);
+  const wordQueueRef = useRef<HTMLDivElement | null>(null);
   
   // Echo retry state
   const [echoCountdown, setEchoCountdown] = useState(0);
@@ -207,6 +208,27 @@ export const RPGWordReader = ({
       clearInterval(echoIntervalRef.current);
       echoIntervalRef.current = null;
     }
+  }, []);
+
+  const getEmojiPopupOrigin = useCallback(() => {
+    const viewportWidth = typeof window === 'undefined' ? 878 : window.innerWidth;
+    const viewportHeight = typeof window === 'undefined' ? 684 : window.innerHeight;
+    const queueRect = wordQueueRef.current?.getBoundingClientRect();
+
+    if (queueRect) {
+      const targetX = queueRect.left + queueRect.width / 2;
+      const targetY = queueRect.top + queueRect.height / 2;
+
+      return {
+        x: targetX + (Math.random() - 0.5) * Math.min(160, queueRect.width * 0.45),
+        y: targetY + 120 + (Math.random() - 0.5) * 28,
+      };
+    }
+
+    return {
+      x: viewportWidth * 0.52 + (Math.random() - 0.5) * 160,
+      y: viewportHeight * 0.6 + (Math.random() - 0.5) * 28,
+    };
   }, []);
 
   // Stop recognition completely
@@ -292,17 +314,14 @@ export const RPGWordReader = ({
     // EMOJI LEARNING: Trigger emoji pop for meaningful words
     const emoji = getWordEmoji(targetWord);
     if (emoji) {
-      const viewportWidth = typeof window === 'undefined' ? 878 : window.innerWidth;
-      const viewportHeight = typeof window === 'undefined' ? 684 : window.innerHeight;
-      const originX = viewportWidth * 0.52;
-      const originY = viewportHeight * 0.68;
+      const { x, y } = getEmojiPopupOrigin();
 
       const newPopup: LocalEmojiPopup = {
         id: ++emojiPopId,
         emoji,
         word: targetWord,
-        x: originX + (Math.random() - 0.5) * 220,
-        y: originY + (Math.random() - 0.5) * 64,
+        x,
+        y,
       };
       setEmojiPopups(prev => {
         // Limit to 3 concurrent popups to prevent pile-up
@@ -902,7 +921,7 @@ export const RPGWordReader = ({
       )}
       
       {/* Multi-Word Queue Display with Color Coding */}
-      <div className="flex flex-wrap gap-2 justify-center max-w-md">
+      <div ref={wordQueueRef} className="flex flex-wrap gap-2 justify-center max-w-md">
         {currentBatch.map((word, index) => {
           const clean = word.replace(/[^a-zA-Z']/g, '');
           const isActiveWord = index === currentIndex;
