@@ -8,7 +8,7 @@ import { unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
 import { ensureMicrophoneAccess } from "@/lib/micDiagnostics";
 import { MicTroubleshooterModal } from "@/components/mic/MicTroubleshooterModal";
 import { getWordEmoji } from "@/lib/wordEmojiMap";
-import { RPGEmojiPop, RPGEmojiManager } from "./RPGEmojiPop";
+import { RPGEmojiManager } from "./RPGEmojiPop";
 import type { EmojiPopup as EmojiPopupType } from "./RPGEmojiPop";
 import { WordFeedbackOverlay } from "./WordFeedbackOverlay";
 
@@ -292,12 +292,17 @@ export const RPGWordReader = ({
     // EMOJI LEARNING: Trigger emoji pop for meaningful words
     const emoji = getWordEmoji(targetWord);
     if (emoji) {
+      const viewportWidth = typeof window === 'undefined' ? 878 : window.innerWidth;
+      const viewportHeight = typeof window === 'undefined' ? 684 : window.innerHeight;
+      const originX = viewportWidth * 0.52;
+      const originY = viewportHeight * 0.68;
+
       const newPopup: LocalEmojiPopup = {
         id: ++emojiPopId,
         emoji,
         word: targetWord,
-        x: 80 + Math.random() * 220,
-        y: 150 + Math.random() * 150,
+        x: originX + (Math.random() - 0.5) * 220,
+        y: originY + (Math.random() - 0.5) * 64,
       };
       setEmojiPopups(prev => {
         // Limit to 3 concurrent popups to prevent pile-up

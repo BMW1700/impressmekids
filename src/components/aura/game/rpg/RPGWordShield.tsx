@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Shield, Zap, Mic, Lock } from "lucide-react";
 import { speechManager } from "@/lib/speechRecognitionManager";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
+import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 
 interface ShieldWord {
   id: number;
@@ -30,6 +31,7 @@ export const RPGWordShield = ({
   const [attackStarted, setAttackStarted] = useState(false);
   const [phase, setPhase] = useState<'building' | 'impact' | 'done'>('building');
   const [lastRecognized, setLastRecognized] = useState<string>('');
+  const wordsKey = useMemo(() => words.join('|'), [words]);
   
   // Use refs to avoid stale closures
   const isMountedRef = useRef(true);
@@ -37,6 +39,16 @@ export const RPGWordShield = ({
   const shieldWordsRef = useRef<ShieldWord[]>([]);
   const phaseRef = useRef<'building' | 'impact' | 'done'>('building');
   const completionTriggeredRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  const listeningStartedRef = useRef(false);
+  const initializedWordsKeyRef = useRef<string | null>(null);
+  const startListeningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const impactTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -51,10 +63,29 @@ export const RPGWordShield = ({
     phaseRef.current = phase;
   }, [phase]);
 
+  const clearShieldTimers = useCallback(() => {
+    if (startListeningTimeoutRef.current) {
+      clearTimeout(startListeningTimeoutRef.current);
+      startListeningTimeoutRef.current = null;
+    }
+
+    if (impactTimeoutRef.current) {
+      clearTimeout(impactTimeoutRef.current);
+      impactTimeoutRef.current = null;
+    }
+
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+  }, []);
+
   const completeShield = useCallback((completedCount: number) => {
     if (!isMountedRef.current || completionTriggeredRef.current) return;
 
     completionTriggeredRef.current = true;
+    listeningStartedRef.current = false;
+    clearShieldTimers();
     speechManager.stop('shield');
 
     const totalWords = shieldWordsRef.current.length;
@@ -73,19 +104,29 @@ export const RPGWordShield = ({
     phaseRef.current = 'impact';
     setIsListening(false);
 
-    // Show impact animation for 1.5s, then call onComplete and mark done
-    setTimeout(() => {
+    impactTimeoutRef.current = setTimeout(() => {
       if (isMountedRef.current) {
         setPhase('done');
         phaseRef.current = 'done';
-        onComplete(finalShieldPower, damage);
+        onCompleteRef.current(finalShieldPower, damage);
       }
     }, 1500);
-  }, [onComplete]);
+  }, [clearShieldTimers]);
 
   // Start recognition using manager
   const startListening = useCallback(() => {
-    speechManager.start({
+    if (
+      !isMountedRef.current ||
+      completionTriggeredRef.current ||
+      phaseRef.current !== 'building' ||
+      listeningStartedRef.current
+    ) {
+      return;
+    }
+
+    listeningStartedRef.current = true;
+
+    const didStart = speechManager.start({
       owner: 'shield',
       continuous: true,
       interimResults: true,
@@ -95,22 +136,27 @@ export const RPGWordShield = ({
         }
       },
       onEnd: () => {
+        if (phaseRef.current === 'building' && !completionTriggeredRef.current) {
+          listeningStartedRef.current = false;
+        }
+
         if (isMountedRef.current) {
           setIsListening(false);
         }
       },
-      onResult: (transcript) => {
-        if (!isMountedRef.current || phaseRef.current !== 'building') return;
+      onResult: (transcript, alternatives) => {
+        if (!isMountedRef.current || phaseRef.current !== 'building' || completionTriggeredRef.current) return;
 
         const spoken = transcript.toLowerCase().trim();
         setLastRecognized(spoken);
-        const spokenWords = spoken.split(' ');
 
-        for (const spokenWord of spokenWords) {
+        const candidates = [transcript, ...alternatives]
+          .flatMap((value) => value.toLowerCase().split(/\s+/))
+          .map((value) => value.replace(/[^a-z]/g, ''))
+          .filter((value) => value.length >= 2);
+
+        for (const cleanSpoken of candidates) {
           if (completionTriggeredRef.current) break;
-
-          const cleanSpoken = spokenWord.replace(/[^a-z]/g, '');
-          if (cleanSpoken.length < 2) continue;
 
           const currentIdx = currentWordIndexRef.current;
           const wordsToSpeak = shieldWordsRef.current;
@@ -118,12 +164,7 @@ export const RPGWordShield = ({
           if (currentIdx < wordsToSpeak.length) {
             const targetWord = wordsToSpeak[currentIdx]?.word.toLowerCase().replace(/[^a-z]/g, '');
 
-            if (
-              cleanSpoken === targetWord ||
-              cleanSpoken.includes(targetWord) ||
-              targetWord.includes(cleanSpoken) ||
-              (cleanSpoken.length >= 3 && targetWord.startsWith(cleanSpoken.slice(0, 3)))
-            ) {
+            if (targetWord && (cleanSpoken === targetWord || isWordMatchLenient(cleanSpoken, targetWord))) {
               sounds.correctWord();
               setShieldWords(prev => prev.map((w, idx) =>
                 idx === currentIdx ? { ...w, spoken: true } : w
@@ -146,13 +187,30 @@ export const RPGWordShield = ({
       },
       onError: (error) => {
         console.log('[WordShield] Recognition error:', error);
+        listeningStartedRef.current = false;
+        if (isMountedRef.current) {
+          setIsListening(false);
+        }
       },
     });
+
+    if (!didStart) {
+      listeningStartedRef.current = false;
+      if (isMountedRef.current) {
+        setIsListening(false);
+      }
+    }
   }, [completeShield]);
 
   // Initialize words
   useEffect(() => {
+    if (initializedWordsKeyRef.current === wordsKey) return;
+
+    initializedWordsKeyRef.current = wordsKey;
+    clearShieldTimers();
+    speechManager.abort('shield');
     completionTriggeredRef.current = false;
+    listeningStartedRef.current = false;
     setCurrentWordIndex(0);
     currentWordIndexRef.current = 0;
     setShieldPower(0);
@@ -174,15 +232,18 @@ export const RPGWordShield = ({
       return;
     }
     
-    // Small delay before starting recognition
-    const timer = setTimeout(() => {
-      if (isMountedRef.current) {
+    startListeningTimeoutRef.current = setTimeout(() => {
+      if (
+        isMountedRef.current &&
+        phaseRef.current === 'building' &&
+        !completionTriggeredRef.current
+      ) {
         startListening();
       }
-    }, 500);
+    }, 350);
 
-    return () => clearTimeout(timer);
-  }, [words, completeShield, startListening]);
+    return clearShieldTimers;
+  }, [words, wordsKey, completeShield, startListening, clearShieldTimers]);
 
   // Auto-complete when all words are spoken
   useEffect(() => {
@@ -194,9 +255,19 @@ export const RPGWordShield = ({
 
   // Countdown timer
   useEffect(() => {
-    if (phase !== 'building') return;
-    
-    const interval = setInterval(() => {
+    if (phase !== 'building' || completionTriggeredRef.current) {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+      return;
+    }
+
+    countdownIntervalRef.current = setInterval(() => {
+      if (completionTriggeredRef.current || phaseRef.current !== 'building') {
+        return;
+      }
+
       setTimeLeft(prev => {
         if (prev <= 1) {
           completeShield(currentWordIndexRef.current);
@@ -206,7 +277,12 @@ export const RPGWordShield = ({
       });
     }, 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+    };
   }, [phase, completeShield]);
 
   // Cleanup on unmount
@@ -215,9 +291,10 @@ export const RPGWordShield = ({
     
     return () => {
       isMountedRef.current = false;
+      clearShieldTimers();
       speechManager.abort('shield');
     };
-  }, []);
+  }, [clearShieldTimers]);
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-50">

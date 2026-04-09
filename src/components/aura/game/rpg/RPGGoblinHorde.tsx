@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, MicOff, Coins, Sparkles } from "lucide-react";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
+import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { MiniGoblin } from "./MiniGoblin";
 import { MiniOperative } from "./MiniOperative";
 import { getStoredTheme } from "@/lib/gameTheme";
@@ -51,6 +52,7 @@ export const RPGGoblinHorde = ({
   const [floatingRewards, setFloatingRewards] = useState<FloatingReward[]>([]);
   const [totalGold, setTotalGold] = useState(0);
   const [totalXp, setTotalXp] = useState(0);
+  const wordsKey = useMemo(() => words.join('|'), [words]);
 
   const recognitionRef = useRef<any>(null);
   const isListeningRef = useRef(false);
@@ -59,6 +61,7 @@ export const RPGGoblinHorde = ({
   const gameWordsRef = useRef<string[]>([]);
   const goblinsRef = useRef<GoblinWord[]>([]);
   const spawnIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const initializedWordsKeyRef = useRef<string | null>(null);
 
   // Keep goblinsRef in sync
   useEffect(() => {
@@ -67,6 +70,33 @@ export const RPGGoblinHorde = ({
 
   // Initialize words and spawn goblins
   useEffect(() => {
+    if (initializedWordsKeyRef.current === wordsKey) return;
+
+    initializedWordsKeyRef.current = wordsKey;
+
+    if (spawnIntervalRef.current) {
+      clearInterval(spawnIntervalRef.current);
+      spawnIntervalRef.current = null;
+    }
+
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch {}
+      recognitionRef.current = null;
+    }
+
+    isListeningRef.current = false;
+    processingRef.current = false;
+    setIsMicActive(false);
+    setFeedback(null);
+    setDefeatedCount(0);
+    setEscapedCount(0);
+    setGameOver(false);
+    setFloatingRewards([]);
+    setTotalGold(0);
+    setTotalXp(0);
+    setGoblins([]);
+    goblinsRef.current = [];
+
     const cleanWords = words
       .filter(w => w.length >= 2 && w.length <= 8)
       .slice(0, 8)
@@ -95,7 +125,7 @@ export const RPGGoblinHorde = ({
     return () => {
       if (spawnIntervalRef.current) clearInterval(spawnIntervalRef.current);
     };
-  }, [words]);
+  }, [words, wordsKey]);
 
   const spawnGoblin = (index: number) => {
     const word = gameWordsRef.current[index];
@@ -109,7 +139,11 @@ export const RPGGoblinHorde = ({
       speed: 0.18 + Math.random() * 0.07, // Faster goblins
     };
 
-    setGoblins(prev => [...prev, newGoblin]);
+    setGoblins(prev => {
+      const next = [...prev, newGoblin];
+      goblinsRef.current = next;
+      return next;
+    });
   };
 
   // Move goblins and check for escapes
@@ -128,6 +162,7 @@ export const RPGGoblinHorde = ({
           
           return { ...g, x: newX };
         });
+        goblinsRef.current = updated;
         return updated;
       });
     }, 50);
@@ -166,9 +201,15 @@ export const RPGGoblinHorde = ({
   }, []);
 
   const handleGoblinDefeat = useCallback((goblinId: number, word: string) => {
-    setGoblins(prev => prev.map(g => 
+    const targetGoblin = goblinsRef.current.find(g => g.id === goblinId);
+    if (!targetGoblin || targetGoblin.defeated) return;
+
+    const nextGoblins = goblinsRef.current.map(g => 
       g.id === goblinId ? { ...g, defeated: true } : g
-    ));
+    );
+
+    goblinsRef.current = nextGoblins;
+    setGoblins(nextGoblins);
     
     setDefeatedCount(c => c + 1);
     setFeedback({ text: "Got 'em!", type: 'success' });
@@ -205,31 +246,25 @@ export const RPGGoblinHorde = ({
         if (processingRef.current) return;
 
         for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript.toLowerCase().trim();
-          const spokenWords = transcript.split(/\s+/);
+          const result = event.results[i];
+          const spokenWords = new Set<string>();
 
-          // Read current goblins snapshot without nesting setGoblins
-          const currentGoblins = goblinsRef.current;
-          const activeGoblins = currentGoblins.filter(g => !g.defeated);
-          
-          for (const goblin of activeGoblins) {
-            const targetWord = goblin.word.toLowerCase();
-            
-            for (const spoken of spokenWords) {
+          for (let j = 0; j < result.length; j++) {
+            const transcript = result[j]?.transcript?.toLowerCase().trim() || '';
+            transcript.split(/\s+/).forEach((spoken: string) => {
               const cleanSpoken = spoken.replace(/[^a-z]/g, '');
-              
               if (cleanSpoken.length >= 2) {
-                const startsWithMatch = targetWord.startsWith(cleanSpoken.slice(0, 2)) || 
-                                        cleanSpoken.startsWith(targetWord.slice(0, 2));
-                const containsMatch = targetWord.includes(cleanSpoken) || 
-                                      cleanSpoken.includes(targetWord);
-                const exactMatch = cleanSpoken === targetWord;
-                
-                if (exactMatch || startsWithMatch || containsMatch) {
-                  handleGoblinDefeat(goblin.id, goblin.word);
-                  break;
-                }
+                spokenWords.add(cleanSpoken);
               }
+            });
+          }
+
+          for (const spoken of spokenWords) {
+            const activeGoblins = goblinsRef.current.filter(g => !g.defeated);
+            const matchedGoblin = activeGoblins.find(goblin => isWordMatchLenient(spoken, goblin.word));
+
+            if (matchedGoblin) {
+              handleGoblinDefeat(matchedGoblin.id, matchedGoblin.word);
             }
           }
         }
@@ -272,7 +307,7 @@ export const RPGGoblinHorde = ({
       clearTimeout(timer);
       stopMic();
     };
-  }, []);
+  }, [wordsKey, startMic, stopMic]);
 
   const agent = isAgent();
 

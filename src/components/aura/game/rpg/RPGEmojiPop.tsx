@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface EmojiPopup {
   id: number;
@@ -18,35 +18,38 @@ interface RPGEmojiPopProps {
 // Single emoji popup animation
 export const RPGEmojiPop = ({ emoji, word, onComplete }: RPGEmojiPopProps) => {
   const [phase, setPhase] = useState<'rising' | 'popping' | 'done'>('rising');
+  const onCompleteRef = useRef(onComplete);
 
   useEffect(() => {
-    // Rising phase
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  useEffect(() => {
     const popTimer = setTimeout(() => {
       setPhase('popping');
     }, 1200);
 
-    // Complete after pop
     const completeTimer = setTimeout(() => {
       setPhase('done');
-      onComplete?.();
+      onCompleteRef.current?.();
     }, 1800);
 
     return () => {
       clearTimeout(popTimer);
       clearTimeout(completeTimer);
     };
-  }, [onComplete]);
+  }, []);
 
   if (phase === 'done') return null;
 
   return (
     <motion.div
-      className="fixed pointer-events-none z-[100]"
+      className="pointer-events-none relative z-[100]"
       initial={{ 
         opacity: 0, 
         scale: 0.5, 
         y: 0,
-        x: '-50%',
+        x: 0,
       }}
       animate={phase === 'rising' ? { 
         opacity: 1, 
@@ -64,10 +67,6 @@ export const RPGEmojiPop = ({ emoji, word, onComplete }: RPGEmojiPopProps) => {
       } : {
         duration: 0.4,
         ease: "easeOut"
-      }}
-      style={{
-        left: '50%',
-        top: '40%',
       }}
     >
       {/* Bubble container */}
