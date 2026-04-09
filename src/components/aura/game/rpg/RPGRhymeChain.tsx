@@ -69,6 +69,9 @@ export const RPGRhymeChain = ({
   const currentIndexRef = useRef(0);
   const rhymeWordsRef = useRef<RhymeWord[]>([]);
   const phaseRef = useRef<'ready' | 'playing' | 'complete'>('ready');
+  const completionTriggeredRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
 
   useEffect(() => {
     currentIndexRef.current = currentIndex;
@@ -107,13 +110,17 @@ export const RPGRhymeChain = ({
 
   // Timer countdown
   useEffect(() => {
-    if (phase !== 'playing') return;
+    if (phase !== 'playing' || completionTriggeredRef.current) return;
     
     const interval = setInterval(() => {
+      if (completionTriggeredRef.current) return;
       setTimeLeft(prev => {
         if (prev <= 1) {
-          speechManager.stop('rhyme_chain');
-          setPhase('complete');
+          if (!completionTriggeredRef.current) {
+            completionTriggeredRef.current = true;
+            speechManager.stop('rhyme_chain');
+            setPhase('complete');
+          }
           return 0;
         }
         return prev - 1;
@@ -125,15 +132,15 @@ export const RPGRhymeChain = ({
 
   // Check for completion
   useEffect(() => {
-    if (phase === 'complete') {
+    if (phase === 'complete' && completionTriggeredRef.current) {
       const damage = score * 8 + combo * 15;
       setTimeout(() => {
         if (isMountedRef.current) {
-          onComplete(score, damage);
+          onCompleteRef.current(score, damage);
         }
       }, 1500);
     }
-  }, [phase, score, combo, onComplete]);
+  }, [phase, score, combo]);
 
   // Start recognition using manager
   const startListening = useCallback(() => {
@@ -175,7 +182,8 @@ export const RPGRhymeChain = ({
           setCurrentIndex(prev => prev + 1);
           
           // Check if all done
-          if (currentIdx >= words.length - 1) {
+          if (currentIdx >= words.length - 1 && !completionTriggeredRef.current) {
+            completionTriggeredRef.current = true;
             speechManager.stop('rhyme_chain');
             setPhase('complete');
           }

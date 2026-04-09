@@ -35,6 +35,9 @@ export const RPGSpellCombo = ({
   const currentIndexRef = useRef(0);
   const comboWordsRef = useRef<ComboWord[]>([]);
   const phaseRef = useRef<'ready' | 'casting' | 'success' | 'failed'>('ready');
+  const completionTriggeredRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
 
   // Keep refs in sync
   useEffect(() => {
@@ -78,18 +81,22 @@ export const RPGSpellCombo = ({
 
   // Timer countdown
   useEffect(() => {
-    if (phase !== 'casting') return;
+    if (phase !== 'casting' || completionTriggeredRef.current) return;
     
     const interval = setInterval(() => {
+      if (completionTriggeredRef.current) return;
       setTimeLeft(prev => {
         if (prev <= 1) {
-          speechManager.stop('spell_combo');
-          setPhase('failed');
-          setTimeout(() => {
-            if (isMountedRef.current) {
-              onComplete(false, 1);
-            }
-          }, 2000);
+          if (!completionTriggeredRef.current) {
+            completionTriggeredRef.current = true;
+            speechManager.stop('spell_combo');
+            setPhase('failed');
+            setTimeout(() => {
+              if (isMountedRef.current) {
+                onCompleteRef.current(false, 1);
+              }
+            }, 2000);
+          }
           return 0;
         }
         return prev - 1;
@@ -97,25 +104,26 @@ export const RPGSpellCombo = ({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [phase, onComplete]);
+  }, [phase]);
 
   // Check for completion
   useEffect(() => {
-    if (phase !== 'casting') return;
+    if (phase !== 'casting' || completionTriggeredRef.current) return;
     
     const allSpoken = comboWords.every(w => w.spoken);
     if (allSpoken && comboWords.length > 0) {
+      completionTriggeredRef.current = true;
       speechManager.stop('spell_combo');
       setPhase('success');
       sounds.comboSuccess();
       const multiplier = Math.min(5, comboWords.length);
       setTimeout(() => {
         if (isMountedRef.current) {
-          onComplete(true, multiplier);
+          onCompleteRef.current(true, multiplier);
         }
       }, 2500);
     }
-  }, [comboWords, phase, onComplete]);
+  }, [comboWords, phase]);
 
   // Start recognition using manager
   const startListening = useCallback(() => {

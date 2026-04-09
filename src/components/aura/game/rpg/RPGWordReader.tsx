@@ -218,7 +218,7 @@ export const RPGWordReader = ({
     const queueRect = wordQueueRef.current?.getBoundingClientRect();
 
     const targetX = viewportWidth * 0.5 + (Math.random() - 0.5) * Math.min(120, viewportWidth * 0.12);
-    const targetY = viewportHeight * 0.38 + (Math.random() - 0.5) * Math.min(56, viewportHeight * 0.06);
+    const targetY = viewportHeight * 0.18 + (Math.random() - 0.5) * Math.min(40, viewportHeight * 0.04);
 
     if (queueRect) {
       return {

@@ -4,6 +4,7 @@ import { Mic, Volume2, Repeat, Radar } from "lucide-react";
 import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { SoundEffects, unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
 import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
+import { speechManager } from "@/lib/speechRecognitionManager";
 
 interface EchoWord {
   id: string;
@@ -33,14 +34,40 @@ export const RPGWordEcho = ({
   const [spokenText, setSpokenText] = useState("");
   const [wordsCompleted, setWordsCompleted] = useState(0);
   const [wordsFailed, setWordsFailed] = useState(0);
-  const [isActive, setIsActive] = useState(true);
   const [timeLeft, setTimeLeft] = useState(30);
-  const recognitionRef = useRef<any>(null);
+
+  const isMountedRef = useRef(true);
   const completedRef = useRef(0);
   const failedRef = useRef(0);
+  const currentWordIndexRef = useRef(0);
+  const echoWordsRef = useRef<EchoWord[]>([]);
+  const completionTriggeredRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Initialize echo words - each word needs to be spoken twice
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
+  useEffect(() => { currentWordIndexRef.current = currentWordIndex; }, [currentWordIndex]);
+  useEffect(() => { echoWordsRef.current = echoWords; }, [echoWords]);
+
+  const completeGame = useCallback(() => {
+    if (completionTriggeredRef.current) return;
+    completionTriggeredRef.current = true;
+    speechManager.stop('word_echo');
+    setIsListening(false);
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    setTimeout(() => {
+      if (isMountedRef.current) {
+        onCompleteRef.current(completedRef.current, failedRef.current);
+      }
+    }, 500);
+  }, []);
+
+  // Initialize echo words
   useEffect(() => {
+    completionTriggeredRef.current = false;
+    completedRef.current = 0;
+    failedRef.current = 0;
+    unlockSpeechSynthesis();
     const initialWords: EchoWord[] = words.slice(0, 6).map((word, index) => ({
       id: `echo-${index}`,
       word: word.replace(/[^a-zA-Z']/g, ''),
@@ -50,109 +77,91 @@ export const RPGWordEcho = ({
       failed: false,
     }));
     setEchoWords(initialWords);
+    echoWordsRef.current = initialWords;
+    setCurrentWordIndex(0);
+    currentWordIndexRef.current = 0;
   }, [words]);
 
   // Countdown timer
   useEffect(() => {
-    if (!isActive || timeLeft <= 0) return;
-    
-    const timer = setInterval(() => {
+    if (completionTriggeredRef.current) return;
+
+    timerRef.current = setInterval(() => {
+      if (completionTriggeredRef.current) return;
       setTimeLeft(prev => {
         if (prev <= 1) {
-          setIsActive(false);
-          setTimeout(() => {
-            onComplete(completedRef.current, failedRef.current);
-          }, 500);
+          completeGame();
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
     
-    return () => clearInterval(timer);
-  }, [isActive, timeLeft, onComplete]);
-
-  // Auto-start listening for current word
-  useEffect(() => {
-    if (isActive && currentWordIndex < echoWords.length && !isListening) {
-      const currentWord = echoWords[currentWordIndex];
-      if (currentWord && !currentWord.completed && !currentWord.failed) {
-        startListening();
-      }
-    }
-  }, [currentWordIndex, echoWords, isActive, isListening]);
-
-  const resetListeningState = useCallback(() => {
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch (e) {}
-      recognitionRef.current = null;
-    }
-    setIsListening(false);
-    setSpokenText("");
-  }, []);
-
-  const startListening = useCallback(() => {
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch (e) {}
-      recognitionRef.current = null;
-    }
-    
-    unlockSpeechSynthesis();
-    
-    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    if (!SpeechRecognition) {
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-    recognition.maxAlternatives = 5;
-
-    recognition.onstart = () => {
-      setIsListening(true);
-      setSpokenText("");
+    return () => {
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     };
+  }, [completeGame]);
 
-    recognition.onresult = (event: any) => {
-      const result = event.results[0];
-      const transcript = result[0].transcript.trim().toLowerCase();
-      setSpokenText(transcript);
+  // Start listening via speechManager
+  const startListening = useCallback(() => {
+    if (completionTriggeredRef.current) return;
 
-      if (result.isFinal) {
-        const currentWord = echoWords[currentWordIndex];
-        if (!currentWord) return;
-        
+    speechManager.start({
+      owner: 'word_echo',
+      continuous: true,
+      interimResults: true,
+      onStart: () => { if (isMountedRef.current) setIsListening(true); },
+      onEnd: () => { if (isMountedRef.current) setIsListening(false); },
+      onResult: (transcript, alternatives, isFinal) => {
+        if (!isMountedRef.current || completionTriggeredRef.current) return;
+        setSpokenText(transcript);
+
+        if (!isFinal) return;
+
+        const currentIdx = currentWordIndexRef.current;
+        const currentWord = echoWordsRef.current[currentIdx];
+        if (!currentWord || currentWord.completed || currentWord.failed) return;
+
         const targetWord = currentWord.word;
         let matched = false;
-        
-        for (let i = 0; i < result.length && !matched; i++) {
-          const alt = result[i]?.transcript?.trim().toLowerCase() || '';
-          const altWords = alt.split(/\s+/);
+        const allTranscripts = [transcript, ...alternatives];
+        for (const t of allTranscripts) {
+          const altWords = t.toLowerCase().trim().split(/\s+/);
           for (const spoken of altWords) {
             if (isWordMatchLenient(spoken, targetWord)) {
               matched = true;
               break;
             }
           }
+          if (matched) break;
         }
 
         if (matched) {
           soundEffects.correctWord();
+          const newEchosSpoken = currentWord.echosSpoken + 1;
+          const isComplete = newEchosSpoken >= currentWord.echosNeeded;
           
+          if (isComplete) {
+            completedRef.current += 1;
+            setWordsCompleted(completedRef.current);
+          }
+
           setEchoWords(prev => prev.map((w, i) => {
-            if (i === currentWordIndex) {
-              const newEchosSpoken = w.echosSpoken + 1;
-              if (newEchosSpoken >= w.echosNeeded) {
-                completedRef.current += 1;
-                setWordsCompleted(completedRef.current);
-                return { ...w, echosSpoken: newEchosSpoken, completed: true };
-              }
-              return { ...w, echosSpoken: newEchosSpoken };
+            if (i === currentIdx) {
+              return { ...w, echosSpoken: newEchosSpoken, completed: isComplete };
             }
             return w;
           }));
+
+          if (isComplete) {
+            const nextIndex = currentIdx + 1;
+            if (nextIndex >= echoWordsRef.current.length) {
+              completeGame();
+            } else {
+              setCurrentWordIndex(nextIndex);
+              currentWordIndexRef.current = nextIndex;
+            }
+          }
         } else {
           soundEffects.incorrectWord();
           onWordHit(15);
@@ -160,49 +169,38 @@ export const RPGWordEcho = ({
           setWordsFailed(failedRef.current);
           
           setEchoWords(prev => prev.map((w, i) => 
-            i === currentWordIndex ? { ...w, failed: true } : w
+            i === currentIdx ? { ...w, failed: true } : w
           ));
+
+          const nextIndex = currentIdx + 1;
+          if (nextIndex >= echoWordsRef.current.length) {
+            completeGame();
+          } else {
+            setCurrentWordIndex(nextIndex);
+            currentWordIndexRef.current = nextIndex;
+          }
         }
+        setSpokenText("");
+      },
+      onError: (error) => {
+        console.log('[WordEcho] Recognition error:', error);
+      },
+    });
+  }, [completeGame, onWordHit]);
 
-        resetListeningState();
-        
-        // Check if current word is done (completed or failed)
-        setTimeout(() => {
-          setEchoWords(prev => {
-            const current = prev[currentWordIndex];
-            if (current?.completed || current?.failed) {
-              const nextIndex = currentWordIndex + 1;
-              if (nextIndex >= prev.length) {
-                setIsActive(false);
-                setTimeout(() => {
-                  onComplete(completedRef.current, failedRef.current);
-                }, 500);
-              } else {
-                setCurrentWordIndex(nextIndex);
-              }
-            }
-            return prev;
-          });
-        }, 300);
-      }
-    };
-
-    recognition.onerror = () => resetListeningState();
-    recognition.onend = () => {
-      if (isListening) {
-        setTimeout(() => startListening(), 200);
-      }
-    };
-
-    recognitionRef.current = recognition;
-    try { recognition.start(); } catch (e) { resetListeningState(); }
-  }, [currentWordIndex, echoWords, isListening, onComplete, onWordHit, resetListeningState]);
-
+  // Auto-start listening
   useEffect(() => {
+    const timer = setTimeout(() => startListening(), 500);
+    return () => clearTimeout(timer);
+  }, [startListening]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
     return () => {
-      if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch (e) {}
-      }
+      isMountedRef.current = false;
+      speechManager.abort('word_echo');
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     };
   }, []);
 
@@ -210,45 +208,25 @@ export const RPGWordEcho = ({
 
   return (
     <div className="fixed inset-0 z-50 pointer-events-none">
-      {/* Cave overlay */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         className={`absolute inset-0 bg-gradient-to-b ${isAgentMode() ? 'from-slate-900/90 via-emerald-950/80 to-slate-950/95' : 'from-stone-900/90 via-amber-950/80 to-stone-950/95'}`}
       />
       
-      {/* Echo wave effects */}
       <div className="absolute inset-0 overflow-hidden">
         {[...Array(5)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-amber-400/30"
-            style={{
-              width: 100 + i * 80,
-              height: 100 + i * 80,
-            }}
-            animate={{ 
-              scale: [1, 1.5, 1],
-              opacity: [0.3, 0.1, 0.3],
-            }}
-            transition={{ 
-              repeat: Infinity, 
-              duration: 2 + i * 0.5,
-              delay: i * 0.3,
-            }}
+          <motion.div key={i} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-amber-400/30"
+            style={{ width: 100 + i * 80, height: 100 + i * 80 }}
+            animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0.1, 0.3] }}
+            transition={{ repeat: Infinity, duration: 2 + i * 0.5, delay: i * 0.3 }}
           />
         ))}
       </div>
 
-      {/* Warning Banner */}
-      <motion.div
-        initial={{ y: -50, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="absolute top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-auto"
-      >
+      <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="absolute top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-auto">
         {(() => { const t = getMinigameTheme('wordEcho'); const agent = isAgentMode(); return (
-        <div className={`bg-gradient-to-r ${agent ? 'from-emerald-600 to-cyan-600' : 'from-amber-600 to-orange-600'} px-6 py-3 rounded-lg
-          shadow-lg border ${agent ? 'border-emerald-400/50' : 'border-amber-400/50'}`}>
+        <div className={`bg-gradient-to-r ${agent ? 'from-emerald-600 to-cyan-600' : 'from-amber-600 to-orange-600'} px-6 py-3 rounded-lg shadow-lg border ${agent ? 'border-emerald-400/50' : 'border-amber-400/50'}`}>
           <div className="flex items-center gap-3 text-white">
             {agent ? <Radar className="h-6 w-6 animate-pulse" /> : <Repeat className="h-6 w-6 animate-pulse" />}
             <span className="font-bold text-lg">{t.title} Say each word TWICE!</span>
@@ -258,53 +236,30 @@ export const RPGWordEcho = ({
         ); })()}
       </motion.div>
 
-      {/* Timer */}
       <div className="absolute top-28 left-1/2 -translate-x-1/2 z-50">
-        <div className={`text-3xl font-black ${timeLeft <= 10 ? 'text-red-400 animate-pulse' : 'text-white'}`}>
-          {timeLeft}s
-        </div>
+        <div className={`text-3xl font-black ${timeLeft <= 10 ? 'text-red-400 animate-pulse' : 'text-white'}`}>{timeLeft}s</div>
       </div>
 
-      {/* Word cards */}
       <div className="absolute inset-x-4 top-40 flex flex-wrap justify-center gap-3 pointer-events-auto">
         {echoWords.map((word, index) => (
-          <motion.div
-            key={word.id}
+          <motion.div key={word.id}
             initial={{ scale: 0, opacity: 0 }}
-            animate={{ 
-              scale: index === currentWordIndex ? 1.1 : 1,
-              opacity: word.completed ? 0.5 : word.failed ? 0.3 : 1,
-            }}
+            animate={{ scale: index === currentWordIndex ? 1.1 : 1, opacity: word.completed ? 0.5 : word.failed ? 0.3 : 1 }}
             className={`relative px-6 py-4 rounded-xl border-2 ${
-              word.completed 
-                ? 'bg-emerald-900/80 border-emerald-400' 
-                : word.failed 
-                  ? 'bg-red-900/80 border-red-400' 
-                  : index === currentWordIndex
-                    ? 'bg-amber-900/80 border-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.5)]'
-                    : 'bg-stone-800/80 border-stone-600'
+              word.completed ? 'bg-emerald-900/80 border-emerald-400' 
+              : word.failed ? 'bg-red-900/80 border-red-400' 
+              : index === currentWordIndex ? 'bg-amber-900/80 border-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.5)]'
+              : 'bg-stone-800/80 border-stone-600'
             }`}
           >
             <p className="text-2xl font-bold text-white">{word.word}</p>
-            
-            {/* Echo progress */}
             <div className="flex justify-center gap-2 mt-2">
               {[...Array(word.echosNeeded)].map((_, i) => (
-                <div
-                  key={i}
-                  className={`w-3 h-3 rounded-full ${
-                    i < word.echosSpoken ? 'bg-amber-400' : 'bg-stone-600'
-                  }`}
-                />
+                <div key={i} className={`w-3 h-3 rounded-full ${i < word.echosSpoken ? 'bg-amber-400' : 'bg-stone-600'}`} />
               ))}
             </div>
-            
             {word.completed && (
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="absolute -top-2 -right-2 w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center"
-              >
+              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute -top-2 -right-2 w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center">
                 <span className="text-white text-lg">✓</span>
               </motion.div>
             )}
@@ -312,20 +267,13 @@ export const RPGWordEcho = ({
         ))}
       </div>
 
-      {/* Current word panel */}
       {currentWord && !currentWord.completed && !currentWord.failed && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="absolute bottom-28 left-1/2 -translate-x-1/2 pointer-events-auto"
-        >
-          <div className="bg-slate-900/95 border-2 border-amber-400 rounded-xl px-10 py-5
-            shadow-[0_0_40px_rgba(245,158,11,0.5)]">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="absolute bottom-28 left-1/2 -translate-x-1/2 pointer-events-auto">
+          <div className="bg-slate-900/95 border-2 border-amber-400 rounded-xl px-10 py-5 shadow-[0_0_40px_rgba(245,158,11,0.5)]">
             <p className="text-amber-400 text-sm mb-2 text-center font-medium">
               Echo {currentWord.echosSpoken + 1} of {currentWord.echosNeeded}:
             </p>
             <p className="text-4xl font-black text-white text-center">{currentWord.word}</p>
-            
             {isListening && (
               <div className="flex items-center justify-center gap-3 mt-4 text-emerald-400">
                 <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ repeat: Infinity, duration: 0.6 }}>
@@ -334,7 +282,6 @@ export const RPGWordEcho = ({
                 <span className="font-medium">Listening...</span>
               </div>
             )}
-            
             {spokenText && (
               <p className="text-center text-slate-400 text-sm mt-2">
                 Heard: "<span className="text-white">{spokenText}</span>"
@@ -344,7 +291,6 @@ export const RPGWordEcho = ({
         </motion.div>
       )}
 
-      {/* Score */}
       <div className="absolute top-28 right-6 pointer-events-auto">
         <div className="bg-slate-900/90 rounded-lg p-4 border border-amber-700 shadow-xl">
           <div className="flex items-center gap-2 text-emerald-400 mb-2">
@@ -352,9 +298,7 @@ export const RPGWordEcho = ({
             <span className="font-bold text-lg">{wordsCompleted}</span>
             <span className="text-sm text-slate-400">echoed</span>
           </div>
-          <div className="text-red-400 text-sm font-medium">
-            Failed: {wordsFailed}
-          </div>
+          <div className="text-red-400 text-sm font-medium">Failed: {wordsFailed}</div>
         </div>
       </div>
     </div>
