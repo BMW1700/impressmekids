@@ -111,7 +111,7 @@ export const RPGGoblinHorde = ({
     goblinsRef.current = [];
 
     const cleanWords = words
-      .filter(w => w.length >= 2 && w.length <= 8)
+      .filter(w => w.length >= 1 && w.length <= 8)
       .slice(0, 8)
       .map(w => w.replace(/[^a-zA-Z]/g, ''));
     
@@ -254,7 +254,7 @@ export const RPGGoblinHorde = ({
         for (const t of allTranscripts) {
           t.toLowerCase().trim().split(/\s+/).forEach((spoken: string) => {
             const cleanSpoken = spoken.replace(/[^a-z]/g, '');
-            if (cleanSpoken.length >= 2) spokenWords.add(cleanSpoken);
+            if (cleanSpoken.length >= 1) spokenWords.add(cleanSpoken);
           });
         }
 

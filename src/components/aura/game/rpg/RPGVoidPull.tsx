@@ -163,7 +163,7 @@ export const RPGVoidPull = ({
               for (const spoken of spokenWords) {
                 const cleanSpoken = spoken.replace(/[^a-z]/g, '');
                 
-                if (cleanSpoken.length >= 2) {
+                if (cleanSpoken.length >= 1) {
                   const startsWithMatch = targetWord.startsWith(cleanSpoken.slice(0, 2)) || 
                                           cleanSpoken.startsWith(targetWord.slice(0, 2));
                   const containsMatch = targetWord.includes(cleanSpoken) || 

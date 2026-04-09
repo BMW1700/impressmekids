@@ -147,7 +147,7 @@ export const RPGWordCannon = ({
             if (target.destroyed) continue;
             for (const spoken of spokenWords) {
               const cleanSpoken = spoken.replace(/[^a-z']/g, '');
-              if (cleanSpoken.length >= 2 && isWordMatchLenient(cleanSpoken, target.word)) {
+              if (cleanSpoken.length >= 1 && isWordMatchLenient(cleanSpoken, target.word)) {
                 destroyTarget(target.id);
                 break;
               }

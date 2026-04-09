@@ -43,7 +43,7 @@ export const RPGGroundRipple = ({
   // Initialize words and spawn mountains
   useEffect(() => {
     const cleanWords = words
-      .filter(w => w.length >= 2 && w.length <= 10)
+      .filter(w => w.length >= 1 && w.length <= 10)
       .slice(0, 6)
       .map(w => w.replace(/[^a-zA-Z]/g, ''));
     
@@ -178,7 +178,7 @@ export const RPGGroundRipple = ({
               for (const spoken of spokenWords) {
                 const cleanSpoken = spoken.replace(/[^a-z]/g, '');
                 
-                if (cleanSpoken.length >= 2) {
+                if (cleanSpoken.length >= 1) {
                   const startsWithMatch = targetWord.startsWith(cleanSpoken.slice(0, 2)) || 
                                           cleanSpoken.startsWith(targetWord.slice(0, 2));
                   const containsMatch = targetWord.includes(cleanSpoken) || 

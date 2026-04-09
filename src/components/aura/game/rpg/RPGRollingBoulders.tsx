@@ -147,7 +147,7 @@ export const RPGRollingBoulders = ({
           for (const boulder of activeBoulders) {
             for (const spoken of spokenWords) {
               const cleanSpoken = spoken.replace(/[^a-z]/g, '');
-              if (cleanSpoken.length >= 2 && isWordMatchLenient(cleanSpoken, boulder.word)) {
+              if (cleanSpoken.length >= 1 && isWordMatchLenient(cleanSpoken, boulder.word)) {
                 handleBoulderDestroy(boulder.id);
                 break;
               }

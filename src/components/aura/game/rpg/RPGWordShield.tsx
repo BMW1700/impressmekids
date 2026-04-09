@@ -153,7 +153,7 @@ export const RPGWordShield = ({
         const candidates = [transcript, ...alternatives]
           .flatMap((value) => value.toLowerCase().split(/\s+/))
           .map((value) => value.replace(/[^a-z]/g, ''))
-          .filter((value) => value.length >= 2);
+          .filter((value) => value.length >= 1);
 
         for (const cleanSpoken of candidates) {
           if (completionTriggeredRef.current) break;

@@ -120,10 +120,10 @@ export const RPGWebTrap = ({
     
     if (cleanSpoken === cleanTarget) return true;
     if (cleanSpoken.includes(cleanTarget)) return true;
-    if (cleanTarget.includes(cleanSpoken) && cleanSpoken.length >= 2) return true;
+    if (cleanTarget.includes(cleanSpoken) && cleanSpoken.length >= 1) return true;
     
     // Phonetic/fuzzy match - first 2+ chars match
-    if (cleanSpoken.length >= 2 && cleanTarget.length >= 2) {
+    if (cleanSpoken.length >= 1 && cleanTarget.length >= 1) {
       if (cleanSpoken.slice(0, 2) === cleanTarget.slice(0, 2)) return true;
       if (cleanSpoken.slice(0, 3) === cleanTarget.slice(0, 3)) return true;
     }
