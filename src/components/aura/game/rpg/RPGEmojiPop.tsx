@@ -7,16 +7,26 @@ interface EmojiPopup {
   word: string;
   x: number;
   y: number;
+  startX?: number;
+  startY?: number;
 }
 
 interface RPGEmojiPopProps {
   emoji: string;
   word: string;
+  initialOffsetX?: number;
+  initialOffsetY?: number;
   onComplete?: () => void;
 }
 
 // Single emoji popup animation
-export const RPGEmojiPop = ({ emoji, word, onComplete }: RPGEmojiPopProps) => {
+export const RPGEmojiPop = ({
+  emoji,
+  word,
+  initialOffsetX = 0,
+  initialOffsetY = 0,
+  onComplete,
+}: RPGEmojiPopProps) => {
   const [phase, setPhase] = useState<'rising' | 'popping' | 'done'>('rising');
   const onCompleteRef = useRef(onComplete);
 
@@ -48,13 +58,14 @@ export const RPGEmojiPop = ({ emoji, word, onComplete }: RPGEmojiPopProps) => {
       initial={{ 
         opacity: 0, 
         scale: 0.5, 
-        y: 0,
-        x: 0,
+        x: initialOffsetX,
+        y: initialOffsetY,
       }}
       animate={phase === 'rising' ? { 
         opacity: 1, 
         scale: 1, 
-        y: -120,
+        x: 0,
+        y: 0,
         rotate: [0, -5, 5, -3, 3, 0],
       } : {
         scale: [1, 1.5, 0],
@@ -193,16 +204,20 @@ export const RPGEmojiManager = ({ popups, onPopupComplete }: RPGEmojiManagerProp
       {popups.map(popup => (
         <motion.div
           key={popup.id}
+          className="pointer-events-none"
           style={{
             position: 'fixed',
             left: popup.x,
             top: popup.y,
             zIndex: 100,
+            transform: 'translate(-50%, -50%)',
           }}
         >
           <RPGEmojiPop
             emoji={popup.emoji}
             word={popup.word}
+            initialOffsetX={(popup.startX ?? popup.x) - popup.x}
+            initialOffsetY={(popup.startY ?? popup.y) - popup.y}
             onComplete={() => onPopupComplete(popup.id)}
           />
         </motion.div>

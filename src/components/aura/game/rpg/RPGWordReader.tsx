@@ -18,6 +18,8 @@ interface LocalEmojiPopup {
   word: string;
   x: number;
   y: number;
+  startX: number;
+  startY: number;
 }
 
 // Track word result state for color coding
@@ -215,19 +217,23 @@ export const RPGWordReader = ({
     const viewportHeight = typeof window === 'undefined' ? 684 : window.innerHeight;
     const queueRect = wordQueueRef.current?.getBoundingClientRect();
 
-    if (queueRect) {
-      const targetX = queueRect.left + queueRect.width / 2;
-      const targetY = queueRect.top + queueRect.height / 2;
+    const targetX = viewportWidth * 0.5 + (Math.random() - 0.5) * Math.min(120, viewportWidth * 0.12);
+    const targetY = viewportHeight * 0.38 + (Math.random() - 0.5) * Math.min(56, viewportHeight * 0.06);
 
+    if (queueRect) {
       return {
-        x: targetX + (Math.random() - 0.5) * Math.min(160, queueRect.width * 0.45),
-        y: targetY + 120 + (Math.random() - 0.5) * 28,
+        startX: queueRect.left + queueRect.width * (0.25 + Math.random() * 0.5),
+        startY: queueRect.top + queueRect.height * 0.5 + 28 + (Math.random() - 0.5) * 22,
+        x: targetX,
+        y: targetY,
       };
     }
 
     return {
-      x: viewportWidth * 0.52 + (Math.random() - 0.5) * 160,
-      y: viewportHeight * 0.6 + (Math.random() - 0.5) * 28,
+      startX: viewportWidth * 0.5 + (Math.random() - 0.5) * 120,
+      startY: viewportHeight * 0.7 + (Math.random() - 0.5) * 28,
+      x: targetX,
+      y: targetY,
     };
   }, []);
 
@@ -314,7 +320,7 @@ export const RPGWordReader = ({
     // EMOJI LEARNING: Trigger emoji pop for meaningful words
     const emoji = getWordEmoji(targetWord);
     if (emoji) {
-      const { x, y } = getEmojiPopupOrigin();
+      const { x, y, startX, startY } = getEmojiPopupOrigin();
 
       const newPopup: LocalEmojiPopup = {
         id: ++emojiPopId,
@@ -322,6 +328,8 @@ export const RPGWordReader = ({
         word: targetWord,
         x,
         y,
+        startX,
+        startY,
       };
       setEmojiPopups(prev => {
         // Limit to 3 concurrent popups to prevent pile-up
