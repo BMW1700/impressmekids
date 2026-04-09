@@ -8,13 +8,16 @@ import { unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
 import { ensureMicrophoneAccess } from "@/lib/micDiagnostics";
 import { MicTroubleshooterModal } from "@/components/mic/MicTroubleshooterModal";
 import { getWordEmoji } from "@/lib/wordEmojiMap";
-import { RPGEmojiPop } from "./RPGEmojiPop";
+import { RPGEmojiPop, RPGEmojiManager } from "./RPGEmojiPop";
+import type { EmojiPopup as EmojiPopupType } from "./RPGEmojiPop";
 import { WordFeedbackOverlay } from "./WordFeedbackOverlay";
 
-interface EmojiPopup {
+interface LocalEmojiPopup {
   id: number;
   emoji: string;
   word: string;
+  x: number;
+  y: number;
 }
 
 // Track word result state for color coding
@@ -124,7 +127,7 @@ export const RPGWordReader = ({
   const [pendingIncorrectWord, setPendingIncorrectWord] = useState<{ word: string; spoken: string; index: number } | null>(null);
   
   // Emoji pop state
-  const [emojiPopups, setEmojiPopups] = useState<EmojiPopup[]>([]);
+  const [emojiPopups, setEmojiPopups] = useState<LocalEmojiPopup[]>([]);
   
   // Echo retry state
   const [echoCountdown, setEchoCountdown] = useState(0);
@@ -289,12 +292,18 @@ export const RPGWordReader = ({
     // EMOJI LEARNING: Trigger emoji pop for meaningful words
     const emoji = getWordEmoji(targetWord);
     if (emoji) {
-      const newPopup: EmojiPopup = {
+      const newPopup: LocalEmojiPopup = {
         id: ++emojiPopId,
         emoji,
         word: targetWord,
+        x: 80 + Math.random() * 220,
+        y: 150 + Math.random() * 150,
       };
-      setEmojiPopups(prev => [...prev, newPopup]);
+      setEmojiPopups(prev => {
+        // Limit to 3 concurrent popups to prevent pile-up
+        const limited = prev.length >= 3 ? prev.slice(1) : prev;
+        return [...limited, newPopup];
+      });
     }
     
     // Calculate response time (ms between word display and correct speech match)
@@ -1161,17 +1170,11 @@ export const RPGWordReader = ({
         onRetry={startReading}
       />
       
-      {/* Emoji Learning Popups */}
-      <AnimatePresence>
-        {emojiPopups.map(popup => (
-          <RPGEmojiPop
-            key={popup.id}
-            emoji={popup.emoji}
-            word={popup.word}
-            onComplete={() => setEmojiPopups(prev => prev.filter(p => p.id !== popup.id))}
-          />
-        ))}
-      </AnimatePresence>
+      {/* Emoji Learning Popups - positioned and auto-removing */}
+      <RPGEmojiManager
+        popups={emojiPopups}
+        onPopupComplete={(id) => setEmojiPopups(prev => prev.filter(p => p.id !== id))}
+      />
 
       {/* Word Feedback Overlay - Pauses on incorrect for learning */}
       <WordFeedbackOverlay
