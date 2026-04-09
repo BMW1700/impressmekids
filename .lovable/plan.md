@@ -1,24 +1,30 @@
 
 
-## Why RPG mode freezes on the "PERFECT BLOCK" screen with repeating sounds
+## The Word Shield doesn't register speech for the word "a"
 
-**Root cause**: `RPGQuickBlock.tsx` was missed during the minigame hardening pass. Its result-phase `useEffect` (line 94) includes `onComplete` in its dependency array. The parent's `handleQuickBlockComplete` callback gets recreated on re-renders (because its dependency `returnToReading` changes). Each time `onComplete` gets a new reference, the effect re-fires — replaying the shield/combo sounds and scheduling another `onComplete` timeout. This creates:
+**Root cause**: The word "a" is a single character. After cleaning (`replace(/[^a-z]/g, '')`), every spoken candidate and every target word filter requires `length >= 2`. The word "a" has length 1, so it is discarded before it ever reaches the matching logic. Speech recognition IS working (the green "Listening..." indicator confirms this) — the match just silently fails.
 
-1. The "constant annoying noise" — sounds replaying on every re-fire
-2. The freeze — multiple `onComplete` calls fight with each other, potentially causing the phase to bounce or get stuck
-
-**The fix**: Apply the same `completionTriggeredRef` + `onCompleteRef` guard pattern already used in `RPGWordShield`, `RPGInkSplash`, and the other hardened minigames.
+**Scope**: This `length >= 2` filter exists in **11 RPG minigame files**, meaning any single-character word ("a", "I") will fail to register in any minigame.
 
 ---
 
-### Changes to `src/components/aura/game/rpg/RPGQuickBlock.tsx`
+### Fix
 
-1. Add `completionTriggeredRef` and `onCompleteRef` refs
-2. Keep `onCompleteRef` synced with the latest `onComplete` prop
-3. Remove `onComplete` from the result `useEffect` dependency array — use the ref instead
-4. Guard the result effect and the timeout callback with `completionTriggeredRef` so sounds play exactly once and `onComplete` fires exactly once
-5. Set `completionTriggeredRef = true` before scheduling the completion timeout
-6. Reset `completionTriggeredRef` on unmount cleanup
+Change the minimum length filter from `>= 2` to `>= 1` across all affected files. The filter was originally there to discard noise/artifacts from speech recognition splitting, but single-letter English words ("a", "I") are legitimate and must be matchable.
 
-This is a targeted fix to one file, applying the exact same pattern that already works in the other minigames.
+**Files to update** (all in `src/components/aura/game/rpg/`):
+
+1. **RPGWordShield.tsx** — line 156: `.filter((value) => value.length >= 1)`
+2. **RPGWordCannon.tsx** — line 150: `cleanSpoken.length >= 1`
+3. **RPGRollingBoulders.tsx** — line 150: `cleanSpoken.length >= 1`
+4. **RPGGoblinHorde.tsx** — lines 114, 257: both `>= 1`
+5. **RPGFireballBarrage.tsx** — line 160: `>= 1`
+6. **RPGVoidPull.tsx** — line 166: `>= 1`
+7. **RPGGhostlyWhispers.tsx** — line 129: `>= 1`
+8. **RPGGroundRipple.tsx** — lines 46, 181: both `>= 1`
+9. **RPGWebTrap.tsx** — lines 123, 126: `>= 1`
+10. **RPGSpeedTypist.tsx** — lines 129, 131: `>= 1`
+11. **RPGQuickBlock.tsx** — check and fix if same pattern exists
+
+Each change is a single-character edit (`2` → `1`). No logic changes needed.
 
