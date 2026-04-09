@@ -37,8 +37,25 @@ const generateQuestions = (storyTitle: string, storyText: string, count: number 
   
   // Extract potential character names (capitalized words, not at sentence start)
   const charMatches = storyText.match(/(?<=[.!?\s])\s*[A-Z][a-z]{2,}/g) || [];
+  const nonNameWords = new Set([
+    'The', 'But', 'And', 'Then', 'When', 'Once', 'They', 'She', 'His', 'Her',
+    'There', 'This', 'That', 'After', 'Before', 'Where', 'Sometimes', 'Good',
+    'Every', 'Because', 'However', 'Although', 'Never', 'Always', 'Maybe',
+    'Perhaps', 'Today', 'Tomorrow', 'Yesterday', 'Many', 'Most', 'Some',
+    'Each', 'Very', 'Really', 'Suddenly', 'Quickly', 'Finally', 'Here',
+    'Just', 'Still', 'Even', 'Much', 'Little', 'Big', 'Great', 'First',
+    'Last', 'Next', 'Only', 'Also', 'Soon', 'Now', 'Often', 'Another',
+    'Without', 'Within', 'Between', 'Through', 'During', 'While', 'Until',
+    'Into', 'About', 'Around', 'Along', 'Across', 'Behind', 'Below',
+    'Above', 'Under', 'Over', 'Inside', 'Outside', 'Together', 'Alone',
+    'Everything', 'Nothing', 'Something', 'Anything', 'Everyone', 'Someone',
+    'Nobody', 'Everybody', 'Already', 'Enough', 'Several', 'Both', 'Neither',
+    'Either', 'Rather', 'Instead', 'Meanwhile', 'Afterward', 'Everywhere',
+    'Nowhere', 'Somewhere', 'Whenever', 'Wherever', 'However', 'Whatever',
+    'Whichever', 'Whoever', 'Certainly', 'Probably', 'Possibly', 'Clearly',
+  ]);
   const potentialCharacters = [...new Set(charMatches.map(c => c.trim()))].filter(
-    c => !['The', 'But', 'And', 'Then', 'When', 'Once', 'They', 'She', 'His', 'Her', 'There', 'This', 'That', 'After', 'Before', 'Where'].includes(c)
+    c => !nonNameWords.has(c)
   );
 
   // Extract key content words (nouns/adjectives 5+ chars) for distractors

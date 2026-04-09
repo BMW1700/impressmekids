@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Mic, Circle, Sparkles } from "lucide-react";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
+import { speechManager } from "@/lib/speechRecognitionManager";
 
 interface VoidWord {
   id: string;
@@ -35,11 +36,21 @@ export const RPGVoidPull = ({
   const [isActive, setIsActive] = useState(true);
   const [voidPulse, setVoidPulse] = useState(false);
 
-  const recognitionRef = useRef<any>(null);
-  const isListeningRef = useRef(false);
+  const isMountedRef = useRef(true);
   const animationRef = useRef<number | null>(null);
   const savedRef = useRef(0);
   const consumedRef = useRef(0);
+  const voidWordsRef = useRef<VoidWord[]>([]);
+  const isActiveRef = useRef(true);
+  const completionTriggeredRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  const onWordHitRef = useRef(onWordHit);
+
+  // Keep refs in sync
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
+  useEffect(() => { onWordHitRef.current = onWordHit; }, [onWordHit]);
+  useEffect(() => { voidWordsRef.current = voidWords; }, [voidWords]);
+  useEffect(() => { isActiveRef.current = isActive; }, [isActive]);
 
   // Initialize void words - positioned around center
   useEffect(() => {
@@ -58,6 +69,7 @@ export const RPGVoidPull = ({
       };
     });
     setVoidWords(initialWords);
+    voidWordsRef.current = initialWords;
   }, [words]);
 
   // Animation loop - words get pulled toward center
@@ -80,7 +92,7 @@ export const RPGVoidPull = ({
           if (newDistance <= 5) {
             if (!anyConsumed) {
               anyConsumed = true;
-              onWordHit(20);
+              onWordHitRef.current(20);
               soundEffects.incorrectWord();
               consumedRef.current += 1;
               setWordsConsumed(consumedRef.current);
@@ -97,17 +109,20 @@ export const RPGVoidPull = ({
         
         // Check completion
         const allDone = updated.every(w => w.saved || w.consumed);
-        if (allDone && isActive) {
+        if (allDone && isActiveRef.current && !completionTriggeredRef.current) {
+          completionTriggeredRef.current = true;
           setIsActive(false);
           setTimeout(() => {
-            onComplete(savedRef.current, consumedRef.current);
+            if (isMountedRef.current) {
+              onCompleteRef.current(savedRef.current, consumedRef.current);
+            }
           }, 500);
         }
         
         return updated;
       });
       
-      if (isActive) {
+      if (isActiveRef.current) {
         animationRef.current = requestAnimationFrame(animate);
       }
     };
@@ -118,7 +133,7 @@ export const RPGVoidPull = ({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [isActive, onComplete, onWordHit]);
+  }, [isActive]);
 
   // Handle word save via speech
   const handleWordSave = useCallback((wordId: string) => {
@@ -130,94 +145,62 @@ export const RPGVoidPull = ({
     soundEffects.correctWord();
   }, []);
 
-  // Continuous speech recognition - like GoblinHorde
-  const startListening = useCallback(() => {
-    if (typeof window === 'undefined') return;
-    
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+  // Start speech recognition via speechManager
+  useEffect(() => {
+    if (!isActive) return;
 
-    try {
-      if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch {}
-      }
+    const timer = setTimeout(() => {
+      setIsMicActive(true);
+      speechManager.start({
+        owner: 'ghostly_whispers', // reuse owner slot
+        continuous: true,
+        interimResults: true,
+        onStart: () => { if (isMountedRef.current) setIsMicActive(true); },
+        onEnd: () => { if (isMountedRef.current) setIsMicActive(false); },
+        onResult: (transcript) => {
+          if (!isMountedRef.current) return;
+          const spokenWords = transcript.toLowerCase().trim().split(/\s+/);
+          const currentWords = voidWordsRef.current;
+          const activeWords = currentWords.filter(w => !w.saved && !w.consumed);
 
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-      recognitionRef.current = recognition;
-
-      recognition.onresult = (event: any) => {
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript.toLowerCase().trim();
-          const spokenWords = transcript.split(/\s+/);
-
-          // Check against all active void words - super lenient matching
-          setVoidWords(prev => {
-            const activeWords = prev.filter(w => !w.saved && !w.consumed);
-            
-            for (const voidWord of activeWords) {
-              const targetWord = voidWord.word.toLowerCase();
-              
-              for (const spoken of spokenWords) {
-                const cleanSpoken = spoken.replace(/[^a-z]/g, '');
+          for (const voidWord of activeWords) {
+            const targetWord = voidWord.word.toLowerCase();
+            for (const spoken of spokenWords) {
+              const cleanSpoken = spoken.replace(/[^a-z]/g, '');
+              if (cleanSpoken.length >= 1) {
+                const startsWithMatch = targetWord.startsWith(cleanSpoken.slice(0, 2)) || 
+                                        cleanSpoken.startsWith(targetWord.slice(0, 2));
+                const containsMatch = targetWord.includes(cleanSpoken) || 
+                                      cleanSpoken.includes(targetWord);
+                const exactMatch = cleanSpoken === targetWord;
                 
-                if (cleanSpoken.length >= 1) {
-                  const startsWithMatch = targetWord.startsWith(cleanSpoken.slice(0, 2)) || 
-                                          cleanSpoken.startsWith(targetWord.slice(0, 2));
-                  const containsMatch = targetWord.includes(cleanSpoken) || 
-                                        cleanSpoken.includes(targetWord);
-                  const exactMatch = cleanSpoken === targetWord;
-                  
-                  if (exactMatch || startsWithMatch || containsMatch) {
-                    handleWordSave(voidWord.id);
-                    return prev;
-                  }
+                if (exactMatch || startsWithMatch || containsMatch) {
+                  handleWordSave(voidWord.id);
+                  return; // one match per result
                 }
               }
             }
-            return prev;
-          });
-        }
-      };
+          }
+        },
+        onError: (error) => {
+          console.log('[VoidPull] Recognition error:', error);
+        },
+      });
+    }, 500);
 
-      recognition.onerror = () => {
-        if (isListeningRef.current && isActive) {
-          setTimeout(() => startListening(), 200);
-        }
-      };
-
-      recognition.onend = () => {
-        if (isListeningRef.current && isActive) {
-          setTimeout(() => startListening(), 100);
-        }
-      };
-
-      recognition.start();
-    } catch {}
-  }, [isActive, handleWordSave]);
-
-  const startMic = useCallback(() => {
-    setIsMicActive(true);
-    isListeningRef.current = true;
-    startListening();
-  }, [startListening]);
-
-  const stopMic = useCallback(() => {
-    setIsMicActive(false);
-    isListeningRef.current = false;
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch {}
-    }
-  }, []);
-
-  // Auto-start mic on mount
-  useEffect(() => {
-    const timer = setTimeout(() => startMic(), 500);
     return () => {
       clearTimeout(timer);
-      stopMic();
+      speechManager.stop('ghostly_whispers');
+    };
+  }, [isActive, handleWordSave]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    completionTriggeredRef.current = false;
+    return () => {
+      isMountedRef.current = false;
+      speechManager.abort('ghostly_whispers');
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
@@ -388,17 +371,16 @@ export const RPGVoidPull = ({
         </AnimatePresence>
       </div>
 
-      {/* Mic control */}
+      {/* Mic indicator */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 pointer-events-auto">
         <motion.div
-          className={`p-6 rounded-full cursor-pointer ${
+          className={`p-6 rounded-full ${
             isMicActive 
               ? 'bg-purple-600 shadow-[0_0_30px_rgba(147,51,234,0.6)]' 
               : 'bg-slate-700'
           }`}
           animate={isMicActive ? { scale: [1, 1.1, 1] } : {}}
           transition={{ duration: 0.5, repeat: Infinity }}
-          onClick={() => isMicActive ? stopMic() : startMic()}
         >
           <Mic className={`h-10 w-10 ${isMicActive ? 'text-white' : 'text-slate-400'}`} />
         </motion.div>

@@ -5,8 +5,7 @@ import { speechManager } from "@/lib/speechRecognitionManager";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
 
-const agentMode = isAgentMode();
-const theme = getMinigameTheme('quickBlock');
+// Theme is computed inside component to avoid stale module-level caching
 
 interface QuickBlockWord {
   id: number;
@@ -22,6 +21,8 @@ interface RPGQuickBlockProps {
 const sounds = new SoundEffects();
 
 export const RPGQuickBlock = ({ words, onComplete }: RPGQuickBlockProps) => {
+  const agentMode = isAgentMode();
+  const theme = getMinigameTheme('quickBlock');
   const [blockWords, setBlockWords] = useState<QuickBlockWord[]>([]);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState(4); // 4 seconds to block
@@ -150,7 +151,7 @@ export const RPGQuickBlock = ({ words, onComplete }: RPGQuickBlockProps) => {
         
         spokenWords.forEach(spokenWord => {
           const cleanSpoken = spokenWord.replace(/[^a-z]/g, '');
-          if (cleanSpoken.length < 2) return;
+          if (cleanSpoken.length < 1) return;
           
           const currentIdx = currentWordIndexRef.current;
           const words = blockWordsRef.current;
