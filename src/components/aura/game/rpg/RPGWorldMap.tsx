@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { ArrowLeft, Lock, Star, Swords, Crown, TreePine, Mountain, Castle, Flame, Sparkles, Gem, Cloud, Waves, Eclipse, GraduationCap, ShoppingBag, Zap } from "lucide-react";
 import { campaignWorlds, CampaignWorld } from "@/lib/campaignData";
 import { agentCampaignWorlds } from "@/lib/agentCampaignData";
+import { getGradeTitle } from "@/lib/gradeUtils";
 import { getStoredTheme, setStoredTheme, type GameTheme } from "@/lib/gameTheme";
 import { 
   DrakeSilhouette, 
@@ -482,6 +483,13 @@ export const RPGWorldMap = ({
                         </motion.div>
                       </div>
                     </div>
+
+                    {/* Grade Label */}
+                    {world.id > 0 && (
+                      <span className="inline-block px-2 py-0.5 rounded text-xs font-semibold bg-yellow-500/20 text-yellow-300 mb-1">
+                        {getGradeTitle(world.requiredGradeLevel)}
+                      </span>
+                    )}
 
                     {/* World Name */}
                     <h3 className={`text-2xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r ${world.gradient}`}>
