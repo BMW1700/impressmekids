@@ -46,6 +46,7 @@ export const RPGWordEcho = ({
   const onWordHitRef = useRef(onWordHit);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const lastMatchTimeRef = useRef(0);
+  const lastMatchedTranscriptRef = useRef("");
 
   useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
   useEffect(() => { onWordHitRef.current = onWordHit; }, [onWordHit]);
@@ -138,7 +139,11 @@ export const RPGWordEcho = ({
 
         // Process both interim and final results for instant feedback
         const now = Date.now();
-        if (now - lastMatchTimeRef.current < 500) return; // cooldown between matches
+        if (now - lastMatchTimeRef.current < 1200) return; // cooldown between echoes
+
+        // Deduplicate: if transcript hasn't meaningfully changed, skip
+        const normalizedTranscript = transcript.toLowerCase().trim();
+        if (normalizedTranscript && normalizedTranscript === lastMatchedTranscriptRef.current) return;
 
         const currentIdx = currentWordIndexRef.current;
         const currentWord = echoWordsRef.current[currentIdx];
@@ -167,6 +172,7 @@ export const RPGWordEcho = ({
 
         if (matched) {
           lastMatchTimeRef.current = now;
+          lastMatchedTranscriptRef.current = normalizedTranscript;
           soundEffects.correctWord();
           const newEchosSpoken = currentWord.echosSpoken + 1;
           const isComplete = newEchosSpoken >= currentWord.echosNeeded;
@@ -200,6 +206,7 @@ export const RPGWordEcho = ({
 
         if (isFinal) {
           setSpokenText("");
+          lastMatchedTranscriptRef.current = ""; // Reset on final so next utterance can match
         }
       },
       onError: (error) => {
