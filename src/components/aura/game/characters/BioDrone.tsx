@@ -4,7 +4,7 @@ export type BioDroneState = 'idle' | 'hit' | 'attacking' | 'defeated';
 interface Props { state: BioDroneState; healthPercent: number; currentHp?: number; maxHp?: number; size?: 'small' | 'medium' | 'large'; flipX?: boolean; }
 const sizeConfig = { small: { width: 60, height: 60 }, medium: { width: 85, height: 85 }, large: { width: 110, height: 110 } };
 
-export const BioDrone = ({ state, healthPercent, size = 'medium', flipX = false }: Props) => {
+export const BioDrone = ({ state, healthPercent, currentHp, maxHp, size = 'medium', flipX = false }: Props) => {
   const { width, height } = sizeConfig[size];
   const isHit = state === 'hit'; const isAttacking = state === 'attacking'; const isDefeated = state === 'defeated';
   return (
@@ -19,6 +19,25 @@ export const BioDrone = ({ state, healthPercent, size = 'medium', flipX = false 
         <motion.rect x="18" y="35" width="15" height="3" rx="1" fill="#34D399" animate={{ rotate: [0, 360] }} transition={{ duration: 0.35, repeat: Infinity, ease: 'linear' }} style={{ transformOrigin: '25px 36px' }} />
         <motion.rect x="67" y="35" width="15" height="3" rx="1" fill="#34D399" animate={{ rotate: [0, -360] }} transition={{ duration: 0.35, repeat: Infinity, ease: 'linear' }} style={{ transformOrigin: '74px 36px' }} />
       </svg>
+
+      {/* Health bar */}
+      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-[85%]">
+        <div className="h-2 bg-gray-900 rounded-full overflow-hidden border border-gray-600">
+          <motion.div
+            className="h-full rounded-full"
+            style={{
+              background: healthPercent > 50 ? 'linear-gradient(90deg, #22c55e, #4ade80)' :
+                healthPercent > 25 ? 'linear-gradient(90deg, #eab308, #facc15)' :
+                'linear-gradient(90deg, #dc2626, #ef4444)',
+            }}
+            animate={{ width: `${Math.max(0, healthPercent)}%` }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+          />
+        </div>
+        {currentHp !== undefined && maxHp !== undefined && (
+          <p className="text-[8px] text-center text-gray-400 mt-0.5" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{currentHp}/{maxHp}</p>
+        )}
+      </div>
     </motion.div>
   );
 };

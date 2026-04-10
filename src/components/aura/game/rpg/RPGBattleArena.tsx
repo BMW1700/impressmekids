@@ -221,6 +221,7 @@ export const RPGBattleArena = ({
         });
     }
     
+    battleSounds.victoryFanfare();
     setPhase('victory');
   }, [clearAllTimeouts, studentId]);
   
@@ -2937,7 +2938,7 @@ export const RPGBattleArena = ({
                       <p className="text-xs text-slate-400">Best Streak</p>
                     </div>
                     <div className="bg-slate-800/60 rounded-lg p-4 border border-slate-700">
-                      <p className="text-3xl font-bold text-red-400">{totalDamage}</p>
+                      <p className="text-3xl font-bold text-red-400">{Math.min(totalDamage, enemy.maxHp)}</p>
                       <p className="text-xs text-slate-400">Damage</p>
                     </div>
                     <div className="bg-slate-800/60 rounded-lg p-4 border border-slate-700">

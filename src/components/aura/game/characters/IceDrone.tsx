@@ -4,7 +4,7 @@ export type IceDroneState = 'idle' | 'hit' | 'attacking' | 'defeated';
 interface Props { state: IceDroneState; healthPercent: number; currentHp?: number; maxHp?: number; size?: 'small' | 'medium' | 'large'; flipX?: boolean; }
 const sizeConfig = { small: { width: 60, height: 60 }, medium: { width: 85, height: 85 }, large: { width: 110, height: 110 } };
 
-export const IceDrone = ({ state, healthPercent, size = 'medium', flipX = false }: Props) => {
+export const IceDrone = ({ state, healthPercent, currentHp, maxHp, size = 'medium', flipX = false }: Props) => {
   const { width, height } = sizeConfig[size];
   const isHit = state === 'hit'; const isAttacking = state === 'attacking'; const isDefeated = state === 'defeated';
   return (
@@ -19,6 +19,25 @@ export const IceDrone = ({ state, healthPercent, size = 'medium', flipX = false 
         <motion.rect x="67" y="35" width="18" height="3" rx="1" fill="#7DD3FC" animate={{ rotate: [0, -360] }} transition={{ duration: 0.4, repeat: Infinity, ease: 'linear' }} style={{ transformOrigin: '76px 36px' }} />
         <motion.path d="M45 70 L50 85 L55 70" fill="#38BDF8" animate={isAttacking ? { opacity: [0, 1, 0] } : { opacity: 0 }} transition={{ duration: 0.3 }} />
       </svg>
+
+      {/* Health bar */}
+      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-[85%]">
+        <div className="h-2 bg-gray-900 rounded-full overflow-hidden border border-gray-600">
+          <motion.div
+            className="h-full rounded-full"
+            style={{
+              background: healthPercent > 50 ? 'linear-gradient(90deg, #22c55e, #4ade80)' :
+                healthPercent > 25 ? 'linear-gradient(90deg, #eab308, #facc15)' :
+                'linear-gradient(90deg, #dc2626, #ef4444)',
+            }}
+            animate={{ width: `${Math.max(0, healthPercent)}%` }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+          />
+        </div>
+        {currentHp !== undefined && maxHp !== undefined && (
+          <p className="text-[8px] text-center text-gray-400 mt-0.5" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{currentHp}/{maxHp}</p>
+        )}
+      </div>
     </motion.div>
   );
 };

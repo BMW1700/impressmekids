@@ -4,7 +4,7 @@ export type ShadowDroneState = 'idle' | 'hit' | 'attacking' | 'defeated';
 interface Props { state: ShadowDroneState; healthPercent: number; currentHp?: number; maxHp?: number; size?: 'small' | 'medium' | 'large'; flipX?: boolean; }
 const sizeConfig = { small: { width: 60, height: 60 }, medium: { width: 85, height: 85 }, large: { width: 110, height: 110 } };
 
-export const ShadowDrone = ({ state, healthPercent, size = 'medium', flipX = false }: Props) => {
+export const ShadowDrone = ({ state, healthPercent, currentHp, maxHp, size = 'medium', flipX = false }: Props) => {
   const { width, height } = sizeConfig[size];
   const isHit = state === 'hit'; const isAttacking = state === 'attacking'; const isDefeated = state === 'defeated';
   return (
@@ -19,6 +19,25 @@ export const ShadowDrone = ({ state, healthPercent, size = 'medium', flipX = fal
         <motion.line x1="20" y1="35" x2="5" y2="25" stroke="#475569" strokeWidth="2" animate={{ rotate: [0, 15, 0] }} transition={{ duration: 0.5, repeat: Infinity }} style={{ transformOrigin: '20px 35px' }} />
         <motion.line x1="80" y1="35" x2="95" y2="25" stroke="#475569" strokeWidth="2" animate={{ rotate: [0, -15, 0] }} transition={{ duration: 0.5, repeat: Infinity }} style={{ transformOrigin: '80px 35px' }} />
       </svg>
+
+      {/* Health bar */}
+      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-[85%]">
+        <div className="h-2 bg-gray-900 rounded-full overflow-hidden border border-gray-600">
+          <motion.div
+            className="h-full rounded-full"
+            style={{
+              background: healthPercent > 50 ? 'linear-gradient(90deg, #22c55e, #4ade80)' :
+                healthPercent > 25 ? 'linear-gradient(90deg, #eab308, #facc15)' :
+                'linear-gradient(90deg, #dc2626, #ef4444)',
+            }}
+            animate={{ width: `${Math.max(0, healthPercent)}%` }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+          />
+        </div>
+        {currentHp !== undefined && maxHp !== undefined && (
+          <p className="text-[8px] text-center text-gray-400 mt-0.5" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{currentHp}/{maxHp}</p>
+        )}
+      </div>
     </motion.div>
   );
 };
