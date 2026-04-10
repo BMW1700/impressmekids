@@ -221,6 +221,7 @@ export const RPGBattleArena = ({
         });
     }
     
+    battleSounds.victoryFanfare();
     setPhase('victory');
   }, [clearAllTimeouts, studentId]);
   
