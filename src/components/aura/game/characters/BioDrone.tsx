@@ -4,7 +4,7 @@ export type BioDroneState = 'idle' | 'hit' | 'attacking' | 'defeated';
 interface Props { state: BioDroneState; healthPercent: number; currentHp?: number; maxHp?: number; size?: 'small' | 'medium' | 'large'; flipX?: boolean; }
 const sizeConfig = { small: { width: 60, height: 60 }, medium: { width: 85, height: 85 }, large: { width: 110, height: 110 } };
 
-export const BioDrone = ({ state, healthPercent, size = 'medium', flipX = false }: Props) => {
+export const BioDrone = ({ state, healthPercent, currentHp, maxHp, size = 'medium', flipX = false }: Props) => {
   const { width, height } = sizeConfig[size];
   const isHit = state === 'hit'; const isAttacking = state === 'attacking'; const isDefeated = state === 'defeated';
   return (

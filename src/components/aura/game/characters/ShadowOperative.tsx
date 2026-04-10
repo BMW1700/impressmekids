@@ -5,7 +5,7 @@ export type ShadowOperativeState = 'idle' | 'hit' | 'attacking' | 'defeated';
 interface Props { state: ShadowOperativeState; healthPercent: number; currentHp?: number; maxHp?: number; size?: 'small' | 'medium' | 'large'; flipX?: boolean; }
 const sizeConfig = { small: { width: 60, height: 110 }, medium: { width: 85, height: 150 }, large: { width: 110, height: 190 } };
 
-export const ShadowOperative = ({ state, healthPercent, size = 'medium', flipX = false }: Props) => {
+export const ShadowOperative = ({ state, healthPercent, currentHp, maxHp, size = 'medium', flipX = false }: Props) => {
   const { width, height } = sizeConfig[size];
   const isHit = state === 'hit'; const isAttacking = state === 'attacking'; const isDefeated = state === 'defeated';
   return (

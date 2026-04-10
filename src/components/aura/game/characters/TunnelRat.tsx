@@ -4,7 +4,7 @@ export type TunnelRatState = 'idle' | 'hit' | 'attacking' | 'defeated';
 interface Props { state: TunnelRatState; healthPercent: number; currentHp?: number; maxHp?: number; size?: 'small' | 'medium' | 'large'; flipX?: boolean; }
 const sizeConfig = { small: { width: 50, height: 90 }, medium: { width: 70, height: 120 }, large: { width: 90, height: 150 } };
 
-export const TunnelRat = ({ state, healthPercent, size = 'medium', flipX = false }: Props) => {
+export const TunnelRat = ({ state, healthPercent, currentHp, maxHp, size = 'medium', flipX = false }: Props) => {
   const { width, height } = sizeConfig[size];
   const isHit = state === 'hit'; const isAttacking = state === 'attacking'; const isDefeated = state === 'defeated';
   return (
