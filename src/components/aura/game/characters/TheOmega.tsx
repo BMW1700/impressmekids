@@ -4,7 +4,7 @@ export type TheOmegaState = 'idle' | 'hit' | 'attacking' | 'defeated';
 interface Props { state: TheOmegaState; healthPercent: number; currentHp?: number; maxHp?: number; size?: 'small' | 'medium' | 'large'; showHealthBar?: boolean; flipX?: boolean; }
 const sizeConfig = { small: { width: 70, height: 130 }, medium: { width: 100, height: 170 }, large: { width: 130, height: 210 } };
 
-export const TheOmega = ({ state, healthPercent, size = 'large', flipX = false }: Props) => {
+export const TheOmega = ({ state, healthPercent, currentHp, maxHp, size = 'large', flipX = false }: Props) => {
   const { width, height } = sizeConfig[size];
   const isHit = state === 'hit'; const isAttacking = state === 'attacking'; const isDefeated = state === 'defeated';
   return (

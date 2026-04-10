@@ -15,7 +15,7 @@ interface VaultDroneProps {
 
 const sizeConfig = { small: { width: 60, height: 60 }, medium: { width: 85, height: 85 }, large: { width: 110, height: 110 } };
 
-export const VaultDrone = ({ state, healthPercent, size = 'medium', flipX = false }: VaultDroneProps) => {
+export const VaultDrone = ({ state, healthPercent, currentHp, maxHp, size = 'medium', flipX = false }: VaultDroneProps) => {
   const { width, height } = sizeConfig[size];
   const isHit = state === 'hit'; const isAttacking = state === 'attacking'; const isDefeated = state === 'defeated';
   return (
