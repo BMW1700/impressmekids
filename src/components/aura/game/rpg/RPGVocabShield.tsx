@@ -78,7 +78,8 @@ export const RPGVocabShield = ({ vocabWord, enemyName, onComplete }: RPGVocabShi
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="absolute inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-[140] flex items-center justify-center pointer-events-auto isolate"
+      onClick={(event) => event.stopPropagation()}
     >
       {/* Dark overlay */}
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm pointer-events-none" />
@@ -86,15 +87,16 @@ export const RPGVocabShield = ({ vocabWord, enemyName, onComplete }: RPGVocabShi
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="relative z-10 w-full max-w-md mx-4 pointer-events-auto"
+        className="relative z-20 w-full max-w-md mx-4 pointer-events-auto"
+        onClick={(event) => event.stopPropagation()}
       >
         {/* Shield container */}
-        <div className="relative">
+        <div className="relative pointer-events-auto">
           {/* Shield visual */}
           <AnimatePresence>
             {!shieldBroken && (
               <motion.div
-                className="absolute inset-0 rounded-2xl"
+                className="absolute inset-0 rounded-2xl pointer-events-none"
                 animate={{
                   boxShadow: [
                     '0 0 30px rgba(239,68,68,0.4)',
@@ -110,7 +112,7 @@ export const RPGVocabShield = ({ vocabWord, enemyName, onComplete }: RPGVocabShi
 
           {shieldBroken && (
             <motion.div
-              className="absolute inset-0 rounded-2xl"
+              className="absolute inset-0 rounded-2xl pointer-events-none"
               initial={{ opacity: 1 }}
               animate={{
                 boxShadow: '0 0 80px rgba(34,197,94,0.8)',
@@ -183,9 +185,13 @@ export const RPGVocabShield = ({ vocabWord, enemyName, onComplete }: RPGVocabShi
                 return (
                   <motion.button
                     key={i}
-                    onClick={() => handleSelect(i)}
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleSelect(i);
+                    }}
                     disabled={showResult}
-                    className={`w-full p-3 rounded-lg border-2 text-left transition-all text-sm font-medium
+                    className={`relative z-10 w-full p-3 rounded-lg border-2 text-left transition-all text-sm font-medium pointer-events-auto
                       ${showCorrect
                         ? 'bg-green-500/30 border-green-400 text-green-200'
                         : showWrong
