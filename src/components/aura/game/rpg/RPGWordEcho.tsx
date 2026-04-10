@@ -44,6 +44,7 @@ export const RPGWordEcho = ({
   const completionTriggeredRef = useRef(false);
   const onCompleteRef = useRef(onComplete);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastMatchTimeRef = useRef(0);
 
   useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
   useEffect(() => { currentWordIndexRef.current = currentWordIndex; }, [currentWordIndex]);
@@ -116,7 +117,9 @@ export const RPGWordEcho = ({
         if (!isMountedRef.current || completionTriggeredRef.current) return;
         setSpokenText(transcript);
 
-        if (!isFinal) return;
+        // Process both interim and final results for instant feedback
+        const now = Date.now();
+        if (now - lastMatchTimeRef.current < 500) return; // cooldown between matches
 
         const currentIdx = currentWordIndexRef.current;
         const currentWord = echoWordsRef.current[currentIdx];
@@ -137,6 +140,7 @@ export const RPGWordEcho = ({
         }
 
         if (matched) {
+          lastMatchTimeRef.current = now;
           soundEffects.correctWord();
           const newEchosSpoken = currentWord.echosSpoken + 1;
           const isComplete = newEchosSpoken >= currentWord.echosNeeded;
@@ -162,7 +166,9 @@ export const RPGWordEcho = ({
               currentWordIndexRef.current = nextIndex;
             }
           }
-        } else {
+        }
+        // Don't penalize on interim — only on final with no match
+        if (isFinal && !matched) {
           soundEffects.incorrectWord();
           onWordHit(15);
           failedRef.current += 1;
@@ -179,8 +185,8 @@ export const RPGWordEcho = ({
             setCurrentWordIndex(nextIndex);
             currentWordIndexRef.current = nextIndex;
           }
+          setSpokenText("");
         }
-        setSpokenText("");
       },
       onError: (error) => {
         console.log('[WordEcho] Recognition error:', error);

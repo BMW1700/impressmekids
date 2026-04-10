@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Shield, Zap, X, Lock } from "lucide-react";
 import { getMinigameTheme, isAgentMode } from "@/lib/minigameTheme";
@@ -23,6 +23,8 @@ export const RPGVocabShield = ({ vocabWord, enemyName, onComplete }: RPGVocabShi
   const [showResult, setShowResult] = useState(false);
   const [timeLeft, setTimeLeft] = useState(15);
   const [shieldBroken, setShieldBroken] = useState(false);
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
 
   // Shuffle options once on mount
   const [options] = useState(() => {
@@ -66,10 +68,10 @@ export const RPGVocabShield = ({ vocabWord, enemyName, onComplete }: RPGVocabShi
 
     // Delay before completing
     setTimeout(() => {
-      const damage = isCorrect ? 45 : 0; // 3x normal damage for correct
-      onComplete(isCorrect, damage);
+      const damage = isCorrect ? 45 : 0;
+      onCompleteRef.current(isCorrect, damage);
     }, 1800);
-  }, [showResult, correctIndex, onComplete]);
+  }, [showResult, correctIndex]);
 
   return (
     <motion.div
@@ -79,12 +81,12 @@ export const RPGVocabShield = ({ vocabWord, enemyName, onComplete }: RPGVocabShi
       className="absolute inset-0 z-50 flex items-center justify-center"
     >
       {/* Dark overlay */}
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm pointer-events-none" />
 
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="relative z-10 w-full max-w-md mx-4"
+        className="relative z-10 w-full max-w-md mx-4 pointer-events-auto"
       >
         {/* Shield container */}
         <div className="relative">
