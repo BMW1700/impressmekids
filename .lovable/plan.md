@@ -1,27 +1,34 @@
 
 
-## Fix: Word Echo Not Registering + VocabShield Choices Not Clickable
+## Fix Plan: Glitchy Backgrounds, Word Echo Double-Count, Power Word Speed
 
-### Issue 1: Word Echo — words never register (0 echoed)
+### 3 Issues
 
-**Root cause**: Line 119 in `RPGWordEcho.tsx` has `if (!isFinal) return;` — this discards ALL interim speech results and only processes "final" results. Browser speech recognition delays "final" results by 1-3 seconds after speaking, and in continuous mode, final results are often unreliable or delayed further. The user speaks the word, nothing happens, and the timer runs out.
+**1. Background elements glitching/moving erratically across many worlds**
 
-**Fix in `RPGWordEcho.tsx`**:
-- Remove the `if (!isFinal) return;` gate
-- Process both interim and final results for instant word matching
-- Add a match cooldown (500ms) to prevent a single utterance from double-counting as both echo 1 and echo 2
-- Use `lastMatchTimeRef` to enforce the cooldown between echo registrations
+The `renderSpecialElements()` function in `RPGBattleBackground.tsx` uses `Math.random()` directly inside `style` props in the render body. Every React re-render generates **new random values**, causing elements to teleport, resize, and flicker wildly. This affects ALL special element types: neon signs, void tears, stars, bubbles, crystals, torches, shadows, lava blobs, trees, pillars, banners — every world.
 
-### Issue 2: VocabShield — answer choices not clickable
+**Fix**: Pre-compute all random values using `useMemo` (like the `particles` array already does). Each special element type gets a memoized array of `{ left, top, width, height, rotation, delay, duration }` so values stay stable across re-renders.
 
-**Root cause**: The dark backdrop overlay at line 82 (`<div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />`) has default `pointer-events: auto` and sits as a sibling of the content div. While z-index should handle layering, `backdrop-blur` can create stacking context issues in some browsers, making the overlay intercept clicks before they reach the buttons.
+**2. Word Echo counts one spoken word as two echoes**
 
-**Fix in `RPGVocabShield.tsx`**:
-- Add `pointer-events-none` to the backdrop overlay div (line 82) so clicks pass through to the content
-- Add explicit `pointer-events-auto` to the content container (line 87) to ensure buttons are always interactive
-- Also apply the `onCompleteRef` hardening pattern to prevent the `handleSelect` callback from going stale (the `onComplete` dependency in `useCallback` at line 72 causes recreation, which could lead to issues if the parent re-renders during selection)
+The 500ms cooldown prevents rapid-fire, but browser speech recognition keeps sending the **same interim transcript** repeatedly over 500ms+. Say "day" once: at t=0 it matches echo 1, at t=600 the same ongoing transcript matches echo 2. The cooldown isn't enough — we need to detect that it's the **same utterance**.
 
-### Files to edit
-1. `src/components/aura/game/rpg/RPGWordEcho.tsx` — remove isFinal gate, add match cooldown
-2. `src/components/aura/game/rpg/RPGVocabShield.tsx` — fix pointer-events, harden callbacks
+**Fix**: Track `lastMatchedTranscriptRef` — the transcript text that triggered the last match. If the current transcript still contains only the same text (hasn't changed meaningfully), skip. Only allow a new match when the transcript has genuinely changed (new words added, or `isFinal` resets it). Also increase cooldown to 1200ms to require a clear pause between echoes.
+
+**3. Power Word emoji/definition popup rises too fast**
+
+The `RPGWordPowerUp.tsx` animation has `duration: 0.4` for enter and exit. Users can't read the word/definition before it disappears.
+
+**Fix**: Increase enter duration to 0.8s, exit duration to 0.6s, making the popup linger longer and float up more slowly.
+
+---
+
+### Files to Edit
+
+1. **`src/components/aura/game/rpg/RPGBattleBackground.tsx`** — Memoize all random values in `renderSpecialElements` for every element type (neon, void, crystals, bubbles, torches, shadows, lava, trees, pillars, banners, clouds). ~10 element types, each gets a `useMemo` array.
+
+2. **`src/components/aura/game/rpg/RPGWordEcho.tsx`** — Add `lastMatchedTranscriptRef` tracking, increase cooldown to 1200ms, require transcript change before allowing echo 2.
+
+3. **`src/components/aura/game/rpg/RPGWordPowerUp.tsx`** — Slow down enter/exit animation durations.
 
