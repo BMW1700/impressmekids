@@ -1,34 +1,40 @@
 
 
-## Fix Plan: Glitchy Backgrounds, Word Echo Double-Count, Power Word Speed
+## Fix Plan: Broker Health Bar, Victory Sound Glitch, Stats, & Store Powers
 
-### 3 Issues
+### Issues Identified
 
-**1. Background elements glitching/moving erratically across many worlds**
+**1. ALL Agent Mode Characters Missing Health Bars (35 files)**
+The `RPGCharacter` component hides its built-in HP bar when `usePremiumSprites=true` (line 911), expecting each premium sprite to render its own. Classic mode characters (GoblinGuard, CaveTroll, etc.) do this correctly. But **every single Agent mode character** — all 15 bosses (TheBroker, TheArchitect, TheDirector, etc.) and all 20 minions (StreetThug, HiredGun, CyberHacker, etc.) — accepts `showHealthBar` as a prop but never renders a health bar. This is why The Broker has no visible HP.
 
-The `renderSpecialElements()` function in `RPGBattleBackground.tsx` uses `Math.random()` directly inside `style` props in the render body. Every React re-render generates **new random values**, causing elements to teleport, resize, and flicker wildly. This affects ALL special element types: neon signs, void tears, stars, bubbles, crystals, torches, shadows, lava blobs, trees, pillars, banners — every world.
+**2. Glitchy Victory Sound**
+When victory triggers, `celebrationSound()` fires from mini-game completion handlers AND from `triggerVictory` path simultaneously. The `celebrationSound()` method plays 4 simultaneous tones (C, E, G, high C) with no rate limiting. Multiple overlapping calls create a harsh, distorted chord. Additionally, there's no dedicated victory sound — only the same `celebrationSound()` used for mini-game completions.
 
-**Fix**: Pre-compute all random values using `useMemo` (like the `particles` array already does). Each special element type gets a memoized array of `{ left, top, width, height, rotation, delay, duration }` so values stay stable across re-renders.
+**3. Inflated Victory Stats**
+The `totalDamage` counter accumulates damage from every source: reading, mini-games, spells, bonus damage — without any cap. For a boss with 200-500 HP, showing "40,910 Damage" is confusing and feels broken. The display should show meaningful stats.
 
-**2. Word Echo counts one spoken word as two echoes**
-
-The 500ms cooldown prevents rapid-fire, but browser speech recognition keeps sending the **same interim transcript** repeatedly over 500ms+. Say "day" once: at t=0 it matches echo 1, at t=600 the same ongoing transcript matches echo 2. The cooldown isn't enough — we need to detect that it's the **same utterance**.
-
-**Fix**: Track `lastMatchedTranscriptRef` — the transcript text that triggered the last match. If the current transcript still contains only the same text (hasn't changed meaningfully), skip. Only allow a new match when the transcript has genuinely changed (new words added, or `isFinal` resets it). Also increase cooldown to 1200ms to require a clear pause between echoes.
-
-**3. Power Word emoji/definition popup rises too fast**
-
-The `RPGWordPowerUp.tsx` animation has `duration: 0.4` for enter and exit. Users can't read the word/definition before it disappears.
-
-**Fix**: Increase enter duration to 0.8s, exit duration to 0.6s, making the popup linger longer and float up more slowly.
+**4. Store Powers Already Work — Need Visual Verification**
+The store power system is wired: purchased powers map to spell effects via `effectMap`, get proper sound effects, and trigger `RPGSpellEffects` animations. The effects (fire, ice, lightning, slash, nature, wind, data_burst, heal) all have corresponding particle animations. This appears functional but the animations may feel generic since all purchased powers of the same element share one visual.
 
 ---
 
-### Files to Edit
+### Fix Details
 
-1. **`src/components/aura/game/rpg/RPGBattleBackground.tsx`** — Memoize all random values in `renderSpecialElements` for every element type (neon, void, crystals, bubbles, torches, shadows, lava, trees, pillars, banners, clouds). ~10 element types, each gets a `useMemo` array.
+**File Group 1: Add Health Bars to ALL 35 Agent Mode Characters**
+Apply the standard health bar template (from GoblinGuard) to each file. The template is ~25 lines, inserted after the closing `</svg>` tag and before the closing `</motion.div>`:
+- Destructure `showHealthBar` from props (most already accept it but ignore it)
+- Add the health bar div with HP text, colored progress bar, and animation
 
-2. **`src/components/aura/game/rpg/RPGWordEcho.tsx`** — Add `lastMatchedTranscriptRef` tracking, increase cooldown to 1200ms, require transcript change before allowing echo 2.
+Files (15 bosses): `TheBroker.tsx`, `TheArchitect.tsx`, `TheDirector.tsx`, `TheDoubleAgent.tsx`, `TheWarden.tsx`, `TheCommander.tsx`, `ThePhantom.tsx`, `TheOverseer.tsx`, `TheVaultKeeper.tsx`, `TheShadowBroker.tsx`, `TheFrostbite.tsx`, `TheMinotaur.tsx`, `TheCatalyst.tsx`, `TheOmega.tsx`, `TheLibrarian.tsx`
 
-3. **`src/components/aura/game/rpg/RPGWordPowerUp.tsx`** — Slow down enter/exit animation durations.
+Files (20 minions): `StreetThug.tsx`, `HiredGun.tsx`, `CyberHacker.tsx`, `DroneSentry.tsx`, `RogueAgent.tsx`, `Bodyguard.tsx`, `Operative.tsx`, `Enforcer.tsx`, `VaultSentinel.tsx`, `VaultDrone.tsx`, `ShadowOperative.tsx`, `ShadowDrone.tsx`, `FrostTrooper.tsx`, `IceDrone.tsx`, `MazeRunner.tsx`, `TunnelRat.tsx`, `LabGuard.tsx`, `BioDrone.tsx`, `OmegaSoldier.tsx`, `OmegaElite.tsx`
+
+**File 2: `src/lib/pronunciationPlayer.ts`**
+- Add a `lastCelebrationTime` tracker to prevent overlapping celebration sounds (minimum 2s gap)
+- Create a proper `victoryFanfare()` method with staggered ascending notes instead of a flat chord
+
+**File 3: `src/components/aura/game/rpg/RPGBattleArena.tsx`**
+- Cap `totalDamage` display in the victory screen to `enemy.maxHp` (or sum of all enemy maxHp if multi-enemy) — the stat should reflect effective damage, not accumulated overkill
+- Replace `celebrationSound()` on victory with `victoryFanfare()`
+- De-duplicate celebration sound calls: only play once in `triggerVictory`, remove from individual mini-game handlers that also call `triggerVictory`
 
