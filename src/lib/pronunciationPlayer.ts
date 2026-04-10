@@ -204,12 +204,29 @@ export class SoundEffects {
     setTimeout(() => this.playTone(784, 0.2, 0.25), 200);  // G
   }
 
+  private lastCelebrationTime = 0;
+
   celebrationSound() {
+    const now = Date.now();
+    if (now - this.lastCelebrationTime < 2000) return;
+    this.lastCelebrationTime = now;
     // Play a celebratory chord
     this.playTone(523, 0.3, 0.2); // C
     this.playTone(659, 0.3, 0.2); // E
     this.playTone(784, 0.3, 0.2); // G
     this.playTone(1047, 0.3, 0.2); // C (octave higher)
+  }
+
+  victoryFanfare() {
+    const now = Date.now();
+    if (now - this.lastCelebrationTime < 2000) return;
+    this.lastCelebrationTime = now;
+    if (!this.ensureContext() || !this.audioContext) return;
+    // Staggered ascending notes for a proper victory sound
+    const notes = [523, 659, 784, 1047, 1319];
+    notes.forEach((freq, i) => {
+      setTimeout(() => this.playTone(freq, 0.3, 0.15), i * 120);
+    });
   }
 
   // === ELEMENTAL SOUND EFFECTS ===
