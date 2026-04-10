@@ -14,50 +14,21 @@ interface RPGBattleBackgroundProps {
 
 // Map world numbers to world_id in database
 const worldToDbId: Record<number, number> = {
-  0: 0, // Tutorial
-  1: 1, // Enchanted Forest
-  2: 2, // Frozen Depths
-  3: 3, // Ancient Ruins
-  4: 4, // Throne Room
-  5: 5, // Whispering Caverns
-  6: 6, // Floating Isles
-  7: 7, // Sunken Library
-  8: 8, // The Void Between
+  0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8,
 };
 
 // World names for the toggle button
 const worldNames: Record<number, string> = {
-  0: 'Tutorial',
-  1: 'Enchanted Forest',
-  2: 'Frozen Depths',
-  3: 'Ancient Ruins',
-  4: 'Throne Room',
-  5: 'Whispering Caverns',
-  6: 'Floating Isles',
-  7: 'Sunken Library',
-  8: 'The Void',
-  9: 'Ember Highlands',
-  10: 'Crystal Citadel',
-  11: 'Starfall Peaks',
-  12: 'Eternal Archive',
+  0: 'Tutorial', 1: 'Enchanted Forest', 2: 'Frozen Depths', 3: 'Ancient Ruins',
+  4: 'Throne Room', 5: 'Whispering Caverns', 6: 'Floating Isles', 7: 'Sunken Library',
+  8: 'The Void', 9: 'Ember Highlands', 10: 'Crystal Citadel', 11: 'Starfall Peaks', 12: 'Eternal Archive',
 };
 
 const agentWorldNames: Record<number, string> = {
-  0: 'Training Grounds',
-  1: 'The Underground',
-  2: 'Neon District',
-  3: 'The Embassy',
-  4: 'Syndicate HQ',
-  5: 'The Black Site',
-  6: 'Skyfall Station',
-  7: 'The Deep Web',
-  8: 'Operation Endgame',
-  9: 'The Vault',
-  10: 'Shadow Protocol',
-  11: 'Arctic Outpost',
-  12: 'The Labyrinth',
-  13: 'Project Zero',
-  14: 'Omega Directive',
+  0: 'Training Grounds', 1: 'The Underground', 2: 'Neon District', 3: 'The Embassy',
+  4: 'Syndicate HQ', 5: 'The Black Site', 6: 'Skyfall Station', 7: 'The Deep Web',
+  8: 'Operation Endgame', 9: 'The Vault', 10: 'Shadow Protocol', 11: 'Arctic Outpost',
+  12: 'The Labyrinth', 13: 'Project Zero', 14: 'Omega Directive',
 };
 
 export const RPGBattleBackground = ({ 
@@ -128,30 +99,17 @@ export const RPGBattleBackground = ({
 
   // Auto-select theme based on enemy type if not specified
   const selectedTheme: BackgroundTheme = theme || useMemo(() => {
-    // Agent mode: select background by world number directly
     const currentTheme = getStoredTheme();
     if (currentTheme === 'agent') {
       const agentWorldThemes: Record<number, BackgroundTheme> = {
-        0: 'underground',
-        1: 'underground',
-        2: 'neon_district',
-        3: 'embassy',
-        4: 'syndicate_hq',
-        5: 'underground',
-        6: 'neon_district',
-        7: 'embassy',
-        8: 'syndicate_hq',
-        9: 'vault',
-        10: 'shadow_protocol',
-        11: 'arctic_outpost',
-        12: 'labyrinth',
-        13: 'project_zero',
-        14: 'omega_directive',
+        0: 'underground', 1: 'underground', 2: 'neon_district', 3: 'embassy',
+        4: 'syndicate_hq', 5: 'underground', 6: 'neon_district', 7: 'embassy',
+        8: 'syndicate_hq', 9: 'vault', 10: 'shadow_protocol', 11: 'arctic_outpost',
+        12: 'labyrinth', 13: 'project_zero', 14: 'omega_directive',
       };
       return agentWorldThemes[worldNumber] || 'underground';
     }
     
-    // Classic mode: select by enemy type
     switch (enemyType) {
       case 'final_boss': return 'throne';
       case 'boss': return 'volcano';
@@ -185,178 +143,43 @@ export const RPGBattleBackground = ({
   const themeStyles = useMemo(() => {
     switch (selectedTheme) {
       case 'throne':
-        return {
-          sky: 'from-purple-950 via-indigo-900 to-slate-900',
-          ground: 'from-slate-800 to-slate-950',
-          accent: 'bg-purple-500/20',
-          particles: 'bg-purple-400',
-          ambientColor: 'rgba(147, 51, 234, 0.3)',
-          specialElements: 'throne',
-        };
+        return { sky: 'from-purple-950 via-indigo-900 to-slate-900', ground: 'from-slate-800 to-slate-950', accent: 'bg-purple-500/20', particles: 'bg-purple-400', ambientColor: 'rgba(147, 51, 234, 0.3)', specialElements: 'throne' };
       case 'volcano':
-        return {
-          sky: 'from-red-950 via-orange-900 to-slate-900',
-          ground: 'from-stone-800 to-stone-950',
-          accent: 'bg-orange-500/30',
-          particles: 'bg-orange-400',
-          ambientColor: 'rgba(234, 88, 12, 0.3)',
-          specialElements: 'lava',
-        };
+        return { sky: 'from-red-950 via-orange-900 to-slate-900', ground: 'from-stone-800 to-stone-950', accent: 'bg-orange-500/30', particles: 'bg-orange-400', ambientColor: 'rgba(234, 88, 12, 0.3)', specialElements: 'lava' };
       case 'dungeon':
-        return {
-          sky: 'from-slate-950 via-stone-900 to-zinc-900',
-          ground: 'from-stone-900 to-zinc-950',
-          accent: 'bg-amber-500/10',
-          particles: 'bg-amber-300',
-          ambientColor: 'rgba(217, 119, 6, 0.2)',
-          specialElements: 'torches',
-        };
+        return { sky: 'from-slate-950 via-stone-900 to-zinc-900', ground: 'from-stone-900 to-zinc-950', accent: 'bg-amber-500/10', particles: 'bg-amber-300', ambientColor: 'rgba(217, 119, 6, 0.2)', specialElements: 'torches' };
       case 'castle':
-        return {
-          sky: 'from-blue-950 via-slate-800 to-indigo-900',
-          ground: 'from-slate-700 to-slate-900',
-          accent: 'bg-blue-400/20',
-          particles: 'bg-blue-300',
-          ambientColor: 'rgba(59, 130, 246, 0.2)',
-          specialElements: 'banners',
-        };
+        return { sky: 'from-blue-950 via-slate-800 to-indigo-900', ground: 'from-slate-700 to-slate-900', accent: 'bg-blue-400/20', particles: 'bg-blue-300', ambientColor: 'rgba(59, 130, 246, 0.2)', specialElements: 'banners' };
       case 'ice_cave':
-        return {
-          sky: 'from-cyan-950 via-blue-900 to-slate-900',
-          ground: 'from-cyan-900 to-slate-950',
-          accent: 'bg-cyan-400/20',
-          particles: 'bg-cyan-200',
-          ambientColor: 'rgba(34, 211, 238, 0.2)',
-          specialElements: 'crystals',
-        };
+        return { sky: 'from-cyan-950 via-blue-900 to-slate-900', ground: 'from-cyan-900 to-slate-950', accent: 'bg-cyan-400/20', particles: 'bg-cyan-200', ambientColor: 'rgba(34, 211, 238, 0.2)', specialElements: 'crystals' };
       case 'shadow_realm':
-        return {
-          sky: 'from-purple-950 via-slate-900 to-black',
-          ground: 'from-slate-900 to-black',
-          accent: 'bg-purple-500/30',
-          particles: 'bg-purple-400',
-          ambientColor: 'rgba(147, 51, 234, 0.3)',
-          specialElements: 'shadows',
-        };
+        return { sky: 'from-purple-950 via-slate-900 to-black', ground: 'from-slate-900 to-black', accent: 'bg-purple-500/30', particles: 'bg-purple-400', ambientColor: 'rgba(147, 51, 234, 0.3)', specialElements: 'shadows' };
       case 'ruins':
-        return {
-          sky: 'from-amber-950 via-stone-800 to-slate-900',
-          ground: 'from-stone-700 to-stone-950',
-          accent: 'bg-amber-500/20',
-          particles: 'bg-amber-300',
-          ambientColor: 'rgba(217, 119, 6, 0.25)',
-          specialElements: 'pillars',
-        };
+        return { sky: 'from-amber-950 via-stone-800 to-slate-900', ground: 'from-stone-700 to-stone-950', accent: 'bg-amber-500/20', particles: 'bg-amber-300', ambientColor: 'rgba(217, 119, 6, 0.25)', specialElements: 'pillars' };
       case 'caverns':
-        return {
-          sky: 'from-slate-950 via-stone-900 to-zinc-950',
-          ground: 'from-stone-800 to-zinc-900',
-          accent: 'bg-violet-500/20',
-          particles: 'bg-violet-300',
-          ambientColor: 'rgba(139, 92, 246, 0.25)',
-          specialElements: 'crystals',
-        };
+        return { sky: 'from-slate-950 via-stone-900 to-zinc-950', ground: 'from-stone-800 to-zinc-900', accent: 'bg-violet-500/20', particles: 'bg-violet-300', ambientColor: 'rgba(139, 92, 246, 0.25)', specialElements: 'crystals' };
       case 'sky_isles':
-        return {
-          sky: 'from-sky-400 via-blue-500 to-indigo-600',
-          ground: 'from-white/20 to-blue-200/30',
-          accent: 'bg-white/30',
-          particles: 'bg-white',
-          ambientColor: 'rgba(255, 255, 255, 0.3)',
-          specialElements: 'clouds',
-        };
+        return { sky: 'from-sky-400 via-blue-500 to-indigo-600', ground: 'from-white/20 to-blue-200/30', accent: 'bg-white/30', particles: 'bg-white', ambientColor: 'rgba(255, 255, 255, 0.3)', specialElements: 'clouds' };
       case 'sunken_library':
-        return {
-          sky: 'from-teal-900 via-cyan-800 to-blue-950',
-          ground: 'from-teal-800 to-blue-900',
-          accent: 'bg-cyan-400/20',
-          particles: 'bg-cyan-300',
-          ambientColor: 'rgba(34, 211, 238, 0.25)',
-          specialElements: 'bubbles',
-        };
+        return { sky: 'from-teal-900 via-cyan-800 to-blue-950', ground: 'from-teal-800 to-blue-900', accent: 'bg-cyan-400/20', particles: 'bg-cyan-300', ambientColor: 'rgba(34, 211, 238, 0.25)', specialElements: 'bubbles' };
       case 'void':
-        return {
-          sky: 'from-purple-950 via-violet-950 to-black',
-          ground: 'from-black to-purple-950/50',
-          accent: 'bg-violet-500/40',
-          particles: 'bg-violet-400',
-          ambientColor: 'rgba(139, 92, 246, 0.4)',
-          specialElements: 'void',
-        };
-      // Agent mode themes
+        return { sky: 'from-purple-950 via-violet-950 to-black', ground: 'from-black to-purple-950/50', accent: 'bg-violet-500/40', particles: 'bg-violet-400', ambientColor: 'rgba(139, 92, 246, 0.4)', specialElements: 'void' };
       case 'underground':
-        return {
-          sky: 'from-zinc-950 via-stone-900 to-neutral-950',
-          ground: 'from-stone-800 to-zinc-950',
-          accent: 'bg-amber-500/15',
-          particles: 'bg-amber-200',
-          ambientColor: 'rgba(217, 119, 6, 0.15)',
-          specialElements: 'torches',
-        };
+        return { sky: 'from-zinc-950 via-stone-900 to-neutral-950', ground: 'from-stone-800 to-zinc-950', accent: 'bg-amber-500/15', particles: 'bg-amber-200', ambientColor: 'rgba(217, 119, 6, 0.15)', specialElements: 'torches' };
       case 'neon_district':
-        return {
-          sky: 'from-slate-950 via-indigo-950 to-purple-950',
-          ground: 'from-slate-900 to-indigo-950',
-          accent: 'bg-cyan-500/25',
-          particles: 'bg-cyan-400',
-          ambientColor: 'rgba(6, 182, 212, 0.3)',
-          specialElements: 'neon',
-        };
+        return { sky: 'from-slate-950 via-indigo-950 to-purple-950', ground: 'from-slate-900 to-indigo-950', accent: 'bg-cyan-500/25', particles: 'bg-cyan-400', ambientColor: 'rgba(6, 182, 212, 0.3)', specialElements: 'neon' };
       case 'embassy':
-        return {
-          sky: 'from-slate-900 via-blue-950 to-slate-950',
-          ground: 'from-slate-800 to-blue-950',
-          accent: 'bg-blue-400/15',
-          particles: 'bg-blue-200',
-          ambientColor: 'rgba(59, 130, 246, 0.15)',
-          specialElements: 'banners',
-        };
+        return { sky: 'from-slate-900 via-blue-950 to-slate-950', ground: 'from-slate-800 to-blue-950', accent: 'bg-blue-400/15', particles: 'bg-blue-200', ambientColor: 'rgba(59, 130, 246, 0.15)', specialElements: 'banners' };
       case 'syndicate_hq':
-        return {
-          sky: 'from-red-950 via-slate-950 to-black',
-          ground: 'from-slate-900 to-red-950',
-          accent: 'bg-red-500/25',
-          particles: 'bg-red-400',
-          ambientColor: 'rgba(239, 68, 68, 0.25)',
-          specialElements: 'shadows',
-        };
+        return { sky: 'from-red-950 via-slate-950 to-black', ground: 'from-slate-900 to-red-950', accent: 'bg-red-500/25', particles: 'bg-red-400', ambientColor: 'rgba(239, 68, 68, 0.25)', specialElements: 'shadows' };
       case 'ember_highlands':
-        return {
-          sky: 'from-red-950 via-orange-900 to-amber-900',
-          ground: 'from-stone-800 to-red-950',
-          accent: 'bg-orange-500/30',
-          particles: 'bg-orange-400',
-          ambientColor: 'rgba(249, 115, 22, 0.3)',
-          specialElements: 'lava',
-        };
+        return { sky: 'from-red-950 via-orange-900 to-amber-900', ground: 'from-stone-800 to-red-950', accent: 'bg-orange-500/30', particles: 'bg-orange-400', ambientColor: 'rgba(249, 115, 22, 0.3)', specialElements: 'lava' };
       case 'crystal_citadel':
-        return {
-          sky: 'from-violet-950 via-fuchsia-900 to-purple-900',
-          ground: 'from-purple-800 to-violet-950',
-          accent: 'bg-fuchsia-400/25',
-          particles: 'bg-fuchsia-300',
-          ambientColor: 'rgba(232, 121, 249, 0.3)',
-          specialElements: 'crystals',
-        };
+        return { sky: 'from-violet-950 via-fuchsia-900 to-purple-900', ground: 'from-purple-800 to-violet-950', accent: 'bg-fuchsia-400/25', particles: 'bg-fuchsia-300', ambientColor: 'rgba(232, 121, 249, 0.3)', specialElements: 'crystals' };
       case 'starfall_peaks':
-        return {
-          sky: 'from-indigo-950 via-blue-950 to-violet-950',
-          ground: 'from-indigo-900 to-slate-950',
-          accent: 'bg-yellow-400/20',
-          particles: 'bg-yellow-200',
-          ambientColor: 'rgba(253, 230, 138, 0.25)',
-          specialElements: 'void',
-        };
+        return { sky: 'from-indigo-950 via-blue-950 to-violet-950', ground: 'from-indigo-900 to-slate-950', accent: 'bg-yellow-400/20', particles: 'bg-yellow-200', ambientColor: 'rgba(253, 230, 138, 0.25)', specialElements: 'void' };
       case 'eternal_archive':
-        return {
-          sky: 'from-stone-950 via-amber-950 to-yellow-950',
-          ground: 'from-stone-900 to-amber-950',
-          accent: 'bg-emerald-500/20',
-          particles: 'bg-emerald-300',
-          ambientColor: 'rgba(34, 197, 94, 0.2)',
-          specialElements: 'torches',
-        };
-      // Agent new world themes
+        return { sky: 'from-stone-950 via-amber-950 to-yellow-950', ground: 'from-stone-900 to-amber-950', accent: 'bg-emerald-500/20', particles: 'bg-emerald-300', ambientColor: 'rgba(34, 197, 94, 0.2)', specialElements: 'torches' };
       case 'vault':
         return { sky: 'from-yellow-950 via-amber-900 to-stone-950', ground: 'from-stone-800 to-amber-950', accent: 'bg-yellow-500/20', particles: 'bg-yellow-300', ambientColor: 'rgba(234, 179, 8, 0.2)', specialElements: 'torches' };
       case 'shadow_protocol':
@@ -371,14 +194,7 @@ export const RPGBattleBackground = ({
         return { sky: 'from-red-950 via-orange-900 to-yellow-950', ground: 'from-red-900 to-orange-950', accent: 'bg-orange-500/30', particles: 'bg-orange-400', ambientColor: 'rgba(249, 115, 22, 0.3)', specialElements: 'lava' };
       case 'forest':
       default:
-        return {
-          sky: 'from-emerald-950 via-green-900 to-slate-900',
-          ground: 'from-green-900 to-slate-950',
-          accent: 'bg-emerald-500/20',
-          particles: 'bg-emerald-300',
-          ambientColor: 'rgba(16, 185, 129, 0.2)',
-          specialElements: 'trees',
-        };
+        return { sky: 'from-emerald-950 via-green-900 to-slate-900', ground: 'from-green-900 to-slate-950', accent: 'bg-emerald-500/20', particles: 'bg-emerald-300', ambientColor: 'rgba(16, 185, 129, 0.2)', specialElements: 'trees' };
     }
   }, [selectedTheme]);
 
@@ -394,33 +210,45 @@ export const RPGBattleBackground = ({
     }));
   }, [particleCount, selectedTheme]);
 
-  // Special elements based on theme
+  // Pre-compute random values for special elements to prevent re-render flicker
+  const bubbleData = useMemo(() => Array.from({ length: 15 }, () => ({
+    size: 10 + Math.random() * 20, left: Math.random() * 100, duration: 8 + Math.random() * 4, delay: Math.random() * 5,
+  })), []);
+  const cloudData = useMemo(() => Array.from({ length: 6 }, () => ({
+    width: 100 + Math.random() * 150, height: 40 + Math.random() * 40, top: 20 + Math.random() * 30, duration: 10 + Math.random() * 5,
+  })), []);
+  const tearData = useMemo(() => Array.from({ length: 8 }, () => ({
+    height: 50 + Math.random() * 100, left: Math.random() * 100, top: Math.random() * 60, rotation: Math.random() * 30 - 15,
+    duration: 3 + Math.random() * 2, delay: Math.random() * 5,
+  })), []);
+  const starData = useMemo(() => Array.from({ length: 30 }, () => ({
+    size: 1 + Math.random() * 2, left: Math.random() * 100, top: Math.random() * 100,
+    duration: 2 + Math.random() * 2, delay: Math.random() * 3,
+  })), []);
+  const crystalData = useMemo(() => Array.from({ length: 8 }, () => ({
+    bottom: 10 + Math.random() * 15, rotation: Math.random() * 20 - 10, duration: 6 + Math.random() * 4,
+  })), []);
+  const neonData = useMemo(() => Array.from({ length: 5 }, () => ({
+    width: 30 + Math.random() * 60, height: 8 + Math.random() * 12, top: 20 + Math.random() * 30,
+    blur: 1 + Math.random() * 2, duration: 1.5 + Math.random() * 2, delay: Math.random() * 2,
+  })), []);
+  const rainData = useMemo(() => Array.from({ length: 12 }, () => ({
+    duration: 4 + Math.random() * 3, delay: Math.random() * 3,
+    text: Array.from({ length: 8 }, () => String.fromCharCode(0x30A0 + Math.random() * 96)).join(''),
+  })), []);
+
   const renderSpecialElements = () => {
     switch (themeStyles.specialElements) {
       case 'bubbles':
         return (
           <>
-            {Array.from({ length: 15 }).map((_, i) => (
+            {bubbleData.map((b, i) => (
               <motion.div
                 key={`bubble-${i}`}
                 className="absolute rounded-full border border-cyan-300/50 bg-cyan-200/10"
-                style={{
-                  width: 10 + Math.random() * 20,
-                  height: 10 + Math.random() * 20,
-                  left: `${Math.random() * 100}%`,
-                  bottom: '-10%',
-                }}
-                animate={{
-                  y: [-50, -600],
-                  opacity: [0, 0.6, 0],
-                  scale: [0.5, 1, 0.5],
-                }}
-                transition={{
-                  duration: 8 + Math.random() * 4,
-                  delay: Math.random() * 5,
-                  repeat: Infinity,
-                  ease: "linear",
-                }}
+                style={{ width: b.size, height: b.size, left: `${b.left}%`, bottom: '-10%' }}
+                animate={{ y: [-50, -600], opacity: [0, 0.6, 0], scale: [0.5, 1, 0.5] }}
+                transition={{ duration: b.duration, delay: b.delay, repeat: Infinity, ease: "linear" }}
               />
             ))}
           </>
@@ -428,26 +256,13 @@ export const RPGBattleBackground = ({
       case 'clouds':
         return (
           <>
-            {Array.from({ length: 6 }).map((_, i) => (
+            {cloudData.map((c, i) => (
               <motion.div
                 key={`cloud-${i}`}
                 className="absolute bg-white/40 rounded-full blur-xl"
-                style={{
-                  width: 100 + Math.random() * 150,
-                  height: 40 + Math.random() * 40,
-                  left: `${i * 20}%`,
-                  top: `${20 + Math.random() * 30}%`,
-                }}
-                animate={{
-                  x: [0, 50, 0],
-                  opacity: [0.3, 0.5, 0.3],
-                }}
-                transition={{
-                  duration: 10 + Math.random() * 5,
-                  delay: i * 2,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
+                style={{ width: c.width, height: c.height, left: `${i * 20}%`, top: `${c.top}%` }}
+                animate={{ x: [0, 50, 0], opacity: [0.3, 0.5, 0.3] }}
+                transition={{ duration: c.duration, delay: i * 2, repeat: Infinity, ease: "easeInOut" }}
               />
             ))}
           </>
@@ -455,51 +270,22 @@ export const RPGBattleBackground = ({
       case 'void':
         return (
           <>
-            {/* Reality tears */}
-            {Array.from({ length: 8 }).map((_, i) => (
+            {tearData.map((t, i) => (
               <motion.div
                 key={`tear-${i}`}
                 className="absolute bg-gradient-to-b from-violet-500/50 via-purple-600/30 to-transparent"
-                style={{
-                  width: 2,
-                  height: 50 + Math.random() * 100,
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 60}%`,
-                  transform: `rotate(${Math.random() * 30 - 15}deg)`,
-                }}
-                animate={{
-                  opacity: [0, 0.8, 0],
-                  scaleY: [0.5, 1.5, 0.5],
-                }}
-                transition={{
-                  duration: 3 + Math.random() * 2,
-                  delay: Math.random() * 5,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
+                style={{ width: 2, height: t.height, left: `${t.left}%`, top: `${t.top}%`, transform: `rotate(${t.rotation}deg)` }}
+                animate={{ opacity: [0, 0.8, 0], scaleY: [0.5, 1.5, 0.5] }}
+                transition={{ duration: t.duration, delay: t.delay, repeat: Infinity, ease: "easeInOut" }}
               />
             ))}
-            {/* Stars/void particles */}
-            {Array.from({ length: 30 }).map((_, i) => (
+            {starData.map((s, i) => (
               <motion.div
                 key={`star-${i}`}
                 className="absolute rounded-full bg-white"
-                style={{
-                  width: 1 + Math.random() * 2,
-                  height: 1 + Math.random() * 2,
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`,
-                }}
-                animate={{
-                  opacity: [0.2, 1, 0.2],
-                  scale: [0.5, 1.5, 0.5],
-                }}
-                transition={{
-                  duration: 2 + Math.random() * 2,
-                  delay: Math.random() * 3,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
+                style={{ width: s.size, height: s.size, left: `${s.left}%`, top: `${s.top}%` }}
+                animate={{ opacity: [0.2, 1, 0.2], scale: [0.5, 1.5, 0.5] }}
+                transition={{ duration: s.duration, delay: s.delay, repeat: Infinity, ease: "easeInOut" }}
               />
             ))}
           </>
@@ -507,30 +293,17 @@ export const RPGBattleBackground = ({
       case 'crystals':
         return (
           <>
-            {Array.from({ length: 8 }).map((_, i) => (
+            {crystalData.map((c, i) => (
               <motion.div
                 key={`crystal-${i}`}
                 className="absolute"
-                style={{
-                  left: `${i * 12 + 5}%`,
-                  bottom: `${10 + Math.random() * 15}%`,
-                }}
-                animate={{
-                  opacity: [0.4, 0.7, 0.4],
-                }}
-                transition={{
-                  duration: 6 + Math.random() * 4,
-                  delay: i * 0.8,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
+                style={{ left: `${i * 12 + 5}%`, bottom: `${c.bottom}%` }}
+                animate={{ opacity: [0.4, 0.7, 0.4] }}
+                transition={{ duration: c.duration, delay: i * 0.8, repeat: Infinity, ease: "easeInOut" }}
               >
                 <div 
                   className="w-4 h-16 bg-gradient-to-t from-violet-600/60 via-purple-400/40 to-transparent"
-                  style={{ 
-                    clipPath: 'polygon(50% 0%, 100% 100%, 0% 100%)',
-                    transform: `rotate(${Math.random() * 20 - 10}deg)`,
-                  }}
+                  style={{ clipPath: 'polygon(50% 0%, 100% 100%, 0% 100%)', transform: `rotate(${c.rotation}deg)` }}
                 />
               </motion.div>
             ))}
@@ -539,52 +312,28 @@ export const RPGBattleBackground = ({
       case 'neon':
         return (
           <>
-            {/* Neon signs */}
-            {Array.from({ length: 5 }).map((_, i) => (
+            {neonData.map((n, i) => (
               <motion.div
                 key={`neon-${i}`}
                 className="absolute rounded-sm"
                 style={{
-                  width: 30 + Math.random() * 60,
-                  height: 8 + Math.random() * 12,
-                  left: `${10 + i * 18}%`,
-                  top: `${20 + Math.random() * 30}%`,
+                  width: n.width, height: n.height, left: `${10 + i * 18}%`, top: `${n.top}%`,
                   background: ['#22D3EE', '#A855F7', '#F43F5E', '#10B981', '#F59E0B'][i],
-                  opacity: 0.3,
-                  filter: `blur(${1 + Math.random() * 2}px)`,
+                  opacity: 0.3, filter: `blur(${n.blur}px)`,
                 }}
-                animate={{
-                  opacity: [0.2, 0.5, 0.2],
-                }}
-                transition={{
-                  duration: 1.5 + Math.random() * 2,
-                  delay: Math.random() * 2,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
+                animate={{ opacity: [0.2, 0.5, 0.2] }}
+                transition={{ duration: n.duration, delay: n.delay, repeat: Infinity, ease: "easeInOut" }}
               />
             ))}
-            {/* Digital rain effect */}
-            {Array.from({ length: 12 }).map((_, i) => (
+            {rainData.map((r, i) => (
               <motion.div
                 key={`rain-${i}`}
                 className="absolute text-cyan-500/30 text-[8px] font-mono"
-                style={{
-                  left: `${5 + i * 8}%`,
-                  top: '-5%',
-                }}
-                animate={{
-                  y: [0, 500],
-                  opacity: [0, 0.4, 0],
-                }}
-                transition={{
-                  duration: 4 + Math.random() * 3,
-                  delay: Math.random() * 3,
-                  repeat: Infinity,
-                  ease: "linear",
-                }}
+                style={{ left: `${5 + i * 8}%`, top: '-5%' }}
+                animate={{ y: [0, 500], opacity: [0, 0.4, 0] }}
+                transition={{ duration: r.duration, delay: r.delay, repeat: Infinity, ease: "linear" }}
               >
-                {Array.from({ length: 8 }).map(() => String.fromCharCode(0x30A0 + Math.random() * 96)).join('')}
+                {r.text}
               </motion.div>
             ))}
           </>
@@ -598,7 +347,7 @@ export const RPGBattleBackground = ({
 
   return (
     <div className="absolute inset-0 overflow-hidden">
-      {/* Background Toggle Button - Below title area */}
+      {/* Background Toggle Button */}
       <motion.button
         className="absolute top-16 right-3 z-50 p-2 rounded-lg bg-slate-900/70 border border-slate-600/50 
           hover:bg-slate-800/80 transition-colors flex items-center gap-2"
@@ -620,7 +369,7 @@ export const RPGBattleBackground = ({
         )}
       </motion.button>
 
-      {/* AI-Generated Background Image (if available and enabled) */}
+      {/* AI-Generated Background Image */}
       {showAiImage && (
         <motion.div
           className="absolute inset-0"
@@ -628,48 +377,31 @@ export const RPGBattleBackground = ({
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5 }}
         >
-          <img
-            src={backgroundImage}
-            alt="Battle Background"
-            className="w-full h-full object-cover"
-          />
-          {/* Overlay for readability */}
+          <img src={backgroundImage} alt="Battle Background" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-black/20" />
         </motion.div>
       )}
 
-      {/* Gradient background (shows when AI is disabled or not loaded) */}
+      {/* Gradient background */}
       <motion.div
         className="absolute inset-0"
         animate={{ opacity: showAiImage ? 0 : 1 }}
         transition={{ duration: 0.5 }}
       >
-        {/* Sky Layer */}
         <div className={`absolute inset-0 bg-gradient-to-b ${themeStyles.sky}`} />
         
-        {/* Parallax Mountain/Structure Layer - Back */}
         <div className="absolute bottom-[30%] left-0 right-0 h-[40%]">
           <svg viewBox="0 0 1200 200" className="w-full h-full opacity-30" preserveAspectRatio="xMidYMax slice">
-            <path 
-              d="M0,200 L0,120 Q100,80 200,100 T400,90 T600,110 T800,85 T1000,100 T1200,95 L1200,200 Z" 
-              fill="currentColor" 
-              className="text-black/40"
-            />
+            <path d="M0,200 L0,120 Q100,80 200,100 T400,90 T600,110 T800,85 T1000,100 T1200,95 L1200,200 Z" fill="currentColor" className="text-black/40" />
           </svg>
         </div>
         
-        {/* Parallax Mountain/Structure Layer - Mid */}
         <div className="absolute bottom-[20%] left-0 right-0 h-[40%]">
           <svg viewBox="0 0 1200 200" className="w-full h-full opacity-50" preserveAspectRatio="xMidYMax slice">
-            <path 
-              d="M0,200 L0,140 Q150,100 300,120 T600,100 T900,115 T1200,105 L1200,200 Z" 
-              fill="currentColor" 
-              className="text-black/50"
-            />
+            <path d="M0,200 L0,140 Q150,100 300,120 T600,100 T900,115 T1200,105 L1200,200 Z" fill="currentColor" className="text-black/50" />
           </svg>
         </div>
 
-        {/* Ground Layer */}
         <div className={`absolute bottom-0 left-0 right-0 h-[25%] bg-gradient-to-t ${themeStyles.ground}`}>
           <div className="absolute inset-0 opacity-20">
             <div className="w-full h-full bg-[repeating-linear-gradient(90deg,transparent,transparent_50px,rgba(0,0,0,0.1)_50px,rgba(0,0,0,0.1)_100px)]" />
@@ -677,70 +409,35 @@ export const RPGBattleBackground = ({
         </div>
       </motion.div>
 
-      {/* Special Theme Elements (always visible for atmosphere) */}
       {renderSpecialElements()}
 
-      {/* Floor reflection/glow */}
       <div 
         className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[80%] h-[10%] rounded-[100%] blur-2xl"
         style={{ backgroundColor: themeStyles.ambientColor }}
       />
 
-      {/* Floating Particles */}
       {particles.map((particle) => (
         <motion.div
           key={particle.id}
           className={`absolute rounded-full ${themeStyles.particles} opacity-60`}
-          style={{
-            width: particle.size,
-            height: particle.size,
-            left: `${particle.left}%`,
-            bottom: '-5%',
-          }}
-          animate={{
-            y: [0, -500],
-            opacity: [0, 0.8, 0.8, 0],
-            x: [0, Math.sin(particle.id) * 30],
-          }}
-          transition={{
-            duration: particle.duration,
-            delay: particle.delay,
-            repeat: Infinity,
-            ease: "linear",
-          }}
+          style={{ width: particle.size, height: particle.size, left: `${particle.left}%`, bottom: '-5%' }}
+          animate={{ y: [0, -500], opacity: [0, 0.8, 0.8, 0], x: [0, Math.sin(particle.id) * 30] }}
+          transition={{ duration: particle.duration, delay: particle.delay, repeat: Infinity, ease: "linear" }}
         />
       ))}
 
-      {/* Ambient Light Effects */}
       <motion.div
         className={`absolute top-1/4 left-1/4 w-64 h-64 rounded-full ${themeStyles.accent} blur-3xl`}
-        animate={{
-          scale: [1, 1.2, 1],
-          opacity: [0.3, 0.5, 0.3],
-        }}
-        transition={{
-          duration: 4,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
+        animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
       />
       <motion.div
         className={`absolute top-1/3 right-1/4 w-48 h-48 rounded-full ${themeStyles.accent} blur-3xl`}
-        animate={{
-          scale: [1.2, 1, 1.2],
-          opacity: [0.4, 0.2, 0.4],
-        }}
-        transition={{
-          duration: 5,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
+        animate={{ scale: [1.2, 1, 1.2], opacity: [0.4, 0.2, 0.4] }}
+        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
       />
 
-      {/* Vignette Effect */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)]" />
-
-      {/* Bottom gradient for UI readability */}
       <div className="absolute bottom-0 left-0 right-0 h-[40%] bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
     </div>
   );
