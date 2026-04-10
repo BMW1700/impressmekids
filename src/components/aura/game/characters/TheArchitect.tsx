@@ -167,6 +167,25 @@ export const TheArchitect = ({ state, healthPercent, currentHp, maxHp, showDamag
         {isHit && <rect x="0" y="0" width="120" height="200" fill="rgba(255,255,255,0.35)" rx="10" />}
       </svg>
 
+      {/* Health bar */}
+      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-[85%]">
+        <div className="h-2 bg-gray-900 rounded-full overflow-hidden border border-gray-600">
+          <motion.div
+            className="h-full rounded-full"
+            style={{
+              background: healthPercent > 50 ? 'linear-gradient(90deg, #22c55e, #4ade80)' :
+                healthPercent > 25 ? 'linear-gradient(90deg, #eab308, #facc15)' :
+                'linear-gradient(90deg, #dc2626, #ef4444)',
+            }}
+            animate={{ width: `${Math.max(0, healthPercent)}%` }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+          />
+        </div>
+        {currentHp !== undefined && maxHp !== undefined && (
+          <p className="text-[8px] text-center text-gray-400 mt-0.5" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{currentHp}/{maxHp}</p>
+        )}
+      </div>
+
       {showDamageNum && showDamage && (
         <motion.div
           className="absolute -top-4 left-1/2 -translate-x-1/2 text-2xl font-black text-red-500 pointer-events-none"
