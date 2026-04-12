@@ -63,12 +63,12 @@ export const RPGMultiplayerLobby = ({
         grade_mode: gradeMode,
         enemy_type: enemyType,
         status: 'waiting',
-        game_state: null,
       })
       .select('id')
       .single();
 
     if (err) {
+      console.error('[Lobby] Failed to create room:', err);
       setError('Failed to create room. Try again.');
       setLoading(false);
       return;
@@ -78,7 +78,7 @@ export const RPGMultiplayerLobby = ({
     setRoomId(data.id);
     setView('hosting');
     setLoading(false);
-  }, [battleMode, studentId, storyPassage, storyTitle, worldNumber, gradeMode]);
+  }, [battleMode, studentId, storyPassage, storyTitle, worldNumber, gradeMode, enemyType]);
 
   // Listen for guest joining — realtime + polling + immediate check
   const transitionedRef = useRef(false);
