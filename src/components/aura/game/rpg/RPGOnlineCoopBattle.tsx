@@ -299,6 +299,8 @@ export const RPGOnlineCoopBattle = ({
       }
 
       gs.lastEvent = { type: 'turn_switch', by: gs.turn, timestamp: Date.now() };
+      // Force reader remount on turn switch
+      setReaderKey(prev => prev + 1);
     }
 
     setGameState(gs);
