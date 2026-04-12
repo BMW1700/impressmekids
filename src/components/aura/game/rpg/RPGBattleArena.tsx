@@ -2272,11 +2272,80 @@ export const RPGBattleArena = ({
     );
   }
 
-  // Route PvP and Co-op to dedicated components
-  if (battleMode === 'pvp') {
-    return <RPGPvPBattle story={story} studentId={studentId} worldNumber={worldNumber} gradeMode={gradeMode} onBack={onBack} onComplete={onComplete} />;
-  }
-  if (battleMode === 'coop') {
+  // Route PvP and Co-op through connection chooser → lobby → online/local
+  if (battleMode === 'pvp' || battleMode === 'coop') {
+    // Step 1: Connection chooser (local vs online)
+    if (showConnectionChooser) {
+      return (
+        <RPGConnectionChooser
+          battleMode={battleMode as 'pvp' | 'coop'}
+          onSelect={(mode) => {
+            setConnectionMode(mode);
+            setShowConnectionChooser(false);
+            if (mode === 'online') {
+              setShowLobby(true);
+            }
+          }}
+          onBack={onBack}
+        />
+      );
+    }
+
+    // Step 2: Online lobby (create/join room)
+    if (showLobby && connectionMode === 'online') {
+      return (
+        <RPGMultiplayerLobby
+          battleMode={battleMode as 'pvp' | 'coop'}
+          studentId={studentId}
+          storyPassage={story.passage_text}
+          storyTitle={story.title}
+          worldNumber={worldNumber}
+          gradeMode={gradeMode || 'k5'}
+          onRoomReady={(roomId, isHost) => {
+            setOnlineRoomId(roomId);
+            setIsOnlineHost(isHost);
+            setShowLobby(false);
+          }}
+          onBack={() => {
+            setShowLobby(false);
+            setShowConnectionChooser(true);
+          }}
+        />
+      );
+    }
+
+    // Step 3a: Online battle
+    if (connectionMode === 'online' && onlineRoomId) {
+      if (battleMode === 'pvp') {
+        return (
+          <RPGOnlinePvPBattle
+            story={story}
+            studentId={studentId}
+            roomId={onlineRoomId}
+            isHost={isOnlineHost}
+            worldNumber={worldNumber}
+            onBack={onBack}
+            onComplete={onComplete}
+          />
+        );
+      }
+      return (
+        <RPGOnlineCoopBattle
+          story={story}
+          studentId={studentId}
+          roomId={onlineRoomId}
+          isHost={isOnlineHost}
+          worldNumber={worldNumber}
+          onBack={onBack}
+          onComplete={onComplete}
+        />
+      );
+    }
+
+    // Step 3b: Local battle (existing components)
+    if (battleMode === 'pvp') {
+      return <RPGPvPBattle story={story} studentId={studentId} worldNumber={worldNumber} gradeMode={gradeMode} onBack={onBack} onComplete={onComplete} />;
+    }
     return <RPGCoopBattle story={story} studentId={studentId} worldNumber={worldNumber} gradeMode={gradeMode} onBack={onBack} onComplete={onComplete} />;
   }
 
