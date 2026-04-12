@@ -2236,6 +2236,31 @@ export const RPGBattleArena = ({
     );
   }
 
+  // Victory Arena reward screen (after boss victories)
+  if (showVictoryArena && pendingBattleStats) {
+    const worldNames = ['Enchanted Forest', 'Crystal Caverns', 'Shadow Realm', 'Sky Kingdom', 'Ink Depths', 'Void Nexus', 'Goblin Peaks', 'Lava Forge', 'Crystal Citadel', 'Star Haven', 'Ancient Library', 'The Vault'];
+    return (
+      <RPGVictoryArena
+        worldNumber={worldNumber}
+        worldName={worldNames[Math.min(worldNumber - 1, worldNames.length - 1)] || `World ${worldNumber}`}
+        playerName={playerCharacter?.name || 'Champion'}
+        onComplete={(bonusGold, bonusXp) => {
+          const boostedStats = {
+            ...pendingBattleStats,
+            xpEarned: pendingBattleStats.xpEarned + bonusXp,
+            goldEarned: (pendingBattleStats.goldEarned || 0) + bonusGold,
+          };
+          setShowVictoryArena(false);
+          onComplete(true, boostedStats);
+        }}
+        onSkip={() => {
+          setShowVictoryArena(false);
+          onComplete(true, pendingBattleStats);
+        }}
+      />
+    );
+  }
+
   // Route PvP and Co-op to dedicated components
   if (battleMode === 'pvp') {
     return <RPGPvPBattle story={story} studentId={studentId} worldNumber={worldNumber} gradeMode={gradeMode} onBack={onBack} onComplete={onComplete} />;
@@ -2243,6 +2268,7 @@ export const RPGBattleArena = ({
   if (battleMode === 'coop') {
     return <RPGCoopBattle story={story} studentId={studentId} worldNumber={worldNumber} gradeMode={gradeMode} onBack={onBack} onComplete={onComplete} />;
   }
+
 
   return (
     <motion.div 
