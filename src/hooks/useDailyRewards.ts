@@ -52,7 +52,7 @@ export const useDailyRewards = (studentId?: string, gradeMode?: string) => {
       const { data, error } = await query.order("updated_at", { ascending: false }).limit(1).maybeSingle();
 
       if (error) throw error;
-      return data || { login_streak: 0, longest_login_streak: 0, last_login_date: null, total_gold: 0 };
+      return data || { login_streak: 0, longest_login_streak: 0, last_login_date: null, total_gold: 0, grade_mode: gradeMode || 'k5' };
     },
     enabled: !!studentId,
   });
