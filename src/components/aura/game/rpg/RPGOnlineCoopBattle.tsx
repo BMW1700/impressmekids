@@ -430,7 +430,7 @@ export const RPGOnlineCoopBattle = ({
       animate={{ opacity: 1 }}
       className="fixed inset-0 z-50 bg-gradient-to-b from-slate-900 to-slate-950 overflow-hidden"
     >
-      <RPGBattleBackground worldNumber={worldNumber} />
+      <RPGBattleBackground worldNumber={roomWorldNumber} />
 
       <div className="absolute top-3 left-3 z-[80]">
         <Button variant="ghost" size="sm" onClick={onBack} className="text-white">
