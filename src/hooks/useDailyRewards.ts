@@ -108,7 +108,7 @@ export const useDailyRewards = (studentId?: string, gradeMode?: string) => {
       // Update campaign_progress with new streak info — scoped by gradeMode
       const upsertData = {
         student_id: studentId,
-        grade_mode: gradeMode || 'k5',
+        grade_mode: gradeMode || streakInfo?.grade_mode || 'k5',
         login_streak: currentStreak,
         longest_login_streak: longestStreak,
         last_login_date: todayStr,
