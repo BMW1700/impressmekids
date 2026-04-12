@@ -39,6 +39,10 @@ import { RPGWordNinja } from "./RPGWordNinja";
 import { RPGPvPBattle } from "./RPGPvPBattle";
 import { RPGCoopBattle } from "./RPGCoopBattle";
 import { RPGVictoryArena } from "./RPGVictoryArena";
+import { RPGConnectionChooser, ConnectionMode } from "./RPGConnectionChooser";
+import { RPGMultiplayerLobby } from "./RPGMultiplayerLobby";
+import { RPGOnlinePvPBattle } from "./RPGOnlinePvPBattle";
+import { RPGOnlineCoopBattle } from "./RPGOnlineCoopBattle";
 // NEW: Import 6 new world mini-games
 import { RPGWordEcho } from "./RPGWordEcho";
 import { RPGWindChase } from "./RPGWindChase";
@@ -443,6 +447,13 @@ export const RPGBattleArena = ({
   // Victory Arena state
   const [showVictoryArena, setShowVictoryArena] = useState(false);
   const [pendingBattleStats, setPendingBattleStats] = useState<BattleStats | null>(null);
+  
+  // Online multiplayer state
+  const [connectionMode, setConnectionMode] = useState<ConnectionMode | null>(null);
+  const [showConnectionChooser, setShowConnectionChooser] = useState(battleMode === 'pvp' || battleMode === 'coop');
+  const [showLobby, setShowLobby] = useState(false);
+  const [onlineRoomId, setOnlineRoomId] = useState<string | null>(null);
+  const [isOnlineHost, setIsOnlineHost] = useState(false);
   
   // Sync inventory from DB when playerInventory loads
   useEffect(() => {
@@ -2261,11 +2272,80 @@ export const RPGBattleArena = ({
     );
   }
 
-  // Route PvP and Co-op to dedicated components
-  if (battleMode === 'pvp') {
-    return <RPGPvPBattle story={story} studentId={studentId} worldNumber={worldNumber} gradeMode={gradeMode} onBack={onBack} onComplete={onComplete} />;
-  }
-  if (battleMode === 'coop') {
+  // Route PvP and Co-op through connection chooser → lobby → online/local
+  if (battleMode === 'pvp' || battleMode === 'coop') {
+    // Step 1: Connection chooser (local vs online)
+    if (showConnectionChooser) {
+      return (
+        <RPGConnectionChooser
+          battleMode={battleMode as 'pvp' | 'coop'}
+          onSelect={(mode) => {
+            setConnectionMode(mode);
+            setShowConnectionChooser(false);
+            if (mode === 'online') {
+              setShowLobby(true);
+            }
+          }}
+          onBack={onBack}
+        />
+      );
+    }
+
+    // Step 2: Online lobby (create/join room)
+    if (showLobby && connectionMode === 'online') {
+      return (
+        <RPGMultiplayerLobby
+          battleMode={battleMode as 'pvp' | 'coop'}
+          studentId={studentId}
+          storyPassage={story.passage_text}
+          storyTitle={story.title}
+          worldNumber={worldNumber}
+          gradeMode={gradeMode || 'k5'}
+          onRoomReady={(roomId, isHost) => {
+            setOnlineRoomId(roomId);
+            setIsOnlineHost(isHost);
+            setShowLobby(false);
+          }}
+          onBack={() => {
+            setShowLobby(false);
+            setShowConnectionChooser(true);
+          }}
+        />
+      );
+    }
+
+    // Step 3a: Online battle
+    if (connectionMode === 'online' && onlineRoomId) {
+      if (battleMode === 'pvp') {
+        return (
+          <RPGOnlinePvPBattle
+            story={story}
+            studentId={studentId}
+            roomId={onlineRoomId}
+            isHost={isOnlineHost}
+            worldNumber={worldNumber}
+            onBack={onBack}
+            onComplete={onComplete}
+          />
+        );
+      }
+      return (
+        <RPGOnlineCoopBattle
+          story={story}
+          studentId={studentId}
+          roomId={onlineRoomId}
+          isHost={isOnlineHost}
+          worldNumber={worldNumber}
+          onBack={onBack}
+          onComplete={onComplete}
+        />
+      );
+    }
+
+    // Step 3b: Local battle (existing components)
+    if (battleMode === 'pvp') {
+      return <RPGPvPBattle story={story} studentId={studentId} worldNumber={worldNumber} gradeMode={gradeMode} onBack={onBack} onComplete={onComplete} />;
+    }
     return <RPGCoopBattle story={story} studentId={studentId} worldNumber={worldNumber} gradeMode={gradeMode} onBack={onBack} onComplete={onComplete} />;
   }
 

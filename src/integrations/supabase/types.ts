@@ -3518,6 +3518,63 @@ export type Database = {
         }
         Relationships: []
       }
+      multiplayer_rooms: {
+        Row: {
+          created_at: string
+          expires_at: string
+          game_state: Json
+          grade_mode: string
+          guest_id: string | null
+          guest_name: string
+          host_id: string
+          host_name: string
+          id: string
+          mode: string
+          room_code: string
+          status: string
+          story_passage: string
+          story_title: string
+          updated_at: string
+          world_number: number
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          game_state?: Json
+          grade_mode?: string
+          guest_id?: string | null
+          guest_name?: string
+          host_id: string
+          host_name?: string
+          id?: string
+          mode?: string
+          room_code: string
+          status?: string
+          story_passage?: string
+          story_title?: string
+          updated_at?: string
+          world_number?: number
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          game_state?: Json
+          grade_mode?: string
+          guest_id?: string | null
+          guest_name?: string
+          host_id?: string
+          host_name?: string
+          id?: string
+          mode?: string
+          room_code?: string
+          status?: string
+          story_passage?: string
+          story_title?: string
+          updated_at?: string
+          world_number?: number
+        }
+        Relationships: []
+      }
       parent_access_requests: {
         Row: {
           admin_id: string | null
