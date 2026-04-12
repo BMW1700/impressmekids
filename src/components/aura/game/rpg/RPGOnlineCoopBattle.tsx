@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Star, Shield, Wifi } from "lucide-react";
+import { ArrowLeft, Star, Shield, Wifi, Repeat, ArrowRight } from "lucide-react";
 import { RPGBattleBackground } from "./RPGBattleBackground";
 import { RPGCharacter } from "./RPGCharacter";
 import { RPGCoopHUD } from "./RPGCoopHUD";
@@ -40,6 +40,8 @@ interface CoopGameState {
   enemyHp: number;
   enemyMaxHp: number;
   turn: 'host' | 'guest';
+  wordIndex: number;
+  batchStartIndex: number;
   turnWordsRead: number;
   hostWords: number;
   guestWords: number;
@@ -47,8 +49,10 @@ interface CoopGameState {
   longestStreak: number;
   currentStreak: number;
   totalDamage: number;
-  lastEvent?: { type: string; damage?: number; by: string; timestamp: number };
-  status: 'active' | 'victory' | 'defeat';
+  coopMode: 'continuous' | 'repeat';
+  repeatPhase: 1 | 2; // 1 = first reader, 2 = repeater
+  phase: 'setup' | 'playing' | 'victory' | 'defeat';
+  lastEvent?: { type: string; damage?: number; by: string; timestamp: number } | null;
 }
 
 export const RPGOnlineCoopBattle = ({
@@ -63,42 +67,93 @@ export const RPGOnlineCoopBattle = ({
   const theme = getStoredTheme();
   const enemy = theme === 'agent' ? getAgentEnemy('guard') : getEnemyForBattle('guard');
 
-  const [gameState, setGameState] = useState<CoopGameState>({
-    hostHp: 100, guestHp: 100,
-    enemyHp: enemy.maxHp, enemyMaxHp: enemy.maxHp,
-    turn: 'host', turnWordsRead: 0,
-    hostWords: 0, guestWords: 0,
-    totalCorrect: 0, longestStreak: 0, currentStreak: 0, totalDamage: 0,
-    status: 'active',
-  });
-  const [phase, setPhase] = useState<'waiting' | 'playing' | 'victory' | 'defeat'>('waiting');
-  const [message, setMessage] = useState<string | null>('Waiting for game...');
+  const [gameState, setGameState] = useState<CoopGameState | null>(null);
+  const [ready, setReady] = useState(false);
+  const [message, setMessage] = useState<string | null>('Loading...');
   const [hostName, setHostName] = useState('Player 1');
   const [guestName, setGuestName] = useState('Player 2');
-  const gameStateRef = useRef(gameState);
+  const gsRef = useRef<CoopGameState | null>(null);
+  const completedRef = useRef(false);
 
-  useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
+  useEffect(() => { gsRef.current = gameState; }, [gameState]);
 
   const storyWords = story.passage_text.split(/\s+/).filter(w => w.length > 0);
-  const isMyTurn = (isHost && gameState.turn === 'host') || (!isHost && gameState.turn === 'guest');
 
-  useEffect(() => {
-    supabase
+  const isMyTurn = gameState
+    ? (isHost && gameState.turn === 'host') || (!isHost && gameState.turn === 'guest')
+    : false;
+
+  const makeInitialState = (mode: 'continuous' | 'repeat'): CoopGameState => ({
+    hostHp: 100, guestHp: 100,
+    enemyHp: enemy.maxHp, enemyMaxHp: enemy.maxHp,
+    turn: 'host', wordIndex: 0, batchStartIndex: 0,
+    turnWordsRead: 0, hostWords: 0, guestWords: 0,
+    totalCorrect: 0, longestStreak: 0, currentStreak: 0, totalDamage: 0,
+    coopMode: mode, repeatPhase: 1,
+    phase: 'setup', lastEvent: null,
+  });
+
+  // ─── Push state to DB ───
+  const pushState = useCallback(async (newState: CoopGameState) => {
+    await supabase
       .from('multiplayer_rooms')
-      .select('game_state, host_name, guest_name')
-      .eq('id', roomId)
-      .single()
-      .then(({ data }) => {
-        if (data) {
-          const gs = data.game_state as any as CoopGameState;
-          if (gs && gs.enemyHp !== undefined) setGameState(gs);
-          if (data.host_name) setHostName(data.host_name);
-          if (data.guest_name) setGuestName(data.guest_name);
-          setPhase('playing');
-          setMessage(`🟢 ${data.host_name || 'Player 1'}'s Turn!`);
-        }
-      });
+      .update({
+        game_state: newState as any,
+        status: (newState.phase === 'victory' || newState.phase === 'defeat') ? 'completed' : 'active',
+      })
+      .eq('id', roomId);
+  }, [roomId]);
 
+  // ─── Load room + poll for guest ───
+  useEffect(() => {
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+
+    const loadRoom = async () => {
+      const { data } = await supabase
+        .from('multiplayer_rooms')
+        .select('game_state, host_name, guest_name')
+        .eq('id', roomId)
+        .single();
+
+      if (data?.host_name) setHostName(data.host_name);
+      if (data?.guest_name) setGuestName(data.guest_name);
+
+      const gs = data?.game_state as any as CoopGameState | null;
+      if (gs && gs.phase) {
+        setGameState(gs);
+        setReady(true);
+        return true;
+      }
+      return false;
+    };
+
+    const init = async () => {
+      const loaded = await loadRoom();
+      if (loaded) return;
+
+      if (isHost) {
+        // Host shows setup screen — don't push state yet
+        const initial = makeInitialState('continuous');
+        setGameState(initial);
+        setReady(true);
+      } else {
+        // Guest polls until host pushes state
+        pollInterval = setInterval(async () => {
+          const ok = await loadRoom();
+          if (ok && pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+          }
+        }, 2000);
+      }
+    };
+    init();
+
+    return () => { if (pollInterval) clearInterval(pollInterval); };
+  }, [roomId, isHost]);
+
+  // ─── Realtime subscription ───
+  useEffect(() => {
     const channel = supabase
       .channel(`coop-${roomId}`)
       .on(
@@ -107,9 +162,10 @@ export const RPGOnlineCoopBattle = ({
         (payload) => {
           const room = payload.new as any;
           const gs = room.game_state as CoopGameState;
-          if (!gs) return;
-          
+          if (!gs || !gs.phase) return;
+
           setGameState(gs);
+          if (!ready) setReady(true);
           if (room.host_name) setHostName(room.host_name);
           if (room.guest_name) setGuestName(room.guest_name);
 
@@ -122,36 +178,34 @@ export const RPGOnlineCoopBattle = ({
               setMessage(`💥 ${enemy.name} attacks for ${evt.damage}!`);
               battleSounds.fireWhoosh();
             } else if (evt.type === 'turn_switch') {
-              setMessage(`🟢 ${evt.by === 'host' ? room.host_name : room.guest_name}'s Turn!`);
+              const who = evt.by === 'host' ? room.host_name : room.guest_name;
+              setMessage(`🟢 ${who}'s Turn!`);
             }
           }
 
-          if (gs.status === 'victory') {
-            setPhase('victory');
-            battleSounds.victoryFanfare();
-          } else if (gs.status === 'defeat') {
-            setPhase('defeat');
-          }
+          if (gs.phase === 'victory') battleSounds.victoryFanfare();
         }
       )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [roomId, enemy.name]);
+  }, [roomId, enemy.name, ready]);
 
-  const pushState = useCallback(async (newState: CoopGameState) => {
-    await supabase
-      .from('multiplayer_rooms')
-      .update({ game_state: newState as any, status: newState.status === 'active' ? 'active' : 'completed' })
-      .eq('id', roomId);
-  }, [roomId]);
+  // ─── Host selects mode and starts battle ───
+  const startBattle = useCallback(async (mode: 'continuous' | 'repeat') => {
+    const gs = makeInitialState(mode);
+    gs.phase = 'playing';
+    setGameState(gs);
+    await pushState(gs);
+    setMessage(`🟢 ${hostName}'s Turn!`);
+  }, [pushState, hostName]);
 
-  const handleWordResult = useCallback((correct: boolean) => {
-    if (!isMyTurn) return;
-
-    const gs = { ...gameStateRef.current };
+  // ─── Handle word result ───
+  const handleWordResult = useCallback((correct: boolean, _spokenWord: string, _wordIndex: number) => {
+    if (!isMyTurn || !gsRef.current) return;
+    const gs = { ...gsRef.current };
     const who = isHost ? 'host' : 'guest';
-    
+
     if (who === 'host') gs.hostWords += 1;
     else gs.guestWords += 1;
 
@@ -166,54 +220,191 @@ export const RPGOnlineCoopBattle = ({
       gs.lastEvent = { type: 'attack', damage, by: who, timestamp: Date.now() };
 
       if (gs.enemyHp <= 0) {
-        gs.status = 'victory';
+        gs.phase = 'victory';
+        setGameState(gs);
+        pushState(gs);
+        return;
       }
     } else {
       gs.currentStreak = 0;
     }
 
+    gs.wordIndex += 1;
     gs.turnWordsRead += 1;
-    if (gs.turnWordsRead >= 5 && gs.status === 'active') {
+
+    // After 5 words in this turn segment
+    if (gs.turnWordsRead >= 5 && gs.phase === 'playing') {
+      // Enemy counter-attack
       const enemyDmg = 5 + Math.floor(Math.random() * 8);
       if (who === 'host') gs.hostHp = Math.max(0, gs.hostHp - enemyDmg);
       else gs.guestHp = Math.max(0, gs.guestHp - enemyDmg);
-      
       gs.lastEvent = { type: 'enemy_attack', damage: enemyDmg, by: who, timestamp: Date.now() };
 
       if (gs.hostHp <= 0 && gs.guestHp <= 0) {
-        gs.status = 'defeat';
-      } else {
+        gs.phase = 'defeat';
+        setGameState(gs);
+        pushState(gs);
+        return;
+      }
+
+      if (gs.coopMode === 'continuous') {
+        // Switch to other player, they continue from current wordIndex
         const nextTurn = who === 'host' ? 'guest' : 'host';
         const nextHp = nextTurn === 'host' ? gs.hostHp : gs.guestHp;
         if (nextHp > 0) {
           gs.turn = nextTurn;
         }
         gs.turnWordsRead = 0;
+      } else {
+        // Repeat mode
+        if (gs.repeatPhase === 1) {
+          // First reader done — second reader repeats same batch
+          gs.repeatPhase = 2;
+          gs.wordIndex = gs.batchStartIndex; // reset to same batch start
+          const nextTurn = who === 'host' ? 'guest' : 'host';
+          const nextHp = nextTurn === 'host' ? gs.hostHp : gs.guestHp;
+          if (nextHp > 0) {
+            gs.turn = nextTurn;
+          }
+          gs.turnWordsRead = 0;
+        } else {
+          // Second reader done — advance batch
+          gs.repeatPhase = 1;
+          gs.batchStartIndex = gs.batchStartIndex + 5;
+          gs.wordIndex = gs.batchStartIndex;
+          const nextTurn = who === 'host' ? 'guest' : 'host';
+          const nextHp = nextTurn === 'host' ? gs.hostHp : gs.guestHp;
+          if (nextHp > 0) {
+            gs.turn = nextTurn;
+          }
+          gs.turnWordsRead = 0;
+        }
       }
+
+      gs.lastEvent = { type: 'turn_switch', by: gs.turn, timestamp: Date.now() };
     }
 
     setGameState(gs);
     pushState(gs);
   }, [isMyTurn, isHost, pushState]);
 
+  // ─── Handle end state ───
   useEffect(() => {
-    if (phase === 'victory' || phase === 'defeat') {
-      const isWin = phase === 'victory';
-      setTimeout(() => {
-        onComplete(isWin, {
-          wordsRead: gameState.hostWords + gameState.guestWords,
-          correctWords: gameState.totalCorrect,
-          longestStreak: gameState.longestStreak,
-          damageDealt: gameState.totalDamage,
-          xpEarned: Math.floor(gameState.totalCorrect * (isWin ? 5 : 2)),
-          goldEarned: isWin ? Math.floor(gameState.totalCorrect * 2) : 0,
-        });
-      }, 3000);
+    if (!gameState || completedRef.current) return;
+    if (gameState.phase !== 'victory' && gameState.phase !== 'defeat') return;
+    completedRef.current = true;
+    const isWin = gameState.phase === 'victory';
+    setTimeout(() => {
+      onComplete(isWin, {
+        wordsRead: gameState.hostWords + gameState.guestWords,
+        correctWords: gameState.totalCorrect,
+        longestStreak: gameState.longestStreak,
+        damageDealt: gameState.totalDamage,
+        xpEarned: Math.floor(gameState.totalCorrect * (isWin ? 5 : 2)),
+        goldEarned: isWin ? Math.floor(gameState.totalCorrect * 2) : 0,
+      });
+    }, 3000);
+  }, [gameState?.phase]);
+
+  // ─── Compute words to show ───
+  const getWordsForReader = (): string[] => {
+    if (!gameState) return [];
+    if (gameState.coopMode === 'continuous') {
+      return storyWords.slice(gameState.wordIndex);
     }
-  }, [phase]);
+    // Repeat mode: show 5 words from batchStartIndex
+    return storyWords.slice(gameState.batchStartIndex, gameState.batchStartIndex + 5);
+  };
 
-  const activePlayer: 1 | 2 = gameState.turn === 'host' ? 1 : 2;
+  const activePlayer: 1 | 2 = gameState?.turn === 'host' ? 1 : 2;
 
+  // ─── SETUP SCREEN (host picks mode) ───
+  if (ready && gameState && gameState.phase === 'setup' && isHost) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="fixed inset-0 z-50 bg-gradient-to-b from-slate-900 to-slate-950 flex items-center justify-center"
+      >
+        <div className="text-center max-w-md mx-auto p-6">
+          <h2 className="text-3xl font-black text-white mb-2">Co-Op Battle</h2>
+          <p className="text-slate-400 mb-6">Choose how you'll take turns reading:</p>
+
+          <div className="space-y-4">
+            <button
+              onClick={() => startBattle('continuous')}
+              className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white rounded-xl p-4 text-left transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <ArrowRight className="h-8 w-8 flex-shrink-0" />
+                <div>
+                  <p className="font-bold text-lg">Continuous Mode</p>
+                  <p className="text-sm text-blue-100 opacity-80">
+                    Player 1 reads words 1-5, then Player 2 reads words 6-10, and so on.
+                  </p>
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => startBattle('repeat')}
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white rounded-xl p-4 text-left transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <Repeat className="h-8 w-8 flex-shrink-0" />
+                <div>
+                  <p className="font-bold text-lg">Repeat Mode</p>
+                  <p className="text-sm text-purple-100 opacity-80">
+                    Player 1 reads 5 words, then Player 2 repeats the same 5 words before moving on.
+                  </p>
+                </div>
+              </div>
+            </button>
+          </div>
+
+          <Button variant="ghost" onClick={onBack} className="text-slate-500 mt-6">
+            <ArrowLeft className="h-4 w-4 mr-1" /> Back
+          </Button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // ─── SETUP SCREEN (guest waits) ───
+  if (ready && gameState && gameState.phase === 'setup' && !isHost) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="fixed inset-0 z-50 bg-gradient-to-b from-slate-900 to-slate-950 flex items-center justify-center"
+      >
+        <div className="text-center">
+          <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1.5 }}>
+            <p className="text-white text-xl font-bold">⏳ Waiting for host to select mode...</p>
+          </motion.div>
+          <Button variant="ghost" onClick={onBack} className="text-slate-500 mt-4">
+            <ArrowLeft className="h-4 w-4 mr-1" /> Back
+          </Button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // ─── LOADING ───
+  if (!ready || !gameState) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="fixed inset-0 z-50 bg-gradient-to-b from-slate-900 to-slate-950 flex items-center justify-center"
+      >
+        <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1 }}
+          className="text-white text-xl font-bold">Loading battle...</motion.div>
+      </motion.div>
+    );
+  }
+
+  // ─── MAIN BATTLE RENDER ───
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -228,22 +419,25 @@ export const RPGOnlineCoopBattle = ({
         </Button>
       </div>
 
-      <div className="absolute top-3 right-3 z-[80] flex items-center gap-1 text-blue-400 text-xs">
+      <div className="absolute top-3 right-3 z-[80] flex items-center gap-2 text-blue-400 text-xs">
         <Wifi className="h-3 w-3" /> ONLINE
+        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+          gameState.coopMode === 'repeat' ? 'bg-purple-500/30 text-purple-300' : 'bg-blue-500/30 text-blue-300'
+        }`}>
+          {gameState.coopMode === 'repeat' ? '🔁 REPEAT' : '➡️ CONTINUOUS'}
+        </span>
       </div>
 
-      {phase !== 'waiting' && (
-        <RPGCoopHUD
-          player1Hp={gameState.hostHp} player1MaxHp={100} player1Name={`${hostName}${isHost ? ' (You)' : ''}`}
-          player2Hp={gameState.guestHp} player2MaxHp={100} player2Name={`${guestName}${!isHost ? ' (You)' : ''}`}
-          activePlayer={activePlayer}
-          player1Words={gameState.hostWords} player2Words={gameState.guestWords}
-          enemyHp={gameState.enemyHp} enemyMaxHp={gameState.enemyMaxHp} enemyName={enemy.name}
-        />
-      )}
+      <RPGCoopHUD
+        player1Hp={gameState.hostHp} player1MaxHp={100} player1Name={`${hostName}${isHost ? ' (You)' : ''}`}
+        player2Hp={gameState.guestHp} player2MaxHp={100} player2Name={`${guestName}${!isHost ? ' (You)' : ''}`}
+        activePlayer={activePlayer}
+        player1Words={gameState.hostWords} player2Words={gameState.guestWords}
+        enemyHp={gameState.enemyHp} enemyMaxHp={gameState.enemyMaxHp} enemyName={enemy.name}
+      />
 
       <AnimatePresence>
-        {message && phase === 'playing' && (
+        {message && gameState.phase === 'playing' && (
           <motion.div key={message} initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="absolute top-36 left-1/2 -translate-x-1/2 z-[70] bg-black/80 px-6 py-3 rounded-xl border border-white/20">
             <p className="text-white font-bold">{message}</p>
@@ -251,30 +445,36 @@ export const RPGOnlineCoopBattle = ({
         )}
       </AnimatePresence>
 
+      {/* Characters */}
       <div className="absolute bottom-40 left-[10%] z-[50]">
-        <RPGCharacter character={heroKnight} currentHp={gameState.hostHp} isAttacking={gameState.turn === 'host' && phase === 'playing'} />
+        <RPGCharacter character={heroKnight} currentHp={gameState.hostHp} isAttacking={gameState.turn === 'host' && gameState.phase === 'playing'} />
       </div>
       <div className="absolute bottom-40 left-[30%] z-[50]">
-        <RPGCharacter character={allyWizard} currentHp={gameState.guestHp} isAttacking={gameState.turn === 'guest' && phase === 'playing'} />
+        <RPGCharacter character={allyWizard} currentHp={gameState.guestHp} isAttacking={gameState.turn === 'guest' && gameState.phase === 'playing'} />
       </div>
       <div className="absolute bottom-40 right-[15%] z-[50]">
         <RPGCharacter character={enemy} currentHp={gameState.enemyHp} isEnemy />
       </div>
 
-      {phase === 'playing' && isMyTurn && (
+      {/* Active player reads words */}
+      {gameState.phase === 'playing' && isMyTurn && (
         <div className="absolute bottom-0 left-0 right-0 z-[70] p-4">
           <div className="text-center mb-2">
             <span className={`text-sm font-bold px-3 py-1 rounded-full ${
               isHost ? 'bg-blue-500/30 text-blue-300' : 'bg-purple-500/30 text-purple-300'
             }`}>
               Your Turn ({5 - gameState.turnWordsRead} words left)
+              {gameState.coopMode === 'repeat' && gameState.repeatPhase === 2 && (
+                <span className="ml-2 text-yellow-300">🔁 Repeating</span>
+              )}
             </span>
           </div>
-          <RPGWordReader words={storyWords} onResult={handleWordResult} />
+          <RPGWordReader words={getWordsForReader()} onResult={handleWordResult} />
         </div>
       )}
 
-      {phase === 'playing' && !isMyTurn && (
+      {/* Waiting for teammate */}
+      {gameState.phase === 'playing' && !isMyTurn && (
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-[70]">
           <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1.5 }}
             className="bg-slate-900/80 border border-slate-600 rounded-xl px-6 py-4 text-center">
@@ -283,7 +483,8 @@ export const RPGOnlineCoopBattle = ({
         </div>
       )}
 
-      {phase === 'victory' && (
+      {/* Victory */}
+      {gameState.phase === 'victory' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 z-[90] flex items-center justify-center bg-black/80">
           <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} transition={{ type: "spring" }} className="text-center">
             <Star className="h-20 w-20 text-yellow-400 mx-auto mb-4" />
@@ -293,7 +494,8 @@ export const RPGOnlineCoopBattle = ({
         </motion.div>
       )}
 
-      {phase === 'defeat' && (
+      {/* Defeat */}
+      {gameState.phase === 'defeat' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 z-[90] flex items-center justify-center bg-black/80">
           <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} className="text-center">
             <Shield className="h-20 w-20 text-red-400 mx-auto mb-4" />
