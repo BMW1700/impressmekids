@@ -440,6 +440,10 @@ export const RPGBattleArena = ({
   const [bossGateTriggered, setBossGateTriggered] = useState(false);
   const [wordMasteryBonus, setWordMasteryBonus] = useState<{ word: string; multiplier: number } | null>(null);
   
+  // Victory Arena state
+  const [showVictoryArena, setShowVictoryArena] = useState(false);
+  const [pendingBattleStats, setPendingBattleStats] = useState<BattleStats | null>(null);
+  
   // Sync inventory from DB when playerInventory loads
   useEffect(() => {
     if (!playerInventory.isLoading) {
