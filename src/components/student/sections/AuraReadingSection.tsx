@@ -300,6 +300,7 @@ export const AuraReadingSection = () => {
           longestStreak: stats.longestStreak,
           storyTitle: rpgStory?.title || 'Unknown',
           worldNumber: selectedWorld.id,
+          goldEarned: stats.goldEarned || 0,
         });
       }
       
