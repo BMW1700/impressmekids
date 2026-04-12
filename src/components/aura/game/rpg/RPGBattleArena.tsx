@@ -35,6 +35,7 @@ import { RPGBalloonBattle } from "./RPGBalloonBattle";
 import { RPGGoblinHorde } from "./RPGGoblinHorde";
 // NEW: Import Fireball Defense mode
 import { RPGFireballDefense } from "./RPGFireballDefense";
+import { RPGWordNinja } from "./RPGWordNinja";
 // NEW: Import 6 new world mini-games
 import { RPGWordEcho } from "./RPGWordEcho";
 import { RPGWindChase } from "./RPGWindChase";
@@ -2525,6 +2526,22 @@ export const RPGBattleArena = ({
           <RPGWebTrap
             words={barrageWords}
             onComplete={handleWebTrapComplete}
+            onDamage={handleMiniGameDamage}
+          />
+        )}
+        {phase === 'word_ninja' && (
+          <RPGWordNinja
+            words={barrageWords}
+            onComplete={(completed, failed) => {
+              const bonusDamage = completed * 3;
+              const playerDamage = failed * 3;
+              if (bonusDamage > 0) {
+                setEnemyHp(prev => Math.max(0, prev - bonusDamage));
+                setTotalDamage(prev => prev + bonusDamage);
+              }
+              if (playerDamage > 0) handleMiniGameDamage(playerDamage);
+              returnToReading();
+            }}
             onDamage={handleMiniGameDamage}
           />
         )}
