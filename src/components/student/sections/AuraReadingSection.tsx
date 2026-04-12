@@ -277,7 +277,7 @@ export const AuraReadingSection = () => {
 
   // RPG Battle Mode - Battle View
   if (isRpgMode && rpgView === 'battle' && rpgStory && user?.id) {
-    const handleBattleComplete = async (victory: boolean, stats: { wordsRead: number; correctWords: number; longestStreak: number; damageDealt: number; xpEarned: number }) => {
+    const handleBattleComplete = async (victory: boolean, stats: { wordsRead: number; correctWords: number; longestStreak: number; damageDealt: number; xpEarned: number; goldEarned?: number }) => {
       const accuracy = stats.wordsRead > 0 ? Math.round((stats.correctWords / stats.wordsRead) * 100) : 0;
       
       setVictoryStats({

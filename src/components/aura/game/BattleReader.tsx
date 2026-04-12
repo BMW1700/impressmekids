@@ -333,6 +333,7 @@ export const BattleReader = ({
           longestStreak: finalState.longestStreak,
           storyTitle: story.title,
           worldNumber,
+          goldEarned: finalState.goldEarned || 0,
         });
       } catch (error) {
         console.error('Failed to complete battle:', error);
