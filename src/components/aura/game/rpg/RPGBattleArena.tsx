@@ -38,6 +38,7 @@ import { RPGFireballDefense } from "./RPGFireballDefense";
 import { RPGWordNinja } from "./RPGWordNinja";
 import { RPGPvPBattle } from "./RPGPvPBattle";
 import { RPGCoopBattle } from "./RPGCoopBattle";
+import { RPGVictoryArena } from "./RPGVictoryArena";
 // NEW: Import 6 new world mini-games
 import { RPGWordEcho } from "./RPGWordEcho";
 import { RPGWindChase } from "./RPGWindChase";
