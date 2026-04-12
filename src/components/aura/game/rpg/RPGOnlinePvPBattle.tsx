@@ -115,9 +115,11 @@ export const RPGOnlinePvPBattle = ({
       .eq('id', roomId);
   }, [roomId]);
 
-  // ─── Host initializes game_state on mount ───
+  // ─── Host initializes game_state on mount; guest polls until ready ───
   useEffect(() => {
-    const init = async () => {
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+
+    const loadRoom = async () => {
       const { data } = await supabase
         .from('multiplayer_rooms')
         .select('game_state, host_name, guest_name')
@@ -130,21 +132,41 @@ export const RPGOnlinePvPBattle = ({
       const existing = data?.game_state as any as OnlinePvPGameState | null;
 
       if (existing && existing.phase) {
-        // State already exists — load it
         setGs(existing);
         setReady(true);
         updateMessage(existing, data?.host_name || 'Student', data?.guest_name || 'Parent');
-      } else if (isHost) {
+        return true; // loaded
+      }
+      return false; // not ready yet
+    };
+
+    const init = async () => {
+      const loaded = await loadRoom();
+      if (loaded) return;
+
+      if (isHost) {
         // Host writes initial state
         const initial = { ...INITIAL_STATE };
         await pushState(initial);
         setGs(initial);
         setReady(true);
         setMessage("🟢 Your turn! Read words to attack!");
+      } else {
+        // Guest: poll every 2s until game_state appears
+        pollInterval = setInterval(async () => {
+          const ok = await loadRoom();
+          if (ok && pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+          }
+        }, 2000);
       }
-      // Guest waits for realtime to deliver the initial state
     };
     init();
+
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+    };
   }, [roomId, isHost, pushState]);
 
   const updateMessage = (state: OnlinePvPGameState, hName: string, gName: string) => {
