@@ -1,55 +1,74 @@
 
-Goal: make the host/student leave the waiting screen immediately when the second player joins, so both devices enter the online match together.
 
-What I found
-- The room join is reaching the backend: the latest room (`T8ZUAJ`) is `active` and has both `host_id` and `guest_id`, so the parent join is being saved correctly.
-- That means the bug is in the host-side transition logic, not the join itself.
-- Right now the student only exits the lobby if the lobby component catches a realtime `UPDATE` event or the 3-second poll sees it while that component is still mounted.
-- This is fragile because the host transition depends entirely on one component-local listener and timing. If that listener misses the update or the component lifecycle/state gets out of sync, the student stays stranded in the waiting UI.
+## Brutal Audit: Online PvP Battle — What's Broken
 
-Likely root cause
-- `RPGMultiplayerLobby.tsx` is acting as the only source of truth for “room is ready”.
-- `RPGBattleArena.tsx` only proceeds when `onRoomReady(...)` fires from that lobby.
-- Since the room row is definitely becoming `active`, the safer design is to make the parent route watch the room readiness too, not just the lobby view.
+### Critical Issues Found
 
-Plan
-1. Harden the lobby ready detection
-- Update `RPGMultiplayerLobby.tsx` so the host checks room readiness immediately after subscribing, not only on future updates.
-- Add a guarded `transitionToRoom()` helper so `onRoomReady` can only fire once.
-- Poll more defensively and include error handling/logging around the readiness fetch.
+**1. NO STORY WORDS VISIBLE — RPGWordReader signature mismatch**
+The `RPGOnlinePvPBattle` passes `onResult: (correct: boolean)` but `RPGWordReader` expects `onResult: (correct: boolean, spokenWord: string, wordIndex: number, responseTimeMs?: number)`. The component is calling `handleWordResult` with the wrong signature, meaning the word reader may mount but the callback shape is wrong. More critically, the online PvP battle never tracks a `wordIndex` — it has no concept of which word the student is on, so the word reader has no state progression.
 
-2. Move room readiness to a more reliable parent-level source
-- In `RPGBattleArena.tsx`, add a small room-status watcher for the online flow once a room has been created/selected.
-- If the room becomes `active` with both players present, force `showLobby` off and enter the online battle even if the lobby listener missed the event.
-- This makes the battle arena, not the transient lobby component, the final authority for progressing into the match.
+**2. Phase starts as 'waiting', initial load sets 'playing' but game_state may be null**
+On line 91-99, the initial DB load reads `game_state`, but when the host creates the room the `game_state` column is likely `null`. The code does `gs.turn === 'host'` on a potentially null `gs`, which would crash. The phase stays stuck at 'waiting' with the message "Waiting for game..." and no word reader renders.
 
-3. Tighten the ready condition
-- Use explicit checks for:
-  - `status = 'active'`
-  - `guest_id IS NOT NULL`
-  - `host_id IS NOT NULL`
-- Pass the room code through state consistently so the host path and guest path both resolve the same room cleanly.
+**3. Host must initialize game_state on room creation**
+The online PvP never pushes an initial `game_state` to the DB. The host creates the room (in the lobby), but `RPGOnlinePvPBattle` expects `game_state` to already exist. Nobody writes it first, so both players load into a null state.
 
-4. Verify the online battle mount path
-- Confirm `RPGOnlinePvPBattle.tsx` and `RPGOnlineCoopBattle.tsx` can safely mount as soon as the room is active and don’t depend on extra lobby-only state.
-- If needed, make their initial load tolerate a just-activated room without showing a stuck “Waiting for game...” state.
+**4. Parent abilities don't work — no mini-games, no reading phase**
+The local `RPGPvPBattle` has full `parent_reading` phase (show word, buttons for correct/incorrect), `mini_game` phase (word barrage, fireball defense). The online version has NONE of this. Parent just clicks an ability card and damage is applied instantly — no reading validation, no mini-games. The `requiresReading` flag is completely ignored.
 
-5. End-to-end validation after implementation
-- Test host + guest in two sessions:
-  - student creates room
-  - parent joins by code
-  - both screens leave lobby immediately
-  - both arrive in the same match
-- Repeat for both PvP and Co-op since they share the room infrastructure.
+**5. No turn-based word progression**
+Local PvP tracks `wordIndex` and progresses through the story sequentially. Online PvP splits story into `storyWords` but never tracks which word the student is on — the `RPGWordReader` gets the full array but the battle has no index state.
 
-Files to update
-- `src/components/aura/game/rpg/RPGMultiplayerLobby.tsx`
-- `src/components/aura/game/rpg/RPGBattleArena.tsx`
-- Possibly small defensive tweaks in:
-  - `src/components/aura/game/rpg/RPGOnlinePvPBattle.tsx`
-  - `src/components/aura/game/rpg/RPGOnlineCoopBattle.tsx`
+**6. Online PvP is a completely different (broken) implementation from Local PvP**
+Local PvP (`RPGPvPBattle.tsx`) is 442 lines of working battle logic with setup screen, turn management, cooldowns, mini-games, parent reading validation, and proper word progression. Online PvP (`RPGOnlinePvPBattle.tsx`) is a 327-line skeleton that shares almost none of this logic.
 
-Technical note
-- The database row is already correct, so I do not currently see this as a backend policy problem.
-- I do not expect a schema change to be required for this fix.
-- This looks like a frontend state-sync / listener-reliability issue, and the best fix is to stop relying on a single lobby-local callback as the only transition trigger.
+### Fix Plan
+
+**Goal**: Make Online PvP functionally identical to Local PvP, but with cross-device sync via the room's `game_state` column.
+
+#### Step 1: Initialize game_state when battle mounts (host only)
+- When `isHost && phase === 'waiting'`, push a proper initial `game_state` to the DB with all fields populated
+- Both players then load from this initial state and transition to 'playing'
+
+#### Step 2: Fix RPGWordReader integration
+- Add `wordIndex` to `GameState` so both players track story progression
+- Pass the correct `onResult(correct, spokenWord, wordIndex)` signature
+- Advance `wordIndex` on each word read, synced via DB
+
+#### Step 3: Port parent abilities from Local PvP
+- Add `parent_reading` phase to online PvP — when parent picks a `requiresReading` ability, sync this to DB so both devices see the reading challenge
+- Add `mini_game` phase — when parent picks a minigame ability, both devices show it
+- Track cooldowns in `game_state` so they sync across devices
+
+#### Step 4: Add setup/names screen
+- Use `host_name` and `guest_name` from the room row (already stored during lobby)
+- Skip the local name-input setup screen since names come from lobby
+
+#### Step 5: Match the full battle flow
+- Turn switching after every 5 correct words (kid → parent)
+- Parent turn: show ability cards with cooldowns
+- Parent reading: show word + correct/incorrect buttons (parent device only)
+- Mini-games: word barrage and fireball defense (renders on both devices)
+- Victory/defeat screens with full stats
+
+### Files to modify
+- `src/components/aura/game/rpg/RPGOnlinePvPBattle.tsx` — full rewrite to mirror Local PvP with DB sync
+- No schema changes needed — `game_state` JSONB column already supports arbitrary state
+
+### Technical approach
+The `game_state` JSON will be expanded to include:
+```
+{
+  hostHp, guestHp, turn, wordIndex, phase,
+  hostCorrect, guestCorrect, hostStreak, guestStreak,
+  longestStreak, totalDamage, wordsRead, status,
+  cooldowns: Record<string, number>,
+  pendingAbility?: { id, name, damage, requiresReading, ... },
+  pendingReadWord?: string,
+  activeMiniGame?: string,
+  lastEvent?: { type, damage, by, timestamp }
+}
+```
+
+Each player pushes state changes only during their turn. The realtime subscription + polling ensures both devices stay in sync.
+
