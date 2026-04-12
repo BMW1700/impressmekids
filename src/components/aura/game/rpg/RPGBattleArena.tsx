@@ -611,6 +611,7 @@ export const RPGBattleArena = ({
       'crystal_prison': `❄️ CRYSTAL PRISON! Break the ice! ❄️`,
       'lightning_storm': `⚡ LIGHTNING STORM! Speak FAST! ⚡`,
       'void_pull': `🕳️ VOID PULL! Save words from the void! 🕳️`,
+      'word_ninja': `🗡️ WORD NINJA! Speak & Slice! 🗡️`,
     };
     
     setEnemyAbilityMessage(announcements[gameType] || `${enemy.name} attacks!`);
@@ -647,6 +648,7 @@ export const RPGBattleArena = ({
         'crystal_prison': 'crystal_prison',
         'lightning_storm': 'lightning_storm',
         'void_pull': 'void_pull',
+        'word_ninja': 'word_ninja',
       };
       setPhase(phaseMap[gameType]);
     }, 1000);

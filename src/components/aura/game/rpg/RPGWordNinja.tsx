@@ -113,14 +113,15 @@ export const RPGWordNinja = ({ words, onComplete, onDamage }: RPGWordNinjaProps)
       });
     };
 
-    speechManager.startListening({
+    speechManager.start({
+      owner: 'word_ninja',
       continuous: true,
       interimResults: true,
       onResult: handleSpeech,
       onError: () => {},
     });
 
-    return () => { speechManager.stopListening(); };
+    return () => { speechManager.stop('word_ninja'); };
   }, []);
 
   // Spawn words periodically
@@ -245,7 +246,7 @@ export const RPGWordNinja = ({ words, onComplete, onDamage }: RPGWordNinjaProps)
   useEffect(() => {
     if (gameOver && !completionTriggeredRef.current) {
       completionTriggeredRef.current = true;
-      speechManager.stopListening();
+      speechManager.stop('word_ninja');
       setTimeout(() => {
         onCompleteRef.current(slicedCountRef.current, missedCountRef.current);
       }, 1500);
