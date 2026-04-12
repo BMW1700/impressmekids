@@ -1,11 +1,34 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
-import { speechManager } from "@/lib/speechRecognitionManager";
 import { getStoredTheme } from "@/lib/gameTheme";
+import { isHomophone } from "@/lib/homophones";
 
 const battleSounds = new SoundEffects();
 const isAgent = () => getStoredTheme() === 'agent';
+
+// Levenshtein edit distance
+const editDistance = (a: string, b: string): number => {
+  const m = a.length, n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j-1], dp[i-1][j], dp[i][j-1]);
+  return dp[m][n];
+};
+
+const checkWordMatch = (spoken: string, target: string): boolean => {
+  const s = spoken.toLowerCase().replace(/[^a-z]/g, '');
+  const t = target.toLowerCase().replace(/[^a-z]/g, '');
+  if (!s || !t) return false;
+  if (s === t) return true;
+  if (isHomophone(s, t)) return true;
+  const maxDist = t.length <= 3 ? 1 : 2;
+  if (editDistance(s, t) <= maxDist) return true;
+  return false;
+};
 
 interface Fireball {
   id: number;
@@ -40,15 +63,17 @@ export const RPGFireballDefense = ({
   const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
   const animationRef = useRef<number>();
   const recognitionRef = useRef<any>(null);
+  const completionTriggeredRef = useRef(false);
+  const gameActiveRef = useRef(true);
 
   // Initialize fireballs from words
   useEffect(() => {
     const initialFireballs: Fireball[] = words.slice(0, 8).map((word, index) => ({
       id: index,
       word,
-      x: -10 - (index * 15), // Start off screen left, staggered
-      y: 20 + Math.random() * 60, // Random vertical position
-      speed: 0.3 + Math.random() * 0.2, // Variable speed
+      x: -10 - (index * 15),
+      y: 20 + Math.random() * 60,
+      speed: 0.08 + Math.random() * 0.06, // Much slower so players can actually speak
       size: word.length > 6 ? 'large' : word.length > 3 ? 'medium' : 'small',
       isDestroyed: false,
       isSelected: false,
@@ -71,7 +96,6 @@ export const RPGFireballDefense = ({
 
           const newX = fireball.x + fireball.speed;
 
-          // Fireball reached player (right side)
           if (newX >= 90) {
             hitThisFrame++;
             const damage = fireball.size === 'large' ? 15 : fireball.size === 'medium' ? 10 : 5;
@@ -82,24 +106,25 @@ export const RPGFireballDefense = ({
           return { ...fireball, x: newX };
         });
 
-        // Apply damage and track hits
         if (hitThisFrame > 0) {
           setHit(p => p + hitThisFrame);
           setTotalDamage(p => p + damageThisFrame);
           if (onDamage) onDamage(damageThisFrame);
-          battleSounds.incorrectWord(); // Use existing sound for damage
+          battleSounds.incorrectWord();
         }
 
-        // Check if game is over (all fireballs destroyed or hit)
         const allDone = updated.every(f => f.isDestroyed);
         if (allDone) {
           setGameActive(false);
+          gameActiveRef.current = false;
         }
 
         return updated;
       });
 
-      animationRef.current = requestAnimationFrame(animate);
+      if (gameActiveRef.current) {
+        animationRef.current = requestAnimationFrame(animate);
+      }
     };
 
     animationRef.current = requestAnimationFrame(animate);
@@ -108,19 +133,32 @@ export const RPGFireballDefense = ({
     };
   }, [gameActive, onDamage]);
 
+  // Force-stop recognition when game ends
+  useEffect(() => {
+    if (!gameActive) {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch {}
+        recognitionRef.current = null;
+      }
+      setIsListening(false);
+      setSelectedFireball(null);
+    }
+  }, [gameActive]);
+
   // Game over - call onComplete
   useEffect(() => {
-    if (!gameActive && fireballs.length > 0) {
+    if (!gameActive && fireballs.length > 0 && !completionTriggeredRef.current) {
+      completionTriggeredRef.current = true;
       const timer = setTimeout(() => {
         onComplete(blocked, hit, totalDamage);
-      }, 1000);
+      }, 500);
       return () => clearTimeout(timer);
     }
   }, [gameActive, blocked, hit, totalDamage, onComplete, fireballs.length]);
 
   // Select a fireball to destroy
   const handleSelectFireball = useCallback((fireball: Fireball) => {
-    if (fireball.isDestroyed || selectedFireball) return;
+    if (fireball.isDestroyed || selectedFireball || !gameActiveRef.current) return;
     
     setSelectedFireball(fireball);
     setFireballs(prev => prev.map(f => ({
@@ -128,7 +166,6 @@ export const RPGFireballDefense = ({
       isSelected: f.id === fireball.id,
     })));
     
-    // Start speech recognition
     startListening(fireball.word);
   }, [selectedFireball]);
 
@@ -143,40 +180,56 @@ export const RPGFireballDefense = ({
     }
 
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    recognitionRef.current = new SpeechRecognition();
-    recognitionRef.current.continuous = false;
-    recognitionRef.current.interimResults = true;
-    recognitionRef.current.lang = 'en-US';
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    recognitionRef.current = recognition;
 
-    recognitionRef.current.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript.toLowerCase().trim();
-      setSpokenWord(transcript);
+    let matched = false;
 
-      if (event.results[0].isFinal) {
-        const isCorrect = transcript === targetWord.toLowerCase() || 
-                          transcript.includes(targetWord.toLowerCase());
-        
-        if (isCorrect) {
+    recognition.onresult = (event: any) => {
+      if (matched || !gameActiveRef.current) return;
+      
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript.toLowerCase().trim();
+        setSpokenWord(transcript);
+
+        // Check each spoken word against target using lenient matching
+        const spokenWords = transcript.split(/\s+/);
+        for (const word of spokenWords) {
+          if (checkWordMatch(word, targetWord)) {
+            matched = true;
+            destroyFireball();
+            return;
+          }
+        }
+
+        // Also check full transcript
+        if (checkWordMatch(transcript.replace(/\s+/g, ''), targetWord)) {
+          matched = true;
           destroyFireball();
-        } else {
-          setFeedback('incorrect');
-          setTimeout(() => {
-            setFeedback(null);
-            cancelSelection();
-          }, 500);
+          return;
         }
       }
     };
 
-    recognitionRef.current.onerror = () => {
-      cancelSelection();
+    recognition.onerror = () => {
+      if (!matched) cancelSelection();
     };
 
-    recognitionRef.current.onend = () => {
+    recognition.onend = () => {
       setIsListening(false);
+      if (!matched && gameActiveRef.current) {
+        setFeedback('incorrect');
+        setTimeout(() => {
+          setFeedback(null);
+          cancelSelection();
+        }, 400);
+      }
     };
 
-    recognitionRef.current.start();
+    recognition.start();
   }, []);
 
   // Destroy the selected fireball
@@ -184,7 +237,7 @@ export const RPGFireballDefense = ({
     if (!selectedFireball) return;
 
     setFeedback('correct');
-    battleSounds.correctWord(); // Use existing sound for hit
+    battleSounds.correctWord();
     setBlocked(p => p + 1);
 
     setFireballs(prev => prev.map(f => 
@@ -196,7 +249,7 @@ export const RPGFireballDefense = ({
       setFeedback(null);
       setSpokenWord('');
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        try { recognitionRef.current.stop(); } catch {}
       }
     }, 300);
   }, [selectedFireball]);
@@ -208,14 +261,15 @@ export const RPGFireballDefense = ({
     setSpokenWord('');
     setIsListening(false);
     if (recognitionRef.current) {
-      recognitionRef.current.stop();
+      try { recognitionRef.current.stop(); } catch {}
     }
   }, []);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (recognitionRef.current) recognitionRef.current.stop();
+      gameActiveRef.current = false;
+      if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch {} }
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
   }, []);
@@ -239,30 +293,6 @@ export const RPGFireballDefense = ({
         ? 'bg-gradient-to-r from-slate-950 via-gray-900 to-slate-950'
         : 'bg-gradient-to-r from-orange-950 via-red-900 to-yellow-900'}`}
     >
-      {/* Particles background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(30)].map((_, i) => (
-          <motion.div
-            key={i}
-            className={`absolute w-2 h-2 rounded-full opacity-60 ${agent ? 'bg-cyan-500' : 'bg-orange-500'}`}
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-            }}
-            animate={{
-              y: [-10, -50],
-              opacity: [0.6, 0],
-              scale: [1, 0.5],
-            }}
-            transition={{
-              duration: 1 + Math.random() * 2,
-              repeat: Infinity,
-              delay: Math.random() * 2,
-            }}
-          />
-        ))}
-      </div>
-
       {/* Header */}
       <div className="absolute top-4 left-0 right-0 text-center z-10">
         <motion.div
@@ -318,7 +348,7 @@ export const RPGFireballDefense = ({
         </motion.div>
       </div>
 
-      {/* Fireballs */}
+      {/* Fireballs / Missiles */}
       <AnimatePresence>
         {fireballs.map(fireball => !fireball.isDestroyed && (
           <motion.button
@@ -334,23 +364,24 @@ export const RPGFireballDefense = ({
               transition: { duration: 0.15 }
             }}
             onClick={() => handleSelectFireball(fireball)}
-            className={`absolute ${getFireballSize(fireball.size)} rounded-full cursor-pointer 
+            className={`absolute ${getFireballSize(fireball.size)} cursor-pointer z-20
               ${fireball.isSelected ? 'ring-4 ring-yellow-400' : ''}
               ${agent
-                ? 'bg-gradient-to-br from-gray-400 via-slate-500 to-gray-700'
-                : 'bg-gradient-to-br from-yellow-500 via-orange-600 to-red-700'}
+                ? 'bg-gradient-to-r from-slate-400 via-cyan-500 to-slate-600 rounded-lg'
+                : 'bg-gradient-to-br from-yellow-500 via-orange-600 to-red-700 rounded-full'}
               flex items-center justify-center shadow-lg ${agent ? 'shadow-cyan-500/50' : 'shadow-orange-500/50'}
               hover:scale-110 transition-transform`}
             style={{
               left: `${fireball.x}%`,
               top: `${fireball.y}%`,
               transform: 'translate(-50%, -50%)',
+              ...(agent ? { borderRadius: '4px 20px 20px 4px' } : {}),
             }}
           >
             {/* Glow */}
-            <div className={`absolute inset-0 rounded-full opacity-50 animate-pulse ${agent
-              ? 'bg-gradient-to-br from-cyan-400 to-transparent'
-              : 'bg-gradient-to-br from-yellow-400 to-transparent'}`} />
+            <div className={`absolute inset-0 opacity-50 animate-pulse ${agent
+              ? 'bg-gradient-to-r from-cyan-400 to-transparent rounded-lg'
+              : 'bg-gradient-to-br from-yellow-400 to-transparent rounded-full'}`} />
             
             {/* Word */}
             <span className="relative z-10 font-bold text-white drop-shadow-lg text-center px-1">
