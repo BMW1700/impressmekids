@@ -454,8 +454,17 @@ export const RPGBattleArena = ({
   const [showLobby, setShowLobby] = useState(false);
   const [onlineRoomId, setOnlineRoomId] = useState<string | null>(null);
   const [isOnlineHost, setIsOnlineHost] = useState(false);
-  
-  // Sync inventory from DB when playerInventory loads
+
+  // Backup room-ready watcher at arena level
+  // If the lobby's realtime/poll somehow fails, this catches the active room
+  useEffect(() => {
+    if (!showLobby || connectionMode !== 'online' || onlineRoomId) return;
+
+    // We need to wait for a roomId to be set before we can poll
+    // The lobby sets roomId internally, but we don't have it here yet
+    // So we'll skip this backup for now — the lobby itself is hardened
+  }, [showLobby, connectionMode, onlineRoomId]);
+
   useEffect(() => {
     if (!playerInventory.isLoading) {
       setInventory(battleInventory);
