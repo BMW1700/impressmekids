@@ -52,10 +52,23 @@ export const RPGCoopBattle = ({
   const [player2Words, setPlayer2Words] = useState(0);
   const [totalCorrect, setTotalCorrect] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
-  const [currentStreak, setCurrentStreak] = useState(0);
   const [totalDamage, setTotalDamage] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const [turnWordsRead, setTurnWordsRead] = useState(0);
+
+  // Refs for volatile counters
+  const streakRef = useRef(0);
+  const longestStreakRef = useRef(0);
+  const totalCorrectRef = useRef(0);
+  const totalDamageRef = useRef(0);
+  const player1HpRef = useRef(100);
+  const player2HpRef = useRef(100);
+  const activePlayerRef = useRef<1 | 2>(1);
+
+  // Keep HP refs in sync
+  useEffect(() => { player1HpRef.current = player1Hp; }, [player1Hp]);
+  useEffect(() => { player2HpRef.current = player2Hp; }, [player2Hp]);
+  useEffect(() => { activePlayerRef.current = activePlayer; }, [activePlayer]);
 
   // Enemy
   const theme = getStoredTheme();
@@ -74,11 +87,11 @@ export const RPGCoopBattle = ({
       setTimeout(() => {
         onComplete(true, {
           wordsRead: totalWords,
-          correctWords: totalCorrect,
-          longestStreak,
-          damageDealt: totalDamage,
-          xpEarned: Math.floor(totalCorrect * 5 + longestStreak * 3),
-          goldEarned: Math.floor(totalCorrect * 2),
+          correctWords: totalCorrectRef.current,
+          longestStreak: longestStreakRef.current,
+          damageDealt: totalDamageRef.current,
+          xpEarned: Math.floor(totalCorrectRef.current * 5 + longestStreakRef.current * 3),
+          goldEarned: Math.floor(totalCorrectRef.current * 2),
         });
       }, 3000);
     }
@@ -88,10 +101,10 @@ export const RPGCoopBattle = ({
       setTimeout(() => {
         onComplete(false, {
           wordsRead: player1Words + player2Words,
-          correctWords: totalCorrect,
-          longestStreak,
-          damageDealt: totalDamage,
-          xpEarned: Math.floor(totalCorrect * 2),
+          correctWords: totalCorrectRef.current,
+          longestStreak: longestStreakRef.current,
+          damageDealt: totalDamageRef.current,
+          xpEarned: Math.floor(totalCorrectRef.current * 2),
           goldEarned: 0,
         });
       }, 3000);
@@ -100,26 +113,31 @@ export const RPGCoopBattle = ({
 
   // Handle word read
   const handleWordResult = useCallback((correct: boolean, _spokenWord: string, _wordIndex: number) => {
-    if (activePlayer === 1) {
+    const currentActive = activePlayerRef.current;
+    
+    if (currentActive === 1) {
       setPlayer1Words(prev => prev + 1);
     } else {
       setPlayer2Words(prev => prev + 1);
     }
 
     if (correct) {
-      setTotalCorrect(prev => prev + 1);
-      setCurrentStreak(prev => {
-        const ns = prev + 1;
-        setLongestStreak(ls => Math.max(ls, ns));
-        return ns;
-      });
+      totalCorrectRef.current += 1;
+      setTotalCorrect(totalCorrectRef.current);
+      
+      streakRef.current += 1;
+      if (streakRef.current > longestStreakRef.current) {
+        longestStreakRef.current = streakRef.current;
+        setLongestStreak(longestStreakRef.current);
+      }
 
-      const damage = 8 + Math.min(currentStreak, 5) * 2;
+      const damage = 8 + Math.min(streakRef.current, 5) * 2;
+      totalDamageRef.current += damage;
+      setTotalDamage(totalDamageRef.current);
       setEnemyHp(prev => Math.max(0, prev - damage));
-      setTotalDamage(prev => prev + damage);
       battleSounds.correctWord();
     } else {
-      setCurrentStreak(0);
+      streakRef.current = 0;
     }
 
     setTurnWordsRead(prev => {
@@ -129,24 +147,24 @@ export const RPGCoopBattle = ({
           // Enemy attacks the active player
           const enemyDmg = 5 + Math.floor(Math.random() * 8);
           
-          if (activePlayer === 1) {
+          if (currentActive === 1) {
             setPlayer1Hp(prev => Math.max(0, prev - enemyDmg));
           } else {
             setPlayer2Hp(prev => Math.max(0, prev - enemyDmg));
           }
           
-          setMessage(`💥 ${enemy.name} attacks ${activePlayer === 1 ? player1Name : player2Name} for ${enemyDmg}!`);
+          setMessage(`💥 ${enemy.name} attacks ${currentActive === 1 ? player1Name : player2Name} for ${enemyDmg}!`);
           battleSounds.fireWhoosh();
 
           setTimeout(() => {
-            const nextPlayer = activePlayer === 1 ? 2 : 1;
-            const nextHp = nextPlayer === 1 ? player1Hp : player2Hp;
+            const nextPlayer = currentActive === 1 ? 2 : 1;
+            const nextHp = nextPlayer === 1 ? player1HpRef.current : player2HpRef.current;
             
             if (nextHp > 0) {
               setActivePlayer(nextPlayer as 1 | 2);
               setMessage(`🟢 ${nextPlayer === 1 ? player1Name : player2Name}'s Turn!`);
             } else {
-              setMessage(`⚔️ ${activePlayer === 1 ? player1Name : player2Name} fights on alone!`);
+              setMessage(`⚔️ ${currentActive === 1 ? player1Name : player2Name} fights on alone!`);
             }
           }, 1000);
         }, 500);
@@ -154,7 +172,7 @@ export const RPGCoopBattle = ({
       }
       return newCount;
     });
-  }, [activePlayer, currentStreak, player1Hp, player2Hp, player1Name, player2Name, enemy.name]);
+  }, [player1Name, player2Name, enemy.name]);
 
   const handleStart = useCallback(() => {
     setPhase('battle');
