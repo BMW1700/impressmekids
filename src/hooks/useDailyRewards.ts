@@ -38,7 +38,10 @@ export const useDailyRewards = (studentId?: string, gradeMode?: string) => {
     enabled: !!studentId,
   });
 
-  // Get current streak info from campaign_progress — scoped by gradeMode
+  // Get current streak info from campaign_progress
+  // CRITICAL: Order by last_login_date (not updated_at) to get the row
+  // that actually has streak data, regardless of which grade_mode was
+  // most recently updated by battle activity.
   const { data: streakInfo, isLoading: streakLoading } = useQuery({
     queryKey: ["login-streak-info", studentId, gradeMode],
     queryFn: async () => {
@@ -49,7 +52,13 @@ export const useDailyRewards = (studentId?: string, gradeMode?: string) => {
       if (gradeMode) {
         query = query.eq("grade_mode", gradeMode);
       }
-      const { data, error } = await query.order("updated_at", { ascending: false }).limit(1).maybeSingle();
+      // Order by last_login_date DESC NULLS LAST so we always get the row
+      // that has the most recent daily reward claim, not the row most
+      // recently touched by any battle/gameplay activity.
+      const { data, error } = await query
+        .order("last_login_date", { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle();
 
       if (error) throw error;
       return data || { login_streak: 0, longest_login_streak: 0, last_login_date: null, total_gold: 0, grade_mode: gradeMode || 'k5' };
@@ -65,10 +74,9 @@ export const useDailyRewards = (studentId?: string, gradeMode?: string) => {
   // Calculate if streak is still active (claimed yesterday or today)
   const isStreakActive = () => {
     if (!streakInfo?.last_login_date) return false;
-    const lastLogin = new Date(streakInfo.last_login_date);
+    const lastLogin = new Date(streakInfo.last_login_date + 'T00:00:00');
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    lastLogin.setHours(0, 0, 0, 0);
     const diffDays = Math.floor((today.getTime() - lastLogin.getTime()) / (1000 * 60 * 60 * 24));
     return diffDays <= 1;
   };
@@ -105,23 +113,47 @@ export const useDailyRewards = (studentId?: string, gradeMode?: string) => {
 
       if (rewardError) throw rewardError;
 
-      // Update campaign_progress with new streak info — scoped by gradeMode
-      const upsertData = {
-        student_id: studentId,
-        grade_mode: gradeMode || streakInfo?.grade_mode || 'k5',
-        login_streak: currentStreak,
-        longest_login_streak: longestStreak,
-        last_login_date: todayStr,
-        total_gold: (streakInfo?.total_gold || 0) + totalGold,
-      };
+      // Update ALL campaign_progress rows for this student with streak info.
+      // Streaks are player-level (cross-mode), so both k5 and 6to12 rows
+      // need the same streak data. Gold goes to the active mode's row.
+      const targetGradeMode = gradeMode || streakInfo?.grade_mode || 'k5';
 
-      const { error: progressError } = await supabase
+      // First: fetch ALL campaign_progress rows for this student
+      const { data: allProgress } = await supabase
         .from("campaign_progress")
-        .upsert(upsertData, {
-          onConflict: 'student_id,grade_mode',
-        } as any);
+        .select("grade_mode, total_gold")
+        .eq("student_id", studentId);
 
-      if (progressError) throw progressError;
+      if (allProgress && allProgress.length > 0) {
+        // Update each existing row with streak data
+        for (const row of allProgress) {
+          const goldToAdd = row.grade_mode === targetGradeMode ? totalGold : 0;
+          const { error } = await supabase
+            .from("campaign_progress")
+            .update({
+              login_streak: currentStreak,
+              longest_login_streak: longestStreak,
+              last_login_date: todayStr,
+              ...(goldToAdd > 0 ? { total_gold: (row.total_gold || 0) + goldToAdd } : {}),
+            })
+            .eq("student_id", studentId)
+            .eq("grade_mode", row.grade_mode);
+          if (error) console.error("[DailyRewards] Failed to update", row.grade_mode, error);
+        }
+      } else {
+        // No campaign_progress rows exist yet — create one
+        const { error: progressError } = await supabase
+          .from("campaign_progress")
+          .insert({
+            student_id: studentId,
+            grade_mode: targetGradeMode,
+            login_streak: currentStreak,
+            longest_login_streak: longestStreak,
+            last_login_date: todayStr,
+            total_gold: totalGold,
+          });
+        if (progressError) throw progressError;
+      }
 
       return {
         streakDay: currentStreak,
@@ -134,7 +166,7 @@ export const useDailyRewards = (studentId?: string, gradeMode?: string) => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["daily-login-history", studentId] });
-      queryClient.invalidateQueries({ queryKey: ["login-streak-info", studentId, gradeMode] });
+      queryClient.invalidateQueries({ queryKey: ["login-streak-info", studentId] });
       queryClient.invalidateQueries({ queryKey: ["campaign-progress", studentId] });
       
       let message = `Day ${data.streakDay} reward: +${data.gold} gold, +${data.xp} XP!`;
