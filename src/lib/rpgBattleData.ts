@@ -56,7 +56,8 @@ export type MiniGameType =
   | 'ink_splash'         // Sunken Library - read obscured words
   | 'crystal_prison'     // Frozen variant - break ice with repeated words
   | 'lightning_storm'    // Quick succession single-word lightning strikes
-  | 'void_pull';         // The Void - save words from being consumed
+  | 'void_pull'          // The Void - save words from being consumed
+  | 'word_ninja';        // Fruit Ninja style - speak to unlock, swipe to slice
 
 export interface RPGEnemy {
   id: string;
