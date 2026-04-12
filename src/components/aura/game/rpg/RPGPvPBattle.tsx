@@ -35,7 +35,7 @@ interface RPGPvPBattleProps {
   onComplete: (victory: boolean, stats: BattleStats) => void;
 }
 
-type PvPPhase = 'setup' | 'kid_turn' | 'parent_turn' | 'mini_game' | 'victory' | 'defeat';
+type PvPPhase = 'setup' | 'kid_turn' | 'parent_turn' | 'parent_reading' | 'mini_game' | 'victory' | 'defeat';
 
 export const RPGPvPBattle = ({
   story,
@@ -56,12 +56,21 @@ export const RPGPvPBattle = ({
   const [activeMiniGame, setActiveMiniGame] = useState<string | null>(null);
   const [kidWordsRead, setKidWordsRead] = useState(0);
   const [kidCorrectWords, setKidCorrectWords] = useState(0);
-  const [kidStreak, setKidStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
   const [totalDamage, setTotalDamage] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const [parentName, setParentName] = useState("Parent");
   const [kidName, setKidName] = useState("Hero");
+
+  // Refs for volatile counters (prevents stale closures)
+  const kidStreakRef = useRef(0);
+  const kidCorrectRef = useRef(0);
+  const longestStreakRef = useRef(0);
+  const totalDamageRef = useRef(0);
+
+  // Parent reading phase state
+  const [pendingAbility, setPendingAbility] = useState<ParentAbility | null>(null);
+  const [parentReadWord, setParentReadWord] = useState<string | null>(null);
 
   // Story words
   const storyWords = story.passage_text.split(/\s+/).filter(w => w.length > 0);
@@ -75,11 +84,11 @@ export const RPGPvPBattle = ({
       setTimeout(() => {
         onComplete(true, {
           wordsRead: kidWordsRead,
-          correctWords: kidCorrectWords,
-          longestStreak,
-          damageDealt: totalDamage,
-          xpEarned: Math.floor(kidCorrectWords * 5 + longestStreak * 2),
-          goldEarned: Math.floor(kidCorrectWords * 2),
+          correctWords: kidCorrectRef.current,
+          longestStreak: longestStreakRef.current,
+          damageDealt: totalDamageRef.current,
+          xpEarned: Math.floor(kidCorrectRef.current * 5 + longestStreakRef.current * 2),
+          goldEarned: Math.floor(kidCorrectRef.current * 2),
         });
       }, 3000);
     }
@@ -89,10 +98,10 @@ export const RPGPvPBattle = ({
       setTimeout(() => {
         onComplete(false, {
           wordsRead: kidWordsRead,
-          correctWords: kidCorrectWords,
-          longestStreak,
-          damageDealt: totalDamage,
-          xpEarned: Math.floor(kidCorrectWords * 2),
+          correctWords: kidCorrectRef.current,
+          longestStreak: longestStreakRef.current,
+          damageDealt: totalDamageRef.current,
+          xpEarned: Math.floor(kidCorrectRef.current * 2),
           goldEarned: 0,
         });
       }, 3000);
@@ -104,24 +113,27 @@ export const RPGPvPBattle = ({
     setKidWordsRead(prev => prev + 1);
     
     if (correct) {
-      setKidCorrectWords(prev => prev + 1);
-      setKidStreak(prev => {
-        const newStreak = prev + 1;
-        setLongestStreak(ls => Math.max(ls, newStreak));
-        return newStreak;
-      });
+      kidCorrectRef.current += 1;
+      setKidCorrectWords(kidCorrectRef.current);
+
+      kidStreakRef.current += 1;
+      if (kidStreakRef.current > longestStreakRef.current) {
+        longestStreakRef.current = kidStreakRef.current;
+        setLongestStreak(longestStreakRef.current);
+      }
 
       const baseDamage = 8;
-      const streakBonus = Math.min(kidStreak, 5) * 2;
+      const streakBonus = Math.min(kidStreakRef.current, 5) * 2;
       const damage = baseDamage + streakBonus;
 
+      totalDamageRef.current += damage;
+      setTotalDamage(totalDamageRef.current);
       setParentHp(prev => Math.max(0, prev - damage));
-      setTotalDamage(prev => prev + damage);
       setMessage(`⚔️ Hero deals ${damage} damage!`);
       battleSounds.correctWord();
 
       // After 5 correct words, switch to parent turn
-      if ((kidCorrectWords + 1) % 5 === 0) {
+      if (kidCorrectRef.current % 5 === 0) {
         setTimeout(() => {
           setTurn('parent');
           setPhase('parent_turn');
@@ -137,9 +149,9 @@ export const RPGPvPBattle = ({
         }, 800);
       }
     } else {
-      setKidStreak(0);
+      kidStreakRef.current = 0;
     }
-  }, [kidStreak, kidCorrectWords]);
+  }, []);
 
   // Parent selects an ability
   const handleParentAbility = useCallback((ability: ParentAbility) => {
@@ -147,6 +159,15 @@ export const RPGPvPBattle = ({
       setActiveMiniGame(ability.miniGame);
       setPhase('mini_game');
       setMessage(`🎮 ${ability.name}!`);
+      if (ability.cooldown > 0) {
+        setCooldowns(prev => ({ ...prev, [ability.id]: ability.cooldown }));
+      }
+    } else if (ability.requiresReading) {
+      // Parent must read a word for bonus damage
+      setPendingAbility(ability);
+      setParentReadWord(storyWords[Math.floor(Math.random() * storyWords.length)]);
+      setPhase('parent_reading');
+      setMessage(`📖 Read the word for bonus damage!`);
     } else {
       let damage = ability.damage;
       setKidHp(prev => Math.max(0, prev - damage));
@@ -163,7 +184,38 @@ export const RPGPvPBattle = ({
         setMessage("🟢 Hero's Turn! Read to attack!");
       }, 1500);
     }
-  }, []);
+  }, [storyWords]);
+
+  // Parent reading result
+  const handleParentReadResult = useCallback((correct: boolean) => {
+    if (!pendingAbility) return;
+    
+    let damage = pendingAbility.damage;
+    if (correct) {
+      damage += 5; // Bonus damage for reading correctly
+      setMessage(`💥 ${pendingAbility.name} + Reading Bonus = ${damage} damage!`);
+      battleSounds.correctWord();
+    } else {
+      setMessage(`💥 ${pendingAbility.name} for ${damage} damage (no bonus)`);
+      battleSounds.incorrectWord();
+    }
+
+    setKidHp(prev => Math.max(0, prev - damage));
+    battleSounds.fireWhoosh();
+
+    if (pendingAbility.cooldown > 0) {
+      setCooldowns(prev => ({ ...prev, [pendingAbility.id]: pendingAbility.cooldown }));
+    }
+
+    setPendingAbility(null);
+    setParentReadWord(null);
+
+    setTimeout(() => {
+      setTurn('kid');
+      setPhase('kid_turn');
+      setMessage("🟢 Hero's Turn! Read to attack!");
+    }, 1500);
+  }, [pendingAbility]);
 
   // Mini-game completion
   const handleMiniGameComplete = useCallback((completed: number, failed: number) => {
@@ -240,6 +292,7 @@ export const RPGPvPBattle = ({
       <AnimatePresence>
         {message && (
           <motion.div
+            key={message}
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
@@ -309,6 +362,41 @@ export const RPGPvPBattle = ({
           parentHp={parentHp}
           parentMaxHp={parentMaxHp}
         />
+      )}
+
+      {/* Parent Reading Phase */}
+      {phase === 'parent_reading' && parentReadWord && (
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute bottom-0 left-0 right-0 z-[90] bg-gradient-to-t from-red-950/95 to-transparent p-6"
+        >
+          <div className="max-w-md mx-auto text-center">
+            <p className="text-red-300 text-sm font-bold mb-2">🔴 PARENT — Read this word aloud:</p>
+            <motion.div
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ repeat: Infinity, duration: 1.5 }}
+              className="bg-red-900/60 border-2 border-red-500/50 rounded-2xl p-6 mb-4"
+            >
+              <p className="text-4xl font-black text-white">{parentReadWord}</p>
+            </motion.div>
+            <div className="flex gap-3 justify-center">
+              <Button
+                onClick={() => handleParentReadResult(true)}
+                className="bg-gradient-to-r from-green-600 to-emerald-500 text-white font-bold px-6"
+              >
+                ✅ Read Correctly
+              </Button>
+              <Button
+                onClick={() => handleParentReadResult(false)}
+                variant="outline"
+                className="border-red-500 text-red-300 px-6"
+              >
+                ❌ Missed It
+              </Button>
+            </div>
+          </div>
+        </motion.div>
       )}
 
       {/* Mini-game Phase */}

@@ -38,6 +38,7 @@ import { RPGFireballDefense } from "./RPGFireballDefense";
 import { RPGWordNinja } from "./RPGWordNinja";
 import { RPGPvPBattle } from "./RPGPvPBattle";
 import { RPGCoopBattle } from "./RPGCoopBattle";
+import { RPGVictoryArena } from "./RPGVictoryArena";
 // NEW: Import 6 new world mini-games
 import { RPGWordEcho } from "./RPGWordEcho";
 import { RPGWindChase } from "./RPGWindChase";
@@ -438,6 +439,10 @@ export const RPGBattleArena = ({
   const [contextClueData, setContextClueData] = useState<{ sentence: string; blankWord: string; options: string[] } | null>(null);
   const [bossGateTriggered, setBossGateTriggered] = useState(false);
   const [wordMasteryBonus, setWordMasteryBonus] = useState<{ word: string; multiplier: number } | null>(null);
+  
+  // Victory Arena state
+  const [showVictoryArena, setShowVictoryArena] = useState(false);
+  const [pendingBattleStats, setPendingBattleStats] = useState<BattleStats | null>(null);
   
   // Sync inventory from DB when playerInventory loads
   useEffect(() => {
@@ -2152,15 +2157,25 @@ export const RPGBattleArena = ({
       }
     }
 
-    onComplete(victory, {
+    const finalStats: BattleStats = {
       wordsRead,
       correctWords,
       longestStreak,
       damageDealt: totalDamage,
       xpEarned: finalXpEarned,
-      goldEarned, // NEW: Pass gold to parent for wallet sync
-    });
-  }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete, studentId, story, battleMode, saveToAuraRecords, triggerQLearningUpdate, goldEarned]);
+      goldEarned,
+    };
+
+    // Show Victory Arena for boss/final victories as a reward
+    const isBossVictory = victory && (enemyType === 'boss' || enemyType === 'final_boss');
+    if (isBossVictory) {
+      setPendingBattleStats(finalStats);
+      setShowVictoryArena(true);
+      return;
+    }
+
+    onComplete(victory, finalStats);
+  }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete, studentId, story, battleMode, saveToAuraRecords, triggerQLearningUpdate, goldEarned, enemyType]);
 
   // Get current batch of words for reading - MEMOIZED for stable reference
   // batchStartIndex only changes when we complete a full batch, keeping this stable
@@ -2221,6 +2236,31 @@ export const RPGBattleArena = ({
     );
   }
 
+  // Victory Arena reward screen (after boss victories)
+  if (showVictoryArena && pendingBattleStats) {
+    const worldNames = ['Enchanted Forest', 'Crystal Caverns', 'Shadow Realm', 'Sky Kingdom', 'Ink Depths', 'Void Nexus', 'Goblin Peaks', 'Lava Forge', 'Crystal Citadel', 'Star Haven', 'Ancient Library', 'The Vault'];
+    return (
+      <RPGVictoryArena
+        worldNumber={worldNumber}
+        worldName={worldNames[Math.min(worldNumber - 1, worldNames.length - 1)] || `World ${worldNumber}`}
+        playerName={playerCharacter?.name || 'Champion'}
+        onComplete={(bonusGold, bonusXp) => {
+          const boostedStats = {
+            ...pendingBattleStats,
+            xpEarned: pendingBattleStats.xpEarned + bonusXp,
+            goldEarned: (pendingBattleStats.goldEarned || 0) + bonusGold,
+          };
+          setShowVictoryArena(false);
+          onComplete(true, boostedStats);
+        }}
+        onSkip={() => {
+          setShowVictoryArena(false);
+          onComplete(true, pendingBattleStats);
+        }}
+      />
+    );
+  }
+
   // Route PvP and Co-op to dedicated components
   if (battleMode === 'pvp') {
     return <RPGPvPBattle story={story} studentId={studentId} worldNumber={worldNumber} gradeMode={gradeMode} onBack={onBack} onComplete={onComplete} />;
@@ -2228,6 +2268,7 @@ export const RPGBattleArena = ({
   if (battleMode === 'coop') {
     return <RPGCoopBattle story={story} studentId={studentId} worldNumber={worldNumber} gradeMode={gradeMode} onBack={onBack} onComplete={onComplete} />;
   }
+
 
   return (
     <motion.div 
