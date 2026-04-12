@@ -44,13 +44,15 @@ export const useDailyRewards = (studentId?: string, gradeMode?: string) => {
     queryFn: async () => {
       let query = supabase
         .from("campaign_progress")
-        .select("login_streak, longest_login_streak, last_login_date, total_gold")
+        .select("login_streak, longest_login_streak, last_login_date, total_gold, grade_mode")
         .eq("student_id", studentId!);
-      if (gradeMode) query = query.eq("grade_mode", gradeMode);
-      const { data, error } = await query.maybeSingle();
+      if (gradeMode) {
+        query = query.eq("grade_mode", gradeMode);
+      }
+      const { data, error } = await query.order("updated_at", { ascending: false }).limit(1).maybeSingle();
 
       if (error) throw error;
-      return data || { login_streak: 0, longest_login_streak: 0, last_login_date: null, total_gold: 0 };
+      return data || { login_streak: 0, longest_login_streak: 0, last_login_date: null, total_gold: 0, grade_mode: gradeMode || 'k5' };
     },
     enabled: !!studentId,
   });
@@ -106,7 +108,7 @@ export const useDailyRewards = (studentId?: string, gradeMode?: string) => {
       // Update campaign_progress with new streak info — scoped by gradeMode
       const upsertData = {
         student_id: studentId,
-        grade_mode: gradeMode || 'k5',
+        grade_mode: gradeMode || streakInfo?.grade_mode || 'k5',
         login_streak: currentStreak,
         longest_login_streak: longestStreak,
         last_login_date: todayStr,
