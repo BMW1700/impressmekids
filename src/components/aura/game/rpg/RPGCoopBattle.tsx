@@ -6,10 +6,9 @@ import { RPGBattleBackground } from "./RPGBattleBackground";
 import { RPGCharacter } from "./RPGCharacter";
 import { RPGCoopHUD } from "./RPGCoopHUD";
 import { RPGWordReader } from "./RPGWordReader";
-import { RPGWordNinja } from "./RPGWordNinja";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { CuratedStory } from "@/data/curatedStories";
-import { getEnemyForBattle, RPGEnemy } from "@/lib/rpgBattleData";
+import { getEnemyForBattle, heroKnight, allyWizard } from "@/lib/rpgBattleData";
 import { getStoredTheme } from "@/lib/gameTheme";
 import { getAgentEnemy } from "@/lib/agentBattleData";
 
@@ -33,7 +32,7 @@ interface RPGCoopBattleProps {
   onComplete: (victory: boolean, stats: BattleStats) => void;
 }
 
-type CoopPhase = 'setup' | 'battle' | 'enemy_attack' | 'mini_game' | 'victory' | 'defeat';
+type CoopPhase = 'setup' | 'battle' | 'victory' | 'defeat';
 
 export const RPGCoopBattle = ({
   story,
@@ -56,22 +55,21 @@ export const RPGCoopBattle = ({
   const [currentStreak, setCurrentStreak] = useState(0);
   const [totalDamage, setTotalDamage] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
-  const [wordIndex, setWordIndex] = useState(0);
   const [turnWordsRead, setTurnWordsRead] = useState(0);
 
   // Enemy
   const theme = getStoredTheme();
-  const enemy: RPGEnemy = theme === 'agent' ? getAgentEnemy('guard') : getEnemyForBattle('guard');
+  const enemy = theme === 'agent' ? getAgentEnemy('guard') : getEnemyForBattle('guard');
   const [enemyHp, setEnemyHp] = useState(enemy.maxHp);
   const [enemyMaxHp] = useState(enemy.maxHp);
 
-  const storyWords = story.content.split(/\s+/).filter(w => w.length > 0);
+  const storyWords = story.passage_text.split(/\s+/).filter(w => w.length > 0);
 
   // Check victory/defeat
   useEffect(() => {
     if (enemyHp <= 0 && phase !== 'victory') {
       setPhase('victory');
-      battleSounds.victory();
+      battleSounds.victoryFanfare();
       const totalWords = player1Words + player2Words;
       setTimeout(() => {
         onComplete(true, {
@@ -86,7 +84,7 @@ export const RPGCoopBattle = ({
     }
     if (player1Hp <= 0 && player2Hp <= 0 && phase !== 'defeat') {
       setPhase('defeat');
-      battleSounds.defeat();
+      battleSounds.incorrectWord();
       setTimeout(() => {
         onComplete(false, {
           wordsRead: player1Words + player2Words,
@@ -101,7 +99,7 @@ export const RPGCoopBattle = ({
   }, [enemyHp, player1Hp, player2Hp, phase]);
 
   // Handle word read
-  const handleWordRead = useCallback((correct: boolean) => {
+  const handleWordResult = useCallback((correct: boolean, _spokenWord: string, _wordIndex: number) => {
     if (activePlayer === 1) {
       setPlayer1Words(prev => prev + 1);
     } else {
@@ -119,18 +117,16 @@ export const RPGCoopBattle = ({
       const damage = 8 + Math.min(currentStreak, 5) * 2;
       setEnemyHp(prev => Math.max(0, prev - damage));
       setTotalDamage(prev => prev + damage);
-      battleSounds.hit();
+      battleSounds.correctWord();
     } else {
       setCurrentStreak(0);
     }
 
     setTurnWordsRead(prev => {
       const newCount = prev + 1;
-      // Switch players every 5 words
       if (newCount >= 5) {
         setTimeout(() => {
           // Enemy attacks the active player
-          const activeHp = activePlayer === 1 ? player1Hp : player2Hp;
           const enemyDmg = 5 + Math.floor(Math.random() * 8);
           
           if (activePlayer === 1) {
@@ -140,10 +136,9 @@ export const RPGCoopBattle = ({
           }
           
           setMessage(`💥 ${enemy.name} attacks ${activePlayer === 1 ? player1Name : player2Name} for ${enemyDmg}!`);
-          battleSounds.enemyAttack();
+          battleSounds.fireWhoosh();
 
           setTimeout(() => {
-            // Switch active player (skip if dead)
             const nextPlayer = activePlayer === 1 ? 2 : 1;
             const nextHp = nextPlayer === 1 ? player1Hp : player2Hp;
             
@@ -151,18 +146,14 @@ export const RPGCoopBattle = ({
               setActivePlayer(nextPlayer as 1 | 2);
               setMessage(`🟢 ${nextPlayer === 1 ? player1Name : player2Name}'s Turn!`);
             } else {
-              // Other player is dead, stay with current
               setMessage(`⚔️ ${activePlayer === 1 ? player1Name : player2Name} fights on alone!`);
             }
-            setTurnWordsRead(0);
           }, 1000);
         }, 500);
         return 0;
       }
       return newCount;
     });
-
-    setWordIndex(prev => prev + 1);
   }, [activePlayer, currentStreak, player1Hp, player2Hp, player1Name, player2Name, enemy.name]);
 
   const handleStart = useCallback(() => {
@@ -178,41 +169,27 @@ export const RPGCoopBattle = ({
     >
       <RPGBattleBackground worldNumber={worldNumber} />
 
-      {/* Back Button */}
       <div className="absolute top-3 left-3 z-[80]">
         <Button variant="ghost" size="sm" onClick={onBack} className="text-white">
           <ArrowLeft className="h-4 w-4 mr-1" /> Exit
         </Button>
       </div>
 
-      {/* Co-op HUD */}
       {phase !== 'setup' && (
         <RPGCoopHUD
-          player1Hp={player1Hp}
-          player1MaxHp={100}
-          player1Name={player1Name}
-          player2Hp={player2Hp}
-          player2MaxHp={100}
-          player2Name={player2Name}
+          player1Hp={player1Hp} player1MaxHp={100} player1Name={player1Name}
+          player2Hp={player2Hp} player2MaxHp={100} player2Name={player2Name}
           activePlayer={activePlayer}
-          player1Words={player1Words}
-          player2Words={player2Words}
-          enemyHp={enemyHp}
-          enemyMaxHp={enemyMaxHp}
-          enemyName={enemy.name}
+          player1Words={player1Words} player2Words={player2Words}
+          enemyHp={enemyHp} enemyMaxHp={enemyMaxHp} enemyName={enemy.name}
         />
       )}
 
       {/* Message Banner */}
       <AnimatePresence>
         {message && phase === 'battle' && (
-          <motion.div
-            key={message}
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="absolute top-36 left-1/2 -translate-x-1/2 z-[70] bg-black/80 px-6 py-3 rounded-xl border border-white/20"
-          >
+          <motion.div key={message} initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className="absolute top-36 left-1/2 -translate-x-1/2 z-[70] bg-black/80 px-6 py-3 rounded-xl border border-white/20">
             <p className="text-white font-bold">{message}</p>
           </motion.div>
         )}
@@ -220,28 +197,13 @@ export const RPGCoopBattle = ({
 
       {/* Characters */}
       <div className="absolute bottom-40 left-[10%] z-[50]">
-        <RPGCharacter
-          character={{ id: 'p1', name: player1Name, type: 'hero', maxHp: 100, attack: 10, defense: 5, color: '#3b82f6', abilities: [] }}
-          hp={player1Hp}
-          isActive={activePlayer === 1}
-          position="left"
-        />
+        <RPGCharacter character={heroKnight} currentHp={player1Hp} isAttacking={activePlayer === 1 && phase === 'battle'} />
       </div>
       <div className="absolute bottom-40 left-[30%] z-[50]">
-        <RPGCharacter
-          character={{ id: 'p2', name: player2Name, type: 'ally', maxHp: 100, attack: 10, defense: 5, color: '#a855f7', abilities: [] }}
-          hp={player2Hp}
-          isActive={activePlayer === 2}
-          position="left"
-        />
+        <RPGCharacter character={allyWizard} currentHp={player2Hp} isAttacking={activePlayer === 2 && phase === 'battle'} />
       </div>
       <div className="absolute bottom-40 right-[15%] z-[50]">
-        <RPGCharacter
-          character={{ id: 'enemy', name: enemy.name, type: 'enemy', maxHp: enemyMaxHp, attack: enemy.attack, defense: enemy.defense, color: enemy.color, abilities: [] }}
-          hp={enemyHp}
-          isActive={false}
-          position="right"
-        />
+        <RPGCharacter character={enemy} currentHp={enemyHp} isEnemy />
       </div>
 
       {/* Setup Screen */}
@@ -280,9 +242,7 @@ export const RPGCoopBattle = ({
           </div>
           <RPGWordReader
             words={storyWords}
-            currentIndex={wordIndex}
-            onWordRead={(correct) => handleWordRead(correct)}
-            isActive={phase === 'battle'}
+            onResult={handleWordResult}
           />
         </div>
       )}
@@ -304,7 +264,7 @@ export const RPGCoopBattle = ({
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 z-[90] flex items-center justify-center bg-black/80">
           <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} className="text-center">
             <Shield className="h-20 w-20 text-red-400 mx-auto mb-4" />
-            <h2 className="text-3xl font-black text-red-400 mb-2">TEAM DEFEATED!</h2>
+            <h2 className="text-4xl font-black text-red-400 mb-2">TEAM DEFEATED!</h2>
             <p className="text-white text-xl">{enemy.name} was too powerful!</p>
             <p className="text-slate-400 mt-2">Keep practicing and try again!</p>
           </motion.div>

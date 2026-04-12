@@ -13,6 +13,7 @@ import { speechManager } from "@/lib/speechRecognitionManager";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { CuratedStory } from "@/data/curatedStories";
 import { getStoredTheme } from "@/lib/gameTheme";
+import { heroKnight, RPGEnemy } from "@/lib/rpgBattleData";
 
 const battleSounds = new SoundEffects();
 
@@ -63,17 +64,14 @@ export const RPGPvPBattle = ({
   const [kidName, setKidName] = useState("Hero");
 
   // Story words
-  const storyWords = story.content.split(/\s+/).filter(w => w.length > 0);
+  const storyWords = story.passage_text.split(/\s+/).filter(w => w.length > 0);
   const [wordIndex, setWordIndex] = useState(0);
-  const wordIndexRef = useRef(0);
-
-  const isAgent = getStoredTheme() === 'agent';
 
   // Completion check
   useEffect(() => {
     if (parentHp <= 0 && phase !== 'victory') {
       setPhase('victory');
-      battleSounds.victory();
+      battleSounds.victoryFanfare();
       setTimeout(() => {
         onComplete(true, {
           wordsRead: kidWordsRead,
@@ -87,7 +85,7 @@ export const RPGPvPBattle = ({
     }
     if (kidHp <= 0 && phase !== 'defeat') {
       setPhase('defeat');
-      battleSounds.defeat();
+      battleSounds.incorrectWord();
       setTimeout(() => {
         onComplete(false, {
           wordsRead: kidWordsRead,
@@ -102,47 +100,46 @@ export const RPGPvPBattle = ({
   }, [kidHp, parentHp, phase]);
 
   // Kid reads a word correctly -> damage to parent
-  const handleKidWordCorrect = useCallback(() => {
-    setKidCorrectWords(prev => prev + 1);
+  const handleKidWordResult = useCallback((correct: boolean, _spokenWord: string, _wordIndex: number) => {
     setKidWordsRead(prev => prev + 1);
-    setKidStreak(prev => {
-      const newStreak = prev + 1;
-      setLongestStreak(ls => Math.max(ls, newStreak));
-      return newStreak;
-    });
+    
+    if (correct) {
+      setKidCorrectWords(prev => prev + 1);
+      setKidStreak(prev => {
+        const newStreak = prev + 1;
+        setLongestStreak(ls => Math.max(ls, newStreak));
+        return newStreak;
+      });
 
-    const baseDamage = 8;
-    const streakBonus = Math.min(kidStreak, 5) * 2;
-    const damage = baseDamage + streakBonus;
+      const baseDamage = 8;
+      const streakBonus = Math.min(kidStreak, 5) * 2;
+      const damage = baseDamage + streakBonus;
 
-    setParentHp(prev => Math.max(0, prev - damage));
-    setTotalDamage(prev => prev + damage);
-    setMessage(`⚔️ Hero deals ${damage} damage!`);
-    battleSounds.hit();
+      setParentHp(prev => Math.max(0, prev - damage));
+      setTotalDamage(prev => prev + damage);
+      setMessage(`⚔️ Hero deals ${damage} damage!`);
+      battleSounds.correctWord();
 
-    // After 5 words, switch to parent turn
-    if ((kidCorrectWords + 1) % 5 === 0) {
-      setTimeout(() => {
-        setTurn('parent');
-        setPhase('parent_turn');
-        setMessage("🔴 Parent's Turn!");
-        // Reduce cooldowns
-        setCooldowns(prev => {
-          const updated = { ...prev };
-          Object.keys(updated).forEach(k => {
-            if (updated[k] > 0) updated[k]--;
+      // After 5 correct words, switch to parent turn
+      if ((kidCorrectWords + 1) % 5 === 0) {
+        setTimeout(() => {
+          setTurn('parent');
+          setPhase('parent_turn');
+          setMessage("🔴 Parent's Turn!");
+          setCooldowns(prev => {
+            const updated = { ...prev };
+            Object.keys(updated).forEach(k => {
+              if (updated[k] > 0) updated[k]--;
+            });
+            return updated;
           });
-          return updated;
-        });
-        setTurnCount(prev => prev + 1);
-      }, 800);
+          setTurnCount(prev => prev + 1);
+        }, 800);
+      }
+    } else {
+      setKidStreak(0);
     }
   }, [kidStreak, kidCorrectWords]);
-
-  const handleKidWordIncorrect = useCallback(() => {
-    setKidWordsRead(prev => prev + 1);
-    setKidStreak(0);
-  }, []);
 
   // Parent selects an ability
   const handleParentAbility = useCallback((ability: ParentAbility) => {
@@ -151,18 +148,15 @@ export const RPGPvPBattle = ({
       setPhase('mini_game');
       setMessage(`🎮 ${ability.name}!`);
     } else {
-      // Direct damage
       let damage = ability.damage;
       setKidHp(prev => Math.max(0, prev - damage));
       setMessage(`💥 Parent uses ${ability.name} for ${damage} damage!`);
-      battleSounds.enemyAttack();
+      battleSounds.fireWhoosh();
 
-      // Set cooldown
       if (ability.cooldown > 0) {
         setCooldowns(prev => ({ ...prev, [ability.id]: ability.cooldown }));
       }
 
-      // Switch back to kid turn
       setTimeout(() => {
         setTurn('kid');
         setPhase('kid_turn');
@@ -187,7 +181,6 @@ export const RPGPvPBattle = ({
     }, 1000);
   }, []);
 
-  // Start the battle
   const handleStart = useCallback(() => {
     setPhase('kid_turn');
     setTurn('kid');
@@ -219,7 +212,6 @@ export const RPGPvPBattle = ({
 
         {/* HP Bars */}
         <div className="flex gap-4 max-w-2xl mx-auto">
-          {/* Kid HP */}
           <div className={`flex-1 p-2 rounded-lg border-2 ${turn === 'kid' ? 'border-green-400 bg-green-950/30' : 'border-slate-700 bg-slate-900/50'}`}>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-sm font-bold text-green-300">🦸 {kidName}</span>
@@ -232,7 +224,6 @@ export const RPGPvPBattle = ({
 
           <span className="text-white font-black text-xl self-center">VS</span>
 
-          {/* Parent HP */}
           <div className={`flex-1 p-2 rounded-lg border-2 ${turn === 'parent' ? 'border-red-400 bg-red-950/30' : 'border-slate-700 bg-slate-900/50'}`}>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-sm font-bold text-red-300">👹 {parentName}</span>
@@ -262,52 +253,35 @@ export const RPGPvPBattle = ({
       {/* Characters */}
       <div className="absolute bottom-40 left-[20%] z-[50]">
         <RPGCharacter
-          character={{ id: 'hero', name: kidName, type: 'hero', maxHp: kidMaxHp, attack: 10, defense: 5, color: '#4ade80', abilities: [] }}
-          hp={kidHp}
-          isActive={turn === 'kid'}
-          position="left"
+          character={heroKnight}
+          currentHp={kidHp}
+          isAttacking={turn === 'kid' && phase === 'kid_turn'}
         />
       </div>
       <div className="absolute bottom-40 right-[20%] z-[50]">
         <RPGCharacter
-          character={{ id: 'enemy', name: parentName, type: 'enemy', maxHp: parentMaxHp, attack: 10, defense: 5, color: '#ef4444', abilities: [] }}
-          hp={parentHp}
-          isActive={turn === 'parent'}
-          position="right"
+          character={{ ...heroKnight, id: 'villain', name: parentName, type: 'enemy', color: '#ef4444' } as any}
+          currentHp={parentHp}
+          isEnemy
+          isTakingDamage={turn === 'kid'}
         />
       </div>
 
       {/* Setup Screen */}
       {phase === 'setup' && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="absolute inset-0 z-[80] flex items-center justify-center bg-black/70"
-        >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 z-[80] flex items-center justify-center bg-black/70">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl p-8 max-w-md mx-4 text-center">
             <Sword className="h-12 w-12 text-red-400 mx-auto mb-4" />
             <h2 className="text-2xl font-black text-white mb-2">Parent vs Kid PvP!</h2>
-            <p className="text-slate-400 mb-6">
-              Parent controls the enemy with ability cards. Kid reads words to fight back!
-            </p>
+            <p className="text-slate-400 mb-6">Parent controls the enemy with ability cards. Kid reads words to fight back!</p>
             <div className="space-y-3 mb-6">
               <div>
                 <label className="text-sm text-slate-400 block mb-1">Hero Name</label>
-                <input
-                  value={kidName}
-                  onChange={(e) => setKidName(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-center"
-                  maxLength={15}
-                />
+                <input value={kidName} onChange={e => setKidName(e.target.value)} className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-center" maxLength={15} />
               </div>
               <div>
                 <label className="text-sm text-slate-400 block mb-1">Villain Name</label>
-                <input
-                  value={parentName}
-                  onChange={(e) => setParentName(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-center"
-                  maxLength={15}
-                />
+                <input value={parentName} onChange={e => setParentName(e.target.value)} className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-center" maxLength={15} />
               </div>
             </div>
             <Button onClick={handleStart} className="w-full bg-gradient-to-r from-red-600 to-orange-500 hover:from-red-500 hover:to-orange-400 text-white font-bold py-3">
@@ -322,17 +296,7 @@ export const RPGPvPBattle = ({
         <div className="absolute bottom-0 left-0 right-0 z-[70] p-4">
           <RPGWordReader
             words={storyWords}
-            currentIndex={wordIndex}
-            onWordRead={(correct) => {
-              if (correct) {
-                handleKidWordCorrect();
-              } else {
-                handleKidWordIncorrect();
-              }
-              setWordIndex(prev => prev + 1);
-              wordIndexRef.current++;
-            }}
-            isActive={phase === 'kid_turn'}
+            onResult={handleKidWordResult}
           />
         </div>
       )}
@@ -352,6 +316,7 @@ export const RPGPvPBattle = ({
         <RPGWordBarrage
           words={barrageWords}
           onComplete={(completed, failed) => handleMiniGameComplete(completed, failed)}
+          onWordHit={() => {}}
         />
       )}
       {phase === 'mini_game' && activeMiniGame === 'fireball_defense' && (
@@ -360,20 +325,10 @@ export const RPGPvPBattle = ({
           onComplete={(completed, failed) => handleMiniGameComplete(completed, failed)}
         />
       )}
-      {phase === 'mini_game' && activeMiniGame === 'word_ninja' && (
-        <RPGWordNinja
-          words={barrageWords}
-          onComplete={(completed, failed) => handleMiniGameComplete(completed, failed)}
-        />
-      )}
 
       {/* Victory Screen */}
       {phase === 'victory' && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="absolute inset-0 z-[90] flex items-center justify-center bg-black/80"
-        >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 z-[90] flex items-center justify-center bg-black/80">
           <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} transition={{ type: "spring" }} className="text-center">
             <Star className="h-20 w-20 text-yellow-400 mx-auto mb-4" />
             <h2 className="text-4xl font-black text-yellow-400 mb-2">HERO WINS!</h2>
@@ -385,11 +340,7 @@ export const RPGPvPBattle = ({
 
       {/* Defeat Screen */}
       {phase === 'defeat' && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="absolute inset-0 z-[90] flex items-center justify-center bg-black/80"
-        >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 z-[90] flex items-center justify-center bg-black/80">
           <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} className="text-center">
             <Shield className="h-20 w-20 text-red-400 mx-auto mb-4" />
             <h2 className="text-4xl font-black text-red-400 mb-2">VILLAIN WINS!</h2>
