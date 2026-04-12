@@ -1,106 +1,55 @@
 
 
-## Revised Plan: 4 New RPG Features
+## Brutally Honest Audit: 4 New Features
 
-### 1. Parent vs Kid PvP Mode (Asymmetric Gameplay)
+### What's Actually Working
 
-**Concept:** Parent controls the enemy side with powers and mini-attacks. Kid reads words to fight back as the hero.
+1. **Battle Mode Selector** — PvP and Co-op cards are properly added and wired. Routing in `RPGBattleArena.tsx` correctly redirects to dedicated components. This is solid.
 
-**Parent's turn:**
-- Parent picks from enemy ability cards (fireball, ice blast, word barrage, etc.)
-- Some abilities require the parent to read a word too (deals bonus damage)
-- Parent can trigger mini-attack games against the kid (same pool: Word Barrage, Fireball Defense, etc.)
+2. **Word Ninja Minigame** — Physics engine, speech recognition, slice detection, bomb hazards, combo system, timer — all implemented and wired into the battle phase rotation. This looks functional.
 
-**Kid's turn:**
-- Kid reads story words to deal damage (standard reading flow)
-- Kid can trigger their own attack mini-games (Word Cannon, Speed Blitz, etc.)
-- Successful reading builds combo multiplier
+3. **Parent Controls** — 6 ability cards with cooldowns, damage types, and minigame triggers. Clean UI. Works.
 
-**Implementation:**
-- New file: `RPGPvPBattle.tsx` — full battle screen with turn indicator, role labels
-- New file: `RPGParentControls.tsx` — enemy ability card picker for the parent's turn
-- Add `'pvp'` to `BattleMode` type in `RPGBattleModeSelector.tsx`
-- Wire into `RPGBattleArena.tsx` routing
-- Track stats for both players separately
+4. **PvP Battle** — Turn-based flow, setup screen with name inputs, HP bars, kid reads words, parent picks abilities, mini-games trigger correctly. Functional.
+
+5. **Co-op Battle** — Dual heroes, turn switching, enemy attacks, setup screen. Functional.
 
 ---
 
-### 2. Co-op 2-Player Mode
+### What's Broken or Missing
 
-**Concept:** Two heroes (100HP each) vs enemy. Players alternate turns reading words.
+#### BUG 1: Victory Arena is NOT wired in anywhere
+`RPGVictoryArena.tsx` exists as a component but is **never imported or rendered** outside its own file. It's dead code. Nobody will ever see it. It needs to be triggered after world-completion victories — but that hookup was never done.
 
-- Turn indicator shows "Player 1" / "Player 2" with distinct colors
-- Both heroes visible on screen with separate HP bars
-- If one hero falls, the other fights alone (not instant game over)
-- Enemy attacks target the active player
-- Mini-games trigger for whichever player is active
+#### BUG 2: PvP stale closure on `kidCorrectWords`
+Line 124 of `RPGPvPBattle.tsx`: `if ((kidCorrectWords + 1) % 5 === 0)` — this reads `kidCorrectWords` from the closure, but `setKidCorrectWords` is async. The turn-switch logic will fire at the wrong time (off by one or skipped entirely). Same class of bug we just fixed in Fireball Defense.
 
-**Implementation:**
-- New file: `RPGCoopBattle.tsx`
-- New file: `RPGCoopHUD.tsx` — dual hero HP display
-- Add `'coop'` to `BattleMode` type
-- Wire into battle arena routing
+#### BUG 3: PvP stale closure on `kidStreak`
+Line 115: `const streakBonus = Math.min(kidStreak, 5) * 2` — reads stale `kidStreak` from callback closure. First correct word always gets 0 streak bonus regardless of actual streak.
 
----
+#### BUG 4: Co-op stale closure on `currentStreak`
+Line ~108 in `RPGCoopBattle.tsx`: `const damage = 8 + Math.min(currentStreak, 5) * 2` — same stale closure issue. Streak bonus is always one word behind.
 
-### 3. Word Ninja Minigame (Fruit Ninja Style)
+#### BUG 5: Co-op stale closure on player HP for turn switching
+Lines 120-123: `const nextHp = nextPlayer === 1 ? player1Hp : player2Hp` reads from the closure, not current state. If a player just took damage, the stale HP might still show them alive when they're dead.
 
-**Concept:** Words fly across screen. Player speaks a word to "unlock" it, then slices it with mouse/trackpad drag.
+#### BUG 6: Parent "requiresReading" abilities don't actually require reading
+The `requiresReading` flag is displayed as a badge on the ability card, but there's no code that makes the parent actually read a word. Fireball and Lightning Strike say "Read a word for bonus damage" but just deal flat damage when clicked. It's cosmetic-only.
 
-- Words launch from bottom in arcs (like fruit in Fruit Ninja)
-- Each word starts locked (grey/dark) — speech recognition unlocks it (glows green)
-- Player drags cursor/finger across unlocked word to slice it
-- Sliced words split in half with particle burst animation
-- Unsliced words fall off screen after ~4 seconds = damage to player
-- Combo counter for consecutive slices
-- "Bomb" words mixed in — slicing a bomb = instant damage (must avoid)
-
-**Implementation:**
-- New file: `RPGWordNinja.tsx`
-- Add `'word_ninja'` to `MiniGameType` in `rpgBattleData.ts`
-- Wire into minigame rotation in `RPGBattleArena.tsx`
-- Uses existing speech recognition pipeline + lenient matching
-- Mouse/touch drag detection via pointer events
+#### ISSUE 7: Victory Arena has no connection to game flow
+Even after wiring it in, there's no existing "world completion" detection that would trigger it. We need to identify where world victories happen and add the arena as an optional reward step.
 
 ---
 
-### 4. Victory Arena (2D Brawler Reward)
+### Fix Plan
 
-**Concept:** After completing a world, player enters a 2D arena fight as a pure reward. No reading — just button-mashing combat for dopamine.
+| Fix | File | Change |
+|---|---|---|
+| Wire Victory Arena into post-battle flow | `RPGBattleArena.tsx` | Import and render `RPGVictoryArena` after world-completion victories |
+| Fix PvP stale closures | `RPGPvPBattle.tsx` | Use refs for `kidCorrectWords` and `kidStreak` |
+| Fix Co-op stale closures | `RPGCoopBattle.tsx` | Use refs for `currentStreak`, `player1Hp`, `player2Hp` |
+| Make parent reading abilities functional | `RPGPvPBattle.tsx` | Add a "parent reads word" phase before dealing bonus damage |
+| Wire Victory Arena trigger | `RPGBattleArena.tsx` | Detect world-final enemy defeat, show arena before `onComplete` |
 
-- Retro fighting game aesthetic — side-view arena with crowd silhouettes
-- Simple controls: punch, kick, dodge, special move (4 buttons)
-- Animated sprite combat with hit effects, knockback
-- Enemy AI fights back with patterns the player learns to dodge
-- No blood — hit effects are stars, flashes, comic-style "POW!" text
-- Win = bonus gold + XP + "Champion of [World Name]" title
-- Crowd cheers, confetti, victory fanfare
-
-**Implementation:**
-- New file: `RPGVictoryArena.tsx` — the 2D fighting arena
-- New file: `RPGArenaFighter.tsx` — fighter sprite + animation states
-- New file: `RPGArenaAI.tsx` — simple enemy AI patterns
-- Triggers after world-completion victories in battle flow
-- Awards bonus rewards tracked in existing economy system
-
----
-
-### Files Summary
-
-| New Files | Purpose |
-|---|---|
-| `RPGPvPBattle.tsx` | Parent vs Kid asymmetric battle |
-| `RPGParentControls.tsx` | Enemy ability card picker for parent |
-| `RPGCoopBattle.tsx` | 2-player cooperative battle |
-| `RPGCoopHUD.tsx` | Dual hero HP display |
-| `RPGWordNinja.tsx` | Fruit Ninja word-slicing minigame |
-| `RPGVictoryArena.tsx` | 2D arena brawler reward |
-| `RPGArenaFighter.tsx` | Fighter sprites and animations |
-| `RPGArenaAI.tsx` | Simple enemy AI for arena |
-
-| Modified Files | Change |
-|---|---|
-| `RPGBattleModeSelector.tsx` | Add PvP + Co-op mode cards |
-| `RPGBattleArena.tsx` | Route to PvP/Co-op, add Word Ninja to rotation |
-| `src/lib/rpgBattleData.ts` | Add `'word_ninja'` to MiniGameType, add `'pvp' \| 'coop'` to BattleMode |
+All fixes are surgical — refs to eliminate stale closures (same pattern we used for Fireball Defense), plus routing logic for the Victory Arena.
 
