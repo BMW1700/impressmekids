@@ -54,6 +54,7 @@ export const RPGFireballDefense = ({
 }: RPGFireballDefenseProps) => {
   const [fireballs, setFireballs] = useState<Fireball[]>([]);
   const [selectedFireball, setSelectedFireball] = useState<Fireball | null>(null);
+  const selectedFireballRef = useRef<Fireball | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [spokenWord, setSpokenWord] = useState('');
   const [blocked, setBlocked] = useState(0);
@@ -161,6 +162,7 @@ export const RPGFireballDefense = ({
     if (fireball.isDestroyed || selectedFireball || !gameActiveRef.current) return;
     
     setSelectedFireball(fireball);
+    selectedFireballRef.current = fireball;
     setFireballs(prev => prev.map(f => ({
       ...f,
       isSelected: f.id === fireball.id,
@@ -234,29 +236,32 @@ export const RPGFireballDefense = ({
 
   // Destroy the selected fireball
   const destroyFireball = useCallback(() => {
-    if (!selectedFireball) return;
+    const fireball = selectedFireballRef.current;
+    if (!fireball) return;
 
     setFeedback('correct');
     battleSounds.correctWord();
     setBlocked(p => p + 1);
 
     setFireballs(prev => prev.map(f => 
-      f.id === selectedFireball.id ? { ...f, isDestroyed: true, isSelected: false } : f
+      f.id === fireball.id ? { ...f, isDestroyed: true, isSelected: false } : f
     ));
 
     setTimeout(() => {
       setSelectedFireball(null);
+      selectedFireballRef.current = null;
       setFeedback(null);
       setSpokenWord('');
       if (recognitionRef.current) {
         try { recognitionRef.current.stop(); } catch {}
       }
     }, 300);
-  }, [selectedFireball]);
+  }, []);
 
   // Cancel current selection
   const cancelSelection = useCallback(() => {
     setSelectedFireball(null);
+    selectedFireballRef.current = null;
     setFireballs(prev => prev.map(f => ({ ...f, isSelected: false })));
     setSpokenWord('');
     setIsListening(false);
