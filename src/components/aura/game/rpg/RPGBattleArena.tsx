@@ -2157,15 +2157,25 @@ export const RPGBattleArena = ({
       }
     }
 
-    onComplete(victory, {
+    const finalStats: BattleStats = {
       wordsRead,
       correctWords,
       longestStreak,
       damageDealt: totalDamage,
       xpEarned: finalXpEarned,
-      goldEarned, // NEW: Pass gold to parent for wallet sync
-    });
-  }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete, studentId, story, battleMode, saveToAuraRecords, triggerQLearningUpdate, goldEarned]);
+      goldEarned,
+    };
+
+    // Show Victory Arena for boss/final victories as a reward
+    const isBossVictory = victory && (enemyType === 'boss' || enemyType === 'final_boss');
+    if (isBossVictory) {
+      setPendingBattleStats(finalStats);
+      setShowVictoryArena(true);
+      return;
+    }
+
+    onComplete(victory, finalStats);
+  }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete, studentId, story, battleMode, saveToAuraRecords, triggerQLearningUpdate, goldEarned, enemyType]);
 
   // Get current batch of words for reading - MEMOIZED for stable reference
   // batchStartIndex only changes when we complete a full batch, keeping this stable
