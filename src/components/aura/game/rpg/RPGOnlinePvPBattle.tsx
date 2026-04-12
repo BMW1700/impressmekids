@@ -92,12 +92,14 @@ export const RPGOnlinePvPBattle = ({
   const [endPhase, setEndPhase] = useState<'victory' | 'defeat' | null>(null);
   const [hostName, setHostName] = useState('Student');
   const [guestName, setGuestName] = useState('Parent');
+  const [roomStory, setRoomStory] = useState<string>(story.passage_text);
+  const [roomWorldNumber, setRoomWorldNumber] = useState(worldNumber);
   const gsRef = useRef(gs);
   const completedRef = useRef(false);
 
   useEffect(() => { gsRef.current = gs; }, [gs]);
 
-  const storyWords = story.passage_text.split(/\s+/).filter(w => w.length > 0);
+  const storyWords = roomStory.split(/\s+/).filter(w => w.length > 0);
 
   // Derived state
   const isMyTurn = (isHost && gs.turn === 'host') || (!isHost && gs.turn === 'guest');
@@ -118,53 +120,58 @@ export const RPGOnlinePvPBattle = ({
   // ─── Host initializes game_state on mount; guest polls until ready ───
   useEffect(() => {
     let pollInterval: ReturnType<typeof setInterval> | null = null;
+    let cancelled = false;
 
-    const loadRoom = async () => {
+    const hydrateRoom = async (): Promise<boolean> => {
       const { data } = await supabase
         .from('multiplayer_rooms')
-        .select('game_state, host_name, guest_name')
+        .select('game_state, host_name, guest_name, story_passage, story_title, world_number')
         .eq('id', roomId)
         .single();
 
-      if (data?.host_name) setHostName(data.host_name);
-      if (data?.guest_name) setGuestName(data.guest_name);
+      if (!data || cancelled) return false;
 
-      const existing = data?.game_state as any as OnlinePvPGameState | null;
+      if (data.host_name) setHostName(data.host_name);
+      if (data.guest_name) setGuestName(data.guest_name);
+      if (data.story_passage) setRoomStory(data.story_passage);
+      if (data.world_number) setRoomWorldNumber(data.world_number);
 
+      const existing = data.game_state as any as OnlinePvPGameState | null;
       if (existing && existing.phase) {
         setGs(existing);
         setReady(true);
-        updateMessage(existing, data?.host_name || 'Student', data?.guest_name || 'Parent');
-        return true; // loaded
+        updateMessage(existing, data.host_name || 'Student', data.guest_name || 'Parent');
+        return true;
       }
-      return false; // not ready yet
+      return false;
     };
 
     const init = async () => {
-      const loaded = await loadRoom();
-      if (loaded) return;
+      const loaded = await hydrateRoom();
+      if (loaded || cancelled) return;
 
       if (isHost) {
-        // Host writes initial state
         const initial = { ...INITIAL_STATE };
         await pushState(initial);
         setGs(initial);
         setReady(true);
         setMessage("🟢 Your turn! Read words to attack!");
       } else {
-        // Guest: poll every 2s until game_state appears
+        // Guest: poll every 1.5s until game_state appears
         pollInterval = setInterval(async () => {
-          const ok = await loadRoom();
+          if (cancelled) return;
+          const ok = await hydrateRoom();
           if (ok && pollInterval) {
             clearInterval(pollInterval);
             pollInterval = null;
           }
-        }, 2000);
+        }, 1500);
       }
     };
     init();
 
     return () => {
+      cancelled = true;
       if (pollInterval) clearInterval(pollInterval);
     };
   }, [roomId, isHost, pushState]);
@@ -391,7 +398,7 @@ export const RPGOnlinePvPBattle = ({
       animate={{ opacity: 1 }}
       className="fixed inset-0 z-50 bg-gradient-to-b from-slate-900 to-slate-950 overflow-hidden"
     >
-      <RPGBattleBackground worldNumber={worldNumber} />
+      <RPGBattleBackground worldNumber={roomWorldNumber} />
 
       {/* Top bar */}
       <div className="absolute top-3 left-3 z-[80]">
