@@ -448,6 +448,13 @@ export const RPGBattleArena = ({
   const [showVictoryArena, setShowVictoryArena] = useState(false);
   const [pendingBattleStats, setPendingBattleStats] = useState<BattleStats | null>(null);
   
+  // Online multiplayer state
+  const [connectionMode, setConnectionMode] = useState<ConnectionMode | null>(null);
+  const [showConnectionChooser, setShowConnectionChooser] = useState(battleMode === 'pvp' || battleMode === 'coop');
+  const [showLobby, setShowLobby] = useState(false);
+  const [onlineRoomId, setOnlineRoomId] = useState<string | null>(null);
+  const [isOnlineHost, setIsOnlineHost] = useState(false);
+  
   // Sync inventory from DB when playerInventory loads
   useEffect(() => {
     if (!playerInventory.isLoading) {
