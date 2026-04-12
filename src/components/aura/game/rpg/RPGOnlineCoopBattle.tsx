@@ -488,7 +488,7 @@ export const RPGOnlineCoopBattle = ({
               )}
             </span>
           </div>
-          <RPGWordReader words={getWordsForReader()} onResult={handleWordResult} />
+          <RPGWordReader key={`reader-${readerKey}`} words={getWordsForReader()} onResult={handleWordResult} />
         </div>
       )}
 
