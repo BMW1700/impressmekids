@@ -44,10 +44,31 @@ export const RPGMultiplayerLobby = ({
   const [copied, setCopied] = useState(false);
   const [roomId, setRoomId] = useState<string | null>(null);
 
+  const getCurrentUserId = useCallback(async () => {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    return data.session?.user?.id ?? null;
+  }, []);
+
   // Host: create room and wait for guest
   const handleCreateRoom = useCallback(async () => {
     setLoading(true);
     setError(null);
+
+    let userId: string | null = null;
+
+    try {
+      userId = await getCurrentUserId();
+    } catch (authError) {
+      console.error('[Lobby] Failed to read session before room creation:', authError);
+    }
+
+    if (!userId) {
+      setError('You must be signed in to create a room. Refresh and try again.');
+      setLoading(false);
+      return;
+    }
+
     const code = generateRoomCode();
 
     const { data, error: err } = await supabase
@@ -55,7 +76,7 @@ export const RPGMultiplayerLobby = ({
       .insert({
         room_code: code,
         mode: battleMode,
-        host_id: studentId,
+        host_id: userId,
         host_name: 'Player 1',
         story_passage: storyPassage,
         story_title: storyTitle,
@@ -69,7 +90,7 @@ export const RPGMultiplayerLobby = ({
 
     if (err) {
       console.error('[Lobby] Failed to create room:', err);
-      setError('Failed to create room. Try again.');
+      setError(err.message || 'Failed to create room. Try again.');
       setLoading(false);
       return;
     }
@@ -78,7 +99,7 @@ export const RPGMultiplayerLobby = ({
     setRoomId(data.id);
     setView('hosting');
     setLoading(false);
-  }, [battleMode, studentId, storyPassage, storyTitle, worldNumber, gradeMode, enemyType]);
+  }, [battleMode, storyPassage, storyTitle, worldNumber, gradeMode, enemyType, getCurrentUserId]);
 
   // Listen for guest joining — realtime + polling + immediate check
   const transitionedRef = useRef(false);
@@ -145,6 +166,20 @@ export const RPGMultiplayerLobby = ({
     setLoading(true);
     setError(null);
 
+    let userId: string | null = null;
+
+    try {
+      userId = await getCurrentUserId();
+    } catch (authError) {
+      console.error('[Lobby] Failed to read session before joining room:', authError);
+    }
+
+    if (!userId) {
+      setError('You must be signed in to join a room. Refresh and try again.');
+      setLoading(false);
+      return;
+    }
+
     // Find the room
     const { data: room, error: findErr } = await supabase
       .from('multiplayer_rooms')
@@ -159,7 +194,7 @@ export const RPGMultiplayerLobby = ({
       return;
     }
 
-    if (room.host_id === studentId) {
+    if (room.host_id === userId) {
       setError("You can't join your own room!");
       setLoading(false);
       return;
@@ -168,18 +203,19 @@ export const RPGMultiplayerLobby = ({
     // Join the room
     const { error: joinErr } = await supabase
       .from('multiplayer_rooms')
-      .update({ guest_id: studentId, guest_name: 'Player 2', status: 'active' })
+      .update({ guest_id: userId, guest_name: 'Player 2', status: 'active' })
       .eq('id', room.id);
 
     if (joinErr) {
-      setError('Failed to join room.');
+      console.error('[Lobby] Failed to join room:', joinErr);
+      setError(joinErr.message || 'Failed to join room.');
       setLoading(false);
       return;
     }
 
     setLoading(false);
     onRoomReady(room.id, false, code);
-  }, [joinCode, studentId, onRoomReady]);
+  }, [joinCode, onRoomReady, getCurrentUserId]);
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(roomCode);
