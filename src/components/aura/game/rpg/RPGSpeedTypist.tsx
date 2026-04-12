@@ -191,7 +191,7 @@ export const RPGSpeedTypist = ({
             i === currentIdx ? { ...w, spoken: true } : w
           ));
           setCurrentIndex(prev => prev + 1);
-          onDamage(10); // Deal damage on each word
+          // Damage to enemy handled in onComplete callback, not here
           setTimeout(() => setFeedback(null), 300);
         }
       },

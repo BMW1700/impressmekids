@@ -235,26 +235,6 @@ export const RPGIceCrystalBarrage = ({
         animate={{ opacity: 1 }}
       />
 
-      {/* Snowflakes / particles */}
-      {[...Array(30)].map((_, i) => (
-        <motion.div
-          key={i}
-          className="absolute text-white/60"
-          style={{ left: `${Math.random() * 100}%`, top: -20 }}
-          animate={{
-            y: [0, window.innerHeight + 40],
-            x: [0, Math.random() * 100 - 50],
-            rotate: [0, 360],
-          }}
-          transition={{
-            duration: 3 + Math.random() * 2,
-            repeat: Infinity,
-            delay: Math.random() * 2,
-          }}
-        >
-          {agent ? <Zap size={12 + Math.random() * 12} /> : <Snowflake size={12 + Math.random() * 12} />}
-        </motion.div>
-      ))}
 
       {/* Title */}
       <motion.div
