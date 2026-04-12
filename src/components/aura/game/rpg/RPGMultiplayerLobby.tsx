@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Copy, Loader2, Users, Wifi, Check } from "lucide-react";
@@ -77,10 +77,34 @@ export const RPGMultiplayerLobby = ({
     setLoading(false);
   }, [battleMode, studentId, storyPassage, storyTitle, worldNumber, gradeMode]);
 
-  // Listen for guest joining — realtime + polling fallback
+  // Listen for guest joining — realtime + polling + immediate check
+  const transitionedRef = useRef(false);
+
   useEffect(() => {
     if (view !== 'hosting' || !roomId) return;
-    let cancelled = false;
+    transitionedRef.current = false;
+
+    const tryTransition = () => {
+      if (transitionedRef.current) return;
+      transitionedRef.current = true;
+      console.log('[Lobby] Host transitioning to game for room', roomId);
+      onRoomReady(roomId, true, roomCode);
+    };
+
+    const checkRoom = async () => {
+      if (transitionedRef.current) return;
+      const { data } = await supabase
+        .from('multiplayer_rooms')
+        .select('guest_id, status')
+        .eq('id', roomId)
+        .single();
+      if (data?.guest_id && data?.status === 'active') {
+        tryTransition();
+      }
+    };
+
+    // Immediate check in case guest already joined
+    checkRoom();
 
     // Realtime subscription
     const channel = supabase
@@ -90,28 +114,18 @@ export const RPGMultiplayerLobby = ({
         { event: 'UPDATE', schema: 'public', table: 'multiplayer_rooms', filter: `id=eq.${roomId}` },
         (payload) => {
           const room = payload.new as any;
-          if (room.guest_id && room.status === 'active' && !cancelled) {
-            onRoomReady(roomId, true, roomCode);
+          if (room.guest_id && room.status === 'active') {
+            tryTransition();
           }
         }
       )
       .subscribe();
 
-    // Polling fallback every 3s in case realtime misses the event
-    const poll = setInterval(async () => {
-      if (cancelled) return;
-      const { data } = await supabase
-        .from('multiplayer_rooms')
-        .select('guest_id, status')
-        .eq('id', roomId)
-        .single();
-      if (data?.guest_id && data?.status === 'active' && !cancelled) {
-        onRoomReady(roomId, true, roomCode);
-      }
-    }, 3000);
+    // Polling fallback every 2s
+    const poll = setInterval(checkRoom, 2000);
 
     return () => {
-      cancelled = true;
+      transitionedRef.current = true;
       clearInterval(poll);
       supabase.removeChannel(channel);
     };
