@@ -267,11 +267,11 @@ export const RPGBattleArena = ({
   
   // Calculate HP thresholds based on enemy max HP
   const getHPThresholds = useCallback((maxHp: number): number[] => {
-    if (maxHp >= 500) return [90, 80, 65, 50, 35, 25, 10]; // 7 triggers
-    if (maxHp >= 300) return [85, 70, 55, 50, 40, 25, 10]; // 6-7 triggers
-    if (maxHp >= 200) return [80, 60, 50, 40, 25]; // 4-5 triggers
-    if (maxHp >= 120) return [75, 50, 25]; // 3 triggers
-    return [50, 25]; // 2 triggers for 80-120 HP enemies
+    if (maxHp >= 500) return [75, 50, 25, 10]; // 4 triggers
+    if (maxHp >= 300) return [65, 50, 30, 10]; // 4 triggers
+    if (maxHp >= 200) return [65, 50, 25]; // 3 triggers
+    if (maxHp >= 120) return [50, 25]; // 2 triggers
+    return [50]; // 1 trigger for 80-120 HP enemies
   }, []);
   
   // Random enemy attack tracking for quick block
@@ -703,8 +703,8 @@ export const RPGBattleArena = ({
     
     // Bosses and final bosses attack more frequently
     const isBoss = enemy.type === 'boss' || enemy.type === 'final_boss';
-    const attackInterval = isBoss ? 3 : 4;
-    const attackChance = isBoss ? 0.5 : 0.4;
+    const attackInterval = isBoss ? 5 : 6;
+    const attackChance = isBoss ? 0.35 : 0.3;
     
     const wordsSinceLastAttack = correctWords - lastAttackCheck;
     if (wordsSinceLastAttack < attackInterval) return;
