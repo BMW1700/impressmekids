@@ -120,13 +120,6 @@ export const RPGBattleArena = ({
   onBack,
   onComplete,
 }: RPGBattleArenaProps) => {
-  // Route PvP and Co-op to their dedicated components
-  if (battleMode === 'pvp') {
-    return <RPGPvPBattle story={story} studentId={studentId} worldNumber={worldNumber} gradeMode={gradeMode} onBack={onBack} onComplete={onComplete} />;
-  }
-  if (battleMode === 'coop') {
-    return <RPGCoopBattle story={story} studentId={studentId} worldNumber={worldNumber} gradeMode={gradeMode} onBack={onBack} onComplete={onComplete} />;
-  }
   // ML Integration for saving training data
   const { saveToAuraRecords, triggerQLearningUpdate } = useMLIntegration();
   // STORE INVENTORY: Read real purchased items from database
