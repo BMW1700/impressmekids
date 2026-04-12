@@ -179,10 +179,13 @@ export const RPGMultiplayerLobby = ({
               className="w-full bg-gradient-to-r from-blue-600 to-indigo-500 hover:from-blue-500 hover:to-indigo-400 text-white font-bold py-6 text-lg"
             >
               {loading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-              🏠 Create Room
+              {battleMode === 'pvp' ? '🎮 Students Click Here to Create a Match' : '🏠 Create Room'}
             </Button>
             <div className="text-center text-slate-500 text-sm">— or —</div>
             <div className="space-y-2">
+              <p className="text-slate-300 text-sm text-center font-medium">
+                {battleMode === 'pvp' ? "🧑‍🦳 Parents Enter a Code Here to Join Your Student's Match" : 'Enter a room code to join'}
+              </p>
               <input
                 value={joinCode}
                 onChange={e => setJoinCode(e.target.value.toUpperCase())}
