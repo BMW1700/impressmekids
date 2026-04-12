@@ -35,6 +35,9 @@ import { RPGBalloonBattle } from "./RPGBalloonBattle";
 import { RPGGoblinHorde } from "./RPGGoblinHorde";
 // NEW: Import Fireball Defense mode
 import { RPGFireballDefense } from "./RPGFireballDefense";
+import { RPGWordNinja } from "./RPGWordNinja";
+import { RPGPvPBattle } from "./RPGPvPBattle";
+import { RPGCoopBattle } from "./RPGCoopBattle";
 // NEW: Import 6 new world mini-games
 import { RPGWordEcho } from "./RPGWordEcho";
 import { RPGWindChase } from "./RPGWindChase";
@@ -81,11 +84,11 @@ const battleSounds = new SoundEffects();
 
 type EnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'goblin_shaman' | 'fire_elemental' | 'lava_hound' | 'ember_drake' | 'crystal_knight' | 'prism_mage' | 'crystal_queen' | 'star_sprite' | 'comet_wolf' | 'nova_titan' | 'tome_golem' | 'page_wraith' | 'the_librarian' | 'vault_sentinel' | 'vault_drone' | 'the_vault_keeper' | 'shadow_operative' | 'shadow_drone' | 'the_shadow_broker' | 'frost_trooper' | 'ice_drone' | 'the_frostbite' | 'maze_runner' | 'tunnel_rat' | 'the_minotaur' | 'lab_guard' | 'bio_drone' | 'the_catalyst' | 'omega_soldier' | 'omega_elite' | 'the_omega';
 // UPDATED: Added goblin_horde for Classic mode mini-game + quick_block for enemy attacks
-type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'word_shield' | 'spell_combo' | 'dodge_words' | 'rhyme_chain' | 'speed_typist' | 'tug_of_war' | 'balloon_battle' | 'goblin_horde' | 'fireball_defense' | 'quick_block' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat' | 'word_echo' | 'wind_chase' | 'ink_splash' | 'crystal_prison' | 'lightning_storm' | 'void_pull' | 'ground_ripple' | 'web_trap' | 'vocab_shield' | 'context_clue' | 'boss_gate';
+type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'word_shield' | 'spell_combo' | 'dodge_words' | 'rhyme_chain' | 'speed_typist' | 'tug_of_war' | 'balloon_battle' | 'goblin_horde' | 'fireball_defense' | 'quick_block' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat' | 'word_echo' | 'wind_chase' | 'ink_splash' | 'crystal_prison' | 'lightning_storm' | 'void_pull' | 'ground_ripple' | 'web_trap' | 'vocab_shield' | 'context_clue' | 'boss_gate' | 'word_ninja';
 // InventoryKey removed — now uses string keys from store items
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
 
-export type BattleModeType = 'classic' | 'tug_of_war' | 'balloon';
+export type BattleModeType = 'classic' | 'tug_of_war' | 'balloon' | 'pvp' | 'coop';
 
 interface RPGBattleArenaProps {
   story: CuratedStory;
@@ -611,6 +614,7 @@ export const RPGBattleArena = ({
       'crystal_prison': `❄️ CRYSTAL PRISON! Break the ice! ❄️`,
       'lightning_storm': `⚡ LIGHTNING STORM! Speak FAST! ⚡`,
       'void_pull': `🕳️ VOID PULL! Save words from the void! 🕳️`,
+      'word_ninja': `🗡️ WORD NINJA! Speak & Slice! 🗡️`,
     };
     
     setEnemyAbilityMessage(announcements[gameType] || `${enemy.name} attacks!`);
@@ -647,6 +651,7 @@ export const RPGBattleArena = ({
         'crystal_prison': 'crystal_prison',
         'lightning_storm': 'lightning_storm',
         'void_pull': 'void_pull',
+        'word_ninja': 'word_ninja',
       };
       setPhase(phaseMap[gameType]);
     }, 1000);
@@ -2216,6 +2221,14 @@ export const RPGBattleArena = ({
     );
   }
 
+  // Route PvP and Co-op to dedicated components
+  if (battleMode === 'pvp') {
+    return <RPGPvPBattle story={story} studentId={studentId} worldNumber={worldNumber} gradeMode={gradeMode} onBack={onBack} onComplete={onComplete} />;
+  }
+  if (battleMode === 'coop') {
+    return <RPGCoopBattle story={story} studentId={studentId} worldNumber={worldNumber} gradeMode={gradeMode} onBack={onBack} onComplete={onComplete} />;
+  }
+
   return (
     <motion.div 
       className="fixed inset-x-0 top-0 h-[100dvh] z-50 overflow-hidden"
@@ -2523,6 +2536,22 @@ export const RPGBattleArena = ({
           <RPGWebTrap
             words={barrageWords}
             onComplete={handleWebTrapComplete}
+            onDamage={handleMiniGameDamage}
+          />
+        )}
+        {phase === 'word_ninja' && (
+          <RPGWordNinja
+            words={barrageWords}
+            onComplete={(completed, failed) => {
+              const bonusDamage = completed * 3;
+              const playerDamage = failed * 3;
+              if (bonusDamage > 0) {
+                setEnemyHp(prev => Math.max(0, prev - bonusDamage));
+                setTotalDamage(prev => prev + bonusDamage);
+              }
+              if (playerDamage > 0) handleMiniGameDamage(playerDamage);
+              returnToReading();
+            }}
             onDamage={handleMiniGameDamage}
           />
         )}

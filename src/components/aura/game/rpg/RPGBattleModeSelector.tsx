@@ -1,9 +1,9 @@
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Sword, Anchor, Sparkles, X } from "lucide-react";
+import { Sword, Anchor, Sparkles, X, Users, Swords } from "lucide-react";
 
-export type BattleMode = 'classic' | 'tug_of_war' | 'balloon';
+export type BattleMode = 'classic' | 'tug_of_war' | 'balloon' | 'pvp' | 'coop';
 
 interface RPGBattleModeSelectorProps {
   onSelectMode: (mode: BattleMode) => void;
@@ -34,6 +34,22 @@ const battleModes = [
     icon: Sparkles,
     gradient: 'from-purple-600 to-pink-500',
     bgGradient: 'from-purple-900/30 to-pink-900/30',
+  },
+  {
+    id: 'pvp' as BattleMode,
+    name: 'Parent vs Kid PvP',
+    description: 'Parent controls the enemy! Asymmetric competitive reading battle!',
+    icon: Swords,
+    gradient: 'from-red-600 to-rose-500',
+    bgGradient: 'from-red-900/30 to-rose-900/30',
+  },
+  {
+    id: 'coop' as BattleMode,
+    name: 'Co-op Team Battle',
+    description: 'Two heroes team up to defeat the enemy together!',
+    icon: Users,
+    gradient: 'from-blue-600 to-purple-500',
+    bgGradient: 'from-blue-900/30 to-purple-900/30',
   },
 ];
 
