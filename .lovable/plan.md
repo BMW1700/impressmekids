@@ -1,18 +1,41 @@
 
 
-## Fix the Patent Attorney Email — 3 Corrections
+## Reduce Minigame Frequency in RPG Battles
 
-Write `/mnt/documents/patent_attorney_email_v2.txt` with these fixes applied:
+The minigames are triggered by HP thresholds — every time the enemy's HP drops past a threshold percentage, a minigame fires. The current thresholds are very aggressive:
 
-1. **Story count**: Change "279 stories (110 for K-5, 169 for 6-12)" → **"280 stories (110 for K-5, 170 for 6-12)"**
+| Enemy Max HP | Current Thresholds | Count |
+|---|---|---|
+| 500+ | 90, 80, 65, 50, 35, 25, 10 | **7** |
+| 300+ | 85, 70, 55, 50, 40, 25, 10 | **7** |
+| 200+ | 80, 60, 50, 40, 25 | **5** |
+| 120+ | 75, 50, 25 | **3** |
+| <120 | 50, 25 | **2** |
 
-2. **Matching layers**: Rewrite the matching description to accurately reflect the code:
-   - Layer 1: Exact match
-   - Layer 2: Homophone lookup (local dictionary, ~136 word entries)
-   - Layer 3: Edit distance (Levenshtein — allows 1-2 character differences)
-   - Mention phoneme matching as a **separate fallback** used in word-by-word reading mode, not as a 4th layer in the main matching function
+Additionally, random enemy attacks (Quick Block) fire every 3-4 words with a 40-50% chance.
 
-3. **Homophone count**: Change "about 160 word groups" → **"about 136 word entries"**
+### Changes
 
-Everything else in the email is accurate and stays as-is. Output: single corrected plain text file ready to copy-paste.
+**1. Reduce HP thresholds (fewer minigames per battle)**
+
+Cut roughly in half:
+
+| Enemy Max HP | New Thresholds | Count |
+|---|---|---|
+| 500+ | 75, 50, 25, 10 | **4** |
+| 300+ | 65, 50, 30, 10 | **4** |
+| 200+ | 65, 50, 25 | **3** |
+| 120+ | 50, 25 | **2** |
+| <120 | 50 | **1** |
+
+**2. Reduce random enemy attack frequency**
+
+- Bosses: change from every 3 words (50% chance) → every 5 words (35% chance)
+- Regular enemies: change from every 4 words (40% chance) → every 6 words (30% chance)
+
+### Technical Details
+
+Single file edit: `src/components/aura/game/rpg/RPGBattleArena.tsx`
+- Lines 269-275: Update `getHPThresholds` return values
+- Lines 706-707: Update `attackInterval` and `attackChance` values
 
