@@ -2221,6 +2221,14 @@ export const RPGBattleArena = ({
     );
   }
 
+  // Route PvP and Co-op to dedicated components
+  if (battleMode === 'pvp') {
+    return <RPGPvPBattle story={story} studentId={studentId} worldNumber={worldNumber} gradeMode={gradeMode} onBack={onBack} onComplete={onComplete} />;
+  }
+  if (battleMode === 'coop') {
+    return <RPGCoopBattle story={story} studentId={studentId} worldNumber={worldNumber} gradeMode={gradeMode} onBack={onBack} onComplete={onComplete} />;
+  }
+
   return (
     <motion.div 
       className="fixed inset-x-0 top-0 h-[100dvh] z-50 overflow-hidden"
