@@ -86,7 +86,7 @@ type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fi
 // InventoryKey removed — now uses string keys from store items
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
 
-export type BattleModeType = 'classic' | 'tug_of_war' | 'balloon';
+export type BattleModeType = 'classic' | 'tug_of_war' | 'balloon' | 'pvp' | 'coop';
 
 interface RPGBattleArenaProps {
   story: CuratedStory;
