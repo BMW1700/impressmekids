@@ -77,10 +77,12 @@ export const RPGMultiplayerLobby = ({
     setLoading(false);
   }, [battleMode, studentId, storyPassage, storyTitle, worldNumber, gradeMode]);
 
-  // Listen for guest joining
+  // Listen for guest joining — realtime + polling fallback
   useEffect(() => {
     if (view !== 'hosting' || !roomId) return;
+    let cancelled = false;
 
+    // Realtime subscription
     const channel = supabase
       .channel(`room-${roomId}`)
       .on(
@@ -88,14 +90,31 @@ export const RPGMultiplayerLobby = ({
         { event: 'UPDATE', schema: 'public', table: 'multiplayer_rooms', filter: `id=eq.${roomId}` },
         (payload) => {
           const room = payload.new as any;
-          if (room.guest_id && room.status === 'active') {
+          if (room.guest_id && room.status === 'active' && !cancelled) {
             onRoomReady(roomId, true, roomCode);
           }
         }
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    // Polling fallback every 3s in case realtime misses the event
+    const poll = setInterval(async () => {
+      if (cancelled) return;
+      const { data } = await supabase
+        .from('multiplayer_rooms')
+        .select('guest_id, status')
+        .eq('id', roomId)
+        .single();
+      if (data?.guest_id && data?.status === 'active' && !cancelled) {
+        onRoomReady(roomId, true, roomCode);
+      }
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(poll);
+      supabase.removeChannel(channel);
+    };
   }, [view, roomId, roomCode, onRoomReady]);
 
   // Guest: join room by code
