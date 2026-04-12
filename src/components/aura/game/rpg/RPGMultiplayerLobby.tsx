@@ -61,6 +61,7 @@ export const RPGMultiplayerLobby = ({
         story_title: storyTitle,
         world_number: worldNumber,
         grade_mode: gradeMode,
+        enemy_type: enemyType,
         status: 'waiting',
         game_state: null,
       })
