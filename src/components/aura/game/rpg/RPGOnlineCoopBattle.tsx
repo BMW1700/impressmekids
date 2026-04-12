@@ -65,19 +65,26 @@ export const RPGOnlineCoopBattle = ({
   onComplete,
 }: RPGOnlineCoopBattleProps) => {
   const theme = getStoredTheme();
-  const enemy = theme === 'agent' ? getAgentEnemy('guard') : getEnemyForBattle('guard');
 
   const [gameState, setGameState] = useState<CoopGameState | null>(null);
   const [ready, setReady] = useState(false);
   const [message, setMessage] = useState<string | null>('Loading...');
   const [hostName, setHostName] = useState('Player 1');
   const [guestName, setGuestName] = useState('Player 2');
+  const [roomStory, setRoomStory] = useState<string>(story.passage_text);
+  const [roomWorldNumber, setRoomWorldNumber] = useState(worldNumber);
+  const [roomEnemyType, setRoomEnemyType] = useState<string>('guard');
   const gsRef = useRef<CoopGameState | null>(null);
   const completedRef = useRef(false);
+  // Reader reset key — changes force RPGWordReader to remount
+  const [readerKey, setReaderKey] = useState(0);
 
   useEffect(() => { gsRef.current = gameState; }, [gameState]);
 
-  const storyWords = story.passage_text.split(/\s+/).filter(w => w.length > 0);
+  // Derive enemy from room metadata
+  const enemy = theme === 'agent' ? getAgentEnemy(roomEnemyType as any) : getEnemyForBattle(roomEnemyType as any);
+
+  const storyWords = roomStory.split(/\s+/).filter(w => w.length > 0);
 
   const isMyTurn = gameState
     ? (isHost && gameState.turn === 'host') || (!isHost && gameState.turn === 'guest')
@@ -107,18 +114,24 @@ export const RPGOnlineCoopBattle = ({
   // ─── Load room + poll for guest ───
   useEffect(() => {
     let pollInterval: ReturnType<typeof setInterval> | null = null;
+    let cancelled = false;
 
-    const loadRoom = async () => {
+    const hydrateRoom = async (): Promise<boolean> => {
       const { data } = await supabase
         .from('multiplayer_rooms')
-        .select('game_state, host_name, guest_name')
+        .select('game_state, host_name, guest_name, story_passage, world_number, enemy_type')
         .eq('id', roomId)
         .single();
 
-      if (data?.host_name) setHostName(data.host_name);
-      if (data?.guest_name) setGuestName(data.guest_name);
+      if (!data || cancelled) return false;
 
-      const gs = data?.game_state as any as CoopGameState | null;
+      if (data.host_name) setHostName(data.host_name);
+      if (data.guest_name) setGuestName(data.guest_name);
+      if (data.story_passage) setRoomStory(data.story_passage);
+      if (data.world_number) setRoomWorldNumber(data.world_number);
+      if ((data as any).enemy_type) setRoomEnemyType((data as any).enemy_type);
+
+      const gs = data.game_state as any as CoopGameState | null;
       if (gs && gs.phase) {
         setGameState(gs);
         setReady(true);
@@ -128,28 +141,32 @@ export const RPGOnlineCoopBattle = ({
     };
 
     const init = async () => {
-      const loaded = await loadRoom();
-      if (loaded) return;
+      const loaded = await hydrateRoom();
+      if (loaded || cancelled) return;
 
       if (isHost) {
-        // Host shows setup screen — don't push state yet
+        // Host shows setup screen — don't push state yet, but hydrate room metadata
         const initial = makeInitialState('continuous');
         setGameState(initial);
         setReady(true);
       } else {
         // Guest polls until host pushes state
         pollInterval = setInterval(async () => {
-          const ok = await loadRoom();
+          if (cancelled) return;
+          const ok = await hydrateRoom();
           if (ok && pollInterval) {
             clearInterval(pollInterval);
             pollInterval = null;
           }
-        }, 2000);
+        }, 1500);
       }
     };
     init();
 
-    return () => { if (pollInterval) clearInterval(pollInterval); };
+    return () => {
+      cancelled = true;
+      if (pollInterval) clearInterval(pollInterval);
+    };
   }, [roomId, isHost]);
 
   // ─── Realtime subscription ───
@@ -282,6 +299,8 @@ export const RPGOnlineCoopBattle = ({
       }
 
       gs.lastEvent = { type: 'turn_switch', by: gs.turn, timestamp: Date.now() };
+      // Force reader remount on turn switch
+      setReaderKey(prev => prev + 1);
     }
 
     setGameState(gs);
@@ -411,7 +430,7 @@ export const RPGOnlineCoopBattle = ({
       animate={{ opacity: 1 }}
       className="fixed inset-0 z-50 bg-gradient-to-b from-slate-900 to-slate-950 overflow-hidden"
     >
-      <RPGBattleBackground worldNumber={worldNumber} />
+      <RPGBattleBackground worldNumber={roomWorldNumber} />
 
       <div className="absolute top-3 left-3 z-[80]">
         <Button variant="ghost" size="sm" onClick={onBack} className="text-white">
@@ -469,7 +488,7 @@ export const RPGOnlineCoopBattle = ({
               )}
             </span>
           </div>
-          <RPGWordReader words={getWordsForReader()} onResult={handleWordResult} />
+          <RPGWordReader key={`reader-${readerKey}`} words={getWordsForReader()} onResult={handleWordResult} />
         </div>
       )}
 

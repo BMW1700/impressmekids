@@ -2310,6 +2310,7 @@ export const RPGBattleArena = ({
           storyTitle={story.title}
           worldNumber={worldNumber}
           gradeMode={gradeMode || 'k5'}
+          enemyType={enemyType}
           onRoomReady={(roomId, isHost) => {
             setOnlineRoomId(roomId);
             setIsOnlineHost(isHost);

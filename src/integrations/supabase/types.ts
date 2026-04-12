@@ -1286,6 +1286,8 @@ export type Database = {
           total_gold: number | null
           total_xp_earned: number
           updated_at: string
+          victory_arena_completions: number | null
+          victory_arena_unlocked: Json | null
           world_progress: Json
         }
         Insert: {
@@ -1309,6 +1311,8 @@ export type Database = {
           total_gold?: number | null
           total_xp_earned?: number
           updated_at?: string
+          victory_arena_completions?: number | null
+          victory_arena_unlocked?: Json | null
           world_progress?: Json
         }
         Update: {
@@ -1332,6 +1336,8 @@ export type Database = {
           total_gold?: number | null
           total_xp_earned?: number
           updated_at?: string
+          victory_arena_completions?: number | null
+          victory_arena_unlocked?: Json | null
           world_progress?: Json
         }
         Relationships: [
@@ -3521,6 +3527,7 @@ export type Database = {
       multiplayer_rooms: {
         Row: {
           created_at: string
+          enemy_type: string | null
           expires_at: string
           game_state: Json
           grade_mode: string
@@ -3539,6 +3546,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          enemy_type?: string | null
           expires_at?: string
           game_state?: Json
           grade_mode?: string
@@ -3557,6 +3565,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          enemy_type?: string | null
           expires_at?: string
           game_state?: Json
           grade_mode?: string

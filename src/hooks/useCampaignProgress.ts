@@ -202,6 +202,7 @@ export const useCampaignProgress = (studentId?: string, gradeMode: GradeMode = '
       storyTitle,
       worldNumber,
       goldEarned = 0,
+      isBossVictory = false,
     }: {
       battleId: string;
       victory: boolean;
@@ -211,6 +212,7 @@ export const useCampaignProgress = (studentId?: string, gradeMode: GradeMode = '
       storyTitle: string;
       worldNumber: number;
       goldEarned?: number;
+      isBossVictory?: boolean;
     }) => {
       if (!studentId) throw new Error("No student ID");
 
@@ -257,6 +259,15 @@ export const useCampaignProgress = (studentId?: string, gradeMode: GradeMode = '
           }
         }
 
+        // Build victory arena unlocked list
+        const existingArenaUnlocked = (currentProgress as any)?.victory_arena_unlocked || [];
+        const arenaUnlocked = isBossVictory && !existingArenaUnlocked.includes(worldNumber)
+          ? [...existingArenaUnlocked, worldNumber]
+          : existingArenaUnlocked;
+        const arenaCompletions = isBossVictory
+          ? ((currentProgress as any)?.victory_arena_completions || 0) + 1
+          : ((currentProgress as any)?.victory_arena_completions || 0);
+
         await supabase
           .from("campaign_progress")
           .upsert({
@@ -270,7 +281,9 @@ export const useCampaignProgress = (studentId?: string, gradeMode: GradeMode = '
             grog_battles_won: newBattlesWon,
             total_xp_earned: newXpEarned,
             total_gold: (currentProgress?.total_gold || 0) + goldEarned,
-          }, {
+            victory_arena_unlocked: arenaUnlocked,
+            victory_arena_completions: arenaCompletions,
+          } as any, {
             onConflict: 'student_id,grade_mode',
           });
       }

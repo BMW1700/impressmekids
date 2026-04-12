@@ -11,6 +11,7 @@ interface RPGMultiplayerLobbyProps {
   storyTitle: string;
   worldNumber: number;
   gradeMode: string;
+  enemyType?: string;
   onRoomReady: (roomId: string, isHost: boolean, roomCode: string) => void;
   onBack: () => void;
 }
@@ -31,6 +32,7 @@ export const RPGMultiplayerLobby = ({
   storyTitle,
   worldNumber,
   gradeMode,
+  enemyType = 'guard',
   onRoomReady,
   onBack,
 }: RPGMultiplayerLobbyProps) => {
@@ -59,8 +61,9 @@ export const RPGMultiplayerLobby = ({
         story_title: storyTitle,
         world_number: worldNumber,
         grade_mode: gradeMode,
+        enemy_type: enemyType,
         status: 'waiting',
-        game_state: { hostHp: 100, guestHp: 100, enemyHp: 150, turn: 'host', events: [] },
+        game_state: null,
       })
       .select('id')
       .single();
