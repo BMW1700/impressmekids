@@ -1,41 +1,57 @@
 
 
-## Reduce Minigame Frequency in RPG Battles
+## Fix Three Critical RPG Minigame Bugs
 
-The minigames are triggered by HP thresholds — every time the enemy's HP drops past a threshold percentage, a minigame fires. The current thresholds are very aggressive:
+### Bug 1: Speed Reading Blitz — Reading Correctly Kills the Player
 
-| Enemy Max HP | Current Thresholds | Count |
-|---|---|---|
-| 500+ | 90, 80, 65, 50, 35, 25, 10 | **7** |
-| 300+ | 85, 70, 55, 50, 40, 25, 10 | **7** |
-| 200+ | 80, 60, 50, 40, 25 | **5** |
-| 120+ | 75, 50, 25 | **3** |
-| <120 | 50, 25 | **2** |
+**Root cause**: In `RPGSpeedTypist.tsx` line 194, every correct word calls `onDamage(10)`. This prop is wired to `handleMiniGameDamage` in `RPGBattleArena.tsx`, which **subtracts HP from the player**. So reading 10 words correctly = 100 damage to yourself = instant death.
 
-Additionally, random enemy attacks (Quick Block) fire every 3-4 words with a 40-50% chance.
+**Fix**: Remove `onDamage(10)` from the correct-word handler entirely. The damage to the enemy is already handled in `handleSpeedTypistComplete` via the `damage` parameter (`score * 10 + streak * 5`). The `onDamage` prop should only be called when the player FAILS (e.g., time runs out with unread words), not on success.
 
-### Changes
+- **File**: `src/components/aura/game/rpg/RPGSpeedTypist.tsx`, line 194
+- Delete `onDamage(10);`
 
-**1. Reduce HP thresholds (fewer minigames per battle)**
+---
 
-Cut roughly in half:
+### Bug 2: Missile/Fireball Defense — Can't Speak Words, Moves Too Fast, Looks Wrong
 
-| Enemy Max HP | New Thresholds | Count |
-|---|---|---|
-| 500+ | 75, 50, 25, 10 | **4** |
-| 300+ | 65, 50, 30, 10 | **4** |
-| 200+ | 65, 50, 25 | **3** |
-| 120+ | 50, 25 | **2** |
-| <120 | 50 | **1** |
+Three sub-issues in `RPGFireballDefense.tsx`:
 
-**2. Reduce random enemy attack frequency**
+**a) Speech recognition is too strict**: Line 156 only accepts exact match or `includes`. It doesn't use the lenient matching pipeline the rest of the game uses (homophones, edit distance, first-chars). Fix: add the same lenient matching used everywhere else.
 
-- Bosses: change from every 3 words (50% chance) → every 5 words (35% chance)
-- Regular enemies: change from every 4 words (40% chance) → every 6 words (30% chance)
+**b) Fireballs move too fast**: Speed is `0.3 + Math.random() * 0.2` (0.3-0.5% per frame at 60fps). With tap-to-select + speak workflow, that's ~3 seconds to cross the screen. Fix: reduce to `0.08 + Math.random() * 0.06` (same range as FireballBarrage).
 
-### Technical Details
+**c) Visual doesn't match "missiles" in Agent mode**: The balls use orange/red gradients even in Agent mode. Fix: in Agent mode, render them as elongated missile-shaped elements with cyan/slate colors instead of round fireballs.
 
-Single file edit: `src/components/aura/game/rpg/RPGBattleArena.tsx`
-- Lines 269-275: Update `getHPThresholds` return values
-- Lines 706-707: Update `attackInterval` and `attackChance` values
+- **File**: `src/components/aura/game/rpg/RPGFireballDefense.tsx`
+- Lines 50-51: Reduce speed values
+- Lines 151-168: Replace strict matching with lenient matching
+- Lines 337-341: Update Agent mode visual styling
+
+---
+
+### Bug 3: Missile Defense Freezes After Completion
+
+**Root cause**: The game-over overlay renders (line 401-430) but `onComplete` fires after a 1-second delay (line 114). During this time, speech recognition may still be active, and the overlay blocks all interaction. If `recognitionRef` isn't properly stopped, it can cause the component to hang.
+
+**Fix**: 
+- Force-stop speech recognition when `gameActive` becomes false
+- Reduce the completion delay from 1000ms to 500ms
+- Ensure `cancelSelection()` is called on game end
+
+- **File**: `src/components/aura/game/rpg/RPGFireballDefense.tsx`
+- Add cleanup when `gameActive` flips to false (stop recognition)
+- Line 114: Reduce timeout to 500ms
+
+---
+
+### Summary
+
+| File | Change |
+|---|---|
+| `RPGSpeedTypist.tsx` | Remove self-damage on correct words (line 194) |
+| `RPGFireballDefense.tsx` | Slow down projectiles (0.3→0.08 speed) |
+| `RPGFireballDefense.tsx` | Add lenient speech matching |
+| `RPGFireballDefense.tsx` | Fix Agent mode visuals (missiles not balls) |
+| `RPGFireballDefense.tsx` | Fix freeze on completion (cleanup recognition) |
 
