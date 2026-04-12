@@ -60,7 +60,7 @@ export const RPGMultiplayerLobby = ({
         world_number: worldNumber,
         grade_mode: gradeMode,
         status: 'waiting',
-        game_state: { hostHp: 100, guestHp: 100, enemyHp: 150, turn: 'host', events: [] },
+        game_state: null,
       })
       .select('id')
       .single();
