@@ -39,6 +39,10 @@ import { RPGWordNinja } from "./RPGWordNinja";
 import { RPGPvPBattle } from "./RPGPvPBattle";
 import { RPGCoopBattle } from "./RPGCoopBattle";
 import { RPGVictoryArena } from "./RPGVictoryArena";
+import { RPGConnectionChooser, ConnectionMode } from "./RPGConnectionChooser";
+import { RPGMultiplayerLobby } from "./RPGMultiplayerLobby";
+import { RPGOnlinePvPBattle } from "./RPGOnlinePvPBattle";
+import { RPGOnlineCoopBattle } from "./RPGOnlineCoopBattle";
 // NEW: Import 6 new world mini-games
 import { RPGWordEcho } from "./RPGWordEcho";
 import { RPGWindChase } from "./RPGWindChase";
