@@ -1,49 +1,49 @@
 
 
-## Problem Analysis
+## Brutal Audit: What's Actually Wrong with Online PvP
 
-The host (student) reads words and `commitState` fires on every word, which calls `pushState` → `sync_multiplayer_room_state` RPC. The RPC returns the updated row, and `acceptSnapshot` applies it. However, the **guest (parent) never sees these updates** because:
+### The Smoking Gun
+I queried the database. **Every single PvP room ever created has `rev=0`, `wordsRead=0`, `batchProgress=0`**. The `game_state` JSONB column is never updated after room creation. The student reads words and their local UI updates (you can see the student is on word 4 of 5), but `pushState` — the function that writes to the database — is **silently failing on every call**. The parent never receives any updates because there's nothing to receive.
 
-1. **The RPC call itself may be silently failing.** The `pushState` function casts `supabase` to a manual RPC client type (`rpcClient`), bypassing TypeScript's generated types. If the cast is wrong or the RPC response shape doesn't match expectations, the data may not persist or the response may not be processed correctly.
+### Root Causes (3 Issues)
 
-2. **Revision guard blocks legitimate updates on the guest side.** The `acceptSnapshot` function rejects any snapshot where `incomingRev < currentRev`. But the guest's `gsRef.current.rev` may already be ahead if the guest previously processed a stale or duplicate event, causing all subsequent real updates to be silently dropped.
+**Issue 1: `pushState` RPC is silently failing**
+The `sync_multiplayer_room_state` RPC requires `auth.uid()` to be non-null. The function works — it's properly defined with `SECURITY DEFINER` and `GRANT EXECUTE` to `authenticated`. But the Supabase client may not have a valid session when `pushState` fires. The error is caught in a try/catch and logged to `console.error`, but since neither player's console is visible to us, the failure is invisible. The `enqueueStatePersist` chain then calls `rehydrateRoom()` as fallback, which reads from DB — but since DB was never updated, it reads back the same `rev=0` state.
 
-3. **Realtime subscription may not fire for RPC-based updates.** The `sync_multiplayer_room_state` function is `SECURITY DEFINER` — it updates the row directly. However, Supabase Realtime only fires for changes visible through the **subscribing user's RLS policies**. Since the RPC bypasses RLS, the realtime event may not propagate to the guest's channel. The 2-second poll is the only fallback, but it uses the same `acceptSnapshot` with the same revision guard issue.
+Additionally, the `pushState` function reads the RPC response (`data[0].game_state`) and applies it locally. If the RPC returns an error, the local state gets clobbered back to the DB's stale `rev=0` state, **undoing the student's local progress**. This would explain why the student's progress resets or appears glitchy.
 
-4. **The RPC call uses a manual cast instead of the typed client.** The types file shows `sync_multiplayer_room_state` is properly typed, so the cast to `rpcClient` is unnecessary and may cause issues with how the response is parsed.
+**Issue 2: RPGWordReader not in `mode='fast'` for Elara**
+The online PvP battle renders `<RPGWordReader words={currentBatchWords} onResult={handleKidWordResult} />` without passing `mode='fast'`. In regular RPG mode (RPGBattleArena), Elara gets `mode={selectedCharacter === 'elara' ? 'fast' : 'normal'}` which provides faster feedback (150ms vs 300ms delays) for her 5-word charge-and-barrage mechanic. The online PvP also has no Elara charge counter UI, no plasma barrage logic, and no character selection step.
 
-## Fix Plan
+**Issue 3: Background mismatch is a red herring**
+The AI vs gradient background toggle is stored in `localStorage('rpg_use_ai_bg')`. Each device has its own localStorage. One player toggled it on, the other didn't. This is expected per-device behavior, not a sync bug.
 
-### 1. Fix RPC invocation to use typed Supabase client (RPGOnlinePvPBattle.tsx)
-Remove the manual `rpcClient` cast. Use `supabase.rpc('sync_multiplayer_room_state', {...})` directly since the function exists in the generated types. This ensures proper request serialization and response parsing.
+### Fix Plan
 
-### 2. Fix revision guard to allow equal revisions (RPGOnlinePvPBattle.tsx)
-Change `if (incomingRev < currentRev)` to `if (incomingRev < currentRev)` but also ensure the guest doesn't artificially inflate its own rev. The guest should never increment `lastQueuedRevRef` — only the writing side should. Add a guard so only the active writer (whoever called `commitState`) tracks `lastQueuedRevRef`.
+#### 1. Fix `pushState` to be resilient (the critical fix)
+- Add defensive logging with `console.warn` for every possible failure path
+- After RPC error, do NOT clobber local state — keep the locally-computed state and retry
+- Add a session validity check before calling the RPC
+- If session is missing, call `supabase.auth.getSession()` to refresh before retrying
+- Remove the local state clobber from the RPC response (the local state is already correct; we don't need to re-apply the DB response)
 
-### 3. Make the poll reconciliation ignore revision on the non-writing side (RPGOnlinePvPBattle.tsx)
-The guest (parent) is a passive consumer during the kid's turn. The poll should always apply the latest DB state when the user is not the active turn holder, bypassing the revision guard for read-only reconciliation.
+#### 2. Add Elara's 5-word fast mode to online PvP
+- Pass `mode='fast'` to `RPGWordReader` in the online PvP component
+- Add the Elara charge counter UI (the purple orbs showing charge 1-5)
+- Implement the plasma barrage logic: first 4 words charge up (no damage), 5th word deals 3x damage
+- This makes online PvP behave identically to regular RPG mode when playing as Elara
 
-### 4. Add a dedicated realtime channel approach that works with SECURITY DEFINER (RPGOnlinePvPBattle.tsx)
-Since `SECURITY DEFINER` updates may not trigger realtime for the other participant, add a Supabase Realtime **broadcast channel** as a lightweight signal. After each `pushState`, broadcast a small message (`{ rev: N }`) on a shared channel. The other client listens for this broadcast and immediately calls `rehydrateRoom()` to fetch the latest state. This gives near-instant updates without relying on postgres_changes.
-
-### 5. Apply the same pattern to RPGOnlineCoopBattle.tsx
-- Replace direct `.update()` with the `sync_multiplayer_room_state` RPC
-- Add broadcast signaling for instant cross-device sync
-- Add a continuous reconciliation poll
-- Add revision tracking to co-op game state
+#### 3. Harden the sync layer
+- Make the broadcast channel fire even on RPC failure (so the other client at least tries to rehydrate)
+- Add a `console.log` on every `commitState` call with the rev number and phase for debugging
+- Add a health-check on component mount that verifies the RPC works (call it with a no-op state to confirm auth is valid)
 
 ### Files to modify
-- `src/components/aura/game/rpg/RPGOnlinePvPBattle.tsx` — Fix RPC call, add broadcast channel, fix revision guard for passive side
-- `src/components/aura/game/rpg/RPGOnlineCoopBattle.tsx` — Port the same sync infrastructure
-- `src/components/aura/game/rpg/multiplayerRoomTypes.ts` — Add `rev` field to co-op state interface
+- `src/components/aura/game/rpg/RPGOnlinePvPBattle.tsx` — Fix pushState resilience, add Elara fast mode + charge UI, add session refresh, add debug logging
+- `src/components/aura/game/rpg/RPGOnlineCoopBattle.tsx` — Same pushState fixes for co-op parity
 
-### Technical detail: Broadcast channel approach
-```text
-Host reads word → commitState → pushState (RPC) → broadcast { rev: N }
-                                                        ↓
-Guest receives broadcast → rehydrateRoom() → acceptSnapshot (no rev guard for passive side)
-                                                        ↓
-                                            UI updates: HP, batch progress, word highlights
-```
-This is ~50-100ms latency (broadcast + single DB read), which is effectively real-time for a reading game. The existing postgres_changes subscription and 2-second poll remain as fallbacks.
+### What this does NOT fix (deferred to next pass)
+- Character selection screen for the student in online PvP (currently hardcoded to Elara)
+- Co-op mode full testing
+- Background sync between devices (low priority — it's a per-device preference)
 
