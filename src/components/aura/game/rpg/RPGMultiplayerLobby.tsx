@@ -71,6 +71,25 @@ export const RPGMultiplayerLobby = ({
 
     const code = generateRoomCode();
 
+    // Seed game_state at creation time so both players can hydrate immediately
+    const initialGameState = battleMode === 'pvp'
+      ? {
+          hostHp: 100, guestHp: 100, turn: 'host', phase: 'kid_turn',
+          wordIndex: 0, hostCorrect: 0, guestCorrect: 0,
+          hostStreak: 0, guestStreak: 0, longestStreak: 0,
+          totalDamage: 0, wordsRead: 0, cooldowns: {},
+          pendingAbility: null, pendingReadWord: null,
+          activeMiniGame: null, lastEvent: null, turnCount: 0,
+        }
+      : {
+          hostHp: 100, guestHp: 100, enemyHp: 150, enemyMaxHp: 150,
+          turn: 'host', wordIndex: 0, batchStartIndex: 0,
+          turnWordsRead: 0, hostWords: 0, guestWords: 0,
+          totalCorrect: 0, longestStreak: 0, currentStreak: 0,
+          totalDamage: 0, coopMode: 'continuous', repeatPhase: 1,
+          phase: 'setup', lastEvent: null,
+        };
+
     const { data, error: err } = await supabase
       .from('multiplayer_rooms')
       .insert({
@@ -84,6 +103,7 @@ export const RPGMultiplayerLobby = ({
         grade_mode: gradeMode,
         enemy_type: enemyType,
         status: 'waiting',
+        game_state: initialGameState,
       })
       .select('id')
       .single();

@@ -103,17 +103,24 @@ export const RPGOnlineCoopBattle = ({
     phase: 'setup', lastEvent: null,
   });
 
-  // ─── Push state to DB ───
+  // ─── Push state to DB with silent-failure detection ───
   const pushState = useCallback(async (newState: CoopGameState): Promise<boolean> => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('multiplayer_rooms')
       .update({
         game_state: newState as any,
         status: (newState.phase === 'victory' || newState.phase === 'defeat') ? 'completed' : 'active',
       })
-      .eq('id', roomId);
+      .eq('id', roomId)
+      .select('id');
     if (error) {
       console.error('[Coop] pushState failed:', error);
+      return false;
+    }
+    if (!data || data.length === 0) {
+      console.error('[Coop] pushState: 0 rows updated (RLS blocked)');
+      const { data: session } = await supabase.auth.getSession();
+      console.error('[Coop] Current auth uid:', session?.session?.user?.id);
       return false;
     }
     return true;
