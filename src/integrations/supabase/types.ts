@@ -8084,6 +8084,14 @@ export type Database = {
             }
             Returns: Json
           }
+      sync_multiplayer_room_state: {
+        Args: { p_game_state: Json; p_room_id: string; p_status?: string }
+        Returns: {
+          game_state: Json
+          status: string
+          updated_at: string
+        }[]
+      }
       update_user_district:
         | {
             Args: { p_district_id: string; p_user_id: string }
