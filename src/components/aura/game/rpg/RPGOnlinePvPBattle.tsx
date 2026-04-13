@@ -147,7 +147,7 @@ export const RPGOnlinePvPBattle = ({
     try {
       const { error, count } = await supabase
         .from('multiplayer_rooms')
-        .update({ game_state: newState as unknown as Record<string, unknown>, status })
+        .update({ game_state: newState as any, status })
         .eq('id', roomId);
 
       if (error) {
