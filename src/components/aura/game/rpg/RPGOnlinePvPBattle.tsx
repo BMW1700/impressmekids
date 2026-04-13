@@ -560,7 +560,8 @@ export const RPGOnlinePvPBattle = ({
       {ready && gs.phase === 'kid_turn' && isHost && (
         <div className="absolute bottom-0 left-0 right-0 z-[70] p-4">
           <RPGWordReader
-            words={readerWords}
+            key={`reader-${readerKey}`}
+            words={currentBatchWords}
             onResult={handleKidWordResult}
           />
         </div>
