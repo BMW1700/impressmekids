@@ -12,6 +12,7 @@ import { heroKnight, allyWizard, getEnemyForBattle } from "@/lib/rpgBattleData";
 import { getStoredTheme } from "@/lib/gameTheme";
 import { getAgentEnemy } from "@/lib/agentBattleData";
 import { supabase } from "@/integrations/supabase/client";
+import { LongLoadNotice } from "@/components/system/LongLoadNotice";
 
 const battleSounds = new SoundEffects();
 
@@ -50,10 +51,13 @@ interface CoopGameState {
   currentStreak: number;
   totalDamage: number;
   coopMode: 'continuous' | 'repeat';
-  repeatPhase: 1 | 2; // 1 = first reader, 2 = repeater
+  repeatPhase: 1 | 2;
   phase: 'setup' | 'playing' | 'victory' | 'defeat';
   lastEvent?: { type: string; damage?: number; by: string; timestamp: number } | null;
 }
+
+const isValidCoopState = (gs: any): gs is CoopGameState =>
+  gs && typeof gs === 'object' && typeof gs.phase === 'string' && typeof gs.enemyHp === 'number';
 
 export const RPGOnlineCoopBattle = ({
   story,
@@ -74,14 +78,13 @@ export const RPGOnlineCoopBattle = ({
   const [roomStory, setRoomStory] = useState<string>(story.passage_text);
   const [roomWorldNumber, setRoomWorldNumber] = useState(worldNumber);
   const [roomEnemyType, setRoomEnemyType] = useState<string>('guard');
+  const [initError, setInitError] = useState<string | null>(null);
   const gsRef = useRef<CoopGameState | null>(null);
   const completedRef = useRef(false);
-  // Reader reset key — changes force RPGWordReader to remount
   const [readerKey, setReaderKey] = useState(0);
 
   useEffect(() => { gsRef.current = gameState; }, [gameState]);
 
-  // Derive enemy from room metadata
   const enemy = theme === 'agent' ? getAgentEnemy(roomEnemyType as any) : getEnemyForBattle(roomEnemyType as any);
 
   const storyWords = roomStory.split(/\s+/).filter(w => w.length > 0);
@@ -101,14 +104,19 @@ export const RPGOnlineCoopBattle = ({
   });
 
   // ─── Push state to DB ───
-  const pushState = useCallback(async (newState: CoopGameState) => {
-    await supabase
+  const pushState = useCallback(async (newState: CoopGameState): Promise<boolean> => {
+    const { error } = await supabase
       .from('multiplayer_rooms')
       .update({
         game_state: newState as any,
         status: (newState.phase === 'victory' || newState.phase === 'defeat') ? 'completed' : 'active',
       })
       .eq('id', roomId);
+    if (error) {
+      console.error('[Coop] pushState failed:', error);
+      return false;
+    }
+    return true;
   }, [roomId]);
 
   // ─── Load room + poll for guest ───
@@ -117,22 +125,26 @@ export const RPGOnlineCoopBattle = ({
     let cancelled = false;
 
     const hydrateRoom = async (): Promise<boolean> => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('multiplayer_rooms')
         .select('game_state, host_name, guest_name, story_passage, world_number, enemy_type')
         .eq('id', roomId)
         .single();
 
+      if (error) {
+        console.error('[Coop] hydrateRoom read failed:', error);
+        return false;
+      }
       if (!data || cancelled) return false;
 
       if (data.host_name) setHostName(data.host_name);
       if (data.guest_name) setGuestName(data.guest_name);
       if (data.story_passage) setRoomStory(data.story_passage);
       if (data.world_number) setRoomWorldNumber(data.world_number);
-      if ((data as any).enemy_type) setRoomEnemyType((data as any).enemy_type);
+      if (data.enemy_type) setRoomEnemyType(data.enemy_type);
 
-      const gs = data.game_state as any as CoopGameState | null;
-      if (gs && gs.phase) {
+      const gs = data.game_state as any;
+      if (isValidCoopState(gs)) {
         setGameState(gs);
         setReady(true);
         return true;
@@ -145,7 +157,7 @@ export const RPGOnlineCoopBattle = ({
       if (loaded || cancelled) return;
 
       if (isHost) {
-        // Host shows setup screen — don't push state yet, but hydrate room metadata
+        // Host shows setup screen locally — don't push state yet
         const initial = makeInitialState('continuous');
         setGameState(initial);
         setReady(true);
@@ -178,8 +190,8 @@ export const RPGOnlineCoopBattle = ({
         { event: 'UPDATE', schema: 'public', table: 'multiplayer_rooms', filter: `id=eq.${roomId}` },
         (payload) => {
           const room = payload.new as any;
-          const gs = room.game_state as CoopGameState;
-          if (!gs || !gs.phase) return;
+          const gs = room.game_state as any;
+          if (!isValidCoopState(gs)) return;
 
           setGameState(gs);
           if (!ready) setReady(true);
@@ -213,7 +225,11 @@ export const RPGOnlineCoopBattle = ({
     const gs = makeInitialState(mode);
     gs.phase = 'playing';
     setGameState(gs);
-    await pushState(gs);
+    const ok = await pushState(gs);
+    if (!ok) {
+      setInitError('Failed to start battle. Go back and try again.');
+      return;
+    }
     setMessage(`🟢 ${hostName}'s Turn!`);
   }, [pushState, hostName]);
 
@@ -265,7 +281,6 @@ export const RPGOnlineCoopBattle = ({
       }
 
       if (gs.coopMode === 'continuous') {
-        // Switch to other player, they continue from current wordIndex
         const nextTurn = who === 'host' ? 'guest' : 'host';
         const nextHp = nextTurn === 'host' ? gs.hostHp : gs.guestHp;
         if (nextHp > 0) {
@@ -275,9 +290,8 @@ export const RPGOnlineCoopBattle = ({
       } else {
         // Repeat mode
         if (gs.repeatPhase === 1) {
-          // First reader done — second reader repeats same batch
           gs.repeatPhase = 2;
-          gs.wordIndex = gs.batchStartIndex; // reset to same batch start
+          gs.wordIndex = gs.batchStartIndex;
           const nextTurn = who === 'host' ? 'guest' : 'host';
           const nextHp = nextTurn === 'host' ? gs.hostHp : gs.guestHp;
           if (nextHp > 0) {
@@ -285,7 +299,6 @@ export const RPGOnlineCoopBattle = ({
           }
           gs.turnWordsRead = 0;
         } else {
-          // Second reader done — advance batch
           gs.repeatPhase = 1;
           gs.batchStartIndex = gs.batchStartIndex + 5;
           gs.wordIndex = gs.batchStartIndex;
@@ -299,7 +312,6 @@ export const RPGOnlineCoopBattle = ({
       }
 
       gs.lastEvent = { type: 'turn_switch', by: gs.turn, timestamp: Date.now() };
-      // Force reader remount on turn switch
       setReaderKey(prev => prev + 1);
     }
 
@@ -331,7 +343,6 @@ export const RPGOnlineCoopBattle = ({
     if (gameState.coopMode === 'continuous') {
       return storyWords.slice(gameState.wordIndex);
     }
-    // Repeat mode: show 5 words from batchStartIndex
     return storyWords.slice(gameState.batchStartIndex, gameState.batchStartIndex + 5);
   };
 
@@ -415,10 +426,26 @@ export const RPGOnlineCoopBattle = ({
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="fixed inset-0 z-50 bg-gradient-to-b from-slate-900 to-slate-950 flex items-center justify-center"
+        className="fixed inset-0 z-50 bg-gradient-to-b from-slate-900 to-slate-950 flex flex-col items-center justify-center"
       >
-        <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1 }}
-          className="text-white text-xl font-bold">Loading battle...</motion.div>
+        {initError ? (
+          <div className="bg-slate-900 border border-red-600 rounded-xl p-6 max-w-sm mx-4 text-center">
+            <p className="text-red-400 font-bold mb-3">{initError}</p>
+            <Button onClick={onBack} className="bg-slate-700 text-white">← Go Back</Button>
+          </div>
+        ) : (
+          <>
+            <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1 }}
+              className="text-white text-xl font-bold">Loading battle...</motion.div>
+            <LongLoadNotice
+              afterSeconds={12}
+              title="Battle taking too long?"
+              description="The battle couldn't sync. Try going back and creating a new room."
+              onRetry={onBack}
+              showSignIn={false}
+            />
+          </>
+        )}
       </motion.div>
     );
   }

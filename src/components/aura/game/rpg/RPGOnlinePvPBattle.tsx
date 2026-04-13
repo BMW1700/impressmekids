@@ -12,6 +12,7 @@ import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { CuratedStory } from "@/data/curatedStories";
 import { heroKnight } from "@/lib/rpgBattleData";
 import { supabase } from "@/integrations/supabase/client";
+import { LongLoadNotice } from "@/components/system/LongLoadNotice";
 
 const battleSounds = new SoundEffects();
 
@@ -77,6 +78,10 @@ const INITIAL_STATE: OnlinePvPGameState = {
   turnCount: 0,
 };
 
+/** Check if a game_state payload is a valid initialized PvP state */
+const isValidPvPState = (gs: any): gs is OnlinePvPGameState =>
+  gs && typeof gs === 'object' && typeof gs.phase === 'string' && typeof gs.hostHp === 'number';
+
 export const RPGOnlinePvPBattle = ({
   story,
   studentId,
@@ -94,6 +99,7 @@ export const RPGOnlinePvPBattle = ({
   const [guestName, setGuestName] = useState('Parent');
   const [roomStory, setRoomStory] = useState<string>(story.passage_text);
   const [roomWorldNumber, setRoomWorldNumber] = useState(worldNumber);
+  const [initError, setInitError] = useState<string | null>(null);
   const gsRef = useRef(gs);
   const completedRef = useRef(false);
 
@@ -108,13 +114,18 @@ export const RPGOnlinePvPBattle = ({
   // Host = kid/student (reads words), Guest = parent (uses abilities)
   const myRole = isHost ? 'kid' : 'parent';
 
-  // ─── Push state to DB ───
-  const pushState = useCallback(async (newState: OnlinePvPGameState) => {
+  // ─── Push state to DB with error logging ───
+  const pushState = useCallback(async (newState: OnlinePvPGameState): Promise<boolean> => {
     const status = (newState.phase === 'host_wins' || newState.phase === 'guest_wins') ? 'completed' : 'active';
-    await supabase
+    const { error } = await supabase
       .from('multiplayer_rooms')
       .update({ game_state: newState as any, status })
       .eq('id', roomId);
+    if (error) {
+      console.error('[PvP] pushState failed:', error);
+      return false;
+    }
+    return true;
   }, [roomId]);
 
   // ─── Host initializes game_state on mount; guest polls until ready ───
@@ -123,12 +134,16 @@ export const RPGOnlinePvPBattle = ({
     let cancelled = false;
 
     const hydrateRoom = async (): Promise<boolean> => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('multiplayer_rooms')
         .select('game_state, host_name, guest_name, story_passage, story_title, world_number')
         .eq('id', roomId)
         .single();
 
+      if (error) {
+        console.error('[PvP] hydrateRoom read failed:', error);
+        return false;
+      }
       if (!data || cancelled) return false;
 
       if (data.host_name) setHostName(data.host_name);
@@ -136,8 +151,8 @@ export const RPGOnlinePvPBattle = ({
       if (data.story_passage) setRoomStory(data.story_passage);
       if (data.world_number) setRoomWorldNumber(data.world_number);
 
-      const existing = data.game_state as any as OnlinePvPGameState | null;
-      if (existing && existing.phase) {
+      const existing = data.game_state as any;
+      if (isValidPvPState(existing)) {
         setGs(existing);
         setReady(true);
         updateMessage(existing, data.host_name || 'Student', data.guest_name || 'Parent');
@@ -147,17 +162,51 @@ export const RPGOnlinePvPBattle = ({
     };
 
     const init = async () => {
+      // First hydrate room metadata + check if state already exists
       const loaded = await hydrateRoom();
       if (loaded || cancelled) return;
 
       if (isHost) {
+        // Host: write initial state, then verify it was persisted
         const initial = { ...INITIAL_STATE };
-        await pushState(initial);
+        console.log('[PvP] Host writing initial game_state...');
+        const ok = await pushState(initial);
+
+        if (!ok) {
+          console.error('[PvP] Host initial pushState failed!');
+          setInitError('Failed to initialize battle. Please go back and try again.');
+          return;
+        }
+
+        // Verify the write took by re-reading
+        let verified = false;
+        for (let attempt = 0; attempt < 5 && !cancelled; attempt++) {
+          const { data } = await supabase
+            .from('multiplayer_rooms')
+            .select('game_state')
+            .eq('id', roomId)
+            .single();
+          if (isValidPvPState(data?.game_state)) {
+            verified = true;
+            break;
+          }
+          await new Promise(r => setTimeout(r, 500));
+        }
+
+        if (cancelled) return;
+
+        if (!verified) {
+          console.error('[PvP] Host could not verify game_state was saved');
+          setInitError('Battle state could not be saved. Please go back and try again.');
+          return;
+        }
+
+        console.log('[PvP] Host verified game_state saved. Ready!');
         setGs(initial);
         setReady(true);
         setMessage("🟢 Your turn! Read words to attack!");
       } else {
-        // Guest: poll every 1.5s until game_state appears
+        // Guest: poll every 1.5s until valid game_state appears
         pollInterval = setInterval(async () => {
           if (cancelled) return;
           const ok = await hydrateRoom();
@@ -197,8 +246,8 @@ export const RPGOnlinePvPBattle = ({
         { event: 'UPDATE', schema: 'public', table: 'multiplayer_rooms', filter: `id=eq.${roomId}` },
         (payload) => {
           const room = payload.new as any;
-          const incoming = room.game_state as OnlinePvPGameState;
-          if (!incoming || !incoming.phase) return;
+          const incoming = room.game_state as any;
+          if (!isValidPvPState(incoming)) return;
 
           if (room.host_name) setHostName(room.host_name);
           if (room.guest_name) setGuestName(room.guest_name);
@@ -554,10 +603,27 @@ export const RPGOnlinePvPBattle = ({
       )}
 
       {/* ──── Not ready yet ──── */}
-      {!ready && (
-        <div className="absolute inset-0 z-[90] flex items-center justify-center">
+      {!ready && !initError && (
+        <div className="absolute inset-0 z-[90] flex flex-col items-center justify-center">
           <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1 }}
             className="text-white text-xl font-bold">Loading battle...</motion.div>
+          <LongLoadNotice
+            afterSeconds={12}
+            title="Battle taking too long?"
+            description="The battle couldn't sync. Try going back and creating a new room."
+            onRetry={onBack}
+            showSignIn={false}
+          />
+        </div>
+      )}
+
+      {/* ──── Init error ──── */}
+      {initError && (
+        <div className="absolute inset-0 z-[90] flex items-center justify-center">
+          <div className="bg-slate-900 border border-red-600 rounded-xl p-6 max-w-sm mx-4 text-center">
+            <p className="text-red-400 font-bold mb-3">{initError}</p>
+            <Button onClick={onBack} className="bg-slate-700 text-white">← Go Back</Button>
+          </div>
         </div>
       )}
 
