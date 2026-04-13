@@ -93,11 +93,9 @@ export const RPGOnlinePvPBattle = ({
     [storyWords, gs.wordIndex]
   );
 
-  // Words remaining in the batch for the reader
-  const readerWords = useMemo(
-    () => currentBatchWords.slice(gs.batchProgress),
-    [currentBatchWords, gs.batchProgress]
-  );
+  // Use a stable key so RPGWordReader only re-mounts when the batch itself changes (wordIndex),
+  // NOT on every batchProgress update. The reader manages its own internal word index.
+  const readerKey = gs.wordIndex;
 
   // Derive the banner text from gs — no separate message state
   const bannerText = useMemo(() => {
