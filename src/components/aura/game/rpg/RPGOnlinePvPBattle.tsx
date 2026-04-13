@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Star, Shield, Sword, Wifi } from "lucide-react";
@@ -17,9 +17,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS,
   MultiplayerRoomSnapshot,
+  OnlinePvPGameState,
+  INITIAL_PVP_STATE,
+  isValidPvPState,
 } from "./multiplayerRoomTypes";
 
 const battleSounds = new SoundEffects();
+const BATCH_SIZE = 5;
+const POLL_MS = 2000; // continuous reconciliation poll
 
 interface BattleStats {
   wordsRead: number;
@@ -41,53 +46,6 @@ interface RPGOnlinePvPBattleProps {
   onComplete: (victory: boolean, stats: BattleStats) => void;
 }
 
-// Full synced game state — mirrors local PvP logic
-interface OnlinePvPGameState {
-  hostHp: number;
-  guestHp: number;
-  turn: 'host' | 'guest';
-  phase: 'kid_turn' | 'parent_turn' | 'parent_reading' | 'mini_game' | 'host_wins' | 'guest_wins';
-  wordIndex: number;
-  hostCorrect: number;
-  guestCorrect: number;
-  hostStreak: number;
-  guestStreak: number;
-  longestStreak: number;
-  totalDamage: number;
-  wordsRead: number;
-  cooldowns: Record<string, number>;
-  pendingAbility?: { id: string; name: string; damage: number; requiresReading: boolean; cooldown: number } | null;
-  pendingReadWord?: string | null;
-  activeMiniGame?: string | null;
-  lastEvent?: { type: string; damage?: number; by: string; message?: string; timestamp: number } | null;
-  turnCount: number;
-}
-
-const INITIAL_STATE: OnlinePvPGameState = {
-  hostHp: 100,
-  guestHp: 100,
-  turn: 'host',
-  phase: 'kid_turn',
-  wordIndex: 0,
-  hostCorrect: 0,
-  guestCorrect: 0,
-  hostStreak: 0,
-  guestStreak: 0,
-  longestStreak: 0,
-  totalDamage: 0,
-  wordsRead: 0,
-  cooldowns: {},
-  pendingAbility: null,
-  pendingReadWord: null,
-  activeMiniGame: null,
-  lastEvent: null,
-  turnCount: 0,
-};
-
-/** Check if a game_state payload is a valid initialized PvP state */
-const isValidPvPState = (gs: any): gs is OnlinePvPGameState =>
-  gs && typeof gs === 'object' && typeof gs.phase === 'string' && typeof gs.hostHp === 'number';
-
 export const RPGOnlinePvPBattle = ({
   story,
   studentId,
@@ -99,15 +57,18 @@ export const RPGOnlinePvPBattle = ({
   onComplete,
 }: RPGOnlinePvPBattleProps) => {
   const { session, isLoading: authLoading } = useAuth();
-  const [gs, setGs] = useState<OnlinePvPGameState>(INITIAL_STATE);
+
+  // ─── Authoritative state ───
+  const [gs, setGs] = useState<OnlinePvPGameState>(INITIAL_PVP_STATE);
   const [ready, setReady] = useState(false);
-  const [message, setMessage] = useState<string | null>('Loading battle...');
   const [endPhase, setEndPhase] = useState<'victory' | 'defeat' | null>(null);
   const [hostName, setHostName] = useState('Student');
   const [guestName, setGuestName] = useState('Parent');
   const [roomStory, setRoomStory] = useState<string>(story.passage_text);
   const [roomWorldNumber, setRoomWorldNumber] = useState(worldNumber);
   const [initError, setInitError] = useState<string | null>(null);
+  const [eventFlash, setEventFlash] = useState<string | null>(null);
+
   const gsRef = useRef(gs);
   const readyRef = useRef(ready);
   const completedRef = useRef(false);
@@ -116,50 +77,71 @@ export const RPGOnlinePvPBattle = ({
   useEffect(() => { gsRef.current = gs; }, [gs]);
   useEffect(() => { readyRef.current = ready; }, [ready]);
 
-  const updateMessage = useCallback((state: OnlinePvPGameState, hName: string, gName: string) => {
-    if (state.phase === 'kid_turn') {
-      setMessage(state.turn === 'host' ? `🟢 ${hName}'s turn — Read to attack!` : `🟢 ${hName}'s turn`);
-    } else if (state.phase === 'parent_turn') {
-      setMessage(`🔴 ${gName}'s turn — Choose an attack!`);
-    } else if (state.phase === 'parent_reading') {
-      setMessage(`📖 ${gName} must read the word!`);
-    } else if (state.phase === 'mini_game') {
-      setMessage(`🎮 Mini-game active!`);
-    }
-  }, []);
+  // ─── Story words ───
+  const storyWords = useMemo(() => roomStory.split(/\s+/).filter(w => w.length > 0), [roomStory]);
 
-  const applyRoomSnapshot = useCallback((room: MultiplayerRoomSnapshot | null | undefined, markReady = false) => {
+  // ─── Derived state (all from gs, no separate message state) ───
+  const isMyTurn = (isHost && gs.turn === 'host') || (!isHost && gs.turn === 'guest');
+  const myRole = isHost ? 'kid' : 'parent';
+
+  // Current 5-word batch
+  const currentBatchWords = useMemo(
+    () => storyWords.slice(gs.wordIndex, gs.wordIndex + BATCH_SIZE),
+    [storyWords, gs.wordIndex]
+  );
+
+  // Words remaining in the batch for the reader
+  const readerWords = useMemo(
+    () => currentBatchWords.slice(gs.batchProgress),
+    [currentBatchWords, gs.batchProgress]
+  );
+
+  // Derive the banner text from gs — no separate message state
+  const bannerText = useMemo(() => {
+    if (eventFlash) return eventFlash;
+    if (gs.phase === 'kid_turn') {
+      return gs.turn === 'host'
+        ? `🟢 ${hostName}'s turn — Read to attack!`
+        : `🟢 ${hostName}'s turn`;
+    }
+    if (gs.phase === 'parent_turn') return `🔴 ${guestName}'s turn — Choose an attack!`;
+    if (gs.phase === 'parent_reading') return `📖 ${guestName} must read the word!`;
+    if (gs.phase === 'mini_game') return `🎮 Mini-game active!`;
+    return null;
+  }, [gs.phase, gs.turn, hostName, guestName, eventFlash]);
+
+  // ─── Accept a snapshot with revision guard ───
+  const acceptSnapshot = useCallback((room: MultiplayerRoomSnapshot | null | undefined, markReady = false): boolean => {
     if (!room) return false;
 
-    const nextHostName = room.host_name || 'Student';
-    const nextGuestName = room.guest_name || 'Parent';
+    const incoming = room.game_state as any;
+    if (!isValidPvPState(incoming)) return false;
+
+    // Revision guard: reject stale updates
+    const currentRev = gsRef.current.rev ?? 0;
+    const incomingRev = incoming.rev ?? 0;
+    if (incomingRev < currentRev) {
+      console.warn(`[PvP] Rejecting stale snapshot rev=${incomingRev} < current=${currentRev}`);
+      return false;
+    }
+
+    // Backfill batchProgress for legacy states
+    if (typeof incoming.batchProgress !== 'number') incoming.batchProgress = 0;
+    if (typeof incoming.rev !== 'number') incoming.rev = 0;
 
     if (room.host_name) setHostName(room.host_name);
     if (room.guest_name) setGuestName(room.guest_name);
     if (room.story_passage) setRoomStory(room.story_passage);
     if (typeof room.world_number === 'number') setRoomWorldNumber(room.world_number);
 
-    const nextState = room.game_state as any;
-    if (!isValidPvPState(nextState)) return false;
-
     hydrateAttemptsRef.current = 0;
     setInitError(null);
-    setGs(nextState);
+    setGs(incoming);
     if (markReady) setReady(true);
-    updateMessage(nextState, nextHostName, nextGuestName);
     return true;
-  }, [updateMessage]);
+  }, []);
 
-  const storyWords = roomStory.split(/\s+/).filter(w => w.length > 0);
-
-  // Derived state
-  const isMyTurn = (isHost && gs.turn === 'host') || (!isHost && gs.turn === 'guest');
-  const myHp = isHost ? gs.hostHp : gs.guestHp;
-  const opponentHp = isHost ? gs.guestHp : gs.hostHp;
-  // Host = kid/student (reads words), Guest = parent (uses abilities)
-  const myRole = isHost ? 'kid' : 'parent';
-
-  // ─── Push state to DB with silent-failure detection ───
+  // ─── Push state to DB ───
   const pushState = useCallback(async (newState: OnlinePvPGameState): Promise<boolean> => {
     const status = (newState.phase === 'host_wins' || newState.phase === 'guest_wins') ? 'completed' : 'active';
     const { data, error } = await supabase
@@ -167,101 +149,90 @@ export const RPGOnlinePvPBattle = ({
       .update({ game_state: newState as any, status })
       .eq('id', roomId)
       .select('id');
-    if (error) {
+    if (error || !data?.length) {
       console.error('[PvP] pushState failed:', error);
-      return false;
-    }
-    if (!data || data.length === 0) {
-      console.error('[PvP] pushState: 0 rows updated (RLS blocked). Attempting with fresh session...');
-      // Re-check auth
-      const { data: session } = await supabase.auth.getSession();
-      console.error('[PvP] Current auth uid:', session?.session?.user?.id);
+      // Re-hydrate on failure
+      const { data: fresh } = await supabase
+        .from('multiplayer_rooms')
+        .select(MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS)
+        .eq('id', roomId)
+        .maybeSingle();
+      if (fresh) acceptSnapshot(fresh as unknown as MultiplayerRoomSnapshot);
       return false;
     }
     return true;
-  }, [roomId]);
+  }, [roomId, acceptSnapshot]);
 
-  useEffect(() => {
-    if (initialRoomSnapshot) {
-      applyRoomSnapshot(initialRoomSnapshot, true);
+  // ─── Commit helper: bump rev, set local, push ───
+  const commitState = useCallback((newState: OnlinePvPGameState) => {
+    const withRev = { ...newState, rev: (gsRef.current.rev ?? 0) + 1 };
+    setGs(withRev);
+    gsRef.current = withRev;
+    pushState(withRev);
+
+    // Flash event message briefly
+    if (withRev.lastEvent?.message) {
+      setEventFlash(withRev.lastEvent.message);
+      setTimeout(() => setEventFlash(null), 2000);
     }
-  }, [initialRoomSnapshot, applyRoomSnapshot]);
+  }, [pushState]);
 
-  // ─── Both host and guest hydrate from pre-seeded game_state ───
+  // ─── Initial hydration from snapshot or DB ───
   useEffect(() => {
     if (authLoading) return;
-
-    let pollInterval: ReturnType<typeof setInterval> | null = null;
     let cancelled = false;
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
 
     const hydrateRoom = async (): Promise<boolean> => {
-      if (!session?.user?.id) {
-        return false;
-      }
-
+      if (!session?.user?.id) return false;
       const { data, error } = await supabase
         .from('multiplayer_rooms')
         .select(MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS)
         .eq('id', roomId)
         .maybeSingle();
-
-      if (error) {
-        console.error('[PvP] hydrateRoom read failed:', error);
-        hydrateAttemptsRef.current += 1;
-        if (hydrateAttemptsRef.current >= 5 && !cancelled && !readyRef.current) {
-          setInitError('The host could not sync the room. Go back and create a new room.');
-        }
-        return false;
-      }
-      if (!data || cancelled) {
+      if (error || !data || cancelled) {
         hydrateAttemptsRef.current += 1;
         if (hydrateAttemptsRef.current >= 8 && !cancelled && !readyRef.current) {
-          setInitError('Battle sync failed before the room finished loading. Please go back and recreate the room.');
+          setInitError('Battle sync failed. Go back and create a new room.');
         }
         return false;
       }
-
-      if (applyRoomSnapshot(data as unknown as MultiplayerRoomSnapshot, true)) {
-        return true;
-      }
-
-      hydrateAttemptsRef.current += 1;
-      if (hydrateAttemptsRef.current >= 8 && !cancelled && !readyRef.current) {
-        setInitError('Battle sync failed before the room finished loading. Please go back and recreate the room.');
-      }
-      return false;
+      return acceptSnapshot(data as unknown as MultiplayerRoomSnapshot, true);
     };
 
     const init = async () => {
-      if (initialRoomSnapshot) {
-        applyRoomSnapshot(initialRoomSnapshot, true);
-      }
-
-      const loaded = await hydrateRoom();
-      if (loaded || readyRef.current || cancelled) return;
-
-      console.warn('[PvP] game_state not valid on first read, polling...');
+      // Try snapshot first
+      if (initialRoomSnapshot && acceptSnapshot(initialRoomSnapshot, true)) return;
+      const ok = await hydrateRoom();
+      if (ok || readyRef.current || cancelled) return;
       pollInterval = setInterval(async () => {
         if (cancelled) return;
         const ok = await hydrateRoom();
-        if (ok && pollInterval) {
-          clearInterval(pollInterval);
-          pollInterval = null;
-        }
+        if (ok && pollInterval) { clearInterval(pollInterval); pollInterval = null; }
       }, 1500);
     };
     init();
 
-    return () => {
-      cancelled = true;
-      if (pollInterval) clearInterval(pollInterval);
-    };
-  }, [roomId, authLoading, session?.user?.id, initialRoomSnapshot, applyRoomSnapshot]);
+    return () => { cancelled = true; if (pollInterval) clearInterval(pollInterval); };
+  }, [roomId, authLoading, session?.user?.id, initialRoomSnapshot, acceptSnapshot]);
+
+  // ─── Continuous reconciliation poll (runs for entire match) ───
+  useEffect(() => {
+    if (!ready || authLoading || !session?.user?.id) return;
+    const interval = setInterval(async () => {
+      const { data } = await supabase
+        .from('multiplayer_rooms')
+        .select(MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS)
+        .eq('id', roomId)
+        .maybeSingle();
+      if (data) acceptSnapshot(data as unknown as MultiplayerRoomSnapshot);
+    }, POLL_MS);
+    return () => clearInterval(interval);
+  }, [ready, roomId, authLoading, session?.user?.id, acceptSnapshot]);
 
   // ─── Realtime subscription ───
   useEffect(() => {
     if (authLoading || !session?.user?.id) return;
-
     const channel = supabase
       .channel(`pvp-battle-${roomId}`)
       .on(
@@ -270,23 +241,16 @@ export const RPGOnlinePvPBattle = ({
         (payload) => {
           const room = payload.new as unknown as MultiplayerRoomSnapshot;
           const incoming = room.game_state as any;
-          if (!applyRoomSnapshot(room, true) || !isValidPvPState(incoming)) return;
+          if (!acceptSnapshot(room, true) || !isValidPvPState(incoming)) return;
 
-          // Sound effects based on lastEvent
           if (incoming.lastEvent) {
-            const evt = incoming.lastEvent;
-            if (evt.type === 'attack') battleSounds.correctWord();
-            else if (evt.type === 'ability') battleSounds.fireWhoosh();
+            if (incoming.lastEvent.type === 'attack') battleSounds.correctWord();
+            else if (incoming.lastEvent.type === 'ability') battleSounds.fireWhoosh();
           }
-
-          // Show event message
           if (incoming.lastEvent?.message) {
-            setMessage(incoming.lastEvent.message);
-          } else {
-            updateMessage(incoming, room.host_name || 'Student', room.guest_name || 'Parent');
+            setEventFlash(incoming.lastEvent.message);
+            setTimeout(() => setEventFlash(null), 2000);
           }
-
-          // Check win/loss
           if (incoming.phase === 'host_wins') {
             setEndPhase(isHost ? 'victory' : 'defeat');
             if (isHost) battleSounds.victoryFanfare();
@@ -297,11 +261,10 @@ export const RPGOnlinePvPBattle = ({
         }
       )
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
-  }, [roomId, isHost, authLoading, session?.user?.id, applyRoomSnapshot, updateMessage]);
+  }, [roomId, isHost, authLoading, session?.user?.id, acceptSnapshot]);
 
-  // ─── Handle end state ───
+  // ─── Handle end ───
   useEffect(() => {
     if (!endPhase || completedRef.current) return;
     completedRef.current = true;
@@ -319,49 +282,64 @@ export const RPGOnlinePvPBattle = ({
     }, 3000);
   }, [endPhase]);
 
-  // ─── Kid reads a word (host only) ───
+  // Also detect win from gs directly (in case realtime event is missed)
+  useEffect(() => {
+    if (!ready || endPhase || completedRef.current) return;
+    if (gs.phase === 'host_wins') {
+      setEndPhase(isHost ? 'victory' : 'defeat');
+      if (isHost) battleSounds.victoryFanfare();
+    } else if (gs.phase === 'guest_wins') {
+      setEndPhase(!isHost ? 'victory' : 'defeat');
+      if (!isHost) battleSounds.victoryFanfare();
+    }
+  }, [gs.phase, ready, endPhase, isHost]);
+
+  // ─── Kid reads a word (host only, true 5-word batch) ───
   const handleKidWordResult = useCallback((correct: boolean, _spokenWord: string, _wordIndex: number) => {
     if (!isHost) return;
 
     const s = { ...gsRef.current };
     s.wordsRead += 1;
+    s.batchProgress += 1;
 
     if (correct) {
       s.hostCorrect += 1;
       s.hostStreak += 1;
       if (s.hostStreak > s.longestStreak) s.longestStreak = s.hostStreak;
-
       const damage = 8 + Math.min(s.hostStreak, 5) * 2;
       s.totalDamage += damage;
       s.guestHp = Math.max(0, s.guestHp - damage);
       s.lastEvent = { type: 'attack', damage, by: 'host', message: `⚔️ ${hostName} deals ${damage} damage!`, timestamp: Date.now() };
-      s.wordIndex += 1;
 
       if (s.guestHp <= 0) {
         s.phase = 'host_wins';
-      } else if (s.hostCorrect % 5 === 0) {
-        // Switch to parent turn
-        s.turn = 'guest';
-        s.phase = 'parent_turn';
-        // Reduce cooldowns
-        const cd = { ...s.cooldowns };
-        Object.keys(cd).forEach(k => { if (cd[k] > 0) cd[k]--; });
-        s.cooldowns = cd;
-        s.turnCount += 1;
-        s.lastEvent = { type: 'turn_switch', by: 'host', message: `🔴 ${guestName}'s Turn!`, timestamp: Date.now() };
+        commitState(s);
+        return;
       }
     } else {
       s.hostStreak = 0;
     }
 
-    setGs(s);
-    pushState(s);
-  }, [isHost, pushState, hostName, guestName]);
+    // Check if this 5-word batch is done
+    if (s.batchProgress >= BATCH_SIZE) {
+      // Switch to parent turn
+      s.turn = 'guest';
+      s.phase = 'parent_turn';
+      s.wordIndex += BATCH_SIZE;
+      s.batchProgress = 0;
+      const cd = { ...s.cooldowns };
+      Object.keys(cd).forEach(k => { if (cd[k] > 0) cd[k]--; });
+      s.cooldowns = cd;
+      s.turnCount += 1;
+      s.lastEvent = { type: 'turn_switch', by: 'host', message: `🔴 ${guestName}'s Turn!`, timestamp: Date.now() };
+    }
+
+    commitState(s);
+  }, [isHost, commitState, hostName, guestName]);
 
   // ─── Parent selects ability (guest only) ───
   const handleParentAbility = useCallback((ability: ParentAbility) => {
     if (!isMyTurn || myRole !== 'parent') return;
-
     const s = { ...gsRef.current };
 
     if (ability.type === 'minigame' && ability.miniGame) {
@@ -370,32 +348,27 @@ export const RPGOnlinePvPBattle = ({
       s.lastEvent = { type: 'ability', by: 'guest', message: `🎮 ${ability.name}!`, timestamp: Date.now() };
       if (ability.cooldown > 0) s.cooldowns = { ...s.cooldowns, [ability.id]: ability.cooldown };
     } else if (ability.requiresReading) {
-      // Parent must read a word for bonus damage
       s.pendingAbility = { id: ability.id, name: ability.name, damage: ability.damage, requiresReading: true, cooldown: ability.cooldown };
       s.pendingReadWord = storyWords[Math.floor(Math.random() * storyWords.length)];
       s.phase = 'parent_reading';
       s.lastEvent = { type: 'ability', by: 'guest', message: `📖 Read the word for bonus damage!`, timestamp: Date.now() };
     } else {
-      // Direct damage ability
       const damage = ability.damage;
       s.hostHp = Math.max(0, s.hostHp - damage);
       s.lastEvent = { type: 'ability', damage, by: 'guest', message: `💥 ${guestName} uses ${ability.name} for ${damage} damage!`, timestamp: Date.now() };
       if (ability.cooldown > 0) s.cooldowns = { ...s.cooldowns, [ability.id]: ability.cooldown };
-
       if (s.hostHp <= 0) {
         s.phase = 'guest_wins';
       } else {
-        // Switch back to kid
         s.turn = 'host';
         s.phase = 'kid_turn';
+        s.batchProgress = 0;
       }
     }
+    commitState(s);
+  }, [isMyTurn, myRole, commitState, storyWords, guestName]);
 
-    setGs(s);
-    pushState(s);
-  }, [isMyTurn, myRole, pushState, storyWords, guestName]);
-
-  // ─── Parent reading result (guest only) ───
+  // ─── Parent reading result ───
   const handleParentReadResult = useCallback((correct: boolean) => {
     if (myRole !== 'parent') return;
     const s = { ...gsRef.current };
@@ -404,12 +377,8 @@ export const RPGOnlinePvPBattle = ({
 
     let damage = ability.damage;
     let msg: string;
-    if (correct) {
-      damage += 5;
-      msg = `💥 ${ability.name} + Reading Bonus = ${damage} damage!`;
-    } else {
-      msg = `💥 ${ability.name} for ${damage} damage (no bonus)`;
-    }
+    if (correct) { damage += 5; msg = `💥 ${ability.name} + Reading Bonus = ${damage} damage!`; }
+    else { msg = `💥 ${ability.name} for ${damage} damage (no bonus)`; }
 
     s.hostHp = Math.max(0, s.hostHp - damage);
     if (ability.cooldown > 0) s.cooldowns = { ...s.cooldowns, [ability.id]: ability.cooldown };
@@ -417,21 +386,15 @@ export const RPGOnlinePvPBattle = ({
     s.pendingReadWord = null;
     s.lastEvent = { type: 'ability', damage, by: 'guest', message: msg, timestamp: Date.now() };
 
-    if (s.hostHp <= 0) {
-      s.phase = 'guest_wins';
-    } else {
-      s.turn = 'host';
-      s.phase = 'kid_turn';
-    }
+    if (s.hostHp <= 0) { s.phase = 'guest_wins'; }
+    else { s.turn = 'host'; s.phase = 'kid_turn'; s.batchProgress = 0; }
 
-    setGs(s);
-    pushState(s);
-  }, [myRole, pushState]);
+    commitState(s);
+  }, [myRole, commitState]);
 
-  // ─── Mini-game completion (rendered on both devices, but only guest pushes result) ───
+  // ─── Mini-game completion ───
   const handleMiniGameComplete = useCallback((completed: number, failed: number) => {
     if (myRole !== 'parent') return;
-
     const s = { ...gsRef.current };
     const kidDamage = failed * 5;
     const bonusDamage = completed * 3;
@@ -440,21 +403,13 @@ export const RPGOnlinePvPBattle = ({
     s.activeMiniGame = null;
     s.lastEvent = { type: 'mini_game_end', by: 'guest', message: `🎮 Mini-game done! ${completed} caught, ${failed} missed`, timestamp: Date.now() };
 
-    if (s.hostHp <= 0) {
-      s.phase = 'guest_wins';
-    } else if (s.guestHp <= 0) {
-      s.phase = 'host_wins';
-    } else {
-      s.turn = 'host';
-      s.phase = 'kid_turn';
-    }
+    if (s.hostHp <= 0) { s.phase = 'guest_wins'; }
+    else if (s.guestHp <= 0) { s.phase = 'host_wins'; }
+    else { s.turn = 'host'; s.phase = 'kid_turn'; s.batchProgress = 0; }
 
-    setGs(s);
-    pushState(s);
-  }, [myRole, pushState]);
+    commitState(s);
+  }, [myRole, commitState]);
 
-  // Words for the current position
-  const currentStoryWords = storyWords.slice(gs.wordIndex);
   const barrageWords = storyWords.slice(gs.wordIndex, gs.wordIndex + 10);
 
   // ─── RENDER ───
@@ -476,10 +431,9 @@ export const RPGOnlinePvPBattle = ({
         <Wifi className="h-3 w-3" /> ONLINE PvP
       </div>
 
-      {/* HUD */}
+      {/* HUD — HP bars synced from gs */}
       <div className="absolute top-12 left-0 right-0 z-[60] px-4">
         <div className="flex gap-4 max-w-2xl mx-auto">
-          {/* Host (Kid) HP */}
           <div className={`flex-1 p-2 rounded-lg border-2 ${gs.turn === 'host' ? 'border-green-400 bg-green-950/30' : 'border-slate-700 bg-slate-900/50'}`}>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-sm font-bold text-green-300">🦸 {hostName} {isHost ? '(You)' : ''}</span>
@@ -490,7 +444,6 @@ export const RPGOnlinePvPBattle = ({
             </div>
           </div>
           <span className="text-white font-black text-xl self-center">VS</span>
-          {/* Guest (Parent) HP */}
           <div className={`flex-1 p-2 rounded-lg border-2 ${gs.turn === 'guest' ? 'border-red-400 bg-red-950/30' : 'border-slate-700 bg-slate-900/50'}`}>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-sm font-bold text-red-300">👹 {guestName} {!isHost ? '(You)' : ''}</span>
@@ -502,16 +455,16 @@ export const RPGOnlinePvPBattle = ({
           </div>
         </div>
         <div className="text-center mt-1">
-          <span className="text-slate-500 text-xs">Turn {gs.turnCount + 1}</span>
+          <span className="text-slate-500 text-xs">Turn {gs.turnCount + 1} • Batch {Math.floor(gs.wordIndex / BATCH_SIZE) + 1}</span>
         </div>
       </div>
 
-      {/* Message Banner */}
+      {/* Banner — derived from gs, no independent state */}
       <AnimatePresence>
-        {message && ready && !endPhase && (
-          <motion.div key={message} initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+        {bannerText && ready && !endPhase && (
+          <motion.div key={bannerText} initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="absolute top-32 left-1/2 -translate-x-1/2 z-[70] bg-black/80 px-6 py-3 rounded-xl border border-white/20">
-            <p className="text-white font-bold">{message}</p>
+            <p className="text-white font-bold">{bannerText}</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -527,13 +480,41 @@ export const RPGOnlinePvPBattle = ({
         />
       </div>
 
-      {/* ──── Kid's Turn: Word Reader (host device only) ──── */}
+      {/* ──── Kid's Turn: Word Reader (host device — interactive) ──── */}
       {ready && gs.phase === 'kid_turn' && isHost && (
         <div className="absolute bottom-0 left-0 right-0 z-[70] p-4">
           <RPGWordReader
-            words={currentStoryWords}
+            words={readerWords}
             onResult={handleKidWordResult}
           />
+        </div>
+      )}
+
+      {/* ──── Kid's Turn: Spectator view for parent (read-only word display) ──── */}
+      {ready && gs.phase === 'kid_turn' && !isHost && (
+        <div className="absolute bottom-0 left-0 right-0 z-[70] p-4">
+          <div className="max-w-lg mx-auto bg-slate-900/90 border border-green-600/40 rounded-xl p-4">
+            <p className="text-green-300 text-xs font-bold text-center mb-3">📖 {hostName} is reading:</p>
+            <div className="flex flex-wrap gap-2 justify-center">
+              {currentBatchWords.map((word, i) => (
+                <span
+                  key={`${gs.wordIndex}-${i}`}
+                  className={`px-3 py-2 rounded-lg text-lg font-bold transition-all ${
+                    i < gs.batchProgress
+                      ? 'bg-green-800/60 text-green-300 line-through opacity-60'
+                      : i === gs.batchProgress
+                        ? 'bg-green-600/80 text-white ring-2 ring-green-400 scale-110'
+                        : 'bg-slate-700/60 text-slate-300'
+                  }`}
+                >
+                  {word}
+                </span>
+              ))}
+            </div>
+            <div className="mt-3 text-center">
+              <span className="text-slate-400 text-xs">{gs.batchProgress}/{BATCH_SIZE} words read</span>
+            </div>
+          </div>
         </div>
       )}
 
@@ -547,7 +528,17 @@ export const RPGOnlinePvPBattle = ({
         />
       )}
 
-      {/* ──── Parent Reading Phase (guest device only) ──── */}
+      {/* ──── Parent's Turn: Student waits (host device) ──── */}
+      {ready && gs.phase === 'parent_turn' && isHost && (
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-[70]">
+          <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1.5 }}
+            className="bg-slate-900/80 border border-red-600/50 rounded-xl px-6 py-4 text-center">
+            <p className="text-red-300 font-bold">🔴 {guestName} is choosing an attack...</p>
+          </motion.div>
+        </div>
+      )}
+
+      {/* ──── Parent Reading Phase (guest device) ──── */}
       {ready && gs.phase === 'parent_reading' && gs.pendingReadWord && !isHost && (
         <motion.div
           initial={{ opacity: 0, y: 50 }}
@@ -564,17 +555,12 @@ export const RPGOnlinePvPBattle = ({
               <p className="text-4xl font-black text-white">{gs.pendingReadWord}</p>
             </motion.div>
             <div className="flex gap-3 justify-center">
-              <Button
-                onClick={() => handleParentReadResult(true)}
-                className="bg-gradient-to-r from-green-600 to-emerald-500 text-white font-bold px-6"
-              >
+              <Button onClick={() => handleParentReadResult(true)}
+                className="bg-gradient-to-r from-green-600 to-emerald-500 text-white font-bold px-6">
                 ✅ Read Correctly
               </Button>
-              <Button
-                onClick={() => handleParentReadResult(false)}
-                variant="outline"
-                className="border-red-500 text-red-300 px-6"
-              >
+              <Button onClick={() => handleParentReadResult(false)}
+                variant="outline" className="border-red-500 text-red-300 px-6">
                 ❌ Missed It
               </Button>
             </div>
@@ -582,7 +568,7 @@ export const RPGOnlinePvPBattle = ({
         </motion.div>
       )}
 
-      {/* ──── Parent Reading Phase — Kid sees word too (host device, read-only) ──── */}
+      {/* ──── Parent Reading — Kid sees word (host device, read-only) ──── */}
       {ready && gs.phase === 'parent_reading' && gs.pendingReadWord && isHost && (
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-[70]">
           <div className="bg-slate-900/80 border border-red-600/50 rounded-xl px-6 py-4 text-center">
@@ -594,43 +580,22 @@ export const RPGOnlinePvPBattle = ({
 
       {/* ──── Mini-game: Word Barrage ──── */}
       {ready && gs.phase === 'mini_game' && gs.activeMiniGame === 'word_barrage' && (
-        <RPGWordBarrage
-          words={barrageWords}
-          onComplete={(completed, failed) => handleMiniGameComplete(completed, failed)}
-          onWordHit={() => {}}
-        />
+        <RPGWordBarrage words={barrageWords} onComplete={handleMiniGameComplete} onWordHit={() => {}} />
       )}
 
       {/* ──── Mini-game: Fireball Defense ──── */}
       {ready && gs.phase === 'mini_game' && gs.activeMiniGame === 'fireball_defense' && (
-        <RPGFireballDefense
-          words={barrageWords}
-          onComplete={(completed, failed) => handleMiniGameComplete(completed, failed)}
-        />
+        <RPGFireballDefense words={barrageWords} onComplete={handleMiniGameComplete} />
       )}
 
-      {/* ──── Waiting for opponent ──── */}
-      {ready && !endPhase && !isMyTurn && gs.phase !== 'parent_reading' && gs.phase !== 'mini_game' && (
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-[70]">
-          <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1.5 }}
-            className="bg-slate-900/80 border border-slate-600 rounded-xl px-6 py-4 text-center">
-            <p className="text-slate-300 font-bold">⏳ Waiting for opponent...</p>
-          </motion.div>
-        </div>
-      )}
-
-      {/* ──── Not ready yet ──── */}
+      {/* ──── Not ready ──── */}
       {!ready && !initError && (
         <div className="absolute inset-0 z-[90] flex flex-col items-center justify-center">
           <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1 }}
             className="text-white text-xl font-bold">Loading battle...</motion.div>
-          <LongLoadNotice
-            afterSeconds={12}
-            title="Battle taking too long?"
+          <LongLoadNotice afterSeconds={12} title="Battle taking too long?"
             description="The battle couldn't sync. Try going back and creating a new room."
-            onRetry={onBack}
-            showSignIn={false}
-          />
+            onRetry={onBack} showSignIn={false} />
         </div>
       )}
 
@@ -651,9 +616,7 @@ export const RPGOnlinePvPBattle = ({
             <Star className="h-20 w-20 text-yellow-400 mx-auto mb-4" />
             <h2 className="text-4xl font-black text-yellow-400 mb-2">YOU WIN!</h2>
             <p className="text-white text-xl">{isHost ? hostName : guestName} is victorious!</p>
-            <p className="text-slate-400 mt-2">
-              {isHost ? gs.hostCorrect : gs.guestCorrect} words • {gs.longestStreak} best streak
-            </p>
+            <p className="text-slate-400 mt-2">{isHost ? gs.hostCorrect : gs.guestCorrect} words • {gs.longestStreak} best streak</p>
           </motion.div>
         </motion.div>
       )}
