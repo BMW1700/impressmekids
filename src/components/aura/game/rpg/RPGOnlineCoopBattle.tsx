@@ -143,21 +143,16 @@ export const RPGOnlineCoopBattle = ({
     return true;
   }, [isHost]);
 
-  // ─── Push state to DB using typed RPC ───
-  // CRITICAL FIX: session refresh, no state clobbering, broadcast on failure
+  // ─── Push state to DB via direct UPDATE (bypasses broken RPC path) ───
   const pushState = useCallback(async (newState: CoopGameState): Promise<boolean> => {
-    // Ensure valid session
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData?.session) {
-      console.warn('[Coop] pushState: No active session, attempting refresh...');
-      const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
-      if (refreshErr || !refreshed?.session) {
-        console.error('[Coop] pushState: Session refresh failed');
+      console.warn('[Coop] pushState: No session, refreshing...');
+      const { error: refreshErr } = await supabase.auth.refreshSession();
+      if (refreshErr) {
+        console.error('[Coop] pushState: Session refresh failed:', refreshErr.message);
         if (broadcastChannelRef.current) {
-          broadcastChannelRef.current.send({
-            type: 'broadcast', event: 'state_update',
-            payload: { rev: newState.rev },
-          });
+          broadcastChannelRef.current.send({ type: 'broadcast', event: 'state_update', payload: { rev: newState.rev } });
         }
         return false;
       }
@@ -165,42 +160,29 @@ export const RPGOnlineCoopBattle = ({
 
     const status = (newState.phase === 'victory' || newState.phase === 'defeat') ? 'completed' : 'active';
     try {
-      const { error } = await supabase.rpc('sync_multiplayer_room_state', {
-        p_room_id: roomId,
-        p_game_state: newState as any,
-        p_status: status,
-      });
+      const { error } = await supabase
+        .from('multiplayer_rooms')
+        .update({
+          game_state: newState as any,
+          status,
+        })
+        .eq('id', roomId);
 
       if (error) {
-        console.error('[Coop] pushState failed:', error.message, error.code, error.details);
-        // DO NOT clobber local state — broadcast so peer can rehydrate
-        if (broadcastChannelRef.current) {
-          broadcastChannelRef.current.send({
-            type: 'broadcast', event: 'state_update',
-            payload: { rev: newState.rev },
-          });
-        }
-        return false;
+        console.error('[Coop] pushState UPDATE error:', error.message, error.code, error.details);
+      } else {
+        console.log('[Coop] pushState OK rev=', newState.rev, 'phase=', newState.phase);
       }
 
-      // Broadcast signal — DO NOT re-apply DB response to local state
       if (broadcastChannelRef.current) {
-        broadcastChannelRef.current.send({
-          type: 'broadcast',
-          event: 'state_update',
-          payload: { rev: newState.rev },
-        });
+        broadcastChannelRef.current.send({ type: 'broadcast', event: 'state_update', payload: { rev: newState.rev } });
       }
 
-      console.log('[Coop] pushState OK rev=', newState.rev, 'phase=', newState.phase);
-      return true;
+      return !error;
     } catch (e) {
       console.error('[Coop] pushState exception:', e);
       if (broadcastChannelRef.current) {
-        broadcastChannelRef.current.send({
-          type: 'broadcast', event: 'state_update',
-          payload: { rev: newState.rev },
-        });
+        broadcastChannelRef.current.send({ type: 'broadcast', event: 'state_update', payload: { rev: newState.rev } });
       }
       return false;
     }
