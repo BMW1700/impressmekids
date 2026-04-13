@@ -114,21 +114,29 @@ export const RPGOnlinePvPBattle = ({
   // Host = kid/student (reads words), Guest = parent (uses abilities)
   const myRole = isHost ? 'kid' : 'parent';
 
-  // ─── Push state to DB with error logging ───
+  // ─── Push state to DB with silent-failure detection ───
   const pushState = useCallback(async (newState: OnlinePvPGameState): Promise<boolean> => {
     const status = (newState.phase === 'host_wins' || newState.phase === 'guest_wins') ? 'completed' : 'active';
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('multiplayer_rooms')
       .update({ game_state: newState as any, status })
-      .eq('id', roomId);
+      .eq('id', roomId)
+      .select('id');
     if (error) {
       console.error('[PvP] pushState failed:', error);
+      return false;
+    }
+    if (!data || data.length === 0) {
+      console.error('[PvP] pushState: 0 rows updated (RLS blocked). Attempting with fresh session...');
+      // Re-check auth
+      const { data: session } = await supabase.auth.getSession();
+      console.error('[PvP] Current auth uid:', session?.session?.user?.id);
       return false;
     }
     return true;
   }, [roomId]);
 
-  // ─── Host initializes game_state on mount; guest polls until ready ───
+  // ─── Both host and guest hydrate from pre-seeded game_state ───
   useEffect(() => {
     let pollInterval: ReturnType<typeof setInterval> | null = null;
     let cancelled = false;
@@ -162,60 +170,20 @@ export const RPGOnlinePvPBattle = ({
     };
 
     const init = async () => {
-      // First hydrate room metadata + check if state already exists
+      // game_state is pre-seeded at room creation, so both players just hydrate
       const loaded = await hydrateRoom();
       if (loaded || cancelled) return;
 
-      if (isHost) {
-        // Host: write initial state, then verify it was persisted
-        const initial = { ...INITIAL_STATE };
-        console.log('[PvP] Host writing initial game_state...');
-        const ok = await pushState(initial);
-
-        if (!ok) {
-          console.error('[PvP] Host initial pushState failed!');
-          setInitError('Failed to initialize battle. Please go back and try again.');
-          return;
-        }
-
-        // Verify the write took by re-reading
-        let verified = false;
-        for (let attempt = 0; attempt < 5 && !cancelled; attempt++) {
-          const { data } = await supabase
-            .from('multiplayer_rooms')
-            .select('game_state')
-            .eq('id', roomId)
-            .single();
-          if (isValidPvPState(data?.game_state)) {
-            verified = true;
-            break;
-          }
-          await new Promise(r => setTimeout(r, 500));
-        }
-
+      // If state wasn't valid yet (shouldn't happen with pre-seeded state), poll
+      console.warn('[PvP] game_state not valid on first read, polling...');
+      pollInterval = setInterval(async () => {
         if (cancelled) return;
-
-        if (!verified) {
-          console.error('[PvP] Host could not verify game_state was saved');
-          setInitError('Battle state could not be saved. Please go back and try again.');
-          return;
+        const ok = await hydrateRoom();
+        if (ok && pollInterval) {
+          clearInterval(pollInterval);
+          pollInterval = null;
         }
-
-        console.log('[PvP] Host verified game_state saved. Ready!');
-        setGs(initial);
-        setReady(true);
-        setMessage("🟢 Your turn! Read words to attack!");
-      } else {
-        // Guest: poll every 1.5s until valid game_state appears
-        pollInterval = setInterval(async () => {
-          if (cancelled) return;
-          const ok = await hydrateRoom();
-          if (ok && pollInterval) {
-            clearInterval(pollInterval);
-            pollInterval = null;
-          }
-        }, 1500);
-      }
+      }, 1500);
     };
     init();
 
@@ -223,7 +191,7 @@ export const RPGOnlinePvPBattle = ({
       cancelled = true;
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [roomId, isHost, pushState]);
+  }, [roomId]);
 
   const updateMessage = (state: OnlinePvPGameState, hName: string, gName: string) => {
     if (state.phase === 'kid_turn') {
