@@ -549,7 +549,7 @@ export const RPGOnlinePvPBattle = ({
 
       {/* Characters */}
       <div className="absolute bottom-40 left-[20%] z-[50]">
-        <RPGCharacter character={heroKnight} currentHp={gs.hostHp} isAttacking={gs.turn === 'host' && gs.phase === 'kid_turn'} />
+        <RPGCharacter character={allyWizard} currentHp={gs.hostHp} isAttacking={gs.turn === 'host' && gs.phase === 'kid_turn'} />
       </div>
       <div className="absolute bottom-40 right-[20%] z-[50]">
         <RPGCharacter
