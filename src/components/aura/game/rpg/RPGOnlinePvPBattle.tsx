@@ -13,6 +13,11 @@ import { CuratedStory } from "@/data/curatedStories";
 import { heroKnight } from "@/lib/rpgBattleData";
 import { supabase } from "@/integrations/supabase/client";
 import { LongLoadNotice } from "@/components/system/LongLoadNotice";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS,
+  MultiplayerRoomSnapshot,
+} from "./multiplayerRoomTypes";
 
 const battleSounds = new SoundEffects();
 
@@ -30,6 +35,7 @@ interface RPGOnlinePvPBattleProps {
   studentId: string;
   roomId: string;
   isHost: boolean;
+  initialRoomSnapshot?: MultiplayerRoomSnapshot | null;
   worldNumber?: number;
   onBack: () => void;
   onComplete: (victory: boolean, stats: BattleStats) => void;
@@ -87,10 +93,12 @@ export const RPGOnlinePvPBattle = ({
   studentId,
   roomId,
   isHost,
+  initialRoomSnapshot = null,
   worldNumber = 1,
   onBack,
   onComplete,
 }: RPGOnlinePvPBattleProps) => {
+  const { session, isLoading: authLoading } = useAuth();
   const [gs, setGs] = useState<OnlinePvPGameState>(INITIAL_STATE);
   const [ready, setReady] = useState(false);
   const [message, setMessage] = useState<string | null>('Loading battle...');
@@ -101,10 +109,12 @@ export const RPGOnlinePvPBattle = ({
   const [roomWorldNumber, setRoomWorldNumber] = useState(worldNumber);
   const [initError, setInitError] = useState<string | null>(null);
   const gsRef = useRef(gs);
+  const readyRef = useRef(ready);
   const completedRef = useRef(false);
   const hydrateAttemptsRef = useRef(0);
 
   useEffect(() => { gsRef.current = gs; }, [gs]);
+  useEffect(() => { readyRef.current = ready; }, [ready]);
 
   const updateMessage = useCallback((state: OnlinePvPGameState, hName: string, gName: string) => {
     if (state.phase === 'kid_turn') {
@@ -117,6 +127,28 @@ export const RPGOnlinePvPBattle = ({
       setMessage(`🎮 Mini-game active!`);
     }
   }, []);
+
+  const applyRoomSnapshot = useCallback((room: MultiplayerRoomSnapshot | null | undefined, markReady = false) => {
+    if (!room) return false;
+
+    const nextHostName = room.host_name || 'Student';
+    const nextGuestName = room.guest_name || 'Parent';
+
+    if (room.host_name) setHostName(room.host_name);
+    if (room.guest_name) setGuestName(room.guest_name);
+    if (room.story_passage) setRoomStory(room.story_passage);
+    if (typeof room.world_number === 'number') setRoomWorldNumber(room.world_number);
+
+    const nextState = room.game_state as any;
+    if (!isValidPvPState(nextState)) return false;
+
+    hydrateAttemptsRef.current = 0;
+    setInitError(null);
+    setGs(nextState);
+    if (markReady) setReady(true);
+    updateMessage(nextState, nextHostName, nextGuestName);
+    return true;
+  }, [updateMessage]);
 
   const storyWords = roomStory.split(/\s+/).filter(w => w.length > 0);
 
@@ -149,56 +181,65 @@ export const RPGOnlinePvPBattle = ({
     return true;
   }, [roomId]);
 
+  useEffect(() => {
+    if (initialRoomSnapshot) {
+      applyRoomSnapshot(initialRoomSnapshot, true);
+    }
+  }, [initialRoomSnapshot, applyRoomSnapshot]);
+
   // ─── Both host and guest hydrate from pre-seeded game_state ───
   useEffect(() => {
+    if (authLoading) return;
+
     let pollInterval: ReturnType<typeof setInterval> | null = null;
     let cancelled = false;
 
     const hydrateRoom = async (): Promise<boolean> => {
+      if (!session?.user?.id) {
+        return false;
+      }
+
       const { data, error } = await supabase
         .from('multiplayer_rooms')
-        .select('game_state, host_name, guest_name, story_passage, story_title, world_number')
+        .select(MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS)
         .eq('id', roomId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('[PvP] hydrateRoom read failed:', error);
         hydrateAttemptsRef.current += 1;
-        if (hydrateAttemptsRef.current >= 5 && !cancelled) {
+        if (hydrateAttemptsRef.current >= 5 && !cancelled && !readyRef.current) {
           setInitError('The host could not sync the room. Go back and create a new room.');
         }
         return false;
       }
-      if (!data || cancelled) return false;
+      if (!data || cancelled) {
+        hydrateAttemptsRef.current += 1;
+        if (hydrateAttemptsRef.current >= 8 && !cancelled && !readyRef.current) {
+          setInitError('Battle sync failed before the room finished loading. Please go back and recreate the room.');
+        }
+        return false;
+      }
 
-      if (data.host_name) setHostName(data.host_name);
-      if (data.guest_name) setGuestName(data.guest_name);
-      if (data.story_passage) setRoomStory(data.story_passage);
-      if (data.world_number) setRoomWorldNumber(data.world_number);
-
-      const existing = data.game_state as any;
-      if (isValidPvPState(existing)) {
-        hydrateAttemptsRef.current = 0;
-        setInitError(null);
-        setGs(existing);
-        setReady(true);
-        updateMessage(existing, data.host_name || 'Student', data.guest_name || 'Parent');
+      if (applyRoomSnapshot(data as MultiplayerRoomSnapshot, true)) {
         return true;
       }
 
       hydrateAttemptsRef.current += 1;
-      if (hydrateAttemptsRef.current >= 8 && !cancelled) {
+      if (hydrateAttemptsRef.current >= 8 && !cancelled && !readyRef.current) {
         setInitError('Battle sync failed before the room finished loading. Please go back and recreate the room.');
       }
       return false;
     };
 
     const init = async () => {
-      // game_state is pre-seeded at room creation, so both players just hydrate
-      const loaded = await hydrateRoom();
-      if (loaded || cancelled) return;
+      if (initialRoomSnapshot) {
+        applyRoomSnapshot(initialRoomSnapshot, true);
+      }
 
-      // If state wasn't valid yet (shouldn't happen with pre-seeded state), poll
+      const loaded = await hydrateRoom();
+      if (loaded || readyRef.current || cancelled) return;
+
       console.warn('[PvP] game_state not valid on first read, polling...');
       pollInterval = setInterval(async () => {
         if (cancelled) return;
@@ -215,25 +256,21 @@ export const RPGOnlinePvPBattle = ({
       cancelled = true;
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [roomId, updateMessage]);
+  }, [roomId, authLoading, session?.user?.id, initialRoomSnapshot, applyRoomSnapshot]);
 
   // ─── Realtime subscription ───
   useEffect(() => {
+    if (authLoading || !session?.user?.id) return;
+
     const channel = supabase
       .channel(`pvp-battle-${roomId}`)
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'multiplayer_rooms', filter: `id=eq.${roomId}` },
         (payload) => {
-          const room = payload.new as any;
+          const room = payload.new as MultiplayerRoomSnapshot;
           const incoming = room.game_state as any;
-          if (!isValidPvPState(incoming)) return;
-
-          if (room.host_name) setHostName(room.host_name);
-          if (room.guest_name) setGuestName(room.guest_name);
-
-          setGs(incoming);
-          if (!ready) setReady(true);
+          if (!applyRoomSnapshot(room, true) || !isValidPvPState(incoming)) return;
 
           // Sound effects based on lastEvent
           if (incoming.lastEvent) {
@@ -262,7 +299,7 @@ export const RPGOnlinePvPBattle = ({
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [roomId, isHost, ready]);
+  }, [roomId, isHost, authLoading, session?.user?.id, applyRoomSnapshot, updateMessage]);
 
   // ─── Handle end state ───
   useEffect(() => {

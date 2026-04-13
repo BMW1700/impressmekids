@@ -43,6 +43,7 @@ import { RPGConnectionChooser, ConnectionMode } from "./RPGConnectionChooser";
 import { RPGMultiplayerLobby } from "./RPGMultiplayerLobby";
 import { RPGOnlinePvPBattle } from "./RPGOnlinePvPBattle";
 import { RPGOnlineCoopBattle } from "./RPGOnlineCoopBattle";
+import { MultiplayerRoomReadyPayload, MultiplayerRoomSnapshot } from "./multiplayerRoomTypes";
 // NEW: Import 6 new world mini-games
 import { RPGWordEcho } from "./RPGWordEcho";
 import { RPGWindChase } from "./RPGWindChase";
@@ -454,6 +455,7 @@ export const RPGBattleArena = ({
   const [showLobby, setShowLobby] = useState(false);
   const [onlineRoomId, setOnlineRoomId] = useState<string | null>(null);
   const [isOnlineHost, setIsOnlineHost] = useState(false);
+  const [onlineRoomSnapshot, setOnlineRoomSnapshot] = useState<MultiplayerRoomSnapshot | null>(null);
 
   // Backup room-ready watcher at arena level
   // If the lobby's realtime/poll somehow fails, this catches the active room
@@ -2291,6 +2293,9 @@ export const RPGBattleArena = ({
           onSelect={(mode) => {
             setConnectionMode(mode);
             setShowConnectionChooser(false);
+            setOnlineRoomId(null);
+            setIsOnlineHost(false);
+            setOnlineRoomSnapshot(null);
             if (mode === 'online') {
               setShowLobby(true);
             }
@@ -2311,14 +2316,16 @@ export const RPGBattleArena = ({
           worldNumber={worldNumber}
           gradeMode={gradeMode || 'k5'}
           enemyType={enemyType}
-          onRoomReady={(roomId, isHost) => {
+          onRoomReady={({ roomId, isHost, snapshot }: MultiplayerRoomReadyPayload) => {
             setOnlineRoomId(roomId);
             setIsOnlineHost(isHost);
+            setOnlineRoomSnapshot(snapshot ?? null);
             setShowLobby(false);
           }}
           onBack={() => {
             setShowLobby(false);
             setShowConnectionChooser(true);
+            setOnlineRoomSnapshot(null);
           }}
         />
       );
@@ -2333,6 +2340,7 @@ export const RPGBattleArena = ({
             studentId={studentId}
             roomId={onlineRoomId}
             isHost={isOnlineHost}
+            initialRoomSnapshot={onlineRoomSnapshot}
             worldNumber={worldNumber}
             onBack={onBack}
             onComplete={onComplete}
