@@ -1,75 +1,49 @@
 
-What I found after auditing the PvP flow repeatedly
 
-This is not primarily a “loading” bug anymore. The battle is mounting. The real problem now is PvP state desync plus incomplete turn rendering.
+## Problem Analysis
 
-Highest-probability causes I found
-1. `RPGOnlinePvPBattle.tsx` stops reconciling after the initial hydrate. After mount it depends almost entirely on realtime updates. If either client misses one update, both screens drift permanently.
-2. The UI keeps a separate `message` state outside the authoritative room state. That lets the banner say one thing while the actual synced turn state says another, which matches your screenshots.
-3. Turn control is wrong for your rule. The code switches turns with `hostCorrect % 5 === 0`, which means “5 correct words,” not “the 5 words currently on screen.” So turns can overrun, stall, or feel inconsistent.
-4. The parent cannot see the student’s active reading batch because only the host renders `RPGWordReader`. There is no mirrored read-only batch on the parent side.
-5. Online PvP is still not rendering a fully synchronized battlefield presentation. `RPGBattleBackground` can differ per device because it uses local device preferences, so two users can see different backgrounds for the same room.
-6. Incoming room snapshots are applied without freshness protection. An older snapshot can overwrite a newer one on one client, causing HP/turn mismatch.
+The host (student) reads words and `commitState` fires on every word, which calls `pushState` → `sync_multiplayer_room_state` RPC. The RPC returns the updated row, and `acceptSnapshot` applies it. However, the **guest (parent) never sees these updates** because:
 
-What I will change
-1. Make the room state the single source of truth for PvP
-- Keep a lightweight reconciliation poll running for the whole match, not just initial load.
-- Apply realtime updates and poll updates through one shared “accept snapshot” function.
-- Reject stale snapshots using an explicit monotonic field in PvP state (for example `revision` or `stateVersion` inside `game_state`).
+1. **The RPC call itself may be silently failing.** The `pushState` function casts `supabase` to a manual RPC client type (`rpcClient`), bypassing TypeScript's generated types. If the cast is wrong or the RPC response shape doesn't match expectations, the data may not persist or the response may not be processed correctly.
 
-2. Fix turn logic to be true 5-word turns
-- Replace the current `hostCorrect % 5` turn switch.
-- Add explicit per-turn batch state to PvP, e.g.
+2. **Revision guard blocks legitimate updates on the guest side.** The `acceptSnapshot` function rejects any snapshot where `incomingRev < currentRev`. But the guest's `gsRef.current.rev` may already be ahead if the guest previously processed a stale or duplicate event, causing all subsequent real updates to be silently dropped.
+
+3. **Realtime subscription may not fire for RPC-based updates.** The `sync_multiplayer_room_state` function is `SECURITY DEFINER` — it updates the row directly. However, Supabase Realtime only fires for changes visible through the **subscribing user's RLS policies**. Since the RPC bypasses RLS, the realtime event may not propagate to the guest's channel. The 2-second poll is the only fallback, but it uses the same `acceptSnapshot` with the same revision guard issue.
+
+4. **The RPC call uses a manual cast instead of the typed client.** The types file shows `sync_multiplayer_room_state` is properly typed, so the cast to `rpcClient` is unnecessary and may cause issues with how the response is parsed.
+
+## Fix Plan
+
+### 1. Fix RPC invocation to use typed Supabase client (RPGOnlinePvPBattle.tsx)
+Remove the manual `rpcClient` cast. Use `supabase.rpc('sync_multiplayer_room_state', {...})` directly since the function exists in the generated types. This ensures proper request serialization and response parsing.
+
+### 2. Fix revision guard to allow equal revisions (RPGOnlinePvPBattle.tsx)
+Change `if (incomingRev < currentRev)` to `if (incomingRev < currentRev)` but also ensure the guest doesn't artificially inflate its own rev. The guest should never increment `lastQueuedRevRef` — only the writing side should. Add a guard so only the active writer (whoever called `commitState`) tracks `lastQueuedRevRef`.
+
+### 3. Make the poll reconciliation ignore revision on the non-writing side (RPGOnlinePvPBattle.tsx)
+The guest (parent) is a passive consumer during the kid's turn. The poll should always apply the latest DB state when the user is not the active turn holder, bypassing the revision guard for read-only reconciliation.
+
+### 4. Add a dedicated realtime channel approach that works with SECURITY DEFINER (RPGOnlinePvPBattle.tsx)
+Since `SECURITY DEFINER` updates may not trigger realtime for the other participant, add a Supabase Realtime **broadcast channel** as a lightweight signal. After each `pushState`, broadcast a small message (`{ rev: N }`) on a shared channel. The other client listens for this broadcast and immediately calls `rehydrateRoom()` to fetch the latest state. This gives near-instant updates without relying on postgres_changes.
+
+### 5. Apply the same pattern to RPGOnlineCoopBattle.tsx
+- Replace direct `.update()` with the `sync_multiplayer_room_state` RPC
+- Add broadcast signaling for instant cross-device sync
+- Add a continuous reconciliation poll
+- Add revision tracking to co-op game state
+
+### Files to modify
+- `src/components/aura/game/rpg/RPGOnlinePvPBattle.tsx` — Fix RPC call, add broadcast channel, fix revision guard for passive side
+- `src/components/aura/game/rpg/RPGOnlineCoopBattle.tsx` — Port the same sync infrastructure
+- `src/components/aura/game/rpg/multiplayerRoomTypes.ts` — Add `rev` field to co-op state interface
+
+### Technical detail: Broadcast channel approach
 ```text
-wordIndex        = start of current batch in story
-turnWordsRead    = how many of the 5 visible words are finished
-activeWordOffset = which visible word is currently active
+Host reads word → commitState → pushState (RPC) → broadcast { rev: N }
+                                                        ↓
+Guest receives broadcast → rehydrateRoom() → acceptSnapshot (no rev guard for passive side)
+                                                        ↓
+                                            UI updates: HP, batch progress, word highlights
 ```
-- End the student turn when that 5-word batch is completed, not when 5 correct answers happen.
+This is ~50-100ms latency (broadcast + single DB read), which is effectively real-time for a reading game. The existing postgres_changes subscription and 2-second poll remain as fallbacks.
 
-3. Mirror the student’s reading UI to the parent
-- Keep the host’s `RPGWordReader` interactive.
-- Add a read-only mirrored batch panel for the guest that shows:
-  - the same 5 words
-  - the currently active word
-  - progress through the batch
-- Push batch progress to room state so both devices advance simultaneously.
-
-4. Remove contradictory UI state
-- Stop treating the message banner as an independent source of truth.
-- Derive turn/waiting text from synced PvP state, with only short-lived event text layered on top.
-- This will prevent cases where the banner says “Student turn” while the bottom says “Waiting for opponent.”
-
-5. Lock online PvP visuals to one synchronized battlefield
-- Use room/world/enemy metadata only.
-- Pass authoritative enemy/background inputs into the battle background.
-- Disable per-device visual preference differences for online PvP so both players see the same battlefield.
-
-6. Harden write/apply flow
-- Route all PvP mutations through one commit helper:
-  - build next state
-  - increment revision
-  - write to backend
-  - if write fails, immediately re-hydrate
-- Add guards so only the host can progress reading state during student turn and only the guest can act during parent turn.
-
-Files to update
-- `src/components/aura/game/rpg/RPGOnlinePvPBattle.tsx`
-- `src/components/aura/game/rpg/RPGWordReader.tsx`
-- `src/components/aura/game/rpg/RPGBattleBackground.tsx`
-- `src/components/aura/game/rpg/RPGBattleArena.tsx`
-- `src/components/aura/game/rpg/multiplayerRoomTypes.ts`
-- possibly `src/components/aura/game/rpg/RPGMultiplayerLobby.tsx` if I need to seed the expanded PvP room state shape cleanly
-
-Technical notes
-- The screenshot mismatch is consistent with stale/missed room updates plus stale local banner state.
-- The “5 words on screen” rule is not implemented today in online PvP.
-- The parent visibility requirement also is not implemented today; it needs explicit spectator rendering, not just syncing HP.
-
-Validation after implementation
-- Host and guest enter the battle together
-- Both screens show the same HP, same turn, same batch progress, same background
-- Student always gets exactly one 5-word batch per turn
-- Parent sees those same 5 words and the active word in real time during the student turn
-- After every host read, both screens update immediately and stay in sync
-- No screen gets stuck on “Waiting for opponent” while its own turn is active
