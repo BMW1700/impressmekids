@@ -10,7 +10,7 @@ import { RPGWordBarrage } from "./RPGWordBarrage";
 import { RPGFireballDefense } from "./RPGFireballDefense";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { CuratedStory } from "@/data/curatedStories";
-import { heroKnight } from "@/lib/rpgBattleData";
+import { heroKnight, allyWizard } from "@/lib/rpgBattleData";
 import { supabase } from "@/integrations/supabase/client";
 import { LongLoadNotice } from "@/components/system/LongLoadNotice";
 import { useAuth } from "@/contexts/AuthContext";
