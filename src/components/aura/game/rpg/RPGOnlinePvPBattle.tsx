@@ -221,7 +221,7 @@ export const RPGOnlinePvPBattle = ({
         return false;
       }
 
-      if (applyRoomSnapshot(data as MultiplayerRoomSnapshot, true)) {
+      if (applyRoomSnapshot(data as unknown as MultiplayerRoomSnapshot, true)) {
         return true;
       }
 
@@ -268,7 +268,7 @@ export const RPGOnlinePvPBattle = ({
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'multiplayer_rooms', filter: `id=eq.${roomId}` },
         (payload) => {
-          const room = payload.new as MultiplayerRoomSnapshot;
+          const room = payload.new as unknown as MultiplayerRoomSnapshot;
           const incoming = room.game_state as any;
           if (!applyRoomSnapshot(room, true) || !isValidPvPState(incoming)) return;
 
