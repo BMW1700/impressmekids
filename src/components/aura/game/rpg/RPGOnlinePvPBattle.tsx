@@ -144,24 +144,23 @@ export const RPGOnlinePvPBattle = ({
   // ─── Push state to DB ───
   const pushState = useCallback(async (newState: OnlinePvPGameState): Promise<boolean> => {
     const status = (newState.phase === 'host_wins' || newState.phase === 'guest_wins') ? 'completed' : 'active';
-    const { data, error } = await supabase
-      .from('multiplayer_rooms')
-      .update({ game_state: newState as any, status })
-      .eq('id', roomId)
-      .select('id');
-    if (error || !data?.length) {
-      console.error('[PvP] pushState failed:', error);
-      // Re-hydrate on failure
-      const { data: fresh } = await supabase
+    try {
+      const { error, count } = await supabase
         .from('multiplayer_rooms')
-        .select(MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS)
-        .eq('id', roomId)
-        .maybeSingle();
-      if (fresh) acceptSnapshot(fresh as unknown as MultiplayerRoomSnapshot);
+        .update({ game_state: newState as any, status })
+        .eq('id', roomId);
+
+      if (error) {
+        console.error('[PvP] pushState DB error:', error.message, error.code, error.details);
+        return false;
+      }
+      console.log('[PvP] pushState OK rev=', newState.rev);
+      return true;
+    } catch (e) {
+      console.error('[PvP] pushState exception:', e);
       return false;
     }
-    return true;
-  }, [roomId, acceptSnapshot]);
+  }, [roomId]);
 
   // ─── Commit helper: bump rev, set local, push ───
   const commitState = useCallback((newState: OnlinePvPGameState) => {
