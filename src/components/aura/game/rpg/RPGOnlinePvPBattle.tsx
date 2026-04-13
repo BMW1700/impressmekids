@@ -102,8 +102,21 @@ export const RPGOnlinePvPBattle = ({
   const [initError, setInitError] = useState<string | null>(null);
   const gsRef = useRef(gs);
   const completedRef = useRef(false);
+  const hydrateAttemptsRef = useRef(0);
 
   useEffect(() => { gsRef.current = gs; }, [gs]);
+
+  const updateMessage = useCallback((state: OnlinePvPGameState, hName: string, gName: string) => {
+    if (state.phase === 'kid_turn') {
+      setMessage(state.turn === 'host' ? `🟢 ${hName}'s turn — Read to attack!` : `🟢 ${hName}'s turn`);
+    } else if (state.phase === 'parent_turn') {
+      setMessage(`🔴 ${gName}'s turn — Choose an attack!`);
+    } else if (state.phase === 'parent_reading') {
+      setMessage(`📖 ${gName} must read the word!`);
+    } else if (state.phase === 'mini_game') {
+      setMessage(`🎮 Mini-game active!`);
+    }
+  }, []);
 
   const storyWords = roomStory.split(/\s+/).filter(w => w.length > 0);
 
@@ -150,6 +163,10 @@ export const RPGOnlinePvPBattle = ({
 
       if (error) {
         console.error('[PvP] hydrateRoom read failed:', error);
+        hydrateAttemptsRef.current += 1;
+        if (hydrateAttemptsRef.current >= 5 && !cancelled) {
+          setInitError('The host could not sync the room. Go back and create a new room.');
+        }
         return false;
       }
       if (!data || cancelled) return false;
@@ -161,10 +178,17 @@ export const RPGOnlinePvPBattle = ({
 
       const existing = data.game_state as any;
       if (isValidPvPState(existing)) {
+        hydrateAttemptsRef.current = 0;
+        setInitError(null);
         setGs(existing);
         setReady(true);
         updateMessage(existing, data.host_name || 'Student', data.guest_name || 'Parent');
         return true;
+      }
+
+      hydrateAttemptsRef.current += 1;
+      if (hydrateAttemptsRef.current >= 8 && !cancelled) {
+        setInitError('Battle sync failed before the room finished loading. Please go back and recreate the room.');
       }
       return false;
     };
@@ -191,19 +215,7 @@ export const RPGOnlinePvPBattle = ({
       cancelled = true;
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [roomId]);
-
-  const updateMessage = (state: OnlinePvPGameState, hName: string, gName: string) => {
-    if (state.phase === 'kid_turn') {
-      setMessage(state.turn === 'host' ? `🟢 ${hName}'s turn — Read to attack!` : `🟢 ${hName}'s turn`);
-    } else if (state.phase === 'parent_turn') {
-      setMessage(`🔴 ${gName}'s turn — Choose an attack!`);
-    } else if (state.phase === 'parent_reading') {
-      setMessage(`📖 ${gName} must read the word!`);
-    } else if (state.phase === 'mini_game') {
-      setMessage(`🎮 Mini-game active!`);
-    }
-  };
+  }, [roomId, updateMessage]);
 
   // ─── Realtime subscription ───
   useEffect(() => {
