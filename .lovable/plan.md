@@ -1,62 +1,75 @@
 
-Do I know what the issue is? Yes.
+What I found after auditing the PvP flow repeatedly
 
-What is actually broken:
-1. The online PvP battle is not bootstrapping from the selected level as a single authoritative source. The battle mounts with fallback local props, so you see the correct shell/background area, but `ready` never flips because valid synced room state never gets confirmed.
-2. The host path in `RPGOnlinePvPBattle.tsx` is too optimistic: it writes an initial state and immediately sets `ready=true` locally without confirming the room now contains a valid game state. If that write is rejected, delayed, or overwritten by `{}`, one side stays on the loading overlay forever.
-3. The battle still does not fully model “normal level, except other player controls the enemy.” It hardcodes a 100 HP parent enemy and generic parent powers instead of deriving enemy HP/background/presentation from the selected level metadata.
-4. The guest/hydration logic only checks `phase`; it does not validate a complete usable state shape tied to the chosen level/enemy, so partial/invalid room data can keep the overlay alive or produce mismatched battles.
-5. Co-op likely has the same root architecture flaw: local fallback props and weak room hydration rather than a room-driven validated battle payload.
+This is not primarily a “loading” bug anymore. The battle is mounting. The real problem now is PvP state desync plus incomplete turn rendering.
 
-Files to update:
-- `src/components/aura/game/rpg/RPGOnlinePvPBattle.tsx`
-- `src/components/aura/game/rpg/RPGOnlineCoopBattle.tsx`
-- `src/components/aura/game/rpg/RPGMultiplayerLobby.tsx`
-- `src/components/aura/game/rpg/RPGBattleArena.tsx`
-- likely `src/components/aura/game/rpg/RPGPvPBattle.tsx` as the parity reference
+Highest-probability causes I found
+1. `RPGOnlinePvPBattle.tsx` stops reconciling after the initial hydrate. After mount it depends almost entirely on realtime updates. If either client misses one update, both screens drift permanently.
+2. The UI keeps a separate `message` state outside the authoritative room state. That lets the banner say one thing while the actual synced turn state says another, which matches your screenshots.
+3. Turn control is wrong for your rule. The code switches turns with `hostCorrect % 5 === 0`, which means “5 correct words,” not “the 5 words currently on screen.” So turns can overrun, stall, or feel inconsistent.
+4. The parent cannot see the student’s active reading batch because only the host renders `RPGWordReader`. There is no mirrored read-only batch on the parent side.
+5. Online PvP is still not rendering a fully synchronized battlefield presentation. `RPGBattleBackground` can differ per device because it uses local device preferences, so two users can see different backgrounds for the same room.
+6. Incoming room snapshots are applied without freshness protection. An older snapshot can overwrite a newer one on one client, causing HP/turn mismatch.
 
-Implementation plan:
-1. Rebuild online PvP bootstrap around a validated room payload
-- Add a strict room hydration function that reads room metadata + `game_state`.
-- Only mark `ready=true` after confirming the room contains a valid initialized PvP state.
-- If host, initialize the room once, then re-fetch until the saved state is confirmed.
-- If guest, poll until the same validated state appears.
-- Replace infinite loading with a visible recovery error state after timeout.
+What I will change
+1. Make the room state the single source of truth for PvP
+- Keep a lightweight reconciliation poll running for the whole match, not just initial load.
+- Apply realtime updates and poll updates through one shared “accept snapshot” function.
+- Reject stale snapshots using an explicit monotonic field in PvP state (for example `revision` or `stateVersion` inside `game_state`).
 
-2. Make the room fully authoritative for level parity
-- Use `story_passage`, `story_title`, `world_number`, `grade_mode`, and `enemy_type` from the room for both players.
-- Stop relying on local `story`/`worldNumber` props as battle authority after mount.
-- Ensure the displayed story words, world background, and enemy identity always come from the selected room level.
-
-3. Make online PvP mirror the normal level structure
-- Use the normal selected level’s enemy config as the enemy baseline: HP, visuals, enemy type, and background.
-- Keep the asymmetric PvP rule that the remote player controls enemy actions, but preserve the normal level feel and stats.
-- Audit parent powers so they behave consistently with the selected level instead of a generic placeholder enemy.
-
-4. Harden state shape and realtime sync
-- Introduce explicit PvP room state validation so `{}` or malformed states are rejected and reinitialized.
-- Add better guards around realtime updates/polling so stale or partial updates do not leave either player stuck.
-- Ensure host and guest both converge on the same `wordIndex`, phase, turn, and level metadata.
-
-5. Apply the same hydration fix to online co-op
-- Make co-op load from validated room metadata/state.
-- Keep the selected level’s normal background/enemy for co-op too.
-- Preserve the new repeat/continuous modes while fixing any shared loading deadlocks.
-
-6. Verify Victory Arena wiring after multiplayer is stable
-- Re-check boss victory flow so the post-boss arena triggers from the normal battle completion path and remains replayable once unlocked.
-- This is secondary to fixing the online battle blocker, but should be audited in the same pass because the completion flow is adjacent.
-
-Technical details:
-- The screenshot strongly suggests the PvP component mounted and rendered fallback HUD/background, but `!ready` stayed true. That means the bug is in room initialization/hydration, not in top-level routing.
-- `RPGOnlinePvPBattle.tsx` currently renders the correct shell before synchronization completes; the fix is not just “show more UI,” it is to confirm the DB write/read cycle and validated state before entering play.
-- The clean target architecture is:
+2. Fix turn logic to be true 5-word turns
+- Replace the current `hostCorrect % 5` turn switch.
+- Add explicit per-turn batch state to PvP, e.g.
 ```text
-selected level
-  -> lobby stores room metadata
-  -> host initializes validated game_state from that level
-  -> both clients hydrate from room row
-  -> battle plays exactly like the normal level
-     except the second player drives the enemy turn/actions
+wordIndex        = start of current batch in story
+turnWordsRead    = how many of the 5 visible words are finished
+activeWordOffset = which visible word is currently active
 ```
-- Because I’m in read-only mode, I can’t patch the files now. After approval, I’ll implement the bootstrap rewrite directly in the battle/lobby components and make PvP behave like the normal selected level with multiplayer enemy control.
+- End the student turn when that 5-word batch is completed, not when 5 correct answers happen.
+
+3. Mirror the student’s reading UI to the parent
+- Keep the host’s `RPGWordReader` interactive.
+- Add a read-only mirrored batch panel for the guest that shows:
+  - the same 5 words
+  - the currently active word
+  - progress through the batch
+- Push batch progress to room state so both devices advance simultaneously.
+
+4. Remove contradictory UI state
+- Stop treating the message banner as an independent source of truth.
+- Derive turn/waiting text from synced PvP state, with only short-lived event text layered on top.
+- This will prevent cases where the banner says “Student turn” while the bottom says “Waiting for opponent.”
+
+5. Lock online PvP visuals to one synchronized battlefield
+- Use room/world/enemy metadata only.
+- Pass authoritative enemy/background inputs into the battle background.
+- Disable per-device visual preference differences for online PvP so both players see the same battlefield.
+
+6. Harden write/apply flow
+- Route all PvP mutations through one commit helper:
+  - build next state
+  - increment revision
+  - write to backend
+  - if write fails, immediately re-hydrate
+- Add guards so only the host can progress reading state during student turn and only the guest can act during parent turn.
+
+Files to update
+- `src/components/aura/game/rpg/RPGOnlinePvPBattle.tsx`
+- `src/components/aura/game/rpg/RPGWordReader.tsx`
+- `src/components/aura/game/rpg/RPGBattleBackground.tsx`
+- `src/components/aura/game/rpg/RPGBattleArena.tsx`
+- `src/components/aura/game/rpg/multiplayerRoomTypes.ts`
+- possibly `src/components/aura/game/rpg/RPGMultiplayerLobby.tsx` if I need to seed the expanded PvP room state shape cleanly
+
+Technical notes
+- The screenshot mismatch is consistent with stale/missed room updates plus stale local banner state.
+- The “5 words on screen” rule is not implemented today in online PvP.
+- The parent visibility requirement also is not implemented today; it needs explicit spectator rendering, not just syncing HP.
+
+Validation after implementation
+- Host and guest enter the battle together
+- Both screens show the same HP, same turn, same batch progress, same background
+- Student always gets exactly one 5-word batch per turn
+- Parent sees those same 5 words and the active word in real time during the student turn
+- After every host read, both screens update immediately and stay in sync
+- No screen gets stuck on “Waiting for opponent” while its own turn is active
