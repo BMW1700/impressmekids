@@ -75,12 +75,10 @@ export const RPGOnlinePvPBattle = ({
   const hydrateAttemptsRef = useRef(0);
   const writeQueueRef = useRef<Promise<boolean>>(Promise.resolve(true));
   const lastQueuedRevRef = useRef(0);
+  const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => { gsRef.current = gs; }, [gs]);
   useEffect(() => { readyRef.current = ready; }, [ready]);
-  useEffect(() => {
-    lastQueuedRevRef.current = Math.max(lastQueuedRevRef.current, gs.rev ?? 0);
-  }, [gs.rev]);
 
   // ─── Story words ───
   const storyWords = useMemo(() => roomStory.split(/\s+/).filter(w => w.length > 0), [roomStory]);
@@ -115,7 +113,7 @@ export const RPGOnlinePvPBattle = ({
     return null;
   }, [gs.phase, gs.turn, hostName, guestName, eventFlash]);
 
-  // ─── Accept a snapshot with revision guard ───
+  // ─── Accept a snapshot — passive side always accepts, active side uses rev guard ───
   const acceptSnapshot = useCallback((room: MultiplayerRoomSnapshot | null | undefined, markReady = false): boolean => {
     if (!room) return false;
 
@@ -128,11 +126,14 @@ export const RPGOnlinePvPBattle = ({
       rev: typeof incoming.rev === 'number' ? incoming.rev : 0,
     };
 
-    // Revision guard: reject stale updates
+    // Revision guard: only apply on the ACTIVE (writing) side.
+    // The passive side (not their turn) always accepts the latest DB state.
     const currentRev = gsRef.current.rev ?? 0;
     const incomingRev = normalized.rev ?? 0;
-    if (incomingRev < currentRev) {
-      console.warn(`[PvP] Rejecting stale snapshot rev=${incomingRev} < current=${currentRev}`);
+    const iAmActiveTurnHolder = (isHost && normalized.turn === 'host') || (!isHost && normalized.turn === 'guest');
+
+    if (iAmActiveTurnHolder && incomingRev < currentRev) {
+      console.warn(`[PvP] Active side rejecting stale snapshot rev=${incomingRev} < current=${currentRev}`);
       return false;
     }
 
@@ -151,7 +152,7 @@ export const RPGOnlinePvPBattle = ({
       setReady(true);
     }
     return true;
-  }, []);
+  }, [isHost]);
 
   const rehydrateRoom = useCallback(async (markReady = false): Promise<boolean> => {
     if (!session?.user?.id) return false;
@@ -170,17 +171,13 @@ export const RPGOnlinePvPBattle = ({
     return acceptSnapshot(data as unknown as MultiplayerRoomSnapshot, markReady);
   }, [roomId, session?.user?.id, acceptSnapshot]);
 
-  // ─── Push state to DB ───
+  // ─── Push state to DB using typed Supabase RPC ───
   const pushState = useCallback(async (newState: OnlinePvPGameState): Promise<boolean> => {
     const status = (newState.phase === 'host_wins' || newState.phase === 'guest_wins') ? 'completed' : 'active';
     try {
-      const rpcClient = supabase as unknown as {
-        rpc: (fn: string, args?: Record<string, unknown>) => Promise<{ data: any; error: any }>;
-      };
-
-      const { data, error } = await rpcClient.rpc('sync_multiplayer_room_state', {
+      const { data, error } = await supabase.rpc('sync_multiplayer_room_state', {
         p_room_id: roomId,
-        p_game_state: newState as unknown as Record<string, unknown>,
+        p_game_state: newState as any,
         p_status: status,
       });
 
@@ -189,13 +186,24 @@ export const RPGOnlinePvPBattle = ({
         return false;
       }
 
+      // The RPC returns an array of rows
       const persistedRow = Array.isArray(data) ? data[0] : data;
       if (persistedRow?.game_state) {
-        acceptSnapshot({
-          id: roomId,
-          status: persistedRow.status ?? status,
-          game_state: persistedRow.game_state,
-        } as MultiplayerRoomSnapshot);
+        // Apply the persisted state locally (active side)
+        const gs = persistedRow.game_state as any;
+        if (isValidPvPState(gs)) {
+          gsRef.current = { ...gs, batchProgress: gs.batchProgress ?? 0, rev: gs.rev ?? 0 };
+          setGs(gsRef.current);
+        }
+      }
+
+      // Broadcast a signal so the other client fetches immediately
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current.send({
+          type: 'broadcast',
+          event: 'state_update',
+          payload: { rev: newState.rev },
+        });
       }
 
       console.log('[PvP] pushState OK rev=', newState.rev);
@@ -204,7 +212,7 @@ export const RPGOnlinePvPBattle = ({
       console.error('[PvP] pushState exception:', e);
       return false;
     }
-  }, [roomId, acceptSnapshot]);
+  }, [roomId]);
 
   const enqueueStatePersist = useCallback((newState: OnlinePvPGameState) => {
     writeQueueRef.current = writeQueueRef.current
@@ -232,6 +240,29 @@ export const RPGOnlinePvPBattle = ({
       setTimeout(() => setEventFlash(null), 2000);
     }
   }, [enqueueStatePersist]);
+
+  // ─── Broadcast channel for instant cross-device signaling ───
+  useEffect(() => {
+    if (authLoading || !session?.user?.id) return;
+
+    const channel = supabase.channel(`pvp-broadcast-${roomId}`, {
+      config: { broadcast: { self: false } },
+    });
+
+    channel.on('broadcast', { event: 'state_update' }, async (_payload) => {
+      // Other side pushed a state update — fetch it immediately
+      console.log('[PvP] Broadcast signal received, rehydrating...');
+      await rehydrateRoom();
+    });
+
+    channel.subscribe();
+    broadcastChannelRef.current = channel;
+
+    return () => {
+      broadcastChannelRef.current = null;
+      supabase.removeChannel(channel);
+    };
+  }, [roomId, authLoading, session?.user?.id, rehydrateRoom]);
 
   // ─── Initial hydration from snapshot or DB ───
   useEffect(() => {
@@ -276,7 +307,7 @@ export const RPGOnlinePvPBattle = ({
     return () => clearInterval(interval);
   }, [ready, roomId, authLoading, session?.user?.id, rehydrateRoom]);
 
-  // ─── Realtime subscription ───
+  // ─── Realtime postgres_changes subscription (kept as fallback) ───
   useEffect(() => {
     if (authLoading || !session?.user?.id) return;
     const channel = supabase

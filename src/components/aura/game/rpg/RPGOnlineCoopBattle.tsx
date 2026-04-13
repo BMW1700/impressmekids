@@ -13,8 +13,10 @@ import { getStoredTheme } from "@/lib/gameTheme";
 import { getAgentEnemy } from "@/lib/agentBattleData";
 import { supabase } from "@/integrations/supabase/client";
 import { LongLoadNotice } from "@/components/system/LongLoadNotice";
+import { useAuth } from "@/contexts/AuthContext";
 
 const battleSounds = new SoundEffects();
+const POLL_MS = 2000;
 
 interface BattleStats {
   wordsRead: number;
@@ -36,6 +38,7 @@ interface RPGOnlineCoopBattleProps {
 }
 
 interface CoopGameState {
+  rev: number;
   hostHp: number;
   guestHp: number;
   enemyHp: number;
@@ -68,6 +71,7 @@ export const RPGOnlineCoopBattle = ({
   onBack,
   onComplete,
 }: RPGOnlineCoopBattleProps) => {
+  const { session, isLoading: authLoading } = useAuth();
   const theme = getStoredTheme();
 
   const [gameState, setGameState] = useState<CoopGameState | null>(null);
@@ -82,6 +86,9 @@ export const RPGOnlineCoopBattle = ({
   const gsRef = useRef<CoopGameState | null>(null);
   const completedRef = useRef(false);
   const [readerKey, setReaderKey] = useState(0);
+  const lastQueuedRevRef = useRef(0);
+  const writeQueueRef = useRef<Promise<boolean>>(Promise.resolve(true));
+  const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => { gsRef.current = gameState; }, [gameState]);
 
@@ -94,6 +101,7 @@ export const RPGOnlineCoopBattle = ({
     : false;
 
   const makeInitialState = (mode: 'continuous' | 'repeat'): CoopGameState => ({
+    rev: 0,
     hostHp: 100, guestHp: 100,
     enemyHp: enemy.maxHp, enemyMaxHp: enemy.maxHp,
     turn: 'host', wordIndex: 0, batchStartIndex: 0,
@@ -103,56 +111,136 @@ export const RPGOnlineCoopBattle = ({
     phase: 'setup', lastEvent: null,
   });
 
-  // ─── Push state to DB with silent-failure detection ───
+  // ─── Accept snapshot — passive side always accepts ───
+  const acceptSnapshot = useCallback((gs: CoopGameState, roomData?: any): boolean => {
+    if (!isValidCoopState(gs)) return false;
+
+    const normalized: CoopGameState = {
+      ...gs,
+      rev: typeof gs.rev === 'number' ? gs.rev : 0,
+    };
+
+    // Revision guard: only for active writer
+    const currentRev = gsRef.current?.rev ?? 0;
+    const incomingRev = normalized.rev ?? 0;
+    const iAmActiveTurnHolder = (isHost && normalized.turn === 'host') || (!isHost && normalized.turn === 'guest');
+
+    if (iAmActiveTurnHolder && incomingRev < currentRev) {
+      return false;
+    }
+
+    if (roomData) {
+      if (roomData.host_name) setHostName(roomData.host_name);
+      if (roomData.guest_name) setGuestName(roomData.guest_name);
+      if (roomData.story_passage) setRoomStory(roomData.story_passage);
+      if (roomData.world_number) setRoomWorldNumber(roomData.world_number);
+      if (roomData.enemy_type) setRoomEnemyType(roomData.enemy_type);
+    }
+
+    gsRef.current = normalized;
+    lastQueuedRevRef.current = Math.max(lastQueuedRevRef.current, normalized.rev);
+    setGameState(normalized);
+    return true;
+  }, [isHost]);
+
+  // ─── Push state to DB using typed RPC ───
   const pushState = useCallback(async (newState: CoopGameState): Promise<boolean> => {
+    const status = (newState.phase === 'victory' || newState.phase === 'defeat') ? 'completed' : 'active';
+    try {
+      const { data, error } = await supabase.rpc('sync_multiplayer_room_state', {
+        p_room_id: roomId,
+        p_game_state: newState as any,
+        p_status: status,
+      });
+
+      if (error) {
+        console.error('[Coop] pushState failed:', error.message, error.code, error.details);
+        return false;
+      }
+
+      // Broadcast signal
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current.send({
+          type: 'broadcast',
+          event: 'state_update',
+          payload: { rev: newState.rev },
+        });
+      }
+
+      console.log('[Coop] pushState OK rev=', newState.rev);
+      return true;
+    } catch (e) {
+      console.error('[Coop] pushState exception:', e);
+      return false;
+    }
+  }, [roomId]);
+
+  const rehydrateRoom = useCallback(async (): Promise<boolean> => {
+    if (!session?.user?.id) return false;
     const { data, error } = await supabase
       .from('multiplayer_rooms')
-      .update({
-        game_state: newState as any,
-        status: (newState.phase === 'victory' || newState.phase === 'defeat') ? 'completed' : 'active',
-      })
+      .select('game_state, host_name, guest_name, story_passage, world_number, enemy_type')
       .eq('id', roomId)
-      .select('id');
-    if (error) {
-      console.error('[Coop] pushState failed:', error);
-      return false;
-    }
-    if (!data || data.length === 0) {
-      console.error('[Coop] pushState: 0 rows updated (RLS blocked)');
-      const { data: session } = await supabase.auth.getSession();
-      console.error('[Coop] Current auth uid:', session?.session?.user?.id);
-      return false;
-    }
-    return true;
-  }, [roomId]);
+      .maybeSingle();
+
+    if (error || !data) return false;
+
+    const gs = data.game_state as any;
+    if (!isValidCoopState(gs)) return false;
+
+    return acceptSnapshot(gs, data);
+  }, [roomId, session?.user?.id, acceptSnapshot]);
+
+  const enqueueStatePersist = useCallback((newState: CoopGameState) => {
+    writeQueueRef.current = writeQueueRef.current
+      .catch(() => false)
+      .then(async () => {
+        const ok = await pushState(newState);
+        if (!ok) await rehydrateRoom();
+        return ok;
+      });
+    return writeQueueRef.current;
+  }, [pushState, rehydrateRoom]);
+
+  const commitState = useCallback((newState: CoopGameState) => {
+    const withRev = { ...newState, rev: Math.max(gsRef.current?.rev ?? 0, lastQueuedRevRef.current) + 1 };
+    setGameState(withRev);
+    gsRef.current = withRev;
+    lastQueuedRevRef.current = withRev.rev;
+    void enqueueStatePersist(withRev);
+  }, [enqueueStatePersist]);
+
+  // ─── Broadcast channel ───
+  useEffect(() => {
+    if (authLoading || !session?.user?.id) return;
+
+    const channel = supabase.channel(`coop-broadcast-${roomId}`, {
+      config: { broadcast: { self: false } },
+    });
+
+    channel.on('broadcast', { event: 'state_update' }, async () => {
+      console.log('[Coop] Broadcast signal received, rehydrating...');
+      await rehydrateRoom();
+    });
+
+    channel.subscribe();
+    broadcastChannelRef.current = channel;
+
+    return () => {
+      broadcastChannelRef.current = null;
+      supabase.removeChannel(channel);
+    };
+  }, [roomId, authLoading, session?.user?.id, rehydrateRoom]);
 
   // ─── Load room + poll for guest ───
   useEffect(() => {
+    if (authLoading) return;
     let pollInterval: ReturnType<typeof setInterval> | null = null;
     let cancelled = false;
 
     const hydrateRoom = async (): Promise<boolean> => {
-      const { data, error } = await supabase
-        .from('multiplayer_rooms')
-        .select('game_state, host_name, guest_name, story_passage, world_number, enemy_type')
-        .eq('id', roomId)
-        .single();
-
-      if (error) {
-        console.error('[Coop] hydrateRoom read failed:', error);
-        return false;
-      }
-      if (!data || cancelled) return false;
-
-      if (data.host_name) setHostName(data.host_name);
-      if (data.guest_name) setGuestName(data.guest_name);
-      if (data.story_passage) setRoomStory(data.story_passage);
-      if (data.world_number) setRoomWorldNumber(data.world_number);
-      if (data.enemy_type) setRoomEnemyType(data.enemy_type);
-
-      const gs = data.game_state as any;
-      if (isValidCoopState(gs)) {
-        setGameState(gs);
+      const ok = await rehydrateRoom();
+      if (ok) {
         setReady(true);
         return true;
       }
@@ -164,12 +252,11 @@ export const RPGOnlineCoopBattle = ({
       if (loaded || cancelled) return;
 
       if (isHost) {
-        // Host shows setup screen locally — don't push state yet
         const initial = makeInitialState('continuous');
         setGameState(initial);
+        gsRef.current = initial;
         setReady(true);
       } else {
-        // Guest polls until host pushes state
         pollInterval = setInterval(async () => {
           if (cancelled) return;
           const ok = await hydrateRoom();
@@ -186,12 +273,22 @@ export const RPGOnlineCoopBattle = ({
       cancelled = true;
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [roomId, isHost]);
+  }, [roomId, isHost, authLoading, session?.user?.id]);
 
-  // ─── Realtime subscription ───
+  // ─── Continuous reconciliation poll ───
   useEffect(() => {
+    if (!ready || authLoading || !session?.user?.id) return;
+    const interval = setInterval(async () => {
+      await rehydrateRoom();
+    }, POLL_MS);
+    return () => clearInterval(interval);
+  }, [ready, roomId, authLoading, session?.user?.id, rehydrateRoom]);
+
+  // ─── Realtime postgres_changes (fallback) ───
+  useEffect(() => {
+    if (authLoading || !session?.user?.id) return;
     const channel = supabase
-      .channel(`coop-${roomId}`)
+      .channel(`coop-rt-${roomId}`)
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'multiplayer_rooms', filter: `id=eq.${roomId}` },
@@ -200,10 +297,8 @@ export const RPGOnlineCoopBattle = ({
           const gs = room.game_state as any;
           if (!isValidCoopState(gs)) return;
 
-          setGameState(gs);
+          acceptSnapshot(gs, room);
           if (!ready) setReady(true);
-          if (room.host_name) setHostName(room.host_name);
-          if (room.guest_name) setGuestName(room.guest_name);
 
           if (gs.lastEvent) {
             const evt = gs.lastEvent;
@@ -214,7 +309,7 @@ export const RPGOnlineCoopBattle = ({
               setMessage(`💥 ${enemy.name} attacks for ${evt.damage}!`);
               battleSounds.fireWhoosh();
             } else if (evt.type === 'turn_switch') {
-              const who = evt.by === 'host' ? room.host_name : room.guest_name;
+              const who = evt.by === 'host' ? hostName : guestName;
               setMessage(`🟢 ${who}'s Turn!`);
             }
           }
@@ -225,17 +320,28 @@ export const RPGOnlineCoopBattle = ({
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [roomId, enemy.name, ready]);
+  }, [roomId, enemy.name, ready, authLoading, session?.user?.id, acceptSnapshot, hostName, guestName]);
 
   // ─── Host selects mode and starts battle ───
   const startBattle = useCallback(async (mode: 'continuous' | 'repeat') => {
     const gs = makeInitialState(mode);
     gs.phase = 'playing';
+    gs.rev = 1;
     setGameState(gs);
+    gsRef.current = gs;
+    lastQueuedRevRef.current = 1;
     const ok = await pushState(gs);
     if (!ok) {
       setInitError('Failed to start battle. Go back and try again.');
       return;
+    }
+    // Broadcast
+    if (broadcastChannelRef.current) {
+      broadcastChannelRef.current.send({
+        type: 'broadcast',
+        event: 'state_update',
+        payload: { rev: 1 },
+      });
     }
     setMessage(`🟢 ${hostName}'s Turn!`);
   }, [pushState, hostName]);
@@ -261,8 +367,7 @@ export const RPGOnlineCoopBattle = ({
 
       if (gs.enemyHp <= 0) {
         gs.phase = 'victory';
-        setGameState(gs);
-        pushState(gs);
+        commitState(gs);
         return;
       }
     } else {
@@ -282,8 +387,7 @@ export const RPGOnlineCoopBattle = ({
 
       if (gs.hostHp <= 0 && gs.guestHp <= 0) {
         gs.phase = 'defeat';
-        setGameState(gs);
-        pushState(gs);
+        commitState(gs);
         return;
       }
 
@@ -322,9 +426,8 @@ export const RPGOnlineCoopBattle = ({
       setReaderKey(prev => prev + 1);
     }
 
-    setGameState(gs);
-    pushState(gs);
-  }, [isMyTurn, isHost, pushState]);
+    commitState(gs);
+  }, [isMyTurn, isHost, commitState]);
 
   // ─── Handle end state ───
   useEffect(() => {
