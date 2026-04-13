@@ -174,22 +174,17 @@ export const RPGOnlinePvPBattle = ({
     return acceptSnapshot(data as unknown as MultiplayerRoomSnapshot, markReady);
   }, [roomId, session?.user?.id, acceptSnapshot]);
 
-  // ─── Push state to DB using typed Supabase RPC ───
-  // CRITICAL FIX: session refresh before RPC, no local state clobbering, broadcast on failure too
+  // ─── Push state to DB via direct UPDATE (bypasses broken RPC path) ───
   const pushState = useCallback(async (newState: OnlinePvPGameState): Promise<boolean> => {
-    // Ensure we have a valid session before calling the RPC
+    // Ensure we have a valid session
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData?.session) {
-      console.warn('[PvP] pushState: No active session, attempting refresh...');
-      const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
-      if (refreshErr || !refreshed?.session) {
-        console.error('[PvP] pushState: Session refresh failed, cannot persist state');
-        // Still broadcast so the other client can try to help
+      console.warn('[PvP] pushState: No session, refreshing...');
+      const { error: refreshErr } = await supabase.auth.refreshSession();
+      if (refreshErr) {
+        console.error('[PvP] pushState: Session refresh failed:', refreshErr.message);
         if (broadcastChannelRef.current) {
-          broadcastChannelRef.current.send({
-            type: 'broadcast', event: 'state_update',
-            payload: { rev: newState.rev },
-          });
+          broadcastChannelRef.current.send({ type: 'broadcast', event: 'state_update', payload: { rev: newState.rev } });
         }
         return false;
       }
@@ -197,48 +192,30 @@ export const RPGOnlinePvPBattle = ({
 
     const status = (newState.phase === 'host_wins' || newState.phase === 'guest_wins') ? 'completed' : 'active';
     try {
-      const { error } = await supabase.rpc('sync_multiplayer_room_state', {
-        p_room_id: roomId,
-        p_game_state: newState as any,
-        p_status: status,
-      });
+      const { error } = await supabase
+        .from('multiplayer_rooms')
+        .update({
+          game_state: newState as any,
+          status,
+        })
+        .eq('id', roomId);
 
       if (error) {
-        console.error('[PvP] pushState DB error:', error.message, error.code, error.details);
-        // DO NOT clobber local state — the local state is authoritative
-        // Still broadcast so the other client can attempt rehydration
-        if (broadcastChannelRef.current) {
-          broadcastChannelRef.current.send({
-            type: 'broadcast', event: 'state_update',
-            payload: { rev: newState.rev },
-          });
-        }
-        return false;
+        console.error('[PvP] pushState UPDATE error:', error.message, error.code, error.details);
+      } else {
+        console.log('[PvP] pushState OK rev=', newState.rev, 'phase=', newState.phase, 'turn=', newState.turn);
       }
 
-      // SUCCESS — DO NOT re-apply the DB response to local state.
-      // The local state is already correct (we computed it). Re-applying the DB
-      // response was causing state clobbering when the response was stale.
-
-      // Broadcast a signal so the other client fetches immediately
+      // Broadcast signal regardless so peer rehydrates
       if (broadcastChannelRef.current) {
-        broadcastChannelRef.current.send({
-          type: 'broadcast',
-          event: 'state_update',
-          payload: { rev: newState.rev },
-        });
+        broadcastChannelRef.current.send({ type: 'broadcast', event: 'state_update', payload: { rev: newState.rev } });
       }
 
-      console.log('[PvP] pushState OK rev=', newState.rev, 'phase=', newState.phase);
-      return true;
+      return !error;
     } catch (e) {
       console.error('[PvP] pushState exception:', e);
-      // Broadcast even on exception
       if (broadcastChannelRef.current) {
-        broadcastChannelRef.current.send({
-          type: 'broadcast', event: 'state_update',
-          payload: { rev: newState.rev },
-        });
+        broadcastChannelRef.current.send({ type: 'broadcast', event: 'state_update', payload: { rev: newState.rev } });
       }
       return false;
     }
