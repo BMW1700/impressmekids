@@ -144,10 +144,28 @@ export const RPGOnlineCoopBattle = ({
   }, [isHost]);
 
   // ─── Push state to DB using typed RPC ───
+  // CRITICAL FIX: session refresh, no state clobbering, broadcast on failure
   const pushState = useCallback(async (newState: CoopGameState): Promise<boolean> => {
+    // Ensure valid session
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData?.session) {
+      console.warn('[Coop] pushState: No active session, attempting refresh...');
+      const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
+      if (refreshErr || !refreshed?.session) {
+        console.error('[Coop] pushState: Session refresh failed');
+        if (broadcastChannelRef.current) {
+          broadcastChannelRef.current.send({
+            type: 'broadcast', event: 'state_update',
+            payload: { rev: newState.rev },
+          });
+        }
+        return false;
+      }
+    }
+
     const status = (newState.phase === 'victory' || newState.phase === 'defeat') ? 'completed' : 'active';
     try {
-      const { data, error } = await supabase.rpc('sync_multiplayer_room_state', {
+      const { error } = await supabase.rpc('sync_multiplayer_room_state', {
         p_room_id: roomId,
         p_game_state: newState as any,
         p_status: status,
@@ -155,10 +173,17 @@ export const RPGOnlineCoopBattle = ({
 
       if (error) {
         console.error('[Coop] pushState failed:', error.message, error.code, error.details);
+        // DO NOT clobber local state — broadcast so peer can rehydrate
+        if (broadcastChannelRef.current) {
+          broadcastChannelRef.current.send({
+            type: 'broadcast', event: 'state_update',
+            payload: { rev: newState.rev },
+          });
+        }
         return false;
       }
 
-      // Broadcast signal
+      // Broadcast signal — DO NOT re-apply DB response to local state
       if (broadcastChannelRef.current) {
         broadcastChannelRef.current.send({
           type: 'broadcast',
@@ -167,10 +192,16 @@ export const RPGOnlineCoopBattle = ({
         });
       }
 
-      console.log('[Coop] pushState OK rev=', newState.rev);
+      console.log('[Coop] pushState OK rev=', newState.rev, 'phase=', newState.phase);
       return true;
     } catch (e) {
       console.error('[Coop] pushState exception:', e);
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current.send({
+          type: 'broadcast', event: 'state_update',
+          payload: { rev: newState.rev },
+        });
+      }
       return false;
     }
   }, [roomId]);
@@ -196,14 +227,18 @@ export const RPGOnlineCoopBattle = ({
       .catch(() => false)
       .then(async () => {
         const ok = await pushState(newState);
-        if (!ok) await rehydrateRoom();
+        if (!ok) {
+          // DO NOT rehydrate from DB — preserve local state
+          console.warn('[Coop] pushState failed for rev=', newState.rev, '— local state preserved');
+        }
         return ok;
       });
     return writeQueueRef.current;
-  }, [pushState, rehydrateRoom]);
+  }, [pushState]);
 
   const commitState = useCallback((newState: CoopGameState) => {
     const withRev = { ...newState, rev: Math.max(gsRef.current?.rev ?? 0, lastQueuedRevRef.current) + 1 };
+    console.log(`[Coop] commitState rev=${withRev.rev} phase=${withRev.phase} turn=${withRev.turn} enemyHp=${withRev.enemyHp}`);
     setGameState(withRev);
     gsRef.current = withRev;
     lastQueuedRevRef.current = withRev.rev;

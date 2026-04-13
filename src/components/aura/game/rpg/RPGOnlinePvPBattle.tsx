@@ -25,6 +25,8 @@ import {
 const battleSounds = new SoundEffects();
 const BATCH_SIZE = 5;
 const POLL_MS = 2000; // continuous reconciliation poll
+const ELARA_CHARGE_MAX = 5;
+const ELARA_BARRAGE_MULTIPLIER = 3;
 
 interface BattleStats {
   wordsRead: number;
@@ -68,6 +70,9 @@ export const RPGOnlinePvPBattle = ({
   const [roomWorldNumber, setRoomWorldNumber] = useState(worldNumber);
   const [initError, setInitError] = useState<string | null>(null);
   const [eventFlash, setEventFlash] = useState<string | null>(null);
+
+  // ─── Elara charge counter ───
+  const [elaraCharge, setElaraCharge] = useState(0);
 
   const gsRef = useRef(gs);
   const readyRef = useRef(ready);
@@ -170,10 +175,29 @@ export const RPGOnlinePvPBattle = ({
   }, [roomId, session?.user?.id, acceptSnapshot]);
 
   // ─── Push state to DB using typed Supabase RPC ───
+  // CRITICAL FIX: session refresh before RPC, no local state clobbering, broadcast on failure too
   const pushState = useCallback(async (newState: OnlinePvPGameState): Promise<boolean> => {
+    // Ensure we have a valid session before calling the RPC
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData?.session) {
+      console.warn('[PvP] pushState: No active session, attempting refresh...');
+      const { data: refreshed, error: refreshErr } = await supabase.auth.refreshSession();
+      if (refreshErr || !refreshed?.session) {
+        console.error('[PvP] pushState: Session refresh failed, cannot persist state');
+        // Still broadcast so the other client can try to help
+        if (broadcastChannelRef.current) {
+          broadcastChannelRef.current.send({
+            type: 'broadcast', event: 'state_update',
+            payload: { rev: newState.rev },
+          });
+        }
+        return false;
+      }
+    }
+
     const status = (newState.phase === 'host_wins' || newState.phase === 'guest_wins') ? 'completed' : 'active';
     try {
-      const { data, error } = await supabase.rpc('sync_multiplayer_room_state', {
+      const { error } = await supabase.rpc('sync_multiplayer_room_state', {
         p_room_id: roomId,
         p_game_state: newState as any,
         p_status: status,
@@ -181,19 +205,20 @@ export const RPGOnlinePvPBattle = ({
 
       if (error) {
         console.error('[PvP] pushState DB error:', error.message, error.code, error.details);
+        // DO NOT clobber local state — the local state is authoritative
+        // Still broadcast so the other client can attempt rehydration
+        if (broadcastChannelRef.current) {
+          broadcastChannelRef.current.send({
+            type: 'broadcast', event: 'state_update',
+            payload: { rev: newState.rev },
+          });
+        }
         return false;
       }
 
-      // The RPC returns an array of rows
-      const persistedRow = Array.isArray(data) ? data[0] : data;
-      if (persistedRow?.game_state) {
-        // Apply the persisted state locally (active side)
-        const gs = persistedRow.game_state as any;
-        if (isValidPvPState(gs)) {
-          gsRef.current = { ...gs, batchProgress: gs.batchProgress ?? 0, rev: gs.rev ?? 0 };
-          setGs(gsRef.current);
-        }
-      }
+      // SUCCESS — DO NOT re-apply the DB response to local state.
+      // The local state is already correct (we computed it). Re-applying the DB
+      // response was causing state clobbering when the response was stale.
 
       // Broadcast a signal so the other client fetches immediately
       if (broadcastChannelRef.current) {
@@ -204,10 +229,17 @@ export const RPGOnlinePvPBattle = ({
         });
       }
 
-      console.log('[PvP] pushState OK rev=', newState.rev);
+      console.log('[PvP] pushState OK rev=', newState.rev, 'phase=', newState.phase);
       return true;
     } catch (e) {
       console.error('[PvP] pushState exception:', e);
+      // Broadcast even on exception
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current.send({
+          type: 'broadcast', event: 'state_update',
+          payload: { rev: newState.rev },
+        });
+      }
       return false;
     }
   }, [roomId]);
@@ -217,16 +249,21 @@ export const RPGOnlinePvPBattle = ({
       .catch(() => false)
       .then(async () => {
         const ok = await pushState(newState);
-        if (!ok) await rehydrateRoom();
+        if (!ok) {
+          // On failure, do NOT rehydrate from DB — that would clobber our local state.
+          // The broadcast signal will prompt the other client to fetch.
+          console.warn('[PvP] pushState failed for rev=', newState.rev, '— local state preserved');
+        }
         return ok;
       });
 
     return writeQueueRef.current;
-  }, [pushState, rehydrateRoom]);
+  }, [pushState]);
 
   // ─── Commit helper: bump rev, set local, push ───
   const commitState = useCallback((newState: OnlinePvPGameState) => {
     const withRev = { ...newState, rev: Math.max(gsRef.current.rev ?? 0, lastQueuedRevRef.current) + 1 };
+    console.log(`[PvP] commitState rev=${withRev.rev} phase=${withRev.phase} turn=${withRev.turn} hostHp=${withRev.hostHp} guestHp=${withRev.guestHp} batch=${withRev.batchProgress}`);
     setGs(withRev);
     gsRef.current = withRev;
     lastQueuedRevRef.current = withRev.rev;
@@ -261,6 +298,20 @@ export const RPGOnlinePvPBattle = ({
       supabase.removeChannel(channel);
     };
   }, [roomId, authLoading, session?.user?.id, rehydrateRoom]);
+
+  // ─── Mount-time RPC health check ───
+  useEffect(() => {
+    if (authLoading || !session?.user?.id) return;
+    const checkRpc = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session) {
+        console.warn('[PvP] Health check: no session at mount time');
+      } else {
+        console.log('[PvP] Health check: session valid, uid=', sessionData.session.user.id);
+      }
+    };
+    checkRpc();
+  }, [authLoading, session?.user?.id]);
 
   // ─── Initial hydration from snapshot or DB ───
   useEffect(() => {
@@ -369,7 +420,7 @@ export const RPGOnlinePvPBattle = ({
     }
   }, [gs.phase, ready, endPhase, isHost]);
 
-  // ─── Kid reads a word (host only, true 5-word batch) ───
+  // ─── Kid reads a word — Elara 5-word charge + plasma barrage mechanic ───
   const handleKidWordResult = useCallback((correct: boolean, _spokenWord: string, _wordIndex: number) => {
     if (!isHost) return;
 
@@ -378,14 +429,31 @@ export const RPGOnlinePvPBattle = ({
     s.wordsRead += 1;
     s.batchProgress += 1;
 
+    // Elara charge mechanic: charge up for first 4 words, barrage on 5th
+    const newCharge = elaraCharge + 1;
+
     if (correct) {
       s.hostCorrect += 1;
       s.hostStreak += 1;
       if (s.hostStreak > s.longestStreak) s.longestStreak = s.hostStreak;
-      const damage = 8 + Math.min(s.hostStreak, 5) * 2;
-      s.totalDamage += damage;
-      s.guestHp = Math.max(0, s.guestHp - damage);
-      s.lastEvent = { type: 'attack', damage, by: 'host', message: `⚔️ ${hostName} deals ${damage} damage!`, timestamp: Date.now() };
+
+      if (newCharge >= ELARA_CHARGE_MAX) {
+        // 5th word — PLASMA BARRAGE! Triple damage
+        const baseDamage = 8 + Math.min(s.hostStreak, 5) * 2;
+        const damage = baseDamage * ELARA_BARRAGE_MULTIPLIER;
+        s.totalDamage += damage;
+        s.guestHp = Math.max(0, s.guestHp - damage);
+        s.lastEvent = { type: 'attack', damage, by: 'host', message: `🔮 PLASMA BARRAGE! ${hostName} deals ${damage} damage!`, timestamp: Date.now() };
+        setElaraCharge(0);
+        battleSounds.fireWhoosh();
+      } else {
+        // Charging — minor damage per word
+        const damage = 3;
+        s.totalDamage += damage;
+        s.guestHp = Math.max(0, s.guestHp - damage);
+        s.lastEvent = { type: 'attack', damage, by: 'host', message: `⚡ Charge ${newCharge}/${ELARA_CHARGE_MAX} — ${damage} damage`, timestamp: Date.now() };
+        setElaraCharge(newCharge);
+      }
 
       if (s.guestHp <= 0) {
         s.phase = 'host_wins';
@@ -394,6 +462,8 @@ export const RPGOnlinePvPBattle = ({
       }
     } else {
       s.hostStreak = 0;
+      // Miss resets Elara charge
+      setElaraCharge(0);
     }
 
     // Check if this 5-word batch is done
@@ -408,10 +478,11 @@ export const RPGOnlinePvPBattle = ({
       s.cooldowns = cd;
       s.turnCount += 1;
       s.lastEvent = { type: 'turn_switch', by: 'host', message: `🔴 ${guestName}'s Turn!`, timestamp: Date.now() };
+      setElaraCharge(0);
     }
 
     commitState(s);
-  }, [isHost, commitState, hostName, guestName, storyWords.length]);
+  }, [isHost, commitState, hostName, guestName, storyWords.length, elaraCharge]);
 
   // ─── Parent selects ability (guest only) ───
   const handleParentAbility = useCallback((ability: ParentAbility) => {
@@ -512,7 +583,7 @@ export const RPGOnlinePvPBattle = ({
         <div className="flex gap-4 max-w-2xl mx-auto">
           <div className={`flex-1 p-2 rounded-lg border-2 ${gs.turn === 'host' ? 'border-green-400 bg-green-950/30' : 'border-slate-700 bg-slate-900/50'}`}>
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-sm font-bold text-green-300">🦸 {hostName} {isHost ? '(You)' : ''}</span>
+              <span className="text-sm font-bold text-green-300">🧙‍♀️ {hostName} {isHost ? '(You)' : ''}</span>
               <span className="text-xs text-green-400 ml-auto">{gs.hostHp}/100</span>
             </div>
             <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
@@ -556,13 +627,41 @@ export const RPGOnlinePvPBattle = ({
         />
       </div>
 
-      {/* ──── Kid's Turn: Word Reader (host device — interactive) ──── */}
+      {/* ──── Kid's Turn: Word Reader (host device — interactive) with mode='fast' for Elara ──── */}
       {ready && gs.phase === 'kid_turn' && isHost && (
         <div className="absolute bottom-0 left-0 right-0 z-[70] p-4">
+          {/* Elara Charge Counter */}
+          <div className="flex justify-center gap-2 mb-3">
+            {Array.from({ length: ELARA_CHARGE_MAX }).map((_, i) => (
+              <motion.div
+                key={i}
+                className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-bold transition-all ${
+                  i < elaraCharge
+                    ? 'bg-purple-500 border-purple-300 text-white shadow-lg shadow-purple-500/50'
+                    : 'bg-slate-800 border-slate-600 text-slate-500'
+                }`}
+                animate={i < elaraCharge ? { scale: [1, 1.2, 1] } : {}}
+                transition={{ duration: 0.3 }}
+              >
+                {i < elaraCharge ? '⚡' : (i + 1)}
+              </motion.div>
+            ))}
+          </div>
+          {elaraCharge >= ELARA_CHARGE_MAX - 1 && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ repeat: Infinity, duration: 0.8 }}
+              className="text-center text-purple-300 text-xs font-bold mb-2"
+            >
+              🔮 NEXT WORD = PLASMA BARRAGE (3x damage)!
+            </motion.p>
+          )}
           <RPGWordReader
             key={`reader-${readerKey}`}
             words={currentBatchWords}
             onResult={handleKidWordResult}
+            mode="fast"
           />
         </div>
       )}
