@@ -2,63 +2,61 @@
 Do I know what the issue is? Yes.
 
 What is actually broken:
-1. Online PvP/Co-op are still not using the room as the single source of truth. They rely on local `story` / `worldNumber` props, so the guest can load the wrong level data instead of the host’s selected level.
-2. The lobby seeds a fake `game_state` shape that does not match either online battle component. That makes the bootstrap fragile.
-3. `RPGOnlinePvPBattle` can stay in infinite loading because readiness is optimistic and silent failures are ignored. It needs a confirmed room-hydration path, not “set ready and hope”.
-4. `RPGOnlineCoopBattle` repeat mode is fundamentally broken because `RPGWordReader` only resets when its `words` key changes. Repeating the same 5 words keeps the same key, so the reader does not restart cleanly for the second player.
-5. Online Co-op is not the same level as local play right now because it hardcodes a generic enemy instead of the selected level’s enemy.
-6. Victory Arena currently exists only as a transient reward screen. It is not persisted as an unlocked replayable level.
+1. The online PvP battle is not bootstrapping from the selected level as a single authoritative source. The battle mounts with fallback local props, so you see the correct shell/background area, but `ready` never flips because valid synced room state never gets confirmed.
+2. The host path in `RPGOnlinePvPBattle.tsx` is too optimistic: it writes an initial state and immediately sets `ready=true` locally without confirming the room now contains a valid game state. If that write is rejected, delayed, or overwritten by `{}`, one side stays on the loading overlay forever.
+3. The battle still does not fully model “normal level, except other player controls the enemy.” It hardcodes a 100 HP parent enemy and generic parent powers instead of deriving enemy HP/background/presentation from the selected level metadata.
+4. The guest/hydration logic only checks `phase`; it does not validate a complete usable state shape tied to the chosen level/enemy, so partial/invalid room data can keep the overlay alive or produce mismatched battles.
+5. Co-op likely has the same root architecture flaw: local fallback props and weak room hydration rather than a room-driven validated battle payload.
 
-Implementation plan
-
-1. Make the room authoritative for online matches
-- Update `RPGMultiplayerLobby.tsx` to create rooms with clean metadata only, not a fake starter `game_state`.
-- Persist the host-selected level data in the room and hydrate both clients from the room row.
-- Add missing room metadata for parity, especially `enemy_type` for online co-op.
-
-2. Harden online battle bootstrapping so “Loading battle…” cannot hang forever
-- Rewrite the init path in `RPGOnlinePvPBattle.tsx` and `RPGOnlineCoopBattle.tsx` to:
-  - fetch room metadata first
-  - confirm a valid synced battle state exists
-  - if host, write initial state and re-fetch until confirmed
-  - if guest, poll until valid state appears
-  - surface an explicit recovery/error state instead of infinite loading
-- Only show the battle UI after a valid synchronized state is confirmed.
-
-3. Make online PvP match the selected level perfectly
-- Stop using local `story`/`worldNumber` as battle authority; use the room’s `story_passage`, `story_title`, and `world_number`.
-- Keep the existing parent abilities / reading / mini-game flow, but drive it from confirmed synced state.
-- Ensure the student always sees the story words from the selected level and the correct world background.
-
-4. Fix co-op progression and both turn modes properly
-- In `RPGOnlineCoopBattle.tsx`, add a reader reset key/session token based on turn + batch + repeat phase so the same 5-word batch can be repeated cleanly.
-- Continuous mode: Player 1 reads words 1–5, Player 2 reads 6–10, etc.
-- Repeat mode: Player 1 reads 1–5, Player 2 repeats 1–5, then move to 6–10.
-- Use the room metadata enemy instead of the current hardcoded guard so online co-op matches the chosen level.
-
-5. Persist Victory Arena as a real unlock, not a one-off overlay
-- Add persistent progress fields in campaign progress for unlocked/completed Victory Arenas by world.
-- On boss/final-boss victory, launch Victory Arena immediately as the second fight.
-- After first unlock, show a replayable Victory Arena entry in level select for that world.
-- Winning/losing/skipping the arena should return cleanly and preserve rewards/unlock state.
-
-Files to update
-- `src/components/aura/game/rpg/RPGMultiplayerLobby.tsx`
+Files to update:
 - `src/components/aura/game/rpg/RPGOnlinePvPBattle.tsx`
 - `src/components/aura/game/rpg/RPGOnlineCoopBattle.tsx`
+- `src/components/aura/game/rpg/RPGMultiplayerLobby.tsx`
 - `src/components/aura/game/rpg/RPGBattleArena.tsx`
-- `src/components/aura/game/rpg/RPGLevelSelect.tsx`
-- `src/hooks/useCampaignProgress.ts`
-- `src/components/student/sections/AuraReadingSection.tsx`
-- `src/pages/student/AuraPractice.tsx`
+- likely `src/components/aura/game/rpg/RPGPvPBattle.tsx` as the parity reference
 
-Backend work required
-- Migration: add `enemy_type` to `multiplayer_rooms`
-- Migration: add persistent Victory Arena unlock/completion fields to `campaign_progress`
+Implementation plan:
+1. Rebuild online PvP bootstrap around a validated room payload
+- Add a strict room hydration function that reads room metadata + `game_state`.
+- Only mark `ready=true` after confirming the room contains a valid initialized PvP state.
+- If host, initialize the room once, then re-fetch until the saved state is confirmed.
+- If guest, poll until the same validated state appears.
+- Replace infinite loading with a visible recovery error state after timeout.
 
-Validation after implementation
-- Student creates PvP room, parent joins by code, both enter battle immediately
-- Parent joins from a different device/session and still gets the host’s exact level/story/world
-- PvP shows real story words and synced parent powers/minigames
-- Co-op continuous and repeat both advance correctly across multiple 5-word batches
-- Boss victory launches Victory Arena immediately, and afterward the arena appears as a replayable level for that world
+2. Make the room fully authoritative for level parity
+- Use `story_passage`, `story_title`, `world_number`, `grade_mode`, and `enemy_type` from the room for both players.
+- Stop relying on local `story`/`worldNumber` props as battle authority after mount.
+- Ensure the displayed story words, world background, and enemy identity always come from the selected room level.
+
+3. Make online PvP mirror the normal level structure
+- Use the normal selected level’s enemy config as the enemy baseline: HP, visuals, enemy type, and background.
+- Keep the asymmetric PvP rule that the remote player controls enemy actions, but preserve the normal level feel and stats.
+- Audit parent powers so they behave consistently with the selected level instead of a generic placeholder enemy.
+
+4. Harden state shape and realtime sync
+- Introduce explicit PvP room state validation so `{}` or malformed states are rejected and reinitialized.
+- Add better guards around realtime updates/polling so stale or partial updates do not leave either player stuck.
+- Ensure host and guest both converge on the same `wordIndex`, phase, turn, and level metadata.
+
+5. Apply the same hydration fix to online co-op
+- Make co-op load from validated room metadata/state.
+- Keep the selected level’s normal background/enemy for co-op too.
+- Preserve the new repeat/continuous modes while fixing any shared loading deadlocks.
+
+6. Verify Victory Arena wiring after multiplayer is stable
+- Re-check boss victory flow so the post-boss arena triggers from the normal battle completion path and remains replayable once unlocked.
+- This is secondary to fixing the online battle blocker, but should be audited in the same pass because the completion flow is adjacent.
+
+Technical details:
+- The screenshot strongly suggests the PvP component mounted and rendered fallback HUD/background, but `!ready` stayed true. That means the bug is in room initialization/hydration, not in top-level routing.
+- `RPGOnlinePvPBattle.tsx` currently renders the correct shell before synchronization completes; the fix is not just “show more UI,” it is to confirm the DB write/read cycle and validated state before entering play.
+- The clean target architecture is:
+```text
+selected level
+  -> lobby stores room metadata
+  -> host initializes validated game_state from that level
+  -> both clients hydrate from room row
+  -> battle plays exactly like the normal level
+     except the second player drives the enemy turn/actions
+```
+- Because I’m in read-only mode, I can’t patch the files now. After approval, I’ll implement the bootstrap rewrite directly in the battle/lobby components and make PvP behave like the normal selected level with multiplayer enemy control.
