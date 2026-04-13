@@ -73,9 +73,14 @@ export const RPGOnlinePvPBattle = ({
   const readyRef = useRef(ready);
   const completedRef = useRef(false);
   const hydrateAttemptsRef = useRef(0);
+  const writeQueueRef = useRef<Promise<boolean>>(Promise.resolve(true));
+  const lastQueuedRevRef = useRef(0);
 
   useEffect(() => { gsRef.current = gs; }, [gs]);
   useEffect(() => { readyRef.current = ready; }, [ready]);
+  useEffect(() => {
+    lastQueuedRevRef.current = Math.max(lastQueuedRevRef.current, gs.rev ?? 0);
+  }, [gs.rev]);
 
   // ─── Story words ───
   const storyWords = useMemo(() => roomStory.split(/\s+/).filter(w => w.length > 0), [roomStory]);
@@ -117,17 +122,19 @@ export const RPGOnlinePvPBattle = ({
     const incoming = room.game_state as any;
     if (!isValidPvPState(incoming)) return false;
 
+    const normalized: OnlinePvPGameState = {
+      ...incoming,
+      batchProgress: typeof incoming.batchProgress === 'number' ? incoming.batchProgress : 0,
+      rev: typeof incoming.rev === 'number' ? incoming.rev : 0,
+    };
+
     // Revision guard: reject stale updates
     const currentRev = gsRef.current.rev ?? 0;
-    const incomingRev = incoming.rev ?? 0;
+    const incomingRev = normalized.rev ?? 0;
     if (incomingRev < currentRev) {
       console.warn(`[PvP] Rejecting stale snapshot rev=${incomingRev} < current=${currentRev}`);
       return false;
     }
-
-    // Backfill batchProgress for legacy states
-    if (typeof incoming.batchProgress !== 'number') incoming.batchProgress = 0;
-    if (typeof incoming.rev !== 'number') incoming.rev = 0;
 
     if (room.host_name) setHostName(room.host_name);
     if (room.guest_name) setGuestName(room.guest_name);
@@ -136,45 +143,95 @@ export const RPGOnlinePvPBattle = ({
 
     hydrateAttemptsRef.current = 0;
     setInitError(null);
-    setGs(incoming);
-    if (markReady) setReady(true);
+    gsRef.current = normalized;
+    lastQueuedRevRef.current = Math.max(lastQueuedRevRef.current, normalized.rev ?? 0);
+    setGs(normalized);
+    if (markReady) {
+      readyRef.current = true;
+      setReady(true);
+    }
     return true;
   }, []);
+
+  const rehydrateRoom = useCallback(async (markReady = false): Promise<boolean> => {
+    if (!session?.user?.id) return false;
+
+    const { data, error } = await supabase
+      .from('multiplayer_rooms')
+      .select(MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS)
+      .eq('id', roomId)
+      .maybeSingle();
+
+    if (error || !data) {
+      if (error) console.error('[PvP] rehydrateRoom failed:', error.message, error.code, error.details);
+      return false;
+    }
+
+    return acceptSnapshot(data as unknown as MultiplayerRoomSnapshot, markReady);
+  }, [roomId, session?.user?.id, acceptSnapshot]);
 
   // ─── Push state to DB ───
   const pushState = useCallback(async (newState: OnlinePvPGameState): Promise<boolean> => {
     const status = (newState.phase === 'host_wins' || newState.phase === 'guest_wins') ? 'completed' : 'active';
     try {
-      const { error, count } = await supabase
-        .from('multiplayer_rooms')
-        .update({ game_state: newState as any, status })
-        .eq('id', roomId);
+      const rpcClient = supabase as unknown as {
+        rpc: (fn: string, args?: Record<string, unknown>) => Promise<{ data: any; error: any }>;
+      };
+
+      const { data, error } = await rpcClient.rpc('sync_multiplayer_room_state', {
+        p_room_id: roomId,
+        p_game_state: newState as unknown as Record<string, unknown>,
+        p_status: status,
+      });
 
       if (error) {
         console.error('[PvP] pushState DB error:', error.message, error.code, error.details);
         return false;
       }
+
+      const persistedRow = Array.isArray(data) ? data[0] : data;
+      if (persistedRow?.game_state) {
+        acceptSnapshot({
+          id: roomId,
+          status: persistedRow.status ?? status,
+          game_state: persistedRow.game_state,
+        } as MultiplayerRoomSnapshot);
+      }
+
       console.log('[PvP] pushState OK rev=', newState.rev);
       return true;
     } catch (e) {
       console.error('[PvP] pushState exception:', e);
       return false;
     }
-  }, [roomId]);
+  }, [roomId, acceptSnapshot]);
+
+  const enqueueStatePersist = useCallback((newState: OnlinePvPGameState) => {
+    writeQueueRef.current = writeQueueRef.current
+      .catch(() => false)
+      .then(async () => {
+        const ok = await pushState(newState);
+        if (!ok) await rehydrateRoom();
+        return ok;
+      });
+
+    return writeQueueRef.current;
+  }, [pushState, rehydrateRoom]);
 
   // ─── Commit helper: bump rev, set local, push ───
   const commitState = useCallback((newState: OnlinePvPGameState) => {
-    const withRev = { ...newState, rev: (gsRef.current.rev ?? 0) + 1 };
+    const withRev = { ...newState, rev: Math.max(gsRef.current.rev ?? 0, lastQueuedRevRef.current) + 1 };
     setGs(withRev);
     gsRef.current = withRev;
-    pushState(withRev);
+    lastQueuedRevRef.current = withRev.rev;
+    void enqueueStatePersist(withRev);
 
     // Flash event message briefly
     if (withRev.lastEvent?.message) {
       setEventFlash(withRev.lastEvent.message);
       setTimeout(() => setEventFlash(null), 2000);
     }
-  }, [pushState]);
+  }, [enqueueStatePersist]);
 
   // ─── Initial hydration from snapshot or DB ───
   useEffect(() => {
@@ -182,21 +239,16 @@ export const RPGOnlinePvPBattle = ({
     let cancelled = false;
     let pollInterval: ReturnType<typeof setInterval> | null = null;
 
-    const hydrateRoom = async (): Promise<boolean> => {
-      if (!session?.user?.id) return false;
-      const { data, error } = await supabase
-        .from('multiplayer_rooms')
-        .select(MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS)
-        .eq('id', roomId)
-        .maybeSingle();
-      if (error || !data || cancelled) {
+      const hydrateRoom = async (): Promise<boolean> => {
+        const ok = await rehydrateRoom(true);
+        if (!ok || cancelled) {
         hydrateAttemptsRef.current += 1;
         if (hydrateAttemptsRef.current >= 8 && !cancelled && !readyRef.current) {
           setInitError('Battle sync failed. Go back and create a new room.');
         }
         return false;
       }
-      return acceptSnapshot(data as unknown as MultiplayerRoomSnapshot, true);
+        return true;
     };
 
     const init = async () => {
@@ -213,21 +265,16 @@ export const RPGOnlinePvPBattle = ({
     init();
 
     return () => { cancelled = true; if (pollInterval) clearInterval(pollInterval); };
-  }, [roomId, authLoading, session?.user?.id, initialRoomSnapshot, acceptSnapshot]);
+  }, [roomId, authLoading, session?.user?.id, initialRoomSnapshot, acceptSnapshot, rehydrateRoom]);
 
   // ─── Continuous reconciliation poll (runs for entire match) ───
   useEffect(() => {
     if (!ready || authLoading || !session?.user?.id) return;
     const interval = setInterval(async () => {
-      const { data } = await supabase
-        .from('multiplayer_rooms')
-        .select(MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS)
-        .eq('id', roomId)
-        .maybeSingle();
-      if (data) acceptSnapshot(data as unknown as MultiplayerRoomSnapshot);
+      await rehydrateRoom();
     }, POLL_MS);
     return () => clearInterval(interval);
-  }, [ready, roomId, authLoading, session?.user?.id, acceptSnapshot]);
+  }, [ready, roomId, authLoading, session?.user?.id, rehydrateRoom]);
 
   // ─── Realtime subscription ───
   useEffect(() => {
@@ -298,6 +345,7 @@ export const RPGOnlinePvPBattle = ({
     if (!isHost) return;
 
     const s = { ...gsRef.current };
+    const currentTurnSize = Math.max(1, Math.min(BATCH_SIZE, storyWords.length - s.wordIndex));
     s.wordsRead += 1;
     s.batchProgress += 1;
 
@@ -320,11 +368,11 @@ export const RPGOnlinePvPBattle = ({
     }
 
     // Check if this 5-word batch is done
-    if (s.batchProgress >= BATCH_SIZE) {
+    if (s.batchProgress >= currentTurnSize) {
       // Switch to parent turn
       s.turn = 'guest';
       s.phase = 'parent_turn';
-      s.wordIndex += BATCH_SIZE;
+      s.wordIndex += currentTurnSize;
       s.batchProgress = 0;
       const cd = { ...s.cooldowns };
       Object.keys(cd).forEach(k => { if (cd[k] > 0) cd[k]--; });
@@ -334,7 +382,7 @@ export const RPGOnlinePvPBattle = ({
     }
 
     commitState(s);
-  }, [isHost, commitState, hostName, guestName]);
+  }, [isHost, commitState, hostName, guestName, storyWords.length]);
 
   // ─── Parent selects ability (guest only) ───
   const handleParentAbility = useCallback((ability: ParentAbility) => {
@@ -511,7 +559,7 @@ export const RPGOnlinePvPBattle = ({
               ))}
             </div>
             <div className="mt-3 text-center">
-              <span className="text-slate-400 text-xs">{gs.batchProgress}/{BATCH_SIZE} words read</span>
+              <span className="text-slate-400 text-xs">{Math.min(gs.batchProgress, currentBatchWords.length)}/{Math.max(currentBatchWords.length, 1)} words read</span>
             </div>
           </div>
         </div>
