@@ -98,8 +98,8 @@ export const RPGMultiplayerLobby = ({
     // Seed game_state at creation time so both players can hydrate immediately
     const initialGameState = battleMode === 'pvp'
       ? {
-          hostHp: 100, guestHp: 100, turn: 'host', phase: 'kid_turn',
-          wordIndex: 0, hostCorrect: 0, guestCorrect: 0,
+          rev: 0, hostHp: 100, guestHp: 100, turn: 'host', phase: 'kid_turn',
+          wordIndex: 0, batchProgress: 0, hostCorrect: 0, guestCorrect: 0,
           hostStreak: 0, guestStreak: 0, longestStreak: 0,
           totalDamage: 0, wordsRead: 0, cooldowns: {},
           pendingAbility: null, pendingReadWord: null,
