@@ -3,6 +3,11 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Copy, Loader2, Users, Wifi, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS,
+  MultiplayerRoomReadyPayload,
+  MultiplayerRoomSnapshot,
+} from "./multiplayerRoomTypes";
 
 interface RPGMultiplayerLobbyProps {
   battleMode: 'pvp' | 'coop';
@@ -12,7 +17,7 @@ interface RPGMultiplayerLobbyProps {
   worldNumber: number;
   gradeMode: string;
   enemyType?: string;
-  onRoomReady: (roomId: string, isHost: boolean, roomCode: string) => void;
+  onRoomReady: (payload: MultiplayerRoomReadyPayload) => void;
   onBack: () => void;
 }
 
@@ -48,6 +53,25 @@ export const RPGMultiplayerLobby = ({
     const { data, error } = await supabase.auth.getSession();
     if (error) throw error;
     return data.session?.user?.id ?? null;
+  }, []);
+
+  const toRoomSnapshot = useCallback((room: any): MultiplayerRoomSnapshot | null => {
+    if (!room?.id) return null;
+
+    return {
+      id: room.id,
+      room_code: room.room_code ?? null,
+      status: room.status ?? null,
+      host_id: room.host_id ?? null,
+      guest_id: room.guest_id ?? null,
+      host_name: room.host_name ?? null,
+      guest_name: room.guest_name ?? null,
+      story_passage: room.story_passage ?? null,
+      story_title: room.story_title ?? null,
+      world_number: typeof room.world_number === 'number' ? room.world_number : null,
+      enemy_type: room.enemy_type ?? null,
+      game_state: room.game_state,
+    };
   }, []);
 
   // Host: create room and wait for guest
@@ -128,22 +152,29 @@ export const RPGMultiplayerLobby = ({
     if (view !== 'hosting' || !roomId) return;
     transitionedRef.current = false;
 
-    const tryTransition = () => {
+    const tryTransition = (snapshot?: MultiplayerRoomSnapshot | null) => {
       if (transitionedRef.current) return;
       transitionedRef.current = true;
       console.log('[Lobby] Host transitioning to game for room', roomId);
-      onRoomReady(roomId, true, roomCode);
+      onRoomReady({
+        roomId,
+        isHost: true,
+        roomCode: snapshot?.room_code || roomCode,
+        snapshot: snapshot ?? null,
+      });
     };
 
     const checkRoom = async () => {
       if (transitionedRef.current) return;
       const { data } = await supabase
         .from('multiplayer_rooms')
-        .select('guest_id, status')
+        .select(MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS)
         .eq('id', roomId)
-        .single();
-      if (data?.guest_id && data?.status === 'active') {
-        tryTransition();
+        .maybeSingle();
+
+      const snapshot = toRoomSnapshot(data);
+      if (snapshot?.guest_id && snapshot.status === 'active') {
+        tryTransition(snapshot);
       }
     };
 
@@ -157,9 +188,9 @@ export const RPGMultiplayerLobby = ({
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'multiplayer_rooms', filter: `id=eq.${roomId}` },
         (payload) => {
-          const room = payload.new as any;
-          if (room.guest_id && room.status === 'active') {
-            tryTransition();
+          const room = toRoomSnapshot(payload.new as any);
+          if (room?.guest_id && room.status === 'active') {
+            tryTransition(room);
           }
         }
       )
@@ -173,7 +204,7 @@ export const RPGMultiplayerLobby = ({
       clearInterval(poll);
       supabase.removeChannel(channel);
     };
-  }, [view, roomId, roomCode, onRoomReady]);
+  }, [view, roomId, roomCode, onRoomReady, toRoomSnapshot]);
 
   // Guest: join room by code
   const handleJoinRoom = useCallback(async () => {
@@ -185,6 +216,7 @@ export const RPGMultiplayerLobby = ({
 
     setLoading(true);
     setError(null);
+    setView('joining');
 
     let userId: string | null = null;
 
@@ -221,21 +253,29 @@ export const RPGMultiplayerLobby = ({
     }
 
     // Join the room
-    const { error: joinErr } = await supabase
+    const { data: joinedRoom, error: joinErr } = await supabase
       .from('multiplayer_rooms')
       .update({ guest_id: userId, guest_name: 'Player 2', status: 'active' })
-      .eq('id', room.id);
+      .eq('id', room.id)
+      .select(MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS)
+      .maybeSingle();
 
     if (joinErr) {
       console.error('[Lobby] Failed to join room:', joinErr);
       setError(joinErr.message || 'Failed to join room.');
       setLoading(false);
+      setView('choose');
       return;
     }
 
     setLoading(false);
-    onRoomReady(room.id, false, code);
-  }, [joinCode, onRoomReady, getCurrentUserId]);
+    onRoomReady({
+      roomId: room.id,
+      isHost: false,
+      roomCode: code,
+      snapshot: toRoomSnapshot(joinedRoom),
+    });
+  }, [joinCode, onRoomReady, getCurrentUserId, toRoomSnapshot]);
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(roomCode);
