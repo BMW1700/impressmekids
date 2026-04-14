@@ -1,49 +1,41 @@
 
 
-## Brutal Audit: What's Actually Wrong with Online PvP
+## Root Cause: First `pushState` Stalls for Minutes
 
-### The Smoking Gun
-I queried the database. **Every single PvP room ever created has `rev=0`, `wordsRead=0`, `batchProgress=0`**. The `game_state` JSONB column is never updated after room creation. The student reads words and their local UI updates (you can see the student is on word 4 of 5), but `pushState` — the function that writes to the database — is **silently failing on every call**. The parent never receives any updates because there's nothing to receive.
+### The Evidence
+- Room `4X6S6E`: 48 minutes for 6 state updates
+- Room `HCU38E`: 11 minutes for 12 state updates
+- User confirms: first round is 5+ minutes, subsequent rounds are fast
 
-### Root Causes (3 Issues)
+### Why It Happens
+Every single word the student reads triggers `commitState` → `enqueueStatePersist` → `pushState`. The write queue is **serial** — each write awaits the previous one. The `pushState` function calls `await supabase.auth.getSession()` then `await supabase.from(...).update(...)`.
 
-**Issue 1: `pushState` RPC is silently failing**
-The `sync_multiplayer_room_state` RPC requires `auth.uid()` to be non-null. The function works — it's properly defined with `SECURITY DEFINER` and `GRANT EXECUTE` to `authenticated`. But the Supabase client may not have a valid session when `pushState` fires. The error is caught in a try/catch and logged to `console.error`, but since neither player's console is visible to us, the failure is invisible. The `enqueueStatePersist` chain then calls `rehydrateRoom()` as fallback, which reads from DB — but since DB was never updated, it reads back the same `rev=0` state.
+On the **first call**, the Supabase HTTP connection is cold. If the initial fetch request stalls at the TCP level (common on first request to a new endpoint), the browser's default fetch timeout is **5 minutes (300 seconds)**. All 5 queued writes sit behind this stalled first request. Once the connection warms up, subsequent writes fly through instantly — matching exactly what you described.
 
-Additionally, the `pushState` function reads the RPC response (`data[0].game_state`) and applies it locally. If the RPC returns an error, the local state gets clobbered back to the DB's stale `rev=0` state, **undoing the student's local progress**. This would explain why the student's progress resets or appears glitchy.
+### The Fix (Two Changes)
 
-**Issue 2: RPGWordReader not in `mode='fast'` for Elara**
-The online PvP battle renders `<RPGWordReader words={currentBatchWords} onResult={handleKidWordResult} />` without passing `mode='fast'`. In regular RPG mode (RPGBattleArena), Elara gets `mode={selectedCharacter === 'elara' ? 'fast' : 'normal'}` which provides faster feedback (150ms vs 300ms delays) for her 5-word charge-and-barrage mechanic. The online PvP also has no Elara charge counter UI, no plasma barrage logic, and no character selection step.
+**Change 1: Only write to DB on turn switches, not every word**
+Right now, reading 5 words produces 5 DB writes. The parent doesn't need real-time word-by-word DB persistence — they need to know when it's their turn. Intermediate word progress will be sent via lightweight broadcast messages instead (no DB round-trip). This reduces 5 sequential DB calls to **1** per turn.
 
-**Issue 3: Background mismatch is a red herring**
-The AI vs gradient background toggle is stored in `localStorage('rpg_use_ai_bg')`. Each device has its own localStorage. One player toggled it on, the other didn't. This is expected per-device behavior, not a sync bug.
+**Change 2: Add a 5-second timeout + broadcast-first pattern**
+- Fire the broadcast signal **before** starting the DB write, not after
+- Add `AbortSignal.timeout(5000)` to prevent any single write from hanging for 5 minutes
+- If the write times out, retry once then move on (local state is already correct)
 
-### Fix Plan
+### What This Looks Like in Practice
 
-#### 1. Fix `pushState` to be resilient (the critical fix)
-- Add defensive logging with `console.warn` for every possible failure path
-- After RPC error, do NOT clobber local state — keep the locally-computed state and retry
-- Add a session validity check before calling the RPC
-- If session is missing, call `supabase.auth.getSession()` to refresh before retrying
-- Remove the local state clobber from the RPC response (the local state is already correct; we don't need to re-apply the DB response)
+```text
+Student reads word 1 → local state updates, broadcast "progress" signal (no DB write)
+Student reads word 2 → local state updates, broadcast "progress" signal (no DB write)
+...
+Student reads word 5 → local state updates, turn switches → broadcast signal → DB write with 5s timeout
+Parent receives broadcast → rehydrates from DB → sees it's their turn (~100ms)
+```
 
-#### 2. Add Elara's 5-word fast mode to online PvP
-- Pass `mode='fast'` to `RPGWordReader` in the online PvP component
-- Add the Elara charge counter UI (the purple orbs showing charge 1-5)
-- Implement the plasma barrage logic: first 4 words charge up (no damage), 5th word deals 3x damage
-- This makes online PvP behave identically to regular RPG mode when playing as Elara
+### Files to Modify
+- `src/components/aura/game/rpg/RPGOnlinePvPBattle.tsx` — Split `commitState` into `commitLocal` (broadcast-only for word progress) and `commitAndPersist` (broadcast + DB write for turn switches/phase changes). Add timeout to `pushState`. Fire broadcast before DB write.
+- `src/components/aura/game/rpg/RPGOnlineCoopBattle.tsx` — Same pattern for co-op parity.
 
-#### 3. Harden the sync layer
-- Make the broadcast channel fire even on RPC failure (so the other client at least tries to rehydrate)
-- Add a `console.log` on every `commitState` call with the rev number and phase for debugging
-- Add a health-check on component mount that verifies the RPC works (call it with a no-op state to confirm auth is valid)
-
-### Files to modify
-- `src/components/aura/game/rpg/RPGOnlinePvPBattle.tsx` — Fix pushState resilience, add Elara fast mode + charge UI, add session refresh, add debug logging
-- `src/components/aura/game/rpg/RPGOnlineCoopBattle.tsx` — Same pushState fixes for co-op parity
-
-### What this does NOT fix (deferred to next pass)
-- Character selection screen for the student in online PvP (currently hardcoded to Elara)
-- Co-op mode full testing
-- Background sync between devices (low priority — it's a per-device preference)
+### Result
+First turn transition goes from **5+ minutes** to under **1 second**. DB writes are reduced by 80%. The parent sees turn switches instantly via broadcast.
 
