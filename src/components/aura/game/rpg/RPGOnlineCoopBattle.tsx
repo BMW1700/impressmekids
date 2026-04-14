@@ -143,50 +143,67 @@ export const RPGOnlineCoopBattle = ({
     return true;
   }, [isHost]);
 
-  // ─── Push state to DB via direct UPDATE (bypasses broken RPC path) ───
+  // ─── Broadcast a state snapshot to the peer (no DB) ───
+  const broadcastState = useCallback((state: CoopGameState) => {
+    if (broadcastChannelRef.current) {
+      broadcastChannelRef.current.send({
+        type: 'broadcast',
+        event: 'state_update',
+        payload: { rev: state.rev, phase: state.phase, state },
+      });
+    }
+  }, []);
+
+  // ─── Push state to DB with 5-second timeout ───
   const pushState = useCallback(async (newState: CoopGameState): Promise<boolean> => {
+    broadcastState(newState);
+
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData?.session) {
       console.warn('[Coop] pushState: No session, refreshing...');
       const { error: refreshErr } = await supabase.auth.refreshSession();
       if (refreshErr) {
         console.error('[Coop] pushState: Session refresh failed:', refreshErr.message);
-        if (broadcastChannelRef.current) {
-          broadcastChannelRef.current.send({ type: 'broadcast', event: 'state_update', payload: { rev: newState.rev } });
-        }
         return false;
       }
     }
 
     const status = (newState.phase === 'victory' || newState.phase === 'defeat') ? 'completed' : 'active';
-    try {
-      const { error } = await supabase
-        .from('multiplayer_rooms')
-        .update({
-          game_state: newState as any,
-          status,
-        })
-        .eq('id', roomId);
 
-      if (error) {
-        console.error('[Coop] pushState UPDATE error:', error.message, error.code, error.details);
-      } else {
+    const attemptWrite = async (): Promise<boolean> => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const { error } = await supabase
+          .from('multiplayer_rooms')
+          .update({ game_state: newState as any, status })
+          .eq('id', roomId)
+          .abortSignal(controller.signal);
+        clearTimeout(timeoutId);
+
+        if (error) {
+          console.error('[Coop] pushState UPDATE error:', error.message, error.code);
+          return false;
+        }
         console.log('[Coop] pushState OK rev=', newState.rev, 'phase=', newState.phase);
+        return true;
+      } catch (e: any) {
+        if (e?.name === 'AbortError') {
+          console.warn('[Coop] pushState timed out (5s) rev=', newState.rev);
+        } else {
+          console.error('[Coop] pushState exception:', e);
+        }
+        return false;
       }
+    };
 
-      if (broadcastChannelRef.current) {
-        broadcastChannelRef.current.send({ type: 'broadcast', event: 'state_update', payload: { rev: newState.rev } });
-      }
-
-      return !error;
-    } catch (e) {
-      console.error('[Coop] pushState exception:', e);
-      if (broadcastChannelRef.current) {
-        broadcastChannelRef.current.send({ type: 'broadcast', event: 'state_update', payload: { rev: newState.rev } });
-      }
-      return false;
+    let ok = await attemptWrite();
+    if (!ok) {
+      console.warn('[Coop] pushState retrying rev=', newState.rev);
+      ok = await attemptWrite();
     }
-  }, [roomId]);
+    return ok;
+  }, [roomId, broadcastState]);
 
   const rehydrateRoom = useCallback(async (): Promise<boolean> => {
     if (!session?.user?.id) return false;
@@ -210,7 +227,6 @@ export const RPGOnlineCoopBattle = ({
       .then(async () => {
         const ok = await pushState(newState);
         if (!ok) {
-          // DO NOT rehydrate from DB — preserve local state
           console.warn('[Coop] pushState failed for rev=', newState.rev, '— local state preserved');
         }
         return ok;
@@ -218,9 +234,20 @@ export const RPGOnlineCoopBattle = ({
     return writeQueueRef.current;
   }, [pushState]);
 
-  const commitState = useCallback((newState: CoopGameState) => {
+  // ─── commitLocal: broadcast-only (no DB write) — for intermediate word progress ───
+  const commitLocal = useCallback((newState: CoopGameState) => {
     const withRev = { ...newState, rev: Math.max(gsRef.current?.rev ?? 0, lastQueuedRevRef.current) + 1 };
-    console.log(`[Coop] commitState rev=${withRev.rev} phase=${withRev.phase} turn=${withRev.turn} enemyHp=${withRev.enemyHp}`);
+    console.log(`[Coop] commitLocal rev=${withRev.rev} phase=${withRev.phase}`);
+    setGameState(withRev);
+    gsRef.current = withRev;
+    lastQueuedRevRef.current = withRev.rev;
+    broadcastState(withRev);
+  }, [broadcastState]);
+
+  // ─── commitAndPersist: broadcast + DB write — for turn switches, phase changes ───
+  const commitAndPersist = useCallback((newState: CoopGameState) => {
+    const withRev = { ...newState, rev: Math.max(gsRef.current?.rev ?? 0, lastQueuedRevRef.current) + 1 };
+    console.log(`[Coop] commitAndPersist rev=${withRev.rev} phase=${withRev.phase} turn=${withRev.turn} enemyHp=${withRev.enemyHp}`);
     setGameState(withRev);
     gsRef.current = withRev;
     lastQueuedRevRef.current = withRev.rev;
@@ -235,9 +262,22 @@ export const RPGOnlineCoopBattle = ({
       config: { broadcast: { self: false } },
     });
 
-    channel.on('broadcast', { event: 'state_update' }, async () => {
-      console.log('[Coop] Broadcast signal received, rehydrating...');
-      await rehydrateRoom();
+    channel.on('broadcast', { event: 'state_update' }, async (msg) => {
+      const payload = msg.payload as any;
+      if (payload?.state && isValidCoopState(payload.state)) {
+        console.log('[Coop] Broadcast received with inline state rev=', payload.state.rev);
+        const incoming = payload.state as CoopGameState;
+        const currentRev = gsRef.current?.rev ?? 0;
+        const iAmActive = (isHost && incoming.turn === 'host') || (!isHost && incoming.turn === 'guest');
+        if (iAmActive && incoming.rev < currentRev) return;
+        gsRef.current = incoming;
+        lastQueuedRevRef.current = Math.max(lastQueuedRevRef.current, incoming.rev);
+        setGameState(incoming);
+        if (!ready) setReady(true);
+      } else {
+        console.log('[Coop] Broadcast signal received, rehydrating from DB...');
+        await rehydrateRoom();
+      }
     });
 
     channel.subscribe();
@@ -384,7 +424,7 @@ export const RPGOnlineCoopBattle = ({
 
       if (gs.enemyHp <= 0) {
         gs.phase = 'victory';
-        commitState(gs);
+        commitAndPersist(gs);
         return;
       }
     } else {
@@ -394,9 +434,8 @@ export const RPGOnlineCoopBattle = ({
     gs.wordIndex += 1;
     gs.turnWordsRead += 1;
 
-    // After 5 words in this turn segment
+    // After 5 words in this turn segment → turn switch = persist to DB
     if (gs.turnWordsRead >= 5 && gs.phase === 'playing') {
-      // Enemy counter-attack
       const enemyDmg = 5 + Math.floor(Math.random() * 8);
       if (who === 'host') gs.hostHp = Math.max(0, gs.hostHp - enemyDmg);
       else gs.guestHp = Math.max(0, gs.guestHp - enemyDmg);
@@ -404,27 +443,22 @@ export const RPGOnlineCoopBattle = ({
 
       if (gs.hostHp <= 0 && gs.guestHp <= 0) {
         gs.phase = 'defeat';
-        commitState(gs);
+        commitAndPersist(gs);
         return;
       }
 
       if (gs.coopMode === 'continuous') {
         const nextTurn = who === 'host' ? 'guest' : 'host';
         const nextHp = nextTurn === 'host' ? gs.hostHp : gs.guestHp;
-        if (nextHp > 0) {
-          gs.turn = nextTurn;
-        }
+        if (nextHp > 0) gs.turn = nextTurn;
         gs.turnWordsRead = 0;
       } else {
-        // Repeat mode
         if (gs.repeatPhase === 1) {
           gs.repeatPhase = 2;
           gs.wordIndex = gs.batchStartIndex;
           const nextTurn = who === 'host' ? 'guest' : 'host';
           const nextHp = nextTurn === 'host' ? gs.hostHp : gs.guestHp;
-          if (nextHp > 0) {
-            gs.turn = nextTurn;
-          }
+          if (nextHp > 0) gs.turn = nextTurn;
           gs.turnWordsRead = 0;
         } else {
           gs.repeatPhase = 1;
@@ -432,19 +466,19 @@ export const RPGOnlineCoopBattle = ({
           gs.wordIndex = gs.batchStartIndex;
           const nextTurn = who === 'host' ? 'guest' : 'host';
           const nextHp = nextTurn === 'host' ? gs.hostHp : gs.guestHp;
-          if (nextHp > 0) {
-            gs.turn = nextTurn;
-          }
+          if (nextHp > 0) gs.turn = nextTurn;
           gs.turnWordsRead = 0;
         }
       }
 
       gs.lastEvent = { type: 'turn_switch', by: gs.turn, timestamp: Date.now() };
       setReaderKey(prev => prev + 1);
+      commitAndPersist(gs);
+    } else {
+      // Intermediate word — broadcast only, no DB write
+      commitLocal(gs);
     }
-
-    commitState(gs);
-  }, [isMyTurn, isHost, commitState]);
+  }, [isMyTurn, isHost, commitLocal, commitAndPersist]);
 
   // ─── Handle end state ───
   useEffect(() => {

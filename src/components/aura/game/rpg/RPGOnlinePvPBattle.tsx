@@ -174,52 +174,70 @@ export const RPGOnlinePvPBattle = ({
     return acceptSnapshot(data as unknown as MultiplayerRoomSnapshot, markReady);
   }, [roomId, session?.user?.id, acceptSnapshot]);
 
-  // ─── Push state to DB via direct UPDATE (bypasses broken RPC path) ───
+  // ─── Broadcast a state snapshot to the peer (no DB) ───
+  const broadcastState = useCallback((state: OnlinePvPGameState) => {
+    if (broadcastChannelRef.current) {
+      broadcastChannelRef.current.send({
+        type: 'broadcast',
+        event: 'state_update',
+        payload: { rev: state.rev, phase: state.phase, state },
+      });
+    }
+  }, []);
+
+  // ─── Push state to DB with 5-second timeout ───
   const pushState = useCallback(async (newState: OnlinePvPGameState): Promise<boolean> => {
-    // Ensure we have a valid session
+    // Broadcast FIRST so peer gets the update instantly
+    broadcastState(newState);
+
+    // Ensure valid session
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData?.session) {
       console.warn('[PvP] pushState: No session, refreshing...');
       const { error: refreshErr } = await supabase.auth.refreshSession();
       if (refreshErr) {
         console.error('[PvP] pushState: Session refresh failed:', refreshErr.message);
-        if (broadcastChannelRef.current) {
-          broadcastChannelRef.current.send({ type: 'broadcast', event: 'state_update', payload: { rev: newState.rev } });
-        }
         return false;
       }
     }
 
     const status = (newState.phase === 'host_wins' || newState.phase === 'guest_wins') ? 'completed' : 'active';
-    try {
-      const { error } = await supabase
-        .from('multiplayer_rooms')
-        .update({
-          game_state: newState as any,
-          status,
-        })
-        .eq('id', roomId);
 
-      if (error) {
-        console.error('[PvP] pushState UPDATE error:', error.message, error.code, error.details);
-      } else {
+    const attemptWrite = async (): Promise<boolean> => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const { error } = await supabase
+          .from('multiplayer_rooms')
+          .update({ game_state: newState as any, status })
+          .eq('id', roomId)
+          .abortSignal(controller.signal);
+        clearTimeout(timeoutId);
+
+        if (error) {
+          console.error('[PvP] pushState UPDATE error:', error.message, error.code);
+          return false;
+        }
         console.log('[PvP] pushState OK rev=', newState.rev, 'phase=', newState.phase, 'turn=', newState.turn);
+        return true;
+      } catch (e: any) {
+        if (e?.name === 'AbortError') {
+          console.warn('[PvP] pushState timed out (5s) rev=', newState.rev);
+        } else {
+          console.error('[PvP] pushState exception:', e);
+        }
+        return false;
       }
+    };
 
-      // Broadcast signal regardless so peer rehydrates
-      if (broadcastChannelRef.current) {
-        broadcastChannelRef.current.send({ type: 'broadcast', event: 'state_update', payload: { rev: newState.rev } });
-      }
-
-      return !error;
-    } catch (e) {
-      console.error('[PvP] pushState exception:', e);
-      if (broadcastChannelRef.current) {
-        broadcastChannelRef.current.send({ type: 'broadcast', event: 'state_update', payload: { rev: newState.rev } });
-      }
-      return false;
+    // Try once, retry once on failure
+    let ok = await attemptWrite();
+    if (!ok) {
+      console.warn('[PvP] pushState retrying rev=', newState.rev);
+      ok = await attemptWrite();
     }
-  }, [roomId]);
+    return ok;
+  }, [roomId, broadcastState]);
 
   const enqueueStatePersist = useCallback((newState: OnlinePvPGameState) => {
     writeQueueRef.current = writeQueueRef.current
@@ -227,26 +245,37 @@ export const RPGOnlinePvPBattle = ({
       .then(async () => {
         const ok = await pushState(newState);
         if (!ok) {
-          // On failure, do NOT rehydrate from DB — that would clobber our local state.
-          // The broadcast signal will prompt the other client to fetch.
           console.warn('[PvP] pushState failed for rev=', newState.rev, '— local state preserved');
         }
         return ok;
       });
-
     return writeQueueRef.current;
   }, [pushState]);
 
-  // ─── Commit helper: bump rev, set local, push ───
-  const commitState = useCallback((newState: OnlinePvPGameState) => {
+  // ─── commitLocal: broadcast-only (no DB write) — for intermediate word progress ───
+  const commitLocal = useCallback((newState: OnlinePvPGameState) => {
     const withRev = { ...newState, rev: Math.max(gsRef.current.rev ?? 0, lastQueuedRevRef.current) + 1 };
-    console.log(`[PvP] commitState rev=${withRev.rev} phase=${withRev.phase} turn=${withRev.turn} hostHp=${withRev.hostHp} guestHp=${withRev.guestHp} batch=${withRev.batchProgress}`);
+    console.log(`[PvP] commitLocal rev=${withRev.rev} phase=${withRev.phase} batch=${withRev.batchProgress}`);
+    setGs(withRev);
+    gsRef.current = withRev;
+    lastQueuedRevRef.current = withRev.rev;
+    broadcastState(withRev);
+
+    if (withRev.lastEvent?.message) {
+      setEventFlash(withRev.lastEvent.message);
+      setTimeout(() => setEventFlash(null), 2000);
+    }
+  }, [broadcastState]);
+
+  // ─── commitAndPersist: broadcast + DB write — for turn switches, phase changes, wins ───
+  const commitAndPersist = useCallback((newState: OnlinePvPGameState) => {
+    const withRev = { ...newState, rev: Math.max(gsRef.current.rev ?? 0, lastQueuedRevRef.current) + 1 };
+    console.log(`[PvP] commitAndPersist rev=${withRev.rev} phase=${withRev.phase} turn=${withRev.turn} hostHp=${withRev.hostHp} guestHp=${withRev.guestHp}`);
     setGs(withRev);
     gsRef.current = withRev;
     lastQueuedRevRef.current = withRev.rev;
     void enqueueStatePersist(withRev);
 
-    // Flash event message briefly
     if (withRev.lastEvent?.message) {
       setEventFlash(withRev.lastEvent.message);
       setTimeout(() => setEventFlash(null), 2000);
@@ -261,10 +290,27 @@ export const RPGOnlinePvPBattle = ({
       config: { broadcast: { self: false } },
     });
 
-    channel.on('broadcast', { event: 'state_update' }, async (_payload) => {
-      // Other side pushed a state update — fetch it immediately
-      console.log('[PvP] Broadcast signal received, rehydrating...');
-      await rehydrateRoom();
+    channel.on('broadcast', { event: 'state_update' }, async (msg) => {
+      const payload = msg.payload as any;
+      // If broadcast contains full state, apply it directly (no DB round-trip)
+      if (payload?.state && isValidPvPState(payload.state)) {
+        console.log('[PvP] Broadcast received with inline state rev=', payload.state.rev);
+        const incoming = payload.state as OnlinePvPGameState;
+        const currentRev = gsRef.current.rev ?? 0;
+        const iAmActiveTurnHolder = (isHost && incoming.turn === 'host') || (!isHost && incoming.turn === 'guest');
+        if (iAmActiveTurnHolder && incoming.rev < currentRev) {
+          console.warn('[PvP] Active side ignoring stale broadcast rev=', incoming.rev);
+          return;
+        }
+        gsRef.current = incoming;
+        lastQueuedRevRef.current = Math.max(lastQueuedRevRef.current, incoming.rev);
+        setGs(incoming);
+        if (!readyRef.current) { readyRef.current = true; setReady(true); }
+      } else {
+        // Fallback: no inline state, rehydrate from DB
+        console.log('[PvP] Broadcast signal received, rehydrating from DB...');
+        await rehydrateRoom();
+      }
     });
 
     channel.subscribe();
@@ -434,18 +480,16 @@ export const RPGOnlinePvPBattle = ({
 
       if (s.guestHp <= 0) {
         s.phase = 'host_wins';
-        commitState(s);
+        commitAndPersist(s);
         return;
       }
     } else {
       s.hostStreak = 0;
-      // Miss resets Elara charge
       setElaraCharge(0);
     }
 
-    // Check if this 5-word batch is done
+    // Check if this 5-word batch is done → turn switch = persist to DB
     if (s.batchProgress >= currentTurnSize) {
-      // Switch to parent turn
       s.turn = 'guest';
       s.phase = 'parent_turn';
       s.wordIndex += currentTurnSize;
@@ -456,10 +500,12 @@ export const RPGOnlinePvPBattle = ({
       s.turnCount += 1;
       s.lastEvent = { type: 'turn_switch', by: 'host', message: `🔴 ${guestName}'s Turn!`, timestamp: Date.now() };
       setElaraCharge(0);
+      commitAndPersist(s);
+    } else {
+      // Intermediate word — broadcast only, no DB write
+      commitLocal(s);
     }
-
-    commitState(s);
-  }, [isHost, commitState, hostName, guestName, storyWords.length, elaraCharge]);
+  }, [isHost, commitLocal, commitAndPersist, hostName, guestName, storyWords.length, elaraCharge]);
 
   // ─── Parent selects ability (guest only) ───
   const handleParentAbility = useCallback((ability: ParentAbility) => {
@@ -489,8 +535,8 @@ export const RPGOnlinePvPBattle = ({
         s.batchProgress = 0;
       }
     }
-    commitState(s);
-  }, [isMyTurn, myRole, commitState, storyWords, guestName]);
+    commitAndPersist(s);
+  }, [isMyTurn, myRole, commitAndPersist, storyWords, guestName]);
 
   // ─── Parent reading result ───
   const handleParentReadResult = useCallback((correct: boolean) => {
@@ -513,8 +559,8 @@ export const RPGOnlinePvPBattle = ({
     if (s.hostHp <= 0) { s.phase = 'guest_wins'; }
     else { s.turn = 'host'; s.phase = 'kid_turn'; s.batchProgress = 0; }
 
-    commitState(s);
-  }, [myRole, commitState]);
+    commitAndPersist(s);
+  }, [myRole, commitAndPersist]);
 
   // ─── Mini-game completion ───
   const handleMiniGameComplete = useCallback((completed: number, failed: number) => {
@@ -531,8 +577,8 @@ export const RPGOnlinePvPBattle = ({
     else if (s.guestHp <= 0) { s.phase = 'host_wins'; }
     else { s.turn = 'host'; s.phase = 'kid_turn'; s.batchProgress = 0; }
 
-    commitState(s);
-  }, [myRole, commitState]);
+    commitAndPersist(s);
+  }, [myRole, commitAndPersist]);
 
   const barrageWords = storyWords.slice(gs.wordIndex, gs.wordIndex + 10);
 
