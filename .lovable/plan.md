@@ -1,41 +1,58 @@
+<final-text>Brutal honesty: yes, the parent and student are in the same room. The wiring proves that. Both devices use the same `roomId` from `RPGMultiplayerLobby` through `RPGBattleArena`, and both subscribe to the same room record plus the same `pvp-broadcast-${roomId}` channel. So this is not a “wrong room” bug anymore. It is a broken parent-to-student turn-return sync path.
 
+What my audit of the current code says:
+1. `RPGOnlinePvPBattle.tsx` still has two different state-apply paths:
+   - `acceptSnapshot(...)` for DB poll / realtime
+   - a separate inline broadcast handler that directly calls `setGs(incoming)`
+   Those two paths do not use exactly the same guard logic.
+2. Parent turn completion (`handleParentAbility`, `handleParentReadResult`, `handleMiniGameComplete`) still depends on a fragile combo of:
+   - optimistic broadcast
+   - queued DB write
+   If either side misses the broadcast or the DB write does not land reliably, the student stays stuck on the old parent-phase screen.
+3. The DB write path is still using raw `.update(...)` instead of the backend `sync_multiplayer_room_state(...)` function that already exists specifically to make room-state writes authoritative.
+4. The student UI is entirely conditional on `gs.phase`, so if the student does not receive/apply the parent’s turn-end snapshot, the waiting screen never goes away. That matches your exact report from the previous prompt.
 
-## Root Cause: Two Bugs Working Together to Create the Flicker
+Implementation plan:
+1. Unify all incoming sync into one authoritative function
+   - Refactor broadcast, realtime, and poll so they all go through a single `applyIncomingState(source, state)` path.
+   - Remove the special inline broadcast branch that bypasses `acceptSnapshot`.
+   - Use one universal rev guard for every source, on both devices.
 
-### Bug 1: DB writes silently succeed with zero rows updated
-PostgREST's `.update()` returns `{ error: null }` even when **zero rows are matched** due to RLS filtering. The RLS UPDATE policy requires `auth.uid() = host_id OR guest_id`. If the JWT is stale/expired in memory, `auth.uid()` evaluates to NULL server-side, the WHERE clause matches nothing, and PostgREST returns HTTP 200 with no error. The code logs `[PvP] pushState OK` but **nothing was written**. Every room in the database has `rev=0` — confirmed just now.
+2. Make turn-ending writes authoritative
+   - Replace raw `.from('multiplayer_rooms').update(...)` in PvP with the existing backend room-sync function.
+   - Verify the returned state and timestamp so parent turn-end writes cannot “look successful” while the student never gets durable state.
 
-### Bug 2: The poll overwrites broadcast state on the passive side
-The `acceptSnapshot` rev guard (line 132-141) only protects the **active turn holder**. The passive side (parent, when it's kid's turn) **always accepts** incoming state, even if its rev is lower. Here's the deadly sequence:
+3. Harden the exact broken transition: parent -> student
+   - Add explicit handling for incoming `{ phase: 'kid_turn', turn: 'host' }`.
+   - Force-clear any parent-only transient UI state on the student side.
+   - Force the student reader to remount on turn return using a stronger key than just `wordIndex` if needed.
 
-```text
-1. Student reads word 2 → commitLocal fires → broadcast sends rev=5 (batchProgress=2)
-2. Parent receives broadcast → applies rev=5 → UI shows word 2 highlighted ✓
-3. ~2 seconds later, reconciliation poll fires rehydrateRoom()
-4. Poll reads DB → rev=0, batchProgress=0 (DB was never updated!)
-5. Parent is passive side → rev guard skipped → accepts rev=0
-6. UI snaps back to batchProgress=0 → FLICKER
-```
+4. Add targeted sync instrumentation
+   - Log source, roomId, rev, phase, turn, and whether the snapshot was accepted/rejected.
+   - Log specifically when parent actions end and when the student receives or rejects that turn-return update.
+   - This will let me audit the most recent PvP sessions honestly instead of guessing.
 
-This cycle repeats every 2 seconds. The parent sees the update from broadcast, then it gets yanked back by the poll reading stale DB data. The poll is actively fighting the broadcast.
+5. QA the exact failure path you described
+   - Student takes turn -> parent updates
+   - Parent takes turn with:
+     - instant attack
+     - reading-required attack
+     - mini-game
+   - Confirm that each path returns the student device immediately to playable `kid_turn`.
 
-### Fix Plan
+Files to change:
+- `src/components/aura/game/rpg/RPGOnlinePvPBattle.tsx` — main fix
+- `src/components/aura/game/rpg/RPGBattleArena.tsx` — only if stronger handoff/reset logic is needed
+- `src/components/aura/game/rpg/RPGOnlineCoopBattle.tsx` — parity pass after PvP is stable
 
-**Fix 1: Universal rev guard in `acceptSnapshot`**
-Apply the rev guard to BOTH sides, not just the active turn holder. If the incoming rev is lower than the current local rev, reject it regardless of who holds the turn. This stops the poll from overwriting broadcast-delivered state.
+Technical details:
+- The most suspicious code right now is the split between:
+  - `acceptSnapshot(...)`
+  - broadcast handler lines around the current direct `setGs(incoming)`
+- The most suspicious persistence issue is that the code is not using the backend sync function that already exists for multiplayer room state.
+- The most suspicious UI recovery issue is that the student reader remount key is only `gs.wordIndex`; if the state returns to `kid_turn` without the expected remount behavior, I will strengthen that key during the fix.
 
-**Fix 2: Verify DB writes actually happened**
-Add `.select('id')` to the `.update()` chain. If the returned array is empty, the write was silently blocked. Force a full session refresh and retry. This makes DB write failures visible and recoverable.
-
-**Fix 3: Same fixes to Co-op component**
-Apply identical changes to `RPGOnlineCoopBattle.tsx`.
-
-### Files to modify
-- `src/components/aura/game/rpg/RPGOnlinePvPBattle.tsx` — Fix `acceptSnapshot` rev guard (universal), fix `pushState` to verify writes
-- `src/components/aura/game/rpg/RPGOnlineCoopBattle.tsx` — Same fixes
-
-### What this achieves
-- **Flicker eliminated**: Poll can never overwrite a higher-rev state received via broadcast
-- **DB writes verified**: Silent RLS failures become visible, trigger session refresh + retry
-- **Both directions work**: Parent and student both get instant broadcast updates that persist across poll cycles
-
+Expected result after this pass:
+- Parent-to-student updates become as reliable as student-to-parent.
+- When the parent finishes their turn, the student device immediately switches back to the student’s playable turn instead of staying stuck on the parent screen.
+- We will know from logs whether any remaining failure is transport, persistence, or render-state related.</final-text>
