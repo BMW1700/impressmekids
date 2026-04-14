@@ -255,15 +255,17 @@ export const RPGOnlineCoopBattle = ({
     broadcastState(withRev);
   }, [broadcastState]);
 
-  // ─── commitAndPersist: broadcast + DB write — for turn switches, phase changes ───
+  // ─── commitAndPersist: broadcast IMMEDIATELY + queue DB write — for turn switches, phase changes ───
   const commitAndPersist = useCallback((newState: CoopGameState) => {
     const withRev = { ...newState, rev: Math.max(gsRef.current?.rev ?? 0, lastQueuedRevRef.current) + 1 };
     console.log(`[Coop] commitAndPersist rev=${withRev.rev} phase=${withRev.phase} turn=${withRev.turn} enemyHp=${withRev.enemyHp}`);
     setGameState(withRev);
     gsRef.current = withRev;
     lastQueuedRevRef.current = withRev.rev;
+    // Broadcast IMMEDIATELY so peer gets the update without waiting for the DB write queue
+    broadcastState(withRev);
     void enqueueStatePersist(withRev);
-  }, [enqueueStatePersist]);
+  }, [enqueueStatePersist, broadcastState]);
 
   // ─── Broadcast channel ───
   useEffect(() => {
