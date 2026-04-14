@@ -456,6 +456,8 @@ export const RPGOnlinePvPBattle = ({
   // ─── Kid reads a word — Elara 5-word charge + plasma barrage mechanic ───
   const handleKidWordResult = useCallback((correct: boolean, _spokenWord: string, _wordIndex: number) => {
     if (!isHost) return;
+    // Guard: only process if it's actually kid's turn (prevents stale callbacks after turn switch)
+    if (gsRef.current.phase !== 'kid_turn' || gsRef.current.turn !== 'host') return;
 
     const s = { ...gsRef.current };
     const currentTurnSize = Math.max(1, Math.min(BATCH_SIZE, storyWords.length - s.wordIndex));
@@ -520,6 +522,7 @@ export const RPGOnlinePvPBattle = ({
   // ─── Parent selects ability (guest only) ───
   const handleParentAbility = useCallback((ability: ParentAbility) => {
     if (!isMyTurn || myRole !== 'parent') return;
+    if (gsRef.current.phase !== 'parent_turn') return;
     const s = { ...gsRef.current };
 
     if (ability.type === 'minigame' && ability.miniGame) {
@@ -551,6 +554,7 @@ export const RPGOnlinePvPBattle = ({
   // ─── Parent reading result ───
   const handleParentReadResult = useCallback((correct: boolean) => {
     if (myRole !== 'parent') return;
+    if (gsRef.current.phase !== 'parent_reading') return;
     const s = { ...gsRef.current };
     const ability = s.pendingAbility;
     if (!ability) return;
@@ -575,6 +579,7 @@ export const RPGOnlinePvPBattle = ({
   // ─── Mini-game completion ───
   const handleMiniGameComplete = useCallback((completed: number, failed: number) => {
     if (myRole !== 'parent') return;
+    if (gsRef.current.phase !== 'mini_game') return;
     const s = { ...gsRef.current };
     const kidDamage = failed * 5;
     const bonusDamage = completed * 3;
