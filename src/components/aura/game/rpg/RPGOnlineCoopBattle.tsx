@@ -120,12 +120,12 @@ export const RPGOnlineCoopBattle = ({
       rev: typeof gs.rev === 'number' ? gs.rev : 0,
     };
 
-    // Revision guard: only for active writer
+    // Universal revision guard: BOTH sides reject stale state
     const currentRev = gsRef.current?.rev ?? 0;
     const incomingRev = normalized.rev ?? 0;
-    const iAmActiveTurnHolder = (isHost && normalized.turn === 'host') || (!isHost && normalized.turn === 'guest');
 
-    if (iAmActiveTurnHolder && incomingRev < currentRev) {
+    if (incomingRev < currentRev) {
+      console.warn(`[Coop] Rejecting stale snapshot rev=${incomingRev} < current=${currentRev}`);
       return false;
     }
 
@@ -170,14 +170,15 @@ export const RPGOnlineCoopBattle = ({
 
     const status = (newState.phase === 'victory' || newState.phase === 'defeat') ? 'completed' : 'active';
 
-    const attemptWrite = async (): Promise<boolean> => {
+    const attemptWrite = async (isRetry = false): Promise<boolean> => {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
-        const { error } = await supabase
+        const { data: rows, error } = await supabase
           .from('multiplayer_rooms')
           .update({ game_state: newState as any, status })
           .eq('id', roomId)
+          .select('id')
           .abortSignal(controller.signal);
         clearTimeout(timeoutId);
 
@@ -185,6 +186,16 @@ export const RPGOnlineCoopBattle = ({
           console.error('[Coop] pushState UPDATE error:', error.message, error.code);
           return false;
         }
+
+        // Verify write actually happened (RLS can silently match 0 rows)
+        if (!rows || rows.length === 0) {
+          console.warn('[Coop] pushState wrote 0 rows (RLS block). Refreshing session...');
+          if (!isRetry) {
+            await supabase.auth.refreshSession();
+          }
+          return false;
+        }
+
         console.log('[Coop] pushState OK rev=', newState.rev, 'phase=', newState.phase);
         return true;
       } catch (e: any) {

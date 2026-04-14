@@ -129,14 +129,13 @@ export const RPGOnlinePvPBattle = ({
       rev: typeof incoming.rev === 'number' ? incoming.rev : 0,
     };
 
-    // Revision guard: only apply on the ACTIVE (writing) side.
-    // The passive side (not their turn) always accepts the latest DB state.
+    // Universal revision guard: BOTH sides reject stale state.
+    // This prevents the poll from overwriting broadcast-delivered state with stale DB data.
     const currentRev = gsRef.current.rev ?? 0;
     const incomingRev = normalized.rev ?? 0;
-    const iAmActiveTurnHolder = (isHost && normalized.turn === 'host') || (!isHost && normalized.turn === 'guest');
 
-    if (iAmActiveTurnHolder && incomingRev < currentRev) {
-      console.warn(`[PvP] Active side rejecting stale snapshot rev=${incomingRev} < current=${currentRev}`);
+    if (incomingRev < currentRev) {
+      console.warn(`[PvP] Rejecting stale snapshot rev=${incomingRev} < current=${currentRev}`);
       return false;
     }
 
@@ -203,14 +202,15 @@ export const RPGOnlinePvPBattle = ({
 
     const status = (newState.phase === 'host_wins' || newState.phase === 'guest_wins') ? 'completed' : 'active';
 
-    const attemptWrite = async (): Promise<boolean> => {
+    const attemptWrite = async (isRetry = false): Promise<boolean> => {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
-        const { error } = await supabase
+        const { data: rows, error } = await supabase
           .from('multiplayer_rooms')
           .update({ game_state: newState as any, status })
           .eq('id', roomId)
+          .select('id')
           .abortSignal(controller.signal);
         clearTimeout(timeoutId);
 
@@ -218,6 +218,16 @@ export const RPGOnlinePvPBattle = ({
           console.error('[PvP] pushState UPDATE error:', error.message, error.code);
           return false;
         }
+
+        // Verify write actually happened (RLS can silently match 0 rows)
+        if (!rows || rows.length === 0) {
+          console.warn('[PvP] pushState wrote 0 rows (RLS block). Refreshing session...');
+          if (!isRetry) {
+            await supabase.auth.refreshSession();
+          }
+          return false;
+        }
+
         console.log('[PvP] pushState OK rev=', newState.rev, 'phase=', newState.phase, 'turn=', newState.turn);
         return true;
       } catch (e: any) {
