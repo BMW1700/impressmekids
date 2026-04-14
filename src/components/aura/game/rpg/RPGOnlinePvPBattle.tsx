@@ -98,9 +98,9 @@ export const RPGOnlinePvPBattle = ({
     [storyWords, gs.wordIndex]
   );
 
-  // Use a stable key so RPGWordReader only re-mounts when the batch itself changes (wordIndex),
-  // NOT on every batchProgress update. The reader manages its own internal word index.
-  const readerKey = gs.wordIndex;
+  // Force RPGWordReader to remount when the batch changes OR when turns cycle back.
+  // Using turnCount ensures the reader remounts even if wordIndex hasn't changed yet.
+  const readerKey = `${gs.wordIndex}-${gs.turnCount}`;
 
   // Derive the banner text from gs — no separate message state
   const bannerText = useMemo(() => {
@@ -116,12 +116,20 @@ export const RPGOnlinePvPBattle = ({
     return null;
   }, [gs.phase, gs.turn, hostName, guestName, eventFlash]);
 
-  // ─── Accept a snapshot — passive side always accepts, active side uses rev guard ───
-  const acceptSnapshot = useCallback((room: MultiplayerRoomSnapshot | null | undefined, markReady = false): boolean => {
-    if (!room) return false;
-
-    const incoming = room.game_state as any;
-    if (!isValidPvPState(incoming)) return false;
+  // ═══════════════════════════════════════════════════════════════
+  // SINGLE AUTHORITATIVE STATE-APPLY FUNCTION
+  // Every incoming state (broadcast, realtime, poll) flows through here.
+  // ═══════════════════════════════════════════════════════════════
+  const applyIncomingState = useCallback((
+    source: 'broadcast' | 'realtime' | 'poll' | 'snapshot',
+    incoming: OnlinePvPGameState,
+    roomMeta?: { host_name?: string | null; guest_name?: string | null; story_passage?: string | null; world_number?: number | null },
+    markReady = false,
+  ): boolean => {
+    if (!isValidPvPState(incoming)) {
+      console.warn(`[PvP] applyIncoming(${source}): invalid state, rejected`);
+      return false;
+    }
 
     const normalized: OnlinePvPGameState = {
       ...incoming,
@@ -129,32 +137,71 @@ export const RPGOnlinePvPBattle = ({
       rev: typeof incoming.rev === 'number' ? incoming.rev : 0,
     };
 
-    // Universal revision guard: BOTH sides reject stale state.
-    // This prevents the poll from overwriting broadcast-delivered state with stale DB data.
+    // ── Universal revision guard ──
+    // BOTH devices, ALL sources: reject if incoming rev is strictly lower than local rev.
     const currentRev = gsRef.current.rev ?? 0;
     const incomingRev = normalized.rev ?? 0;
 
     if (incomingRev < currentRev) {
-      console.warn(`[PvP] Rejecting stale snapshot rev=${incomingRev} < current=${currentRev}`);
+      console.warn(`[PvP] applyIncoming(${source}): REJECTED rev=${incomingRev} < local=${currentRev} (phase=${normalized.phase}, turn=${normalized.turn})`);
       return false;
     }
 
-    if (room.host_name) setHostName(room.host_name);
-    if (room.guest_name) setGuestName(room.guest_name);
-    if (room.story_passage) setRoomStory(room.story_passage);
-    if (typeof room.world_number === 'number') setRoomWorldNumber(room.world_number);
+    // Equal rev from a remote source — accept (idempotent) to ensure phase/turn alignment
+    console.log(`[PvP] applyIncoming(${source}): ACCEPTED rev=${incomingRev} phase=${normalized.phase} turn=${normalized.turn} (local was rev=${currentRev} phase=${gsRef.current.phase})`);
+
+    // Apply room metadata if provided
+    if (roomMeta) {
+      if (roomMeta.host_name) setHostName(roomMeta.host_name);
+      if (roomMeta.guest_name) setGuestName(roomMeta.guest_name);
+      if (roomMeta.story_passage) setRoomStory(roomMeta.story_passage);
+      if (typeof roomMeta.world_number === 'number') setRoomWorldNumber(roomMeta.world_number);
+    }
 
     hydrateAttemptsRef.current = 0;
     setInitError(null);
     gsRef.current = normalized;
     lastQueuedRevRef.current = Math.max(lastQueuedRevRef.current, normalized.rev ?? 0);
     setGs(normalized);
-    if (markReady) {
+
+    if (markReady && !readyRef.current) {
       readyRef.current = true;
       setReady(true);
     }
+
+    // Sound + event flash for remote events
+    if (source !== 'snapshot' && normalized.lastEvent) {
+      if (normalized.lastEvent.type === 'attack') battleSounds.correctWord();
+      else if (normalized.lastEvent.type === 'ability') battleSounds.fireWhoosh();
+      if (normalized.lastEvent.message) {
+        setEventFlash(normalized.lastEvent.message);
+        setTimeout(() => setEventFlash(null), 2000);
+      }
+    }
+
+    // Detect win
+    if (normalized.phase === 'host_wins' && !endPhase) {
+      setEndPhase(isHost ? 'victory' : 'defeat');
+      if (isHost) battleSounds.victoryFanfare();
+    } else if (normalized.phase === 'guest_wins' && !endPhase) {
+      setEndPhase(!isHost ? 'victory' : 'defeat');
+      if (!isHost) battleSounds.victoryFanfare();
+    }
+
     return true;
-  }, [isHost]);
+  }, [isHost, endPhase]);
+
+  // ─── Legacy wrapper for snapshot hydration ───
+  const acceptSnapshot = useCallback((room: MultiplayerRoomSnapshot | null | undefined, markReady = false): boolean => {
+    if (!room) return false;
+    const incoming = room.game_state as any;
+    return applyIncomingState('snapshot', incoming, {
+      host_name: room.host_name,
+      guest_name: room.guest_name,
+      story_passage: room.story_passage,
+      world_number: room.world_number,
+    }, markReady);
+  }, [applyIncomingState]);
 
   const rehydrateRoom = useCallback(async (markReady = false): Promise<boolean> => {
     if (!session?.user?.id) return false;
@@ -170,8 +217,14 @@ export const RPGOnlinePvPBattle = ({
       return false;
     }
 
-    return acceptSnapshot(data as unknown as MultiplayerRoomSnapshot, markReady);
-  }, [roomId, session?.user?.id, acceptSnapshot]);
+    const incoming = (data as any).game_state;
+    return applyIncomingState('poll', incoming, {
+      host_name: (data as any).host_name,
+      guest_name: (data as any).guest_name,
+      story_passage: (data as any).story_passage,
+      world_number: (data as any).world_number,
+    }, markReady);
+  }, [roomId, session?.user?.id, applyIncomingState]);
 
   // ─── Broadcast a state snapshot to the peer (no DB) ───
   const broadcastState = useCallback((state: OnlinePvPGameState) => {
@@ -184,11 +237,8 @@ export const RPGOnlinePvPBattle = ({
     }
   }, []);
 
-  // ─── Push state to DB with 5-second timeout ───
+  // ─── Push state to DB with 5-second timeout (NO broadcast — caller handles that) ───
   const pushState = useCallback(async (newState: OnlinePvPGameState): Promise<boolean> => {
-    // Broadcast FIRST so peer gets the update instantly
-    broadcastState(newState);
-
     // Ensure valid session
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData?.session) {
@@ -245,6 +295,11 @@ export const RPGOnlinePvPBattle = ({
     if (!ok) {
       console.warn('[PvP] pushState retrying rev=', newState.rev);
       ok = await attemptWrite(true);
+      // If write still failed, re-broadcast so peer can at least use the realtime data
+      if (!ok) {
+        console.warn('[PvP] pushState failed after retry, re-broadcasting rev=', newState.rev);
+        broadcastState(newState);
+      }
     }
     return ok;
   }, [roomId, broadcastState]);
@@ -294,7 +349,9 @@ export const RPGOnlinePvPBattle = ({
     }
   }, [enqueueStatePersist, broadcastState]);
 
-  // ─── Broadcast channel for instant cross-device signaling ───
+  // ═══════════════════════════════════════════════════════════════
+  // BROADCAST CHANNEL — unified through applyIncomingState
+  // ═══════════════════════════════════════════════════════════════
   useEffect(() => {
     if (authLoading || !session?.user?.id) return;
 
@@ -304,35 +361,26 @@ export const RPGOnlinePvPBattle = ({
 
     channel.on('broadcast', { event: 'state_update' }, async (msg) => {
       const payload = msg.payload as any;
-      // If broadcast contains full state, apply it directly (no DB round-trip)
       if (payload?.state && isValidPvPState(payload.state)) {
-        console.log('[PvP] Broadcast received with inline state rev=', payload.state.rev);
-        const incoming = payload.state as OnlinePvPGameState;
-        const currentRev = gsRef.current.rev ?? 0;
-        const iAmActiveTurnHolder = (isHost && incoming.turn === 'host') || (!isHost && incoming.turn === 'guest');
-        if (iAmActiveTurnHolder && incoming.rev < currentRev) {
-          console.warn('[PvP] Active side ignoring stale broadcast rev=', incoming.rev);
-          return;
-        }
-        gsRef.current = incoming;
-        lastQueuedRevRef.current = Math.max(lastQueuedRevRef.current, incoming.rev);
-        setGs(incoming);
-        if (!readyRef.current) { readyRef.current = true; setReady(true); }
+        // Use the unified apply function — same guard as poll and realtime
+        applyIncomingState('broadcast', payload.state as OnlinePvPGameState, undefined, true);
       } else {
         // Fallback: no inline state, rehydrate from DB
-        console.log('[PvP] Broadcast signal received, rehydrating from DB...');
+        console.log('[PvP] Broadcast signal received (no inline state), rehydrating from DB...');
         await rehydrateRoom();
       }
     });
 
-    channel.subscribe();
+    channel.subscribe((status) => {
+      console.log(`[PvP] Broadcast channel status: ${status}`);
+    });
     broadcastChannelRef.current = channel;
 
     return () => {
       broadcastChannelRef.current = null;
       supabase.removeChannel(channel);
     };
-  }, [roomId, authLoading, session?.user?.id, rehydrateRoom]);
+  }, [roomId, authLoading, session?.user?.id, rehydrateRoom, applyIncomingState]);
 
   // ─── Mount-time RPC health check ───
   useEffect(() => {
@@ -400,30 +448,20 @@ export const RPGOnlinePvPBattle = ({
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'multiplayer_rooms', filter: `id=eq.${roomId}` },
         (payload) => {
-          const room = payload.new as unknown as MultiplayerRoomSnapshot;
+          const room = payload.new as any;
           const incoming = room.game_state as any;
-          if (!acceptSnapshot(room, true) || !isValidPvPState(incoming)) return;
-
-          if (incoming.lastEvent) {
-            if (incoming.lastEvent.type === 'attack') battleSounds.correctWord();
-            else if (incoming.lastEvent.type === 'ability') battleSounds.fireWhoosh();
-          }
-          if (incoming.lastEvent?.message) {
-            setEventFlash(incoming.lastEvent.message);
-            setTimeout(() => setEventFlash(null), 2000);
-          }
-          if (incoming.phase === 'host_wins') {
-            setEndPhase(isHost ? 'victory' : 'defeat');
-            if (isHost) battleSounds.victoryFanfare();
-          } else if (incoming.phase === 'guest_wins') {
-            setEndPhase(!isHost ? 'victory' : 'defeat');
-            if (!isHost) battleSounds.victoryFanfare();
-          }
+          if (!isValidPvPState(incoming)) return;
+          applyIncomingState('realtime', incoming, {
+            host_name: room.host_name,
+            guest_name: room.guest_name,
+            story_passage: room.story_passage,
+            world_number: room.world_number,
+          }, true);
         }
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [roomId, isHost, authLoading, session?.user?.id, acceptSnapshot]);
+  }, [roomId, isHost, authLoading, session?.user?.id, applyIncomingState]);
 
   // ─── Handle end ───
   useEffect(() => {
@@ -794,14 +832,24 @@ export const RPGOnlinePvPBattle = ({
         </div>
       )}
 
-      {/* ──── Mini-game: Word Barrage ──── */}
-      {ready && gs.phase === 'mini_game' && gs.activeMiniGame === 'word_barrage' && (
+      {/* ──── Mini-game: Word Barrage (parent device only) ──── */}
+      {ready && gs.phase === 'mini_game' && gs.activeMiniGame === 'word_barrage' && !isHost && (
         <RPGWordBarrage words={barrageWords} onComplete={handleMiniGameComplete} onWordHit={() => {}} />
       )}
 
-      {/* ──── Mini-game: Fireball Defense ──── */}
-      {ready && gs.phase === 'mini_game' && gs.activeMiniGame === 'fireball_defense' && (
+      {/* ──── Mini-game: Fireball Defense (parent device only) ──── */}
+      {ready && gs.phase === 'mini_game' && gs.activeMiniGame === 'fireball_defense' && !isHost && (
         <RPGFireballDefense words={barrageWords} onComplete={handleMiniGameComplete} />
+      )}
+
+      {/* ──── Mini-game: Student waits (host device) ──── */}
+      {ready && gs.phase === 'mini_game' && isHost && (
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-[70]">
+          <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 1.5 }}
+            className="bg-slate-900/80 border border-yellow-600/50 rounded-xl px-6 py-4 text-center">
+            <p className="text-yellow-300 font-bold">🎮 {guestName} is playing a mini-game...</p>
+          </motion.div>
+        </div>
       )}
 
       {/* ──── Not ready ──── */}
