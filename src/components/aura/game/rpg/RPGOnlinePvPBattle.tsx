@@ -522,6 +522,7 @@ export const RPGOnlinePvPBattle = ({
   // ─── Parent selects ability (guest only) ───
   const handleParentAbility = useCallback((ability: ParentAbility) => {
     if (!isMyTurn || myRole !== 'parent') return;
+    if (gsRef.current.phase !== 'parent_turn') return;
     const s = { ...gsRef.current };
 
     if (ability.type === 'minigame' && ability.miniGame) {
@@ -553,6 +554,7 @@ export const RPGOnlinePvPBattle = ({
   // ─── Parent reading result ───
   const handleParentReadResult = useCallback((correct: boolean) => {
     if (myRole !== 'parent') return;
+    if (gsRef.current.phase !== 'parent_reading') return;
     const s = { ...gsRef.current };
     const ability = s.pendingAbility;
     if (!ability) return;
@@ -577,6 +579,7 @@ export const RPGOnlinePvPBattle = ({
   // ─── Mini-game completion ───
   const handleMiniGameComplete = useCallback((completed: number, failed: number) => {
     if (myRole !== 'parent') return;
+    if (gsRef.current.phase !== 'mini_game') return;
     const s = { ...gsRef.current };
     const kidDamage = failed * 5;
     const bonusDamage = completed * 3;

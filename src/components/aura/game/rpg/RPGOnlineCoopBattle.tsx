@@ -417,6 +417,11 @@ export const RPGOnlineCoopBattle = ({
   // ─── Handle word result ───
   const handleWordResult = useCallback((correct: boolean, _spokenWord: string, _wordIndex: number) => {
     if (!isMyTurn || !gsRef.current) return;
+    // Guard: only process if it's actually the playing phase and our turn (prevents stale callbacks)
+    const currentGs = gsRef.current;
+    if (currentGs.phase !== 'playing') return;
+    const myTurnNow = (isHost && currentGs.turn === 'host') || (!isHost && currentGs.turn === 'guest');
+    if (!myTurnNow) return;
     const gs = { ...gsRef.current };
     const who = isHost ? 'host' : 'guest';
 
