@@ -1,41 +1,41 @@
 
 
-## Root Cause: First `pushState` Stalls for Minutes
+## Root Cause: Two Bugs Working Together to Create the Flicker
 
-### The Evidence
-- Room `4X6S6E`: 48 minutes for 6 state updates
-- Room `HCU38E`: 11 minutes for 12 state updates
-- User confirms: first round is 5+ minutes, subsequent rounds are fast
+### Bug 1: DB writes silently succeed with zero rows updated
+PostgREST's `.update()` returns `{ error: null }` even when **zero rows are matched** due to RLS filtering. The RLS UPDATE policy requires `auth.uid() = host_id OR guest_id`. If the JWT is stale/expired in memory, `auth.uid()` evaluates to NULL server-side, the WHERE clause matches nothing, and PostgREST returns HTTP 200 with no error. The code logs `[PvP] pushState OK` but **nothing was written**. Every room in the database has `rev=0` — confirmed just now.
 
-### Why It Happens
-Every single word the student reads triggers `commitState` → `enqueueStatePersist` → `pushState`. The write queue is **serial** — each write awaits the previous one. The `pushState` function calls `await supabase.auth.getSession()` then `await supabase.from(...).update(...)`.
-
-On the **first call**, the Supabase HTTP connection is cold. If the initial fetch request stalls at the TCP level (common on first request to a new endpoint), the browser's default fetch timeout is **5 minutes (300 seconds)**. All 5 queued writes sit behind this stalled first request. Once the connection warms up, subsequent writes fly through instantly — matching exactly what you described.
-
-### The Fix (Two Changes)
-
-**Change 1: Only write to DB on turn switches, not every word**
-Right now, reading 5 words produces 5 DB writes. The parent doesn't need real-time word-by-word DB persistence — they need to know when it's their turn. Intermediate word progress will be sent via lightweight broadcast messages instead (no DB round-trip). This reduces 5 sequential DB calls to **1** per turn.
-
-**Change 2: Add a 5-second timeout + broadcast-first pattern**
-- Fire the broadcast signal **before** starting the DB write, not after
-- Add `AbortSignal.timeout(5000)` to prevent any single write from hanging for 5 minutes
-- If the write times out, retry once then move on (local state is already correct)
-
-### What This Looks Like in Practice
+### Bug 2: The poll overwrites broadcast state on the passive side
+The `acceptSnapshot` rev guard (line 132-141) only protects the **active turn holder**. The passive side (parent, when it's kid's turn) **always accepts** incoming state, even if its rev is lower. Here's the deadly sequence:
 
 ```text
-Student reads word 1 → local state updates, broadcast "progress" signal (no DB write)
-Student reads word 2 → local state updates, broadcast "progress" signal (no DB write)
-...
-Student reads word 5 → local state updates, turn switches → broadcast signal → DB write with 5s timeout
-Parent receives broadcast → rehydrates from DB → sees it's their turn (~100ms)
+1. Student reads word 2 → commitLocal fires → broadcast sends rev=5 (batchProgress=2)
+2. Parent receives broadcast → applies rev=5 → UI shows word 2 highlighted ✓
+3. ~2 seconds later, reconciliation poll fires rehydrateRoom()
+4. Poll reads DB → rev=0, batchProgress=0 (DB was never updated!)
+5. Parent is passive side → rev guard skipped → accepts rev=0
+6. UI snaps back to batchProgress=0 → FLICKER
 ```
 
-### Files to Modify
-- `src/components/aura/game/rpg/RPGOnlinePvPBattle.tsx` — Split `commitState` into `commitLocal` (broadcast-only for word progress) and `commitAndPersist` (broadcast + DB write for turn switches/phase changes). Add timeout to `pushState`. Fire broadcast before DB write.
-- `src/components/aura/game/rpg/RPGOnlineCoopBattle.tsx` — Same pattern for co-op parity.
+This cycle repeats every 2 seconds. The parent sees the update from broadcast, then it gets yanked back by the poll reading stale DB data. The poll is actively fighting the broadcast.
 
-### Result
-First turn transition goes from **5+ minutes** to under **1 second**. DB writes are reduced by 80%. The parent sees turn switches instantly via broadcast.
+### Fix Plan
+
+**Fix 1: Universal rev guard in `acceptSnapshot`**
+Apply the rev guard to BOTH sides, not just the active turn holder. If the incoming rev is lower than the current local rev, reject it regardless of who holds the turn. This stops the poll from overwriting broadcast-delivered state.
+
+**Fix 2: Verify DB writes actually happened**
+Add `.select('id')` to the `.update()` chain. If the returned array is empty, the write was silently blocked. Force a full session refresh and retry. This makes DB write failures visible and recoverable.
+
+**Fix 3: Same fixes to Co-op component**
+Apply identical changes to `RPGOnlineCoopBattle.tsx`.
+
+### Files to modify
+- `src/components/aura/game/rpg/RPGOnlinePvPBattle.tsx` — Fix `acceptSnapshot` rev guard (universal), fix `pushState` to verify writes
+- `src/components/aura/game/rpg/RPGOnlineCoopBattle.tsx` — Same fixes
+
+### What this achieves
+- **Flicker eliminated**: Poll can never overwrite a higher-rev state received via broadcast
+- **DB writes verified**: Silent RLS failures become visible, trigger session refresh + retry
+- **Both directions work**: Parent and student both get instant broadcast updates that persist across poll cycles
 
