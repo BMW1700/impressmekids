@@ -208,10 +208,10 @@ export const RPGOnlineCoopBattle = ({
       }
     };
 
-    let ok = await attemptWrite();
+    let ok = await attemptWrite(false);
     if (!ok) {
       console.warn('[Coop] pushState retrying rev=', newState.rev);
-      ok = await attemptWrite();
+      ok = await attemptWrite(true);
     }
     return ok;
   }, [roomId, broadcastState]);

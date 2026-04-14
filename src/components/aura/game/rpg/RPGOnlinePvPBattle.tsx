@@ -241,10 +241,10 @@ export const RPGOnlinePvPBattle = ({
     };
 
     // Try once, retry once on failure
-    let ok = await attemptWrite();
+    let ok = await attemptWrite(false);
     if (!ok) {
       console.warn('[PvP] pushState retrying rev=', newState.rev);
-      ok = await attemptWrite();
+      ok = await attemptWrite(true);
     }
     return ok;
   }, [roomId, broadcastState]);
