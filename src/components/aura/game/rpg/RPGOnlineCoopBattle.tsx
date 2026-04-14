@@ -124,7 +124,7 @@ export const RPGOnlineCoopBattle = ({
     const currentRev = gsRef.current?.rev ?? 0;
     const incomingRev = normalized.rev ?? 0;
 
-    if (incomingRev < currentRev) {
+    if (incomingRev <= currentRev) {
       console.warn(`[Coop] Rejecting stale snapshot rev=${incomingRev} < current=${currentRev}`);
       return false;
     }
@@ -279,8 +279,8 @@ export const RPGOnlineCoopBattle = ({
         console.log('[Coop] Broadcast received with inline state rev=', payload.state.rev);
         const incoming = payload.state as CoopGameState;
         const currentRev = gsRef.current?.rev ?? 0;
-        const iAmActive = (isHost && incoming.turn === 'host') || (!isHost && incoming.turn === 'guest');
-        if (iAmActive && incoming.rev < currentRev) return;
+        // Universal guard: reject any rev we've already seen or applied
+        if (incoming.rev <= currentRev) return;
         gsRef.current = incoming;
         lastQueuedRevRef.current = Math.max(lastQueuedRevRef.current, incoming.rev);
         setGameState(incoming);

@@ -134,7 +134,7 @@ export const RPGOnlinePvPBattle = ({
     const currentRev = gsRef.current.rev ?? 0;
     const incomingRev = normalized.rev ?? 0;
 
-    if (incomingRev < currentRev) {
+    if (incomingRev <= currentRev) {
       console.warn(`[PvP] Rejecting stale snapshot rev=${incomingRev} < current=${currentRev}`);
       return false;
     }
@@ -307,10 +307,27 @@ export const RPGOnlinePvPBattle = ({
         console.log('[PvP] Broadcast received with inline state rev=', payload.state.rev);
         const incoming = payload.state as OnlinePvPGameState;
         const currentRev = gsRef.current.rev ?? 0;
-        const iAmActiveTurnHolder = (isHost && incoming.turn === 'host') || (!isHost && incoming.turn === 'guest');
-        if (iAmActiveTurnHolder && incoming.rev < currentRev) {
-          console.warn('[PvP] Active side ignoring stale broadcast rev=', incoming.rev);
+        // Universal guard: reject any rev we've already seen or applied
+        if (incoming.rev <= currentRev) {
+          console.warn('[PvP] Ignoring stale/equal broadcast rev=', incoming.rev, 'current=', currentRev);
           return;
+        }
+        // Trigger sound effects and event flash for the receiving side
+        if (incoming.lastEvent && incoming.lastEvent.timestamp !== gsRef.current.lastEvent?.timestamp) {
+          if (incoming.lastEvent.type === 'attack') battleSounds.correctWord();
+          else if (incoming.lastEvent.type === 'ability') battleSounds.fireWhoosh();
+          if (incoming.lastEvent.message) {
+            setEventFlash(incoming.lastEvent.message);
+            setTimeout(() => setEventFlash(null), 2000);
+          }
+        }
+        // Check for game-end phases
+        if (incoming.phase === 'host_wins') {
+          setEndPhase(isHost ? 'victory' : 'defeat');
+          if (isHost) battleSounds.victoryFanfare();
+        } else if (incoming.phase === 'guest_wins') {
+          setEndPhase(!isHost ? 'victory' : 'defeat');
+          if (!isHost) battleSounds.victoryFanfare();
         }
         gsRef.current = incoming;
         lastQueuedRevRef.current = Math.max(lastQueuedRevRef.current, incoming.rev);
