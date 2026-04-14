@@ -290,10 +290,27 @@ export const RPGOnlinePvPBattle = ({
       config: { broadcast: { self: false } },
     });
 
-    channel.on('broadcast', { event: 'state_update' }, async (_payload) => {
-      // Other side pushed a state update — fetch it immediately
-      console.log('[PvP] Broadcast signal received, rehydrating...');
-      await rehydrateRoom();
+    channel.on('broadcast', { event: 'state_update' }, async (msg) => {
+      const payload = msg.payload as any;
+      // If broadcast contains full state, apply it directly (no DB round-trip)
+      if (payload?.state && isValidPvPState(payload.state)) {
+        console.log('[PvP] Broadcast received with inline state rev=', payload.state.rev);
+        const incoming = payload.state as OnlinePvPGameState;
+        const currentRev = gsRef.current.rev ?? 0;
+        const iAmActiveTurnHolder = (isHost && incoming.turn === 'host') || (!isHost && incoming.turn === 'guest');
+        if (iAmActiveTurnHolder && incoming.rev < currentRev) {
+          console.warn('[PvP] Active side ignoring stale broadcast rev=', incoming.rev);
+          return;
+        }
+        gsRef.current = incoming;
+        lastQueuedRevRef.current = Math.max(lastQueuedRevRef.current, incoming.rev);
+        setGs(incoming);
+        if (!readyRef.current) { readyRef.current = true; setReady(true); }
+      } else {
+        // Fallback: no inline state, rehydrate from DB
+        console.log('[PvP] Broadcast signal received, rehydrating from DB...');
+        await rehydrateRoom();
+      }
     });
 
     channel.subscribe();
@@ -463,18 +480,16 @@ export const RPGOnlinePvPBattle = ({
 
       if (s.guestHp <= 0) {
         s.phase = 'host_wins';
-        commitState(s);
+        commitAndPersist(s);
         return;
       }
     } else {
       s.hostStreak = 0;
-      // Miss resets Elara charge
       setElaraCharge(0);
     }
 
-    // Check if this 5-word batch is done
+    // Check if this 5-word batch is done → turn switch = persist to DB
     if (s.batchProgress >= currentTurnSize) {
-      // Switch to parent turn
       s.turn = 'guest';
       s.phase = 'parent_turn';
       s.wordIndex += currentTurnSize;
@@ -485,10 +500,12 @@ export const RPGOnlinePvPBattle = ({
       s.turnCount += 1;
       s.lastEvent = { type: 'turn_switch', by: 'host', message: `🔴 ${guestName}'s Turn!`, timestamp: Date.now() };
       setElaraCharge(0);
+      commitAndPersist(s);
+    } else {
+      // Intermediate word — broadcast only, no DB write
+      commitLocal(s);
     }
-
-    commitState(s);
-  }, [isHost, commitState, hostName, guestName, storyWords.length, elaraCharge]);
+  }, [isHost, commitLocal, commitAndPersist, hostName, guestName, storyWords.length, elaraCharge]);
 
   // ─── Parent selects ability (guest only) ───
   const handleParentAbility = useCallback((ability: ParentAbility) => {
@@ -518,8 +535,8 @@ export const RPGOnlinePvPBattle = ({
         s.batchProgress = 0;
       }
     }
-    commitState(s);
-  }, [isMyTurn, myRole, commitState, storyWords, guestName]);
+    commitAndPersist(s);
+  }, [isMyTurn, myRole, commitAndPersist, storyWords, guestName]);
 
   // ─── Parent reading result ───
   const handleParentReadResult = useCallback((correct: boolean) => {
@@ -542,8 +559,8 @@ export const RPGOnlinePvPBattle = ({
     if (s.hostHp <= 0) { s.phase = 'guest_wins'; }
     else { s.turn = 'host'; s.phase = 'kid_turn'; s.batchProgress = 0; }
 
-    commitState(s);
-  }, [myRole, commitState]);
+    commitAndPersist(s);
+  }, [myRole, commitAndPersist]);
 
   // ─── Mini-game completion ───
   const handleMiniGameComplete = useCallback((completed: number, failed: number) => {
@@ -560,8 +577,8 @@ export const RPGOnlinePvPBattle = ({
     else if (s.guestHp <= 0) { s.phase = 'host_wins'; }
     else { s.turn = 'host'; s.phase = 'kid_turn'; s.batchProgress = 0; }
 
-    commitState(s);
-  }, [myRole, commitState]);
+    commitAndPersist(s);
+  }, [myRole, commitAndPersist]);
 
   const barrageWords = storyWords.slice(gs.wordIndex, gs.wordIndex + 10);
 
