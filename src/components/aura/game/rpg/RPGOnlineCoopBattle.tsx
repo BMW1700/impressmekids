@@ -143,50 +143,67 @@ export const RPGOnlineCoopBattle = ({
     return true;
   }, [isHost]);
 
-  // ─── Push state to DB via direct UPDATE (bypasses broken RPC path) ───
+  // ─── Broadcast a state snapshot to the peer (no DB) ───
+  const broadcastState = useCallback((state: CoopGameState) => {
+    if (broadcastChannelRef.current) {
+      broadcastChannelRef.current.send({
+        type: 'broadcast',
+        event: 'state_update',
+        payload: { rev: state.rev, phase: state.phase, state },
+      });
+    }
+  }, []);
+
+  // ─── Push state to DB with 5-second timeout ───
   const pushState = useCallback(async (newState: CoopGameState): Promise<boolean> => {
+    broadcastState(newState);
+
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData?.session) {
       console.warn('[Coop] pushState: No session, refreshing...');
       const { error: refreshErr } = await supabase.auth.refreshSession();
       if (refreshErr) {
         console.error('[Coop] pushState: Session refresh failed:', refreshErr.message);
-        if (broadcastChannelRef.current) {
-          broadcastChannelRef.current.send({ type: 'broadcast', event: 'state_update', payload: { rev: newState.rev } });
-        }
         return false;
       }
     }
 
     const status = (newState.phase === 'victory' || newState.phase === 'defeat') ? 'completed' : 'active';
-    try {
-      const { error } = await supabase
-        .from('multiplayer_rooms')
-        .update({
-          game_state: newState as any,
-          status,
-        })
-        .eq('id', roomId);
 
-      if (error) {
-        console.error('[Coop] pushState UPDATE error:', error.message, error.code, error.details);
-      } else {
+    const attemptWrite = async (): Promise<boolean> => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const { error } = await supabase
+          .from('multiplayer_rooms')
+          .update({ game_state: newState as any, status })
+          .eq('id', roomId)
+          .abortSignal(controller.signal);
+        clearTimeout(timeoutId);
+
+        if (error) {
+          console.error('[Coop] pushState UPDATE error:', error.message, error.code);
+          return false;
+        }
         console.log('[Coop] pushState OK rev=', newState.rev, 'phase=', newState.phase);
+        return true;
+      } catch (e: any) {
+        if (e?.name === 'AbortError') {
+          console.warn('[Coop] pushState timed out (5s) rev=', newState.rev);
+        } else {
+          console.error('[Coop] pushState exception:', e);
+        }
+        return false;
       }
+    };
 
-      if (broadcastChannelRef.current) {
-        broadcastChannelRef.current.send({ type: 'broadcast', event: 'state_update', payload: { rev: newState.rev } });
-      }
-
-      return !error;
-    } catch (e) {
-      console.error('[Coop] pushState exception:', e);
-      if (broadcastChannelRef.current) {
-        broadcastChannelRef.current.send({ type: 'broadcast', event: 'state_update', payload: { rev: newState.rev } });
-      }
-      return false;
+    let ok = await attemptWrite();
+    if (!ok) {
+      console.warn('[Coop] pushState retrying rev=', newState.rev);
+      ok = await attemptWrite();
     }
-  }, [roomId]);
+    return ok;
+  }, [roomId, broadcastState]);
 
   const rehydrateRoom = useCallback(async (): Promise<boolean> => {
     if (!session?.user?.id) return false;
@@ -210,7 +227,6 @@ export const RPGOnlineCoopBattle = ({
       .then(async () => {
         const ok = await pushState(newState);
         if (!ok) {
-          // DO NOT rehydrate from DB — preserve local state
           console.warn('[Coop] pushState failed for rev=', newState.rev, '— local state preserved');
         }
         return ok;
@@ -218,9 +234,20 @@ export const RPGOnlineCoopBattle = ({
     return writeQueueRef.current;
   }, [pushState]);
 
-  const commitState = useCallback((newState: CoopGameState) => {
+  // ─── commitLocal: broadcast-only (no DB write) — for intermediate word progress ───
+  const commitLocal = useCallback((newState: CoopGameState) => {
     const withRev = { ...newState, rev: Math.max(gsRef.current?.rev ?? 0, lastQueuedRevRef.current) + 1 };
-    console.log(`[Coop] commitState rev=${withRev.rev} phase=${withRev.phase} turn=${withRev.turn} enemyHp=${withRev.enemyHp}`);
+    console.log(`[Coop] commitLocal rev=${withRev.rev} phase=${withRev.phase}`);
+    setGameState(withRev);
+    gsRef.current = withRev;
+    lastQueuedRevRef.current = withRev.rev;
+    broadcastState(withRev);
+  }, [broadcastState]);
+
+  // ─── commitAndPersist: broadcast + DB write — for turn switches, phase changes ───
+  const commitAndPersist = useCallback((newState: CoopGameState) => {
+    const withRev = { ...newState, rev: Math.max(gsRef.current?.rev ?? 0, lastQueuedRevRef.current) + 1 };
+    console.log(`[Coop] commitAndPersist rev=${withRev.rev} phase=${withRev.phase} turn=${withRev.turn} enemyHp=${withRev.enemyHp}`);
     setGameState(withRev);
     gsRef.current = withRev;
     lastQueuedRevRef.current = withRev.rev;
