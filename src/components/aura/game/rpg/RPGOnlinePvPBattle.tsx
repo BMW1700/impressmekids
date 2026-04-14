@@ -456,6 +456,8 @@ export const RPGOnlinePvPBattle = ({
   // ─── Kid reads a word — Elara 5-word charge + plasma barrage mechanic ───
   const handleKidWordResult = useCallback((correct: boolean, _spokenWord: string, _wordIndex: number) => {
     if (!isHost) return;
+    // Guard: only process if it's actually kid's turn (prevents stale callbacks after turn switch)
+    if (gsRef.current.phase !== 'kid_turn' || gsRef.current.turn !== 'host') return;
 
     const s = { ...gsRef.current };
     const currentTurnSize = Math.max(1, Math.min(BATCH_SIZE, storyWords.length - s.wordIndex));
