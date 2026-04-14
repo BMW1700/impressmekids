@@ -111,37 +111,80 @@ export const RPGOnlineCoopBattle = ({
     phase: 'setup', lastEvent: null,
   });
 
-  // ─── Accept snapshot — passive side always accepts ───
-  const acceptSnapshot = useCallback((gs: CoopGameState, roomData?: any): boolean => {
-    if (!isValidCoopState(gs)) return false;
+  // ═══════════════════════════════════════════════════════════════
+  // SINGLE AUTHORITATIVE STATE-APPLY FUNCTION
+  // ═══════════════════════════════════════════════════════════════
+  const applyIncomingState = useCallback((
+    source: 'broadcast' | 'realtime' | 'poll' | 'snapshot',
+    incoming: CoopGameState,
+    roomMeta?: { host_name?: string | null; guest_name?: string | null; story_passage?: string | null; world_number?: number | null; enemy_type?: string | null },
+    markReady = false,
+  ): boolean => {
+    if (!isValidCoopState(incoming)) {
+      console.warn(`[Coop] applyIncoming(${source}): invalid state, rejected`);
+      return false;
+    }
 
     const normalized: CoopGameState = {
-      ...gs,
-      rev: typeof gs.rev === 'number' ? gs.rev : 0,
+      ...incoming,
+      rev: typeof incoming.rev === 'number' ? incoming.rev : 0,
     };
 
-    // Universal revision guard: BOTH sides reject stale state
+    // ── Universal revision guard ──
     const currentRev = gsRef.current?.rev ?? 0;
     const incomingRev = normalized.rev ?? 0;
 
     if (incomingRev < currentRev) {
-      console.warn(`[Coop] Rejecting stale snapshot rev=${incomingRev} < current=${currentRev}`);
+      console.warn(`[Coop] applyIncoming(${source}): REJECTED rev=${incomingRev} < local=${currentRev} (phase=${normalized.phase}, turn=${normalized.turn})`);
       return false;
     }
 
-    if (roomData) {
-      if (roomData.host_name) setHostName(roomData.host_name);
-      if (roomData.guest_name) setGuestName(roomData.guest_name);
-      if (roomData.story_passage) setRoomStory(roomData.story_passage);
-      if (roomData.world_number) setRoomWorldNumber(roomData.world_number);
-      if (roomData.enemy_type) setRoomEnemyType(roomData.enemy_type);
+    console.log(`[Coop] applyIncoming(${source}): ACCEPTED rev=${incomingRev} phase=${normalized.phase} turn=${normalized.turn} (local was rev=${currentRev})`);
+
+    if (roomMeta) {
+      if (roomMeta.host_name) setHostName(roomMeta.host_name);
+      if (roomMeta.guest_name) setGuestName(roomMeta.guest_name);
+      if (roomMeta.story_passage) setRoomStory(roomMeta.story_passage);
+      if (roomMeta.world_number) setRoomWorldNumber(roomMeta.world_number);
+      if (roomMeta.enemy_type) setRoomEnemyType(roomMeta.enemy_type);
     }
 
     gsRef.current = normalized;
     lastQueuedRevRef.current = Math.max(lastQueuedRevRef.current, normalized.rev);
     setGameState(normalized);
+
+    if (markReady && !ready) setReady(true);
+
+    // Sound effects for remote events
+    if (source !== 'snapshot' && normalized.lastEvent) {
+      const evt = normalized.lastEvent;
+      if (evt.type === 'attack') {
+        setMessage(`⚔️ ${evt.damage} damage to ${enemy.name}!`);
+        battleSounds.correctWord();
+      } else if (evt.type === 'enemy_attack') {
+        setMessage(`💥 ${enemy.name} attacks for ${evt.damage}!`);
+        battleSounds.fireWhoosh();
+      } else if (evt.type === 'turn_switch') {
+        const who = evt.by === 'host' ? hostName : guestName;
+        setMessage(`🟢 ${who}'s Turn!`);
+      }
+    }
+
+    if (normalized.phase === 'victory') battleSounds.victoryFanfare();
+
     return true;
-  }, [isHost]);
+  }, [isHost, ready, enemy.name, hostName, guestName]);
+
+  // ─── Legacy wrapper ───
+  const acceptSnapshot = useCallback((gs: CoopGameState, roomData?: any): boolean => {
+    return applyIncomingState('snapshot', gs, roomData ? {
+      host_name: roomData.host_name,
+      guest_name: roomData.guest_name,
+      story_passage: roomData.story_passage,
+      world_number: roomData.world_number,
+      enemy_type: roomData.enemy_type,
+    } : undefined);
+  }, [applyIncomingState]);
 
   // ─── Broadcast a state snapshot to the peer (no DB) ───
   const broadcastState = useCallback((state: CoopGameState) => {
@@ -154,10 +197,8 @@ export const RPGOnlineCoopBattle = ({
     }
   }, []);
 
-  // ─── Push state to DB with 5-second timeout ───
+  // ─── Push state to DB with 5-second timeout (NO broadcast — caller handles that) ───
   const pushState = useCallback(async (newState: CoopGameState): Promise<boolean> => {
-    broadcastState(newState);
-
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData?.session) {
       console.warn('[Coop] pushState: No session, refreshing...');
@@ -187,7 +228,6 @@ export const RPGOnlineCoopBattle = ({
           return false;
         }
 
-        // Verify write actually happened (RLS can silently match 0 rows)
         if (!rows || rows.length === 0) {
           console.warn('[Coop] pushState wrote 0 rows (RLS block). Refreshing session...');
           if (!isRetry) {
@@ -212,6 +252,10 @@ export const RPGOnlineCoopBattle = ({
     if (!ok) {
       console.warn('[Coop] pushState retrying rev=', newState.rev);
       ok = await attemptWrite(true);
+      if (!ok) {
+        console.warn('[Coop] pushState failed after retry, re-broadcasting rev=', newState.rev);
+        broadcastState(newState);
+      }
     }
     return ok;
   }, [roomId, broadcastState]);
@@ -229,8 +273,14 @@ export const RPGOnlineCoopBattle = ({
     const gs = data.game_state as any;
     if (!isValidCoopState(gs)) return false;
 
-    return acceptSnapshot(gs, data);
-  }, [roomId, session?.user?.id, acceptSnapshot]);
+    return applyIncomingState('poll', gs, {
+      host_name: data.host_name,
+      guest_name: data.guest_name,
+      story_passage: data.story_passage,
+      world_number: data.world_number,
+      enemy_type: data.enemy_type,
+    }, true);
+  }, [roomId, session?.user?.id, applyIncomingState]);
 
   const enqueueStatePersist = useCallback((newState: CoopGameState) => {
     writeQueueRef.current = writeQueueRef.current
@@ -255,19 +305,20 @@ export const RPGOnlineCoopBattle = ({
     broadcastState(withRev);
   }, [broadcastState]);
 
-  // ─── commitAndPersist: broadcast IMMEDIATELY + queue DB write — for turn switches, phase changes ───
+  // ─── commitAndPersist: broadcast IMMEDIATELY + queue DB write ───
   const commitAndPersist = useCallback((newState: CoopGameState) => {
     const withRev = { ...newState, rev: Math.max(gsRef.current?.rev ?? 0, lastQueuedRevRef.current) + 1 };
     console.log(`[Coop] commitAndPersist rev=${withRev.rev} phase=${withRev.phase} turn=${withRev.turn} enemyHp=${withRev.enemyHp}`);
     setGameState(withRev);
     gsRef.current = withRev;
     lastQueuedRevRef.current = withRev.rev;
-    // Broadcast IMMEDIATELY so peer gets the update without waiting for the DB write queue
     broadcastState(withRev);
     void enqueueStatePersist(withRev);
   }, [enqueueStatePersist, broadcastState]);
 
-  // ─── Broadcast channel ───
+  // ═══════════════════════════════════════════════════════════════
+  // BROADCAST CHANNEL — unified through applyIncomingState
+  // ═══════════════════════════════════════════════════════════════
   useEffect(() => {
     if (authLoading || !session?.user?.id) return;
 
@@ -278,29 +329,23 @@ export const RPGOnlineCoopBattle = ({
     channel.on('broadcast', { event: 'state_update' }, async (msg) => {
       const payload = msg.payload as any;
       if (payload?.state && isValidCoopState(payload.state)) {
-        console.log('[Coop] Broadcast received with inline state rev=', payload.state.rev);
-        const incoming = payload.state as CoopGameState;
-        const currentRev = gsRef.current?.rev ?? 0;
-        const iAmActive = (isHost && incoming.turn === 'host') || (!isHost && incoming.turn === 'guest');
-        if (iAmActive && incoming.rev < currentRev) return;
-        gsRef.current = incoming;
-        lastQueuedRevRef.current = Math.max(lastQueuedRevRef.current, incoming.rev);
-        setGameState(incoming);
-        if (!ready) setReady(true);
+        applyIncomingState('broadcast', payload.state as CoopGameState, undefined, true);
       } else {
-        console.log('[Coop] Broadcast signal received, rehydrating from DB...');
+        console.log('[Coop] Broadcast signal received (no inline state), rehydrating from DB...');
         await rehydrateRoom();
       }
     });
 
-    channel.subscribe();
+    channel.subscribe((status) => {
+      console.log(`[Coop] Broadcast channel status: ${status}`);
+    });
     broadcastChannelRef.current = channel;
 
     return () => {
       broadcastChannelRef.current = null;
       supabase.removeChannel(channel);
     };
-  }, [roomId, authLoading, session?.user?.id, rehydrateRoom]);
+  }, [roomId, authLoading, session?.user?.id, rehydrateRoom, applyIncomingState]);
 
   // ─── Load room + poll for guest ───
   useEffect(() => {
@@ -354,7 +399,7 @@ export const RPGOnlineCoopBattle = ({
     return () => clearInterval(interval);
   }, [ready, roomId, authLoading, session?.user?.id, rehydrateRoom]);
 
-  // ─── Realtime postgres_changes (fallback) ───
+  // ─── Realtime postgres_changes (fallback) — unified through applyIncomingState ───
   useEffect(() => {
     if (authLoading || !session?.user?.id) return;
     const channel = supabase
@@ -366,31 +411,19 @@ export const RPGOnlineCoopBattle = ({
           const room = payload.new as any;
           const gs = room.game_state as any;
           if (!isValidCoopState(gs)) return;
-
-          acceptSnapshot(gs, room);
-          if (!ready) setReady(true);
-
-          if (gs.lastEvent) {
-            const evt = gs.lastEvent;
-            if (evt.type === 'attack') {
-              setMessage(`⚔️ ${evt.damage} damage to ${enemy.name}!`);
-              battleSounds.correctWord();
-            } else if (evt.type === 'enemy_attack') {
-              setMessage(`💥 ${enemy.name} attacks for ${evt.damage}!`);
-              battleSounds.fireWhoosh();
-            } else if (evt.type === 'turn_switch') {
-              const who = evt.by === 'host' ? hostName : guestName;
-              setMessage(`🟢 ${who}'s Turn!`);
-            }
-          }
-
-          if (gs.phase === 'victory') battleSounds.victoryFanfare();
+          applyIncomingState('realtime', gs, {
+            host_name: room.host_name,
+            guest_name: room.guest_name,
+            story_passage: room.story_passage,
+            world_number: room.world_number,
+            enemy_type: room.enemy_type,
+          }, true);
         }
       )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [roomId, enemy.name, ready, authLoading, session?.user?.id, acceptSnapshot, hostName, guestName]);
+  }, [roomId, enemy.name, ready, authLoading, session?.user?.id, applyIncomingState]);
 
   // ─── Host selects mode and starts battle ───
   const startBattle = useCallback(async (mode: 'continuous' | 'repeat') => {
@@ -400,26 +433,19 @@ export const RPGOnlineCoopBattle = ({
     setGameState(gs);
     gsRef.current = gs;
     lastQueuedRevRef.current = 1;
+    // Broadcast immediately
+    broadcastState(gs);
     const ok = await pushState(gs);
     if (!ok) {
       setInitError('Failed to start battle. Go back and try again.');
       return;
     }
-    // Broadcast
-    if (broadcastChannelRef.current) {
-      broadcastChannelRef.current.send({
-        type: 'broadcast',
-        event: 'state_update',
-        payload: { rev: 1 },
-      });
-    }
     setMessage(`🟢 ${hostName}'s Turn!`);
-  }, [pushState, hostName]);
+  }, [pushState, broadcastState, hostName]);
 
   // ─── Handle word result ───
   const handleWordResult = useCallback((correct: boolean, _spokenWord: string, _wordIndex: number) => {
     if (!isMyTurn || !gsRef.current) return;
-    // Guard: only process if it's actually the playing phase and our turn (prevents stale callbacks)
     const currentGs = gsRef.current;
     if (currentGs.phase !== 'playing') return;
     const myTurnNow = (isHost && currentGs.turn === 'host') || (!isHost && currentGs.turn === 'guest');
