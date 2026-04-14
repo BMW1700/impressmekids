@@ -262,9 +262,22 @@ export const RPGOnlineCoopBattle = ({
       config: { broadcast: { self: false } },
     });
 
-    channel.on('broadcast', { event: 'state_update' }, async () => {
-      console.log('[Coop] Broadcast signal received, rehydrating...');
-      await rehydrateRoom();
+    channel.on('broadcast', { event: 'state_update' }, async (msg) => {
+      const payload = msg.payload as any;
+      if (payload?.state && isValidCoopState(payload.state)) {
+        console.log('[Coop] Broadcast received with inline state rev=', payload.state.rev);
+        const incoming = payload.state as CoopGameState;
+        const currentRev = gsRef.current?.rev ?? 0;
+        const iAmActive = (isHost && incoming.turn === 'host') || (!isHost && incoming.turn === 'guest');
+        if (iAmActive && incoming.rev < currentRev) return;
+        gsRef.current = incoming;
+        lastQueuedRevRef.current = Math.max(lastQueuedRevRef.current, incoming.rev);
+        setGameState(incoming);
+        if (!ready) setReady(true);
+      } else {
+        console.log('[Coop] Broadcast signal received, rehydrating from DB...');
+        await rehydrateRoom();
+      }
     });
 
     channel.subscribe();
@@ -411,7 +424,7 @@ export const RPGOnlineCoopBattle = ({
 
       if (gs.enemyHp <= 0) {
         gs.phase = 'victory';
-        commitState(gs);
+        commitAndPersist(gs);
         return;
       }
     } else {
@@ -421,9 +434,8 @@ export const RPGOnlineCoopBattle = ({
     gs.wordIndex += 1;
     gs.turnWordsRead += 1;
 
-    // After 5 words in this turn segment
+    // After 5 words in this turn segment → turn switch = persist to DB
     if (gs.turnWordsRead >= 5 && gs.phase === 'playing') {
-      // Enemy counter-attack
       const enemyDmg = 5 + Math.floor(Math.random() * 8);
       if (who === 'host') gs.hostHp = Math.max(0, gs.hostHp - enemyDmg);
       else gs.guestHp = Math.max(0, gs.guestHp - enemyDmg);
@@ -431,27 +443,22 @@ export const RPGOnlineCoopBattle = ({
 
       if (gs.hostHp <= 0 && gs.guestHp <= 0) {
         gs.phase = 'defeat';
-        commitState(gs);
+        commitAndPersist(gs);
         return;
       }
 
       if (gs.coopMode === 'continuous') {
         const nextTurn = who === 'host' ? 'guest' : 'host';
         const nextHp = nextTurn === 'host' ? gs.hostHp : gs.guestHp;
-        if (nextHp > 0) {
-          gs.turn = nextTurn;
-        }
+        if (nextHp > 0) gs.turn = nextTurn;
         gs.turnWordsRead = 0;
       } else {
-        // Repeat mode
         if (gs.repeatPhase === 1) {
           gs.repeatPhase = 2;
           gs.wordIndex = gs.batchStartIndex;
           const nextTurn = who === 'host' ? 'guest' : 'host';
           const nextHp = nextTurn === 'host' ? gs.hostHp : gs.guestHp;
-          if (nextHp > 0) {
-            gs.turn = nextTurn;
-          }
+          if (nextHp > 0) gs.turn = nextTurn;
           gs.turnWordsRead = 0;
         } else {
           gs.repeatPhase = 1;
@@ -459,19 +466,19 @@ export const RPGOnlineCoopBattle = ({
           gs.wordIndex = gs.batchStartIndex;
           const nextTurn = who === 'host' ? 'guest' : 'host';
           const nextHp = nextTurn === 'host' ? gs.hostHp : gs.guestHp;
-          if (nextHp > 0) {
-            gs.turn = nextTurn;
-          }
+          if (nextHp > 0) gs.turn = nextTurn;
           gs.turnWordsRead = 0;
         }
       }
 
       gs.lastEvent = { type: 'turn_switch', by: gs.turn, timestamp: Date.now() };
       setReaderKey(prev => prev + 1);
+      commitAndPersist(gs);
+    } else {
+      // Intermediate word — broadcast only, no DB write
+      commitLocal(gs);
     }
-
-    commitState(gs);
-  }, [isMyTurn, isHost, commitState]);
+  }, [isMyTurn, isHost, commitLocal, commitAndPersist]);
 
   // ─── Handle end state ───
   useEffect(() => {
