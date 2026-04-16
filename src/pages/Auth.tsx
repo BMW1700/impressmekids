@@ -1220,20 +1220,71 @@ const Auth = () => {
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="signup-email" className="text-white text-sm font-medium">Email</Label>
-                <Input
-                  id="signup-email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="you@school.edu"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur"
-                  required
-                />
-              </div>
+
+              {/* Student ID / Email toggle — only for student role */}
+              {role === 'student' && (
+                <div className="flex rounded-xl bg-white/10 p-1 border border-white/15">
+                  <button
+                    type="button"
+                    onClick={() => setLoginMode("email")}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
+                      loginMode === "email"
+                        ? "bg-white/20 text-white"
+                        : "text-white/50 hover:text-white/70"
+                    }`}
+                  >
+                    Email
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLoginMode("studentId")}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
+                      loginMode === "studentId"
+                        ? "bg-white/20 text-white"
+                        : "text-white/50 hover:text-white/70"
+                    }`}
+                  >
+                    <Hash className="h-3.5 w-3.5" />
+                    Student ID
+                  </button>
+                </div>
+              )}
+
+              {/* Email or Student ID input */}
+              {loginMode === "studentId" && role === "student" ? (
+                <div className="space-y-2">
+                  <Label htmlFor="signup-student-id" className="text-white text-sm font-medium">Student ID</Label>
+                  <Input
+                    id="signup-student-id"
+                    name="student-id"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="\d{8}"
+                    maxLength={8}
+                    placeholder="12345678"
+                    value={studentIdInput}
+                    onChange={(e) => setStudentIdInput(e.target.value.replace(/\D/g, ''))}
+                    className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur font-mono tracking-widest text-center"
+                    required
+                  />
+                  <p className="text-xs text-white/40">Enter your 8-digit Student ID provided by your teacher</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email" className="text-white text-sm font-medium">Email</Label>
+                  <Input
+                    id="signup-email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="you@school.edu"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur"
+                    required
+                  />
+                </div>
+              )
               <div className="space-y-2">
                 <Label htmlFor="signup-password" className="text-white text-sm font-medium">Password</Label>
                 <div className="relative">
