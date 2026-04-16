@@ -545,20 +545,22 @@ const Auth = () => {
       // Get district info
       const districtId = (role === 'teacher' || role === 'admin') 
         ? districtInfo?.district_code 
-        : selectedDistrictId;
+        : selectedDistrictId || null;
       
       const districtName = (role === 'teacher' || role === 'admin')
         ? districtInfo?.name
-        : districts?.find(d => d.district_code === selectedDistrictId)?.name;
+        : districts?.find(d => d.district_code === selectedDistrictId)?.name || null;
 
       // For admins, mark as verified immediately (they'll create the first admin manually)
-      const isVerified = role === 'admin';
+      // For Student ID students, mark as verified (school-managed, no email verification)
+      const isVerified = role === 'admin' || isStudentIdMode;
 
       // Build profile update data
       const profileUpdateData: Record<string, any> = {
-        district_id: districtId,
-        district_name: districtName,
-        is_verified: isVerified
+        is_verified: isVerified,
+        ...(districtId ? { district_id: districtId } : {}),
+        ...(districtName ? { district_name: districtName } : {}),
+        ...(isStudentIdMode ? { student_id: studentIdInput } : {}),
       };
 
       // Add school_id for school admins
