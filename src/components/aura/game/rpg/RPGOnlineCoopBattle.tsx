@@ -86,9 +86,11 @@ export const RPGOnlineCoopBattle = ({
   const gsRef = useRef<CoopGameState | null>(null);
   const completedRef = useRef(false);
   const [readerKey, setReaderKey] = useState(0);
-  const lastQueuedRevRef = useRef(0);
-  const writeQueueRef = useRef<Promise<boolean>>(Promise.resolve(true));
   const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  // ─── Coalescing writer state ───
+  const pendingWriteRef = useRef<CoopGameState | null>(null);
+  const writeInFlightRef = useRef(false);
 
   useEffect(() => { gsRef.current = gameState; }, [gameState]);
 
@@ -150,7 +152,6 @@ export const RPGOnlineCoopBattle = ({
     }
 
     gsRef.current = normalized;
-    lastQueuedRevRef.current = Math.max(lastQueuedRevRef.current, normalized.rev);
     setGameState(normalized);
 
     if (markReady && !ready) setReady(true);
@@ -193,72 +194,98 @@ export const RPGOnlineCoopBattle = ({
         type: 'broadcast',
         event: 'state_update',
         payload: { rev: state.rev, phase: state.phase, state },
+      }).then((result: string) => {
+        if (result !== 'ok') {
+          console.warn(`[Coop] broadcast send result: ${result} for rev=${state.rev} phase=${state.phase}`);
+        }
+      }).catch((err: any) => {
+        console.warn(`[Coop] broadcast send error for rev=${state.rev}:`, err);
       });
     }
   }, []);
 
-  // ─── Push state to DB with 5-second timeout (NO broadcast — caller handles that) ───
-  const pushState = useCallback(async (newState: CoopGameState): Promise<boolean> => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData?.session) {
-      console.warn('[Coop] pushState: No session, refreshing...');
-      const { error: refreshErr } = await supabase.auth.refreshSession();
-      if (refreshErr) {
-        console.error('[Coop] pushState: Session refresh failed:', refreshErr.message);
-        return false;
-      }
-    }
-
+  // ═══════════════════════════════════════════════════════════════
+  // AUTHORITATIVE PERSISTENCE — uses sync_multiplayer_room_state RPC
+  // with latest-state coalescing (never queues stale writes)
+  // ═══════════════════════════════════════════════════════════════
+  const persistState = useCallback(async (newState: CoopGameState): Promise<boolean> => {
     const status = (newState.phase === 'victory' || newState.phase === 'defeat') ? 'completed' : 'active';
 
-    const attemptWrite = async (isRetry = false): Promise<boolean> => {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-        const { data: rows, error } = await supabase
-          .from('multiplayer_rooms')
-          .update({ game_state: newState as any, status })
-          .eq('id', roomId)
-          .select('id')
-          .abortSignal(controller.signal);
-        clearTimeout(timeoutId);
-
-        if (error) {
-          console.error('[Coop] pushState UPDATE error:', error.message, error.code);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session) {
+        const { error: refreshErr } = await supabase.auth.refreshSession();
+        if (refreshErr) {
+          console.error('[Coop] persistState: Session refresh failed:', refreshErr.message);
           return false;
         }
+      }
 
-        if (!rows || rows.length === 0) {
-          console.warn('[Coop] pushState wrote 0 rows (RLS block). Refreshing session...');
-          if (!isRetry) {
-            await supabase.auth.refreshSession();
-          }
-          return false;
-        }
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-        console.log('[Coop] pushState OK rev=', newState.rev, 'phase=', newState.phase);
-        return true;
-      } catch (e: any) {
-        if (e?.name === 'AbortError') {
-          console.warn('[Coop] pushState timed out (5s) rev=', newState.rev);
-        } else {
-          console.error('[Coop] pushState exception:', e);
+      const { data, error } = await supabase
+        .rpc('sync_multiplayer_room_state', {
+          p_room_id: roomId,
+          p_game_state: newState as any,
+          p_status: status,
+        })
+        .abortSignal(controller.signal);
+
+      clearTimeout(timeoutId);
+
+      if (error) {
+        console.error('[Coop] persistState RPC error:', error.message, error.code);
+        if (error.message?.includes('Authentication') || error.code === 'PGRST301') {
+          await supabase.auth.refreshSession();
         }
         return false;
       }
-    };
 
-    let ok = await attemptWrite(false);
-    if (!ok) {
-      console.warn('[Coop] pushState retrying rev=', newState.rev);
-      ok = await attemptWrite(true);
-      if (!ok) {
-        console.warn('[Coop] pushState failed after retry, re-broadcasting rev=', newState.rev);
-        broadcastState(newState);
+      if (!data || (Array.isArray(data) && data.length === 0)) {
+        console.warn('[Coop] persistState RPC returned no rows');
+        return false;
       }
+
+      console.log(`[Coop] persistState OK rev=${newState.rev} phase=${newState.phase} turn=${newState.turn}`);
+      return true;
+    } catch (e: any) {
+      if (e?.name === 'AbortError') {
+        console.warn('[Coop] persistState timed out (5s) rev=', newState.rev);
+      } else {
+        console.error('[Coop] persistState exception:', e);
+      }
+      return false;
     }
-    return ok;
-  }, [roomId, broadcastState]);
+  }, [roomId]);
+
+  // ─── Coalescing write loop ───
+  const flushPendingWrite = useCallback(async () => {
+    if (writeInFlightRef.current) return;
+    
+    while (pendingWriteRef.current !== null) {
+      writeInFlightRef.current = true;
+      const stateToWrite = pendingWriteRef.current;
+      pendingWriteRef.current = null;
+
+      const ok = await persistState(stateToWrite);
+      if (!ok) {
+        console.warn(`[Coop] coalesced write failed rev=${stateToWrite.rev}, re-broadcasting`);
+        broadcastState(stateToWrite);
+        const ok2 = await persistState(stateToWrite);
+        if (!ok2) {
+          console.error(`[Coop] coalesced write failed after retry rev=${stateToWrite.rev}`);
+          broadcastState(stateToWrite);
+        }
+      }
+      writeInFlightRef.current = false;
+    }
+  }, [persistState, broadcastState]);
+
+  const enqueueStatePersist = useCallback((newState: CoopGameState) => {
+    pendingWriteRef.current = newState;
+    void flushPendingWrite();
+  }, [flushPendingWrite]);
 
   const rehydrateRoom = useCallback(async (): Promise<boolean> => {
     if (!session?.user?.id) return false;
@@ -282,38 +309,32 @@ export const RPGOnlineCoopBattle = ({
     }, true);
   }, [roomId, session?.user?.id, applyIncomingState]);
 
-  const enqueueStatePersist = useCallback((newState: CoopGameState) => {
-    writeQueueRef.current = writeQueueRef.current
-      .catch(() => false)
-      .then(async () => {
-        const ok = await pushState(newState);
-        if (!ok) {
-          console.warn('[Coop] pushState failed for rev=', newState.rev, '— local state preserved');
-        }
-        return ok;
-      });
-    return writeQueueRef.current;
-  }, [pushState]);
-
   // ─── commitLocal: broadcast-only (no DB write) — for intermediate word progress ───
   const commitLocal = useCallback((newState: CoopGameState) => {
-    const withRev = { ...newState, rev: Math.max(gsRef.current?.rev ?? 0, lastQueuedRevRef.current) + 1 };
+    const withRev = { ...newState, rev: (gsRef.current?.rev ?? 0) + 1 };
     console.log(`[Coop] commitLocal rev=${withRev.rev} phase=${withRev.phase}`);
     setGameState(withRev);
     gsRef.current = withRev;
-    lastQueuedRevRef.current = withRev.rev;
     broadcastState(withRev);
   }, [broadcastState]);
 
-  // ─── commitAndPersist: broadcast IMMEDIATELY + queue DB write ───
+  // ─── commitAndPersist: broadcast IMMEDIATELY + coalesced DB write ───
   const commitAndPersist = useCallback((newState: CoopGameState) => {
-    const withRev = { ...newState, rev: Math.max(gsRef.current?.rev ?? 0, lastQueuedRevRef.current) + 1 };
+    const withRev = { ...newState, rev: (gsRef.current?.rev ?? 0) + 1 };
     console.log(`[Coop] commitAndPersist rev=${withRev.rev} phase=${withRev.phase} turn=${withRev.turn} enemyHp=${withRev.enemyHp}`);
     setGameState(withRev);
     gsRef.current = withRev;
-    lastQueuedRevRef.current = withRev.rev;
     broadcastState(withRev);
-    void enqueueStatePersist(withRev);
+    enqueueStatePersist(withRev);
+
+    // Double-broadcast after 300ms for turn switches as insurance
+    const isTurnSwitch = withRev.lastEvent?.type === 'turn_switch' || 
+                          withRev.phase === 'victory' || withRev.phase === 'defeat';
+    if (isTurnSwitch) {
+      setTimeout(() => {
+        broadcastState(withRev);
+      }, 300);
+    }
   }, [enqueueStatePersist, broadcastState]);
 
   // ═══════════════════════════════════════════════════════════════
@@ -432,16 +453,14 @@ export const RPGOnlineCoopBattle = ({
     gs.rev = 1;
     setGameState(gs);
     gsRef.current = gs;
-    lastQueuedRevRef.current = 1;
-    // Broadcast immediately
     broadcastState(gs);
-    const ok = await pushState(gs);
+    const ok = await persistState(gs);
     if (!ok) {
       setInitError('Failed to start battle. Go back and try again.');
       return;
     }
     setMessage(`🟢 ${hostName}'s Turn!`);
-  }, [pushState, broadcastState, hostName]);
+  }, [persistState, broadcastState, hostName]);
 
   // ─── Handle word result ───
   const handleWordResult = useCallback((correct: boolean, _spokenWord: string, _wordIndex: number) => {

@@ -24,7 +24,7 @@ import {
 
 const battleSounds = new SoundEffects();
 const BATCH_SIZE = 5;
-const POLL_MS = 2000; // continuous reconciliation poll
+const POLL_MS = 2000;
 const ELARA_CHARGE_MAX = 5;
 const ELARA_BARRAGE_MULTIPLIER = 3;
 
@@ -78,9 +78,11 @@ export const RPGOnlinePvPBattle = ({
   const readyRef = useRef(ready);
   const completedRef = useRef(false);
   const hydrateAttemptsRef = useRef(0);
-  const writeQueueRef = useRef<Promise<boolean>>(Promise.resolve(true));
-  const lastQueuedRevRef = useRef(0);
   const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  // ─── Coalescing writer state ───
+  const pendingWriteRef = useRef<OnlinePvPGameState | null>(null);
+  const writeInFlightRef = useRef(false);
 
   useEffect(() => { gsRef.current = gs; }, [gs]);
   useEffect(() => { readyRef.current = ready; }, [ready]);
@@ -99,10 +101,9 @@ export const RPGOnlinePvPBattle = ({
   );
 
   // Force RPGWordReader to remount when the batch changes OR when turns cycle back.
-  // Using turnCount ensures the reader remounts even if wordIndex hasn't changed yet.
   const readerKey = `${gs.wordIndex}-${gs.turnCount}`;
 
-  // Derive the banner text from gs — no separate message state
+  // Derive the banner text from gs
   const bannerText = useMemo(() => {
     if (eventFlash) return eventFlash;
     if (gs.phase === 'kid_turn') {
@@ -118,7 +119,6 @@ export const RPGOnlinePvPBattle = ({
 
   // ═══════════════════════════════════════════════════════════════
   // SINGLE AUTHORITATIVE STATE-APPLY FUNCTION
-  // Every incoming state (broadcast, realtime, poll) flows through here.
   // ═══════════════════════════════════════════════════════════════
   const applyIncomingState = useCallback((
     source: 'broadcast' | 'realtime' | 'poll' | 'snapshot',
@@ -138,7 +138,6 @@ export const RPGOnlinePvPBattle = ({
     };
 
     // ── Universal revision guard ──
-    // BOTH devices, ALL sources: reject if incoming rev is strictly lower than local rev.
     const currentRev = gsRef.current.rev ?? 0;
     const incomingRev = normalized.rev ?? 0;
 
@@ -147,7 +146,6 @@ export const RPGOnlinePvPBattle = ({
       return false;
     }
 
-    // Equal rev from a remote source — accept (idempotent) to ensure phase/turn alignment
     console.log(`[PvP] applyIncoming(${source}): ACCEPTED rev=${incomingRev} phase=${normalized.phase} turn=${normalized.turn} (local was rev=${currentRev} phase=${gsRef.current.phase})`);
 
     // Apply room metadata if provided
@@ -161,7 +159,6 @@ export const RPGOnlinePvPBattle = ({
     hydrateAttemptsRef.current = 0;
     setInitError(null);
     gsRef.current = normalized;
-    lastQueuedRevRef.current = Math.max(lastQueuedRevRef.current, normalized.rev ?? 0);
     setGs(normalized);
 
     if (markReady && !readyRef.current) {
@@ -233,97 +230,110 @@ export const RPGOnlinePvPBattle = ({
         type: 'broadcast',
         event: 'state_update',
         payload: { rev: state.rev, phase: state.phase, state },
+      }).then((result: string) => {
+        if (result !== 'ok') {
+          console.warn(`[PvP] broadcast send result: ${result} for rev=${state.rev} phase=${state.phase}`);
+        }
+      }).catch((err: any) => {
+        console.warn(`[PvP] broadcast send error for rev=${state.rev}:`, err);
       });
     }
   }, []);
 
-  // ─── Push state to DB with 5-second timeout (NO broadcast — caller handles that) ───
-  const pushState = useCallback(async (newState: OnlinePvPGameState): Promise<boolean> => {
-    // Ensure valid session
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData?.session) {
-      console.warn('[PvP] pushState: No session, refreshing...');
-      const { error: refreshErr } = await supabase.auth.refreshSession();
-      if (refreshErr) {
-        console.error('[PvP] pushState: Session refresh failed:', refreshErr.message);
-        return false;
-      }
-    }
-
+  // ═══════════════════════════════════════════════════════════════
+  // AUTHORITATIVE PERSISTENCE — uses sync_multiplayer_room_state RPC
+  // with latest-state coalescing (never queues stale writes)
+  // ═══════════════════════════════════════════════════════════════
+  const persistState = useCallback(async (newState: OnlinePvPGameState): Promise<boolean> => {
     const status = (newState.phase === 'host_wins' || newState.phase === 'guest_wins') ? 'completed' : 'active';
 
-    const attemptWrite = async (isRetry = false): Promise<boolean> => {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-        const { data: rows, error } = await supabase
-          .from('multiplayer_rooms')
-          .update({ game_state: newState as any, status })
-          .eq('id', roomId)
-          .select('id')
-          .abortSignal(controller.signal);
-        clearTimeout(timeoutId);
-
-        if (error) {
-          console.error('[PvP] pushState UPDATE error:', error.message, error.code);
+    try {
+      // Ensure valid session
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session) {
+        const { error: refreshErr } = await supabase.auth.refreshSession();
+        if (refreshErr) {
+          console.error('[PvP] persistState: Session refresh failed:', refreshErr.message);
           return false;
         }
+      }
 
-        // Verify write actually happened (RLS can silently match 0 rows)
-        if (!rows || rows.length === 0) {
-          console.warn('[PvP] pushState wrote 0 rows (RLS block). Refreshing session...');
-          if (!isRetry) {
-            await supabase.auth.refreshSession();
-          }
-          return false;
-        }
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-        console.log('[PvP] pushState OK rev=', newState.rev, 'phase=', newState.phase, 'turn=', newState.turn);
-        return true;
-      } catch (e: any) {
-        if (e?.name === 'AbortError') {
-          console.warn('[PvP] pushState timed out (5s) rev=', newState.rev);
-        } else {
-          console.error('[PvP] pushState exception:', e);
+      const { data, error } = await supabase
+        .rpc('sync_multiplayer_room_state', {
+          p_room_id: roomId,
+          p_game_state: newState as any,
+          p_status: status,
+        })
+        .abortSignal(controller.signal);
+
+      clearTimeout(timeoutId);
+
+      if (error) {
+        console.error('[PvP] persistState RPC error:', error.message, error.code);
+        // If auth error, try session refresh
+        if (error.message?.includes('Authentication') || error.code === 'PGRST301') {
+          await supabase.auth.refreshSession();
         }
         return false;
       }
-    };
 
-    // Try once, retry once on failure
-    let ok = await attemptWrite(false);
-    if (!ok) {
-      console.warn('[PvP] pushState retrying rev=', newState.rev);
-      ok = await attemptWrite(true);
-      // If write still failed, re-broadcast so peer can at least use the realtime data
-      if (!ok) {
-        console.warn('[PvP] pushState failed after retry, re-broadcasting rev=', newState.rev);
-        broadcastState(newState);
+      if (!data || (Array.isArray(data) && data.length === 0)) {
+        console.warn('[PvP] persistState RPC returned no rows');
+        return false;
       }
+
+      console.log(`[PvP] persistState OK rev=${newState.rev} phase=${newState.phase} turn=${newState.turn}`);
+      return true;
+    } catch (e: any) {
+      if (e?.name === 'AbortError') {
+        console.warn('[PvP] persistState timed out (5s) rev=', newState.rev);
+      } else {
+        console.error('[PvP] persistState exception:', e);
+      }
+      return false;
     }
-    return ok;
-  }, [roomId, broadcastState]);
+  }, [roomId]);
+
+  // ─── Coalescing write loop: only persists the LATEST state, never blocks newer writes behind old ones ───
+  const flushPendingWrite = useCallback(async () => {
+    if (writeInFlightRef.current) return; // another flush is running — it will pick up our state
+    
+    while (pendingWriteRef.current !== null) {
+      writeInFlightRef.current = true;
+      const stateToWrite = pendingWriteRef.current;
+      pendingWriteRef.current = null; // clear before async — if new state arrives during write, it'll be set again
+
+      const ok = await persistState(stateToWrite);
+      if (!ok) {
+        console.warn(`[PvP] coalesced write failed rev=${stateToWrite.rev}, re-broadcasting`);
+        broadcastState(stateToWrite);
+        // Retry once
+        const ok2 = await persistState(stateToWrite);
+        if (!ok2) {
+          console.error(`[PvP] coalesced write failed after retry rev=${stateToWrite.rev}`);
+          // Re-broadcast again as last resort
+          broadcastState(stateToWrite);
+        }
+      }
+      writeInFlightRef.current = false;
+      // Loop continues if pendingWriteRef was set again during the write
+    }
+  }, [persistState, broadcastState]);
 
   const enqueueStatePersist = useCallback((newState: OnlinePvPGameState) => {
-    writeQueueRef.current = writeQueueRef.current
-      .catch(() => false)
-      .then(async () => {
-        const ok = await pushState(newState);
-        if (!ok) {
-          console.warn('[PvP] pushState failed for rev=', newState.rev, '— local state preserved');
-        }
-        return ok;
-      });
-    return writeQueueRef.current;
-  }, [pushState]);
+    pendingWriteRef.current = newState; // always overwrite — we only care about the latest
+    void flushPendingWrite();
+  }, [flushPendingWrite]);
 
   // ─── commitLocal: broadcast-only (no DB write) — for intermediate word progress ───
   const commitLocal = useCallback((newState: OnlinePvPGameState) => {
-    const withRev = { ...newState, rev: Math.max(gsRef.current.rev ?? 0, lastQueuedRevRef.current) + 1 };
+    const withRev = { ...newState, rev: (gsRef.current.rev ?? 0) + 1 };
     console.log(`[PvP] commitLocal rev=${withRev.rev} phase=${withRev.phase} batch=${withRev.batchProgress}`);
     setGs(withRev);
     gsRef.current = withRev;
-    lastQueuedRevRef.current = withRev.rev;
     broadcastState(withRev);
 
     if (withRev.lastEvent?.message) {
@@ -332,20 +342,28 @@ export const RPGOnlinePvPBattle = ({
     }
   }, [broadcastState]);
 
-  // ─── commitAndPersist: broadcast IMMEDIATELY + queue DB write — for turn switches, phase changes, wins ───
+  // ─── commitAndPersist: broadcast IMMEDIATELY + coalesced DB write — for turn switches, phase changes, wins ───
   const commitAndPersist = useCallback((newState: OnlinePvPGameState) => {
-    const withRev = { ...newState, rev: Math.max(gsRef.current.rev ?? 0, lastQueuedRevRef.current) + 1 };
+    const withRev = { ...newState, rev: (gsRef.current.rev ?? 0) + 1 };
     console.log(`[PvP] commitAndPersist rev=${withRev.rev} phase=${withRev.phase} turn=${withRev.turn} hostHp=${withRev.hostHp} guestHp=${withRev.guestHp}`);
     setGs(withRev);
     gsRef.current = withRev;
-    lastQueuedRevRef.current = withRev.rev;
-    // Broadcast IMMEDIATELY so peer gets the update without waiting for the DB write queue
+    // Broadcast IMMEDIATELY — peer gets the update without waiting for DB
     broadcastState(withRev);
-    void enqueueStatePersist(withRev);
+    // Schedule authoritative persistence (coalesced, non-blocking)
+    enqueueStatePersist(withRev);
 
     if (withRev.lastEvent?.message) {
       setEventFlash(withRev.lastEvent.message);
       setTimeout(() => setEventFlash(null), 2000);
+    }
+
+    // Double-broadcast after 300ms for critical turn switches as insurance
+    if (withRev.phase === 'kid_turn' || withRev.phase === 'parent_turn' || 
+        withRev.phase === 'host_wins' || withRev.phase === 'guest_wins') {
+      setTimeout(() => {
+        broadcastState(withRev);
+      }, 300);
     }
   }, [enqueueStatePersist, broadcastState]);
 
@@ -362,10 +380,8 @@ export const RPGOnlinePvPBattle = ({
     channel.on('broadcast', { event: 'state_update' }, async (msg) => {
       const payload = msg.payload as any;
       if (payload?.state && isValidPvPState(payload.state)) {
-        // Use the unified apply function — same guard as poll and realtime
         applyIncomingState('broadcast', payload.state as OnlinePvPGameState, undefined, true);
       } else {
-        // Fallback: no inline state, rehydrate from DB
         console.log('[PvP] Broadcast signal received (no inline state), rehydrating from DB...');
         await rehydrateRoom();
       }
@@ -496,7 +512,6 @@ export const RPGOnlinePvPBattle = ({
   // ─── Kid reads a word — Elara 5-word charge + plasma barrage mechanic ───
   const handleKidWordResult = useCallback((correct: boolean, _spokenWord: string, _wordIndex: number) => {
     if (!isHost) return;
-    // Guard: only process if it's actually kid's turn (prevents stale callbacks after turn switch)
     if (gsRef.current.phase !== 'kid_turn' || gsRef.current.turn !== 'host') return;
 
     const s = { ...gsRef.current };
@@ -504,7 +519,6 @@ export const RPGOnlinePvPBattle = ({
     s.wordsRead += 1;
     s.batchProgress += 1;
 
-    // Elara charge mechanic: charge up for first 4 words, barrage on 5th
     const newCharge = elaraCharge + 1;
 
     if (correct) {
@@ -513,7 +527,6 @@ export const RPGOnlinePvPBattle = ({
       if (s.hostStreak > s.longestStreak) s.longestStreak = s.hostStreak;
 
       if (newCharge >= ELARA_CHARGE_MAX) {
-        // 5th word — PLASMA BARRAGE! Triple damage
         const baseDamage = 8 + Math.min(s.hostStreak, 5) * 2;
         const damage = baseDamage * ELARA_BARRAGE_MULTIPLIER;
         s.totalDamage += damage;
@@ -522,7 +535,6 @@ export const RPGOnlinePvPBattle = ({
         setElaraCharge(0);
         battleSounds.fireWhoosh();
       } else {
-        // Charging — minor damage per word
         const damage = 3;
         s.totalDamage += damage;
         s.guestHp = Math.max(0, s.guestHp - damage);
@@ -554,7 +566,6 @@ export const RPGOnlinePvPBattle = ({
       setElaraCharge(0);
       commitAndPersist(s);
     } else {
-      // Intermediate word — broadcast only, no DB write
       commitLocal(s);
     }
   }, [isHost, commitLocal, commitAndPersist, hostName, guestName, storyWords.length, elaraCharge]);
