@@ -327,6 +327,25 @@ const GameAuth = () => {
                     />
                   </div>
                   <IdentityInput idPrefix="signup" />
+                  {loginMode === "studentId" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-class-code" className="text-white/80">
+                        Class Code <span className="text-white/40 font-normal">(optional)</span>
+                      </Label>
+                      <Input
+                        id="signup-class-code"
+                        type="text"
+                        maxLength={6}
+                        value={classJoinCode}
+                        onChange={(e) => setClassJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                        placeholder="ABC123"
+                        className="bg-white/10 border-white/20 text-white placeholder:text-white/40 font-mono tracking-widest text-center uppercase"
+                      />
+                      <p className="text-xs text-white/40">
+                        6-character code from your teacher to join your class
+                      </p>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="signup-password" className="text-white/80">Password</Label>
                     <div className="relative">
