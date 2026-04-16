@@ -6148,6 +6148,30 @@ export type Database = {
           },
         ]
       }
+      student_id_signin_attempts: {
+        Row: {
+          attempted_at: string
+          id: string
+          ip_hash: string
+          student_id_attempt: string
+          succeeded: boolean
+        }
+        Insert: {
+          attempted_at?: string
+          id?: string
+          ip_hash: string
+          student_id_attempt: string
+          succeeded?: boolean
+        }
+        Update: {
+          attempted_at?: string
+          id?: string
+          ip_hash?: string
+          student_id_attempt?: string
+          succeeded?: boolean
+        }
+        Relationships: []
+      }
       student_interventions: {
         Row: {
           classroom_id: string
@@ -7613,7 +7637,12 @@ export type Database = {
         }[]
       }
       check_email_exists_secure: { Args: { p_email: string }; Returns: boolean }
+      check_student_id_signin_rate: {
+        Args: { p_ip_hash: string; p_student_id_attempt: string }
+        Returns: Json
+      }
       cleanup_expired_safety_alerts: { Args: never; Returns: undefined }
+      cleanup_old_signin_attempts: { Args: never; Returns: undefined }
       compute_levenshtein: { Args: { a: string; b: string }; Returns: number }
       deny_club_join_request: { Args: { p_request_id: string }; Returns: Json }
       deny_student_join_request: {
@@ -8060,6 +8089,14 @@ export type Database = {
       mask_email: {
         Args: { email: string; viewer_id: string }
         Returns: string
+      }
+      record_student_id_signin_success: {
+        Args: { p_ip_hash: string; p_student_id_attempt: string }
+        Returns: undefined
+      }
+      redeem_classroom_join_code: {
+        Args: { p_join_code: string; p_student_id: string }
+        Returns: Json
       }
       seed_default_behavior_categories: {
         Args: { p_classroom_id: string }
