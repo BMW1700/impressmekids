@@ -12,7 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Chrome, Building2, BookOpen, Eye, EyeOff, UserCheck, ArrowLeft, Info, Hash } from "lucide-react";
 import { toSyntheticEmail, isStudentId, isSyntheticStudentEmail } from "@/lib/studentIdAuth";
-import { redeemClassJoinCode } from "@/lib/classJoinCode";
+import { redeemClassJoinCode, peekClassJoinCode, type PeekResult } from "@/lib/classJoinCode";
 import { checkStudentIdSigninRate, recordStudentIdSigninSuccess } from "@/lib/studentIdRateLimit";
 import { detectUserTypeFromEmail } from "@/lib/districtDetection";
 import { RoleSelectionModal } from "@/components/auth/RoleSelectionModal";
@@ -63,7 +63,26 @@ const Auth = () => {
   const [loginMode, setLoginMode] = useState<"email" | "studentId">("email");
   const [studentIdInput, setStudentIdInput] = useState("");
   const [classJoinCode, setClassJoinCode] = useState("");
+  const [classCodePeek, setClassCodePeek] = useState<PeekResult | null>(null);
+  const [classCodePeekLoading, setClassCodePeekLoading] = useState(false);
   const [duplicateEmailPrompt, setDuplicateEmailPrompt] = useState(false);
+
+  // Debounced pre-validation of the optional class join code.
+  useEffect(() => {
+    const code = classJoinCode.trim();
+    if (code.length !== 6) {
+      setClassCodePeek(null);
+      setClassCodePeekLoading(false);
+      return;
+    }
+    setClassCodePeekLoading(true);
+    const handle = setTimeout(async () => {
+      const result = await peekClassJoinCode(code);
+      setClassCodePeek(result);
+      setClassCodePeekLoading(false);
+    }, 350);
+    return () => clearTimeout(handle);
+  }, [classJoinCode]);
 
   // Substitute teacher mode
   const [isSubstituteMode, setIsSubstituteMode] = useState(false);
@@ -1400,6 +1419,22 @@ const Auth = () => {
                   <p className="text-xs text-white/40">
                     6-character code from your teacher to join your class roster
                   </p>
+                  {classCodePeekLoading && (
+                    <p className="text-xs text-white/60 flex items-center gap-2">
+                      <Loader2 className="h-3 w-3 animate-spin" /> Checking code…
+                    </p>
+                  )}
+                  {!classCodePeekLoading && classCodePeek?.valid && (
+                    <div className="rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-3 py-2 text-xs text-emerald-100">
+                      ✓ Joining <span className="font-semibold">{classCodePeek.classroomName}</span>
+                      {classCodePeek.teacherName && <> with {classCodePeek.teacherName}</>}
+                    </div>
+                  )}
+                  {!classCodePeekLoading && classCodePeek && !classCodePeek.valid && classJoinCode.length === 6 && (
+                    <div className="rounded-lg border border-red-400/40 bg-red-400/10 px-3 py-2 text-xs text-red-100">
+                      ✗ {classCodePeek.error ?? "Class code not found"}
+                    </div>
+                  )}
                 </div>
               )}
               <div className="space-y-2">

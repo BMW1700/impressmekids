@@ -121,3 +121,9 @@ verify_jwt = false
 
 [functions.cleanup-orphan-student]
 verify_jwt = false
+
+[functions.check-student-signin-rate]
+verify_jwt = false
+
+[functions.record-student-signin-success]
+verify_jwt = false

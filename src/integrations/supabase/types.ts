@@ -8090,6 +8090,7 @@ export type Database = {
         Args: { email: string; viewer_id: string }
         Returns: string
       }
+      peek_classroom_join_code: { Args: { p_join_code: string }; Returns: Json }
       record_student_id_signin_success: {
         Args: { p_ip_hash: string; p_student_id_attempt: string }
         Returns: undefined
