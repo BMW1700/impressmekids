@@ -1379,6 +1379,29 @@ const Auth = () => {
                   />
                 </div>
               )}
+              {/* Optional class join code — only shown for Student ID signup */}
+              {loginMode === "studentId" && role === "student" && (
+                <div className="space-y-2">
+                  <Label htmlFor="signup-class-code" className="text-white text-sm font-medium">
+                    Class Code <span className="text-white/40 font-normal">(optional)</span>
+                  </Label>
+                  <Input
+                    id="signup-class-code"
+                    name="class-code"
+                    type="text"
+                    maxLength={6}
+                    placeholder="ABC123"
+                    value={classJoinCode}
+                    onChange={(e) =>
+                      setClassJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))
+                    }
+                    className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur font-mono tracking-widest text-center uppercase"
+                  />
+                  <p className="text-xs text-white/40">
+                    6-character code from your teacher to join your class roster
+                  </p>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="signup-password" className="text-white text-sm font-medium">Password</Label>
                 <div className="relative">
