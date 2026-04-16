@@ -121,3 +121,6 @@ verify_jwt = false
 
 [functions.confirm-student-account]
 verify_jwt = false
+
+[functions.cleanup-orphan-student]
+verify_jwt = false
