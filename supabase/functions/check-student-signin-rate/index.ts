@@ -1,9 +1,10 @@
-// Edge function: real per-IP rate-limit check for Student ID sign-in.
-// Reads the actual client IP from x-forwarded-for (set by Supabase's edge proxy)
-// instead of trusting a localStorage device id, which is trivially bypassable.
+// Edge function: per-Student-ID rate-limit check for Student ID sign-in.
 //
-// Returns { allowed: boolean, error?: string } — same shape as the DB RPC,
-// so the client can swap them transparently.
+// Per FERPA/COPPA & literacy-team mandate: this function collects ZERO
+// network identifiers (no IP read, no hashing, no salt). The only
+// rate-limit signal is the 8-digit Student ID itself, which is not PPI
+// on its own. The DB RPC's per-IP bucket is fed a constant ('none') so
+// only the per-Student-ID limit (5 failures / 5 minutes) is enforced.
 //
 // verify_jwt = false because this is called BEFORE sign-in (no session yet).
 
@@ -15,24 +16,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Hash an IP with a server-side salt so we never store raw IPs.
-async function hashIp(ip: string): Promise<string> {
-  const salt = Deno.env.get("SIGNIN_IP_SALT") ?? "nl-default-salt-change-me";
-  const data = new TextEncoder().encode(`${salt}|${ip}`);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-function getClientIp(req: Request): string {
-  // Supabase edge proxy sets x-forwarded-for; first entry is the real client.
-  const xff = req.headers.get("x-forwarded-for");
-  if (xff) return xff.split(",")[0].trim();
-  const real = req.headers.get("x-real-ip");
-  if (real) return real.trim();
-  return "unknown";
-}
+// Fixed bucket — we do NOT collect IPs. Sized >= 8 chars to satisfy the
+// existing RPC's input validation without leaking any client signal.
+const NO_IP_BUCKET = "no-ip-collected";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -50,10 +36,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    const ip = getClientIp(req);
-    const ipHash = await hashIp(ip);
-
-    // Use service-role client to call the existing rate-limit RPC.
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -61,7 +43,7 @@ Deno.serve(async (req) => {
     );
 
     const { data, error } = await supabase.rpc("check_student_id_signin_rate", {
-      p_ip_hash: ipHash,
+      p_ip_hash: NO_IP_BUCKET,
       p_student_id_attempt: studentId,
     });
 
@@ -75,7 +57,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ ...(data as object), ip_hash: ipHash }),
+      JSON.stringify(data),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {

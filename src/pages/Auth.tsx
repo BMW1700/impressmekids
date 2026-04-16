@@ -1408,6 +1408,10 @@ const Auth = () => {
                     required
                   />
                   <p className="text-xs text-white/40">Enter your 8-digit Student ID provided by your teacher</p>
+                  <div className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs text-white/70 leading-relaxed">
+                    Student accounts use a school-issued ID — not an email.
+                    We don't collect personal information (FERPA/COPPA-aligned).
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-2">

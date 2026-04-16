@@ -1,6 +1,8 @@
 // Edge function counterpart to check-student-signin-rate.
-// Marks the most recent failed attempt as succeeded for the same IP-hash.
+// Marks the most recent failed attempt as succeeded for the same bucket.
 // Called AFTER signInWithPassword resolves successfully.
+//
+// Per FERPA/COPPA mandate: NO IP collection, NO hashing, NO salt.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -10,22 +12,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-async function hashIp(ip: string): Promise<string> {
-  const salt = Deno.env.get("SIGNIN_IP_SALT") ?? "nl-default-salt-change-me";
-  const data = new TextEncoder().encode(`${salt}|${ip}`);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-function getClientIp(req: Request): string {
-  const xff = req.headers.get("x-forwarded-for");
-  if (xff) return xff.split(",")[0].trim();
-  const real = req.headers.get("x-real-ip");
-  if (real) return real.trim();
-  return "unknown";
-}
+const NO_IP_BUCKET = "no-ip-collected";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -43,9 +30,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    const ip = getClientIp(req);
-    const ipHash = await hashIp(ip);
-
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -53,7 +37,7 @@ Deno.serve(async (req) => {
     );
 
     const { error } = await supabase.rpc("record_student_id_signin_success", {
-      p_ip_hash: ipHash,
+      p_ip_hash: NO_IP_BUCKET,
       p_student_id_attempt: studentId,
     });
 
