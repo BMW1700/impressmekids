@@ -10,6 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff, ArrowLeft, Gamepad2, Hash } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toSyntheticEmail } from "@/lib/studentIdAuth";
+import { redeemClassJoinCode, isValidClassJoinCode } from "@/lib/classJoinCode";
+import { checkStudentIdSigninRate, recordStudentIdSigninSuccess } from "@/lib/studentIdRateLimit";
 
 const GameAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -19,6 +21,7 @@ const GameAuth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loginMode, setLoginMode] = useState<"email" | "studentId">("email");
   const [studentIdInput, setStudentIdInput] = useState("");
+  const [classJoinCode, setClassJoinCode] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
   const { session, profile } = useAuth();
@@ -92,27 +95,27 @@ const GameAuth = () => {
         throw error;
       }
 
-      // Auto-confirm synthetic student accounts so they can sign in immediately
+      // Synthetic student accounts are auto-confirmed by a DB trigger on auth.users
+      // (auto_confirm_synthetic_student). No edge-function round-trip needed.
       if (data.user && isStudentIdMode) {
-        const { error: confirmErr } = await supabase.functions.invoke('confirm-student-account', {
-          body: { user_id: data.user.id, email: signupEmail },
-        });
-        if (confirmErr) {
-          console.error('[GameAuth] Failed to auto-confirm student account:', confirmErr);
-          await supabase.functions.invoke('cleanup-orphan-student', { body: { user_id: data.user.id } });
-          toast({
-            title: "Signup failed",
-            description: "Could not finalize student account. Please try again.",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
         const { data: sessionData } = await supabase.auth.signInWithPassword({
           email: signupEmail,
           password,
         });
         if (sessionData?.session) {
+          // Best-effort classroom enrollment via teacher-provided join code.
+          if (classJoinCode.trim()) {
+            const redeem = await redeemClassJoinCode(data.user.id, classJoinCode);
+            if (!redeem.success) {
+              toast({
+                title: "Joined, but class code didn't work",
+                description: redeem.error ?? "Ask your teacher for the correct code.",
+                variant: "destructive",
+              });
+            } else {
+              toast({ title: "Joined your class!", description: "You're on the roster." });
+            }
+          }
           navigate('/game/dashboard', { replace: true });
           return;
         }
@@ -139,7 +142,8 @@ const GameAuth = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const loginEmail = loginMode === "studentId" ? toSyntheticEmail(studentIdInput) : email.trim();
+    const isStudentIdMode = loginMode === "studentId";
+    const loginEmail = isStudentIdMode ? toSyntheticEmail(studentIdInput) : email.trim();
 
     if (!loginEmail || !password.trim()) {
       toast({ title: "Please fill in all fields", variant: "destructive" });
@@ -148,12 +152,23 @@ const GameAuth = () => {
 
     setIsLoading(true);
     try {
+      // Pre-flight rate limit on Student ID sign-in to defeat brute-force scans
+      if (isStudentIdMode) {
+        const gate = await checkStudentIdSigninRate(studentIdInput);
+        if (!gate.allowed) {
+          toast({ title: "Slow down", description: gate.error, variant: "destructive" });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
         email: loginEmail,
         password,
       });
 
       if (error) throw error;
+      if (isStudentIdMode) await recordStudentIdSigninSuccess(studentIdInput);
       navigate('/game/dashboard', { replace: true });
     } catch (error: any) {
       toast({
@@ -312,6 +327,25 @@ const GameAuth = () => {
                     />
                   </div>
                   <IdentityInput idPrefix="signup" />
+                  {loginMode === "studentId" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-class-code" className="text-white/80">
+                        Class Code <span className="text-white/40 font-normal">(optional)</span>
+                      </Label>
+                      <Input
+                        id="signup-class-code"
+                        type="text"
+                        maxLength={6}
+                        value={classJoinCode}
+                        onChange={(e) => setClassJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                        placeholder="ABC123"
+                        className="bg-white/10 border-white/20 text-white placeholder:text-white/40 font-mono tracking-widest text-center uppercase"
+                      />
+                      <p className="text-xs text-white/40">
+                        6-character code from your teacher to join your class
+                      </p>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="signup-password" className="text-white/80">Password</Label>
                     <div className="relative">

@@ -12,6 +12,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Chrome, Building2, BookOpen, Eye, EyeOff, UserCheck, ArrowLeft, Info, Hash } from "lucide-react";
 import { toSyntheticEmail, isStudentId, isSyntheticStudentEmail } from "@/lib/studentIdAuth";
+import { redeemClassJoinCode } from "@/lib/classJoinCode";
+import { checkStudentIdSigninRate, recordStudentIdSigninSuccess } from "@/lib/studentIdRateLimit";
 import { detectUserTypeFromEmail } from "@/lib/districtDetection";
 import { RoleSelectionModal } from "@/components/auth/RoleSelectionModal";
 import { DistrictCombobox } from "@/components/auth/DistrictCombobox";
@@ -60,6 +62,7 @@ const Auth = () => {
   const [authTab, setAuthTab] = useState<string>("signin");
   const [loginMode, setLoginMode] = useState<"email" | "studentId">("email");
   const [studentIdInput, setStudentIdInput] = useState("");
+  const [classJoinCode, setClassJoinCode] = useState("");
   const [duplicateEmailPrompt, setDuplicateEmailPrompt] = useState(false);
 
   // Substitute teacher mode
@@ -545,25 +548,9 @@ const Auth = () => {
       }
       if (!data.user) throw new Error('User creation failed');
 
-      // For synthetic Student-ID accounts, confirm the email server-side so the
-      // student can sign in immediately (they have no real mailbox).
-      if (isStudentIdMode) {
-        const { error: confirmErr } = await supabase.functions.invoke('confirm-student-account', {
-          body: { user_id: data.user.id, email: signupEmail },
-        });
-        if (confirmErr) {
-          console.error('[Auth] Failed to auto-confirm student account:', confirmErr);
-          // Orphan cleanup: delete the synthetic auth user so the ID can be reused
-          await supabase.functions.invoke('cleanup-orphan-student', { body: { user_id: data.user.id } });
-          toast({
-            title: "Signup failed",
-            description: "Could not finalize student account. Please try again.",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
-      }
+      // Synthetic Student-ID accounts are auto-confirmed by a DB trigger on
+      // auth.users (auto_confirm_synthetic_student). No edge function call needed.
+      // Real teacher/parent emails still go through normal email verification.
 
       // Wait for trigger to create profile - with retry verification
       let profileExists = false;
@@ -680,11 +667,28 @@ const Auth = () => {
 
         navigate('/pending-verification');
       } else if (isStudentIdMode) {
-        // Student ID students are auto-verified and go straight to dashboard
-        toast({
-          title: "Account Created!",
-          description: "Welcome to NabuLearn! Let's start learning.",
-        });
+        // Student ID students are auto-verified by DB trigger; sign in immediately.
+        if (!data.session) {
+          await supabase.auth.signInWithPassword({ email: signupEmail, password });
+        }
+        // Optional: redeem teacher-provided class join code to auto-roster.
+        if (classJoinCode.trim()) {
+          const redeem = await redeemClassJoinCode(data.user.id, classJoinCode);
+          if (!redeem.success) {
+            toast({
+              title: "Account created, but class code didn't work",
+              description: redeem.error ?? "Ask your teacher for the correct 6-character code.",
+              variant: "destructive",
+            });
+          } else {
+            toast({ title: "Joined your class!", description: "You're on the roster." });
+          }
+        } else {
+          toast({
+            title: "Account Created!",
+            description: "Welcome to NabuLearn! Let's start learning.",
+          });
+        }
         redirectToDashboard('student');
       } else {
         toast({
@@ -754,14 +758,26 @@ const Auth = () => {
     setIsLoading(true);
 
     // Determine the actual email to use
-    const signInEmail = loginMode === 'studentId' 
-      ? toSyntheticEmail(studentIdInput) 
+    const isStudentIdMode = loginMode === 'studentId';
+    const signInEmail = isStudentIdMode
+      ? toSyntheticEmail(studentIdInput)
       : email;
 
     try {
+      // Pre-flight rate limit on Student ID sign-in to defeat brute-force scans
+      if (isStudentIdMode) {
+        const gate = await checkStudentIdSigninRate(studentIdInput);
+        if (!gate.allowed) {
+          toast({ title: "Slow down", description: gate.error, variant: "destructive" });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({ email: signInEmail, password });
       if (error) throw error;
       if (!data.user) throw new Error("Sign in failed");
+      if (isStudentIdMode) await recordStudentIdSigninSuccess(studentIdInput);
 
       // Best-effort verification check (never block sign-in if this fails)
       try {
@@ -1361,6 +1377,29 @@ const Auth = () => {
                     className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur"
                     required
                   />
+                </div>
+              )}
+              {/* Optional class join code — only shown for Student ID signup */}
+              {loginMode === "studentId" && role === "student" && (
+                <div className="space-y-2">
+                  <Label htmlFor="signup-class-code" className="text-white text-sm font-medium">
+                    Class Code <span className="text-white/40 font-normal">(optional)</span>
+                  </Label>
+                  <Input
+                    id="signup-class-code"
+                    name="class-code"
+                    type="text"
+                    maxLength={6}
+                    placeholder="ABC123"
+                    value={classJoinCode}
+                    onChange={(e) =>
+                      setClassJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))
+                    }
+                    className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur font-mono tracking-widest text-center uppercase"
+                  />
+                  <p className="text-xs text-white/40">
+                    6-character code from your teacher to join your class roster
+                  </p>
                 </div>
               )}
               <div className="space-y-2">
