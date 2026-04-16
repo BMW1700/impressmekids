@@ -482,14 +482,16 @@ const Auth = () => {
         return;
       }
 
-      // Check if email exists
-      const { data: profileCheck, error: checkError } = await supabase
-        .rpc('check_email_exists_secure', { p_email: email.toLowerCase().trim() });
-      
-      if (profileCheck === true) {
-        setDuplicateEmailPrompt(true);
-        setIsLoading(false);
-        return;
+      // Check if email exists (skip for Student ID mode — synthetic emails won't exist yet)
+      if (!isStudentIdMode) {
+        const { data: profileCheck, error: checkError } = await supabase
+          .rpc('check_email_exists_secure', { p_email: signupEmail.toLowerCase().trim() });
+        
+        if (profileCheck === true) {
+          setDuplicateEmailPrompt(true);
+          setIsLoading(false);
+          return;
+        }
       }
 
       // Clear any existing sessions
@@ -497,14 +499,15 @@ const Auth = () => {
 
       // Create auth user
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: signupEmail,
         password,
         options: {
           data: {
             full_name: fullName,
             role: role,
+            ...(isStudentIdMode ? { student_id: studentIdInput } : {}),
           },
-          emailRedirectTo: window.location.origin + '/auth',
+          emailRedirectTo: isStudentIdMode ? undefined : window.location.origin + '/auth',
         },
       });
 
