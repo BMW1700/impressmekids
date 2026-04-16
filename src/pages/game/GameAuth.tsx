@@ -142,7 +142,8 @@ const GameAuth = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const loginEmail = loginMode === "studentId" ? toSyntheticEmail(studentIdInput) : email.trim();
+    const isStudentIdMode = loginMode === "studentId";
+    const loginEmail = isStudentIdMode ? toSyntheticEmail(studentIdInput) : email.trim();
 
     if (!loginEmail || !password.trim()) {
       toast({ title: "Please fill in all fields", variant: "destructive" });
@@ -151,12 +152,23 @@ const GameAuth = () => {
 
     setIsLoading(true);
     try {
+      // Pre-flight rate limit on Student ID sign-in to defeat brute-force scans
+      if (isStudentIdMode) {
+        const gate = await checkStudentIdSigninRate(studentIdInput);
+        if (!gate.allowed) {
+          toast({ title: "Slow down", description: gate.error, variant: "destructive" });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
         email: loginEmail,
         password,
       });
 
       if (error) throw error;
+      if (isStudentIdMode) await recordStudentIdSigninSuccess(studentIdInput);
       navigate('/game/dashboard', { replace: true });
     } catch (error: any) {
       toast({
