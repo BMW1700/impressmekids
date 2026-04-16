@@ -371,9 +371,13 @@ const Auth = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Determine actual email for signup
+    const isStudentIdMode = loginMode === 'studentId' && role === 'student';
+    const signupEmail = isStudentIdMode ? toSyntheticEmail(studentIdInput) : email;
     
-    // For students, show age verification first
-    if (role === 'student' && !showAgeVerification && !isUnder13 && !showParentalConsentForm) {
+    // For students, show age verification first (skip for Student ID mode — school-managed)
+    if (role === 'student' && !isStudentIdMode && !showAgeVerification && !isUnder13 && !showParentalConsentForm) {
       setShowAgeVerification(true);
       return;
     }
