@@ -359,6 +359,12 @@ const GameAuth = () => {
               <form onSubmit={handleSignUp}>
                 <CardContent className="space-y-4 pt-6">
                   <LoginModeToggle />
+                  {loginMode === "studentId" && (
+                    <div className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs text-white/70 leading-relaxed">
+                      Student ID accounts use a school-issued ID — not an email.
+                      We don't collect personal information (FERPA/COPPA-aligned).
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="signup-name" className="text-white/80">Player Name</Label>
                     <Input
