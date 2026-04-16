@@ -10,7 +10,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Chrome, Building2, BookOpen, Eye, EyeOff, UserCheck, ArrowLeft, Info } from "lucide-react";
+import { Loader2, Chrome, Building2, BookOpen, Eye, EyeOff, UserCheck, ArrowLeft, Info, Hash } from "lucide-react";
+import { toSyntheticEmail, isStudentId, isSyntheticStudentEmail } from "@/lib/studentIdAuth";
 import { detectUserTypeFromEmail } from "@/lib/districtDetection";
 import { RoleSelectionModal } from "@/components/auth/RoleSelectionModal";
 import { DistrictCombobox } from "@/components/auth/DistrictCombobox";
@@ -57,6 +58,8 @@ const Auth = () => {
   const [isUnder13, setIsUnder13] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [authTab, setAuthTab] = useState<string>("signin");
+  const [loginMode, setLoginMode] = useState<"email" | "studentId">("email");
+  const [studentIdInput, setStudentIdInput] = useState("");
   const [duplicateEmailPrompt, setDuplicateEmailPrompt] = useState(false);
 
   // Substitute teacher mode
@@ -368,9 +371,13 @@ const Auth = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Determine actual email for signup
+    const isStudentIdMode = loginMode === 'studentId' && role === 'student';
+    const signupEmail = isStudentIdMode ? toSyntheticEmail(studentIdInput) : email;
     
-    // For students, show age verification first
-    if (role === 'student' && !showAgeVerification && !isUnder13 && !showParentalConsentForm) {
+    // For students, show age verification first (skip for Student ID mode — school-managed)
+    if (role === 'student' && !isStudentIdMode && !showAgeVerification && !isUnder13 && !showParentalConsentForm) {
       setShowAgeVerification(true);
       return;
     }
@@ -453,8 +460,8 @@ const Auth = () => {
         }
       }
 
-      // Validation for student/parent signup
-      if ((role === 'student' || role === 'parent') && !selectedDistrictId) {
+      // Validation for student/parent signup (skip for Student ID mode)
+      if ((role === 'student' || role === 'parent') && !selectedDistrictId && !isStudentIdMode) {
         toast({
           title: "District Selection Required",
           description: "Please select your school district.",
@@ -464,14 +471,27 @@ const Auth = () => {
         return;
       }
 
-      // Check if email exists
-      const { data: profileCheck, error: checkError } = await supabase
-        .rpc('check_email_exists_secure', { p_email: email.toLowerCase().trim() });
-      
-      if (profileCheck === true) {
-        setDuplicateEmailPrompt(true);
+      // Validation for Student ID mode
+      if (isStudentIdMode && studentIdInput.length !== 8) {
+        toast({
+          title: "Invalid Student ID",
+          description: "Please enter a valid 8-digit Student ID.",
+          variant: "destructive",
+        });
         setIsLoading(false);
         return;
+      }
+
+      // Check if email exists (skip for Student ID mode — synthetic emails won't exist yet)
+      if (!isStudentIdMode) {
+        const { data: profileCheck, error: checkError } = await supabase
+          .rpc('check_email_exists_secure', { p_email: signupEmail.toLowerCase().trim() });
+        
+        if (profileCheck === true) {
+          setDuplicateEmailPrompt(true);
+          setIsLoading(false);
+          return;
+        }
       }
 
       // Clear any existing sessions
@@ -479,14 +499,15 @@ const Auth = () => {
 
       // Create auth user
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: signupEmail,
         password,
         options: {
           data: {
             full_name: fullName,
             role: role,
+            ...(isStudentIdMode ? { student_id: studentIdInput } : {}),
           },
-          emailRedirectTo: window.location.origin + '/auth',
+          emailRedirectTo: isStudentIdMode ? undefined : window.location.origin + '/auth',
         },
       });
 
@@ -524,20 +545,22 @@ const Auth = () => {
       // Get district info
       const districtId = (role === 'teacher' || role === 'admin') 
         ? districtInfo?.district_code 
-        : selectedDistrictId;
+        : selectedDistrictId || null;
       
       const districtName = (role === 'teacher' || role === 'admin')
         ? districtInfo?.name
-        : districts?.find(d => d.district_code === selectedDistrictId)?.name;
+        : districts?.find(d => d.district_code === selectedDistrictId)?.name || null;
 
       // For admins, mark as verified immediately (they'll create the first admin manually)
-      const isVerified = role === 'admin';
+      // For Student ID students, mark as verified (school-managed, no email verification)
+      const isVerified = role === 'admin' || isStudentIdMode;
 
       // Build profile update data
       const profileUpdateData: Record<string, any> = {
-        district_id: districtId,
-        district_name: districtName,
-        is_verified: isVerified
+        is_verified: isVerified,
+        ...(districtId ? { district_id: districtId } : {}),
+        ...(districtName ? { district_name: districtName } : {}),
+        ...(isStudentIdMode ? { student_id: studentIdInput } : {}),
       };
 
       // Add school_id for school admins
@@ -570,8 +593,8 @@ const Auth = () => {
         // Don't fail signup - the profile trigger may have already created the role
       }
 
-      // Create verification request for all non-admin roles
-      if (role === 'teacher' || role === 'student' || role === 'parent') {
+      // Create verification request for non-admin, non-Student-ID roles
+      if (!isStudentIdMode && (role === 'teacher' || role === 'student' || role === 'parent')) {
         // Validate district_id before creating verification request
         if (!districtId) {
           // Clean up orphan profile if district validation fails
@@ -587,7 +610,7 @@ const Auth = () => {
             district_id: districtId,
             district_name: districtName || '',
             full_name: fullName,
-            email: email,
+            email: signupEmail,
             requested_role: role,
             status: 'pending'
           });
@@ -605,6 +628,13 @@ const Auth = () => {
         });
 
         navigate('/pending-verification');
+      } else if (isStudentIdMode) {
+        // Student ID students are auto-verified and go straight to dashboard
+        toast({
+          title: "Account Created!",
+          description: "Welcome to NabuLearn! Let's start learning.",
+        });
+        redirectToDashboard('student');
       } else {
         toast({
           title: "Admin Account Created",
@@ -672,8 +702,13 @@ const Auth = () => {
     e.preventDefault();
     setIsLoading(true);
 
+    // Determine the actual email to use
+    const signInEmail = loginMode === 'studentId' 
+      ? toSyntheticEmail(studentIdInput) 
+      : email;
+
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email: signInEmail, password });
       if (error) throw error;
       if (!data.user) throw new Error("Sign in failed");
 
@@ -1015,70 +1050,127 @@ const Auth = () => {
                 </button>
               </div>
             ) : (
-              /* Regular Email Form */
-              <form onSubmit={handleSignIn} className="space-y-4" autoComplete="on">
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email" className="text-white text-sm font-medium">Email</Label>
-                  <Input
-                    id="signin-email"
-                    name="email"
-                    type="email"
-                    autoComplete="username"
-                    placeholder="you@school.edu"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur"
-                    required
-                  />
+              /* Regular Login — with Email / Student ID sub-tabs */
+              <div className="space-y-4">
+                {/* Login mode toggle */}
+                <div className="flex rounded-xl bg-white/10 p-1 border border-white/15">
+                  <button
+                    type="button"
+                    onClick={() => setLoginMode("email")}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
+                      loginMode === "email"
+                        ? "bg-white/20 text-white"
+                        : "text-white/50 hover:text-white/70"
+                    }`}
+                  >
+                    Email
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLoginMode("studentId")}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
+                      loginMode === "studentId"
+                        ? "bg-white/20 text-white"
+                        : "text-white/50 hover:text-white/70"
+                    }`}
+                  >
+                    <Hash className="h-3.5 w-3.5" />
+                    Student ID
+                  </button>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="signin-password" className="text-white text-sm font-medium">Password</Label>
-                    <button
-                      type="button"
-                      className="text-sm text-purple-400 hover:text-purple-300"
-                      onClick={handleResetPassword}
-                      disabled={isLoading}
-                    >
-                      Forgot password?
-                    </button>
-                  </div>
-                  <div className="relative">
-                    <Input
-                      id="signin-password"
-                      name="password"
-                      type={showPassword ? "text" : "password"}
-                      autoComplete="current-password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur pr-12"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
-                  </div>
-                </div>
-                <Button 
-                  type="submit" 
-                  className="w-full h-14 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white rounded-xl font-medium text-base shadow-lg shadow-purple-500/25"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Signing in...
-                    </>
+
+                <form onSubmit={handleSignIn} className="space-y-4" autoComplete="on">
+                  {loginMode === "email" ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="signin-email" className="text-white text-sm font-medium">Email</Label>
+                      <Input
+                        id="signin-email"
+                        name="email"
+                        type="email"
+                        autoComplete="username"
+                        placeholder="you@school.edu"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur"
+                        required
+                      />
+                    </div>
                   ) : (
-                    "Sign In"
+                    <div className="space-y-2">
+                      <Label htmlFor="signin-student-id" className="text-white text-sm font-medium">Student ID</Label>
+                      <Input
+                        id="signin-student-id"
+                        name="student-id"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="\d{8}"
+                        maxLength={8}
+                        autoComplete="username"
+                        placeholder="12345678"
+                        value={studentIdInput}
+                        onChange={(e) => setStudentIdInput(e.target.value.replace(/\D/g, ''))}
+                        className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur font-mono tracking-widest text-center"
+                        required
+                      />
+                      <p className="text-xs text-white/40">Enter your 8-digit Student ID</p>
+                    </div>
                   )}
-                </Button>
-              </form>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="signin-password" className="text-white text-sm font-medium">Password</Label>
+                      {loginMode === "email" && (
+                        <button
+                          type="button"
+                          className="text-sm text-purple-400 hover:text-purple-300"
+                          onClick={handleResetPassword}
+                          disabled={isLoading}
+                        >
+                          Forgot password?
+                        </button>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <Input
+                        id="signin-password"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        autoComplete="current-password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur pr-12"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+                  </div>
+                  <Button 
+                    type="submit" 
+                    className="w-full h-14 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white rounded-xl font-medium text-base shadow-lg shadow-purple-500/25"
+                    disabled={isLoading || (loginMode === 'studentId' && studentIdInput.length !== 8)}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      "Sign In"
+                    )}
+                  </Button>
+                  {loginMode === "studentId" && (
+                    <p className="text-xs text-white/40 text-center">
+                      Forgot your password? Ask your teacher to reset it.
+                    </p>
+                  )}
+                </form>
+              </div>
             )}
           </TabsContent>
 
@@ -1155,20 +1247,71 @@ const Auth = () => {
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="signup-email" className="text-white text-sm font-medium">Email</Label>
-                <Input
-                  id="signup-email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="you@school.edu"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur"
-                  required
-                />
-              </div>
+
+              {/* Student ID / Email toggle — only for student role */}
+              {role === 'student' && (
+                <div className="flex rounded-xl bg-white/10 p-1 border border-white/15">
+                  <button
+                    type="button"
+                    onClick={() => setLoginMode("email")}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
+                      loginMode === "email"
+                        ? "bg-white/20 text-white"
+                        : "text-white/50 hover:text-white/70"
+                    }`}
+                  >
+                    Email
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLoginMode("studentId")}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
+                      loginMode === "studentId"
+                        ? "bg-white/20 text-white"
+                        : "text-white/50 hover:text-white/70"
+                    }`}
+                  >
+                    <Hash className="h-3.5 w-3.5" />
+                    Student ID
+                  </button>
+                </div>
+              )}
+
+              {/* Email or Student ID input */}
+              {loginMode === "studentId" && role === "student" ? (
+                <div className="space-y-2">
+                  <Label htmlFor="signup-student-id" className="text-white text-sm font-medium">Student ID</Label>
+                  <Input
+                    id="signup-student-id"
+                    name="student-id"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="\d{8}"
+                    maxLength={8}
+                    placeholder="12345678"
+                    value={studentIdInput}
+                    onChange={(e) => setStudentIdInput(e.target.value.replace(/\D/g, ''))}
+                    className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur font-mono tracking-widest text-center"
+                    required
+                  />
+                  <p className="text-xs text-white/40">Enter your 8-digit Student ID provided by your teacher</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email" className="text-white text-sm font-medium">Email</Label>
+                  <Input
+                    id="signup-email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="you@school.edu"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur"
+                    required
+                  />
+                </div>
+              )
               <div className="space-y-2">
                 <Label htmlFor="signup-password" className="text-white text-sm font-medium">Password</Label>
                 <div className="relative">

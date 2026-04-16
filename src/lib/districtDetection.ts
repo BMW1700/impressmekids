@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { STUDENT_INTERNAL_DOMAIN } from "@/lib/studentIdAuth";
 
 export interface DistrictMatch {
   districtCode: string | null;
@@ -18,6 +19,17 @@ export async function detectUserTypeFromEmail(email: string): Promise<DistrictMa
       suggestedRole: 'student',
       requiresRoleSelection: true,
       availableRoles: ['student', 'parent'],
+    };
+  }
+
+  // Skip domain detection for synthetic student emails
+  if (domain === STUDENT_INTERNAL_DOMAIN) {
+    return {
+      districtCode: null,
+      districtName: null,
+      suggestedRole: 'student',
+      requiresRoleSelection: false,
+      availableRoles: ['student'],
     };
   }
   
