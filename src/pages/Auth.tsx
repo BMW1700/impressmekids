@@ -1023,70 +1023,127 @@ const Auth = () => {
                 </button>
               </div>
             ) : (
-              /* Regular Email Form */
-              <form onSubmit={handleSignIn} className="space-y-4" autoComplete="on">
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email" className="text-white text-sm font-medium">Email</Label>
-                  <Input
-                    id="signin-email"
-                    name="email"
-                    type="email"
-                    autoComplete="username"
-                    placeholder="you@school.edu"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur"
-                    required
-                  />
+              /* Regular Login — with Email / Student ID sub-tabs */
+              <div className="space-y-4">
+                {/* Login mode toggle */}
+                <div className="flex rounded-xl bg-white/10 p-1 border border-white/15">
+                  <button
+                    type="button"
+                    onClick={() => setLoginMode("email")}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
+                      loginMode === "email"
+                        ? "bg-white/20 text-white"
+                        : "text-white/50 hover:text-white/70"
+                    }`}
+                  >
+                    Email
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLoginMode("studentId")}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
+                      loginMode === "studentId"
+                        ? "bg-white/20 text-white"
+                        : "text-white/50 hover:text-white/70"
+                    }`}
+                  >
+                    <Hash className="h-3.5 w-3.5" />
+                    Student ID
+                  </button>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="signin-password" className="text-white text-sm font-medium">Password</Label>
-                    <button
-                      type="button"
-                      className="text-sm text-purple-400 hover:text-purple-300"
-                      onClick={handleResetPassword}
-                      disabled={isLoading}
-                    >
-                      Forgot password?
-                    </button>
-                  </div>
-                  <div className="relative">
-                    <Input
-                      id="signin-password"
-                      name="password"
-                      type={showPassword ? "text" : "password"}
-                      autoComplete="current-password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur pr-12"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
-                  </div>
-                </div>
-                <Button 
-                  type="submit" 
-                  className="w-full h-14 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white rounded-xl font-medium text-base shadow-lg shadow-purple-500/25"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Signing in...
-                    </>
+
+                <form onSubmit={handleSignIn} className="space-y-4" autoComplete="on">
+                  {loginMode === "email" ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="signin-email" className="text-white text-sm font-medium">Email</Label>
+                      <Input
+                        id="signin-email"
+                        name="email"
+                        type="email"
+                        autoComplete="username"
+                        placeholder="you@school.edu"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur"
+                        required
+                      />
+                    </div>
                   ) : (
-                    "Sign In"
+                    <div className="space-y-2">
+                      <Label htmlFor="signin-student-id" className="text-white text-sm font-medium">Student ID</Label>
+                      <Input
+                        id="signin-student-id"
+                        name="student-id"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="\d{8}"
+                        maxLength={8}
+                        autoComplete="username"
+                        placeholder="12345678"
+                        value={studentIdInput}
+                        onChange={(e) => setStudentIdInput(e.target.value.replace(/\D/g, ''))}
+                        className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur font-mono tracking-widest text-center"
+                        required
+                      />
+                      <p className="text-xs text-white/40">Enter your 8-digit Student ID</p>
+                    </div>
                   )}
-                </Button>
-              </form>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="signin-password" className="text-white text-sm font-medium">Password</Label>
+                      {loginMode === "email" && (
+                        <button
+                          type="button"
+                          className="text-sm text-purple-400 hover:text-purple-300"
+                          onClick={handleResetPassword}
+                          disabled={isLoading}
+                        >
+                          Forgot password?
+                        </button>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <Input
+                        id="signin-password"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        autoComplete="current-password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="h-12 bg-white/15 border-white/20 text-white placeholder:text-white/50 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 backdrop-blur pr-12"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+                  </div>
+                  <Button 
+                    type="submit" 
+                    className="w-full h-14 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white rounded-xl font-medium text-base shadow-lg shadow-purple-500/25"
+                    disabled={isLoading || (loginMode === 'studentId' && studentIdInput.length !== 8)}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      "Sign In"
+                    )}
+                  </Button>
+                  {loginMode === "studentId" && (
+                    <p className="text-xs text-white/40 text-center">
+                      Forgot your password? Ask your teacher to reset it.
+                    </p>
+                  )}
+                </form>
+              </div>
             )}
           </TabsContent>
 
