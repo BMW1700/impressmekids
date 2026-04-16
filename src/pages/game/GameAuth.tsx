@@ -10,6 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff, ArrowLeft, Gamepad2, Hash } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toSyntheticEmail } from "@/lib/studentIdAuth";
+import { redeemClassJoinCode, isValidClassJoinCode } from "@/lib/classJoinCode";
+import { checkStudentIdSigninRate, recordStudentIdSigninSuccess } from "@/lib/studentIdRateLimit";
 
 const GameAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
