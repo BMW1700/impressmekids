@@ -593,8 +593,8 @@ const Auth = () => {
         // Don't fail signup - the profile trigger may have already created the role
       }
 
-      // Create verification request for all non-admin roles
-      if (role === 'teacher' || role === 'student' || role === 'parent') {
+      // Create verification request for non-admin, non-Student-ID roles
+      if (!isStudentIdMode && (role === 'teacher' || role === 'student' || role === 'parent')) {
         // Validate district_id before creating verification request
         if (!districtId) {
           // Clean up orphan profile if district validation fails
@@ -610,7 +610,7 @@ const Auth = () => {
             district_id: districtId,
             district_name: districtName || '',
             full_name: fullName,
-            email: email,
+            email: signupEmail,
             requested_role: role,
             status: 'pending'
           });
@@ -628,6 +628,13 @@ const Auth = () => {
         });
 
         navigate('/pending-verification');
+      } else if (isStudentIdMode) {
+        // Student ID students are auto-verified and go straight to dashboard
+        toast({
+          title: "Account Created!",
+          description: "Welcome to NabuLearn! Let's start learning.",
+        });
+        redirectToDashboard('student');
       } else {
         toast({
           title: "Admin Account Created",
