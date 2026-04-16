@@ -482,6 +482,24 @@ const Auth = () => {
         return;
       }
 
+      // Pre-check Student ID uniqueness before calling signUp (friendlier error)
+      if (isStudentIdMode) {
+        const { data: existingStudent } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('student_id', studentIdInput)
+          .maybeSingle();
+        if (existingStudent) {
+          toast({
+            title: "Student ID already in use",
+            description: "That 8-digit ID is already registered. Ask your teacher for help.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       // Check if email exists (skip for Student ID mode — synthetic emails won't exist yet)
       if (!isStudentIdMode) {
         const { data: profileCheck, error: checkError } = await supabase
@@ -513,6 +531,17 @@ const Auth = () => {
 
       if (error) throw error;
       if (!data.user) throw new Error('User creation failed');
+
+      // For synthetic Student-ID accounts, confirm the email server-side so the
+      // student can sign in immediately (they have no real mailbox).
+      if (isStudentIdMode) {
+        const { error: confirmErr } = await supabase.functions.invoke('confirm-student-account', {
+          body: { user_id: data.user.id, email: signupEmail },
+        });
+        if (confirmErr) {
+          console.error('[Auth] Failed to auto-confirm student account:', confirmErr);
+        }
+      }
 
       // Wait for trigger to create profile - with retry verification
       let profileExists = false;

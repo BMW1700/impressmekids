@@ -47,6 +47,24 @@ const GameAuth = () => {
 
     setIsLoading(true);
     try {
+      // Pre-check Student ID uniqueness for friendlier error
+      if (isStudentIdMode) {
+        const { data: existingStudent } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('student_id', studentIdInput)
+          .maybeSingle();
+        if (existingStudent) {
+          toast({
+            title: "Student ID already in use",
+            description: "That 8-digit ID is already registered.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email: signupEmail,
         password,
@@ -61,6 +79,21 @@ const GameAuth = () => {
       });
 
       if (error) throw error;
+
+      // Auto-confirm synthetic student accounts so they can sign in immediately
+      if (data.user && isStudentIdMode) {
+        await supabase.functions.invoke('confirm-student-account', {
+          body: { user_id: data.user.id, email: signupEmail },
+        });
+        const { data: sessionData } = await supabase.auth.signInWithPassword({
+          email: signupEmail,
+          password,
+        });
+        if (sessionData?.session) {
+          navigate('/game/dashboard', { replace: true });
+          return;
+        }
+      }
 
       if (data.user && !data.session && !isStudentIdMode) {
         toast({
