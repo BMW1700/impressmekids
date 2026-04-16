@@ -667,11 +667,28 @@ const Auth = () => {
 
         navigate('/pending-verification');
       } else if (isStudentIdMode) {
-        // Student ID students are auto-verified and go straight to dashboard
-        toast({
-          title: "Account Created!",
-          description: "Welcome to NabuLearn! Let's start learning.",
-        });
+        // Student ID students are auto-verified by DB trigger; sign in immediately.
+        if (!data.session) {
+          await supabase.auth.signInWithPassword({ email: signupEmail, password });
+        }
+        // Optional: redeem teacher-provided class join code to auto-roster.
+        if (classJoinCode.trim()) {
+          const redeem = await redeemClassJoinCode(data.user.id, classJoinCode);
+          if (!redeem.success) {
+            toast({
+              title: "Account created, but class code didn't work",
+              description: redeem.error ?? "Ask your teacher for the correct 6-character code.",
+              variant: "destructive",
+            });
+          } else {
+            toast({ title: "Joined your class!", description: "You're on the roster." });
+          }
+        } else {
+          toast({
+            title: "Account Created!",
+            description: "Welcome to NabuLearn! Let's start learning.",
+          });
+        }
         redirectToDashboard('student');
       } else {
         toast({
