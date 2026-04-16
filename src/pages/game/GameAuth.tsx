@@ -95,27 +95,27 @@ const GameAuth = () => {
         throw error;
       }
 
-      // Auto-confirm synthetic student accounts so they can sign in immediately
+      // Synthetic student accounts are auto-confirmed by a DB trigger on auth.users
+      // (auto_confirm_synthetic_student). No edge-function round-trip needed.
       if (data.user && isStudentIdMode) {
-        const { error: confirmErr } = await supabase.functions.invoke('confirm-student-account', {
-          body: { user_id: data.user.id, email: signupEmail },
-        });
-        if (confirmErr) {
-          console.error('[GameAuth] Failed to auto-confirm student account:', confirmErr);
-          await supabase.functions.invoke('cleanup-orphan-student', { body: { user_id: data.user.id } });
-          toast({
-            title: "Signup failed",
-            description: "Could not finalize student account. Please try again.",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
         const { data: sessionData } = await supabase.auth.signInWithPassword({
           email: signupEmail,
           password,
         });
         if (sessionData?.session) {
+          // Best-effort classroom enrollment via teacher-provided join code.
+          if (classJoinCode.trim()) {
+            const redeem = await redeemClassJoinCode(data.user.id, classJoinCode);
+            if (!redeem.success) {
+              toast({
+                title: "Joined, but class code didn't work",
+                description: redeem.error ?? "Ask your teacher for the correct code.",
+                variant: "destructive",
+              });
+            } else {
+              toast({ title: "Joined your class!", description: "You're on the roster." });
+            }
+          }
           navigate('/game/dashboard', { replace: true });
           return;
         }
