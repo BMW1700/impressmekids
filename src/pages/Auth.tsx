@@ -460,11 +460,22 @@ const Auth = () => {
         }
       }
 
-      // Validation for student/parent signup
-      if ((role === 'student' || role === 'parent') && !selectedDistrictId) {
+      // Validation for student/parent signup (skip for Student ID mode)
+      if ((role === 'student' || role === 'parent') && !selectedDistrictId && !isStudentIdMode) {
         toast({
           title: "District Selection Required",
           description: "Please select your school district.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Validation for Student ID mode
+      if (isStudentIdMode && studentIdInput.length !== 8) {
+        toast({
+          title: "Invalid Student ID",
+          description: "Please enter a valid 8-digit Student ID.",
           variant: "destructive",
         });
         setIsLoading(false);
