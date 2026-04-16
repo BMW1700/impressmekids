@@ -66,6 +66,11 @@ const Auth = () => {
   const [classCodePeek, setClassCodePeek] = useState<PeekResult | null>(null);
   const [classCodePeekLoading, setClassCodePeekLoading] = useState(false);
   const [duplicateEmailPrompt, setDuplicateEmailPrompt] = useState(false);
+  const hasPendingClassCodeValidation =
+    loginMode === "studentId" &&
+    role === "student" &&
+    classJoinCode.trim().length === 6 &&
+    (classCodePeekLoading || !classCodePeek?.valid);
 
   // Debounced pre-validation of the optional class join code.
   useEffect(() => {
@@ -502,6 +507,28 @@ const Auth = () => {
         });
         setIsLoading(false);
         return;
+      }
+
+      if (isStudentIdMode && classJoinCode.trim().length === 6) {
+        if (classCodePeekLoading) {
+          toast({
+            title: "Checking class code",
+            description: "Please wait a moment while we verify that class code.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        if (!classCodePeek?.valid) {
+          toast({
+            title: "Invalid class code",
+            description: classCodePeek?.error ?? "Please fix the class code or clear it to continue.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
       }
 
       // Pre-check Student ID uniqueness before calling signUp (friendlier error)
@@ -1622,7 +1649,7 @@ const Auth = () => {
               <Button 
                 type="submit" 
                 className="w-full h-14 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white rounded-xl font-medium text-base shadow-lg shadow-purple-500/25"
-                disabled={isLoading}
+                disabled={isLoading || hasPendingClassCodeValidation}
               >
                 {isLoading ? (
                   <>
