@@ -78,13 +78,36 @@ const GameAuth = () => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        const msg = (error.message || '').toLowerCase();
+        if (isStudentIdMode && (msg.includes('23505') || msg.includes('duplicate') || msg.includes('profiles_student_id'))) {
+          toast({
+            title: "Student ID already in use",
+            description: "That 8-digit ID was just registered. Please pick another.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+        throw error;
+      }
 
       // Auto-confirm synthetic student accounts so they can sign in immediately
       if (data.user && isStudentIdMode) {
-        await supabase.functions.invoke('confirm-student-account', {
+        const { error: confirmErr } = await supabase.functions.invoke('confirm-student-account', {
           body: { user_id: data.user.id, email: signupEmail },
         });
+        if (confirmErr) {
+          console.error('[GameAuth] Failed to auto-confirm student account:', confirmErr);
+          await supabase.functions.invoke('cleanup-orphan-student', { body: { user_id: data.user.id } });
+          toast({
+            title: "Signup failed",
+            description: "Could not finalize student account. Please try again.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
         const { data: sessionData } = await supabase.auth.signInWithPassword({
           email: signupEmail,
           password,

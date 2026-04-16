@@ -529,7 +529,20 @@ const Auth = () => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Translate Postgres unique-violation (23505) on student_id into a friendly toast
+        const msg = (error.message || '').toLowerCase();
+        if (isStudentIdMode && (msg.includes('23505') || msg.includes('duplicate') || msg.includes('profiles_student_id'))) {
+          toast({
+            title: "Student ID already in use",
+            description: "That 8-digit ID was just registered. Please pick another.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+        throw error;
+      }
       if (!data.user) throw new Error('User creation failed');
 
       // For synthetic Student-ID accounts, confirm the email server-side so the
@@ -540,6 +553,15 @@ const Auth = () => {
         });
         if (confirmErr) {
           console.error('[Auth] Failed to auto-confirm student account:', confirmErr);
+          // Orphan cleanup: delete the synthetic auth user so the ID can be reused
+          await supabase.functions.invoke('cleanup-orphan-student', { body: { user_id: data.user.id } });
+          toast({
+            title: "Signup failed",
+            description: "Could not finalize student account. Please try again.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
         }
       }
 
