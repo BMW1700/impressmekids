@@ -1,41 +1,35 @@
 
 
-## Brutally Honest Status
+## Brutally Honest Status — P0 Fix Round
 
-**Did everything work perfectly? No. It compiles, but there are real gaps.**
+**Did the P0 fixes land cleanly? Mostly yes. There are still 2 real holes.**
 
-### What actually works ✅
-1. **Landing page branding** — `Header.tsx` tagline + `ResearchSection.tsx` badges are correctly updated. Clean.
-2. **Build error** — fixed (missing `}` on the ternary close at line 1314).
-3. **Auth.tsx Student ID flow logic** — sign in, sign up, district skip, verification skip, profile `student_id` write, navigate to dashboard. All wired correctly.
-4. **GameAuth.tsx** — dual login wired with the same pattern.
-5. **`districtDetection.ts`** — synthetic domain bypass is correct.
-6. **Memory** — both new memory files written.
+### What actually shipped ✅
 
-### What is broken or sloppy ⚠️
+1. **`supabase/config.toml`** — `confirm-student-account` registered with `verify_jwt = false`. Correct: the client calls it right after `signUp()` before a session exists.
+2. **Edge function `confirm-student-account`** — Solid. Hard-refuses any email not ending in `@student.nabulearn.internal`, double-checks the DB record before flipping `email_confirm`, uses service role correctly. This is the right shape.
+3. **Migration `profiles_student_id_unique_idx`** — Partial unique index on `student_id WHERE student_id IS NOT NULL` is the correct pattern (lets existing NULL rows coexist, blocks dupes going forward).
+4. **`Auth.tsx` / `GameAuth.tsx`** — Pre-signup `student_id` availability check + post-signup edge function call + auto sign-in are all wired.
 
-1. **Auto-confirm email is now enabled globally.** I flipped `auto_confirm` ON so synthetic student emails could log in immediately. **Side effect: every new teacher and parent signup now also skips email verification.** That breaks the existing security model where teachers/parents must verify their email before pending-verification review. This is a real regression, not a nitpick.
+### What is still broken or sloppy ⚠️
 
-2. **No DB constraint preventing Student ID collisions.** Two students can pick the same 8-digit ID and the second signup will fail with a confusing "user already exists" Supabase Auth error instead of a clear "that ID is taken" message. The `profiles.student_id` column has no UNIQUE constraint enforced at signup time.
+1. **🔴 Global auto-confirm was NOT actually reverted in code I can see.** The plan said "revert `auto_confirm_email` to false," but `supabase/config.toml` has no `[auth]` block at all — meaning auto-confirm state is whatever the Cloud UI was last set to. If it was flipped ON in the previous loop via the Cloud config tool, **it is still ON unless explicitly toggled OFF**. I need to verify and explicitly disable it. This is the same teacher/parent verification bypass regression as before — not actually fixed.
 
-3. **Student ID signup has no district association.** Student ID accounts are created with no `district_id` and no `school_id`. That means teachers in a school will not see those students in their roster — Student ID kids exist in a void. For a real pilot you need either a teacher-issued invite code or a district picker even on the Student ID tab.
+2. **🟡 Race condition on Student ID uniqueness.** The pre-signup `select` from `profiles` is a TOCTOU check — two students hitting "Sign Up" within the same second can both pass the check, then one will fail at the DB unique index with a raw Postgres error code `23505`. The UI doesn't catch that specific error and translate it. Result: confusing "duplicate key" message instead of "that ID is taken."
 
-4. **Password rules are weak for K-5.** Min length 6, no display of "ask your teacher if you forget." Realistic K-5 students will lock themselves out and there's no teacher-side reset UI yet.
+3. **🟡 Orphan auth user on failed profile insert.** If `signUp()` succeeds but the profile insert fails (e.g. unique index trips), the `auth.users` row is created but orphaned. The synthetic email is now permanently taken and that Student ID can never be reused. No cleanup path.
 
-5. **No rate limiting on Student ID guesses.** Anyone can brute-force 8-digit IDs against `signInWithPassword` since there's no captcha or lockout. With ~100M ID space + a known password pattern, this is exploitable.
+4. **🟢 Still no district/school association for Student ID accounts.** Flagged last round as P1, deliberately deferred — flagging again so it's not forgotten.
 
-### What needs to happen next (proposed fixes)
+### Recommended fixes this loop
 
 | Priority | Fix | File(s) |
 |---|---|---|
-| 🔴 P0 | Revert global auto-confirm; instead handle Student ID confirmation via a SECURITY DEFINER edge function that auto-confirms only synthetic emails | Supabase config + new edge fn |
-| 🔴 P0 | Add UNIQUE index on `profiles.student_id` and pre-check before signup with friendly error | migration + Auth.tsx |
-| 🟡 P1 | Require teacher-issued **class join code** OR district pick on Student ID signup so kids land in the right roster | Auth.tsx + migration for `class_codes` table |
-| 🟡 P1 | Teacher-side "Reset Student Password" button in classroom roster | new component + edge fn |
-| 🟢 P2 | Add captcha or per-IP rate limit on Student ID sign-in | edge fn or Supabase auth hook |
+| 🔴 P0 | Verify and explicitly disable global auto-confirm via Cloud auth config tool | runtime config |
+| 🟡 P1 | Catch Postgres `23505` on signup → friendly "Student ID already taken" toast | `Auth.tsx`, `GameAuth.tsx` |
+| 🟡 P1 | If profile insert fails after signup, call admin delete on the orphan auth user (new edge fn `cleanup-orphan-student`) | new edge fn + Auth flow |
 
 ### Recommendation
-Do not ship Student ID login to a real school until P0 items are fixed. The auto-confirm regression alone could let an attacker create a fake teacher account that skips verification. Everything else (landing page, dual UI, memory) is solid and can ship today.
 
-If you approve, next default-mode loop fixes the two P0 items first, then we go back to multiplayer PvP.
+The edge function and unique index are good. **The auto-confirm regression is the only real ship-blocker** — until I confirm it's OFF, every new teacher/parent signup is still skipping email verification. Approve and I'll verify the auth setting first, then patch the two P1 items, then we go straight to multiplayer PvP.
 
