@@ -675,8 +675,13 @@ const Auth = () => {
     e.preventDefault();
     setIsLoading(true);
 
+    // Determine the actual email to use
+    const signInEmail = loginMode === 'studentId' 
+      ? toSyntheticEmail(studentIdInput) 
+      : email;
+
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email: signInEmail, password });
       if (error) throw error;
       if (!data.user) throw new Error("Sign in failed");
 
