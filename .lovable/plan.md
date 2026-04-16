@@ -1,66 +1,78 @@
 
-Brutal honesty: the bug is still in the sync architecture, not in the room wiring. I audited the current PvP code and your screenshots match a state-handoff failure, not a visual bug.
 
-What is actually wrong now:
-1. `RPGOnlinePvPBattle.tsx` still makes the most important turn switches depend on a fragile combo:
-   - fire-and-forget broadcast via `broadcastChannelRef.current.send(...)`
-   - queued raw DB writes via `.from('multiplayer_rooms').update(...)`
-2. The project already has an authoritative backend function `sync_multiplayer_room_state(...)`, but PvP/Co-op are not using it for battle-state persistence.
-3. Critical phase writes are still serialized behind `writeQueueRef`. If one room-state write stalls, later turn-return writes wait behind it. That is how you get “nothing happens”, then minutes later the next screen finally appears.
-4. Broadcast delivery is not verified. If a turn-switch broadcast is missed once, the other device falls back to polling the DB. If the DB write is slow or blocked, that device stays stuck on the old phase.
-5. The current fix unified incoming state application, which was necessary, but it did not fully harden the outgoing turn-switch path. That is why the exact same class of delay has moved from one transition to another.
+## Plan: Landing Page Credibility Fixes + Dual Student ID Login
 
-Why this matches your newest report:
-- Student finishes 5 words -> parent powers should appear instantly.
-- Parent/enemy makes move -> student should instantly return to `kid_turn`.
-- Instead, one device sits on the prior phase until the DB eventually catches up.
-That is exactly what happens when turn transitions are “best effort” instead of authoritative.
+### Part 1: Landing Page (immediate, 3 files)
 
-Implementation plan:
-1. Make turn/phase persistence authoritative
-   - Replace raw `.update(...)` in both online battle components with `sync_multiplayer_room_state(...)`.
-   - Validate the returned `game_state`, `status`, and `updated_at`.
-   - Treat “no returned row / wrong rev” as a real failure, not a soft success.
+**`src/components/Header.tsx` line 71**
+- Change `"The Science of Reading"` to `"AI-Powered Literacy"`
 
-2. Replace the strict serial write queue with latest-state coalescing
-   - Keep intermediate word progress broadcast-only.
-   - For critical turn switches, persist only the newest unsaved state instead of letting older stalled writes block newer revs.
-   - This prevents one stuck request from making later rounds wait minutes.
+**`src/components/landing/ResearchSection.tsx` lines 77-81**
+- Remove `"Simple View of Reading"` badge
+- Remove `"Science of Reading Aligned"` badge
+- Add `"Adaptive Phoneme Progression"` badge
+- Keep: Bloom's Taxonomy, CMU Pronouncing Dictionary, Q-Learning Reinforcement
 
-3. Harden broadcast delivery for turn switches
-   - Await/inspect broadcast send results for critical handoffs.
-   - If a turn-switch broadcast fails, immediately trigger authoritative rehydrate logic instead of silently hoping polling fixes it.
-   - Add explicit logging for `source`, `roomId`, `rev`, `phase`, `turn`, send result, and persist result.
+**Update memory** to record these branding decisions.
 
-4. Add explicit handoff recovery on both devices
-   - When incoming state changes to `parent_turn`, force the parent controls view to unlock immediately.
-   - When incoming state changes back to `kid_turn`, force the student reader view to reset/remount immediately.
-   - Strengthen the reader reset key if needed so turn-return always produces a clean playable reader.
+---
 
-5. Apply the same repair pattern to Co-op
-   - Co-op uses the same raw update + queue pattern.
-   - I’ll patch it for parity so this exact failure does not survive there.
+### Part 2: Dual Login — Student ID Tab
 
-Files to change:
-- `src/components/aura/game/rpg/RPGOnlinePvPBattle.tsx` — main fix
-- `src/components/aura/game/rpg/RPGOnlineCoopBattle.tsx` — parity fix
-- `src/components/aura/game/rpg/multiplayerRoomTypes.ts` — only if a stronger handoff/reset token is needed
+Add a **Student ID** tab alongside the existing **Email** login on both auth pages. This gives schools the FERPA/COPPA-safe option while keeping email login fully functional for teachers, parents, and existing students.
 
-Technical details:
-- The backend sync function already exists in `supabase/migrations/20260413203253_f175b4ef-ae7c-41f2-ad9f-27553248f51d.sql`.
-- The current weak point is still `pushState()` in PvP/Co-op using raw table updates.
-- The current queue model (`writeQueueRef`) is too fragile for critical phase transitions.
-- The current broadcast path is optimistic but not verified.
+**How it works:**
 
-QA I will use after the fix:
-1. Student reads first 5 words -> parent powers visible in under 1 second
-2. Parent uses instant attack -> student returns to playable reader in under 1 second
-3. Parent uses reading-required attack -> student returns in under 1 second
-4. Parent uses mini-game -> student returns in under 1 second
-5. Repeat across multiple rounds to confirm the delay does not “move” to round 2 or 3
+```text
+Sign In screen:
+┌─────────────────────────────────────┐
+│  [Email]  [Student ID]              │  ← new tab row
+├─────────────────────────────────────┤
+│  Email tab: existing flow (unchanged)
+│  Student ID tab:                    │
+│    Student ID: [________] (8 digits)│
+│    Password:   [________]           │
+│    [Sign In]                        │
+└─────────────────────────────────────┘
 
-Expected result:
-- No more multi-minute dead zones between rounds
-- Parent and student both switch turns immediately
-- If broadcast misses, authoritative persistence still restores the other device quickly
-- If persistence fails, logs will show exactly where it failed instead of hiding it
+Sign Up screen:
+┌─────────────────────────────────────┐
+│  Role selector: Student | Parent | Teacher | Admin
+│  IF Student selected:               │
+│    [Email]  [Student ID]  ← tab row │
+│    Student ID tab:                  │
+│      Full Name: [________]          │
+│      Student ID: [________]         │
+│      Password: [________]           │
+│      District: [dropdown]           │
+│      [Create Account]               │
+└─────────────────────────────────────┘
+```
+
+- **Synthetic email**: When a student uses their ID (e.g. `12345678`), the system internally maps it to `12345678@student.nabulearn.internal` for Supabase Auth. Students never see this.
+- **Sign-in**: Same mapping — enter ID + password, system constructs the synthetic email and calls `signInWithPassword`.
+- **Existing accounts**: Students who already signed up with real email continue using the Email tab. No disruption.
+- **Non-student roles**: Parent/Teacher/Admin always use the Email tab (no Student ID option shown).
+
+**Files to modify:**
+
+| File | Change |
+|------|--------|
+| `src/pages/Auth.tsx` | Add Student ID sub-tabs on sign-in and sign-up (when role=student). Add `loginMode` state. Synthetic email helper. |
+| `src/pages/game/GameAuth.tsx` | Same dual tab for Game Mode login/signup. |
+| `src/lib/districtDetection.ts` | Skip domain detection for `@student.nabulearn.internal` synthetic emails. |
+
+**No database migration needed** — `student_id` column already exists on `profiles`. The synthetic email is just a consistent mapping pattern.
+
+**Helper function (shared):**
+```typescript
+const STUDENT_DOMAIN = 'student.nabulearn.internal';
+const isStudentId = (input: string) => /^\d{8}$/.test(input.trim());
+const toSyntheticEmail = (studentId: string) => `${studentId}@${STUDENT_DOMAIN}`;
+```
+
+**Security notes:**
+- `@student.nabulearn.internal` is not a real domain — no email verification is possible (which is correct for K-5 students who shouldn't have email)
+- Auto-confirm will need to be enabled for these synthetic emails only, or we handle it via the existing COPPA consent flow
+- Password reset for Student ID accounts is handled by teacher/parent (no email-based reset)
+
