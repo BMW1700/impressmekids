@@ -74,8 +74,7 @@ export const ResearchSection = () => {
             Our platform integrates decades of reading science research with cutting-edge machine learning to deliver outcomes that were previously impossible
           </p>
           <div className="flex flex-wrap justify-center gap-4 text-sm">
-            <Badge variant="secondary" className="px-4 py-2">Simple View of Reading</Badge>
-            <Badge variant="secondary" className="px-4 py-2">Science of Reading Aligned</Badge>
+            <Badge variant="secondary" className="px-4 py-2">Adaptive Phoneme Progression</Badge>
             <Badge variant="secondary" className="px-4 py-2">Bloom's Taxonomy</Badge>
             <Badge variant="secondary" className="px-4 py-2">CMU Pronouncing Dictionary</Badge>
             <Badge variant="secondary" className="px-4 py-2">Q-Learning Reinforcement</Badge>
