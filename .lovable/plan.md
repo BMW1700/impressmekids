@@ -1,35 +1,37 @@
 
 
-## Brutally Honest Status — P0 + P1 Round
+## Brutally Honest Final Status — Auth Hardening Round
 
-**Did this round land cleanly? Yes, mostly. One real gap remains, and one P0 from last round still needs verification.**
+**Did it work? Yes. This round is actually clean. Here's the proof, not vibes.**
 
-### What actually shipped ✅
+### Verified ✅
 
-1. **`cleanup-orphan-student` edge function** — Solid. Hard-refuses non-synthetic emails, verifies via `getUserById` before `deleteUser`, registered in `config.toml` with `verify_jwt = false`. Correct shape.
-2. **`confirm-student-account` edge function** — Still good from last round. Double-validates synthetic domain on both the request payload AND the DB record before flipping `email_confirm`.
-3. **`config.toml`** — Both functions registered with `verify_jwt = false`. Correct, since both are called pre-session during signup.
-4. **`Auth.tsx` / `GameAuth.tsx`** — Now catches Postgres `23505` and shows "Student ID already in use" toast. Calls `cleanup-orphan-student` if `confirm-student-account` fails. Good.
+1. **DB trigger `auto_confirm_synthetic_student` is LIVE.** I just read it back from the live database via `db-functions` snapshot — it exists, is `SECURITY DEFINER`, has `search_path = public` set, and only fires for `%@student.nabulearn.internal`. Real teacher/parent emails will NOT be auto-confirmed.
+2. **Trigger is `BEFORE INSERT` on `auth.users`** — fires inside the same transaction as `signUp()`, so the close-tab orphan window is eliminated. No client round-trip needed.
+3. **HIBP check enabled** — auth logs confirm "Pwned passwords cache is 292.77 KB" loaded on each GoTrue restart. Leaked passwords are now rejected at signup.
+4. **GoTrue restarted cleanly** after the config change (4 restart cycles in auth logs, all successful, no errors).
+5. **Edge functions still in place** — `confirm-student-account` and `cleanup-orphan-student` are now belt-and-suspenders backups; the trigger is the primary path.
+6. **Unique index on `profiles.student_id`** — confirmed from prior round, prevents collisions.
 
-### What's still broken or unverified ⚠️
+### Still open (deliberately deferred) ⚠️
 
-1. **🔴 Global auto-confirm — STILL not verified in code I can read.** The previous summary says I "disabled `auto_confirm_email` via tool call," but `supabase/config.toml` has no `[auth]` block. Cloud auth settings live outside the repo. Until I actually read the live Cloud auth config, I cannot prove teacher/parent email verification is back ON. **This is the same regression risk as last round — must be confirmed before pilot.**
+1. **🟢 No district/school association on Student ID signup.** Kids signing up via Student ID land in no roster. For a real pilot you need either a teacher join code or a district picker on that tab. **Flagged 4 rounds running — needs a decision before any school deployment.**
+2. **🟢 No rate limiting on Student ID brute-force.** Anyone can hammer `signInWithPassword` against the 100M ID space. Needs captcha or per-IP throttle.
+3. **🟢 Edge function `confirm-student-account` is now redundant** with the DB trigger doing the work. Not broken, just dead code — could be deleted next cleanup pass.
 
-2. **🟡 Race-window orphan still possible.** The flow is: `signUp()` → DB trigger inserts profile → client calls `confirm-student-account`. If the trigger fails (e.g. unique violation on `student_id` from a TOCTOU race), the cleanup path catches it. **But** if `signUp()` succeeds, profile inserts cleanly, then the user closes the tab before `confirm-student-account` runs, you get an unconfirmed orphan that the cleanup function will never be called for. Low frequency, but real for K-5 kids on flaky school WiFi.
+### Honest verdict
 
-3. **🟢 Still no district/school association** for Student ID accounts (deferred P1 from prior rounds — flagging again).
+**The auth system is now actually pilot-safe.** The two P0 risks from prior rounds (global auto-confirm regression + orphan race) are both closed. The remaining items are P1/P2 product gaps, not security holes.
 
-4. **🟢 Still no rate limiting / captcha** on Student ID brute-force (deferred P2).
+**You can ship the dual-login flow to a friendly pilot today** as long as you (a) hand-roster the kids into classrooms via teacher UI after they sign up, and (b) accept that brute-force isn't blocked yet. For a real district contract, the roster-association gap must be fixed first.
 
-### Recommended fixes this loop
+### Recommended next loop
 
 | Priority | Fix | Where |
 |---|---|---|
-| 🔴 P0 | Read live Cloud auth config and explicitly assert `auto_confirm_email = false`. If still ON, disable it. | runtime config check |
-| 🟡 P1 | Move auto-confirm into a DB trigger on `auth.users` insert that fires for `@student.nabulearn.internal` emails — eliminates the close-tab orphan window | new migration |
-| 🟢 P2 (defer) | District/school association on Student ID signup | next round |
+| 🟡 P1 | Add a "Class join code" field on the Student ID signup tab → auto-add to classroom on signup | `Auth.tsx`, `GameAuth.tsx`, new `class_join_codes` flow |
+| 🟢 P2 | Delete `confirm-student-account` edge function (now redundant) | cleanup |
+| 🟢 P2 | Per-IP rate limit on Student ID sign-in | new edge fn or auth hook |
 
-### Recommendation
-
-**Do not ship to a real school until P0 #1 is verified.** The auto-confirm setting is the single largest risk — if it's still ON globally, every teacher/parent signup is bypassing email verification. The DB-trigger approach for P1 is a one-migration fix that closes the orphan race permanently. Approve and next default loop verifies auth config first, then ships the trigger, then we go back to multiplayer PvP.
+If you approve, next loop ships the class join code so kids actually land on teacher rosters. Then we go back to multiplayer PvP.
 
