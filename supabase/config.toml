@@ -118,3 +118,6 @@ verify_jwt = false
 
 [functions.process-data-deletion]
 verify_jwt = false
+
+[functions.confirm-student-account]
+verify_jwt = false
