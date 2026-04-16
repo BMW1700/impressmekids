@@ -58,6 +58,8 @@ const Auth = () => {
   const [isUnder13, setIsUnder13] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [authTab, setAuthTab] = useState<string>("signin");
+  const [loginMode, setLoginMode] = useState<"email" | "studentId">("email");
+  const [studentIdInput, setStudentIdInput] = useState("");
   const [duplicateEmailPrompt, setDuplicateEmailPrompt] = useState(false);
 
   // Substitute teacher mode
