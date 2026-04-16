@@ -12,6 +12,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Chrome, Building2, BookOpen, Eye, EyeOff, UserCheck, ArrowLeft, Info, Hash } from "lucide-react";
 import { toSyntheticEmail, isStudentId, isSyntheticStudentEmail } from "@/lib/studentIdAuth";
+import { redeemClassJoinCode } from "@/lib/classJoinCode";
+import { checkStudentIdSigninRate, recordStudentIdSigninSuccess } from "@/lib/studentIdRateLimit";
 import { detectUserTypeFromEmail } from "@/lib/districtDetection";
 import { RoleSelectionModal } from "@/components/auth/RoleSelectionModal";
 import { DistrictCombobox } from "@/components/auth/DistrictCombobox";
@@ -60,6 +62,7 @@ const Auth = () => {
   const [authTab, setAuthTab] = useState<string>("signin");
   const [loginMode, setLoginMode] = useState<"email" | "studentId">("email");
   const [studentIdInput, setStudentIdInput] = useState("");
+  const [classJoinCode, setClassJoinCode] = useState("");
   const [duplicateEmailPrompt, setDuplicateEmailPrompt] = useState(false);
 
   // Substitute teacher mode
@@ -545,25 +548,9 @@ const Auth = () => {
       }
       if (!data.user) throw new Error('User creation failed');
 
-      // For synthetic Student-ID accounts, confirm the email server-side so the
-      // student can sign in immediately (they have no real mailbox).
-      if (isStudentIdMode) {
-        const { error: confirmErr } = await supabase.functions.invoke('confirm-student-account', {
-          body: { user_id: data.user.id, email: signupEmail },
-        });
-        if (confirmErr) {
-          console.error('[Auth] Failed to auto-confirm student account:', confirmErr);
-          // Orphan cleanup: delete the synthetic auth user so the ID can be reused
-          await supabase.functions.invoke('cleanup-orphan-student', { body: { user_id: data.user.id } });
-          toast({
-            title: "Signup failed",
-            description: "Could not finalize student account. Please try again.",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
-      }
+      // Synthetic Student-ID accounts are auto-confirmed by a DB trigger on
+      // auth.users (auto_confirm_synthetic_student). No edge function call needed.
+      // Real teacher/parent emails still go through normal email verification.
 
       // Wait for trigger to create profile - with retry verification
       let profileExists = false;
@@ -754,14 +741,26 @@ const Auth = () => {
     setIsLoading(true);
 
     // Determine the actual email to use
-    const signInEmail = loginMode === 'studentId' 
-      ? toSyntheticEmail(studentIdInput) 
+    const isStudentIdMode = loginMode === 'studentId';
+    const signInEmail = isStudentIdMode
+      ? toSyntheticEmail(studentIdInput)
       : email;
 
     try {
+      // Pre-flight rate limit on Student ID sign-in to defeat brute-force scans
+      if (isStudentIdMode) {
+        const gate = await checkStudentIdSigninRate(studentIdInput);
+        if (!gate.allowed) {
+          toast({ title: "Slow down", description: gate.error, variant: "destructive" });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({ email: signInEmail, password });
       if (error) throw error;
       if (!data.user) throw new Error("Sign in failed");
+      if (isStudentIdMode) await recordStudentIdSigninSuccess(studentIdInput);
 
       // Best-effort verification check (never block sign-in if this fails)
       try {
