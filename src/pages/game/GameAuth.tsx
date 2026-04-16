@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff, ArrowLeft, Gamepad2, Hash } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toSyntheticEmail } from "@/lib/studentIdAuth";
-import { redeemClassJoinCode, isValidClassJoinCode, peekClassJoinCode, type PeekResult } from "@/lib/classJoinCode";
+import { redeemClassJoinCode, peekClassJoinCode, type PeekResult } from "@/lib/classJoinCode";
 import { checkStudentIdSigninRate, recordStudentIdSigninSuccess } from "@/lib/studentIdRateLimit";
 
 const GameAuth = () => {
@@ -24,6 +24,10 @@ const GameAuth = () => {
   const [classJoinCode, setClassJoinCode] = useState("");
   const [classCodePeek, setClassCodePeek] = useState<PeekResult | null>(null);
   const [classCodePeekLoading, setClassCodePeekLoading] = useState(false);
+  const hasPendingClassCodeValidation =
+    loginMode === "studentId" &&
+    classJoinCode.trim().length === 6 &&
+    (classCodePeekLoading || !classCodePeek?.valid);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { session, profile } = useAuth();
@@ -65,6 +69,26 @@ const GameAuth = () => {
     if (isStudentIdMode && studentIdInput.length !== 8) {
       toast({ title: "Please enter a valid 8-digit Student ID", variant: "destructive" });
       return;
+    }
+
+    if (isStudentIdMode && classJoinCode.trim().length === 6) {
+      if (classCodePeekLoading) {
+        toast({
+          title: "Checking class code",
+          description: "Please wait a moment while we verify that class code.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!classCodePeek?.valid) {
+        toast({
+          title: "Invalid class code",
+          description: classCodePeek?.error ?? "Please fix the class code or clear it to continue.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -317,7 +341,7 @@ const GameAuth = () => {
                   <Button
                     type="submit"
                     className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold"
-                    disabled={isLoading || (loginMode === 'studentId' && studentIdInput.length !== 8)}
+                    disabled={isLoading || (loginMode === 'studentId' && studentIdInput.length !== 8) || hasPendingClassCodeValidation}
                   >
                     {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                     Login
