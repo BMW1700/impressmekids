@@ -1,35 +1,35 @@
 
 
-## Brutally Honest Status — P0 Fix Round
+## Brutally Honest Status — P0 + P1 Round
 
-**Did the P0 fixes land cleanly? Mostly yes. There are still 2 real holes.**
+**Did this round land cleanly? Yes, mostly. One real gap remains, and one P0 from last round still needs verification.**
 
 ### What actually shipped ✅
 
-1. **`supabase/config.toml`** — `confirm-student-account` registered with `verify_jwt = false`. Correct: the client calls it right after `signUp()` before a session exists.
-2. **Edge function `confirm-student-account`** — Solid. Hard-refuses any email not ending in `@student.nabulearn.internal`, double-checks the DB record before flipping `email_confirm`, uses service role correctly. This is the right shape.
-3. **Migration `profiles_student_id_unique_idx`** — Partial unique index on `student_id WHERE student_id IS NOT NULL` is the correct pattern (lets existing NULL rows coexist, blocks dupes going forward).
-4. **`Auth.tsx` / `GameAuth.tsx`** — Pre-signup `student_id` availability check + post-signup edge function call + auto sign-in are all wired.
+1. **`cleanup-orphan-student` edge function** — Solid. Hard-refuses non-synthetic emails, verifies via `getUserById` before `deleteUser`, registered in `config.toml` with `verify_jwt = false`. Correct shape.
+2. **`confirm-student-account` edge function** — Still good from last round. Double-validates synthetic domain on both the request payload AND the DB record before flipping `email_confirm`.
+3. **`config.toml`** — Both functions registered with `verify_jwt = false`. Correct, since both are called pre-session during signup.
+4. **`Auth.tsx` / `GameAuth.tsx`** — Now catches Postgres `23505` and shows "Student ID already in use" toast. Calls `cleanup-orphan-student` if `confirm-student-account` fails. Good.
 
-### What is still broken or sloppy ⚠️
+### What's still broken or unverified ⚠️
 
-1. **🔴 Global auto-confirm was NOT actually reverted in code I can see.** The plan said "revert `auto_confirm_email` to false," but `supabase/config.toml` has no `[auth]` block at all — meaning auto-confirm state is whatever the Cloud UI was last set to. If it was flipped ON in the previous loop via the Cloud config tool, **it is still ON unless explicitly toggled OFF**. I need to verify and explicitly disable it. This is the same teacher/parent verification bypass regression as before — not actually fixed.
+1. **🔴 Global auto-confirm — STILL not verified in code I can read.** The previous summary says I "disabled `auto_confirm_email` via tool call," but `supabase/config.toml` has no `[auth]` block. Cloud auth settings live outside the repo. Until I actually read the live Cloud auth config, I cannot prove teacher/parent email verification is back ON. **This is the same regression risk as last round — must be confirmed before pilot.**
 
-2. **🟡 Race condition on Student ID uniqueness.** The pre-signup `select` from `profiles` is a TOCTOU check — two students hitting "Sign Up" within the same second can both pass the check, then one will fail at the DB unique index with a raw Postgres error code `23505`. The UI doesn't catch that specific error and translate it. Result: confusing "duplicate key" message instead of "that ID is taken."
+2. **🟡 Race-window orphan still possible.** The flow is: `signUp()` → DB trigger inserts profile → client calls `confirm-student-account`. If the trigger fails (e.g. unique violation on `student_id` from a TOCTOU race), the cleanup path catches it. **But** if `signUp()` succeeds, profile inserts cleanly, then the user closes the tab before `confirm-student-account` runs, you get an unconfirmed orphan that the cleanup function will never be called for. Low frequency, but real for K-5 kids on flaky school WiFi.
 
-3. **🟡 Orphan auth user on failed profile insert.** If `signUp()` succeeds but the profile insert fails (e.g. unique index trips), the `auth.users` row is created but orphaned. The synthetic email is now permanently taken and that Student ID can never be reused. No cleanup path.
+3. **🟢 Still no district/school association** for Student ID accounts (deferred P1 from prior rounds — flagging again).
 
-4. **🟢 Still no district/school association for Student ID accounts.** Flagged last round as P1, deliberately deferred — flagging again so it's not forgotten.
+4. **🟢 Still no rate limiting / captcha** on Student ID brute-force (deferred P2).
 
 ### Recommended fixes this loop
 
-| Priority | Fix | File(s) |
+| Priority | Fix | Where |
 |---|---|---|
-| 🔴 P0 | Verify and explicitly disable global auto-confirm via Cloud auth config tool | runtime config |
-| 🟡 P1 | Catch Postgres `23505` on signup → friendly "Student ID already taken" toast | `Auth.tsx`, `GameAuth.tsx` |
-| 🟡 P1 | If profile insert fails after signup, call admin delete on the orphan auth user (new edge fn `cleanup-orphan-student`) | new edge fn + Auth flow |
+| 🔴 P0 | Read live Cloud auth config and explicitly assert `auto_confirm_email = false`. If still ON, disable it. | runtime config check |
+| 🟡 P1 | Move auto-confirm into a DB trigger on `auth.users` insert that fires for `@student.nabulearn.internal` emails — eliminates the close-tab orphan window | new migration |
+| 🟢 P2 (defer) | District/school association on Student ID signup | next round |
 
 ### Recommendation
 
-The edge function and unique index are good. **The auto-confirm regression is the only real ship-blocker** — until I confirm it's OFF, every new teacher/parent signup is still skipping email verification. Approve and I'll verify the auth setting first, then patch the two P1 items, then we go straight to multiplayer PvP.
+**Do not ship to a real school until P0 #1 is verified.** The auto-confirm setting is the single largest risk — if it's still ON globally, every teacher/parent signup is bypassing email verification. The DB-trigger approach for P1 is a one-migration fix that closes the orphan race permanently. Approve and next default loop verifies auth config first, then ships the trigger, then we go back to multiplayer PvP.
 
