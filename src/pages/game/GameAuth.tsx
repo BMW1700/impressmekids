@@ -21,6 +21,7 @@ const GameAuth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loginMode, setLoginMode] = useState<"email" | "studentId">("email");
   const [studentIdInput, setStudentIdInput] = useState("");
+  const [classJoinCode, setClassJoinCode] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
   const { session, profile } = useAuth();
