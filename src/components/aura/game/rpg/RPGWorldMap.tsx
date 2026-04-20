@@ -211,6 +211,7 @@ export const RPGWorldMap = ({
   xp = 0,
   gradeMode,
 }: RPGWorldMapProps) => {
+  const navigate = useNavigate();
   const [previousBookCount] = useState(totalBooksRescued);
 
   // Check if Boss Rush is unlocked (World 8 complete)
