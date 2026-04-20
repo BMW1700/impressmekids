@@ -45,7 +45,6 @@ export const phonicsConfusionMap: Record<string, string[]> = {
   led: ['lad', 'lid'],
   web: ['wab', 'wib'],
   end: ['and', 'ind'],
-  egg: ['agg', 'ag', 'ed', 'edge'], // duplicate intentional for clarity
 
   // Short-i words heard as short-e
   pin: ['pen', 'pan'],
@@ -149,7 +148,6 @@ export const phonicsConfusionMap: Record<string, string[]> = {
   girl: ['gul', 'gerl'],
   her: ['huh', 'her', 'hur'],
   for: ['fo', 'foe', 'fa'],
-  her: ['ha', 'huh'],
   fork: ['foke', 'fok'],
   horn: ['hone', 'hon'],
   storm: ['stom', 'stome'],
