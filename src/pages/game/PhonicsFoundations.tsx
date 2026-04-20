@@ -101,13 +101,6 @@ const PhonicsFoundations = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Helmet>
-        <title>World 0: Phonics Foundations | NabuLearn</title>
-        <meta
-          name="description"
-          content="Build foundational decoding skills through 6 research-aligned phonics stages: CVC, blends, Silent-E, digraphs, vowel teams, and r-controlled vowels."
-        />
-      </Helmet>
 
       <header className="border-b border-border bg-card">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">

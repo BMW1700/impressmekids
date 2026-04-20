@@ -15,14 +15,6 @@ const ScopeAndSequence = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Helmet>
-        <title>Phonics Scope & Sequence | NabuLearn</title>
-        <meta
-          name="description"
-          content="NabuLearn's K-2 phonics scope and sequence — CVC, blends, Silent-E, digraphs, vowel teams, and r-controlled vowels, aligned to Common Core foundational reading standards."
-        />
-        <link rel="canonical" href="https://nabulearn.com/scope-and-sequence" />
-      </Helmet>
 
       {/* Top bar — hidden when printing */}
       <header className="border-b border-border bg-card print:hidden">
