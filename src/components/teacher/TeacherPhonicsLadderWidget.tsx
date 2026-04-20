@@ -143,6 +143,18 @@ export const TeacherPhonicsLadderWidget = ({ students }: Props) => {
             No students enrolled yet — share your join code to start tracking
             phonics progress.
           </p>
+        ) : classSummary.started === 0 ? (
+          <div className="rounded-lg border border-dashed border-primary/30 bg-primary/5 p-6 text-center">
+            <GraduationCap className="mx-auto mb-2 h-8 w-8 text-primary/70" />
+            <p className="mb-1 font-medium text-foreground">
+              Students haven't started Phonics Foundations yet.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Ask your class to open the Game Dashboard and tap{' '}
+              <span className="font-semibold text-foreground">Phonics Foundations</span>{' '}
+              (World 0) to begin. Their progress will appear here automatically.
+            </p>
+          </div>
         ) : (
           <div className="space-y-4">
             {/* Stage header row */}
