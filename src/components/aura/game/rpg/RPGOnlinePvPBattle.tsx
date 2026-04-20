@@ -79,6 +79,9 @@ export const RPGOnlinePvPBattle = ({
   const completedRef = useRef(false);
   const hydrateAttemptsRef = useRef(0);
   const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  // Highest rev observed from ANY source (local commit OR peer broadcast/realtime/poll).
+  // Local commits MUST increment past this — prevents rev collision when both peers commit near-simultaneously.
+  const highestSeenRevRef = useRef(0);
 
   // ─── Coalescing writer state ───
   const pendingWriteRef = useRef<OnlinePvPGameState | null>(null);
@@ -138,6 +141,9 @@ export const RPGOnlinePvPBattle = ({
     };
 
     // ── Universal revision guard ──
+    // Strict <: stale revs always rejected.
+    // Equal rev: accept only if it's a meaningful state diff (peer's authoritative phase/turn change),
+    // otherwise treat as our own echo and ignore (prevents spurious re-renders + ref churn).
     const currentRev = gsRef.current.rev ?? 0;
     const incomingRev = normalized.rev ?? 0;
 
@@ -146,7 +152,19 @@ export const RPGOnlinePvPBattle = ({
       return false;
     }
 
-    console.log(`[PvP] applyIncoming(${source}): ACCEPTED rev=${incomingRev} phase=${normalized.phase} turn=${normalized.turn} (local was rev=${currentRev} phase=${gsRef.current.phase})`);
+    if (incomingRev === currentRev) {
+      const samePhase = normalized.phase === gsRef.current.phase;
+      const sameTurn = normalized.turn === gsRef.current.turn;
+      const sameWordIndex = normalized.wordIndex === gsRef.current.wordIndex;
+      // Echo of our own write — skip silently to avoid render thrash.
+      if (samePhase && sameTurn && sameWordIndex) {
+        return false;
+      }
+      // Same rev but different state = peer-authoritative change we may have missed. Accept.
+      console.log(`[PvP] applyIncoming(${source}): same-rev override (peer authoritative) phase=${normalized.phase} turn=${normalized.turn}`);
+    } else {
+      console.log(`[PvP] applyIncoming(${source}): ACCEPTED rev=${incomingRev} phase=${normalized.phase} turn=${normalized.turn} (local was rev=${currentRev} phase=${gsRef.current.phase})`);
+    }
 
     // Apply room metadata if provided
     if (roomMeta) {
@@ -159,6 +177,8 @@ export const RPGOnlinePvPBattle = ({
     hydrateAttemptsRef.current = 0;
     setInitError(null);
     gsRef.current = normalized;
+    // Track the highest rev we've seen so future local commits leap past peer's writes.
+    if (incomingRev > highestSeenRevRef.current) highestSeenRevRef.current = incomingRev;
     setGs(normalized);
 
     if (markReady && !readyRef.current) {
@@ -330,7 +350,10 @@ export const RPGOnlinePvPBattle = ({
 
   // ─── commitLocal: broadcast-only (no DB write) — for intermediate word progress ───
   const commitLocal = useCallback((newState: OnlinePvPGameState) => {
-    const withRev = { ...newState, rev: (gsRef.current.rev ?? 0) + 1 };
+    // Increment past the highest rev we've seen from any source — prevents collisions with peer commits.
+    const baseRev = Math.max(gsRef.current.rev ?? 0, highestSeenRevRef.current);
+    const withRev = { ...newState, rev: baseRev + 1 };
+    highestSeenRevRef.current = withRev.rev;
     console.log(`[PvP] commitLocal rev=${withRev.rev} phase=${withRev.phase} batch=${withRev.batchProgress}`);
     setGs(withRev);
     gsRef.current = withRev;
@@ -344,7 +367,9 @@ export const RPGOnlinePvPBattle = ({
 
   // ─── commitAndPersist: broadcast IMMEDIATELY + coalesced DB write — for turn switches, phase changes, wins ───
   const commitAndPersist = useCallback((newState: OnlinePvPGameState) => {
-    const withRev = { ...newState, rev: (gsRef.current.rev ?? 0) + 1 };
+    const baseRev = Math.max(gsRef.current.rev ?? 0, highestSeenRevRef.current);
+    const withRev = { ...newState, rev: baseRev + 1 };
+    highestSeenRevRef.current = withRev.rev;
     console.log(`[PvP] commitAndPersist rev=${withRev.rev} phase=${withRev.phase} turn=${withRev.turn} hostHp=${withRev.hostHp} guestHp=${withRev.guestHp}`);
     setGs(withRev);
     gsRef.current = withRev;
@@ -359,7 +384,7 @@ export const RPGOnlinePvPBattle = ({
     }
 
     // Double-broadcast after 300ms for critical turn switches as insurance
-    if (withRev.phase === 'kid_turn' || withRev.phase === 'parent_turn' || 
+    if (withRev.phase === 'kid_turn' || withRev.phase === 'parent_turn' ||
         withRev.phase === 'host_wins' || withRev.phase === 'guest_wins') {
       setTimeout(() => {
         broadcastState(withRev);
@@ -597,6 +622,7 @@ export const RPGOnlinePvPBattle = ({
         s.turn = 'host';
         s.phase = 'kid_turn';
         s.batchProgress = 0;
+        s.turnCount += 1; // increment on EVERY turn switch so readerKey remounts the word reader
       }
     }
     commitAndPersist(s);
@@ -622,7 +648,7 @@ export const RPGOnlinePvPBattle = ({
     s.lastEvent = { type: 'ability', damage, by: 'guest', message: msg, timestamp: Date.now() };
 
     if (s.hostHp <= 0) { s.phase = 'guest_wins'; }
-    else { s.turn = 'host'; s.phase = 'kid_turn'; s.batchProgress = 0; }
+    else { s.turn = 'host'; s.phase = 'kid_turn'; s.batchProgress = 0; s.turnCount += 1; }
 
     commitAndPersist(s);
   }, [myRole, commitAndPersist]);
@@ -641,7 +667,7 @@ export const RPGOnlinePvPBattle = ({
 
     if (s.hostHp <= 0) { s.phase = 'guest_wins'; }
     else if (s.guestHp <= 0) { s.phase = 'host_wins'; }
-    else { s.turn = 'host'; s.phase = 'kid_turn'; s.batchProgress = 0; }
+    else { s.turn = 'host'; s.phase = 'kid_turn'; s.batchProgress = 0; s.turnCount += 1; }
 
     commitAndPersist(s);
   }, [myRole, commitAndPersist]);
