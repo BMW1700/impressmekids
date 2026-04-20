@@ -4,7 +4,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Mic, MicOff, CheckCircle2, XCircle, Volume2, RefreshCw } from 'lucide-react';
 import { speechManager } from '@/lib/speechRecognitionManager';
-import { matchWord } from '@/lib/wordMatchingModes';
+import { isWordMatchLenient } from '@/lib/wordMatchingModes';
 import { playCorrectPronunciation, unlockSpeechSynthesis } from '@/lib/pronunciationPlayer';
 
 interface PhonicsMasteryCheckProps {
@@ -64,7 +64,7 @@ export const PhonicsMasteryCheck = ({
   useEffect(() => {
     return () => {
       if (speechManager.getCurrentOwner() === 'reader') {
-        speechManager.stop();
+        speechManager.stop('reader');
       }
     };
   }, []);
@@ -108,10 +108,9 @@ export const PhonicsMasteryCheck = ({
 
         // Try the primary transcript + all alternatives via lenient matcher
         const candidates = [transcript, ...alternatives];
-        const matched = candidates.some((cand) => {
-          const result = matchWord(cand, target, true);
-          return result.matched;
-        });
+        const matched = candidates.some((cand) =>
+          isWordMatchLenient(cand, target),
+        );
 
         advance(matched);
       },
@@ -131,7 +130,7 @@ export const PhonicsMasteryCheck = ({
 
   const stopListening = () => {
     if (speechManager.getCurrentOwner() === 'reader') {
-      speechManager.stop();
+      speechManager.stop('reader');
     }
     setListening(false);
   };
