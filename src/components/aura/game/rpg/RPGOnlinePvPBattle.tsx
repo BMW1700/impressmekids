@@ -648,7 +648,7 @@ export const RPGOnlinePvPBattle = ({
     s.lastEvent = { type: 'ability', damage, by: 'guest', message: msg, timestamp: Date.now() };
 
     if (s.hostHp <= 0) { s.phase = 'guest_wins'; }
-    else { s.turn = 'host'; s.phase = 'kid_turn'; s.batchProgress = 0; }
+    else { s.turn = 'host'; s.phase = 'kid_turn'; s.batchProgress = 0; s.turnCount += 1; }
 
     commitAndPersist(s);
   }, [myRole, commitAndPersist]);
