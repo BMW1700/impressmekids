@@ -1,17 +1,18 @@
-import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Printer, GraduationCap, BookOpen, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Printer, GraduationCap, BookOpen, CheckCircle2, Download } from 'lucide-react';
 import {
   phonicsScopeAndSequence,
   totalPracticeWords,
 } from '@/data/phonicsScopeAndSequence';
+import { generateScopeSequencePdf } from '@/lib/scopeSequencePdf';
 
 const ScopeAndSequence = () => {
   const handlePrint = () => window.print();
+  const handleDownloadPdf = () => generateScopeSequencePdf();
 
   return (
     <div className="min-h-screen bg-background">
@@ -25,10 +26,16 @@ const ScopeAndSequence = () => {
               Back to NabuLearn
             </Link>
           </Button>
-          <Button onClick={handlePrint} size="sm">
-            <Printer className="mr-2 h-4 w-4" />
-            Print / Save as PDF
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={handleDownloadPdf} size="sm" variant="default">
+              <Download className="mr-2 h-4 w-4" />
+              Download One-Pager PDF
+            </Button>
+            <Button onClick={handlePrint} size="sm" variant="outline">
+              <Printer className="mr-2 h-4 w-4" />
+              Print
+            </Button>
+          </div>
         </div>
       </header>
 

@@ -51,6 +51,7 @@ import { useClassroomFeatures } from "@/hooks/useClassroomFeatures";
 import { ClassroomTabsList } from "@/components/classroom/ClassroomTabsList";
 import { MeetingRequestsTab } from "@/components/teacher/MeetingRequestsTab";
 import { PendingStudentRequests } from "@/components/classroom/PendingStudentRequests";
+import { TeacherPhonicsLadderWidget } from "@/components/teacher/TeacherPhonicsLadderWidget";
 import { useClassroomDetail, useClassroomStudents, useClassroomTournaments, useClassroomAnnouncements, useClassroomParentRequests, useClassroomFlashcards, useUserProfile } from "@/hooks/useClassroomData";
 const ClassroomDetail = () => {
   const {
@@ -585,6 +586,16 @@ const ClassroomDetail = () => {
                 
                 {/* Pending Student Join Requests */}
                 <PendingStudentRequests classroomId={id!} onApproved={loadClassroomData} />
+
+                {/* World 0: Phonics Foundations Progress */}
+                <div className="mb-6">
+                  <TeacherPhonicsLadderWidget
+                    students={students.map((s: any) => ({
+                      id: s.id,
+                      full_name: s.profiles?.full_name ?? null,
+                    }))}
+                  />
+                </div>
 
               {students.length === 0 ? <Card className="p-16 text-center shadow-elegant border-2 border-primary/10 bg-gradient-to-br from-background to-muted/20">
               <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-primary/10 flex items-center justify-center">
