@@ -51,6 +51,7 @@ import { useClassroomFeatures } from "@/hooks/useClassroomFeatures";
 import { ClassroomTabsList } from "@/components/classroom/ClassroomTabsList";
 import { MeetingRequestsTab } from "@/components/teacher/MeetingRequestsTab";
 import { PendingStudentRequests } from "@/components/classroom/PendingStudentRequests";
+import { TeacherPhonicsLadderWidget } from "@/components/teacher/TeacherPhonicsLadderWidget";
 import { useClassroomDetail, useClassroomStudents, useClassroomTournaments, useClassroomAnnouncements, useClassroomParentRequests, useClassroomFlashcards, useUserProfile } from "@/hooks/useClassroomData";
 const ClassroomDetail = () => {
   const {
