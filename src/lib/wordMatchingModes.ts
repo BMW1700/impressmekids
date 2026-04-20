@@ -9,6 +9,7 @@
 import { arePhonemesSimilar, phonemeDistance } from '@/lib/phonemeDistance';
 import { getIPAPronunciation } from '@/lib/cmuDictWrapper';
 import { isHomophone, getWordVariants } from '@/lib/homophones';
+import { isPhonicsConfusion } from '@/lib/phonicsConfusionMap';
 import { cleanupTranscript, extractWords } from '@/lib/transcriptCleanup';
 
 // Fuzzy string matching using Levenshtein distance
@@ -233,6 +234,13 @@ export const isWordMatchLenient = (spoken: string, expected: string): boolean =>
     console.log('🎯 HOMOPHONE MATCH:', normalizedSpoken, '→', normalizedExpected);
     return true;
   }
+
+  // V4: Phonics-aware misrecognition map (egg→agg, the→duh, three→free, etc.)
+  // Web Speech API systematically misrecognizes short vowels and th-sounds.
+  if (isPhonicsConfusion(normalizedSpoken, normalizedExpected)) {
+    console.log('🔤 PHONICS CONFUSION MATCH:', normalizedSpoken, '→', normalizedExpected);
+    return true;
+  }
   
   const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
   
@@ -282,6 +290,13 @@ export const isWordMatchStrict = (spoken: string, expected: string): boolean => 
     if (trueHomophones.includes(normalizedExpected) || trueHomophones.includes(normalizedSpoken)) {
       return true;
     }
+  }
+
+  // V4: Phonics-aware misrecognition — accepted even in strict assessment mode.
+  // The child is correct; the API is wrong (e.g., short-e heard as short-a).
+  if (isPhonicsConfusion(normalizedSpoken, normalizedExpected)) {
+    console.log('🔤 STRICT PHONICS CONFUSION MATCH:', normalizedSpoken, '→', normalizedExpected);
+    return true;
   }
   
   // SHORT WORDS (1-3 chars): Max 1 character difference allowed
