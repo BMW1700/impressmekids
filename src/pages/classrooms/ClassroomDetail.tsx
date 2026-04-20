@@ -591,7 +591,7 @@ const ClassroomDetail = () => {
                 <div className="mb-6">
                   <TeacherPhonicsLadderWidget
                     students={students.map((s: any) => ({
-                      id: s.student_id,
+                      id: s.id,
                       full_name: s.profiles?.full_name ?? null,
                     }))}
                   />
