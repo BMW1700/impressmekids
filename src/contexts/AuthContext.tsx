@@ -34,7 +34,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchProfile = async (userId: string): Promise<UserProfile | null | undefined> => {
     try {
-      const { data, error } = await supabase.rpc('get_user_profile', { _user_id: userId });
+      // Run both queries in parallel to halve profile load time.
+      const [rpcResult, verificationResult] = await Promise.all([
+        supabase.rpc('get_user_profile', { _user_id: userId }),
+        supabase
+          .from('profiles')
+          .select('is_verified, school_id, district_id, email, student_id')
+          .eq('id', userId)
+          .maybeSingle(),
+      ]);
+
+      const { data, error } = rpcResult;
+      const { data: verificationData, error: verificationError } = verificationResult;
 
       // Keep existing profile on transient backend errors to prevent redirect loops.
       if (error) {
@@ -47,13 +58,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const profileData = data[0];
-
-      // Fetch verification status, email, student_id, and district_id from profiles table
-      const { data: verificationData, error: verificationError } = await supabase
-        .from('profiles')
-        .select('is_verified, school_id, district_id, email, student_id')
-        .eq('id', userId)
-        .maybeSingle();
 
       if (verificationError) {
         console.error('Error fetching verification data:', verificationError);

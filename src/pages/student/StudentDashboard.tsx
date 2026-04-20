@@ -125,8 +125,25 @@ const StudentDashboard = () => {
   // Only block on auth - let data load progressively
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      <div className="min-h-screen bg-background">
+        {/* Skeleton header */}
+        <div className="border-b border-border bg-card/50 backdrop-blur-sm">
+          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+            <div className="h-8 w-40 rounded-md bg-muted animate-pulse" />
+            <div className="h-9 w-9 rounded-full bg-muted animate-pulse" />
+          </div>
+        </div>
+        {/* Skeleton content */}
+        <div className="container mx-auto px-4 py-8 space-y-6">
+          <div className="h-10 w-64 rounded-md bg-muted animate-pulse" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="h-24 rounded-xl bg-muted animate-pulse" />
+            <div className="h-24 rounded-xl bg-muted animate-pulse" />
+            <div className="h-24 rounded-xl bg-muted animate-pulse" />
+            <div className="h-24 rounded-xl bg-muted animate-pulse" />
+          </div>
+          <div className="h-72 rounded-xl bg-muted animate-pulse" />
+        </div>
       </div>
     );
   }
