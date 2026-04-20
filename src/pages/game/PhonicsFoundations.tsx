@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,6 +20,7 @@ import {
   Volume2,
   Trophy,
   Mic,
+  Download,
 } from 'lucide-react';
 import { phonicsScopeAndSequence } from '@/data/phonicsScopeAndSequence';
 import { playCorrectPronunciation, unlockSpeechSynthesis } from '@/lib/pronunciationPlayer';
@@ -28,8 +29,6 @@ import { usePhonicsFoundationsProgress } from '@/hooks/usePhonicsFoundationsProg
 import { PhonicsMasteryCheck } from '@/components/aura/PhonicsMasteryCheck';
 import { generatePhonicsCertificatePdf } from '@/lib/phonicsCertificatePdf';
 import { supabase } from '@/integrations/supabase/client';
-import { useEffect, useState as useReactState } from 'react';
-import { Download } from 'lucide-react';
 
 /**
  * World 0: Phonics Foundations
@@ -44,6 +43,24 @@ const PhonicsFoundations = () => {
     phonicsScopeAndSequence[0].id,
   );
   const [checkingStageId, setCheckingStageId] = useState<string | null>(null);
+  const [studentName, setStudentName] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadName = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const uid = session?.user?.id;
+      if (!uid) return;
+      const { data } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', uid)
+        .maybeSingle();
+      if (!cancelled && data?.full_name) setStudentName(data.full_name);
+    };
+    loadName();
+    return () => { cancelled = true; };
+  }, []);
 
   const total = phonicsScopeAndSequence.length;
   const completed = mastered.size;
