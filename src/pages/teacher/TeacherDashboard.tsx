@@ -72,10 +72,23 @@ const TeacherDashboard = () => {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">{t("teacherDashboard.loading")}</p>
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
+        {/* Skeleton header */}
+        <div className="border-b border-border bg-card/50 backdrop-blur-sm">
+          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+            <div className="h-8 w-40 rounded-md bg-muted animate-pulse" />
+            <div className="h-9 w-9 rounded-full bg-muted animate-pulse" />
+          </div>
+        </div>
+        {/* Skeleton content */}
+        <div className="container mx-auto px-4 py-8 space-y-6">
+          <div className="h-10 w-72 rounded-md bg-muted animate-pulse" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="h-28 rounded-xl bg-muted animate-pulse" />
+            <div className="h-28 rounded-xl bg-muted animate-pulse" />
+            <div className="h-28 rounded-xl bg-muted animate-pulse" />
+          </div>
+          <div className="h-64 rounded-xl bg-muted animate-pulse" />
         </div>
       </div>
     );

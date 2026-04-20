@@ -1,88 +1,52 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Loader2, School, Gamepad2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
 
 const ModeSelect = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const skipRedirect = (location.state as any)?.skipRedirect === true;
-  const [isCheckingAuth, setIsCheckingAuth] = useState(!skipRedirect);
+  const { user, profile, isLoading, isProfileLoading } = useAuth();
 
   useEffect(() => {
     if (skipRedirect) return;
-    let cancelled = false;
+    if (isLoading) return;
+    if (!user) return; // Not signed in — show mode select
+    if (isProfileLoading || !profile) return; // Wait for profile from AuthContext (no refetch)
 
-    const hardTimeout = window.setTimeout(() => {
-      if (!cancelled) setIsCheckingAuth(false);
-    }, 1500);
+    const userRole = profile.role;
 
-    const checkAuthAndRedirect = async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+    // Game players always go to game dashboard
+    if (userRole === 'game_player') {
+      navigate('/game/dashboard', { replace: true });
+      return;
+    }
 
-        if (!session || cancelled) return;
+    const hasDistrict = !!profile.district_id;
+    const isVerified = profile.is_verified !== false;
 
-        const { data: profileData } = await supabase.rpc('get_user_profile', {
-          _user_id: session.user.id,
-        });
+    // School roles only auto-redirect if they have a district AND are verified
+    const schoolRoles = ['teacher', 'student', 'parent', 'admin', 'district_admin'];
+    if (userRole && schoolRoles.includes(userRole) && hasDistrict && isVerified) {
+      const dashboardMap: Record<string, string> = {
+        teacher: '/teacher/dashboard',
+        parent: '/parent/dashboard',
+        district_admin: '/district/dashboard',
+        admin: '/admin/dashboard',
+        student: '/student/dashboard',
+      };
+      navigate(dashboardMap[userRole] || '/student/dashboard', { replace: true });
+    }
+    // Otherwise stay on mode select
+  }, [skipRedirect, isLoading, isProfileLoading, user, profile, navigate]);
 
-        if (!profileData || profileData.length === 0 || cancelled) return;
+  // Show spinner only while session is being determined OR while a signed-in user's
+  // profile is loading (so we don't flash mode select before redirecting them).
+  const showSpinner = !skipRedirect && (isLoading || (!!user && (isProfileLoading || !profile)));
 
-        const userRole = profileData[0].role;
-
-        // Also check district_id and is_verified from profiles table
-        const { data: profileRow } = await supabase
-          .from('profiles')
-          .select('district_id, is_verified')
-          .eq('id', session.user.id)
-          .single();
-
-        const hasDistrict = !!profileRow?.district_id;
-        const isVerified = profileRow?.is_verified !== false;
-
-        // Game players always go to game dashboard
-        if (userRole === 'game_player') {
-          navigate('/game/dashboard');
-          return;
-        }
-
-        // School roles only auto-redirect if they have a district AND are verified
-        const schoolRoles = ['teacher', 'student', 'parent', 'admin', 'district_admin'];
-        if (schoolRoles.includes(userRole) && hasDistrict) {
-          if (!isVerified) {
-            // Don't auto-redirect unverified users — let them stay on mode select
-            return;
-          }
-          const dashboardMap: Record<string, string> = {
-            teacher: '/teacher/dashboard',
-            parent: '/parent/dashboard',
-            district_admin: '/district/dashboard',
-            admin: '/admin/dashboard',
-            student: '/student/dashboard',
-          };
-          navigate(dashboardMap[userRole] || '/student/dashboard');
-        }
-        // If no complete school profile, stay on mode select — don't redirect
-      } catch {
-        // Intentionally swallow so page never bricks behind a spinner
-      } finally {
-        if (!cancelled) setIsCheckingAuth(false);
-      }
-    };
-
-    checkAuthAndRedirect();
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(hardTimeout);
-    };
-  }, [navigate, skipRedirect]);
-
-  if (isCheckingAuth) {
+  if (showSpinner) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
