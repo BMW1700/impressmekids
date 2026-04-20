@@ -4219,6 +4219,50 @@ export type Database = {
         }
         Relationships: []
       }
+      phonics_foundations_progress: {
+        Row: {
+          accuracy_percent: number
+          created_at: string
+          id: string
+          mastered_at: string
+          stage_id: string
+          student_id: string
+          updated_at: string
+          words_attempted: number
+          words_correct: number
+        }
+        Insert: {
+          accuracy_percent?: number
+          created_at?: string
+          id?: string
+          mastered_at?: string
+          stage_id: string
+          student_id: string
+          updated_at?: string
+          words_attempted?: number
+          words_correct?: number
+        }
+        Update: {
+          accuracy_percent?: number
+          created_at?: string
+          id?: string
+          mastered_at?: string
+          stage_id?: string
+          student_id?: string
+          updated_at?: string
+          words_attempted?: number
+          words_correct?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phonics_foundations_progress_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_achievements: {
         Row: {
           achievement_category: string
