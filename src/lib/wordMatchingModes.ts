@@ -9,6 +9,7 @@
 import { arePhonemesSimilar, phonemeDistance } from '@/lib/phonemeDistance';
 import { getIPAPronunciation } from '@/lib/cmuDictWrapper';
 import { isHomophone, getWordVariants } from '@/lib/homophones';
+import { isPhonicsConfusion } from '@/lib/phonicsConfusionMap';
 import { cleanupTranscript, extractWords } from '@/lib/transcriptCleanup';
 
 // Fuzzy string matching using Levenshtein distance
