@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { GameHeader } from "@/components/game/GameHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Swords, BookOpen, Gamepad2, BarChart3, Flame, Star, LogIn, Shield, Search, ArrowLeft } from "lucide-react";
+import { Swords, BookOpen, Gamepad2, BarChart3, Flame, Star, LogIn, Shield, Search, ArrowLeft, GraduationCap } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,6 +59,16 @@ const GameDashboard = () => {
       primary: true,
       requiresAuth: true,
       onClick: () => setShowModeSelect(true),
+    },
+    {
+      title: "Phonics Foundations",
+      description: "World 0 — master CVC, blends, Silent-E, digraphs, and vowel teams before LexiQuest",
+      icon: GraduationCap,
+      color: "from-emerald-500/20 to-teal-500/20",
+      borderColor: "border-emerald-500/30",
+      iconColor: "text-emerald-400",
+      requiresAuth: false,
+      onClick: () => navigate('/game/phonics-foundations'),
     },
     {
       title: "Story Library",
