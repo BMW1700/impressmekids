@@ -26,6 +26,10 @@ import { playCorrectPronunciation, unlockSpeechSynthesis } from '@/lib/pronuncia
 import { useToast } from '@/hooks/use-toast';
 import { usePhonicsFoundationsProgress } from '@/hooks/usePhonicsFoundationsProgress';
 import { PhonicsMasteryCheck } from '@/components/aura/PhonicsMasteryCheck';
+import { generatePhonicsCertificatePdf } from '@/lib/phonicsCertificatePdf';
+import { supabase } from '@/integrations/supabase/client';
+import { useEffect, useState as useReactState } from 'react';
+import { Download } from 'lucide-react';
 
 /**
  * World 0: Phonics Foundations
@@ -149,9 +153,19 @@ const PhonicsFoundations = () => {
               <p className="mb-3 text-sm text-muted-foreground">
                 You've mastered every phonics stage. LexiQuest awaits.
               </p>
-              <Button onClick={handleEnterLexiQuest} size="lg">
-                Enter LexiQuest →
-              </Button>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button onClick={handleEnterLexiQuest} size="lg">
+                  Enter LexiQuest →
+                </Button>
+                <Button
+                  onClick={() => generatePhonicsCertificatePdf(studentName)}
+                  size="lg"
+                  variant="outline"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Certificate
+                </Button>
+              </div>
             </div>
           )}
         </section>

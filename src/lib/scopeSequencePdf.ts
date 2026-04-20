@@ -20,7 +20,7 @@ export const generateScopeSequencePdf = (): void => {
   const DARK: [number, number, number] = [17, 24, 39];
 
   // ── Header ──────────────────────────────────────────────
-  doc.setFillColor(...PRIMARY);
+  doc.setFillColor(PRIMARY[0], PRIMARY[1], PRIMARY[2]);
   doc.rect(0, 0, pageWidth, 70, 'F');
 
   doc.setTextColor(255, 255, 255);
@@ -38,7 +38,7 @@ export const generateScopeSequencePdf = (): void => {
 
   // ── Title ──────────────────────────────────────────────
   let y = 100;
-  doc.setTextColor(...DARK);
+  doc.setTextColor(DARK[0], DARK[1], DARK[2]);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
   doc.text('Phonics Scope & Sequence', margin, y);
@@ -46,7 +46,7 @@ export const generateScopeSequencePdf = (): void => {
   y += 18;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.setTextColor(...MUTED);
+  doc.setTextColor(MUTED[0], MUTED[1], MUTED[2]);
   const subtitle =
     `${phonicsScopeAndSequence.length} stages · ${totalPracticeWords}+ practice words · ` +
     'Aligned to Common Core RF.K.2–RF.2.3 · Compatible with Wilson, UFLI, Heggerty, Orton-Gillingham';
@@ -68,7 +68,7 @@ export const generateScopeSequencePdf = (): void => {
     }
 
     // Stage badge bar
-    doc.setFillColor(...PRIMARY);
+    doc.setFillColor(PRIMARY[0], PRIMARY[1], PRIMARY[2]);
     doc.roundedRect(margin, y, 26, 18, 3, 3, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
@@ -76,7 +76,7 @@ export const generateScopeSequencePdf = (): void => {
     doc.text(`${stage.stageNumber}`, margin + 13, y + 13, { align: 'center' });
 
     // Stage title
-    doc.setTextColor(...DARK);
+    doc.setTextColor(DARK[0], DARK[1], DARK[2]);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.text(stage.title, margin + 34, y + 13);
@@ -84,7 +84,7 @@ export const generateScopeSequencePdf = (): void => {
     // Grade pill (right aligned)
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    doc.setTextColor(...MUTED);
+    doc.setTextColor(MUTED[0], MUTED[1], MUTED[2]);
     doc.text(stage.recommendedGrades, pageWidth - margin, y + 13, { align: 'right' });
 
     y += 24;
@@ -92,21 +92,21 @@ export const generateScopeSequencePdf = (): void => {
     // CCSS standards
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
-    doc.setTextColor(...PRIMARY);
+    doc.setTextColor(PRIMARY[0], PRIMARY[1], PRIMARY[2]);
     doc.text(`CCSS: ${stage.ccssStandards.join(' · ')}`, margin + 8, y);
     y += 12;
 
     // Sample words
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    doc.setTextColor(...DARK);
+    doc.setTextColor(DARK[0], DARK[1], DARK[2]);
     doc.text(wordsLines, margin + 8, y);
     y += wordsLines.length * 10 + 4;
 
     // Teaching tip
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(8.5);
-    doc.setTextColor(...MUTED);
+    doc.setTextColor(MUTED[0], MUTED[1], MUTED[2]);
     doc.text(`Teaching tip: ${stage.teachingTip}`, margin + 8, y, { maxWidth: contentWidth - 16 });
     const tipWrapped = doc.splitTextToSize(`Teaching tip: ${stage.teachingTip}`, contentWidth - 16);
     y += tipWrapped.length * 10 + 14;
@@ -123,7 +123,7 @@ export const generateScopeSequencePdf = (): void => {
     doc.setPage(i);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    doc.setTextColor(...MUTED);
+    doc.setTextColor(MUTED[0], MUTED[1], MUTED[2]);
     doc.text(
       'NabuLearn · AI-Powered Literacy · Used in all K-2 instruction across the platform',
       margin,
