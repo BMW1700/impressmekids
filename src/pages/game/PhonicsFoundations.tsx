@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,54 +19,32 @@ import {
   Sparkles,
   Volume2,
   Trophy,
+  Mic,
 } from 'lucide-react';
 import { phonicsScopeAndSequence } from '@/data/phonicsScopeAndSequence';
 import { playCorrectPronunciation, unlockSpeechSynthesis } from '@/lib/pronunciationPlayer';
 import { useToast } from '@/hooks/use-toast';
+import { usePhonicsFoundationsProgress } from '@/hooks/usePhonicsFoundationsProgress';
+import { PhonicsMasteryCheck } from '@/components/aura/PhonicsMasteryCheck';
 
 /**
  * World 0: Phonics Foundations
- *
- * A pre-LexiQuest mini-campaign that teaches the science-of-reading
- * progression (CVC → blends → Silent-E → digraphs → vowel teams → r-controlled).
- * Each stage shows a lesson card, lets the student listen to practice words,
- * and offers a "Mark Mastered" gate. Local-only progression for now (no DB
- * write); a future pass can persist mastery to campaign_progress.
+ * Speech-checked progression aligned to Common Core RF.K.2–RF.2.3.
  */
-const STORAGE_KEY = 'nabulearn:phonics-foundations:mastered';
-
-const loadMastered = (): Set<string> => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return new Set();
-    const arr = JSON.parse(raw) as string[];
-    return new Set(arr);
-  } catch {
-    return new Set();
-  }
-};
-
 const PhonicsFoundations = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [mastered, setMastered] = useState<Set<string>>(() => loadMastered());
-  const [activeStageId, setActiveStageId] = useState<string | null>(
+  const { mastered, loading, recordMastery, isAuthenticated } =
+    usePhonicsFoundationsProgress();
+  const [activeStageId, setActiveStageId] = useState<string>(
     phonicsScopeAndSequence[0].id,
   );
+  const [checkingStageId, setCheckingStageId] = useState<string | null>(null);
 
   const total = phonicsScopeAndSequence.length;
   const completed = mastered.size;
   const percent = Math.round((completed / total) * 100);
   const allComplete = completed === total;
-
-  const persist = (next: Set<string>) => {
-    setMastered(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
-    } catch {
-      // ignore storage errors
-    }
-  };
 
   const isUnlocked = (idx: number) => {
     if (idx === 0) return true;
@@ -79,15 +57,22 @@ const PhonicsFoundations = () => {
     playCorrectPronunciation(word);
   };
 
-  const handleMastered = (stageId: string, stageTitle: string) => {
-    const next = new Set(mastered);
-    next.add(stageId);
-    persist(next);
+  const handleMasteryPass = async (
+    stageId: string,
+    stageTitle: string,
+    wordsCorrect: number,
+    wordsAttempted: number,
+  ) => {
+    setCheckingStageId(null);
+    const { persisted } = await recordMastery(stageId, wordsCorrect, wordsAttempted);
+
     toast({
       title: 'Stage mastered! 🎉',
-      description: `Great job completing ${stageTitle}.`,
+      description: persisted
+        ? `Saved your progress on ${stageTitle}.`
+        : `Great job on ${stageTitle}! Sign in to save progress to your account.`,
     });
-    // Auto-advance to the next stage
+
     const idx = phonicsScopeAndSequence.findIndex((s) => s.id === stageId);
     const nextStage = phonicsScopeAndSequence[idx + 1];
     if (nextStage) setActiveStageId(nextStage.id);
@@ -98,10 +83,11 @@ const PhonicsFoundations = () => {
   const activeStage =
     phonicsScopeAndSequence.find((s) => s.id === activeStageId) ??
     phonicsScopeAndSequence[0];
+  const isCheckingActive = checkingStageId === activeStage.id;
+  const isAlreadyMastered = mastered.has(activeStage.id);
 
   return (
     <div className="min-h-screen bg-background">
-
       <header className="border-b border-border bg-card">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
           <Button asChild variant="ghost" size="sm">
@@ -130,9 +116,9 @@ const PhonicsFoundations = () => {
             Master the Building Blocks of Reading
           </h1>
           <p className="mx-auto max-w-2xl text-muted-foreground">
-            Six research-aligned stages — the same progression used by Wilson,
-            UFLI, and Orton-Gillingham. Complete each stage to unlock LexiQuest
-            World 1.
+            Six research-aligned stages aligned to Common Core RF.K.2–RF.2.3.
+            Each stage is unlocked by reading 5 practice words aloud — your
+            voice is graded by the same engine that powers AURA.
           </p>
 
           <div className="mx-auto mt-6 max-w-md">
@@ -143,6 +129,15 @@ const PhonicsFoundations = () => {
               <span className="text-muted-foreground">{percent}%</span>
             </div>
             <Progress value={percent} className="h-2" />
+            {!isAuthenticated && !loading && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Progress is saved locally on this device.{' '}
+                <Link to="/auth" className="text-primary underline">
+                  Sign in
+                </Link>{' '}
+                to sync across devices.
+              </p>
+            )}
           </div>
 
           {allComplete && (
@@ -271,28 +266,45 @@ const PhonicsFoundations = () => {
 
                 <Separator />
 
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="text-sm text-muted-foreground">
-                    {mastered.has(activeStage.id)
-                      ? '✓ You\'ve already mastered this stage.'
-                      : 'When you can read these confidently, mark this stage as mastered.'}
-                  </div>
-                  <Button
-                    onClick={() =>
-                      handleMastered(activeStage.id, activeStage.title)
+                {/* Mastery gate: speech-checked OR already-passed badge */}
+                {isCheckingActive ? (
+                  <PhonicsMasteryCheck
+                    words={activeStage.practiceWords}
+                    onPass={(correct, attempted) =>
+                      handleMasteryPass(
+                        activeStage.id,
+                        activeStage.title,
+                        correct,
+                        attempted,
+                      )
                     }
-                    disabled={mastered.has(activeStage.id)}
-                  >
-                    {mastered.has(activeStage.id) ? (
-                      <>
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                        Mastered
-                      </>
-                    ) : (
-                      'Mark as Mastered'
-                    )}
-                  </Button>
-                </div>
+                    onCancel={() => setCheckingStageId(null)}
+                  />
+                ) : (
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="text-sm text-muted-foreground">
+                      {isAlreadyMastered
+                        ? '✓ You\'ve already mastered this stage.'
+                        : 'Ready? Read 5 random words aloud to prove mastery.'}
+                    </div>
+                    <Button
+                      onClick={() => setCheckingStageId(activeStage.id)}
+                      disabled={isAlreadyMastered}
+                    >
+                      {isAlreadyMastered ? (
+                        <>
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                          Mastered
+                        </>
+                      ) : (
+                        <>
+                          <Mic className="mr-2 h-4 w-4" />
+                          Start Mastery Check
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </section>
