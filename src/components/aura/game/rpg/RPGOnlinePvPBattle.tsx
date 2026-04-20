@@ -622,6 +622,7 @@ export const RPGOnlinePvPBattle = ({
         s.turn = 'host';
         s.phase = 'kid_turn';
         s.batchProgress = 0;
+        s.turnCount += 1; // increment on EVERY turn switch so readerKey remounts the word reader
       }
     }
     commitAndPersist(s);
