@@ -141,6 +141,9 @@ export const RPGOnlinePvPBattle = ({
     };
 
     // ── Universal revision guard ──
+    // Strict <: stale revs always rejected.
+    // Equal rev: accept only if it's a meaningful state diff (peer's authoritative phase/turn change),
+    // otherwise treat as our own echo and ignore (prevents spurious re-renders + ref churn).
     const currentRev = gsRef.current.rev ?? 0;
     const incomingRev = normalized.rev ?? 0;
 
@@ -149,7 +152,19 @@ export const RPGOnlinePvPBattle = ({
       return false;
     }
 
-    console.log(`[PvP] applyIncoming(${source}): ACCEPTED rev=${incomingRev} phase=${normalized.phase} turn=${normalized.turn} (local was rev=${currentRev} phase=${gsRef.current.phase})`);
+    if (incomingRev === currentRev) {
+      const samePhase = normalized.phase === gsRef.current.phase;
+      const sameTurn = normalized.turn === gsRef.current.turn;
+      const sameWordIndex = normalized.wordIndex === gsRef.current.wordIndex;
+      // Echo of our own write — skip silently to avoid render thrash.
+      if (samePhase && sameTurn && sameWordIndex) {
+        return false;
+      }
+      // Same rev but different state = peer-authoritative change we may have missed. Accept.
+      console.log(`[PvP] applyIncoming(${source}): same-rev override (peer authoritative) phase=${normalized.phase} turn=${normalized.turn}`);
+    } else {
+      console.log(`[PvP] applyIncoming(${source}): ACCEPTED rev=${incomingRev} phase=${normalized.phase} turn=${normalized.turn} (local was rev=${currentRev} phase=${gsRef.current.phase})`);
+    }
 
     // Apply room metadata if provided
     if (roomMeta) {
@@ -162,6 +177,8 @@ export const RPGOnlinePvPBattle = ({
     hydrateAttemptsRef.current = 0;
     setInitError(null);
     gsRef.current = normalized;
+    // Track the highest rev we've seen so future local commits leap past peer's writes.
+    if (incomingRev > highestSeenRevRef.current) highestSeenRevRef.current = incomingRev;
     setGs(normalized);
 
     if (markReady && !readyRef.current) {
