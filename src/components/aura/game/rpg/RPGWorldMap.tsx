@@ -380,6 +380,54 @@ export const RPGWorldMap = ({
         </motion.div>
       </motion.div>
 
+      {/* World 0: Phonics Foundations — prominent entry banner */}
+      <div className="max-w-4xl mx-auto relative z-[5] mb-6">
+        <motion.button
+          type="button"
+          onClick={() => navigate('/game/phonics-foundations')}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
+          className="w-full text-left rounded-2xl border border-emerald-400/40 bg-gradient-to-r from-emerald-600/30 via-teal-600/25 to-cyan-600/30 p-4 sm:p-5 shadow-lg shadow-emerald-900/30 hover:border-emerald-300/70 transition-colors"
+          aria-label="Open World 0: Phonics Foundations"
+        >
+          <div className="flex items-center gap-4">
+            <div className="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-emerald-500/30 border border-emerald-300/40 flex items-center justify-center">
+              <GraduationCap className="w-7 h-7 text-emerald-200" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-emerald-200 bg-emerald-500/20 border border-emerald-400/30 px-2 py-0.5 rounded-full">
+                  World 0 · New
+                </span>
+                <span className="text-[10px] sm:text-xs text-emerald-100/80 hidden sm:inline">
+                  CCSS RF.K.2 – RF.2.3
+                </span>
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-white mt-1">
+                Phonics Foundations
+              </h3>
+              <p className="text-xs sm:text-sm text-emerald-100/85 mt-0.5">
+                Master CVC, blends, Silent-E, digraphs & vowel teams — speech-checked.
+              </p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-emerald-200 flex-shrink-0" />
+          </div>
+        </motion.button>
+
+        <div className="mt-2 flex justify-end">
+          <button
+            type="button"
+            onClick={() => navigate('/scope-and-sequence')}
+            className="text-[11px] sm:text-xs text-purple-200/80 hover:text-white inline-flex items-center gap-1 underline-offset-2 hover:underline"
+          >
+            <BookOpen className="w-3 h-3" />
+            View Full Scope &amp; Sequence
+          </button>
+        </div>
+      </div>
+
       {/* World Cards with Enhanced Connecting Paths */}
       <div className="max-w-4xl mx-auto relative z-[5]">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
