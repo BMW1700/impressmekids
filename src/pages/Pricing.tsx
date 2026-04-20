@@ -85,6 +85,14 @@ const Pricing = () => {
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Up to 60% less than DIBELS & mCLASS — with an LMS, safety system, and RPG campaign included
             </p>
+            <div className="mt-6">
+              <Button asChild variant="outline" size="sm">
+                <Link to="/scope-and-sequence">
+                  View Phonics Scope &amp; Sequence
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-16">

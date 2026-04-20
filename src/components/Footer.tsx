@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Shield, Globe, FileText } from "lucide-react";
+import { Shield, Globe, FileText, BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -43,6 +43,13 @@ export const Footer = () => {
             © {new Date().getFullYear()} NabuLearn. {t('footer.copyright').replace('© {year} NabuLearn. ', '')}
           </div>
           <div className="flex items-center gap-4 text-sm">
+            <Link to="/scope-and-sequence" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1">
+              <BookOpen className="h-3.5 w-3.5" />
+              Scope &amp; Sequence
+            </Link>
+            <Link to="/pricing" className="text-muted-foreground hover:text-primary transition-colors">
+              Pricing
+            </Link>
             <Link to="/privacy-policy" className="text-muted-foreground hover:text-primary transition-colors">
               {t('footer.privacyPolicy')}
             </Link>
