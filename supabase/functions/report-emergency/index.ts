@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 import { corsHeaders } from '../_shared/cors.ts';
+import { sendBulkEmails } from '../_shared/resendClient.ts';
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -125,75 +126,58 @@ serve(async (req) => {
     // Format emergency type for display
     const emergencyTypeDisplay = emergencyType === "other" ? (title || "Other Emergency") : emergencyType;
 
-    // Send email notifications using Resend
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
-    
-    if (resendApiKey && adminEmails.length > 0) {
-      const emailPromises = adminEmails.map(async (adminEmail) => {
-        const emailBody = {
-          from: "NabuLearn Emergencies <emergencies@nabulearn.com>",
-          to: adminEmail,
-          subject: `🚨 EMERGENCY REPORT: ${emergencyTypeDisplay}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background-color: #dc2626; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-                <h1 style="margin: 0; font-size: 24px;">🚨 Emergency Report</h1>
-                <p style="margin: 5px 0 0 0; opacity: 0.9;">Immediate Attention Required</p>
+    // Send email notifications via shared bulk-batched Resend client
+    if (adminEmails.length > 0) {
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #dc2626; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+            <h1 style="margin: 0; font-size: 24px;">🚨 Emergency Report</h1>
+            <p style="margin: 5px 0 0 0; opacity: 0.9;">Immediate Attention Required</p>
+          </div>
+          <div style="background-color: #fef2f2; padding: 30px; border-radius: 0 0 8px 8px; border: 2px solid #dc2626;">
+            <h2 style="color: #991b1b; margin-top: 0;">${emergencyTypeDisplay}</h2>
+
+            <div style="background-color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0;">
+                <strong>Description:</strong><br/>
+                ${description}
+              </p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+              <div style="background-color: white; padding: 15px; border-radius: 8px;">
+                <p style="color: #6b7280; font-size: 12px; margin: 0 0 5px 0; text-transform: uppercase;">Reported By</p>
+                <p style="color: #1f2937; font-size: 16px; font-weight: bold; margin: 0;">${teacher.full_name}</p>
               </div>
-              <div style="background-color: #fef2f2; padding: 30px; border-radius: 0 0 8px 8px; border: 2px solid #dc2626;">
-                <h2 style="color: #991b1b; margin-top: 0;">${emergencyTypeDisplay}</h2>
-                
-                <div style="background-color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                  <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0;">
-                    <strong>Description:</strong><br/>
-                    ${description}
-                  </p>
-                </div>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                  <div style="background-color: white; padding: 15px; border-radius: 8px;">
-                    <p style="color: #6b7280; font-size: 12px; margin: 0 0 5px 0; text-transform: uppercase;">Reported By</p>
-                    <p style="color: #1f2937; font-size: 16px; font-weight: bold; margin: 0;">${teacher.full_name}</p>
-                  </div>
-                  <div style="background-color: white; padding: 15px; border-radius: 8px;">
-                    <p style="color: #6b7280; font-size: 12px; margin: 0 0 5px 0; text-transform: uppercase;">Room / Location</p>
-                    <p style="color: #1f2937; font-size: 16px; font-weight: bold; margin: 0;">${roomNumber}</p>
-                  </div>
-                </div>
-                
-                <div style="margin-top: 20px; padding: 15px; background-color: #fef3c7; border-radius: 8px;">
-                  <p style="color: #92400e; font-size: 14px; margin: 0; font-weight: bold;">
-                    ⚠️ This report was submitted at ${new Date().toLocaleString()}
-                  </p>
-                </div>
-                
-                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-                  <p style="color: #6b7280; font-size: 14px; margin: 0;">
-                    This is an automated emergency notification from NabuLearn.
-                  </p>
-                </div>
+              <div style="background-color: white; padding: 15px; border-radius: 8px;">
+                <p style="color: #6b7280; font-size: 12px; margin: 0 0 5px 0; text-transform: uppercase;">Room / Location</p>
+                <p style="color: #1f2937; font-size: 16px; font-weight: bold; margin: 0;">${roomNumber}</p>
               </div>
             </div>
-          `,
-        };
 
-        const response = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${resendApiKey}`,
-          },
-          body: JSON.stringify(emailBody),
-        });
+            <div style="margin-top: 20px; padding: 15px; background-color: #fef3c7; border-radius: 8px;">
+              <p style="color: #92400e; font-size: 14px; margin: 0; font-weight: bold;">
+                ⚠️ This report was submitted at ${new Date().toLocaleString()}
+              </p>
+            </div>
 
-        if (!response.ok) {
-          console.error(`Failed to send email to ${adminEmail}`);
-        }
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                This is an automated emergency notification from NabuLearn.
+              </p>
+            </div>
+          </div>
+        </div>
+      `;
 
-        return response.ok;
+      await sendBulkEmails({
+        from: "NabuLearn Emergencies <emergencies@nabulearn.com>",
+        subject: `🚨 EMERGENCY REPORT: ${emergencyTypeDisplay}`,
+        html,
+        recipients: adminEmails.map((email) => ({ to: email })),
+        functionName: "report-emergency",
+        payloadSummary: { emergencyType, classroomId, teacherId },
       });
-
-      await Promise.allSettled(emailPromises);
     }
 
     // Send push notifications to admins
