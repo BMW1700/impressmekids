@@ -114,7 +114,7 @@ serve(async (req: Request): Promise<Response> => {
 
     for (const alert of alerts) {
       // Send teacher email
-      const teacherEmailResult = await sendTeacherEmail(alert, resend);
+      const teacherEmailResult = await sendTeacherEmail(alert);
       results.push(teacherEmailResult);
 
       // Log notification in database
@@ -157,7 +157,6 @@ serve(async (req: Request): Promise<Response> => {
               alert,
               parentEmail,
               parentName,
-              resend
             );
             results.push(parentEmailResult);
 
