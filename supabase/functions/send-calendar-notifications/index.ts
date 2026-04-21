@@ -1,8 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
-import { Resend } from "https://esm.sh/resend@2.0.0";
 
 import { corsHeaders } from '../_shared/cors.ts';
+import { sendEmail } from '../_shared/resendClient.ts';
 
 interface NotificationPreference {
   id: string;
@@ -38,8 +38,6 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
-
-    const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
     console.log("Starting calendar notification check...");
 
@@ -282,16 +280,19 @@ serve(async (req) => {
             </div>
           `;
 
-          try {
-            await resend.emails.send({
-              from: "NabuLearn <notifications@nabulearn.com>",
-              to: [parentAccount.email],
-              subject: `📅 ${upcomingItems.length} upcoming ${upcomingItems.length === 1 ? 'item' : 'items'} ${daysText}`,
-              html: emailHtml,
-            });
-            console.log(`Email sent to ${parentAccount.email} for parent ${pref.parent_id}`);
-          } catch (emailError) {
-            console.error(`Failed to send email to ${parentAccount.email}:`, emailError);
+          // Send via bulletproof shared client (throttled, retried, logged)
+          const emailResult = await sendEmail({
+            from: "NabuLearn <notifications@nabulearn.com>",
+            to: parentAccount.email,
+            subject: `📅 ${upcomingItems.length} upcoming ${upcomingItems.length === 1 ? 'item' : 'items'} ${daysText}`,
+            html: emailHtml,
+            functionName: 'send-calendar-notifications',
+            payloadSummary: { parent_id: pref.parent_id, item_count: upcomingItems.length },
+          });
+          if (emailResult.success) {
+            console.log(`Email sent to ${parentAccount.email} for parent ${pref.parent_id} (id: ${emailResult.id})`);
+          } else {
+            console.error(`Failed to send email to ${parentAccount.email}:`, emailResult.error);
           }
         }
 

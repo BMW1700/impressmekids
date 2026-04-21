@@ -144,12 +144,14 @@ Deno.serve(async (req) => {
 
     const urgencyColor = urgencyColors[requestData.urgency];
 
-    // Send email notification
+    // Send email notification via bulletproof shared client
     try {
-      const { error: emailError } = await resend.emails.send({
-        from: 'NabuLearn Backups <onboarding@resend.dev>',
-        to: ['admin@meapphq.com'],
+      const emailResult = await sendEmail({
+        from: 'NabuLearn Backups <backups@nabulearn.com>',
+        to: 'admin@meapphq.com',
         subject: `🚨 Data Restoration Request - ${requestData.urgency.toUpperCase()} Priority`,
+        functionName: 'request-data-restoration',
+        payloadSummary: { request_id: request.id, urgency: requestData.urgency },
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #1F2937;">🔄 Data Restoration Request Received</h2>
@@ -212,10 +214,10 @@ Deno.serve(async (req) => {
         `,
       });
 
-      if (emailError) {
-        console.error('❌ Failed to send email notification:', emailError);
+      if (!emailResult.success) {
+        console.error('❌ Failed to send email notification:', emailResult.error);
       } else {
-        console.log('✅ Email notification sent to admin@meapphq.com');
+        console.log('✅ Email notification sent to admin@meapphq.com (id:', emailResult.id, ')');
       }
     } catch (emailSendError) {
       console.error('❌ Exception sending email:', emailSendError);
