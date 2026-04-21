@@ -2615,6 +2615,45 @@ export type Database = {
         }
         Relationships: []
       }
+      email_failures: {
+        Row: {
+          attempted_at: string
+          error_code: string | null
+          error_message: string | null
+          from_address: string | null
+          function_name: string | null
+          id: string
+          payload_summary: Json | null
+          recipient_email: string
+          retry_count: number
+          subject: string | null
+        }
+        Insert: {
+          attempted_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          from_address?: string | null
+          function_name?: string | null
+          id?: string
+          payload_summary?: Json | null
+          recipient_email: string
+          retry_count?: number
+          subject?: string | null
+        }
+        Update: {
+          attempted_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          from_address?: string | null
+          function_name?: string | null
+          id?: string
+          payload_summary?: Json | null
+          recipient_email?: string
+          retry_count?: number
+          subject?: string | null
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string

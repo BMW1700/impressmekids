@@ -2,8 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 import { corsHeaders } from '../_shared/cors.ts';
-
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+import { sendEmail } from '../_shared/resendClient.ts';
 
 interface PhonemeReportRequest {
   studentId: string;
@@ -224,31 +223,24 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Sending email to:", parent.email);
 
-    const emailResponse = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-      },
-      body: JSON.stringify({
-        from: "NabuLearn <onboarding@resend.dev>",
-        to: [parent.email],
-        subject: `📊 Sound Accuracy Report for ${student.full_name} - ${classroom.name}`,
-        html: emailHtml,
-      }),
+    const sendResult = await sendEmail({
+      from: "NabuLearn Reports <reports@nabulearn.com>",
+      to: parent.email,
+      subject: `📊 Sound Accuracy Report for ${student.full_name} - ${classroom.name}`,
+      html: emailHtml,
+      functionName: "send-phoneme-report",
+      payloadSummary: { studentId, parentId, classroomId },
     });
 
-    const emailData = await emailResponse.json();
-    
-    if (!emailResponse.ok) {
-      console.error("Email send error:", emailData);
-      throw new Error(emailData.message || "Failed to send email");
+    if (!sendResult.success) {
+      console.error("Email send error:", sendResult.error);
+      throw new Error(sendResult.error || "Failed to send email");
     }
 
-    console.log("Email sent successfully:", emailData);
+    console.log("Email sent successfully:", sendResult.id);
 
     return new Response(
-      JSON.stringify({ success: true, emailId: emailData.id }),
+      JSON.stringify({ success: true, emailId: sendResult.id }),
       {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },

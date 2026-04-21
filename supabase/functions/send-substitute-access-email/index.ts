@@ -1,9 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "https://esm.sh/resend@2.0.0";
 
 import { corsHeaders } from '../_shared/cors.ts';
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { sendEmail } from '../_shared/resendClient.ts';
 
 interface SubstituteAccessEmailRequest {
   substituteName: string;

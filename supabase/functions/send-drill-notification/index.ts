@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 import { corsHeaders } from '../_shared/cors.ts';
+import { sendBulkEmails } from '../_shared/resendClient.ts';
 
 interface DrillNotificationPayload {
   type: 'student_checkin' | 'drill_scheduled' | 'drill_started' | 'all_clear' | 'recess_return' | 'unaccounted_child';
@@ -414,85 +415,68 @@ serve(async (req) => {
     const pushSuccessCount = pushResults.filter((r) => r.status === 'fulfilled' && (r.value as any).success).length;
     console.log(`Push notifications sent: ${pushSuccessCount}/${targetUserIds.length}`);
 
-    // Send email fallback for critical notifications
+    // Send email fallback for critical notifications via shared bulk-batched client
     let emailSuccessCount = 0;
-    const resendApiKey = Deno.env.get('RESEND_API_KEY');
-    
-    if (isCriticalNotification && resendApiKey && parentEmails.length > 0) {
+
+    if (isCriticalNotification && parentEmails.length > 0) {
       console.log(`Sending email fallback for critical ${type} to ${parentEmails.length} parents`);
-      
-      const emailResults = await Promise.allSettled(
-        parentEmails.map(async (parent) => {
-          const severityColor = isEmergency ? '#dc2626' : 
-            type === 'unaccounted_child' ? '#dc2626' : 
-            type === 'all_clear' ? '#16a34a' : '#ea580c';
-          
-          const emailBody = {
-            from: "NabuLearn Safety <safety@nabulearn.com>",
-            to: parent.email,
-            subject: notificationTitle.replace(/[🚨✅📅]/g, '').trim(),
-            html: `
-              <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
-                <div style="background-color: ${severityColor}; color: white; padding: 24px; text-align: center;">
-                  <h1 style="margin: 0; font-size: 24px; font-weight: 600;">${notificationTitle.replace(/[🚨✅📅]/g, '').trim()}</h1>
-                </div>
-                <div style="padding: 32px; background: #f9fafb;">
-                  <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    ${notificationBody}
-                  </p>
-                  ${parent.studentName ? `
-                    <p style="color: #6b7280; font-size: 14px; margin: 20px 0 0 0;">
-                      Student: <strong>${parent.studentName}</strong>
-                    </p>
-                  ` : ''}
-                  <div style="margin-top: 24px; padding: 16px; background: #fff; border-radius: 8px; border: 1px solid #e5e7eb;">
-                    <p style="color: #374151; font-size: 14px; margin: 0;">
-                      <strong>What to do:</strong> ${
-                        type === 'unaccounted_child' 
-                          ? 'Staff are actively locating your child. You will receive another notification when they are found. Please keep your phone nearby.'
-                          : type === 'all_clear'
-                          ? 'No action required. The situation has been resolved safely.'
-                          : 'Follow school emergency protocols. Check the parent portal for updates.'
-                      }
-                    </p>
-                  </div>
-                </div>
-                <div style="padding: 20px; background: #f3f4f6; text-align: center; border-top: 1px solid #e5e7eb;">
-                  <p style="color: #6b7280; font-size: 12px; margin: 0;">
-                    This is an automated safety notification from NabuLearn.<br>
-                    For immediate questions, contact your school directly.
-                  </p>
-                </div>
-              </div>
-            `,
-          };
 
-          try {
-            const response = await fetch('https://api.resend.com/emails', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${resendApiKey}`,
-              },
-              body: JSON.stringify(emailBody),
-            });
+      const severityColor = isEmergency ? '#dc2626' :
+        type === 'unaccounted_child' ? '#dc2626' :
+        type === 'all_clear' ? '#16a34a' : '#ea580c';
 
-            if (!response.ok) {
-              const errorText = await response.text();
-              console.error(`Failed to send email to ${parent.email}: ${errorText}`);
-              return { email: parent.email, success: false };
-            }
+      const cleanTitle = notificationTitle.replace(/[🚨✅📅]/g, '').trim();
 
-            return { email: parent.email, success: true };
-          } catch (error) {
-            console.error(`Error sending email to ${parent.email}:`, error);
-            return { email: parent.email, success: false };
-          }
-        })
+      const whatToDo =
+        type === 'unaccounted_child'
+          ? 'Staff are actively locating your child. You will receive another notification when they are found. Please keep your phone nearby.'
+          : type === 'all_clear'
+          ? 'No action required. The situation has been resolved safely.'
+          : 'Follow school emergency protocols. Check the parent portal for updates.';
+
+      const buildHtml = (studentName?: string) => `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+          <div style="background-color: ${severityColor}; color: white; padding: 24px; text-align: center;">
+            <h1 style="margin: 0; font-size: 24px; font-weight: 600;">${cleanTitle}</h1>
+          </div>
+          <div style="padding: 32px; background: #f9fafb;">
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+              ${notificationBody}
+            </p>
+            ${studentName ? `
+              <p style="color: #6b7280; font-size: 14px; margin: 20px 0 0 0;">
+                Student: <strong>${studentName}</strong>
+              </p>
+            ` : ''}
+            <div style="margin-top: 24px; padding: 16px; background: #fff; border-radius: 8px; border: 1px solid #e5e7eb;">
+              <p style="color: #374151; font-size: 14px; margin: 0;">
+                <strong>What to do:</strong> ${whatToDo}
+              </p>
+            </div>
+          </div>
+          <div style="padding: 20px; background: #f3f4f6; text-align: center; border-top: 1px solid #e5e7eb;">
+            <p style="color: #6b7280; font-size: 12px; margin: 0;">
+              This is an automated safety notification from NabuLearn.<br>
+              For immediate questions, contact your school directly.
+            </p>
+          </div>
+        </div>
+      `;
+
+      const bulkResult = await sendBulkEmails({
+        from: "NabuLearn Safety <safety@nabulearn.com>",
+        subject: cleanTitle,
+        recipients: parentEmails.map((p) => ({
+          to: p.email,
+          html: buildHtml(p.studentName),
+        })),
+        functionName: "send-drill-notification",
+        payloadSummary: { type, drillSessionId, isEmergency, classroomId },
+      });
+      emailSuccessCount = bulkResult.sent;
+      console.log(
+        `Email fallback sent: ${emailSuccessCount}/${bulkResult.totalRecipients} across ${bulkResult.batches} batch(es), ${bulkResult.failed} failed`,
       );
-
-      emailSuccessCount = emailResults.filter((r) => r.status === 'fulfilled' && (r.value as any).success).length;
-      console.log(`Email fallback sent: ${emailSuccessCount}/${parentEmails.length}`);
     }
 
     return new Response(
