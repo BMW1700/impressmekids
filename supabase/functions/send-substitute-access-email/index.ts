@@ -56,10 +56,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     const loginUrl = appUrl || Deno.env.get("APP_URL") || "https://nabulearn.com";
 
-    const emailResponse = await resend.emails.send({
+    const emailResult = await sendEmail({
       from: "NabuLearn <noreply@nabulearn.com>",
-      to: [substituteEmail],
+      to: substituteEmail,
       subject: `Substitute Access Code for ${classroomName}`,
+      functionName: 'send-substitute-access-email',
+      payloadSummary: { substituteEmail, classroomName },
       html: `
         <!DOCTYPE html>
         <html>
@@ -161,9 +163,17 @@ const handler = async (req: Request): Promise<Response> => {
       `,
     });
 
-    console.log("Substitute access email sent successfully:", emailResponse);
+    if (!emailResult.success) {
+      console.error("Failed to send substitute access email:", emailResult.error);
+      return new Response(
+        JSON.stringify({ success: false, error: emailResult.error || "Failed to send email" }),
+        { status: 502, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
 
-    return new Response(JSON.stringify({ success: true, ...emailResponse }), {
+    console.log("Substitute access email sent successfully:", emailResult.id);
+
+    return new Response(JSON.stringify({ success: true, id: emailResult.id }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
