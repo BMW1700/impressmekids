@@ -1,9 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
-import { Resend } from 'https://esm.sh/resend@2.0.0';
 
 import { corsHeaders } from '../_shared/cors.ts';
-
-const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string);
+import { sendEmail } from '../_shared/resendClient.ts';
 
 interface RestorationRequest {
   backup_id: string;
