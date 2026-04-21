@@ -1,86 +1,106 @@
 
 
-## The Real Situation (NabuLearn, not FlyFit)
+## Verification Report (Track A — Already Shipped) ✅
 
-### What's actually configured
+| Check | Result |
+|---|---|
+| Domain `notify.nabulearn.com` registered | ✅ Verifying DNS (does not block scaffolding) |
+| All 6 branded auth templates exist | ✅ signup, magic-link, recovery, invite, email-change, reauthentication |
+| `auth-email-hook` uses queue pattern | ✅ Line 253: `supabase.rpc('enqueue_email', ...)` |
+| `process-email-queue` cron job active | ✅ Every 5 seconds, `active=true` |
+| NabuLearn purple/yellow + logo applied | ✅ All 6 templates |
+| Old `@lovable.dev/email-js` direct-send pattern | ✅ Not present — fully on queue |
 
-- **App custom domain:** `nabulearn.com` ✅
-- **Auth email domain configured in Lovable Cloud:** ❌ none for nabulearn.com — the only one in your workspace is `notify.flyfitfashion.com` from your other project, which is irrelevant here
-- **Resend API key:** ✅ present (`RESEND_API_KEY`)
-- **Existing Resend usage:** 9 edge functions sending directly via raw `fetch` or the Resend SDK — `send-safety-alert`, `report-emergency`, `send-risk-alerts`, `send-phoneme-report`, `send-drill-notification`, `request-data-restoration`, `send-substitute-access-email`, `send-parent-consent-email`, `send-calendar-notifications`
-- **Auth emails (signup confirm, password reset, magic link, etc.):** still going through **Supabase's default sender** → this is the 2-emails-per-hour throttle that bit you on the other project
-
-### The two distinct rate-limit problems
-
-**Problem 1 — Auth emails (the pilot blocker you're worried about)**
-Supabase free tier auth sender = **~2-3 emails/hour, hard cap**. The moment a school imports 30 students at once and they each trigger a verification email, signups silently fail. This is exactly what hit you before.
-
-**Problem 2 — Resend transactional emails (lower risk, but real)**
-Resend caps at **2 requests/sec, 3000/day on free, 100k/day on Pro**. Your safety alerts and phoneme reports go through Resend directly with no queue, no retry, no batching. A district-wide safety alert blast to 500 parents would hit 429s within the first second and silently lose emails.
+**Track A is bulletproof.** Once DNS propagates, Supabase's 2-emails/hour cap is gone. Throughput: ~120/min default, scalable to ~600/min with one SQL update.
 
 ---
 
-## The Fix — Two Independent Tracks
+## Track B — Bulletproof Resend Transactional Wrapper
 
-### Track A — Kill the auth email rate limit (the urgent one)
+### What gets built
 
-Route auth emails off Supabase's default sender entirely by wiring up a custom auth-email-hook on `nabulearn.com`. Once active, auth emails go through your own verified domain — Supabase's 2/hour cap no longer applies.
+**1. New shared client: `supabase/functions/_shared/resendClient.ts`**
 
-Steps (autonomous, in order, ~20 min):
+A single utility every Resend-using function calls. Handles:
+- **Token-bucket throttle** capping outbound at **2 req/sec** (Resend's hard limit)
+- **429 retry with `Retry-After` honor** — up to 3 attempts, exponential backoff (500ms → 1s → 2s)
+- **Bulk batching** — when called with multiple recipients, uses Resend's `/emails/batch` endpoint (100 per call, counts as 1 request)
+- **5xx retry** with backoff
+- **Failure logging** to new `email_failures` table (admin-only RLS) so failed sends never vanish silently
+- **Public surface:** `sendEmail({ from, to, subject, html, ... })` and `sendBulkEmails({ from, recipients[], subject, html })`
 
-1. **Set up sender domain on nabulearn.com.** Open the email setup dialog so you can add `notify.nabulearn.com` (or another subdomain). DNS verification can run in the background — it does not block the rest of the steps.
-2. **Set up email queue infrastructure** (idempotent — pgmq queues, retry/backoff, dead-letter, cron job that drains every 5 sec, ~120 emails/min default, scales to 600+/min with a single SQL update).
-3. **Scaffold all 6 auth email templates** (signup, magic link, password recovery, invite, email change, reauthentication) — uses the queue-based pattern, not direct send.
-4. **Apply NabuLearn branding** to all 6 templates:
-   - Primary purple `hsl(270, 70%, 55%)` for buttons
-   - Yellow accent `hsl(48, 100%, 60%)` for highlights
-   - 16px (1rem) border radius
-   - White body background (`#ffffff`)
-   - NabuLearn logo from `/public/favicon.png` uploaded to email-assets bucket
-   - "AI-Powered Literacy" tone, no edtech jargon
-   - System font stack
-5. **Deploy auth-email-hook** edge function.
-6. **Verify the hook uses the queue pattern** (`enqueue_email` RPC, not `@lovable.dev/email-js`) — re-scaffold with overwrite if needed.
-7. **Confirm the `process-email-queue` pg_cron job is active** (every 5 seconds).
-8. **Surface a button to monitor DNS verification.**
+**2. New table: `email_failures` (migration)**
 
-### Track B — Bulletproof your existing Resend transactional emails
+```
+id uuid PK
+recipient_email text
+subject text
+from_address text
+error_code text          -- "429", "422", "network", etc.
+error_message text
+attempted_at timestamptz
+retry_count int
+function_name text       -- which edge function tried to send
+payload_summary jsonb    -- truncated body for debugging (no PII beyond email)
+```
 
-Build one shared utility — `supabase/functions/_shared/resendClient.ts` — that the 9 existing functions use. Handles:
-- **Token-bucket throttle** capping outbound at 2 req/sec (Resend's limit)
-- **429 retry with `Retry-After` honor**, up to 3 attempts with exponential backoff
-- **Bulk batching** — calls Resend's `/emails/batch` endpoint (100 recipients per call) when there are multiple recipients
-- **Failure logging** to a new `email_failures` table (admins-only RLS) so failed sends don't vanish silently
-- **Bonus:** swap the 2 functions still using `onboarding@resend.dev` test sender to your verified `alerts@nabulearn.com` / `noreply@nabulearn.com`
+RLS: only `admin` and `district_admin` can SELECT. Service role inserts.
 
-Refactor the 9 functions to use the shared client (~5 min each).
+**3. Refactor 9 edge functions to use the shared client**
 
----
-
-## What does NOT change
-
-- AURA, LexiQuest, multiplayer, RPG — untouched
-- Auth flow, RLS, role assignment, COPPA flow — untouched
-- Resend stays as your transactional provider — we're not switching, just wrapping it for safety
-- Lovable Cloud auth = your auth-email-hook on `nabulearn.com` (separate path from Resend)
-
----
-
-## Final state after both tracks
-
-| Email type | Path | Throughput |
+| Function | Current sender | After |
 |---|---|---|
-| Auth (signup, reset, magic link, invite, etc.) | nabulearn.com → Lovable queue → email API | ~120/min default, scalable to 600+/min, retry-safe |
-| Transactional (safety alerts, phoneme reports, parent emails) | Resend via shared client | 2 req/sec throttled, batched, retry-safe, logged |
+| `send-safety-alert` | `safety@nabulearn.com` | unchanged, wrapped |
+| `report-emergency` | `emergencies@nabulearn.com` | unchanged, wrapped |
+| `send-risk-alerts` | `alerts@nabulearn.com` | unchanged, wrapped |
+| `send-phoneme-report` | `onboarding@resend.dev` ⚠️ | **`reports@nabulearn.com`**, wrapped |
+| `send-drill-notification` | `safety@nabulearn.com` | unchanged, wrapped |
+| `request-data-restoration` | `onboarding@resend.dev` ⚠️ | **`backups@nabulearn.com`**, wrapped |
+| `send-substitute-access-email` | `noreply@nabulearn.com` | unchanged, wrapped |
+| `send-parent-consent-email` | `noreply@nabulearn.com` | unchanged, wrapped |
+| `send-calendar-notifications` | `notifications@nabulearn.com` | unchanged, wrapped |
 
-**The 2-emails-per-hour Supabase auth cap will no longer apply to NabuLearn.** Bulk student onboarding (30, 100, 500 at once) will work cleanly.
+The two `onboarding@resend.dev` test senders get swapped to verified `nabulearn.com` addresses as the bonus cleanup you previously flagged.
 
----
+**4. Bulk-send safety in `send-safety-alert` + `send-drill-notification`**
 
-## Recommended order
+These two are the actual blast-radius risk (district-wide alerts to 500+ parents). Both currently fire `Promise.all(allUsers.map(... fetch resend))` with no throttle. Refactor to call `sendBulkEmails(recipients[])` once, which internally batches at 100/call and stays under 2 req/sec.
 
-1. **Approve this plan**
-2. I ship **Track A (auth emails)** first — this is the actual pilot blocker. ~20 min, fully autonomous, you only need to choose the subdomain and confirm DNS in the setup dialog.
-3. Then **Track B (Resend wrapper)** — ~30 min, no user input needed.
-4. Then back to **PvP turn-switching verification** (the open thread from before).
+**5. Deploy all 9 refactored functions in one batch.**
+
+### What does NOT change
+
+- AURA, LexiQuest, multiplayer, RPG, auth flow, RLS, COPPA — untouched
+- Resend stays the provider — we're wrapping it, not replacing it
+- Track A auth email infra — untouched
+- The 9 function APIs (callers don't change) — internal refactor only
+
+### Files touched
+
+**New:**
+- `supabase/functions/_shared/resendClient.ts`
+- `supabase/migrations/<timestamp>_email_failures.sql`
+
+**Modified (9):**
+- All 9 `send-*` / `report-*` / `request-*` edge functions
+
+### Final state after Track B
+
+| Email type | Path | Cap | Safety |
+|---|---|---|---|
+| Auth (signup, reset, etc.) | nabulearn.com → pgmq queue → Lovable Email API | ~120/min default, ~600/min max | TTL, retry, DLQ ✅ |
+| Transactional (alerts, reports) | Resend via shared client | 2 req/sec throttled, batched 100/call | Retry, 429 honor, failure log ✅ |
+
+**Bulk safety alert to 500 parents** = 5 batch calls = 2.5 seconds, zero lost emails.
+
+### Estimated time: ~25 min, fully autonomous.
+
+### Confirmation I'll give when done
+
+(a) `email_failures` table created with admin-only RLS  
+(b) `resendClient.ts` shipped with throttle + retry + batch  
+(c) All 9 functions refactored and deployed  
+(d) 2 test-sender addresses swapped to verified nabulearn.com  
+(e) Bulk paths (safety-alert, drill-notification) using batch endpoint  
+(f) Sample log line you can grep for to verify in production
 
