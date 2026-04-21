@@ -1,47 +1,86 @@
 
 
-## Brutally Honest Verdict
+## The Real Situation (NabuLearn, not FlyFit)
 
-### Did everything work? Mostly yes — with two small caveats
+### What's actually configured
 
-**What's solid (verified by reading the actual files):**
+- **App custom domain:** `nabulearn.com` ✅
+- **Auth email domain configured in Lovable Cloud:** ❌ none for nabulearn.com — the only one in your workspace is `notify.flyfitfashion.com` from your other project, which is irrelevant here
+- **Resend API key:** ✅ present (`RESEND_API_KEY`)
+- **Existing Resend usage:** 9 edge functions sending directly via raw `fetch` or the Resend SDK — `send-safety-alert`, `report-emergency`, `send-risk-alerts`, `send-phoneme-report`, `send-drill-notification`, `request-data-restoration`, `send-substitute-access-email`, `send-parent-consent-email`, `send-calendar-notifications`
+- **Auth emails (signup confirm, password reset, magic link, etc.):** still going through **Supabase's default sender** → this is the 2-emails-per-hour throttle that bit you on the other project
 
-1. **`AuthContext.tsx`** — `Promise.all` is in place, profile queries now run in parallel. Clean, no regressions. ✓
-2. **`ModeSelect.tsx`** — fully migrated to `useAuth()`, no more duplicate session/profile fetches. The redirect logic preserves all the same role/verification gates. ✓
-3. **`TeacherDashboard.tsx`** — skeleton header + body in place when `authLoading`. ✓
-4. **`StudentDashboard.tsx`** — skeleton replaces the spinner, and importantly only blocks on `authLoading` (not data loading), so the shell paints fast. ✓
+### The two distinct rate-limit problems
 
-**No platform breakage** — the changes are purely subtractive (removed duplicate work) + cosmetic (skeleton vs spinner). Auth gates, role redirects, verification checks, COPPA flow — all untouched.
+**Problem 1 — Auth emails (the pilot blocker you're worried about)**
+Supabase free tier auth sender = **~2-3 emails/hour, hard cap**. The moment a school imports 30 students at once and they each trigger a verification email, signups silently fail. This is exactly what hit you before.
 
-### Two small caveats (not blockers, just honesty)
+**Problem 2 — Resend transactional emails (lower risk, but real)**
+Resend caps at **2 requests/sec, 3000/day on free, 100k/day on Pro**. Your safety alerts and phoneme reports go through Resend directly with no queue, no retry, no batching. A district-wide safety alert blast to 500 parents would hit 429s within the first second and silently lose emails.
 
-1. **Other dashboards still use `Loader2` spinners** — Parent, Admin, District dashboards weren't touched. Not a regression (they were always like that), but the "snap-in feel" is inconsistent across roles. Worth a 10-min cleanup pass eventually, not now.
-2. **Skeletons only show during `authLoading`, not `isProfileLoading`** — so if profile fetch is slow, the user briefly sees the shell with no name/data before it hydrates. This is actually the *correct* tradeoff (Linear/Notion do this), but worth knowing.
+---
 
-### Are you ready to go back to PvP multiplayer? Yes.
+## The Fix — Two Independent Tracks
 
-Login flow is faster, no platform breakage, no new bugs introduced. The login speed fix was small, surgical, and shipped clean. There is **nothing else blocking PvP work** from a stability standpoint.
+### Track A — Kill the auth email rate limit (the urgent one)
 
-### Recommended next move
+Route auth emails off Supabase's default sender entirely by wiring up a custom auth-email-hook on `nabulearn.com`. Once active, auth emails go through your own verified domain — Supabase's 2/hour cap no longer applies.
 
-Go straight to PvP turn switching. From memory, the architecture is already in place:
-- `useTournamentRealtime` (gutted, separate system — irrelevant)
-- Multiplayer rooms use the monotonic `rev` counter pattern in `multiplayerRoomTypes.ts`
-- Stale closure ref pattern + component reset key pattern already documented
-- Online PvP state shape (`OnlinePvPGameState`) is defined
+Steps (autonomous, in order, ~20 min):
 
-The remaining work is the actual **turn handoff reliability** — making sure `turn: 'host' | 'guest'` flips cleanly and both clients re-render the correct UI without one client getting stuck on a stale phase.
+1. **Set up sender domain on nabulearn.com.** Open the email setup dialog so you can add `notify.nabulearn.com` (or another subdomain). DNS verification can run in the background — it does not block the rest of the steps.
+2. **Set up email queue infrastructure** (idempotent — pgmq queues, retry/backoff, dead-letter, cron job that drains every 5 sec, ~120 emails/min default, scales to 600+/min with a single SQL update).
+3. **Scaffold all 6 auth email templates** (signup, magic link, password recovery, invite, email change, reauthentication) — uses the queue-based pattern, not direct send.
+4. **Apply NabuLearn branding** to all 6 templates:
+   - Primary purple `hsl(270, 70%, 55%)` for buttons
+   - Yellow accent `hsl(48, 100%, 60%)` for highlights
+   - 16px (1rem) border radius
+   - White body background (`#ffffff`)
+   - NabuLearn logo from `/public/favicon.png` uploaded to email-assets bucket
+   - "AI-Powered Literacy" tone, no edtech jargon
+   - System font stack
+5. **Deploy auth-email-hook** edge function.
+6. **Verify the hook uses the queue pattern** (`enqueue_email` RPC, not `@lovable.dev/email-js`) — re-scaffold with overwrite if needed.
+7. **Confirm the `process-email-queue` pg_cron job is active** (every 5 seconds).
+8. **Surface a button to monitor DNS verification.**
 
-### Plan for PvP close-out (next session)
+### Track B — Bulletproof your existing Resend transactional emails
 
-1. **Reproduce the bug** — load multiplayer PvP in two browser windows, identify exactly when/where the turn switch fails (stuck on opponent's turn? wrong phase shown? missed `rev` update?)
-2. **Audit the turn-flip code path** — find where `turn` and `phase` are mutated and broadcast, verify both clients apply the new `rev` atomically
-3. **Apply the stale closure ref pattern** if the bug is "client missed an update because callback held old state"
-4. **Apply the component reset key pattern** if the bug is "child component didn't re-init for the new turn"
-5. **Add a defensive `rev` mismatch reconciliation** — if a client sees `rev` jumped by more than 1, it should refetch the snapshot
-6. **Test end-to-end** — full PvP match host vs guest, parent reading phase, ability picking, both winning conditions
+Build one shared utility — `supabase/functions/_shared/resendClient.ts` — that the 9 existing functions use. Handles:
+- **Token-bucket throttle** capping outbound at 2 req/sec (Resend's limit)
+- **429 retry with `Retry-After` honor**, up to 3 attempts with exponential backoff
+- **Bulk batching** — calls Resend's `/emails/batch` endpoint (100 recipients per call) when there are multiple recipients
+- **Failure logging** to a new `email_failures` table (admins-only RLS) so failed sends don't vanish silently
+- **Bonus:** swap the 2 functions still using `onboarding@resend.dev` test sender to your verified `alerts@nabulearn.com` / `noreply@nabulearn.com`
 
-### TL;DR
+Refactor the 9 functions to use the shared client (~5 min each).
 
-The login speed fix shipped cleanly, nothing is broken, and you are clear to attack PvP turn switching. Approve and I'll start by reproducing the turn-switch bug in the next session and fixing it for real.
+---
+
+## What does NOT change
+
+- AURA, LexiQuest, multiplayer, RPG — untouched
+- Auth flow, RLS, role assignment, COPPA flow — untouched
+- Resend stays as your transactional provider — we're not switching, just wrapping it for safety
+- Lovable Cloud auth = your auth-email-hook on `nabulearn.com` (separate path from Resend)
+
+---
+
+## Final state after both tracks
+
+| Email type | Path | Throughput |
+|---|---|---|
+| Auth (signup, reset, magic link, invite, etc.) | nabulearn.com → Lovable queue → email API | ~120/min default, scalable to 600+/min, retry-safe |
+| Transactional (safety alerts, phoneme reports, parent emails) | Resend via shared client | 2 req/sec throttled, batched, retry-safe, logged |
+
+**The 2-emails-per-hour Supabase auth cap will no longer apply to NabuLearn.** Bulk student onboarding (30, 100, 500 at once) will work cleanly.
+
+---
+
+## Recommended order
+
+1. **Approve this plan**
+2. I ship **Track A (auth emails)** first — this is the actual pilot blocker. ~20 min, fully autonomous, you only need to choose the subdomain and confirm DNS in the setup dialog.
+3. Then **Track B (Resend wrapper)** — ~30 min, no user input needed.
+4. Then back to **PvP turn-switching verification** (the open thread from before).
 
