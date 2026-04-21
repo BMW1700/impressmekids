@@ -1,8 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
-import { Resend } from "https://esm.sh/resend@2.0.0";
 
 import { corsHeaders } from '../_shared/cors.ts';
+import { sendEmail } from '../_shared/resendClient.ts';
 
 interface RiskAlert {
   studentId: string;
@@ -75,9 +75,8 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-    const { alerts, sendToParents = false } = await req.json() as { 
-      alerts: RiskAlert[]; 
+    const { alerts, sendToParents = false } = await req.json() as {
+      alerts: RiskAlert[];
       sendToParents?: boolean;
     };
 
