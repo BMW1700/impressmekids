@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 import { corsHeaders } from '../_shared/cors.ts';
+import { sendBulkEmails } from '../_shared/resendClient.ts';
 
 interface UserInfo {
   email: string;
@@ -172,78 +173,51 @@ serve(async (req) => {
     })));
 
     // ============================================
-    // STEP 3: Send email notifications using Resend
+    // STEP 3: Send email notifications via shared bulk-batched Resend client
     // ============================================
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
     let emailsSent = 0;
     let emailsFailed = 0;
-    
-    if (resendApiKey) {
-      console.log("=== SENDING EMAILS ===");
-      const emailPromises = allUsers.map(async (user) => {
-        try {
-          const emailBody = {
-            from: "NabuLearn Safety <safety@nabulearn.com>",
-            to: user.email,
-            subject: `[${alert.severity.toUpperCase()}] ${alert.title}`,
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <div style="background-color: ${
-                  alert.severity === "critical" ? "#dc2626" :
-                  alert.severity === "warning" ? "#ea580c" : "#3b82f6"
-                }; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-                  <h1 style="margin: 0; font-size: 24px;">Safety Alert</h1>
-                  <p style="margin: 5px 0 0 0; opacity: 0.9;">Severity: ${alert.severity.toUpperCase()}</p>
-                </div>
-                <div style="background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px;">
-                  <h2 style="color: #1f2937; margin-top: 0;">${alert.title}</h2>
-                  <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">${alert.message}</p>
-                  ${alert.affects_attendance ? 
-                    '<p style="color: #dc2626; font-weight: bold; margin-top: 20px;">⚠️ This alert affects school attendance</p>' 
-                    : ''}
-                  <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-                    <p style="color: #6b7280; font-size: 14px; margin: 0;">
-                      This is an automated safety notification from NabuLearn.<br>
-                      For questions, please contact your school administration.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            `,
-          };
 
-          const response = await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${resendApiKey}`,
-            },
-            body: JSON.stringify(emailBody),
-          });
+    const severityBg =
+      alert.severity === "critical" ? "#dc2626" :
+      alert.severity === "warning" ? "#ea580c" : "#3b82f6";
 
-          if (response.ok) {
-            const result = await response.json();
-            console.log(`✓ Email sent to ${user.email.replace(/^(.{2}).*(@.*)$/, "$1***$2")} (${user.role}) - ID: ${result.id}`);
-            return { success: true, email: user.email };
-          } else {
-            const errorText = await response.text();
-            console.error(`✗ Email failed to ${user.email}: ${response.status} - ${errorText}`);
-            return { success: false, email: user.email, error: errorText };
-          }
-        } catch (err: unknown) {
-          const error = err as Error;
-          console.error(`✗ Email exception for ${user.email}:`, error.message);
-          return { success: false, email: user.email, error: error.message };
-        }
-      });
+    const sharedHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background-color: ${severityBg}; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+          <h1 style="margin: 0; font-size: 24px;">Safety Alert</h1>
+          <p style="margin: 5px 0 0 0; opacity: 0.9;">Severity: ${alert.severity.toUpperCase()}</p>
+        </div>
+        <div style="background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px;">
+          <h2 style="color: #1f2937; margin-top: 0;">${alert.title}</h2>
+          <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">${alert.message}</p>
+          ${alert.affects_attendance ?
+            '<p style="color: #dc2626; font-weight: bold; margin-top: 20px;">⚠️ This alert affects school attendance</p>'
+            : ''}
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+              This is an automated safety notification from NabuLearn.<br>
+              For questions, please contact your school administration.
+            </p>
+          </div>
+        </div>
+      </div>
+    `;
 
-      const emailResults = await Promise.allSettled(emailPromises);
-      emailsSent = emailResults.filter(r => r.status === 'fulfilled' && (r.value as { success: boolean }).success).length;
-      emailsFailed = allUsers.length - emailsSent;
-      console.log(`Email results: ${emailsSent} sent, ${emailsFailed} failed`);
-    } else {
-      console.warn("RESEND_API_KEY not configured - skipping email notifications");
-    }
+    console.log("=== SENDING EMAILS (bulk-batched) ===");
+    const bulkResult = await sendBulkEmails({
+      from: "NabuLearn Safety <safety@nabulearn.com>",
+      subject: `[${alert.severity.toUpperCase()}] ${alert.title}`,
+      html: sharedHtml,
+      recipients: allUsers.map((u) => ({ to: u.email })),
+      functionName: "send-safety-alert",
+      payloadSummary: { alertId, severity: alert.severity, district_id: alert.district_id },
+    });
+    emailsSent = bulkResult.sent;
+    emailsFailed = bulkResult.failed;
+    console.log(
+      `Email results: ${emailsSent}/${bulkResult.totalRecipients} sent across ${bulkResult.batches} batch(es), ${emailsFailed} failed`,
+    );
 
     // ============================================
     // STEP 4: Send push notifications
