@@ -127,3 +127,6 @@ verify_jwt = false
 
 [functions.record-student-signin-success]
 verify_jwt = false
+
+[functions.process-email-queue]
+verify_jwt = true
