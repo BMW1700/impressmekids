@@ -32,10 +32,12 @@ const handler = async (req: Request): Promise<Response> => {
     // Construct verification URL using APP_URL for the frontend domain
     const verificationUrl = `${Deno.env.get("APP_URL") || "https://nabulearn.com"}/consent/${consentToken}`;
 
-    const emailResponse = await resend.emails.send({
+    const emailResult = await sendEmail({
       from: "NabuLearn <noreply@nabulearn.com>",
-      to: [parentEmail],
+      to: parentEmail,
       subject: "Parental Consent Required - NabuLearn",
+      functionName: 'send-parent-consent-email',
+      payloadSummary: { studentEmail, parentEmail },
       html: `
         <!DOCTYPE html>
         <html>
@@ -120,9 +122,17 @@ const handler = async (req: Request): Promise<Response> => {
       `,
     });
 
-    console.log("Parental consent email sent successfully:", emailResponse);
+    if (!emailResult.success) {
+      console.error("Failed to send parental consent email:", emailResult.error);
+      return new Response(
+        JSON.stringify({ error: emailResult.error || "Failed to send email" }),
+        { status: 502, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
 
-    return new Response(JSON.stringify(emailResponse), {
+    console.log("Parental consent email sent successfully:", emailResult.id);
+
+    return new Response(JSON.stringify({ success: true, id: emailResult.id }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
