@@ -95,8 +95,8 @@ export const SiteSettingsSection = () => {
                   <Shield className="h-5 w-5 text-destructive" />
                 </div>
               ) : (
-                <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                  <ShieldOff className="h-5 w-5 text-emerald-600" />
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <ShieldOff className="h-5 w-5 text-primary" />
                 </div>
               )}
               <div>
@@ -106,7 +106,7 @@ export const SiteSettingsSection = () => {
                 </CardDescription>
               </div>
             </div>
-            <Badge variant={enabled ? "destructive" : "default"} className={!enabled ? "bg-emerald-500 hover:bg-emerald-600" : ""}>
+            <Badge variant={enabled ? "destructive" : "default"}>
               {enabled ? "LOCKED" : "PUBLIC"}
             </Badge>
           </div>
