@@ -1,48 +1,54 @@
 
 
-## Pre-Pilot Verification Pass (No new features — proof it works)
+## Quick Answers
 
-### What I'll actually do
+**1. "Open the Bulk Import UI" — already exists?**
+Yes. It's live at **Admin Dashboard → "Import" tab** (`src/components/admin/BulkStudentImport.tsx`, mounted in `AdminDashboard.tsx` line 473–475). Any logged-in admin can drop a CSV (`email, full_name, classroom_code, grade`) and it pipes through the `bulk-create-students` edge function we hardened last round. **No new UI needed for the smoke test** — you can run the live-fire test from your existing admin account in 60 seconds.
 
-**1. Live-fire bulk signup smoke test (the real gap)**
-- Use existing `bulk-create-students` edge function to create **5 throwaway test students** with synthetic `@student.nabulearn.internal` emails
-- Watch `email_send_log` + `email_failures` populate in real time
-- Confirm queue drains, no DLQ entries, all 5 confirm cleanly
-- Delete the 5 test accounts via existing `cleanup-orphan-student` flow
-- **Outcome:** documented proof the pipeline works end-to-end, not just "looks configured"
+**2. Toggle the "blocker code" (DemoGate / `Brecon50` / "Private Preview" screen) on/off — possible?**
+Yes, completely. Today it's hardcoded in `src/components/DemoGate.tsx` and gates everyone who hasn't typed `Brecon50`. We'll convert it into a global, server-driven kill-switch that Ben can flip from his student account.
 
-**2. Throughput knob fix + safe bump**
-- Correct my earlier mistake: tune `email_send_state.batch_size` and `email_send_state.send_delay_ms` (the real columns), not the imaginary `active` flag
-- Bump `batch_size: 10 → 25`, `send_delay_ms: 200 → 100` → ~250 emails/min sustained
-- Conservative — leaves headroom under Resend's 2 req/sec hard ceiling
-- Reversible in one SQL update if anything misbehaves
+---
 
-**3. PvP turn-switching smoke verification (the deferred thread)**
-- Open two tabs, run a local PvP match with the existing test accounts
-- Confirm: buzz → wrong answer → turn passes to opponent → opponent's 10s window opens
-- If broken, file the exact failure mode; if working, mark closed
-- ~5 min, no code unless it's actually broken
+## Plan — Global DemoGate kill-switch
 
-**4. Capacitor sanity check (web-side only)**
-- Re-confirm `node_modules/.vite` rebuilt cleanly, no duplicate React, no console errors
-- Verify `initCapacitor()` is a true no-op in the browser (network tab + console)
-- Confirm `viewport-fit=cover` + safe-area CSS doesn't shift any existing layout
-- **No native build attempted from Lovable** — that stays on your Mac
+### Database (1 migration)
+- New table `app_settings` (singleton, `id=1`)
+  - `demo_gate_enabled boolean default true`
+  - `updated_at`, `updated_by`
+- RLS:
+  - Anyone authenticated → `SELECT` (gate needs to read it before login too — public read is fine, no PII)
+  - `UPDATE` → only `benmaxweiner@gmail.com` (matched by `auth.email()`) **OR** any user with `admin` role
+- Seed row: `(1, true)` so behavior is unchanged on day one
 
-### What I will NOT do
-- No new features
-- No schema migrations beyond the throughput tune
-- No touching AURA, LexiQuest, RPG, auth, RLS, COPPA flow
-- No native iOS/Android builds (your machine, your call)
+### DemoGate component refactor
+- Replace `localStorage`-only check with: `if (settings.demo_gate_enabled === false) → render children directly`
+- Keeps the Brecon50 fallback for when it's enabled (no regression)
+- Subscribes to realtime on `app_settings` so flipping the toggle updates every open tab in <1s
+- Loading state: render children optimistically (don't block paint) while fetching — falls back to gate only if fetch confirms `enabled=true`
 
-### What you do after
-- When ready: the 8-step `npx cap add ios && npx cap sync && npx cap run ios` flow on your Mac
-- I can stay on standby to debug any Xcode/Android Studio errors you hit
+### Ben's student dashboard — new "Site Settings" tab
+- Add one entry to `StudentDashboardSidebar.tsx` sections array, **conditionally rendered only when `user.email === 'benmaxweiner@gmail.com'`**
+  - `{ id: "site-settings", label: "Site Settings", icon: Shield, color: "from-red-500 to-orange-500" }`
+- New `src/components/student/sections/SiteSettingsSection.tsx`:
+  - Single big toggle: "Show 'Private Preview' access code screen to all visitors"
+  - Status indicator (green = gate off / public, red = gate on / locked)
+  - Last-changed timestamp + who changed it
+  - Calls `UPDATE app_settings SET demo_gate_enabled = ... WHERE id = 1`
+- Wire it into the section switcher in `StudentDashboard.tsx`
+
+### What this gives you
+- Ben logs into his student account → sees a red-shield "Site Settings" tab nobody else sees
+- One click flips the gate for everyone, everywhere, instantly (realtime)
+- Safe to flip back on for demos, off for pilots, no redeploy needed
+- Admins keep the same power as a backup
+- Brecon50 still works as the unlock when the gate is on
+
+### Out of scope
+- No changes to Bulk Import (already shipped)
+- No changes to email/Capacitor/auth/RLS elsewhere
+- No new routes — uses the existing student dashboard section pattern
 
 ### Time
-~15 min, fully autonomous. Final report includes:
-- (a) test student send timestamps from `email_send_log`
-- (b) confirmed new throughput numbers
-- (c) PvP test result (pass/fail with evidence)
-- (d) clean console screenshot of the web app post-Capacitor
+~15 min, fully autonomous.
 
