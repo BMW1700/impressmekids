@@ -76,6 +76,13 @@ export type Database = {
             referencedColumns: ["district_code"]
           },
           {
+            foreignKeyName: "account_verification_requests_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts_safe"
+            referencedColumns: ["district_code"]
+          },
+          {
             foreignKeyName: "account_verification_requests_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
@@ -906,6 +913,13 @@ export type Database = {
             columns: ["school_id"]
             isOneToOne: false
             referencedRelation: "districts_public"
+            referencedColumns: ["district_code"]
+          },
+          {
+            foreignKeyName: "authority_alert_sources_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "districts_safe"
             referencedColumns: ["district_code"]
           },
         ]
@@ -2513,6 +2527,13 @@ export type Database = {
             referencedRelation: "districts_public"
             referencedColumns: ["district_code"]
           },
+          {
+            foreignKeyName: "drill_sessions_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "districts_safe"
+            referencedColumns: ["district_code"]
+          },
         ]
       }
       drill_visitor_attendance: {
@@ -2908,6 +2929,13 @@ export type Database = {
             columns: ["school_id"]
             isOneToOne: false
             referencedRelation: "districts_public"
+            referencedColumns: ["district_code"]
+          },
+          {
+            foreignKeyName: "escalation_rules_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "districts_safe"
             referencedColumns: ["district_code"]
           },
         ]
@@ -4657,6 +4685,13 @@ export type Database = {
             referencedColumns: ["district_code"]
           },
           {
+            foreignKeyName: "profiles_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts_safe"
+            referencedColumns: ["district_code"]
+          },
+          {
             foreignKeyName: "profiles_school_id_fkey"
             columns: ["school_id"]
             isOneToOne: false
@@ -5331,6 +5366,13 @@ export type Database = {
             referencedRelation: "districts_public"
             referencedColumns: ["district_code"]
           },
+          {
+            foreignKeyName: "reunification_events_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "districts_safe"
+            referencedColumns: ["district_code"]
+          },
         ]
       }
       risk_alert_notifications: {
@@ -5667,6 +5709,13 @@ export type Database = {
             referencedColumns: ["district_code"]
           },
           {
+            foreignKeyName: "safety_alerts_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts_safe"
+            referencedColumns: ["district_code"]
+          },
+          {
             foreignKeyName: "safety_alerts_school_id_fkey"
             columns: ["school_id"]
             isOneToOne: false
@@ -5678,6 +5727,13 @@ export type Database = {
             columns: ["school_id"]
             isOneToOne: false
             referencedRelation: "districts_public"
+            referencedColumns: ["district_code"]
+          },
+          {
+            foreignKeyName: "safety_alerts_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "districts_safe"
             referencedColumns: ["district_code"]
           },
         ]
@@ -5957,6 +6013,13 @@ export type Database = {
             columns: ["district_id"]
             isOneToOne: false
             referencedRelation: "districts_public"
+            referencedColumns: ["district_code"]
+          },
+          {
+            foreignKeyName: "schools_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts_safe"
             referencedColumns: ["district_code"]
           },
         ]
@@ -7609,6 +7672,13 @@ export type Database = {
             referencedRelation: "districts_public"
             referencedColumns: ["district_code"]
           },
+          {
+            foreignKeyName: "visitors_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "districts_safe"
+            referencedColumns: ["district_code"]
+          },
         ]
       }
       weekly_challenges: {
@@ -7770,6 +7840,39 @@ export type Database = {
           is_visible?: boolean | null
           name?: string | null
           slug?: string | null
+        }
+        Relationships: []
+      }
+      districts_safe: {
+        Row: {
+          created_at: string | null
+          district_code: string | null
+          email_domains: string[] | null
+          is_visible: boolean | null
+          logo_url: string | null
+          name: string | null
+          slug: string | null
+          subscription_tier: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          district_code?: string | null
+          email_domains?: string[] | null
+          is_visible?: boolean | null
+          logo_url?: string | null
+          name?: string | null
+          slug?: string | null
+          subscription_tier?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          district_code?: string | null
+          email_domains?: string[] | null
+          is_visible?: boolean | null
+          logo_url?: string | null
+          name?: string | null
+          slug?: string | null
+          subscription_tier?: string | null
         }
         Relationships: []
       }
