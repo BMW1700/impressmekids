@@ -146,6 +146,27 @@ export type Database = {
           },
         ]
       }
+      app_settings: {
+        Row: {
+          demo_gate_enabled: boolean
+          id: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          demo_gate_enabled?: boolean
+          id?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          demo_gate_enabled?: boolean
+          id?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       assignment_answers: {
         Row: {
           answer_data: Json

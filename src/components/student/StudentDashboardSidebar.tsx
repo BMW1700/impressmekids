@@ -1,7 +1,8 @@
-import { Home, Calendar, BookOpen, Users, Bell, GraduationCap, FolderOpen, User, Gamepad2, Shield, Sparkles, BookOpenCheck, Link } from "lucide-react";
+import { Home, Calendar, BookOpen, Users, Bell, GraduationCap, FolderOpen, User, Gamepad2, Shield, Sparkles, BookOpenCheck, Link, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface StudentDashboardSidebarProps {
   activeSection: string;
@@ -12,7 +13,9 @@ interface StudentDashboardSidebarProps {
   onClose?: () => void;
 }
 
-const getSections = (t: (key: string) => string) => [
+const OWNER_EMAIL = "benmaxweiner@gmail.com";
+
+const getSections = (t: (key: string) => string, isOwner: boolean) => [
   { id: "home", label: t('sidebar.home'), icon: Home, color: "from-violet-500 to-purple-600" },
   { id: "today", label: t('sidebar.today'), icon: Calendar, color: "from-blue-500 to-cyan-500" },
   { id: "courses", label: t('sidebar.courses'), icon: BookOpen, color: "from-emerald-500 to-teal-500" },
@@ -26,6 +29,7 @@ const getSections = (t: (key: string) => string) => [
   { id: "safety", label: t('sidebar.safety'), icon: Shield, color: "from-green-500 to-emerald-500" },
   { id: "links-resources", label: "Links & Resources", icon: Link, color: "from-blue-500 to-indigo-500" },
   { id: "account", label: t('sidebar.account'), icon: User, color: "from-purple-500 to-indigo-500" },
+  ...(isOwner ? [{ id: "site-settings", label: "Site Settings", icon: Settings, color: "from-red-500 to-orange-500" }] : []),
 ];
 
 export const StudentDashboardSidebar = ({
@@ -37,7 +41,9 @@ export const StudentDashboardSidebar = ({
   onClose,
 }: StudentDashboardSidebarProps) => {
   const { t } = useLanguage();
-  const sections = getSections(t);
+  const { user } = useAuth();
+  const isOwner = user?.email?.toLowerCase() === OWNER_EMAIL;
+  const sections = getSections(t, isOwner);
 
   const handleNavigation = (sectionId: string, isExternal: boolean, navigateFn?: () => void) => {
     if (isExternal && navigateFn) {
