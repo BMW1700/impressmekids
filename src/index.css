@@ -1038,3 +1038,15 @@ All colors MUST be HSL.
 .animate-streak-fire {
   animation: streak-fire 0.5s ease-in-out infinite;
 }
+/* ============================================================
+   Capacitor / native shell — safe-area handling for iPhone notch
+   and iPad home indicator. No-op on web.
+   ============================================================ */
+@supports (padding: max(0px)) {
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
