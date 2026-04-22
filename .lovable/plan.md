@@ -1,106 +1,121 @@
 
 
-## Verification Report (Track A — Already Shipped) ✅
+## Brutally Honest Pre-Launch Audit (NabuLearn)
 
-| Check | Result |
-|---|---|
-| Domain `notify.nabulearn.com` registered | ✅ Verifying DNS (does not block scaffolding) |
-| All 6 branded auth templates exist | ✅ signup, magic-link, recovery, invite, email-change, reauthentication |
-| `auth-email-hook` uses queue pattern | ✅ Line 253: `supabase.rpc('enqueue_email', ...)` |
-| `process-email-queue` cron job active | ✅ Every 5 seconds, `active=true` |
-| NabuLearn purple/yellow + logo applied | ✅ All 6 templates |
-| Old `@lovable.dev/email-js` direct-send pattern | ✅ Not present — fully on queue |
+### Email infrastructure ✅ Bulletproof
+- `notify.nabulearn.com` — **Verified ✅** (no longer "verifying" — DNS is live)
+- `process-email-queue` cron — active, every 5 sec
+- All 4 pgmq queues (auth + transactional + 2 DLQs) — clean, length 0
+- 9 Resend functions all wrapped via `resendClient.ts` — throttled, retried, batched, logged
+- 0 entries in `email_failures` over the last 7 days
+- Supabase 2/hour cap is fully bypassed
 
-**Track A is bulletproof.** Once DNS propagates, Supabase's 2-emails/hour cap is gone. Throughput: ~120/min default, scalable to ~600/min with one SQL update.
+**Verdict on emails: launch-ready.** No remaining work.
 
 ---
 
-## Track B — Bulletproof Resend Transactional Wrapper
+### Honest blockers I found that are NOT email-related
+
+I have to be straight with you — there are 2 real security findings flagged by the scanner that block a clean pilot:
+
+**1. 🔴 ERROR — `classroom_students` INSERT policy is too loose**
+Any authenticated user who knows a classroom UUID can add themselves. No join-code check, no teacher approval. A curious student could enroll into any classroom in any district. **Pilot blocker.**
+
+**2. 🟡 WARN — `districts.primary_contact_email` exposed to all authenticated users**
+Every logged-in user can read every district admin's contact email. Low-severity but a superintendent will see it in any audit.
+
+**3. 🟡 Open thread from prior session — PvP turn-switching verification**
+We deferred this when we pivoted to email work. Still not verified.
+
+Everything else (530+ RLS policies, SSVRS, AURA, LexiQuest, COPPA flow, Clever SSO, auth hardening) is solid.
+
+---
+
+### What I recommend BEFORE Capacitor
+
+A focused 30-min hardening pass:
+- Tighten `classroom_students` INSERT to require a valid join code OR an approved `classroom_join_requests` row
+- Move `districts.primary_contact_email` behind an admin-only column policy (or split into `districts_admin_contacts` table)
+- Run the deferred PvP turn-switch smoke test
+
+Then we go mobile.
+
+---
+
+## Mobile Plan — Capacitor Wrap of NabuLearn
+
+### Decision: native Capacitor, not PWA
+You've asked for native. Capacitor is the right call because:
+- AURA needs reliable mic permissions → native is more permissive than browser
+- Push notifications for the parent app (already on the roadmap per memory) require native
+- iPad-as-primary-K5-device (per memory) needs proper home-screen install + offline shell
+- App Store presence = legitimacy for school district contracts
 
 ### What gets built
 
-**1. New shared client: `supabase/functions/_shared/resendClient.ts`**
+**Phase M1 — Capacitor scaffold (in Lovable, fully autonomous)**
+1. Install `@capacitor/core`, `@capacitor/cli` (dev), `@capacitor/ios`, `@capacitor/android`
+2. Create `capacitor.config.ts` with:
+   - `appId: app.lovable.8b261911409a4a0485943e15f3d59496`
+   - `appName: nabulearn`
+   - Hot-reload `server.url` pointing at the Lovable sandbox so you can preview live edits on a real iPad
+3. Add native-friendly viewport + safe-area CSS to `index.html`
+4. Confirm no Service Worker is registered (already removed per memory — good)
 
-A single utility every Resend-using function calls. Handles:
-- **Token-bucket throttle** capping outbound at **2 req/sec** (Resend's hard limit)
-- **429 retry with `Retry-After` honor** — up to 3 attempts, exponential backoff (500ms → 1s → 2s)
-- **Bulk batching** — when called with multiple recipients, uses Resend's `/emails/batch` endpoint (100 per call, counts as 1 request)
-- **5xx retry** with backoff
-- **Failure logging** to new `email_failures` table (admin-only RLS) so failed sends never vanish silently
-- **Public surface:** `sendEmail({ from, to, subject, html, ... })` and `sendBulkEmails({ from, recipients[], subject, html })`
+**Phase M2 — Native plugins NabuLearn needs**
+Installed and wired in:
+- `@capacitor/microphone` + `@capacitor/device` → AURA speech (better than Web Speech permissions on iOS Safari)
+- `@capacitor/push-notifications` → parent app push (per existing roadmap)
+- `@capacitor/app` → handle deep links for Clever SSO + magic links back into the app
+- `@capacitor/preferences` → secure local cache for student session
+- `@capacitor/status-bar` + `@capacitor/splash-screen` → branded launch experience
+- `@capacitor/keyboard` → fix iPad keyboard issues for K-5 students typing in LexiQuest
 
-**2. New table: `email_failures` (migration)**
+**Phase M3 — Auth & deep linking**
+- Configure Clever SSO redirect to support `nabulearn://oauth` custom scheme as well as the existing `nabulearn.com` web flow
+- Configure auth email magic links to deep-link back into the installed app when present, fall back to web
 
+**Phase M4 — Build artifacts (you do this on your Mac)**
+After I ship M1–M3 in Lovable, you take the codebase out and run native builds. Detailed steps below.
+
+---
+
+## Your hands-on steps after I ship M1–M3
+
+You only do this once per dev machine, then `npx cap sync` after every Lovable update.
+
+```text
+1. Click "Export to GitHub" in Lovable → push to your repo
+2. git clone <your repo> && cd nabulearn
+3. npm install
+4. npx cap add ios            (Mac + Xcode required)
+   npx cap add android        (any OS + Android Studio)
+5. npx cap update ios         (or android)
+6. npm run build
+7. npx cap sync               (run this after every Lovable pull)
+8. npx cap run ios            (launches simulator/device)
+   npx cap run android
 ```
-id uuid PK
-recipient_email text
-subject text
-from_address text
-error_code text          -- "429", "422", "network", etc.
-error_message text
-attempted_at timestamptz
-retry_count int
-function_name text       -- which edge function tried to send
-payload_summary jsonb    -- truncated body for debugging (no PII beyond email)
-```
 
-RLS: only `admin` and `district_admin` can SELECT. Service role inserts.
+Whenever you make changes in Lovable later: `git pull && npm install && npm run build && npx cap sync`.
 
-**3. Refactor 9 edge functions to use the shared client**
+---
 
-| Function | Current sender | After |
-|---|---|---|
-| `send-safety-alert` | `safety@nabulearn.com` | unchanged, wrapped |
-| `report-emergency` | `emergencies@nabulearn.com` | unchanged, wrapped |
-| `send-risk-alerts` | `alerts@nabulearn.com` | unchanged, wrapped |
-| `send-phoneme-report` | `onboarding@resend.dev` ⚠️ | **`reports@nabulearn.com`**, wrapped |
-| `send-drill-notification` | `safety@nabulearn.com` | unchanged, wrapped |
-| `request-data-restoration` | `onboarding@resend.dev` ⚠️ | **`backups@nabulearn.com`**, wrapped |
-| `send-substitute-access-email` | `noreply@nabulearn.com` | unchanged, wrapped |
-| `send-parent-consent-email` | `noreply@nabulearn.com` | unchanged, wrapped |
-| `send-calendar-notifications` | `notifications@nabulearn.com` | unchanged, wrapped |
+## What does NOT change
 
-The two `onboarding@resend.dev` test senders get swapped to verified `nabulearn.com` addresses as the bonus cleanup you previously flagged.
+- Codebase, AURA, LexiQuest, RPG, SSVRS, auth flow, RLS, Resend wrapper, email queue — untouched
+- Web app at nabulearn.com keeps working unchanged
+- Same React codebase ships to web + iOS + Android (one repo, three targets)
 
-**4. Bulk-send safety in `send-safety-alert` + `send-drill-notification`**
+---
 
-These two are the actual blast-radius risk (district-wide alerts to 500+ parents). Both currently fire `Promise.all(allUsers.map(... fetch resend))` with no throttle. Refactor to call `sendBulkEmails(recipients[])` once, which internally batches at 100/call and stays under 2 req/sec.
+## Recommended order of execution
 
-**5. Deploy all 9 refactored functions in one batch.**
+1. **Approve this plan**
+2. I ship the **3 security fixes** (`classroom_students`, `districts.primary_contact_email`, PvP smoke check) — ~20 min
+3. I ship **Capacitor M1–M3** (scaffold + plugins + deep links) — ~30 min
+4. You run the **8 export/build commands** on your Mac — ~15 min the first time
+5. App on simulator → physical iPad → TestFlight → App Store
 
-### What does NOT change
-
-- AURA, LexiQuest, multiplayer, RPG, auth flow, RLS, COPPA — untouched
-- Resend stays the provider — we're wrapping it, not replacing it
-- Track A auth email infra — untouched
-- The 9 function APIs (callers don't change) — internal refactor only
-
-### Files touched
-
-**New:**
-- `supabase/functions/_shared/resendClient.ts`
-- `supabase/migrations/<timestamp>_email_failures.sql`
-
-**Modified (9):**
-- All 9 `send-*` / `report-*` / `request-*` edge functions
-
-### Final state after Track B
-
-| Email type | Path | Cap | Safety |
-|---|---|---|---|
-| Auth (signup, reset, etc.) | nabulearn.com → pgmq queue → Lovable Email API | ~120/min default, ~600/min max | TTL, retry, DLQ ✅ |
-| Transactional (alerts, reports) | Resend via shared client | 2 req/sec throttled, batched 100/call | Retry, 429 honor, failure log ✅ |
-
-**Bulk safety alert to 500 parents** = 5 batch calls = 2.5 seconds, zero lost emails.
-
-### Estimated time: ~25 min, fully autonomous.
-
-### Confirmation I'll give when done
-
-(a) `email_failures` table created with admin-only RLS  
-(b) `resendClient.ts` shipped with throttle + retry + batch  
-(c) All 9 functions refactored and deployed  
-(d) 2 test-sender addresses swapped to verified nabulearn.com  
-(e) Bulk paths (safety-alert, drill-notification) using batch endpoint  
-(f) Sample log line you can grep for to verify in production
+Final state: same codebase, web at nabulearn.com + native iOS/Android apps with mic, push, deep links, splash screen, and Clever SSO all working natively.
 
