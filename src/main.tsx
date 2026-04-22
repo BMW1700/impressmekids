@@ -5,12 +5,16 @@ import "./index.css";
 import { initSentry } from "./lib/sentry";
 import { setupGlobalErrorHandler } from "./lib/globalErrorHandler";
 import ErrorBoundary from "./components/error/ErrorBoundary";
+import { initCapacitor } from "./lib/native/capacitorBootstrap";
 
 // Initialize Sentry for error monitoring
 initSentry();
 
 // Set up global error handlers for uncaught errors
 setupGlobalErrorHandler();
+
+// Initialize Capacitor native bridges (no-op on web)
+initCapacitor();
 
 // Guard against runaway history.replaceState loops (prevents blank-screen crash)
 // Some browsers throw a SecurityError if replaceState is called >100 times / 10s.
