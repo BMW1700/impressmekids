@@ -1,19 +1,63 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Lock } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const DEMO_CODE = "Brecon50";
 const STORAGE_KEY = "imk_demo_access";
 
 export function DemoGate({ children }: { children: ReactNode }) {
   const [granted, setGranted] = useState(() => localStorage.getItem(STORAGE_KEY) === "1");
+  const [gateEnabled, setGateEnabled] = useState<boolean | null>(null); // null = still loading
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchSetting = async () => {
+      const { data } = await supabase
+        .from("app_settings")
+        .select("demo_gate_enabled")
+        .eq("id", 1)
+        .maybeSingle();
+      if (mounted) {
+        setGateEnabled(data?.demo_gate_enabled ?? true);
+      }
+    };
+    fetchSetting();
+
+    const channel = supabase
+      .channel("app_settings_gate")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "app_settings" },
+        (payload: any) => {
+          if (payload.new && mounted) {
+            setGateEnabled(payload.new.demo_gate_enabled);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      mounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Gate is OFF globally → render app
+  if (gateEnabled === false) return <>{children}</>;
+
+  // Already unlocked locally → render app
   if (granted) return <>{children}</>;
+
+  // Still loading the setting → render optimistically (don't block paint).
+  // If the fetch then resolves to enabled=true AND user isn't unlocked, the gate will appear.
+  if (gateEnabled === null) return <>{children}</>;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
