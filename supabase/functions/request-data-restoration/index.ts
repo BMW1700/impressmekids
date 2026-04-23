@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
     try {
       const emailResult = await sendEmail({
         from: 'NabuLearn Backups <backups@nabulearn.com>',
-        to: 'admin@meapphq.com',
+        to: 'admin@nabulearn.com',
         subject: `🚨 Data Restoration Request - ${requestData.urgency.toUpperCase()} Priority`,
         functionName: 'request-data-restoration',
         payloadSummary: { request_id: request.id, urgency: requestData.urgency },
@@ -231,7 +231,7 @@ Deno.serve(async (req) => {
         status: 'pending',
         next_steps: 'Our team has been notified and will review your request based on urgency level. You will be contacted at the provided email.',
         contact_info: {
-          email: 'admin@meapphq.com',
+          email: 'admin@nabulearn.com',
           expected_response: '24-48 hours',
         },
       }),

@@ -20,8 +20,8 @@ import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-
 const RESEND_API_URL = "https://api.resend.com/emails";
 const RESEND_BATCH_URL = "https://api.resend.com/emails/batch";
 
-// Resend hard limit: 2 requests / second on most plans.
-const TOKEN_BUCKET_CAPACITY = 2;
+// Resend Pro plan: 10 requests / second.
+const TOKEN_BUCKET_CAPACITY = 10;
 const TOKEN_REFILL_INTERVAL_MS = 1000;
 
 const MAX_RETRIES = 3;
