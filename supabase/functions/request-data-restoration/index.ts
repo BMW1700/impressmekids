@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
     try {
       const emailResult = await sendEmail({
         from: 'NabuLearn Backups <backups@nabulearn.com>',
-        to: 'admin@meapphq.com',
+        to: 'admin@nabulearn.com',
         subject: `🚨 Data Restoration Request - ${requestData.urgency.toUpperCase()} Priority`,
         functionName: 'request-data-restoration',
         payloadSummary: { request_id: request.id, urgency: requestData.urgency },
