@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
   try {
     const to = "Matthew.ross433@gmail.com";
     const result = await sendEmail({
-      from: "NabuLearn <noreply@nabulearn.com>",
+      from: "NabuLearn Test <onboarding@resend.dev>",
       to,
       subject: "NabuLearn Resend Test ✅",
       html: `
