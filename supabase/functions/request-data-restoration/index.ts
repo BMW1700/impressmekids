@@ -231,7 +231,7 @@ Deno.serve(async (req) => {
         status: 'pending',
         next_steps: 'Our team has been notified and will review your request based on urgency level. You will be contacted at the provided email.',
         contact_info: {
-          email: 'admin@meapphq.com',
+          email: 'admin@nabulearn.com',
           expected_response: '24-48 hours',
         },
       }),
