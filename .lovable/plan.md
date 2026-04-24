@@ -1,94 +1,125 @@
 
+## Recommendation right now
 
-## Brutal Honest Status — and the Cost/Throughput Math at 100K Users
+Use a **hybrid fix immediately**:
+- **Lovable Emails for onboarding/auth emails**
+- **Keep Resend temporarily for the existing specialized school emails until each one is verified or migrated**
 
-### Did everything work perfectly?
+That is the brutally honest best move for your current need: **bulk onboarding a whole school without getting blocked by Resend Free**.
 
-**Mostly yes, but with three real gaps.** Here's what I actually verified just now:
+## Brutally honest status right now
 
-| Check | Result |
-|---|---|
-| New `RESEND_API_KEY` accepted by Resend | ✅ Yes |
-| Key type | ✅ Restricted "send-only" (correct best practice — limits blast radius) |
-| `nabulearn.com` domain verified on the new account | ✅ Yes — DNS verified Apr 23, 2:19 AM via GoDaddy |
-| Real test send `noreply@nabulearn.com` → `Matthew.ross433@gmail.com` | ✅ Accepted with message ID `74985806-3fb1-415c-a12f-13218c18282f` |
-| Account owner | `admin@nabulearn.com` (NabuLearn-controlled — no more legacy `meapphq.com` dependency) |
+### What is proven working
+- `send-test-email` works to a real Gmail inbox from `noreply@nabulearn.com`
+- `nabulearn.com` works on Resend
+- `notify.nabulearn.com` is also already verified for Lovable Emails
 
-**The 3 real gaps still left:**
+### What is not “perfect”
+1. **Resend is on the Free plan**, but `_shared/resendClient.ts` is currently coded for **10 req/sec**, not 2. That is wrong for the actual account.
+2. **Bulk onboarding is not actually ready**:
+   - `bulk-create-students` hard-stops at **100 students per request**
+   - it creates users **sequentially**
+   - it **does not send any onboarding email at all**
+   - the UI text saying students will receive email instructions is false today
+3. Only the test email is live-proven. The other Resend functions share the same client, but they are not all individually proven.
 
-1. **`send-test-email/index.ts` still hardcodes `onboarding@resend.dev`** as the `from`. It happened to work because Resend's sandbox is always allowed, but it's misleading — it's not actually proving the production sender works. Should be switched to `noreply@nabulearn.com`.
-2. **`request-data-restoration/index.ts` still emails the legacy `admin@meapphq.com` address** for COPPA data restoration requests. If you don't read that inbox anymore, restoration requests vanish into a black hole.
-3. **The token bucket in `resendClient.ts` is hardcoded to 2 req/sec** (the old free-tier Resend limit). The new account's actual limit may be 10 req/sec (Pro) — leaving us 5× slower than necessary under burst load.
+## Exact limits today
 
-Nothing is broken. But "perfect" it isn't.
+### Resend Free
+- **2 requests/sec**
+- **100 emails/day**
+- **3,000 emails/month**
 
----
+### Your current code
+- `sendEmail(...)`: safe ceiling should be **2 emails/sec**
+- `sendBulkEmails(...)`: can batch up to **100 recipients per API call**, so burst math looks high, but **the real blocker is still 100 total emails/day on Free**
+- `bulk-create-students`: **100 users max per request**, not hundreds
+- current import loop is **not “all at once”**; it is one user at a time inside the function
 
-### Rate limits — what we're actually constrained by
+## Exact answer to “how many users can sign on at one time?”
 
-**Resend's published limits (2026):**
-- Free: 100 emails/day, 3,000/month, **2 req/sec**
-- **Pro ($20/mo): 50,000 emails/month included, 10 req/sec**
-- Scale ($90/mo): 100,000/month, 10 req/sec
-- Enterprise: custom (millions/month, higher rps)
+The only exact code-enforced number I can prove right now is:
 
-Our `resendClient.ts` already handles the 2 req/sec ceiling with a token bucket + 429 retry + exponential backoff + bulk batching (100 messages per batch = 1 token). So under a burst we don't drop emails — we queue them in-memory and trickle them out.
+- **100 users per bulk import submission**
+- and even those 100 are **created sequentially**, not instantly
+- and they are **not fully onboarded**, because no real password-setup/invite message is sent
 
-**With bulk batching enabled**, throughput math:
-- 1 batch = 100 emails = 1 token = ~500ms
-- At 2 req/sec → **~12,000 emails/minute** sustained (already plenty)
-- At 10 req/sec (Pro) → **~60,000 emails/minute** sustained
+So the honest answer is: **right now you do not have a true whole-school bulk onboarding system**. You have a partial account-creation tool with a 100-row cap.
 
----
+## Why I recommend Lovable for onboarding right now
 
-### Email volume at 100K monthly active users
+Because your urgent problem is **mass onboarding**, and Resend Free is the wrong tool for that:
+- 100/day is a hard blocker
+- even if Resend works technically, Free is too small for a school launch
+- Lovable already has a verified sender subdomain in this project
+- Lovable’s queue-based email system is a better fit for onboarding bursts than keeping school onboarding tied to a Free-tier third-party account
 
-What actually triggers an email in this codebase, per user per month (realistic estimates):
+## What I will implement
 
-| Trigger | Edge function | Per user / month |
-|---|---|---|
-| Parent consent (COPPA, signup-only, under-13 only) | `send-parent-consent-email` | ~0.05 (one-time, ~5% of monthly cohort signing up) |
-| Substitute teacher access codes | `send-substitute-access-email` | ~0.001 (rare) |
-| Phoneme reports (teacher-initiated) | `send-phoneme-report` | ~2 (one per child every 2 weeks) |
-| Risk alerts (struggling students) | `send-risk-alerts` | ~0.5 (one per at-risk student/wk) |
-| Calendar reminders (parents) | `send-calendar-notifications` | ~4 (weekly digest) |
-| Safety alerts / drills (rare but bulk) | `send-safety-alert`, `send-drill-notification` | ~0.5 (avg 1 drill/2mo, full school blast) |
-| Emergency reports (very rare) | `report-emergency` | ~0.01 |
-| **Total per user / month** | | **~7 emails** |
+### Phase 1 — make the current system honest and safe
+1. **Fix Resend Free-tier configuration**
+   - change the token bucket back to **2 req/sec**
+2. **Fix the stale `admin@meapphq.com` log string**
+3. **Fix the misleading bulk import UI copy**
+   - remove the false promise that students already receive email instructions
 
-**At 100,000 users/month → ~700,000 emails/month**
+### Phase 2 — build real bulk onboarding
+4. **Replace the current one-shot 100-row import with chunked bulk onboarding**
+   - automatically split CSV imports into safe chunks
+   - process hundreds of rows in sequence with progress reporting
+   - keep per-row success/failure results
+   - make retries possible without duplicating already-created users
+5. **Add a real onboarding path after account creation**
+   - for users with email: send proper setup/reset instructions through Lovable Emails
+   - for student accounts where email is not the right model: support the existing Student ID flow instead of forcing email-based onboarding
+6. **Make bulk onboarding idempotent**
+   - prevent duplicate sends
+   - prevent duplicate account creation when a chunk is retried
 
-Note: Supabase Auth confirmation/password-reset emails do NOT go through this Resend account — they go through Lovable's own auth-email pipeline (or Supabase's default if not configured), so they're free and separate from this budget.
+### Phase 3 — switch the urgent onboarding traffic to Lovable
+7. **Scaffold the built-in email pipeline already available on `notify.nabulearn.com`**
+   - app email sender
+   - branded auth email hook if needed
+   - queue-backed delivery
+8. **Use that pipeline for onboarding-related emails**
+   - password setup / invite / reset style onboarding
+   - not the current Resend Free path
 
----
+### Phase 4 — keep or migrate the existing Resend functions deliberately
+9. **Leave the existing Resend school-operation emails in place short-term**
+   - phoneme reports
+   - safety alerts
+   - drill notifications
+   - substitute access
+   - restoration requests
+10. After onboarding is stable, choose one of two clean end states:
+   - **Option A: keep Resend only for those specialty emails**
+   - **Option B: migrate them to Lovable too and remove Resend completely**
 
-### Cost at 100K users
+## What this gets you
 
-| Plan | Included | Overage | Monthly cost @ 700K emails |
-|---|---|---|---|
-| Resend Pro | 50K emails | $0.40/1K | $20 + (650 × $0.40) = **$280/mo** |
-| Resend Scale | 100K emails | $1.00/1K | $90 + (600 × $1.00) = **$690/mo** ❌ worse |
-| **Resend Pro w/ negotiated overage** | 50K | typically drops to $0.10–0.20/1K at this volume | **~$85–150/mo** |
-| Resend Enterprise (annual contract) | custom | typically ~$0.05/1K all-in | **~$35–50/mo** |
+After implementation:
+- you can onboard **hundreds of users in one admin workflow**
+- you are no longer blocked by **Resend Free’s 100/day ceiling** for onboarding
+- bulk onboarding becomes a **real system**, not just account creation with missing follow-through
+- the biggest student cohort can use **Student ID onboarding** where that is the better school workflow
+- adult accounts and email-based accounts get a proper queued email setup flow
 
-**Cost per 1,000 emails: $0.40 list / $0.10–0.20 actual at scale / $0.05 enterprise.**
-**Cost per user per year: ~$0.034 list, ~$0.012 negotiated, ~$0.006 enterprise.**
+## Success criteria
 
-Against your **$5–7/student/year** revenue model, email is **0.1–0.5% of revenue.** Negligible.
+I will consider this done only when all of these are true:
+1. A CSV with **hundreds of users** can be processed in chunks without manual babysitting
+2. Every imported row gets a clear outcome: created, skipped, or failed
+3. Email-based users receive a real onboarding/setup path
+4. Student-ID-based users can sign in without depending on mass email sends
+5. Resend is no longer the gating factor for bulk school onboarding
+6. The project no longer has misleading onboarding copy or mismatched rate-limit code
 
----
+## Final recommendation
 
-### What I want to do next (3 small fixes, ~5 minutes of work)
+**Do not bet whole-school onboarding on Resend Free.**
+The brutally honest best move is:
+- **switch onboarding/auth traffic to Lovable now**
+- **keep Resend only as a temporary side system until we decide whether to fully migrate or upgrade it later**
 
-1. **Fix `send-test-email`** to use `noreply@nabulearn.com` so future tests prove the real sender works
-2. **Fix `request-data-restoration`** to email a NabuLearn-owned address (e.g. `admin@nabulearn.com` or a new `coppa@nabulearn.com`) instead of the legacy `meapphq.com` address
-3. **Bump `TOKEN_BUCKET_CAPACITY` to 10** in `resendClient.ts` once you confirm the new account is on Pro (otherwise leave at 2 — the throttle is harmless on free)
-
-After that, the system is genuinely production-ready for the pilot and scales cleanly to 100K+ users on a single Resend Pro plan.
-
-### What I am NOT doing
-- Not migrating to Lovable Emails (you explicitly chose Resend)
-- Not touching auth emails (separate pipeline, working)
-- Not touching the 7 production functions that already correctly use `*@nabulearn.com` senders
-- Not changing the bulk-batch logic (already optimal)
-
+That gives you the fastest path to onboarding a school of hundreds without hitting the wrong bottleneck.
