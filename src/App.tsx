@@ -93,6 +93,7 @@ const GameRPGDemo = lazy(() => import("./pages/game/GameRPGDemo"));
 const SchoolSetup = lazy(() => import("./pages/SchoolSetup"));
 const ScopeAndSequence = lazy(() => import("./pages/ScopeAndSequence"));
 const PhonicsFoundations = lazy(() => import("./pages/game/PhonicsFoundations"));
+const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -168,6 +169,7 @@ const App = () => (
                   <Route path="/demos/parent" element={<ParentDemo />} />
                   <Route path="/demos/admin" element={<AdminDemo />} />
                   <Route path="/pricing" element={<Pricing />} />
+                  <Route path="/unsubscribe" element={<Unsubscribe />} />
                   <Route path="/scope-and-sequence" element={<ScopeAndSequence />} />
                   <Route path="/game" element={<GameDashboard />} />
                   <Route path="/game/auth" element={<GameAuth />} />
