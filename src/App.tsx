@@ -93,6 +93,7 @@ const GameRPGDemo = lazy(() => import("./pages/game/GameRPGDemo"));
 const SchoolSetup = lazy(() => import("./pages/SchoolSetup"));
 const ScopeAndSequence = lazy(() => import("./pages/ScopeAndSequence"));
 const PhonicsFoundations = lazy(() => import("./pages/game/PhonicsFoundations"));
+const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
