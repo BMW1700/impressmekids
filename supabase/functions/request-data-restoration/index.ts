@@ -217,7 +217,7 @@ Deno.serve(async (req) => {
       if (!emailResult.success) {
         console.error('❌ Failed to send email notification:', emailResult.error);
       } else {
-        console.log('✅ Email notification sent to admin@meapphq.com (id:', emailResult.id, ')');
+        console.log('✅ Email notification sent to admin@nabulearn.com (id:', emailResult.id, ')');
       }
     } catch (emailSendError) {
       console.error('❌ Exception sending email:', emailSendError);
