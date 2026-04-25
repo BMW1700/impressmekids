@@ -572,18 +572,24 @@ export const RPGOnlinePvPBattle = ({
         (payload) => {
           const room = payload.new as any;
           const incoming = room.game_state as any;
-          if (!isValidPvPState(incoming)) return;
-          applyIncomingState('realtime', incoming, {
-            host_name: room.host_name,
-            guest_name: room.guest_name,
-            story_passage: room.story_passage,
-            world_number: room.world_number,
-          }, true);
+          // Always pull the canonical row on a table update. Depending on the
+          // realtime payload shape, JSONB game_state may be missing/truncated;
+          // the SELECT is the reliable source both devices are authorized for.
+          void rehydrateRoom(true);
+
+          if (isValidPvPState(incoming)) {
+            applyIncomingState('realtime', incoming, {
+              host_name: room.host_name,
+              guest_name: room.guest_name,
+              story_passage: room.story_passage,
+              world_number: room.world_number,
+            }, true);
+          }
         }
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [roomId, isHost, authLoading, session?.user?.id, applyIncomingState]);
+  }, [roomId, isHost, authLoading, session?.user?.id, applyIncomingState, rehydrateRoom]);
 
   // ─── Handle end ───
   useEffect(() => {
