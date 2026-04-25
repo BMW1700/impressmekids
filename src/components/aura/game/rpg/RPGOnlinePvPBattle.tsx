@@ -314,22 +314,35 @@ export const RPGOnlinePvPBattle = ({
     }, markReady);
   }, [roomId, session?.user?.id, applyIncomingState]);
 
-  // ─── Broadcast a state snapshot to the peer (no DB) ───
+  // ─── Broadcast a full state snapshot to the peer (no DB) ───
   const broadcastState = useCallback((state: OnlinePvPGameState) => {
     if (broadcastChannelRef.current) {
+      const sender = session?.user?.id ?? 'unknown';
       broadcastChannelRef.current.send({
         type: 'broadcast',
         event: 'state_update',
-        payload: { rev: state.rev, phase: state.phase, state },
+        payload: { turnRev: state.turnRev, uiRev: state.uiRev, phase: state.phase, sender, state },
       }).then((result: string) => {
         if (result !== 'ok') {
-          console.warn(`[PvP] broadcast send result: ${result} for rev=${state.rev} phase=${state.phase}`);
+          console.warn(`[PvP] broadcast send result: ${result} for turnRev=${state.turnRev} phase=${state.phase}`);
         }
       }).catch((err: any) => {
-        console.warn(`[PvP] broadcast send error for rev=${state.rev}:`, err);
+        console.warn(`[PvP] broadcast send error for turnRev=${state.turnRev}:`, err);
       });
     }
-  }, []);
+  }, [session?.user?.id]);
+
+  // ─── Lightweight reading-progress broadcast (no full state, no DB) ───
+  const broadcastReadingProgress = useCallback((uiRev: number, batchProgress: number, wordsRead: number) => {
+    if (broadcastChannelRef.current) {
+      const sender = session?.user?.id ?? 'unknown';
+      broadcastChannelRef.current.send({
+        type: 'broadcast',
+        event: 'reading_progress',
+        payload: { uiRev, batchProgress, wordsRead, sender },
+      }).catch(() => {});
+    }
+  }, [session?.user?.id]);
 
   // ═══════════════════════════════════════════════════════════════
   // AUTHORITATIVE PERSISTENCE — uses sync_multiplayer_room_state RPC
