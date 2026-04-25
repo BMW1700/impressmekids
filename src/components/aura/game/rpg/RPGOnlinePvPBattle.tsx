@@ -8,6 +8,7 @@ import { RPGParentControls, ParentAbility } from "./RPGParentControls";
 import { RPGWordReader } from "./RPGWordReader";
 import { RPGWordBarrage } from "./RPGWordBarrage";
 import { RPGFireballDefense } from "./RPGFireballDefense";
+import { RPGParentAttackVFX, abilityIdToAttackKind, ParentAttackKind } from "./RPGParentAttackVFX";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { CuratedStory } from "@/data/curatedStories";
 import { heroKnight, allyWizard } from "@/lib/rpgBattleData";
