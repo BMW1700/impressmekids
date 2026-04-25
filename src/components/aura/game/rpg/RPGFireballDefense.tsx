@@ -74,7 +74,7 @@ export const RPGFireballDefense = ({
       word,
       x: -10 - (index * 15),
       y: 20 + Math.random() * 60,
-      speed: 0.08 + Math.random() * 0.06, // Much slower so players can actually speak
+      speed: 0.05 + Math.random() * 0.04, // Even slower so parents can read AND speak the word
       size: word.length > 6 ? 'large' : word.length > 3 ? 'medium' : 'small',
       isDestroyed: false,
       isSelected: false,
@@ -280,11 +280,18 @@ export const RPGFireballDefense = ({
   }, []);
 
   const getFireballSize = (size: 'small' | 'medium' | 'large') => {
+    // Bigger boxes so the word inside is always legible to a parent reading at a distance.
     switch (size) {
-      case 'large': return 'w-20 h-20 text-sm';
-      case 'medium': return 'w-16 h-16 text-xs';
-      case 'small': return 'w-12 h-12 text-xs';
+      case 'large': return 'w-32 h-32';
+      case 'medium': return 'w-28 h-28';
+      case 'small': return 'w-24 h-24';
     }
+  };
+
+  const getFireballTextSize = (word: string) => {
+    if (word.length > 8) return 'text-base';
+    if (word.length > 5) return 'text-lg';
+    return 'text-xl';
   };
 
   const agent = isAgent();
@@ -384,12 +391,18 @@ export const RPGFireballDefense = ({
             }}
           >
             {/* Glow */}
-            <div className={`absolute inset-0 opacity-50 animate-pulse ${agent
+            <div className={`absolute inset-0 opacity-50 animate-pulse pointer-events-none ${agent
               ? 'bg-gradient-to-r from-cyan-400 to-transparent rounded-lg'
               : 'bg-gradient-to-br from-yellow-400 to-transparent rounded-full'}`} />
-            
-            {/* Word */}
-            <span className="relative z-10 font-bold text-white drop-shadow-lg text-center px-1">
+
+            {/* High-contrast word label so the parent can ALWAYS read it,
+                even while the fireball is moving. */}
+            <span
+              className={`relative z-10 font-black text-white text-center px-2 py-1 rounded-md
+                bg-black/70 ring-1 ring-white/50 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]
+                ${getFireballTextSize(fireball.word)}`}
+              style={{ textShadow: '0 1px 2px rgba(0,0,0,0.95), 0 0 4px rgba(0,0,0,0.9)' }}
+            >
               {fireball.word}
             </span>
           </motion.button>

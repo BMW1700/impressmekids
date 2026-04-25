@@ -8,6 +8,7 @@ import { RPGParentControls, ParentAbility } from "./RPGParentControls";
 import { RPGWordReader } from "./RPGWordReader";
 import { RPGWordBarrage } from "./RPGWordBarrage";
 import { RPGFireballDefense } from "./RPGFireballDefense";
+import { RPGParentAttackVFX, abilityIdToAttackKind, ParentAttackKind } from "./RPGParentAttackVFX";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { CuratedStory } from "@/data/curatedStories";
 import { heroKnight, allyWizard } from "@/lib/rpgBattleData";
@@ -70,6 +71,8 @@ export const RPGOnlinePvPBattle = ({
   const [roomWorldNumber, setRoomWorldNumber] = useState(worldNumber);
   const [initError, setInitError] = useState<string | null>(null);
   const [eventFlash, setEventFlash] = useState<string | null>(null);
+  const [attackVfx, setAttackVfx] = useState<{ kind: ParentAttackKind; key: number } | null>(null);
+  const lastVfxTimestampRef = useRef<number>(0);
 
   // ─── Elara charge counter ───
   const [elaraCharge, setElaraCharge] = useState(0);
@@ -541,6 +544,22 @@ export const RPGOnlinePvPBattle = ({
     }
   }, [gs.phase, ready, endPhase, isHost]);
 
+  // ─── Trigger parent attack VFX whenever a NEW ability event arrives (local OR remote) ───
+  useEffect(() => {
+    const ev = gs.lastEvent;
+    if (!ev || ev.type !== 'ability' || ev.by !== 'guest') return;
+    if (!ev.timestamp || ev.timestamp <= lastVfxTimestampRef.current) return;
+    // Only fire when the ability has actually resolved (damage event), not on the
+    // intermediate "📖 Read the word" prompt or the "🎮 mini-game!" announcement.
+    const isResolution =
+      typeof ev.damage === 'number' && ev.damage > 0 &&
+      gsRef.current.phase !== 'parent_reading' &&
+      gsRef.current.phase !== 'mini_game';
+    if (!isResolution) return;
+    lastVfxTimestampRef.current = ev.timestamp;
+    setAttackVfx({ kind: abilityIdToAttackKind(ev.abilityId), key: ev.timestamp });
+  }, [gs.lastEvent]);
+
   // ─── Kid reads a word — Elara 5-word charge + plasma barrage mechanic ───
   const handleKidWordResult = useCallback((correct: boolean, _spokenWord: string, _wordIndex: number) => {
     if (!isHost) return;
@@ -611,17 +630,17 @@ export const RPGOnlinePvPBattle = ({
     if (ability.type === 'minigame' && ability.miniGame) {
       s.activeMiniGame = ability.miniGame;
       s.phase = 'mini_game';
-      s.lastEvent = { type: 'ability', by: 'guest', message: `🎮 ${ability.name}!`, timestamp: Date.now() };
+      s.lastEvent = { type: 'ability', by: 'guest', abilityId: ability.id, message: `🎮 ${ability.name}!`, timestamp: Date.now() };
       if (ability.cooldown > 0) s.cooldowns = { ...s.cooldowns, [ability.id]: ability.cooldown };
     } else if (ability.requiresReading) {
       s.pendingAbility = { id: ability.id, name: ability.name, damage: ability.damage, requiresReading: true, cooldown: ability.cooldown };
       s.pendingReadWord = storyWords[Math.floor(Math.random() * storyWords.length)];
       s.phase = 'parent_reading';
-      s.lastEvent = { type: 'ability', by: 'guest', message: `📖 Read the word for bonus damage!`, timestamp: Date.now() };
+      s.lastEvent = { type: 'ability', by: 'guest', abilityId: ability.id, message: `📖 Read the word for bonus damage!`, timestamp: Date.now() };
     } else {
       const damage = ability.damage;
       s.hostHp = Math.max(0, s.hostHp - damage);
-      s.lastEvent = { type: 'ability', damage, by: 'guest', message: `💥 ${guestName} uses ${ability.name} for ${damage} damage!`, timestamp: Date.now() };
+      s.lastEvent = { type: 'ability', damage, by: 'guest', abilityId: ability.id, message: `💥 ${guestName} uses ${ability.name} for ${damage} damage!`, timestamp: Date.now() };
       if (ability.cooldown > 0) s.cooldowns = { ...s.cooldowns, [ability.id]: ability.cooldown };
       if (s.hostHp <= 0) {
         s.phase = 'guest_wins';
@@ -652,7 +671,7 @@ export const RPGOnlinePvPBattle = ({
     if (ability.cooldown > 0) s.cooldowns = { ...s.cooldowns, [ability.id]: ability.cooldown };
     s.pendingAbility = null;
     s.pendingReadWord = null;
-    s.lastEvent = { type: 'ability', damage, by: 'guest', message: msg, timestamp: Date.now() };
+    s.lastEvent = { type: 'ability', damage, by: 'guest', abilityId: ability.id, message: msg, timestamp: Date.now() };
 
     if (s.hostHp <= 0) { s.phase = 'guest_wins'; }
     else { s.turn = 'host'; s.phase = 'kid_turn'; s.batchProgress = 0; s.turnCount += 1; }
@@ -689,6 +708,13 @@ export const RPGOnlinePvPBattle = ({
       className="fixed inset-0 z-50 bg-gradient-to-b from-slate-900 to-slate-950 overflow-hidden"
     >
       <RPGBattleBackground worldNumber={roomWorldNumber} />
+
+      {/* Parent attack VFX overlay — fires for both peers when an ability resolves */}
+      <RPGParentAttackVFX
+        kind={attackVfx?.kind ?? null}
+        fireKey={attackVfx?.key ?? 0}
+        onDone={() => setAttackVfx(null)}
+      />
 
       {/* Top bar */}
       <div className="absolute top-3 left-3 z-[80]">

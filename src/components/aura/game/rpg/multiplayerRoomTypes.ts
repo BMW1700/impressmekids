@@ -55,7 +55,7 @@ export interface OnlinePvPGameState {
   pendingAbility?: { id: string; name: string; damage: number; requiresReading: boolean; cooldown: number } | null;
   pendingReadWord?: string | null;
   activeMiniGame?: string | null;
-  lastEvent?: { type: string; damage?: number; by: string; message?: string; timestamp: number } | null;
+  lastEvent?: { type: string; damage?: number; by: string; message?: string; abilityId?: string; timestamp: number } | null;
   turnCount: number;
 }
 
