@@ -74,7 +74,7 @@ export const RPGFireballDefense = ({
       word,
       x: -10 - (index * 15),
       y: 20 + Math.random() * 60,
-      speed: 0.08 + Math.random() * 0.06, // Much slower so players can actually speak
+      speed: 0.05 + Math.random() * 0.04, // Even slower so parents can read AND speak the word
       size: word.length > 6 ? 'large' : word.length > 3 ? 'medium' : 'small',
       isDestroyed: false,
       isSelected: false,
