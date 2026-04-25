@@ -652,7 +652,7 @@ export const RPGOnlinePvPBattle = ({
     if (ability.cooldown > 0) s.cooldowns = { ...s.cooldowns, [ability.id]: ability.cooldown };
     s.pendingAbility = null;
     s.pendingReadWord = null;
-    s.lastEvent = { type: 'ability', damage, by: 'guest', message: msg, timestamp: Date.now() };
+    s.lastEvent = { type: 'ability', damage, by: 'guest', abilityId: ability.id, message: msg, timestamp: Date.now() };
 
     if (s.hostHp <= 0) { s.phase = 'guest_wins'; }
     else { s.turn = 'host'; s.phase = 'kid_turn'; s.batchProgress = 0; s.turnCount += 1; }
