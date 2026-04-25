@@ -37,7 +37,9 @@ export const MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS = [
 
 /** PvP game state stored in game_state column */
 export interface OnlinePvPGameState {
-  rev: number; // monotonic revision counter
+  rev: number; // DEPRECATED: kept for backward compat — mirrors turnRev
+  turnRev: number; // monotonic, ONLY incremented on real turn/HP/phase changes — written to DB
+  uiRev: number; // ephemeral, incremented on word-reading ticks — broadcast only, never persisted
   hostHp: number;
   guestHp: number;
   turn: 'host' | 'guest';
