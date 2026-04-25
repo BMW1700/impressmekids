@@ -162,18 +162,37 @@ export const RPGOnlinePvPBattle = ({
     const incomingRev = normalized.rev ?? 0;
     const battleReady = readyRef.current;
 
+    const local = gsRef.current;
+    const localEventTs = local.lastEvent?.timestamp ?? 0;
+    const incomingEventTs = normalized.lastEvent?.timestamp ?? 0;
+    const peerActor = isHost ? 'guest' : 'host';
+    const isFreshPeerEvent = normalized.lastEvent?.by === peerActor && incomingEventTs > localEventTs;
+    const hasAuthoritativeDiff =
+      normalized.phase !== local.phase ||
+      normalized.turn !== local.turn ||
+      normalized.wordIndex !== local.wordIndex ||
+      normalized.hostHp !== local.hostHp ||
+      normalized.guestHp !== local.guestHp ||
+      normalized.turnCount !== local.turnCount;
+
     if (battleReady && incomingRev < currentRev) {
-      console.warn(`[PvP] applyIncoming(${source}): REJECTED rev=${incomingRev} < local=${currentRev} (phase=${normalized.phase}, turn=${normalized.turn})`);
-      return false;
+      // Rev can legitimately go "backwards" when this device has broadcast-only
+      // local progress that was never persisted, then the peer commits the next
+      // authoritative turn/damage state from the DB. Do NOT drop fresh peer events.
+      if (!isFreshPeerEvent || !hasAuthoritativeDiff) {
+        console.warn(`[PvP] applyIncoming(${source}): REJECTED rev=${incomingRev} < local=${currentRev} (phase=${normalized.phase}, turn=${normalized.turn})`);
+        return false;
+      }
+      console.warn(`[PvP] applyIncoming(${source}): ACCEPTED lower-rev fresh peer event rev=${incomingRev} < local=${currentRev} by=${normalized.lastEvent?.by}`);
     }
 
     if (battleReady && incomingRev === currentRev) {
-      const samePhase = normalized.phase === gsRef.current.phase;
-      const sameTurn = normalized.turn === gsRef.current.turn;
-      const sameWordIndex = normalized.wordIndex === gsRef.current.wordIndex;
-      const sameHp = normalized.hostHp === gsRef.current.hostHp && normalized.guestHp === gsRef.current.guestHp;
-      const sameProgress = normalized.batchProgress === gsRef.current.batchProgress && normalized.turnCount === gsRef.current.turnCount;
-      const sameEvent = (normalized.lastEvent?.timestamp ?? 0) === (gsRef.current.lastEvent?.timestamp ?? 0);
+      const samePhase = normalized.phase === local.phase;
+      const sameTurn = normalized.turn === local.turn;
+      const sameWordIndex = normalized.wordIndex === local.wordIndex;
+      const sameHp = normalized.hostHp === local.hostHp && normalized.guestHp === local.guestHp;
+      const sameProgress = normalized.batchProgress === local.batchProgress && normalized.turnCount === local.turnCount;
+      const sameEvent = (normalized.lastEvent?.timestamp ?? 0) === (local.lastEvent?.timestamp ?? 0);
       // Echo of our own write — skip silently to avoid render thrash.
       if (samePhase && sameTurn && sameWordIndex && sameHp && sameProgress && sameEvent) {
         return false;
@@ -427,9 +446,12 @@ export const RPGOnlinePvPBattle = ({
       const payload = msg.payload as any;
       if (payload?.state && isValidPvPState(payload.state)) {
         applyIncomingState('broadcast', payload.state as OnlinePvPGameState, undefined, true);
+        // Broadcast is fast but not authoritative; immediately pull the saved
+        // room too so parent→student writes cannot be lost behind local state.
+        void rehydrateRoom(true);
       } else {
         console.log('[PvP] Broadcast signal received (no inline state), rehydrating from DB...');
-        await rehydrateRoom();
+        await rehydrateRoom(true);
       }
     });
 
@@ -550,18 +572,24 @@ export const RPGOnlinePvPBattle = ({
         (payload) => {
           const room = payload.new as any;
           const incoming = room.game_state as any;
-          if (!isValidPvPState(incoming)) return;
-          applyIncomingState('realtime', incoming, {
-            host_name: room.host_name,
-            guest_name: room.guest_name,
-            story_passage: room.story_passage,
-            world_number: room.world_number,
-          }, true);
+          // Always pull the canonical row on a table update. Depending on the
+          // realtime payload shape, JSONB game_state may be missing/truncated;
+          // the SELECT is the reliable source both devices are authorized for.
+          void rehydrateRoom(true);
+
+          if (isValidPvPState(incoming)) {
+            applyIncomingState('realtime', incoming, {
+              host_name: room.host_name,
+              guest_name: room.guest_name,
+              story_passage: room.story_passage,
+              world_number: room.world_number,
+            }, true);
+          }
         }
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [roomId, isHost, authLoading, session?.user?.id, applyIncomingState]);
+  }, [roomId, isHost, authLoading, session?.user?.id, applyIncomingState, rehydrateRoom]);
 
   // ─── Handle end ───
   useEffect(() => {
