@@ -14,6 +14,7 @@ import { getAgentEnemy } from "@/lib/agentBattleData";
 import { supabase } from "@/integrations/supabase/client";
 import { LongLoadNotice } from "@/components/system/LongLoadNotice";
 import { useAuth } from "@/contexts/AuthContext";
+import { MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS, MultiplayerRoomSnapshot } from "./multiplayerRoomTypes";
 
 const battleSounds = new SoundEffects();
 const POLL_MS = 2000;
@@ -32,6 +33,7 @@ interface RPGOnlineCoopBattleProps {
   studentId: string;
   roomId: string;
   isHost: boolean;
+  initialRoomSnapshot?: MultiplayerRoomSnapshot | null;
   worldNumber?: number;
   onBack: () => void;
   onComplete: (victory: boolean, stats: BattleStats) => void;
@@ -67,6 +69,7 @@ export const RPGOnlineCoopBattle = ({
   studentId,
   roomId,
   isHost,
+  initialRoomSnapshot = null,
   worldNumber = 1,
   onBack,
   onComplete,
