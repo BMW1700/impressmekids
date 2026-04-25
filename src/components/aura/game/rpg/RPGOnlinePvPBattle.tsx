@@ -581,6 +581,38 @@ export const RPGOnlinePvPBattle = ({
     setAttackVfx({ kind: abilityIdToAttackKind(ev.abilityId), key: ev.timestamp });
   }, [gs.lastEvent]);
 
+  // ─── Visible HP-change feedback on both clients ───
+  useEffect(() => {
+    if (!ready) {
+      lastHpRef.current = { hostHp: gs.hostHp, guestHp: gs.guestHp };
+      return;
+    }
+
+    const previous = lastHpRef.current;
+    const hostDamage = Math.max(0, previous.hostHp - gs.hostHp);
+    const guestDamage = Math.max(0, previous.guestHp - gs.guestHp);
+
+    if (hostDamage > 0) {
+      setHeroTakingDamage(true);
+      setFloatingDamages(prev => [...prev, { id: Date.now(), damage: hostDamage, target: 'host' }]);
+      setTimeout(() => setHeroTakingDamage(false), 650);
+    }
+
+    if (guestDamage > 0) {
+      setVillainTakingDamage(true);
+      setFloatingDamages(prev => [...prev, { id: Date.now() + 1, damage: guestDamage, target: 'guest' }]);
+      setTimeout(() => setVillainTakingDamage(false), 650);
+    }
+
+    if (hostDamage > 0 || guestDamage > 0) {
+      setTimeout(() => {
+        setFloatingDamages(prev => prev.filter(item => item.id !== floatingDamages[0]?.id));
+      }, 1200);
+    }
+
+    lastHpRef.current = { hostHp: gs.hostHp, guestHp: gs.guestHp };
+  }, [ready, gs.hostHp, gs.guestHp]);
+
   // ─── Kid reads a word — Elara 5-word charge + plasma barrage mechanic ───
   const handleKidWordResult = useCallback((correct: boolean, _spokenWord: string, _wordIndex: number) => {
     if (!isHost) return;
@@ -621,7 +653,15 @@ export const RPGOnlinePvPBattle = ({
       }
     } else {
       s.hostStreak = 0;
+      s.hostHp = Math.max(0, s.hostHp - STUDENT_MISS_DAMAGE);
+      s.lastEvent = { type: 'mistake', damage: STUDENT_MISS_DAMAGE, by: 'host', message: `💥 Missed word — ${hostName} takes ${STUDENT_MISS_DAMAGE} damage!`, timestamp: Date.now() };
       setElaraCharge(0);
+
+      if (s.hostHp <= 0) {
+        s.phase = 'guest_wins';
+        commitAndPersist(s);
+        return;
+      }
     }
 
     // Check if this 5-word batch is done → turn switch = persist to DB
