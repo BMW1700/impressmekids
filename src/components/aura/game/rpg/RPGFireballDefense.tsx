@@ -391,12 +391,18 @@ export const RPGFireballDefense = ({
             }}
           >
             {/* Glow */}
-            <div className={`absolute inset-0 opacity-50 animate-pulse ${agent
+            <div className={`absolute inset-0 opacity-50 animate-pulse pointer-events-none ${agent
               ? 'bg-gradient-to-r from-cyan-400 to-transparent rounded-lg'
               : 'bg-gradient-to-br from-yellow-400 to-transparent rounded-full'}`} />
-            
-            {/* Word */}
-            <span className="relative z-10 font-bold text-white drop-shadow-lg text-center px-1">
+
+            {/* High-contrast word label so the parent can ALWAYS read it,
+                even while the fireball is moving. */}
+            <span
+              className={`relative z-10 font-black text-white text-center px-2 py-1 rounded-md
+                bg-black/70 ring-1 ring-white/50 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]
+                ${getFireballTextSize(fireball.word)}`}
+              style={{ textShadow: '0 1px 2px rgba(0,0,0,0.95), 0 0 4px rgba(0,0,0,0.9)' }}
+            >
               {fireball.word}
             </span>
           </motion.button>
