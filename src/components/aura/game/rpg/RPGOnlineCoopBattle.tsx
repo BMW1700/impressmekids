@@ -387,6 +387,21 @@ export const RPGOnlineCoopBattle = ({
     };
 
     const init = async () => {
+      // 1) Try the snapshot the lobby handed us first — instant ready, no network round-trip.
+      if (initialRoomSnapshot) {
+        const incoming = (initialRoomSnapshot as any).game_state;
+        if (isValidCoopState(incoming)) {
+          const accepted = applyIncomingState('snapshot', incoming, {
+            host_name: initialRoomSnapshot.host_name,
+            guest_name: initialRoomSnapshot.guest_name,
+            story_passage: initialRoomSnapshot.story_passage,
+            world_number: initialRoomSnapshot.world_number,
+            enemy_type: initialRoomSnapshot.enemy_type,
+          }, true);
+          if (accepted) return;
+        }
+      }
+
       const loaded = await hydrateRoom();
       if (loaded || cancelled) return;
 
@@ -412,7 +427,7 @@ export const RPGOnlineCoopBattle = ({
       cancelled = true;
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [roomId, isHost, authLoading, session?.user?.id]);
+  }, [roomId, isHost, authLoading, session?.user?.id, initialRoomSnapshot, applyIncomingState, rehydrateRoom]);
 
   // ─── Continuous reconciliation poll ───
   useEffect(() => {
