@@ -1,125 +1,62 @@
+Brutally honest audit result: I found a concrete bug that explains the screenshot.
 
-## Recommendation right now
+The online PvP battle is getting a valid room snapshot, but `RPGOnlinePvPBattle` rejects it because the incoming room state is `rev: 0` and matches the component’s local default `rev: 0` placeholder. The code treats that as an echo and returns before setting `ready = true`, so both sides can sit forever on `Loading battle...` even though the backend room is active.
 
-Use a **hybrid fix immediately**:
-- **Lovable Emails for onboarding/auth emails**
-- **Keep Resend temporarily for the existing specialized school emails until each one is verified or migrated**
+Plan to fix multiplayer battles:
 
-That is the brutally honest best move for your current need: **bulk onboarding a whole school without getting blocked by Resend Free**.
+1. Fix the PvP loading deadlock
+   - Update `src/components/aura/game/rpg/RPGOnlinePvPBattle.tsx` so initial snapshots and hydration polls are accepted when the battle is not ready yet.
+   - Do not let the equal-revision “echo guard” reject a valid first room snapshot.
+   - Ensure room metadata like player names, story passage, and world number is applied during initial hydration even when `rev` is unchanged.
 
-## Brutally honest status right now
+2. Harden PvP state sync after loading
+   - Keep the stale-revision protection, but make it distinguish between:
+     - a harmless echo after the battle is already ready
+     - a real initial hydration snapshot that must be accepted
+     - a peer state update that should be accepted
+   - Make `highestSeenRevRef` initialize correctly from snapshots so later local commits do not collide with peer revisions.
+   - Add safer logging around rejected snapshots so future sync failures are diagnosable instead of silently hanging.
 
-### What is proven working
-- `send-test-email` works to a real Gmail inbox from `noreply@nabulearn.com`
-- `nabulearn.com` works on Resend
-- `notify.nabulearn.com` is also already verified for Lovable Emails
+3. Fix Co-op parity issues while in the same multiplayer system
+   - Pass the lobby’s initial room snapshot into `RPGOnlineCoopBattle` the same way PvP does, instead of forcing Co-op to depend only on a database rehydrate after mount.
+   - Add a shared snapshot accept path for Co-op so host and guest enter the setup/battle screen deterministically.
+   - Preserve selected story, world, and enemy metadata from the room snapshot.
 
-### What is not “perfect”
-1. **Resend is on the Free plan**, but `_shared/resendClient.ts` is currently coded for **10 req/sec**, not 2. That is wrong for the actual account.
-2. **Bulk onboarding is not actually ready**:
-   - `bulk-create-students` hard-stops at **100 students per request**
-   - it creates users **sequentially**
-   - it **does not send any onboarding email at all**
-   - the UI text saying students will receive email instructions is false today
-3. Only the test email is live-proven. The other Resend functions share the same client, but they are not all individually proven.
+4. Clean up lobby handoff reliability
+   - In `RPGMultiplayerLobby.tsx`, return the full inserted room snapshot immediately after room creation instead of only selecting `id`.
+   - Keep the host waiting screen, but make the transition to battle always carry a full valid snapshot once the guest joins.
+   - Improve join/create errors so auth or room lookup failures show a useful message rather than dumping the player into a broken battle.
 
-## Exact limits today
+5. Verify the backend access path
+   - Confirm the current `multiplayer_rooms` policies and `sync_multiplayer_room_state` function allow:
+     - host creates room
+     - guest finds waiting room by code
+     - guest joins room
+     - both participants read active room
+     - both participants persist turn/phase changes
+   - If the policies are contributing to sync failures, create a targeted migration to normalize the duplicate/overlapping policies without weakening room privacy.
 
-### Resend Free
-- **2 requests/sec**
-- **100 emails/day**
-- **3,000 emails/month**
+6. Run validation
+   - Run TypeScript/build checks.
+   - Verify the state machine paths in code for:
+     - host creates PvP room
+     - guest joins PvP room
+     - both devices leave `Loading battle...`
+     - student reads a 5-word batch
+     - turn switches to parent/guest
+     - parent ability returns turn to student
+     - Co-op host/guest setup loads
+     - Co-op turn switch after 5 words
 
-### Your current code
-- `sendEmail(...)`: safe ceiling should be **2 emails/sec**
-- `sendBulkEmails(...)`: can batch up to **100 recipients per API call**, so burst math looks high, but **the real blocker is still 100 total emails/day on Free**
-- `bulk-create-students`: **100 users max per request**, not hundreds
-- current import loop is **not “all at once”**; it is one user at a time inside the function
+Primary files to change:
+- `src/components/aura/game/rpg/RPGOnlinePvPBattle.tsx`
+- `src/components/aura/game/rpg/RPGOnlineCoopBattle.tsx`
+- `src/components/aura/game/rpg/RPGMultiplayerLobby.tsx`
+- `src/components/aura/game/rpg/RPGBattleArena.tsx`
+- Possibly one database migration only if the policy audit shows backend access is also blocking active-room sync.
 
-## Exact answer to “how many users can sign on at one time?”
-
-The only exact code-enforced number I can prove right now is:
-
-- **100 users per bulk import submission**
-- and even those 100 are **created sequentially**, not instantly
-- and they are **not fully onboarded**, because no real password-setup/invite message is sent
-
-So the honest answer is: **right now you do not have a true whole-school bulk onboarding system**. You have a partial account-creation tool with a 100-row cap.
-
-## Why I recommend Lovable for onboarding right now
-
-Because your urgent problem is **mass onboarding**, and Resend Free is the wrong tool for that:
-- 100/day is a hard blocker
-- even if Resend works technically, Free is too small for a school launch
-- Lovable already has a verified sender subdomain in this project
-- Lovable’s queue-based email system is a better fit for onboarding bursts than keeping school onboarding tied to a Free-tier third-party account
-
-## What I will implement
-
-### Phase 1 — make the current system honest and safe
-1. **Fix Resend Free-tier configuration**
-   - change the token bucket back to **2 req/sec**
-2. **Fix the stale `admin@meapphq.com` log string**
-3. **Fix the misleading bulk import UI copy**
-   - remove the false promise that students already receive email instructions
-
-### Phase 2 — build real bulk onboarding
-4. **Replace the current one-shot 100-row import with chunked bulk onboarding**
-   - automatically split CSV imports into safe chunks
-   - process hundreds of rows in sequence with progress reporting
-   - keep per-row success/failure results
-   - make retries possible without duplicating already-created users
-5. **Add a real onboarding path after account creation**
-   - for users with email: send proper setup/reset instructions through Lovable Emails
-   - for student accounts where email is not the right model: support the existing Student ID flow instead of forcing email-based onboarding
-6. **Make bulk onboarding idempotent**
-   - prevent duplicate sends
-   - prevent duplicate account creation when a chunk is retried
-
-### Phase 3 — switch the urgent onboarding traffic to Lovable
-7. **Scaffold the built-in email pipeline already available on `notify.nabulearn.com`**
-   - app email sender
-   - branded auth email hook if needed
-   - queue-backed delivery
-8. **Use that pipeline for onboarding-related emails**
-   - password setup / invite / reset style onboarding
-   - not the current Resend Free path
-
-### Phase 4 — keep or migrate the existing Resend functions deliberately
-9. **Leave the existing Resend school-operation emails in place short-term**
-   - phoneme reports
-   - safety alerts
-   - drill notifications
-   - substitute access
-   - restoration requests
-10. After onboarding is stable, choose one of two clean end states:
-   - **Option A: keep Resend only for those specialty emails**
-   - **Option B: migrate them to Lovable too and remove Resend completely**
-
-## What this gets you
-
-After implementation:
-- you can onboard **hundreds of users in one admin workflow**
-- you are no longer blocked by **Resend Free’s 100/day ceiling** for onboarding
-- bulk onboarding becomes a **real system**, not just account creation with missing follow-through
-- the biggest student cohort can use **Student ID onboarding** where that is the better school workflow
-- adult accounts and email-based accounts get a proper queued email setup flow
-
-## Success criteria
-
-I will consider this done only when all of these are true:
-1. A CSV with **hundreds of users** can be processed in chunks without manual babysitting
-2. Every imported row gets a clear outcome: created, skipped, or failed
-3. Email-based users receive a real onboarding/setup path
-4. Student-ID-based users can sign in without depending on mass email sends
-5. Resend is no longer the gating factor for bulk school onboarding
-6. The project no longer has misleading onboarding copy or mismatched rate-limit code
-
-## Final recommendation
-
-**Do not bet whole-school onboarding on Resend Free.**
-The brutally honest best move is:
-- **switch onboarding/auth traffic to Lovable now**
-- **keep Resend only as a temporary side system until we decide whether to fully migrate or upgrade it later**
-
-That gives you the fastest path to onboarding a school of hundreds without hitting the wrong bottleneck.
+Expected outcome:
+- The current `Loading battle... / battle couldn't sync` failure should be fixed.
+- Online PvP should reliably enter the battle screen on both student and parent/teacher devices.
+- Turns should sync through the full 5-word student batch and parent attack cycle.
+- Online Co-op should use the same hardened snapshot handoff pattern instead of depending on a fragile post-mount rehydrate.
