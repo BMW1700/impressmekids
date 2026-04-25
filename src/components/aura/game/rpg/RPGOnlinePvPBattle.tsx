@@ -287,19 +287,10 @@ export const RPGOnlinePvPBattle = ({
   const persistState = useCallback(async (newState: OnlinePvPGameState): Promise<boolean> => {
     const status = (newState.phase === 'host_wins' || newState.phase === 'guest_wins') ? 'completed' : 'active';
 
+    // Try RPC first
     try {
-      // Ensure valid session
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData?.session) {
-        const { error: refreshErr } = await supabase.auth.refreshSession();
-        if (refreshErr) {
-          console.error('[PvP] persistState: Session refresh failed:', refreshErr.message);
-          return false;
-        }
-      }
-
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeoutId = setTimeout(() => controller.abort(), PERSIST_TIMEOUT_MS);
 
       const { data, error } = await supabase
         .rpc('sync_multiplayer_room_state', {
@@ -311,28 +302,38 @@ export const RPGOnlinePvPBattle = ({
 
       clearTimeout(timeoutId);
 
+      if (!error && data && (!Array.isArray(data) || data.length > 0)) {
+        console.log(`[PvP] persistState OK rev=${newState.rev} phase=${newState.phase} turn=${newState.turn}`);
+        return true;
+      }
+
       if (error) {
-        console.error('[PvP] persistState RPC error:', error.message, error.code);
-        // If auth error, try session refresh
-        if (error.message?.includes('Authentication') || error.code === 'PGRST301') {
-          await supabase.auth.refreshSession();
-        }
-        return false;
+        console.warn('[PvP] persistState RPC error, trying direct UPDATE fallback:', error.message);
+      } else {
+        console.warn('[PvP] persistState RPC returned no rows, trying direct UPDATE fallback');
       }
-
-      if (!data || (Array.isArray(data) && data.length === 0)) {
-        console.warn('[PvP] persistState RPC returned no rows');
-        return false;
-      }
-
-      console.log(`[PvP] persistState OK rev=${newState.rev} phase=${newState.phase} turn=${newState.turn}`);
-      return true;
     } catch (e: any) {
       if (e?.name === 'AbortError') {
-        console.warn('[PvP] persistState timed out (5s) rev=', newState.rev);
+        console.warn('[PvP] persistState RPC timed out, trying direct UPDATE fallback');
       } else {
-        console.error('[PvP] persistState exception:', e);
+        console.warn('[PvP] persistState RPC exception, trying direct UPDATE fallback:', e?.message);
       }
+    }
+
+    // Fallback: direct UPDATE (the participants UPDATE policy permits this)
+    try {
+      const { error: updErr } = await supabase
+        .from('multiplayer_rooms')
+        .update({ game_state: newState as any, status, updated_at: new Date().toISOString() })
+        .eq('id', roomId);
+      if (updErr) {
+        console.error('[PvP] persistState fallback UPDATE failed:', updErr.message);
+        return false;
+      }
+      console.log(`[PvP] persistState fallback UPDATE OK rev=${newState.rev} phase=${newState.phase}`);
+      return true;
+    } catch (e: any) {
+      console.error('[PvP] persistState fallback exception:', e);
       return false;
     }
   }, [roomId]);
@@ -403,12 +404,12 @@ export const RPGOnlinePvPBattle = ({
       setTimeout(() => setEventFlash(null), 2000);
     }
 
-    // Double-broadcast after 300ms for critical turn switches as insurance
+    // Aggressive re-broadcast schedule for critical phase transitions to defeat packet loss
     if (withRev.phase === 'kid_turn' || withRev.phase === 'parent_turn' ||
         withRev.phase === 'host_wins' || withRev.phase === 'guest_wins') {
-      setTimeout(() => {
-        broadcastState(withRev);
-      }, 300);
+      setTimeout(() => broadcastState(withRev), 150);
+      setTimeout(() => broadcastState(withRev), 500);
+      setTimeout(() => broadcastState(withRev), 1200);
     }
   }, [enqueueStatePersist, broadcastState]);
 
