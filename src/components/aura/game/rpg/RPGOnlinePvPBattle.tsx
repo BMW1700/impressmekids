@@ -89,9 +89,11 @@ export const RPGOnlinePvPBattle = ({
   const hydrateAttemptsRef = useRef(0);
   const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const lastHpRef = useRef({ hostHp: INITIAL_PVP_STATE.hostHp, guestHp: INITIAL_PVP_STATE.guestHp });
-  // Highest rev observed from ANY source (local commit OR peer broadcast/realtime/poll).
-  // Local commits MUST increment past this — prevents rev collision when both peers commit near-simultaneously.
-  const highestSeenRevRef = useRef(0);
+  // Highest turnRev observed from any source. Local turn commits MUST leap past this.
+  // ONLY tracks turnRev — uiRev is ephemeral and never participates in conflict resolution.
+  const highestSeenTurnRevRef = useRef(0);
+  // Track last broadcast we processed for dedupe (sender + turnRev + uiRev)
+  const lastBroadcastSigRef = useRef<string>('');
 
   // ─── Coalescing writer state ───
   const pendingWriteRef = useRef<OnlinePvPGameState | null>(null);
