@@ -501,17 +501,43 @@ export const RPGOnlinePvPBattle = ({
     return () => clearInterval(interval);
   }, [ready, roomId, authLoading, session?.user?.id, rehydrateRoom]);
 
-  // Aggressive recovery while one side is waiting on the parent/mini-game device.
-  // This fixes the exact stale-host case where the DB has already returned to kid_turn,
-  // but the student browser is still showing "choosing an attack".
+  // Aggressive recovery whenever the LOCAL device is "waiting" on the peer.
+  // Runs on BOTH host (waiting during parent_turn/parent_reading/mini_game)
+  // AND guest (waiting during kid_turn) so neither screen can fall behind.
   useEffect(() => {
-    if (!ready || authLoading || !session?.user?.id || !isHost) return;
-    if (gs.phase !== 'parent_turn' && gs.phase !== 'parent_reading' && gs.phase !== 'mini_game') return;
+    if (!ready || authLoading || !session?.user?.id) return;
+    const waitingForPeer =
+      (isHost && (gs.phase === 'parent_turn' || gs.phase === 'parent_reading' || gs.phase === 'mini_game')) ||
+      (!isHost && gs.phase === 'kid_turn');
+    if (!waitingForPeer) return;
+    // Immediate rehydrate on entering wait state
+    void rehydrateRoom();
     const interval = setInterval(async () => {
       await rehydrateRoom();
     }, WAITING_RECOVERY_POLL_MS);
     return () => clearInterval(interval);
   }, [ready, authLoading, session?.user?.id, isHost, gs.phase, rehydrateRoom]);
+
+  // ─── Force rehydrate on tab visibility / window focus to recover from background throttling ───
+  useEffect(() => {
+    if (!ready || authLoading || !session?.user?.id) return;
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[PvP] Tab visible — forcing rehydrate');
+        void rehydrateRoom();
+      }
+    };
+    const onFocus = () => {
+      console.log('[PvP] Window focused — forcing rehydrate');
+      void rehydrateRoom();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [ready, authLoading, session?.user?.id, rehydrateRoom]);
 
   // ─── Realtime postgres_changes subscription (kept as fallback) ───
   useEffect(() => {
