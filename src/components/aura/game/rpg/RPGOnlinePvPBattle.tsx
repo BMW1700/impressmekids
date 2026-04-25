@@ -675,6 +675,8 @@ export const RPGOnlinePvPBattle = ({
       s.lastEvent = { type: 'turn_switch', by: 'host', message: `🔴 ${guestName}'s Turn!`, timestamp: Date.now() };
       setElaraCharge(0);
       commitAndPersist(s);
+    } else if (!correct) {
+      commitAndPersist(s);
     } else {
       commitLocal(s);
     }
@@ -743,12 +745,13 @@ export const RPGOnlinePvPBattle = ({
     if (myRole !== 'parent') return;
     if (gsRef.current.phase !== 'mini_game') return;
     const s = { ...gsRef.current };
+    const abilityId = s.activeMiniGame;
     const kidDamage = failed * 5;
     const bonusDamage = completed * 3;
     if (kidDamage > 0) s.hostHp = Math.max(0, s.hostHp - kidDamage);
     if (bonusDamage > 0) s.guestHp = Math.max(0, s.guestHp - bonusDamage);
     s.activeMiniGame = null;
-    s.lastEvent = { type: 'mini_game_end', by: 'guest', message: `🎮 Mini-game done! ${completed} caught, ${failed} missed`, timestamp: Date.now() };
+    s.lastEvent = { type: 'ability', damage: kidDamage, by: 'guest', abilityId: abilityId ?? undefined, message: `🎮 Mini-game done! ${completed} caught, ${failed} missed`, timestamp: Date.now() };
 
     if (s.hostHp <= 0) { s.phase = 'guest_wins'; }
     else if (s.guestHp <= 0) { s.phase = 'host_wins'; }
@@ -825,14 +828,28 @@ export const RPGOnlinePvPBattle = ({
 
       {/* Characters */}
       <div className="absolute bottom-40 left-[20%] z-[50]">
-        <RPGCharacter character={allyWizard} currentHp={gs.hostHp} isAttacking={gs.turn === 'host' && gs.phase === 'kid_turn'} />
+        <RPGCharacter character={allyWizard} currentHp={gs.hostHp} isAttacking={gs.turn === 'host' && gs.phase === 'kid_turn'} isTakingDamage={heroTakingDamage} />
       </div>
       <div className="absolute bottom-40 right-[20%] z-[50]">
         <RPGCharacter
           character={{ ...heroKnight, id: 'villain', name: guestName, type: 'enemy', color: '#ef4444' } as any}
-          currentHp={gs.guestHp} isEnemy isTakingDamage={gs.turn === 'host'}
+          currentHp={gs.guestHp} isEnemy isTakingDamage={villainTakingDamage}
         />
       </div>
+
+      <AnimatePresence>
+        {floatingDamages.map(item => (
+          <motion.div
+            key={item.id}
+            initial={{ opacity: 0, y: 20, scale: 0.7 }}
+            animate={{ opacity: 1, y: -28, scale: 1.1 }}
+            exit={{ opacity: 0, y: -48 }}
+            className={`absolute z-[78] text-3xl font-black drop-shadow-lg ${item.target === 'host' ? 'left-[24%] top-[54%] text-red-300' : 'right-[24%] top-[54%] text-yellow-300'}`}
+          >
+            -{item.damage}
+          </motion.div>
+        ))}
+      </AnimatePresence>
 
       {/* ──── Kid's Turn: Word Reader (host device — interactive) with mode='fast' for Elara ──── */}
       {ready && gs.phase === 'kid_turn' && isHost && (
