@@ -180,7 +180,7 @@ export const RPGOnlinePvPBattle = ({
     // and equivalents are ALWAYS legitimate from DB/realtime/poll. Apply unconditionally.
     const isForceApplyTransition =
       battleReady &&
-      (source === 'db' || source === 'poll' || source === 'realtime') &&
+      (source === 'poll' || source === 'realtime') &&
       (
         (local.phase === 'parent_turn' && normalized.phase === 'kid_turn') ||
         (local.phase === 'kid_turn' && normalized.phase === 'parent_turn') ||
