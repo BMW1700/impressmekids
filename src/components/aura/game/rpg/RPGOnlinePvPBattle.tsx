@@ -709,6 +709,13 @@ export const RPGOnlinePvPBattle = ({
     >
       <RPGBattleBackground worldNumber={roomWorldNumber} />
 
+      {/* Parent attack VFX overlay — fires for both peers when an ability resolves */}
+      <RPGParentAttackVFX
+        kind={attackVfx?.kind ?? null}
+        fireKey={attackVfx?.key ?? 0}
+        onDone={() => setAttackVfx(null)}
+      />
+
       {/* Top bar */}
       <div className="absolute top-3 left-3 z-[80]">
         <Button variant="ghost" size="sm" onClick={onBack} className="text-white">
