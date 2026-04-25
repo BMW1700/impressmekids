@@ -25,11 +25,12 @@ import {
 
 const battleSounds = new SoundEffects();
 const BATCH_SIZE = 5;
-const POLL_MS = 2000;
-const WAITING_RECOVERY_POLL_MS = 600;
+const POLL_MS = 1500;
+const WAITING_RECOVERY_POLL_MS = 400;
 const ELARA_CHARGE_MAX = 5;
 const ELARA_BARRAGE_MULTIPLIER = 3;
 const STUDENT_MISS_DAMAGE = 8;
+const PERSIST_TIMEOUT_MS = 6000;
 
 interface BattleStats {
   wordsRead: number;
