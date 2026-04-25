@@ -446,9 +446,12 @@ export const RPGOnlinePvPBattle = ({
       const payload = msg.payload as any;
       if (payload?.state && isValidPvPState(payload.state)) {
         applyIncomingState('broadcast', payload.state as OnlinePvPGameState, undefined, true);
+        // Broadcast is fast but not authoritative; immediately pull the saved
+        // room too so parent→student writes cannot be lost behind local state.
+        void rehydrateRoom(true);
       } else {
         console.log('[PvP] Broadcast signal received (no inline state), rehydrating from DB...');
-        await rehydrateRoom();
+        await rehydrateRoom(true);
       }
     });
 
