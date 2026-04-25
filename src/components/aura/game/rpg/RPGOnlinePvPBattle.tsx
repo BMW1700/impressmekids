@@ -26,8 +26,10 @@ import {
 const battleSounds = new SoundEffects();
 const BATCH_SIZE = 5;
 const POLL_MS = 2000;
+const WAITING_RECOVERY_POLL_MS = 600;
 const ELARA_CHARGE_MAX = 5;
 const ELARA_BARRAGE_MULTIPLIER = 3;
+const STUDENT_MISS_DAMAGE = 8;
 
 interface BattleStats {
   wordsRead: number;
@@ -72,6 +74,9 @@ export const RPGOnlinePvPBattle = ({
   const [initError, setInitError] = useState<string | null>(null);
   const [eventFlash, setEventFlash] = useState<string | null>(null);
   const [attackVfx, setAttackVfx] = useState<{ kind: ParentAttackKind; key: number } | null>(null);
+  const [heroTakingDamage, setHeroTakingDamage] = useState(false);
+  const [villainTakingDamage, setVillainTakingDamage] = useState(false);
+  const [floatingDamages, setFloatingDamages] = useState<{ id: number; damage: number; target: 'host' | 'guest' }[]>([]);
   const lastVfxTimestampRef = useRef<number>(0);
 
   // ─── Elara charge counter ───
@@ -82,6 +87,7 @@ export const RPGOnlinePvPBattle = ({
   const completedRef = useRef(false);
   const hydrateAttemptsRef = useRef(0);
   const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const lastHpRef = useRef({ hostHp: INITIAL_PVP_STATE.hostHp, guestHp: INITIAL_PVP_STATE.guestHp });
   // Highest rev observed from ANY source (local commit OR peer broadcast/realtime/poll).
   // Local commits MUST increment past this — prevents rev collision when both peers commit near-simultaneously.
   const highestSeenRevRef = useRef(0);
