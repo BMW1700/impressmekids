@@ -433,34 +433,43 @@ export const RPGOnlinePvPBattle = ({
     void flushPendingWrite();
   }, [flushPendingWrite]);
 
-  // ─── commitLocal: broadcast-only (no DB write) — for intermediate word progress ───
+  // ─── commitLocal: broadcast-only — for word-reading progress ticks. NEVER touches turnRev or DB. ───
   const commitLocal = useCallback((newState: OnlinePvPGameState) => {
-    // Increment past the highest rev we've seen from any source — prevents collisions with peer commits.
-    const baseRev = Math.max(gsRef.current.rev ?? 0, highestSeenRevRef.current);
-    const withRev = { ...newState, rev: baseRev + 1 };
-    highestSeenRevRef.current = withRev.rev;
-    console.log(`[PvP] commitLocal rev=${withRev.rev} phase=${withRev.phase} batch=${withRev.batchProgress}`);
+    const baseTurnRev = gsRef.current.turnRev ?? gsRef.current.rev ?? 0;
+    const newUiRev = (gsRef.current.uiRev ?? 0) + 1;
+    const withRev: OnlinePvPGameState = {
+      ...newState,
+      turnRev: baseTurnRev,
+      uiRev: newUiRev,
+      rev: baseTurnRev, // mirror for legacy readers
+    };
+    console.log(`[PvP] commitLocal uiRev=${newUiRev} turnRev=${baseTurnRev} phase=${withRev.phase} batch=${withRev.batchProgress}`);
     setGs(withRev);
     gsRef.current = withRev;
-    broadcastState(withRev);
+    // Lightweight broadcast — peer updates progress UI without going through full state-merge
+    broadcastReadingProgress(newUiRev, withRev.batchProgress, withRev.wordsRead);
 
     if (withRev.lastEvent?.message) {
       setEventFlash(withRev.lastEvent.message);
       setTimeout(() => setEventFlash(null), 2000);
     }
-  }, [broadcastState]);
+  }, [broadcastReadingProgress]);
 
-  // ─── commitAndPersist: broadcast IMMEDIATELY + coalesced DB write — for turn switches, phase changes, wins ───
+  // ─── commitAndPersist: increments turnRev, broadcasts full state, persists to DB. For real turn changes. ───
   const commitAndPersist = useCallback((newState: OnlinePvPGameState) => {
-    const baseRev = Math.max(gsRef.current.rev ?? 0, highestSeenRevRef.current);
-    const withRev = { ...newState, rev: baseRev + 1 };
-    highestSeenRevRef.current = withRev.rev;
-    console.log(`[PvP] commitAndPersist rev=${withRev.rev} phase=${withRev.phase} turn=${withRev.turn} hostHp=${withRev.hostHp} guestHp=${withRev.guestHp}`);
+    const baseTurnRev = Math.max(gsRef.current.turnRev ?? gsRef.current.rev ?? 0, highestSeenTurnRevRef.current);
+    const nextTurnRev = baseTurnRev + 1;
+    const withRev: OnlinePvPGameState = {
+      ...newState,
+      turnRev: nextTurnRev,
+      uiRev: gsRef.current.uiRev ?? 0,
+      rev: nextTurnRev, // mirror for legacy readers + RPC's revision check
+    };
+    highestSeenTurnRevRef.current = nextTurnRev;
+    console.log(`[PvP] commitAndPersist turnRev=${nextTurnRev} phase=${withRev.phase} turn=${withRev.turn} hostHp=${withRev.hostHp} guestHp=${withRev.guestHp}`);
     setGs(withRev);
     gsRef.current = withRev;
-    // Broadcast IMMEDIATELY — peer gets the update without waiting for DB
     broadcastState(withRev);
-    // Schedule authoritative persistence (coalesced, non-blocking)
     enqueueStatePersist(withRev);
 
     if (withRev.lastEvent?.message) {
