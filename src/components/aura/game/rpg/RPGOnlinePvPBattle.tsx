@@ -170,8 +170,11 @@ export const RPGOnlinePvPBattle = ({
       const samePhase = normalized.phase === gsRef.current.phase;
       const sameTurn = normalized.turn === gsRef.current.turn;
       const sameWordIndex = normalized.wordIndex === gsRef.current.wordIndex;
+      const sameHp = normalized.hostHp === gsRef.current.hostHp && normalized.guestHp === gsRef.current.guestHp;
+      const sameProgress = normalized.batchProgress === gsRef.current.batchProgress && normalized.turnCount === gsRef.current.turnCount;
+      const sameEvent = (normalized.lastEvent?.timestamp ?? 0) === (gsRef.current.lastEvent?.timestamp ?? 0);
       // Echo of our own write — skip silently to avoid render thrash.
-      if (samePhase && sameTurn && sameWordIndex) {
+      if (samePhase && sameTurn && sameWordIndex && sameHp && sameProgress && sameEvent) {
         return false;
       }
       // Same rev but different state = peer-authoritative change we may have missed. Accept.
@@ -495,6 +498,18 @@ export const RPGOnlinePvPBattle = ({
     }, POLL_MS);
     return () => clearInterval(interval);
   }, [ready, roomId, authLoading, session?.user?.id, rehydrateRoom]);
+
+  // Aggressive recovery while one side is waiting on the parent/mini-game device.
+  // This fixes the exact stale-host case where the DB has already returned to kid_turn,
+  // but the student browser is still showing "choosing an attack".
+  useEffect(() => {
+    if (!ready || authLoading || !session?.user?.id || !isHost) return;
+    if (gs.phase !== 'parent_turn' && gs.phase !== 'parent_reading' && gs.phase !== 'mini_game') return;
+    const interval = setInterval(async () => {
+      await rehydrateRoom();
+    }, WAITING_RECOVERY_POLL_MS);
+    return () => clearInterval(interval);
+  }, [ready, authLoading, session?.user?.id, isHost, gs.phase, rehydrateRoom]);
 
   // ─── Realtime postgres_changes subscription (kept as fallback) ───
   useEffect(() => {
