@@ -664,6 +664,18 @@ export const RPGOnlinePvPBattle = ({
     return () => { supabase.removeChannel(channel); };
   }, [roomId, isHost, authLoading, session?.user?.id, applyIncomingState, rehydrateRoom]);
 
+  // ─── WATCHDOG: if host is stuck in parent_turn for >3s, force rehydrate from DB ───
+  useEffect(() => {
+    if (!ready || !isHost || gs.phase !== 'parent_turn') return;
+    const timer = setTimeout(() => {
+      if (gsRef.current.phase === 'parent_turn') {
+        console.warn('[PvP] WATCHDOG: stuck in parent_turn for 3s — force rehydrating from DB');
+        void rehydrateRoom(true);
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [ready, isHost, gs.phase, gs.turnRev, rehydrateRoom]);
+
   // ─── Handle end ───
   useEffect(() => {
     if (!endPhase || completedRef.current) return;
