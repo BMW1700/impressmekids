@@ -1,62 +1,70 @@
-Brutally honest audit result: I found a concrete bug that explains the screenshot.
+I audited the live room data, the PvP battle component, the lobby handoff, the real-time setup, the room policies, and the sync function. The screenshots point to a specific failure mode: the parent/enemy page can locally advance to the next kid-reading turn, while the student/hero page is still stuck on the previous `parent_turn` state. That means the parent-side attack resolution is being applied optimistically on that device before the update is guaranteed to be persisted and received by the student device.
 
-The online PvP battle is getting a valid room snapshot, but `RPGOnlinePvPBattle` rejects it because the incoming room state is `rev: 0` and matches the component’s local default `rev: 0` placeholder. The code treats that as an echo and returns before setting `ready = true`, so both sides can sit forever on `Loading battle...` even though the backend room is active.
+Plan to fix this properly:
 
-Plan to fix multiplayer battles:
+1. Make parent/enemy attacks database-authoritative before the parent UI advances
+   - Replace the current optimistic path for parent attack resolution with a critical commit path.
+   - For these critical events, write the new state first, confirm the write returned the canonical room state, then update the local parent UI and broadcast it.
+   - Apply this to:
+     - parent direct attacks
+     - parent reading-bonus attacks
+     - parent mini-game completion
+     - student miss/skip damage
+     - student-to-parent turn switch
+   - This prevents the parent page from showing “next words” unless the student page can also receive that same state.
 
-1. Fix the PvP loading deadlock
-   - Update `src/components/aura/game/rpg/RPGOnlinePvPBattle.tsx` so initial snapshots and hydration polls are accepted when the battle is not ready yet.
-   - Do not let the equal-revision “echo guard” reject a valid first room snapshot.
-   - Ensure room metadata like player names, story passage, and world number is applied during initial hydration even when `rev` is unchanged.
+2. Add a persistence fallback when the room sync RPC fails or times out
+   - Keep the existing secure room sync function as the primary path.
+   - If it fails, immediately use the existing participant-safe room update policy as a fallback update.
+   - If both fail, keep the UI in the current phase and show a sync error instead of silently letting one page advance alone.
 
-2. Harden PvP state sync after loading
-   - Keep the stale-revision protection, but make it distinguish between:
-     - a harmless echo after the battle is already ready
-     - a real initial hydration snapshot that must be accepted
-     - a peer state update that should be accepted
-   - Make `highestSeenRevRef` initialize correctly from snapshots so later local commits do not collide with peer revisions.
-   - Add safer logging around rejected snapshots so future sync failures are diagnosable instead of silently hanging.
+3. Add post-write verification for attack resolution
+   - After every parent/enemy attack commit, re-read the room state and verify the database contains the expected revision, phase, HP, and last event.
+   - If the database is still stale, retry the write once and broadcast again.
+   - This directly targets the screenshot state where parent saw `kid_turn` but student remained stuck on `parent_turn`.
 
-3. Fix Co-op parity issues while in the same multiplayer system
-   - Pass the lobby’s initial room snapshot into `RPGOnlineCoopBattle` the same way PvP does, instead of forcing Co-op to depend only on a database rehydrate after mount.
-   - Add a shared snapshot accept path for Co-op so host and guest enter the setup/battle screen deterministically.
-   - Preserve selected story, world, and enemy metadata from the room snapshot.
+4. Force student/hero recovery on focus, visibility, and stale waiting state
+   - Add immediate rehydration when the student tab/window becomes visible or focused.
+   - Keep the aggressive waiting poll, but make it detect “stuck waiting for parent” by elapsed time, not only phase.
+   - If the student is still on `parent_turn`, `parent_reading`, or `mini_game` after the parent action should have resolved, it will force a database re-read immediately.
 
-4. Clean up lobby handoff reliability
-   - In `RPGMultiplayerLobby.tsx`, return the full inserted room snapshot immediately after room creation instead of only selecting `id`.
-   - Keep the host waiting screen, but make the transition to battle always carry a full valid snapshot once the guest joins.
-   - Improve join/create errors so auth or room lookup failures show a useful message rather than dumping the player into a broken battle.
+5. Make parent attack animation and damage display deterministic on both screens
+   - Trigger VFX from the canonical persisted `lastEvent`, not only from local optimistic state.
+   - Ensure `abilityId`, `damage`, `target`, `timestamp`, and a unique event id are always written for parent/enemy attacks.
+   - The student/hero screen will show the same attack animation and floating damage as the parent/enemy screen after the synced event lands.
 
-5. Verify the backend access path
-   - Confirm the current `multiplayer_rooms` policies and `sync_multiplayer_room_state` function allow:
-     - host creates room
-     - guest finds waiting room by code
-     - guest joins room
-     - both participants read active room
-     - both participants persist turn/phase changes
-   - If the policies are contributing to sync failures, create a targeted migration to normalize the duplicate/overlapping policies without weakening room privacy.
+6. Fix role-facing battle UI so both screens clearly show the same game state
+   - Student side during parent turn: show “Parent choosing attack” only while the canonical state is actually `parent_turn`.
+   - Parent side after attack: do not reveal the next reading batch until the canonical shared state is `kid_turn`.
+   - Add a small synced status indicator in development logs so future stuck states show room id, rev, phase, turn, HP, and event timestamp.
 
-6. Run validation
-   - Run TypeScript/build checks.
-   - Verify the state machine paths in code for:
-     - host creates PvP room
-     - guest joins PvP room
-     - both devices leave `Loading battle...`
-     - student reads a 5-word batch
-     - turn switches to parent/guest
-     - parent ability returns turn to student
-     - Co-op host/guest setup loads
-     - Co-op turn switch after 5 words
+7. Validate with the exact broken flow
+   - Build/typecheck.
+   - Test the sequence represented in the screenshots:
 
-Primary files to change:
+```text
+Student reads 5 words
+Parent turn begins
+Parent selects attack
+Attack damage persists
+Both screens show the same animation
+Student HP changes on both screens
+Both screens enter kid_turn / next 5-word batch together
+Student reader remounts and auto-starts
+```
+
+Files to change:
 - `src/components/aura/game/rpg/RPGOnlinePvPBattle.tsx`
-- `src/components/aura/game/rpg/RPGOnlineCoopBattle.tsx`
-- `src/components/aura/game/rpg/RPGMultiplayerLobby.tsx`
-- `src/components/aura/game/rpg/RPGBattleArena.tsx`
-- Possibly one database migration only if the policy audit shows backend access is also blocking active-room sync.
+- `src/components/aura/game/rpg/multiplayerRoomTypes.ts`
+- Possibly `src/components/aura/game/rpg/RPGParentAttackVFX.tsx` for event-id-driven replay safety
 
-Expected outcome:
-- The current `Loading battle... / battle couldn't sync` failure should be fixed.
-- Online PvP should reliably enter the battle screen on both student and parent/teacher devices.
-- Turns should sync through the full 5-word student batch and parent attack cycle.
-- Online Co-op should use the same hardened snapshot handoff pattern instead of depending on a fragile post-mount rehydrate.
+Expected result:
+- The parent/enemy page will no longer get ahead of the student/hero page.
+- The student will see parent/enemy attack animations and damage.
+- The next 5 words will appear on the student side immediately after the enemy attack resolves.
+- If sync fails, the game will stop and report it instead of showing two different realities.
+
+<lov-actions>
+  <lov-open-history>View History</lov-open-history>
+  <lov-link url="https://docs.lovable.dev/tips-tricks/troubleshooting">Troubleshooting docs</lov-link>
+</lov-actions>
