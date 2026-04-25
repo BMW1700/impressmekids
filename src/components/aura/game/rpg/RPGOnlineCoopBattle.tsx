@@ -14,6 +14,7 @@ import { getAgentEnemy } from "@/lib/agentBattleData";
 import { supabase } from "@/integrations/supabase/client";
 import { LongLoadNotice } from "@/components/system/LongLoadNotice";
 import { useAuth } from "@/contexts/AuthContext";
+import { MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS, MultiplayerRoomSnapshot } from "./multiplayerRoomTypes";
 
 const battleSounds = new SoundEffects();
 const POLL_MS = 2000;
@@ -32,6 +33,7 @@ interface RPGOnlineCoopBattleProps {
   studentId: string;
   roomId: string;
   isHost: boolean;
+  initialRoomSnapshot?: MultiplayerRoomSnapshot | null;
   worldNumber?: number;
   onBack: () => void;
   onComplete: (victory: boolean, stats: BattleStats) => void;
@@ -67,6 +69,7 @@ export const RPGOnlineCoopBattle = ({
   studentId,
   roomId,
   isHost,
+  initialRoomSnapshot = null,
   worldNumber = 1,
   onBack,
   onComplete,
@@ -384,6 +387,21 @@ export const RPGOnlineCoopBattle = ({
     };
 
     const init = async () => {
+      // 1) Try the snapshot the lobby handed us first — instant ready, no network round-trip.
+      if (initialRoomSnapshot) {
+        const incoming = (initialRoomSnapshot as any).game_state;
+        if (isValidCoopState(incoming)) {
+          const accepted = applyIncomingState('snapshot', incoming, {
+            host_name: initialRoomSnapshot.host_name,
+            guest_name: initialRoomSnapshot.guest_name,
+            story_passage: initialRoomSnapshot.story_passage,
+            world_number: initialRoomSnapshot.world_number,
+            enemy_type: initialRoomSnapshot.enemy_type,
+          }, true);
+          if (accepted) return;
+        }
+      }
+
       const loaded = await hydrateRoom();
       if (loaded || cancelled) return;
 
@@ -409,7 +427,7 @@ export const RPGOnlineCoopBattle = ({
       cancelled = true;
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [roomId, isHost, authLoading, session?.user?.id]);
+  }, [roomId, isHost, authLoading, session?.user?.id, initialRoomSnapshot, applyIncomingState, rehydrateRoom]);
 
   // ─── Continuous reconciliation poll ───
   useEffect(() => {

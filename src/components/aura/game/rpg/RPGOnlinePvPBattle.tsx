@@ -144,15 +144,20 @@ export const RPGOnlinePvPBattle = ({
     // Strict <: stale revs always rejected.
     // Equal rev: accept only if it's a meaningful state diff (peer's authoritative phase/turn change),
     // otherwise treat as our own echo and ignore (prevents spurious re-renders + ref churn).
+    // CRITICAL: If the battle has not been marked ready yet, ALWAYS accept the snapshot so we can
+    // exit the "Loading battle..." screen. The local default state has rev=0 phase=kid_turn turn=host
+    // wordIndex=0 — which is byte-for-byte identical to the freshly seeded room snapshot, so the
+    // echo guard would otherwise silently reject the very payload that's supposed to start the match.
     const currentRev = gsRef.current.rev ?? 0;
     const incomingRev = normalized.rev ?? 0;
+    const battleReady = readyRef.current;
 
-    if (incomingRev < currentRev) {
+    if (battleReady && incomingRev < currentRev) {
       console.warn(`[PvP] applyIncoming(${source}): REJECTED rev=${incomingRev} < local=${currentRev} (phase=${normalized.phase}, turn=${normalized.turn})`);
       return false;
     }
 
-    if (incomingRev === currentRev) {
+    if (battleReady && incomingRev === currentRev) {
       const samePhase = normalized.phase === gsRef.current.phase;
       const sameTurn = normalized.turn === gsRef.current.turn;
       const sameWordIndex = normalized.wordIndex === gsRef.current.wordIndex;
@@ -162,6 +167,8 @@ export const RPGOnlinePvPBattle = ({
       }
       // Same rev but different state = peer-authoritative change we may have missed. Accept.
       console.log(`[PvP] applyIncoming(${source}): same-rev override (peer authoritative) phase=${normalized.phase} turn=${normalized.turn}`);
+    } else if (!battleReady) {
+      console.log(`[PvP] applyIncoming(${source}): INITIAL HYDRATE accepted rev=${incomingRev} phase=${normalized.phase} turn=${normalized.turn} (battle was not ready yet)`);
     } else {
       console.log(`[PvP] applyIncoming(${source}): ACCEPTED rev=${incomingRev} phase=${normalized.phase} turn=${normalized.turn} (local was rev=${currentRev} phase=${gsRef.current.phase})`);
     }

@@ -129,7 +129,7 @@ export const RPGMultiplayerLobby = ({
         status: 'waiting',
         game_state: initialGameState,
       })
-      .select('id')
+      .select(MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS)
       .single();
 
     if (err) {
@@ -140,7 +140,7 @@ export const RPGMultiplayerLobby = ({
     }
 
     setRoomCode(code);
-    setRoomId(data.id);
+    setRoomId((data as any).id);
     setView('hosting');
     setLoading(false);
   }, [battleMode, storyPassage, storyTitle, worldNumber, gradeMode, enemyType, getCurrentUserId]);
