@@ -140,7 +140,7 @@ export const RPGMultiplayerLobby = ({
     }
 
     setRoomCode(code);
-    setRoomId(data.id);
+    setRoomId((data as any).id);
     setView('hosting');
     setLoading(false);
   }, [battleMode, storyPassage, storyTitle, worldNumber, gradeMode, enemyType, getCurrentUserId]);
