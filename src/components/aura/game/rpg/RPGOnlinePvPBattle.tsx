@@ -611,17 +611,17 @@ export const RPGOnlinePvPBattle = ({
     if (ability.type === 'minigame' && ability.miniGame) {
       s.activeMiniGame = ability.miniGame;
       s.phase = 'mini_game';
-      s.lastEvent = { type: 'ability', by: 'guest', message: `🎮 ${ability.name}!`, timestamp: Date.now() };
+      s.lastEvent = { type: 'ability', by: 'guest', abilityId: ability.id, message: `🎮 ${ability.name}!`, timestamp: Date.now() };
       if (ability.cooldown > 0) s.cooldowns = { ...s.cooldowns, [ability.id]: ability.cooldown };
     } else if (ability.requiresReading) {
       s.pendingAbility = { id: ability.id, name: ability.name, damage: ability.damage, requiresReading: true, cooldown: ability.cooldown };
       s.pendingReadWord = storyWords[Math.floor(Math.random() * storyWords.length)];
       s.phase = 'parent_reading';
-      s.lastEvent = { type: 'ability', by: 'guest', message: `📖 Read the word for bonus damage!`, timestamp: Date.now() };
+      s.lastEvent = { type: 'ability', by: 'guest', abilityId: ability.id, message: `📖 Read the word for bonus damage!`, timestamp: Date.now() };
     } else {
       const damage = ability.damage;
       s.hostHp = Math.max(0, s.hostHp - damage);
-      s.lastEvent = { type: 'ability', damage, by: 'guest', message: `💥 ${guestName} uses ${ability.name} for ${damage} damage!`, timestamp: Date.now() };
+      s.lastEvent = { type: 'ability', damage, by: 'guest', abilityId: ability.id, message: `💥 ${guestName} uses ${ability.name} for ${damage} damage!`, timestamp: Date.now() };
       if (ability.cooldown > 0) s.cooldowns = { ...s.cooldowns, [ability.id]: ability.cooldown };
       if (s.hostHp <= 0) {
         s.phase = 'guest_wins';
