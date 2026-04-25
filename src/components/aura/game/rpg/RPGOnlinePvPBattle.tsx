@@ -498,14 +498,33 @@ export const RPGOnlinePvPBattle = ({
 
     channel.on('broadcast', { event: 'state_update' }, async (msg) => {
       const payload = msg.payload as any;
+      const sender: string | undefined = payload?.sender;
       if (payload?.state && isValidPvPState(payload.state)) {
-        applyIncomingState('broadcast', payload.state as OnlinePvPGameState, undefined, true);
+        applyIncomingState('broadcast', payload.state as OnlinePvPGameState, undefined, true, sender);
         // Broadcast is fast but not authoritative; immediately pull the saved
         // room too so parent→student writes cannot be lost behind local state.
         void rehydrateRoom(true);
       } else {
         console.log('[PvP] Broadcast signal received (no inline state), rehydrating from DB...');
         await rehydrateRoom(true);
+      }
+    });
+
+    // Lightweight reading-progress updates — never go through full state-apply
+    channel.on('broadcast', { event: 'reading_progress' }, (msg) => {
+      const payload = msg.payload as any;
+      if (typeof payload?.batchProgress !== 'number') return;
+      const local = gsRef.current;
+      // Only apply if it advances progress within the same turn — never override turn/HP/phase
+      if (payload.batchProgress > local.batchProgress && local.phase === 'kid_turn') {
+        const next: OnlinePvPGameState = {
+          ...local,
+          batchProgress: payload.batchProgress,
+          wordsRead: typeof payload.wordsRead === 'number' ? payload.wordsRead : local.wordsRead,
+          uiRev: typeof payload.uiRev === 'number' ? payload.uiRev : local.uiRev,
+        };
+        gsRef.current = next;
+        setGs(next);
       }
     });
 
