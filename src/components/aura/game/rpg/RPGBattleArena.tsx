@@ -2353,6 +2353,7 @@ export const RPGBattleArena = ({
           studentId={studentId}
           roomId={onlineRoomId}
           isHost={isOnlineHost}
+          initialRoomSnapshot={onlineRoomSnapshot}
           worldNumber={worldNumber}
           onBack={onBack}
           onComplete={onComplete}
