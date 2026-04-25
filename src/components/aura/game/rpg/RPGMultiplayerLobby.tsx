@@ -129,7 +129,7 @@ export const RPGMultiplayerLobby = ({
         status: 'waiting',
         game_state: initialGameState,
       })
-      .select('id')
+      .select(MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS)
       .single();
 
     if (err) {
