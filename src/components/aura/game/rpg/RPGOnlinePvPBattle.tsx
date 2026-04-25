@@ -594,20 +594,18 @@ export const RPGOnlinePvPBattle = ({
 
     if (hostDamage > 0) {
       setHeroTakingDamage(true);
-      setFloatingDamages(prev => [...prev, { id: Date.now(), damage: hostDamage, target: 'host' }]);
+      const id = Date.now();
+      setFloatingDamages(prev => [...prev, { id, damage: hostDamage, target: 'host' }]);
       setTimeout(() => setHeroTakingDamage(false), 650);
+      setTimeout(() => setFloatingDamages(prev => prev.filter(item => item.id !== id)), 1200);
     }
 
     if (guestDamage > 0) {
       setVillainTakingDamage(true);
-      setFloatingDamages(prev => [...prev, { id: Date.now() + 1, damage: guestDamage, target: 'guest' }]);
+      const id = Date.now() + 1;
+      setFloatingDamages(prev => [...prev, { id, damage: guestDamage, target: 'guest' }]);
       setTimeout(() => setVillainTakingDamage(false), 650);
-    }
-
-    if (hostDamage > 0 || guestDamage > 0) {
-      setTimeout(() => {
-        setFloatingDamages(prev => prev.filter(item => item.id !== floatingDamages[0]?.id));
-      }, 1200);
+      setTimeout(() => setFloatingDamages(prev => prev.filter(item => item.id !== id)), 1200);
     }
 
     lastHpRef.current = { hostHp: gs.hostHp, guestHp: gs.guestHp };
