@@ -71,6 +71,8 @@ export const RPGOnlinePvPBattle = ({
   const [roomWorldNumber, setRoomWorldNumber] = useState(worldNumber);
   const [initError, setInitError] = useState<string | null>(null);
   const [eventFlash, setEventFlash] = useState<string | null>(null);
+  const [attackVfx, setAttackVfx] = useState<{ kind: ParentAttackKind; key: number } | null>(null);
+  const lastVfxTimestampRef = useRef<number>(0);
 
   // ─── Elara charge counter ───
   const [elaraCharge, setElaraCharge] = useState(0);
