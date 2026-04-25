@@ -89,11 +89,9 @@ export const RPGOnlinePvPBattle = ({
   const hydrateAttemptsRef = useRef(0);
   const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const lastHpRef = useRef({ hostHp: INITIAL_PVP_STATE.hostHp, guestHp: INITIAL_PVP_STATE.guestHp });
-  // Highest turnRev observed from any source. Local turn commits MUST leap past this.
-  // ONLY tracks turnRev — uiRev is ephemeral and never participates in conflict resolution.
-  const highestSeenTurnRevRef = useRef(0);
-  // Track last broadcast we processed for dedupe (sender + turnRev + uiRev)
-  const lastBroadcastSigRef = useRef<string>('');
+  // Highest rev observed from ANY source (local commit OR peer broadcast/realtime/poll).
+  // Local commits MUST increment past this — prevents rev collision when both peers commit near-simultaneously.
+  const highestSeenRevRef = useRef(0);
 
   // ─── Coalescing writer state ───
   const pendingWriteRef = useRef<OnlinePvPGameState | null>(null);
@@ -140,97 +138,71 @@ export const RPGOnlinePvPBattle = ({
     incoming: OnlinePvPGameState,
     roomMeta?: { host_name?: string | null; guest_name?: string | null; story_passage?: string | null; world_number?: number | null },
     markReady = false,
-    broadcastSender?: string,
   ): boolean => {
     if (!isValidPvPState(incoming)) {
       console.warn(`[PvP] applyIncoming(${source}): invalid state, rejected`);
       return false;
     }
 
-    // Normalize: tolerate legacy payloads that only carry `rev` and not turnRev/uiRev.
-    const incomingTurnRev = typeof (incoming as any).turnRev === 'number'
-      ? (incoming as any).turnRev
-      : (typeof incoming.rev === 'number' ? incoming.rev : 0);
-    const incomingUiRev = typeof (incoming as any).uiRev === 'number'
-      ? (incoming as any).uiRev
-      : 0;
-
     const normalized: OnlinePvPGameState = {
       ...incoming,
       batchProgress: typeof incoming.batchProgress === 'number' ? incoming.batchProgress : 0,
-      rev: incomingTurnRev,
-      turnRev: incomingTurnRev,
-      uiRev: incomingUiRev,
+      rev: typeof incoming.rev === 'number' ? incoming.rev : 0,
     };
 
-    const local = gsRef.current;
-    const localTurnRev = local.turnRev ?? local.rev ?? 0;
+    // ── Universal revision guard ──
+    // Strict <: stale revs always rejected.
+    // Equal rev: accept only if it's a meaningful state diff (peer's authoritative phase/turn change),
+    // otherwise treat as our own echo and ignore (prevents spurious re-renders + ref churn).
+    // CRITICAL: If the battle has not been marked ready yet, ALWAYS accept the snapshot so we can
+    // exit the "Loading battle..." screen. The local default state has rev=0 phase=kid_turn turn=host
+    // wordIndex=0 — which is byte-for-byte identical to the freshly seeded room snapshot, so the
+    // echo guard would otherwise silently reject the very payload that's supposed to start the match.
+    const currentRev = gsRef.current.rev ?? 0;
+    const incomingRev = normalized.rev ?? 0;
     const battleReady = readyRef.current;
 
-    // ── Echo suppression for broadcasts: skip if we just sent the exact same payload ──
-    if (source === 'broadcast' && broadcastSender) {
-      const sig = `${broadcastSender}|${incomingTurnRev}|${incomingUiRev}|${normalized.phase}|${normalized.batchProgress}`;
-      if (sig === lastBroadcastSigRef.current) {
+    const local = gsRef.current;
+    const localEventTs = local.lastEvent?.timestamp ?? 0;
+    const incomingEventTs = normalized.lastEvent?.timestamp ?? 0;
+    const peerActor = isHost ? 'guest' : 'host';
+    const isFreshPeerEvent = normalized.lastEvent?.by === peerActor && incomingEventTs > localEventTs;
+    const hasAuthoritativeDiff =
+      normalized.phase !== local.phase ||
+      normalized.turn !== local.turn ||
+      normalized.wordIndex !== local.wordIndex ||
+      normalized.hostHp !== local.hostHp ||
+      normalized.guestHp !== local.guestHp ||
+      normalized.turnCount !== local.turnCount;
+
+    if (battleReady && incomingRev < currentRev) {
+      // Rev can legitimately go "backwards" when this device has broadcast-only
+      // local progress that was never persisted, then the peer commits the next
+      // authoritative turn/damage state from the DB. Do NOT drop fresh peer events.
+      if (!isFreshPeerEvent || !hasAuthoritativeDiff) {
+        console.warn(`[PvP] applyIncoming(${source}): REJECTED rev=${incomingRev} < local=${currentRev} (phase=${normalized.phase}, turn=${normalized.turn})`);
         return false;
       }
-      lastBroadcastSigRef.current = sig;
+      console.warn(`[PvP] applyIncoming(${source}): ACCEPTED lower-rev fresh peer event rev=${incomingRev} < local=${currentRev} by=${normalized.lastEvent?.by}`);
     }
 
-    // ── FORCE-APPLY RULE: phase transitions back to the host (parent_turn -> kid_turn) ──
-    // and equivalents are ALWAYS legitimate from DB/realtime/poll. Apply unconditionally.
-    const isForceApplyTransition =
-      battleReady &&
-      (source === 'poll' || source === 'realtime') &&
-      (
-        (local.phase === 'parent_turn' && normalized.phase === 'kid_turn') ||
-        (local.phase === 'kid_turn' && normalized.phase === 'parent_turn') ||
-        (local.phase === 'parent_reading' && normalized.phase !== 'parent_reading') ||
-        (local.phase === 'mini_game' && normalized.phase !== 'mini_game') ||
-        (normalized.phase === 'host_wins' || normalized.phase === 'guest_wins')
-      );
-
-    if (isForceApplyTransition) {
-      console.log(`[PvP] applyIncoming(${source}): FORCE-APPLY phase transition ${local.phase} -> ${normalized.phase} (turnRev local=${localTurnRev} incoming=${incomingTurnRev})`);
+    if (battleReady && incomingRev === currentRev) {
+      const samePhase = normalized.phase === local.phase;
+      const sameTurn = normalized.turn === local.turn;
+      const sameWordIndex = normalized.wordIndex === local.wordIndex;
+      const sameHp = normalized.hostHp === local.hostHp && normalized.guestHp === local.guestHp;
+      const sameProgress = normalized.batchProgress === local.batchProgress && normalized.turnCount === local.turnCount;
+      const sameEvent = (normalized.lastEvent?.timestamp ?? 0) === (local.lastEvent?.timestamp ?? 0);
+      // Echo of our own write — skip silently to avoid render thrash.
+      if (samePhase && sameTurn && sameWordIndex && sameHp && sameProgress && sameEvent) {
+        return false;
+      }
+      // Same rev but different state = peer-authoritative change we may have missed. Accept.
+      console.log(`[PvP] applyIncoming(${source}): same-rev override (peer authoritative) phase=${normalized.phase} turn=${normalized.turn}`);
     } else if (!battleReady) {
-      console.log(`[PvP] applyIncoming(${source}): INITIAL HYDRATE accepted turnRev=${incomingTurnRev} phase=${normalized.phase}`);
-    } else if (source === 'broadcast') {
-      // Broadcasts can arrive out of order. Accept unless it's a clear duplicate.
-      // Don't reject just because turnRev is lower — we'll rely on DB-backed sources for authority.
-      if (incomingTurnRev < localTurnRev) {
-        // Older broadcast — only accept if it carries a phase change we haven't seen.
-        if (normalized.phase === local.phase &&
-            normalized.hostHp === local.hostHp &&
-            normalized.guestHp === local.guestHp &&
-            normalized.batchProgress === local.batchProgress) {
-          return false;
-        }
-      }
-      console.log(`[PvP] applyIncoming(broadcast): turnRev=${incomingTurnRev} (local=${localTurnRev}) phase=${normalized.phase}`);
+      console.log(`[PvP] applyIncoming(${source}): INITIAL HYDRATE accepted rev=${incomingRev} phase=${normalized.phase} turn=${normalized.turn} (battle was not ready yet)`);
     } else {
-      // db / poll / realtime / snapshot
-      if (incomingTurnRev < localTurnRev) {
-        console.warn(`[PvP] applyIncoming(${source}): stale turnRev=${incomingTurnRev} < local=${localTurnRev}, but checking for state diff...`);
-        const sameAll =
-          normalized.phase === local.phase &&
-          normalized.turn === local.turn &&
-          normalized.hostHp === local.hostHp &&
-          normalized.guestHp === local.guestHp &&
-          normalized.wordIndex === local.wordIndex;
-        if (sameAll) return false;
-        console.warn(`[PvP] applyIncoming(${source}): accepting stale turnRev because authoritative state differs`);
-      } else if (incomingTurnRev === localTurnRev) {
-        const sameAll =
-          normalized.phase === local.phase &&
-          normalized.turn === local.turn &&
-          normalized.hostHp === local.hostHp &&
-          normalized.guestHp === local.guestHp &&
-          normalized.wordIndex === local.wordIndex &&
-          normalized.batchProgress === local.batchProgress;
-        if (sameAll) return false;
-        console.log(`[PvP] applyIncoming(${source}): same turnRev override (peer authoritative diff)`);
-      } else {
-        console.log(`[PvP] applyIncoming(${source}): ACCEPTED turnRev=${incomingTurnRev} > local=${localTurnRev} phase=${normalized.phase}`);
-      }
+      console.log(`[PvP] applyIncoming(${source}): ACCEPTED rev=${incomingRev} phase=${normalized.phase} turn=${normalized.turn} (local was rev=${currentRev} phase=${gsRef.current.phase})`);
     }
 
     // Apply room metadata if provided
@@ -244,13 +216,9 @@ export const RPGOnlinePvPBattle = ({
     hydrateAttemptsRef.current = 0;
     setInitError(null);
     gsRef.current = normalized;
-    if (incomingTurnRev > highestSeenTurnRevRef.current) highestSeenTurnRevRef.current = incomingTurnRev;
+    // Track the highest rev we've seen so future local commits leap past peer's writes.
+    if (incomingRev > highestSeenRevRef.current) highestSeenRevRef.current = incomingRev;
     setGs(normalized);
-
-    // Reset in-progress floating-damage so HP renders cleanly with the new authoritative values
-    if (isForceApplyTransition || normalized.hostHp !== local.hostHp || normalized.guestHp !== local.guestHp) {
-      lastHpRef.current = { hostHp: normalized.hostHp, guestHp: normalized.guestHp };
-    }
 
     if (markReady && !readyRef.current) {
       readyRef.current = true;
@@ -314,35 +282,22 @@ export const RPGOnlinePvPBattle = ({
     }, markReady);
   }, [roomId, session?.user?.id, applyIncomingState]);
 
-  // ─── Broadcast a full state snapshot to the peer (no DB) ───
+  // ─── Broadcast a state snapshot to the peer (no DB) ───
   const broadcastState = useCallback((state: OnlinePvPGameState) => {
     if (broadcastChannelRef.current) {
-      const sender = session?.user?.id ?? 'unknown';
       broadcastChannelRef.current.send({
         type: 'broadcast',
         event: 'state_update',
-        payload: { turnRev: state.turnRev, uiRev: state.uiRev, phase: state.phase, sender, state },
+        payload: { rev: state.rev, phase: state.phase, state },
       }).then((result: string) => {
         if (result !== 'ok') {
-          console.warn(`[PvP] broadcast send result: ${result} for turnRev=${state.turnRev} phase=${state.phase}`);
+          console.warn(`[PvP] broadcast send result: ${result} for rev=${state.rev} phase=${state.phase}`);
         }
       }).catch((err: any) => {
-        console.warn(`[PvP] broadcast send error for turnRev=${state.turnRev}:`, err);
+        console.warn(`[PvP] broadcast send error for rev=${state.rev}:`, err);
       });
     }
-  }, [session?.user?.id]);
-
-  // ─── Lightweight reading-progress broadcast (no full state, no DB) ───
-  const broadcastReadingProgress = useCallback((uiRev: number, batchProgress: number, wordsRead: number) => {
-    if (broadcastChannelRef.current) {
-      const sender = session?.user?.id ?? 'unknown';
-      broadcastChannelRef.current.send({
-        type: 'broadcast',
-        event: 'reading_progress',
-        payload: { uiRev, batchProgress, wordsRead, sender },
-      }).catch(() => {});
-    }
-  }, [session?.user?.id]);
+  }, []);
 
   // ═══════════════════════════════════════════════════════════════
   // AUTHORITATIVE PERSISTENCE — uses sync_multiplayer_room_state RPC
@@ -433,43 +388,34 @@ export const RPGOnlinePvPBattle = ({
     void flushPendingWrite();
   }, [flushPendingWrite]);
 
-  // ─── commitLocal: broadcast-only — for word-reading progress ticks. NEVER touches turnRev or DB. ───
+  // ─── commitLocal: broadcast-only (no DB write) — for intermediate word progress ───
   const commitLocal = useCallback((newState: OnlinePvPGameState) => {
-    const baseTurnRev = gsRef.current.turnRev ?? gsRef.current.rev ?? 0;
-    const newUiRev = (gsRef.current.uiRev ?? 0) + 1;
-    const withRev: OnlinePvPGameState = {
-      ...newState,
-      turnRev: baseTurnRev,
-      uiRev: newUiRev,
-      rev: baseTurnRev, // mirror for legacy readers
-    };
-    console.log(`[PvP] commitLocal uiRev=${newUiRev} turnRev=${baseTurnRev} phase=${withRev.phase} batch=${withRev.batchProgress}`);
+    // Increment past the highest rev we've seen from any source — prevents collisions with peer commits.
+    const baseRev = Math.max(gsRef.current.rev ?? 0, highestSeenRevRef.current);
+    const withRev = { ...newState, rev: baseRev + 1 };
+    highestSeenRevRef.current = withRev.rev;
+    console.log(`[PvP] commitLocal rev=${withRev.rev} phase=${withRev.phase} batch=${withRev.batchProgress}`);
     setGs(withRev);
     gsRef.current = withRev;
-    // Lightweight broadcast — peer updates progress UI without going through full state-merge
-    broadcastReadingProgress(newUiRev, withRev.batchProgress, withRev.wordsRead);
+    broadcastState(withRev);
 
     if (withRev.lastEvent?.message) {
       setEventFlash(withRev.lastEvent.message);
       setTimeout(() => setEventFlash(null), 2000);
     }
-  }, [broadcastReadingProgress]);
+  }, [broadcastState]);
 
-  // ─── commitAndPersist: increments turnRev, broadcasts full state, persists to DB. For real turn changes. ───
+  // ─── commitAndPersist: broadcast IMMEDIATELY + coalesced DB write — for turn switches, phase changes, wins ───
   const commitAndPersist = useCallback((newState: OnlinePvPGameState) => {
-    const baseTurnRev = Math.max(gsRef.current.turnRev ?? gsRef.current.rev ?? 0, highestSeenTurnRevRef.current);
-    const nextTurnRev = baseTurnRev + 1;
-    const withRev: OnlinePvPGameState = {
-      ...newState,
-      turnRev: nextTurnRev,
-      uiRev: gsRef.current.uiRev ?? 0,
-      rev: nextTurnRev, // mirror for legacy readers + RPC's revision check
-    };
-    highestSeenTurnRevRef.current = nextTurnRev;
-    console.log(`[PvP] commitAndPersist turnRev=${nextTurnRev} phase=${withRev.phase} turn=${withRev.turn} hostHp=${withRev.hostHp} guestHp=${withRev.guestHp}`);
+    const baseRev = Math.max(gsRef.current.rev ?? 0, highestSeenRevRef.current);
+    const withRev = { ...newState, rev: baseRev + 1 };
+    highestSeenRevRef.current = withRev.rev;
+    console.log(`[PvP] commitAndPersist rev=${withRev.rev} phase=${withRev.phase} turn=${withRev.turn} hostHp=${withRev.hostHp} guestHp=${withRev.guestHp}`);
     setGs(withRev);
     gsRef.current = withRev;
+    // Broadcast IMMEDIATELY — peer gets the update without waiting for DB
     broadcastState(withRev);
+    // Schedule authoritative persistence (coalesced, non-blocking)
     enqueueStatePersist(withRev);
 
     if (withRev.lastEvent?.message) {
@@ -498,33 +444,14 @@ export const RPGOnlinePvPBattle = ({
 
     channel.on('broadcast', { event: 'state_update' }, async (msg) => {
       const payload = msg.payload as any;
-      const sender: string | undefined = payload?.sender;
       if (payload?.state && isValidPvPState(payload.state)) {
-        applyIncomingState('broadcast', payload.state as OnlinePvPGameState, undefined, true, sender);
+        applyIncomingState('broadcast', payload.state as OnlinePvPGameState, undefined, true);
         // Broadcast is fast but not authoritative; immediately pull the saved
         // room too so parent→student writes cannot be lost behind local state.
         void rehydrateRoom(true);
       } else {
         console.log('[PvP] Broadcast signal received (no inline state), rehydrating from DB...');
         await rehydrateRoom(true);
-      }
-    });
-
-    // Lightweight reading-progress updates — never go through full state-apply
-    channel.on('broadcast', { event: 'reading_progress' }, (msg) => {
-      const payload = msg.payload as any;
-      if (typeof payload?.batchProgress !== 'number') return;
-      const local = gsRef.current;
-      // Only apply if it advances progress within the same turn — never override turn/HP/phase
-      if (payload.batchProgress > local.batchProgress && local.phase === 'kid_turn') {
-        const next: OnlinePvPGameState = {
-          ...local,
-          batchProgress: payload.batchProgress,
-          wordsRead: typeof payload.wordsRead === 'number' ? payload.wordsRead : local.wordsRead,
-          uiRev: typeof payload.uiRev === 'number' ? payload.uiRev : local.uiRev,
-        };
-        gsRef.current = next;
-        setGs(next);
       }
     });
 
@@ -663,18 +590,6 @@ export const RPGOnlinePvPBattle = ({
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [roomId, isHost, authLoading, session?.user?.id, applyIncomingState, rehydrateRoom]);
-
-  // ─── WATCHDOG: if host is stuck in parent_turn for >3s, force rehydrate from DB ───
-  useEffect(() => {
-    if (!ready || !isHost || gs.phase !== 'parent_turn') return;
-    const timer = setTimeout(() => {
-      if (gsRef.current.phase === 'parent_turn') {
-        console.warn('[PvP] WATCHDOG: stuck in parent_turn for 3s — force rehydrating from DB');
-        void rehydrateRoom(true);
-      }
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [ready, isHost, gs.phase, gs.turnRev, rehydrateRoom]);
 
   // ─── Handle end ───
   useEffect(() => {
