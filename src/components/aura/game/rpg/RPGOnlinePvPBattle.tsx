@@ -544,6 +544,22 @@ export const RPGOnlinePvPBattle = ({
     }
   }, [gs.phase, ready, endPhase, isHost]);
 
+  // ─── Trigger parent attack VFX whenever a NEW ability event arrives (local OR remote) ───
+  useEffect(() => {
+    const ev = gs.lastEvent;
+    if (!ev || ev.type !== 'ability' || ev.by !== 'guest') return;
+    if (!ev.timestamp || ev.timestamp <= lastVfxTimestampRef.current) return;
+    // Only fire when the ability has actually resolved (damage event), not on the
+    // intermediate "📖 Read the word" prompt or the "🎮 mini-game!" announcement.
+    const isResolution =
+      typeof ev.damage === 'number' && ev.damage > 0 &&
+      gsRef.current.phase !== 'parent_reading' &&
+      gsRef.current.phase !== 'mini_game';
+    if (!isResolution) return;
+    lastVfxTimestampRef.current = ev.timestamp;
+    setAttackVfx({ kind: abilityIdToAttackKind(ev.abilityId), key: ev.timestamp });
+  }, [gs.lastEvent]);
+
   // ─── Kid reads a word — Elara 5-word charge + plasma barrage mechanic ───
   const handleKidWordResult = useCallback((correct: boolean, _spokenWord: string, _wordIndex: number) => {
     if (!isHost) return;
