@@ -280,11 +280,18 @@ export const RPGFireballDefense = ({
   }, []);
 
   const getFireballSize = (size: 'small' | 'medium' | 'large') => {
+    // Bigger boxes so the word inside is always legible to a parent reading at a distance.
     switch (size) {
-      case 'large': return 'w-20 h-20 text-sm';
-      case 'medium': return 'w-16 h-16 text-xs';
-      case 'small': return 'w-12 h-12 text-xs';
+      case 'large': return 'w-32 h-32';
+      case 'medium': return 'w-28 h-28';
+      case 'small': return 'w-24 h-24';
     }
+  };
+
+  const getFireballTextSize = (word: string) => {
+    if (word.length > 8) return 'text-base';
+    if (word.length > 5) return 'text-lg';
+    return 'text-xl';
   };
 
   const agent = isAgent();
