@@ -63,6 +63,8 @@ export interface OnlinePvPGameState {
 
 export const INITIAL_PVP_STATE: OnlinePvPGameState = {
   rev: 0,
+  turnRev: 0,
+  uiRev: 0,
   hostHp: 100,
   guestHp: 100,
   turn: 'host',
