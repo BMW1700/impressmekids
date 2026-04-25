@@ -39,12 +39,14 @@ export const RPGBattleBackground = ({
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   
-  // Toggle between AI and gradient backgrounds - default to gradient (more reliable)
+  // Toggle between generated world art and classic gradient backgrounds.
+  // Default to generated art so multiplayer starts on the same canonical world-one scene.
   const [useAiBackground, setUseAiBackground] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('rpg_use_ai_bg') === 'true';
+      const stored = localStorage.getItem('rpg_use_ai_bg_v2');
+      return stored === null ? true : stored === 'true';
     }
-    return false;
+    return true;
   });
 
   // Get current world name for button display
@@ -56,7 +58,7 @@ export const RPGBattleBackground = ({
   // Save preference
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('rpg_use_ai_bg', useAiBackground.toString());
+      localStorage.setItem('rpg_use_ai_bg_v2', useAiBackground.toString());
     }
   }, [useAiBackground]);
 
@@ -69,6 +71,9 @@ export const RPGBattleBackground = ({
 
   // Fetch AI-generated background from database
   useEffect(() => {
+    setBackgroundImage(null);
+    setImageLoaded(false);
+
     const fetchBackground = async () => {
       const dbWorldId = gameTheme === 'agent' 
         ? (agentWorldToDbId[worldNumber] || 11) 
@@ -86,7 +91,7 @@ export const RPGBattleBackground = ({
     };
 
     fetchBackground();
-  }, [worldNumber]);
+  }, [worldNumber, gameTheme]);
 
   // Preload image
   useEffect(() => {

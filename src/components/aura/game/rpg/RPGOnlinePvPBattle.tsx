@@ -26,8 +26,10 @@ import {
 const battleSounds = new SoundEffects();
 const BATCH_SIZE = 5;
 const POLL_MS = 2000;
+const WAITING_RECOVERY_POLL_MS = 600;
 const ELARA_CHARGE_MAX = 5;
 const ELARA_BARRAGE_MULTIPLIER = 3;
+const STUDENT_MISS_DAMAGE = 8;
 
 interface BattleStats {
   wordsRead: number;
@@ -72,6 +74,9 @@ export const RPGOnlinePvPBattle = ({
   const [initError, setInitError] = useState<string | null>(null);
   const [eventFlash, setEventFlash] = useState<string | null>(null);
   const [attackVfx, setAttackVfx] = useState<{ kind: ParentAttackKind; key: number } | null>(null);
+  const [heroTakingDamage, setHeroTakingDamage] = useState(false);
+  const [villainTakingDamage, setVillainTakingDamage] = useState(false);
+  const [floatingDamages, setFloatingDamages] = useState<{ id: number; damage: number; target: 'host' | 'guest' }[]>([]);
   const lastVfxTimestampRef = useRef<number>(0);
 
   // ─── Elara charge counter ───
@@ -82,6 +87,7 @@ export const RPGOnlinePvPBattle = ({
   const completedRef = useRef(false);
   const hydrateAttemptsRef = useRef(0);
   const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const lastHpRef = useRef({ hostHp: INITIAL_PVP_STATE.hostHp, guestHp: INITIAL_PVP_STATE.guestHp });
   // Highest rev observed from ANY source (local commit OR peer broadcast/realtime/poll).
   // Local commits MUST increment past this — prevents rev collision when both peers commit near-simultaneously.
   const highestSeenRevRef = useRef(0);
@@ -164,8 +170,11 @@ export const RPGOnlinePvPBattle = ({
       const samePhase = normalized.phase === gsRef.current.phase;
       const sameTurn = normalized.turn === gsRef.current.turn;
       const sameWordIndex = normalized.wordIndex === gsRef.current.wordIndex;
+      const sameHp = normalized.hostHp === gsRef.current.hostHp && normalized.guestHp === gsRef.current.guestHp;
+      const sameProgress = normalized.batchProgress === gsRef.current.batchProgress && normalized.turnCount === gsRef.current.turnCount;
+      const sameEvent = (normalized.lastEvent?.timestamp ?? 0) === (gsRef.current.lastEvent?.timestamp ?? 0);
       // Echo of our own write — skip silently to avoid render thrash.
-      if (samePhase && sameTurn && sameWordIndex) {
+      if (samePhase && sameTurn && sameWordIndex && sameHp && sameProgress && sameEvent) {
         return false;
       }
       // Same rev but different state = peer-authoritative change we may have missed. Accept.
@@ -490,6 +499,18 @@ export const RPGOnlinePvPBattle = ({
     return () => clearInterval(interval);
   }, [ready, roomId, authLoading, session?.user?.id, rehydrateRoom]);
 
+  // Aggressive recovery while one side is waiting on the parent/mini-game device.
+  // This fixes the exact stale-host case where the DB has already returned to kid_turn,
+  // but the student browser is still showing "choosing an attack".
+  useEffect(() => {
+    if (!ready || authLoading || !session?.user?.id || !isHost) return;
+    if (gs.phase !== 'parent_turn' && gs.phase !== 'parent_reading' && gs.phase !== 'mini_game') return;
+    const interval = setInterval(async () => {
+      await rehydrateRoom();
+    }, WAITING_RECOVERY_POLL_MS);
+    return () => clearInterval(interval);
+  }, [ready, authLoading, session?.user?.id, isHost, gs.phase, rehydrateRoom]);
+
   // ─── Realtime postgres_changes subscription (kept as fallback) ───
   useEffect(() => {
     if (authLoading || !session?.user?.id) return;
@@ -560,6 +581,36 @@ export const RPGOnlinePvPBattle = ({
     setAttackVfx({ kind: abilityIdToAttackKind(ev.abilityId), key: ev.timestamp });
   }, [gs.lastEvent]);
 
+  // ─── Visible HP-change feedback on both clients ───
+  useEffect(() => {
+    if (!ready) {
+      lastHpRef.current = { hostHp: gs.hostHp, guestHp: gs.guestHp };
+      return;
+    }
+
+    const previous = lastHpRef.current;
+    const hostDamage = Math.max(0, previous.hostHp - gs.hostHp);
+    const guestDamage = Math.max(0, previous.guestHp - gs.guestHp);
+
+    if (hostDamage > 0) {
+      setHeroTakingDamage(true);
+      const id = Date.now();
+      setFloatingDamages(prev => [...prev, { id, damage: hostDamage, target: 'host' }]);
+      setTimeout(() => setHeroTakingDamage(false), 650);
+      setTimeout(() => setFloatingDamages(prev => prev.filter(item => item.id !== id)), 1200);
+    }
+
+    if (guestDamage > 0) {
+      setVillainTakingDamage(true);
+      const id = Date.now() + 1;
+      setFloatingDamages(prev => [...prev, { id, damage: guestDamage, target: 'guest' }]);
+      setTimeout(() => setVillainTakingDamage(false), 650);
+      setTimeout(() => setFloatingDamages(prev => prev.filter(item => item.id !== id)), 1200);
+    }
+
+    lastHpRef.current = { hostHp: gs.hostHp, guestHp: gs.guestHp };
+  }, [ready, gs.hostHp, gs.guestHp]);
+
   // ─── Kid reads a word — Elara 5-word charge + plasma barrage mechanic ───
   const handleKidWordResult = useCallback((correct: boolean, _spokenWord: string, _wordIndex: number) => {
     if (!isHost) return;
@@ -600,7 +651,15 @@ export const RPGOnlinePvPBattle = ({
       }
     } else {
       s.hostStreak = 0;
+      s.hostHp = Math.max(0, s.hostHp - STUDENT_MISS_DAMAGE);
+      s.lastEvent = { type: 'mistake', damage: STUDENT_MISS_DAMAGE, by: 'host', message: `💥 Missed word — ${hostName} takes ${STUDENT_MISS_DAMAGE} damage!`, timestamp: Date.now() };
       setElaraCharge(0);
+
+      if (s.hostHp <= 0) {
+        s.phase = 'guest_wins';
+        commitAndPersist(s);
+        return;
+      }
     }
 
     // Check if this 5-word batch is done → turn switch = persist to DB
@@ -615,6 +674,8 @@ export const RPGOnlinePvPBattle = ({
       s.turnCount += 1;
       s.lastEvent = { type: 'turn_switch', by: 'host', message: `🔴 ${guestName}'s Turn!`, timestamp: Date.now() };
       setElaraCharge(0);
+      commitAndPersist(s);
+    } else if (!correct) {
       commitAndPersist(s);
     } else {
       commitLocal(s);
@@ -684,12 +745,13 @@ export const RPGOnlinePvPBattle = ({
     if (myRole !== 'parent') return;
     if (gsRef.current.phase !== 'mini_game') return;
     const s = { ...gsRef.current };
+    const abilityId = s.activeMiniGame;
     const kidDamage = failed * 5;
     const bonusDamage = completed * 3;
     if (kidDamage > 0) s.hostHp = Math.max(0, s.hostHp - kidDamage);
     if (bonusDamage > 0) s.guestHp = Math.max(0, s.guestHp - bonusDamage);
     s.activeMiniGame = null;
-    s.lastEvent = { type: 'mini_game_end', by: 'guest', message: `🎮 Mini-game done! ${completed} caught, ${failed} missed`, timestamp: Date.now() };
+    s.lastEvent = { type: 'ability', damage: kidDamage, by: 'guest', abilityId: abilityId ?? undefined, message: `🎮 Mini-game done! ${completed} caught, ${failed} missed`, timestamp: Date.now() };
 
     if (s.hostHp <= 0) { s.phase = 'guest_wins'; }
     else if (s.guestHp <= 0) { s.phase = 'host_wins'; }
@@ -766,14 +828,28 @@ export const RPGOnlinePvPBattle = ({
 
       {/* Characters */}
       <div className="absolute bottom-40 left-[20%] z-[50]">
-        <RPGCharacter character={allyWizard} currentHp={gs.hostHp} isAttacking={gs.turn === 'host' && gs.phase === 'kid_turn'} />
+        <RPGCharacter character={allyWizard} currentHp={gs.hostHp} isAttacking={gs.turn === 'host' && gs.phase === 'kid_turn'} isTakingDamage={heroTakingDamage} />
       </div>
       <div className="absolute bottom-40 right-[20%] z-[50]">
         <RPGCharacter
           character={{ ...heroKnight, id: 'villain', name: guestName, type: 'enemy', color: '#ef4444' } as any}
-          currentHp={gs.guestHp} isEnemy isTakingDamage={gs.turn === 'host'}
+          currentHp={gs.guestHp} isEnemy isTakingDamage={villainTakingDamage}
         />
       </div>
+
+      <AnimatePresence>
+        {floatingDamages.map(item => (
+          <motion.div
+            key={item.id}
+            initial={{ opacity: 0, y: 20, scale: 0.7 }}
+            animate={{ opacity: 1, y: -28, scale: 1.1 }}
+            exit={{ opacity: 0, y: -48 }}
+            className={`absolute z-[78] text-3xl font-black drop-shadow-lg ${item.target === 'host' ? 'left-[24%] top-[54%] text-red-300' : 'right-[24%] top-[54%] text-yellow-300'}`}
+          >
+            -{item.damage}
+          </motion.div>
+        ))}
+      </AnimatePresence>
 
       {/* ──── Kid's Turn: Word Reader (host device — interactive) with mode='fast' for Elara ──── */}
       {ready && gs.phase === 'kid_turn' && isHost && (
