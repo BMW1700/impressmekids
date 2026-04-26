@@ -4778,6 +4778,56 @@ export type Database = {
         }
         Relationships: []
       }
+      pvp_room_events: {
+        Row: {
+          ability_id: string | null
+          actor: string
+          created_at: string
+          damage: number | null
+          event_type: string
+          id: number
+          message: string | null
+          payload: Json
+          rev: number
+          room_id: string
+          target: string | null
+        }
+        Insert: {
+          ability_id?: string | null
+          actor: string
+          created_at?: string
+          damage?: number | null
+          event_type: string
+          id?: number
+          message?: string | null
+          payload?: Json
+          rev: number
+          room_id: string
+          target?: string | null
+        }
+        Update: {
+          ability_id?: string | null
+          actor?: string
+          created_at?: string
+          damage?: number | null
+          event_type?: string
+          id?: number
+          message?: string | null
+          payload?: Json
+          rev?: number
+          room_id?: string
+          target?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pvp_room_events_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "multiplayer_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       question_groups: {
         Row: {
           classroom_id: string
@@ -8465,6 +8515,21 @@ export type Database = {
             }
             Returns: Json
           }
+      submit_pvp_action: {
+        Args: {
+          p_action: string
+          p_expected_rev: number
+          p_payload?: Json
+          p_room_id: string
+        }
+        Returns: {
+          applied: boolean
+          game_state: Json
+          reason: string
+          status: string
+          updated_at: string
+        }[]
+      }
       sync_multiplayer_room_state: {
         Args: { p_game_state: Json; p_room_id: string; p_status?: string }
         Returns: {
