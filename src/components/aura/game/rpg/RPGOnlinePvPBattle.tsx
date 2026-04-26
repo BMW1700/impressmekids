@@ -150,8 +150,10 @@ export const RPGOnlinePvPBattle = ({
     markReady = false,
   ): boolean => {
     if (!isValidPvPState(incoming)) return false;
-    if (markReady && !readyRef.current) {
+    const wasReady = readyRef.current;
+    if (markReady && !wasReady) {
       readyRef.current = true;
+      lastHpRef.current = { hostHp: incoming.hostHp, guestHp: incoming.guestHp };
       setReady(true);
     }
     const incomingRev = (incoming as any).rev ?? 0;
