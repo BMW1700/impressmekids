@@ -201,7 +201,8 @@ export const RPGOnlinePvPBattle = ({
 
   // ─── Submit an action through the server-authoritative RPC ───
   const submitAction = useCallback(async (action: string, payload: any = {}) => {
-    if (actionPending) return;
+    if (actionPendingRef.current) return;
+    actionPendingRef.current = true;
     setActionPending(true);
     setActionError(null);
     const expectedRev = gsRef.current.rev ?? 0;
@@ -227,28 +228,40 @@ export const RPGOnlinePvPBattle = ({
       }
       if (!row.applied) {
         console.warn(`[PvP] action rejected: ${row.reason}`);
+        if (row.game_state) applyCanonical(row.game_state);
         if (row.reason === 'stale_rev') {
           // peer beat us; pull canonical state
-          if (row.game_state) applyCanonical(row.game_state);
-          else await pullRoom();
+          if (!row.game_state) await pullRoom();
         } else if (row.reason === 'on_cooldown') {
           setActionError('That ability is on cooldown.');
         } else if (row.reason === 'wrong_phase') {
           // the canonical state already moved on; resync
-          if (row.game_state) applyCanonical(row.game_state);
-          else await pullRoom();
+          if (!row.game_state) await pullRoom();
         }
         return;
       }
       if (row.game_state) applyCanonical(row.game_state);
+      const canonicalEvent = (row.game_state as any)?.lastEvent;
+      if (canonicalEvent) {
+        replayBattleEvent({
+          rev: canonicalEvent.rev,
+          event_type: canonicalEvent.type,
+          actor: canonicalEvent.by,
+          target: canonicalEvent.target,
+          damage: canonicalEvent.damage,
+          ability_id: canonicalEvent.abilityId,
+          message: canonicalEvent.message,
+        });
+      }
     } catch (e: any) {
       console.error('[PvP] submitAction exception:', e);
       setActionError('Network error. Trying to recover.');
       await pullRoom();
     } finally {
+      actionPendingRef.current = false;
       setActionPending(false);
     }
-  }, [roomId, actionPending, applyCanonical, pullRoom]);
+  }, [roomId, applyCanonical, pullRoom, replayBattleEvent]);
 
   // ─── Initial hydration ───
   useEffect(() => {
