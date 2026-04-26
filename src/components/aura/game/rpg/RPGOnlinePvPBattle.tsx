@@ -274,7 +274,7 @@ export const RPGOnlinePvPBattle = ({
       const ok = await pullRoom(true);
       if (!ok) {
         attempts++;
-        if (attempts >= 8 && !ready && !cancelled) {
+        if (attempts >= 8 && !readyRef.current && !cancelled) {
           setInitError('Battle sync failed. Go back and create a new room.');
         }
       }
@@ -302,7 +302,7 @@ export const RPGOnlinePvPBattle = ({
     init();
 
     return () => { cancelled = true; if (pollInterval) clearInterval(pollInterval); };
-  }, [roomId, authLoading, session?.user?.id, initialRoomSnapshot, applyCanonical, pullRoom, ready]);
+  }, [roomId, authLoading, session?.user?.id, initialRoomSnapshot, applyCanonical, pullRoom]);
 
   // ─── Subscribe to canonical room updates (full row delivered via REPLICA IDENTITY FULL) ───
   useEffect(() => {
@@ -354,29 +354,12 @@ export const RPGOnlinePvPBattle = ({
         { event: 'INSERT', schema: 'public', table: 'pvp_room_events', filter: `room_id=eq.${roomId}` },
         (payload) => {
           const ev = payload.new as any;
-          if (!ev || ev.rev <= lastEventRevRef.current) return;
-          lastEventRevRef.current = ev.rev;
-
-          // Banner
-          if (ev.message) {
-            setEventFlash(ev.message);
-            setTimeout(() => setEventFlash(null), 2000);
-          }
-
-          // Sound
-          if (ev.event_type === 'attack') battleSounds.correctWord();
-          else if (ev.event_type === 'ability') battleSounds.fireWhoosh();
-          else if (ev.event_type === 'mistake') battleSounds.incorrectWord();
-
-          // Parent ability VFX
-          if (ev.event_type === 'ability' && ev.actor === 'guest' && typeof ev.damage === 'number' && ev.damage > 0) {
-            setAttackVfx({ kind: abilityIdToAttackKind(ev.ability_id), key: ev.rev });
-          }
+          replayBattleEvent(ev);
         }
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [roomId, authLoading, session?.user?.id]);
+  }, [roomId, authLoading, session?.user?.id, replayBattleEvent]);
 
   // ─── Fallback poll while waiting for the peer ───
   useEffect(() => {
