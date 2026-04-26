@@ -160,14 +160,14 @@ export const RPGOnlinePvPBattle = ({
     const localRev = gsRef.current.rev ?? 0;
     if (incomingRev < localRev) return false; // strictly newer or equal-with-diff
     if (incomingRev === localRev) {
-      // Same rev = same canonical state; nothing to do
+      // Same rev = valid canonical state; metadata may still be fresher.
       if (roomMeta) {
         if (roomMeta.host_name) setHostName(roomMeta.host_name);
         if (roomMeta.guest_name) setGuestName(roomMeta.guest_name);
         if (roomMeta.story_passage) setRoomStory(roomMeta.story_passage);
         if (typeof roomMeta.world_number === 'number') setRoomWorldNumber(roomMeta.world_number);
       }
-      return false;
+      return true;
     }
     if (roomMeta) {
       if (roomMeta.host_name) setHostName(roomMeta.host_name);
