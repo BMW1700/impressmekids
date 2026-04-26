@@ -84,11 +84,14 @@ export const RPGOnlinePvPBattle = ({
   const [floatingDamages, setFloatingDamages] = useState<{ id: number; damage: number; target: 'host' | 'guest' }[]>([]);
 
   const gsRef = useRef(gs);
+  const readyRef = useRef(false);
+  const actionPendingRef = useRef(false);
   const completedRef = useRef(false);
   const lastEventRevRef = useRef<number>(-1);
   const lastHpRef = useRef({ hostHp: INITIAL_PVP_STATE.hostHp, guestHp: INITIAL_PVP_STATE.guestHp });
 
   useEffect(() => { gsRef.current = gs; }, [gs]);
+  useEffect(() => { readyRef.current = ready; }, [ready]);
 
   const storyWords = useMemo(
     () => roomStory.split(/\s+/).filter(w => w.length > 0),
@@ -119,6 +122,27 @@ export const RPGOnlinePvPBattle = ({
     return null;
   }, [gs.phase, gs.turn, hostName, guestName, eventFlash]);
 
+  const replayBattleEvent = useCallback((ev: any) => {
+    if (!ev) return;
+    const rev = typeof ev.rev === 'number' ? ev.rev : Number(ev.rev ?? -1);
+    if (!Number.isFinite(rev) || rev <= lastEventRevRef.current) return;
+    lastEventRevRef.current = rev;
+
+    if (ev.message) {
+      setEventFlash(ev.message);
+      setTimeout(() => setEventFlash(null), 2000);
+    }
+
+    const eventType = ev.event_type ?? ev.type;
+    if (eventType === 'attack') battleSounds.correctWord();
+    else if (eventType === 'ability') battleSounds.fireWhoosh();
+    else if (eventType === 'mistake') battleSounds.incorrectWord();
+
+    if (eventType === 'ability' && ev.actor === 'guest' && typeof ev.damage === 'number' && ev.damage > 0) {
+      setAttackVfx({ kind: abilityIdToAttackKind(ev.ability_id ?? ev.abilityId), key: rev });
+    }
+  }, []);
+
   // ─── Apply canonical state from the database ───
   const applyCanonical = useCallback((
     incoming: any,
@@ -126,19 +150,24 @@ export const RPGOnlinePvPBattle = ({
     markReady = false,
   ): boolean => {
     if (!isValidPvPState(incoming)) return false;
+    const wasReady = readyRef.current;
+    if (markReady && !wasReady) {
+      readyRef.current = true;
+      lastHpRef.current = { hostHp: incoming.hostHp, guestHp: incoming.guestHp };
+      setReady(true);
+    }
     const incomingRev = (incoming as any).rev ?? 0;
     const localRev = gsRef.current.rev ?? 0;
     if (incomingRev < localRev) return false; // strictly newer or equal-with-diff
     if (incomingRev === localRev) {
-      // Same rev = same canonical state; nothing to do
+      // Same rev = valid canonical state; metadata may still be fresher.
       if (roomMeta) {
         if (roomMeta.host_name) setHostName(roomMeta.host_name);
         if (roomMeta.guest_name) setGuestName(roomMeta.guest_name);
         if (roomMeta.story_passage) setRoomStory(roomMeta.story_passage);
         if (typeof roomMeta.world_number === 'number') setRoomWorldNumber(roomMeta.world_number);
       }
-      if (markReady && !ready) setReady(true);
-      return false;
+      return true;
     }
     if (roomMeta) {
       if (roomMeta.host_name) setHostName(roomMeta.host_name);
@@ -149,9 +178,20 @@ export const RPGOnlinePvPBattle = ({
     gsRef.current = incoming;
     setGs(incoming);
     setInitError(null);
-    if (markReady && !ready) setReady(true);
+    const lastEvent = (incoming as any).lastEvent;
+    if (lastEvent) {
+      replayBattleEvent({
+        rev: lastEvent.rev,
+        event_type: lastEvent.type,
+        actor: lastEvent.by,
+        target: lastEvent.target,
+        damage: lastEvent.damage,
+        ability_id: lastEvent.abilityId,
+        message: lastEvent.message,
+      });
+    }
     return true;
-  }, [ready]);
+  }, [replayBattleEvent]);
 
   // ─── Pull canonical state from DB ───
   const pullRoom = useCallback(async (markReady = false): Promise<boolean> => {
@@ -175,7 +215,8 @@ export const RPGOnlinePvPBattle = ({
 
   // ─── Submit an action through the server-authoritative RPC ───
   const submitAction = useCallback(async (action: string, payload: any = {}) => {
-    if (actionPending) return;
+    if (actionPendingRef.current) return;
+    actionPendingRef.current = true;
     setActionPending(true);
     setActionError(null);
     const expectedRev = gsRef.current.rev ?? 0;
@@ -201,28 +242,40 @@ export const RPGOnlinePvPBattle = ({
       }
       if (!row.applied) {
         console.warn(`[PvP] action rejected: ${row.reason}`);
+        if (row.game_state) applyCanonical(row.game_state);
         if (row.reason === 'stale_rev') {
           // peer beat us; pull canonical state
-          if (row.game_state) applyCanonical(row.game_state);
-          else await pullRoom();
+          if (!row.game_state) await pullRoom();
         } else if (row.reason === 'on_cooldown') {
           setActionError('That ability is on cooldown.');
         } else if (row.reason === 'wrong_phase') {
           // the canonical state already moved on; resync
-          if (row.game_state) applyCanonical(row.game_state);
-          else await pullRoom();
+          if (!row.game_state) await pullRoom();
         }
         return;
       }
       if (row.game_state) applyCanonical(row.game_state);
+      const canonicalEvent = (row.game_state as any)?.lastEvent;
+      if (canonicalEvent) {
+        replayBattleEvent({
+          rev: canonicalEvent.rev,
+          event_type: canonicalEvent.type,
+          actor: canonicalEvent.by,
+          target: canonicalEvent.target,
+          damage: canonicalEvent.damage,
+          ability_id: canonicalEvent.abilityId,
+          message: canonicalEvent.message,
+        });
+      }
     } catch (e: any) {
       console.error('[PvP] submitAction exception:', e);
       setActionError('Network error. Trying to recover.');
       await pullRoom();
     } finally {
+      actionPendingRef.current = false;
       setActionPending(false);
     }
-  }, [roomId, actionPending, applyCanonical, pullRoom]);
+  }, [roomId, applyCanonical, pullRoom, replayBattleEvent]);
 
   // ─── Initial hydration ───
   useEffect(() => {
@@ -235,7 +288,7 @@ export const RPGOnlinePvPBattle = ({
       const ok = await pullRoom(true);
       if (!ok) {
         attempts++;
-        if (attempts >= 8 && !ready && !cancelled) {
+        if (attempts >= 8 && !readyRef.current && !cancelled) {
           setInitError('Battle sync failed. Go back and create a new room.');
         }
       }
@@ -263,7 +316,7 @@ export const RPGOnlinePvPBattle = ({
     init();
 
     return () => { cancelled = true; if (pollInterval) clearInterval(pollInterval); };
-  }, [roomId, authLoading, session?.user?.id, initialRoomSnapshot, applyCanonical, pullRoom, ready]);
+  }, [roomId, authLoading, session?.user?.id, initialRoomSnapshot, applyCanonical, pullRoom]);
 
   // ─── Subscribe to canonical room updates (full row delivered via REPLICA IDENTITY FULL) ───
   useEffect(() => {
@@ -315,29 +368,12 @@ export const RPGOnlinePvPBattle = ({
         { event: 'INSERT', schema: 'public', table: 'pvp_room_events', filter: `room_id=eq.${roomId}` },
         (payload) => {
           const ev = payload.new as any;
-          if (!ev || ev.rev <= lastEventRevRef.current) return;
-          lastEventRevRef.current = ev.rev;
-
-          // Banner
-          if (ev.message) {
-            setEventFlash(ev.message);
-            setTimeout(() => setEventFlash(null), 2000);
-          }
-
-          // Sound
-          if (ev.event_type === 'attack') battleSounds.correctWord();
-          else if (ev.event_type === 'ability') battleSounds.fireWhoosh();
-          else if (ev.event_type === 'mistake') battleSounds.incorrectWord();
-
-          // Parent ability VFX
-          if (ev.event_type === 'ability' && ev.actor === 'guest' && typeof ev.damage === 'number' && ev.damage > 0) {
-            setAttackVfx({ kind: abilityIdToAttackKind(ev.ability_id), key: ev.rev });
-          }
+          replayBattleEvent(ev);
         }
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [roomId, authLoading, session?.user?.id]);
+  }, [roomId, authLoading, session?.user?.id, replayBattleEvent]);
 
   // ─── Fallback poll while waiting for the peer ───
   useEffect(() => {
