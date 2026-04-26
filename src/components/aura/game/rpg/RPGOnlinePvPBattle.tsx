@@ -150,6 +150,10 @@ export const RPGOnlinePvPBattle = ({
     markReady = false,
   ): boolean => {
     if (!isValidPvPState(incoming)) return false;
+    if (markReady && !readyRef.current) {
+      readyRef.current = true;
+      setReady(true);
+    }
     const incomingRev = (incoming as any).rev ?? 0;
     const localRev = gsRef.current.rev ?? 0;
     if (incomingRev < localRev) return false; // strictly newer or equal-with-diff
@@ -161,7 +165,6 @@ export const RPGOnlinePvPBattle = ({
         if (roomMeta.story_passage) setRoomStory(roomMeta.story_passage);
         if (typeof roomMeta.world_number === 'number') setRoomWorldNumber(roomMeta.world_number);
       }
-      if (markReady && !ready) setReady(true);
       return false;
     }
     if (roomMeta) {
@@ -173,9 +176,8 @@ export const RPGOnlinePvPBattle = ({
     gsRef.current = incoming;
     setGs(incoming);
     setInitError(null);
-    if (markReady && !ready) setReady(true);
     return true;
-  }, [ready]);
+  }, []);
 
   // ─── Pull canonical state from DB ───
   const pullRoom = useCallback(async (markReady = false): Promise<boolean> => {
