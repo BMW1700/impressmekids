@@ -84,11 +84,14 @@ export const RPGOnlinePvPBattle = ({
   const [floatingDamages, setFloatingDamages] = useState<{ id: number; damage: number; target: 'host' | 'guest' }[]>([]);
 
   const gsRef = useRef(gs);
+  const readyRef = useRef(false);
+  const actionPendingRef = useRef(false);
   const completedRef = useRef(false);
   const lastEventRevRef = useRef<number>(-1);
   const lastHpRef = useRef({ hostHp: INITIAL_PVP_STATE.hostHp, guestHp: INITIAL_PVP_STATE.guestHp });
 
   useEffect(() => { gsRef.current = gs; }, [gs]);
+  useEffect(() => { readyRef.current = ready; }, [ready]);
 
   const storyWords = useMemo(
     () => roomStory.split(/\s+/).filter(w => w.length > 0),
@@ -118,6 +121,27 @@ export const RPGOnlinePvPBattle = ({
     if (gs.phase === 'mini_game') return `🎮 Mini-game active!`;
     return null;
   }, [gs.phase, gs.turn, hostName, guestName, eventFlash]);
+
+  const replayBattleEvent = useCallback((ev: any) => {
+    if (!ev) return;
+    const rev = typeof ev.rev === 'number' ? ev.rev : Number(ev.rev ?? -1);
+    if (!Number.isFinite(rev) || rev <= lastEventRevRef.current) return;
+    lastEventRevRef.current = rev;
+
+    if (ev.message) {
+      setEventFlash(ev.message);
+      setTimeout(() => setEventFlash(null), 2000);
+    }
+
+    const eventType = ev.event_type ?? ev.type;
+    if (eventType === 'attack') battleSounds.correctWord();
+    else if (eventType === 'ability') battleSounds.fireWhoosh();
+    else if (eventType === 'mistake') battleSounds.incorrectWord();
+
+    if (eventType === 'ability' && ev.actor === 'guest' && typeof ev.damage === 'number' && ev.damage > 0) {
+      setAttackVfx({ kind: abilityIdToAttackKind(ev.ability_id ?? ev.abilityId), key: rev });
+    }
+  }, []);
 
   // ─── Apply canonical state from the database ───
   const applyCanonical = useCallback((
