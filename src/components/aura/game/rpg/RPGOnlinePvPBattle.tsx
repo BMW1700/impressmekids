@@ -176,8 +176,20 @@ export const RPGOnlinePvPBattle = ({
     gsRef.current = incoming;
     setGs(incoming);
     setInitError(null);
+    const lastEvent = (incoming as any).lastEvent;
+    if (lastEvent) {
+      replayBattleEvent({
+        rev: lastEvent.rev,
+        event_type: lastEvent.type,
+        actor: lastEvent.by,
+        target: lastEvent.target,
+        damage: lastEvent.damage,
+        ability_id: lastEvent.abilityId,
+        message: lastEvent.message,
+      });
+    }
     return true;
-  }, []);
+  }, [replayBattleEvent]);
 
   // ─── Pull canonical state from DB ───
   const pullRoom = useCallback(async (markReady = false): Promise<boolean> => {
