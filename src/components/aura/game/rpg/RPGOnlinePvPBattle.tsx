@@ -670,6 +670,7 @@ export const RPGOnlinePvPBattle = ({
           cooldowns={gs.cooldowns}
           parentHp={gs.guestHp}
           parentMaxHp={100}
+          disabled={actionPending}
         />
       )}
 
