@@ -90,6 +90,7 @@ interface RPGParentControlsProps {
   cooldowns: Record<string, number>;
   parentHp: number;
   parentMaxHp: number;
+  disabled?: boolean;
 }
 
 export const RPGParentControls = ({
@@ -97,6 +98,7 @@ export const RPGParentControls = ({
   cooldowns,
   parentHp,
   parentMaxHp,
+  disabled = false,
 }: RPGParentControlsProps) => {
   return (
     <motion.div
