@@ -8012,6 +8012,33 @@ export type Database = {
       cleanup_expired_safety_alerts: { Args: never; Returns: undefined }
       cleanup_old_signin_attempts: { Args: never; Returns: undefined }
       compute_levenshtein: { Args: { a: string; b: string }; Returns: number }
+      create_multiplayer_room: {
+        Args: {
+          p_enemy_type?: string
+          p_grade_mode: string
+          p_host_name?: string
+          p_mode: string
+          p_room_code: string
+          p_story_passage: string
+          p_story_title: string
+          p_world_number: number
+        }
+        Returns: {
+          enemy_type: string
+          game_state: Json
+          guest_id: string
+          guest_name: string
+          host_id: string
+          host_name: string
+          id: string
+          mode: string
+          room_code: string
+          status: string
+          story_passage: string
+          story_title: string
+          world_number: number
+        }[]
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
