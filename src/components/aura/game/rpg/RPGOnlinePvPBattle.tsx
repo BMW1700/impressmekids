@@ -538,9 +538,13 @@ export const RPGOnlinePvPBattle = ({
     void submitAction('parent_read_result', { correct });
   }, [isHost, submitAction]);
 
+  const miniGameSubmittedRevRef = useRef<number>(-1);
   const handleMiniGameComplete = useCallback((completed: number, failed: number) => {
     if (isHost) return;
     if (gsRef.current.phase !== 'mini_game') return;
+    const currentRev = gsRef.current.rev ?? 0;
+    if (miniGameSubmittedRevRef.current === currentRev) return;
+    miniGameSubmittedRevRef.current = currentRev;
     void submitAction('mini_game_complete', { completed, failed });
   }, [isHost, submitAction]);
 
