@@ -113,7 +113,7 @@ export const RPGOnlinePvPBattle = ({
     [storyWords, gs.wordIndex]
   );
 
-  const readerKey = `${gs.wordIndex}-${gs.turnCount}`;
+  const readerKey = `${gs.wordIndex}-${gs.batchProgress}-${gs.turnCount}`;
 
   const bannerText = useMemo(() => {
     if (eventFlash) return eventFlash;
@@ -240,13 +240,24 @@ export const RPGOnlinePvPBattle = ({
     return accepted;
   }, [roomId, session?.user?.id, applyCanonical]);
 
+  // Per-rev action lock: prevent the same logical action being submitted twice
+  // for the same canonical revision. Cleared automatically when the revision
+  // advances or the action key changes.
+  const submittedActionRef = useRef<string>('');
+
   // ─── Submit an action through the server-authoritative RPC ───
   const submitAction = useCallback(async (action: string, payload: any = {}) => {
     if (actionPendingRef.current) return;
+    const expectedRev = gsRef.current.rev ?? 0;
+    const lockKey = `${expectedRev}:${action}`;
+    if (submittedActionRef.current === lockKey) {
+      console.warn('[PvP] Duplicate action ignored for', lockKey);
+      return;
+    }
+    submittedActionRef.current = lockKey;
     actionPendingRef.current = true;
     setActionPending(true);
     setActionError(null);
-    const expectedRev = gsRef.current.rev ?? 0;
     try {
       const { data, error } = await supabase.rpc('submit_pvp_action', {
         p_room_id: roomId,
@@ -258,6 +269,7 @@ export const RPGOnlinePvPBattle = ({
         console.error('[PvP] submit_pvp_action error:', error.message);
         lastRpcReasonRef.current = `error: ${error.message}`;
         setActionError('Could not reach the battle server. Try again.');
+        submittedActionRef.current = '';
         await pullRoom();
         return;
       }
@@ -265,12 +277,14 @@ export const RPGOnlinePvPBattle = ({
       if (!row) {
         console.warn('[PvP] submit_pvp_action returned no row');
         lastRpcReasonRef.current = 'no_row';
+        submittedActionRef.current = '';
         await pullRoom();
         return;
       }
       lastRpcReasonRef.current = `${row.applied ? 'applied' : 'rejected'}:${row.reason}`;
       if (!row.applied) {
         console.warn(`[PvP] action rejected: ${row.reason}`);
+        submittedActionRef.current = '';
         if (row.game_state) applyCanonical(row.game_state);
         if (row.reason === 'stale_rev' && !row.game_state) await pullRoom();
         else if (row.reason === 'rev_mismatch') await pullRoom();
@@ -283,6 +297,7 @@ export const RPGOnlinePvPBattle = ({
       console.error('[PvP] submitAction exception:', e);
       lastRpcReasonRef.current = `exception: ${e?.message ?? 'unknown'}`;
       setActionError('Network error. Trying to recover.');
+      submittedActionRef.current = '';
       await pullRoom();
     } finally {
       actionPendingRef.current = false;
@@ -523,9 +538,13 @@ export const RPGOnlinePvPBattle = ({
     void submitAction('parent_read_result', { correct });
   }, [isHost, submitAction]);
 
+  const miniGameSubmittedRevRef = useRef<number>(-1);
   const handleMiniGameComplete = useCallback((completed: number, failed: number) => {
     if (isHost) return;
     if (gsRef.current.phase !== 'mini_game') return;
+    const currentRev = gsRef.current.rev ?? 0;
+    if (miniGameSubmittedRevRef.current === currentRev) return;
+    miniGameSubmittedRevRef.current = currentRev;
     void submitAction('mini_game_complete', { completed, failed });
   }, [isHost, submitAction]);
 

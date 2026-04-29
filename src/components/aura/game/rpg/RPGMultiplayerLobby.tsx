@@ -95,52 +95,29 @@ export const RPGMultiplayerLobby = ({
 
     const code = generateRoomCode();
 
-    // Seed game_state at creation time so both players can hydrate immediately
-    const initialGameState = battleMode === 'pvp'
-      ? {
-          rev: 0, hostHp: 100, guestHp: 100, turn: 'host', phase: 'kid_turn',
-          wordIndex: 0, batchProgress: 0, hostCorrect: 0, guestCorrect: 0,
-          hostStreak: 0, guestStreak: 0, longestStreak: 0,
-          totalDamage: 0, wordsRead: 0, cooldowns: {},
-          pendingAbility: null, pendingReadWord: null,
-          activeMiniGame: null, lastEvent: null, turnCount: 0,
-        }
-      : {
-          hostHp: 100, guestHp: 100, enemyHp: 150, enemyMaxHp: 150,
-          turn: 'host', wordIndex: 0, batchStartIndex: 0,
-          turnWordsRead: 0, hostWords: 0, guestWords: 0,
-          totalCorrect: 0, longestStreak: 0, currentStreak: 0,
-          totalDamage: 0, coopMode: 'continuous', repeatPhase: 1,
-          phase: 'setup', lastEvent: null,
-        };
+    // Server-authoritative room creation. The browser never seeds canonical
+    // game_state for PvP — the RPC writes the canonical initial state.
+    const { data: created, error: err } = await supabase.rpc('create_multiplayer_room', {
+      p_room_code: code,
+      p_mode: battleMode,
+      p_story_passage: storyPassage,
+      p_story_title: storyTitle,
+      p_world_number: worldNumber,
+      p_grade_mode: gradeMode,
+      p_enemy_type: enemyType,
+      p_host_name: 'Player 1',
+    });
+    const createdRoom = Array.isArray(created) ? created[0] : created;
 
-    const { data, error: err } = await supabase
-      .from('multiplayer_rooms')
-      .insert({
-        room_code: code,
-        mode: battleMode,
-        host_id: userId,
-        host_name: 'Player 1',
-        story_passage: storyPassage,
-        story_title: storyTitle,
-        world_number: worldNumber,
-        grade_mode: gradeMode,
-        enemy_type: enemyType,
-        status: 'waiting',
-        game_state: initialGameState,
-      })
-      .select(MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS)
-      .single();
-
-    if (err) {
+    if (err || !createdRoom) {
       console.error('[Lobby] Failed to create room:', err);
-      setError(err.message || 'Failed to create room. Try again.');
+      setError(err?.message || 'Failed to create room. Try again.');
       setLoading(false);
       return;
     }
 
     setRoomCode(code);
-    setRoomId((data as any).id);
+    setRoomId((createdRoom as any).id);
     setView('hosting');
     setLoading(false);
   }, [battleMode, storyPassage, storyTitle, worldNumber, gradeMode, enemyType, getCurrentUserId]);
