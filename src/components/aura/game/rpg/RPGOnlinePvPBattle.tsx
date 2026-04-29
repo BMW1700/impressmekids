@@ -350,12 +350,17 @@ export const RPGOnlinePvPBattle = ({
               world_number: room.world_number,
             }, true);
           } else {
-            // Truncated payload — pull authoritative copy
             void pullRoom(true);
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        roomChannelStatusRef.current = status;
+        forceDiagTick(t => t + 1);
+        // After the channel becomes live, pull once to backfill anything we missed
+        // during the brief subscription handshake.
+        if (status === 'SUBSCRIBED') void pullRoom(true);
+      });
     return () => { supabase.removeChannel(channel); };
   }, [roomId, authLoading, session?.user?.id, applyCanonical, pullRoom]);
 
@@ -363,15 +368,24 @@ export const RPGOnlinePvPBattle = ({
   useEffect(() => {
     if (authLoading || !session?.user?.id) return;
 
-    // Load existing events first (in case we joined mid-battle)
+    // Bootstrap: do NOT suppress the most-recent existing event from being
+    // replayed once. We only suppress events strictly OLDER than the
+    // currently-applied state. This way, if a parent attack happened just
+    // before subscribe finished, we still play the animation.
     (async () => {
       const { data } = await supabase
         .from('pvp_room_events')
-        .select('rev, event_type, actor, target, damage, ability_id, message')
+        .select('rev')
         .eq('room_id', roomId)
         .order('rev', { ascending: false })
         .limit(1);
-      if (data && data[0]) lastEventRevRef.current = data[0].rev;
+      const latestExistingRev = data && data[0] ? Number(data[0].rev) : -1;
+      // Suppress only events older than the latest already in the log MINUS one,
+      // so the most recent event still has a chance to play if it's also the next
+      // realtime event we receive. (Dedup via lastEventRevRef still prevents doubles.)
+      if (latestExistingRev > 0) {
+        lastEventRevRef.current = Math.max(lastEventRevRef.current, latestExistingRev - 1);
+      }
     })();
 
     const channel = supabase
@@ -384,7 +398,10 @@ export const RPGOnlinePvPBattle = ({
           replayBattleEvent(ev);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        eventsChannelStatusRef.current = status;
+        forceDiagTick(t => t + 1);
+      });
     return () => { supabase.removeChannel(channel); };
   }, [roomId, authLoading, session?.user?.id, replayBattleEvent]);
 
