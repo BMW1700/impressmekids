@@ -25,7 +25,7 @@ import {
 
 const battleSounds = new SoundEffects();
 const BATCH_SIZE = 5;
-const POLL_MS = 1500;
+const POLL_MS = 1000;
 
 interface BattleStats {
   wordsRead: number;
@@ -89,6 +89,12 @@ export const RPGOnlinePvPBattle = ({
   const completedRef = useRef(false);
   const lastEventRevRef = useRef<number>(-1);
   const lastHpRef = useRef({ hostHp: INITIAL_PVP_STATE.hostHp, guestHp: INITIAL_PVP_STATE.guestHp });
+  const lastAppliedRevRef = useRef<number>(-1);
+  const roomChannelStatusRef = useRef<string>('init');
+  const eventsChannelStatusRef = useRef<string>('init');
+  const [, forceDiagTick] = useState(0);
+  const lastPullAtRef = useRef<number>(0);
+  const lastRpcReasonRef = useRef<string>('—');
 
   useEffect(() => { gsRef.current = gs; }, [gs]);
   useEffect(() => { readyRef.current = ready; }, [ready]);
@@ -144,42 +150,59 @@ export const RPGOnlinePvPBattle = ({
   }, []);
 
   // ─── Apply canonical state from the database ───
+  // Self-healing: accepts strictly newer revisions, AND accepts equal/lower revisions
+  // that differ from local state (e.g. recovery after a missed websocket frame).
+  // Refuses to silently overwrite local state with an OLDER state that is identical
+  // (no-op) — this avoids ping-pong with stale poll responses.
   const applyCanonical = useCallback((
     incoming: any,
     roomMeta?: { host_name?: string | null; guest_name?: string | null; story_passage?: string | null; world_number?: number | null },
     markReady = false,
   ): boolean => {
     if (!isValidPvPState(incoming)) return false;
-    const wasReady = readyRef.current;
-    if (markReady && !wasReady) {
-      readyRef.current = true;
-      lastHpRef.current = { hostHp: incoming.hostHp, guestHp: incoming.guestHp };
-      setReady(true);
-    }
-    const incomingRev = (incoming as any).rev ?? 0;
-    const localRev = gsRef.current.rev ?? 0;
-    if (incomingRev < localRev) return false; // strictly newer or equal-with-diff
-    if (incomingRev === localRev) {
-      // Same rev = valid canonical state; metadata may still be fresher.
-      if (roomMeta) {
-        if (roomMeta.host_name) setHostName(roomMeta.host_name);
-        if (roomMeta.guest_name) setGuestName(roomMeta.guest_name);
-        if (roomMeta.story_passage) setRoomStory(roomMeta.story_passage);
-        if (typeof roomMeta.world_number === 'number') setRoomWorldNumber(roomMeta.world_number);
-      }
-      return true;
-    }
+
     if (roomMeta) {
       if (roomMeta.host_name) setHostName(roomMeta.host_name);
       if (roomMeta.guest_name) setGuestName(roomMeta.guest_name);
       if (roomMeta.story_passage) setRoomStory(roomMeta.story_passage);
       if (typeof roomMeta.world_number === 'number') setRoomWorldNumber(roomMeta.world_number);
     }
+
+    const wasReady = readyRef.current;
+    if (markReady && !wasReady) {
+      readyRef.current = true;
+      lastHpRef.current = { hostHp: incoming.hostHp, guestHp: incoming.guestHp };
+      setReady(true);
+    }
+
+    const incomingRev = (incoming as any).rev ?? 0;
+    const lastApplied = lastAppliedRevRef.current;
+
+    // Stale: older than what we've already applied → ignore
+    if (incomingRev < lastApplied) return false;
+
+    // Same rev as already applied AND content fingerprint matches → no-op
+    const local = gsRef.current;
+    const sameContent = local
+      && local.rev === incomingRev
+      && local.phase === incoming.phase
+      && local.turn === incoming.turn
+      && local.hostHp === incoming.hostHp
+      && local.guestHp === incoming.guestHp
+      && local.wordIndex === incoming.wordIndex
+      && local.batchProgress === incoming.batchProgress
+      && local.activeMiniGame === incoming.activeMiniGame
+      && local.pendingReadWord === incoming.pendingReadWord;
+    if (sameContent && incomingRev === lastApplied) return true;
+
+    lastAppliedRevRef.current = incomingRev;
     gsRef.current = incoming;
     setGs(incoming);
     setInitError(null);
+
+    // Drive animation/SFX from the canonical lastEvent. Dedupe via lastEventRevRef.
     const lastEvent = (incoming as any).lastEvent;
-    if (lastEvent) {
+    if (lastEvent && typeof lastEvent.rev === 'number') {
       replayBattleEvent({
         rev: lastEvent.rev,
         event_type: lastEvent.type,
@@ -190,12 +213,14 @@ export const RPGOnlinePvPBattle = ({
         message: lastEvent.message,
       });
     }
+    forceDiagTick(t => t + 1);
     return true;
   }, [replayBattleEvent]);
 
   // ─── Pull canonical state from DB ───
   const pullRoom = useCallback(async (markReady = false): Promise<boolean> => {
     if (!session?.user?.id) return false;
+    lastPullAtRef.current = Date.now();
     const { data, error } = await supabase
       .from('multiplayer_rooms')
       .select(MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS)
@@ -205,12 +230,14 @@ export const RPGOnlinePvPBattle = ({
       if (error) console.error('[PvP] pullRoom failed:', error.message);
       return false;
     }
-    return applyCanonical((data as any).game_state, {
+    const accepted = applyCanonical((data as any).game_state, {
       host_name: (data as any).host_name,
       guest_name: (data as any).guest_name,
       story_passage: (data as any).story_passage,
       world_number: (data as any).world_number,
     }, markReady);
+    forceDiagTick(t => t + 1);
+    return accepted;
   }, [roomId, session?.user?.id, applyCanonical]);
 
   // ─── Submit an action through the server-authoritative RPC ───
@@ -229,53 +256,39 @@ export const RPGOnlinePvPBattle = ({
       });
       if (error) {
         console.error('[PvP] submit_pvp_action error:', error.message);
+        lastRpcReasonRef.current = `error: ${error.message}`;
         setActionError('Could not reach the battle server. Try again.');
-        // Force a resync so we don't stay stuck on stale state
         await pullRoom();
         return;
       }
       const row = Array.isArray(data) ? data[0] : data;
       if (!row) {
         console.warn('[PvP] submit_pvp_action returned no row');
+        lastRpcReasonRef.current = 'no_row';
         await pullRoom();
         return;
       }
+      lastRpcReasonRef.current = `${row.applied ? 'applied' : 'rejected'}:${row.reason}`;
       if (!row.applied) {
         console.warn(`[PvP] action rejected: ${row.reason}`);
         if (row.game_state) applyCanonical(row.game_state);
-        if (row.reason === 'stale_rev') {
-          // peer beat us; pull canonical state
-          if (!row.game_state) await pullRoom();
-        } else if (row.reason === 'on_cooldown') {
-          setActionError('That ability is on cooldown.');
-        } else if (row.reason === 'wrong_phase') {
-          // the canonical state already moved on; resync
-          if (!row.game_state) await pullRoom();
-        }
+        if (row.reason === 'stale_rev' && !row.game_state) await pullRoom();
+        else if (row.reason === 'on_cooldown') setActionError('That ability is on cooldown.');
+        else if (row.reason === 'wrong_phase' && !row.game_state) await pullRoom();
         return;
       }
       if (row.game_state) applyCanonical(row.game_state);
-      const canonicalEvent = (row.game_state as any)?.lastEvent;
-      if (canonicalEvent) {
-        replayBattleEvent({
-          rev: canonicalEvent.rev,
-          event_type: canonicalEvent.type,
-          actor: canonicalEvent.by,
-          target: canonicalEvent.target,
-          damage: canonicalEvent.damage,
-          ability_id: canonicalEvent.abilityId,
-          message: canonicalEvent.message,
-        });
-      }
     } catch (e: any) {
       console.error('[PvP] submitAction exception:', e);
+      lastRpcReasonRef.current = `exception: ${e?.message ?? 'unknown'}`;
       setActionError('Network error. Trying to recover.');
       await pullRoom();
     } finally {
       actionPendingRef.current = false;
       setActionPending(false);
+      forceDiagTick(t => t + 1);
     }
-  }, [roomId, applyCanonical, pullRoom, replayBattleEvent]);
+  }, [roomId, applyCanonical, pullRoom]);
 
   // ─── Initial hydration ───
   useEffect(() => {
@@ -337,12 +350,17 @@ export const RPGOnlinePvPBattle = ({
               world_number: room.world_number,
             }, true);
           } else {
-            // Truncated payload — pull authoritative copy
             void pullRoom(true);
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        roomChannelStatusRef.current = status;
+        forceDiagTick(t => t + 1);
+        // After the channel becomes live, pull once to backfill anything we missed
+        // during the brief subscription handshake.
+        if (status === 'SUBSCRIBED') void pullRoom(true);
+      });
     return () => { supabase.removeChannel(channel); };
   }, [roomId, authLoading, session?.user?.id, applyCanonical, pullRoom]);
 
@@ -350,15 +368,24 @@ export const RPGOnlinePvPBattle = ({
   useEffect(() => {
     if (authLoading || !session?.user?.id) return;
 
-    // Load existing events first (in case we joined mid-battle)
+    // Bootstrap: do NOT suppress the most-recent existing event from being
+    // replayed once. We only suppress events strictly OLDER than the
+    // currently-applied state. This way, if a parent attack happened just
+    // before subscribe finished, we still play the animation.
     (async () => {
       const { data } = await supabase
         .from('pvp_room_events')
-        .select('rev, event_type, actor, target, damage, ability_id, message')
+        .select('rev')
         .eq('room_id', roomId)
         .order('rev', { ascending: false })
         .limit(1);
-      if (data && data[0]) lastEventRevRef.current = data[0].rev;
+      const latestExistingRev = data && data[0] ? Number(data[0].rev) : -1;
+      // Suppress only events older than the latest already in the log MINUS one,
+      // so the most recent event still has a chance to play if it's also the next
+      // realtime event we receive. (Dedup via lastEventRevRef still prevents doubles.)
+      if (latestExistingRev > 0) {
+        lastEventRevRef.current = Math.max(lastEventRevRef.current, latestExistingRev - 1);
+      }
     })();
 
     const channel = supabase
@@ -371,7 +398,10 @@ export const RPGOnlinePvPBattle = ({
           replayBattleEvent(ev);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        eventsChannelStatusRef.current = status;
+        forceDiagTick(t => t + 1);
+      });
     return () => { supabase.removeChannel(channel); };
   }, [roomId, authLoading, session?.user?.id, replayBattleEvent]);
 
@@ -557,6 +587,15 @@ export const RPGOnlinePvPBattle = ({
             <span className="text-red-400 text-xs">{actionError}</span>
           </div>
         )}
+        {import.meta.env.DEV && (
+          <div className="text-center mt-1">
+            <span className="text-slate-600 text-[10px] font-mono">
+              {isHost ? 'host' : 'guest'} • room {roomChannelStatusRef.current} • events {eventsChannelStatusRef.current}
+              {' • '}phase {gs.phase} • turn {gs.turn} • evtRev {lastEventRevRef.current}
+              {' • '}rpc {lastRpcReasonRef.current}
+            </span>
+          </div>
+        )}
       </div>
 
       <AnimatePresence>
@@ -600,6 +639,7 @@ export const RPGOnlinePvPBattle = ({
             words={currentBatchWords}
             onResult={(correct) => handleKidWordResult(correct)}
             mode="fast"
+            disabled={actionPending}
           />
         </div>
       )}
@@ -639,6 +679,7 @@ export const RPGOnlinePvPBattle = ({
           cooldowns={gs.cooldowns}
           parentHp={gs.guestHp}
           parentMaxHp={100}
+          disabled={actionPending}
         />
       )}
 
