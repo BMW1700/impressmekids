@@ -863,6 +863,22 @@ export const RPGWordReader = ({
     };
   }, [clearAllTimeouts]);
 
+  // Force-stop recognition the moment `disabled` flips true (e.g. while a
+  // PvP RPC is in flight). Without this, an already-running recognition
+  // session can keep emitting results during the sync window and cause
+  // double submissions or stale word advancement.
+  useEffect(() => {
+    if (!disabled) return;
+    shouldBeListeningRef.current = false;
+    clearAllTimeouts();
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch (e) {}
+    }
+    isRecognitionRunningRef.current = false;
+    isProcessingRef.current = false;
+    setRecognitionState('idle');
+  }, [disabled, clearAllTimeouts]);
+
   // ─── Auto-start mic on mount when in fast mode (Elara / multiplayer PvP) ───
   // The reader is remounted (key changes) on every new batch / turn switch in PvP,
   // so this fires once per batch and removes the need for the kid to click "Start"
