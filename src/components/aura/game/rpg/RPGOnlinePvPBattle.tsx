@@ -256,53 +256,39 @@ export const RPGOnlinePvPBattle = ({
       });
       if (error) {
         console.error('[PvP] submit_pvp_action error:', error.message);
+        lastRpcReasonRef.current = `error: ${error.message}`;
         setActionError('Could not reach the battle server. Try again.');
-        // Force a resync so we don't stay stuck on stale state
         await pullRoom();
         return;
       }
       const row = Array.isArray(data) ? data[0] : data;
       if (!row) {
         console.warn('[PvP] submit_pvp_action returned no row');
+        lastRpcReasonRef.current = 'no_row';
         await pullRoom();
         return;
       }
+      lastRpcReasonRef.current = `${row.applied ? 'applied' : 'rejected'}:${row.reason}`;
       if (!row.applied) {
         console.warn(`[PvP] action rejected: ${row.reason}`);
         if (row.game_state) applyCanonical(row.game_state);
-        if (row.reason === 'stale_rev') {
-          // peer beat us; pull canonical state
-          if (!row.game_state) await pullRoom();
-        } else if (row.reason === 'on_cooldown') {
-          setActionError('That ability is on cooldown.');
-        } else if (row.reason === 'wrong_phase') {
-          // the canonical state already moved on; resync
-          if (!row.game_state) await pullRoom();
-        }
+        if (row.reason === 'stale_rev' && !row.game_state) await pullRoom();
+        else if (row.reason === 'on_cooldown') setActionError('That ability is on cooldown.');
+        else if (row.reason === 'wrong_phase' && !row.game_state) await pullRoom();
         return;
       }
       if (row.game_state) applyCanonical(row.game_state);
-      const canonicalEvent = (row.game_state as any)?.lastEvent;
-      if (canonicalEvent) {
-        replayBattleEvent({
-          rev: canonicalEvent.rev,
-          event_type: canonicalEvent.type,
-          actor: canonicalEvent.by,
-          target: canonicalEvent.target,
-          damage: canonicalEvent.damage,
-          ability_id: canonicalEvent.abilityId,
-          message: canonicalEvent.message,
-        });
-      }
     } catch (e: any) {
       console.error('[PvP] submitAction exception:', e);
+      lastRpcReasonRef.current = `exception: ${e?.message ?? 'unknown'}`;
       setActionError('Network error. Trying to recover.');
       await pullRoom();
     } finally {
       actionPendingRef.current = false;
       setActionPending(false);
+      forceDiagTick(t => t + 1);
     }
-  }, [roomId, applyCanonical, pullRoom, replayBattleEvent]);
+  }, [roomId, applyCanonical, pullRoom]);
 
   // ─── Initial hydration ───
   useEffect(() => {
