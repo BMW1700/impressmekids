@@ -220,6 +220,7 @@ export const RPGOnlinePvPBattle = ({
   // ─── Pull canonical state from DB ───
   const pullRoom = useCallback(async (markReady = false): Promise<boolean> => {
     if (!session?.user?.id) return false;
+    lastPullAtRef.current = Date.now();
     const { data, error } = await supabase
       .from('multiplayer_rooms')
       .select(MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS)
@@ -229,12 +230,14 @@ export const RPGOnlinePvPBattle = ({
       if (error) console.error('[PvP] pullRoom failed:', error.message);
       return false;
     }
-    return applyCanonical((data as any).game_state, {
+    const accepted = applyCanonical((data as any).game_state, {
       host_name: (data as any).host_name,
       guest_name: (data as any).guest_name,
       story_passage: (data as any).story_passage,
       world_number: (data as any).world_number,
     }, markReady);
+    forceDiagTick(t => t + 1);
+    return accepted;
   }, [roomId, session?.user?.id, applyCanonical]);
 
   // ─── Submit an action through the server-authoritative RPC ───
