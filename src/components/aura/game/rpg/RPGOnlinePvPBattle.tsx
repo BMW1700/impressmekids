@@ -587,6 +587,15 @@ export const RPGOnlinePvPBattle = ({
             <span className="text-red-400 text-xs">{actionError}</span>
           </div>
         )}
+        {import.meta.env.DEV && (
+          <div className="text-center mt-1">
+            <span className="text-slate-600 text-[10px] font-mono">
+              {isHost ? 'host' : 'guest'} • room {roomChannelStatusRef.current} • events {eventsChannelStatusRef.current}
+              {' • '}phase {gs.phase} • turn {gs.turn} • evtRev {lastEventRevRef.current}
+              {' • '}rpc {lastRpcReasonRef.current}
+            </span>
+          </div>
+        )}
       </div>
 
       <AnimatePresence>
