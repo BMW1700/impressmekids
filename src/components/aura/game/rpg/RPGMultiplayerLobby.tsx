@@ -232,37 +232,20 @@ export const RPGMultiplayerLobby = ({
       return;
     }
 
-    // Find the room
-    const { data: room, error: findErr } = await supabase
-      .from('multiplayer_rooms')
-      .select('id, host_id, status')
-      .eq('room_code', code)
-      .eq('status', 'waiting')
-      .maybeSingle();
+    // Use secure server-side join RPC. The RPC:
+    //  - finds the room by code
+    //  - validates it is in 'waiting' state
+    //  - rejects self-join
+    //  - sets guest_id + status='active' atomically
+    //  - returns the full room snapshot
+    const { data: joined, error: joinErr } = await supabase
+      .rpc('join_multiplayer_room', { p_room_code: code });
 
-    if (findErr || !room) {
-      setError('Room not found or already started.');
-      setLoading(false);
-      return;
-    }
+    const joinedRoom = Array.isArray(joined) ? joined[0] : joined;
 
-    if (room.host_id === userId) {
-      setError("You can't join your own room!");
-      setLoading(false);
-      return;
-    }
-
-    // Join the room
-    const { data: joinedRoom, error: joinErr } = await supabase
-      .from('multiplayer_rooms')
-      .update({ guest_id: userId, guest_name: 'Player 2', status: 'active' })
-      .eq('id', room.id)
-      .select(MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS)
-      .maybeSingle();
-
-    if (joinErr) {
+    if (joinErr || !joinedRoom) {
       console.error('[Lobby] Failed to join room:', joinErr);
-      setError(joinErr.message || 'Failed to join room.');
+      setError(joinErr?.message || 'Room not found or already started.');
       setLoading(false);
       setView('choose');
       return;
@@ -270,7 +253,7 @@ export const RPGMultiplayerLobby = ({
 
     setLoading(false);
     onRoomReady({
-      roomId: room.id,
+      roomId: joinedRoom.id,
       isHost: false,
       roomCode: code,
       snapshot: toRoomSnapshot(joinedRoom),

@@ -1,125 +1,145 @@
-Brutally honest answer: no, I cannot honestly say the multiplayer PvP is perfect right now.
+Blunt answer: no, I cannot honestly say this is perfect yet.
 
-The architecture is much better than the original browser-to-browser blob sync, but the current deployed/live data proves the rebuild has not been exercised successfully yet. The biggest red flag: the new `pvp_room_events` table exists, realtime is enabled for it, and the `submit_pvp_action` function exists, but the live `pvp_room_events` table currently has zero rows. That means the new event-log animation path has not actually been proven in a real parent/student battle. Recent PvP rooms still show old-style `lastEvent` messages in `multiplayer_rooms.game_state`, but no corresponding saved event rows. So if the question is “did everything work perfectly?” the honest answer is: not verified, and currently not good enough to trust.
+The last rebuild moved the PvP battle in the right direction, but the audit found several real problems that can still break parent-to-student sync or let the battle drift. The most damning live-data finding is that `pvp_room_events` currently has zero rows. That means the new event-log animation path has not been proven in real use yet, so claiming “perfect” would be dishonest.
 
-What is already improved:
+## What is still wrong
 
-1. The old root problem was real: parent actions were writing to the room, but the student screen did not reliably accept/render them.
-2. The new code now routes shared PvP gameplay through a backend `submit_pvp_action` function instead of trusting browser-to-browser broadcasts.
-3. `multiplayer_rooms` and `pvp_room_events` are both in realtime publication and have full replica identity.
-4. The PvP client subscribes to both canonical room updates and event inserts.
-5. Parent and student now both poll as a fallback while waiting on the other player.
+1. **Direct room writes are still allowed**
+   - Participants can still update `multiplayer_rooms` directly.
+   - That bypasses the authoritative `submit_pvp_action` path.
+   - This is exactly the kind of opening that causes split-brain state.
 
-What is still not good enough:
+2. **Old full-state sync RPC still exists**
+   - `sync_multiplayer_room_state` can still overwrite `game_state` for any participant room.
+   - It is needed for co-op today, but it should explicitly refuse PvP rooms.
+   - Right now it is another bypass path around PvP authority.
 
-1. No live event-log evidence
-   - `pvp_room_events` exists but has no rows.
-   - If parent attacks are supposed to insert events, we need to prove those inserts happen in the real flow.
-   - Without event rows, the student may still rely only on `lastEvent` fallback, which is not the full deterministic animation system we wanted.
+3. **The PvP server function still trusts too much client input**
+   - Parent ability damage/cooldown/type comes from the browser payload.
+   - Mini-game completed/failed counts are not safely capped.
+   - A broken or malicious client could submit impossible damage or impossible results.
+   - Even if this is not the current bug, it means the engine is not production-hard.
 
-2. `applyCanonical` has a dangerous same-revision behavior
-   - If incoming state has the same revision as local state, it returns `true` without setting `gs`.
-   - That is fine only if same-revision state is truly identical.
-   - In real realtime/polling systems, same revision with fresher metadata or corrected state can happen. The safer approach is to compare the full state and apply it when different, even if rev is equal.
+4. **Revision check is not strict enough**
+   - The server rejects stale revisions, but it does not reject future/mismatched revisions.
+   - The correct rule for an authoritative turn engine should be: expected revision must exactly equal current revision.
 
-3. `lastEvent` fallback may not replay some events
-   - The fallback replays `lastEvent`, but the dedupe key is only revision-based.
-   - The event subscription also initializes `lastEventRevRef` to the latest existing event, which prevents old event replay on join. That is intentional for avoiding stale animations, but it also means a newly joined or rehydrated client can miss the very animation we care about if timing is bad.
+5. **Student reader can still advance locally before database confirmation**
+   - `RPGWordReader` calls `onResult`, then locally advances to the next word.
+   - The parent component gates duplicate submits, but the child UI can still get ahead of the canonical DB state.
+   - For online PvP, the reader should not own progression. The database revision should.
 
-4. Parent reading/minigame paths are not fully audited by live data
-   - The function has branches for direct parent ability, parent reading result, and minigame completion.
-   - But live event table data does not prove those branches are being hit.
+6. **Parent reading buttons are not disabled while syncing**
+   - Parent ability buttons were disabled, but the “Read Correctly / Missed It” buttons can still be clicked repeatedly during a pending RPC.
 
-5. The room table still has broad participant update policies
-   - The new RPC is server-authoritative, but authenticated participants can still update active room rows directly because old update policies remain.
-   - The current PvP component does not appear to directly update PvP state anymore, but the database still allows it. That leaves room for accidental future split-brain writes.
+7. **Diagnostics are not enough for live verification**
+   - Current diagnostics are dev-only, so they may not appear in the preview/published environment where you are actually testing.
 
-6. The PvP component is still too large
-   - `RPGOnlinePvPBattle.tsx` is now cleaner than before, but it still owns hydration, realtime, polling, RPC calls, VFX replay, HP diff effects, UI phases, and gameplay handlers in one file.
-   - That makes regressions likely.
+## Fix plan
 
-Immediate fix plan:
+### 1. Lock PvP down at the database layer
+Create a migration that:
 
-1. Add hard diagnostics to prove the new path is running
-   - Show a compact sync diagnostic panel in development/test mode:
-     - room id
-     - role
-     - ready state
-     - websocket subscription status for room updates
-     - websocket subscription status for event inserts
-     - current rev
-     - phase
-     - turn
-     - last event rev seen
-     - last poll time
-     - last RPC result/reason
-   - This makes failures visible instead of guessing.
+- Adds a secure `join_multiplayer_room(room_code)` RPC.
+- Changes the lobby to use that RPC instead of direct `.update()`.
+- Removes or narrows direct `multiplayer_rooms` update policies so clients cannot directly mutate active room state.
+- Updates `sync_multiplayer_room_state` so it only works for `mode = 'coop'` and refuses `mode = 'pvp'`.
+- Keeps `submit_pvp_action` as the only gameplay write path for PvP.
 
-2. Fix same-revision canonical application
-   - Update `applyCanonical` so same-revision but different canonical state still updates React state.
-   - Keep rejecting truly older revisions.
-   - Preserve initial hydration behavior so `rev: 0` rooms become ready.
+Target architecture:
 
-3. Make event replay deterministic and self-healing
-   - After every successful RPC, replay the returned canonical event locally.
-   - On every canonical room update, replay `game_state.lastEvent` if it has a newer `rev` than the last replayed event.
-   - On event subscription insert, replay the inserted event.
-   - On polling/focus recovery, replay `lastEvent` if newer.
-   - Store separate refs for:
-     - last canonical state rev applied
-     - last VFX/event rev replayed
-   - Do not let the event-table bootstrapping suppress the current action’s animation.
+```text
+Create room:          client insert allowed
+Join room:            join_multiplayer_room RPC only
+PvP gameplay action:  submit_pvp_action RPC only
+Co-op sync:           sync_multiplayer_room_state RPC only, mode=coop only
+Realtime display:     multiplayer_rooms + pvp_room_events reads only
+```
 
-4. Verify and harden the RPC return/event insert path
-   - Add a migration that tightens `submit_pvp_action` behavior if needed:
-     - Always inserts exactly one `pvp_room_events` row for every applied gameplay action.
-     - Returns the same canonical `game_state` that was saved.
-     - Normalizes event fields to the client’s expected names.
-   - Add a lightweight read-only verification query after implementation to confirm new rooms produce event rows.
+### 2. Harden `submit_pvp_action`
+Update the PvP action function so it:
 
-5. Stop accidental non-RPC PvP state writes
-   - Keep room joining/creation working.
-   - Restrict direct active battle `game_state` updates where practical so PvP gameplay can only advance through `submit_pvp_action`.
-   - Important: do this carefully because online co-op still uses `sync_multiplayer_room_state`; we should not break co-op while fixing PvP.
+- Requires `p_expected_rev = current_rev` exactly.
+- Returns canonical state for every reject reason.
+- Uses server-side ability definitions by ability id instead of trusting browser-provided damage/cooldown/type.
+- Caps mini-game result counts to safe bounds.
+- Emits one `pvp_room_events` row for every applied action.
+- Keeps row locking with `FOR UPDATE` so simultaneous clicks cannot double-apply.
 
-6. Prevent duplicate/rapid submissions from the reader
-   - Pass `disabled={actionPending}` into `RPGWordReader` during PvP.
-   - Keep the existing ref guard, but also prevent speech-recognition callbacks from submitting a second word while the prior action is still waiting for canonical confirmation.
+### 3. Make the student reader canonical-state driven
+Update `RPGOnlinePvPBattle` so online PvP shows only the current canonical word, not an internally advancing 5-word reader batch.
 
-7. Make parent action UX honest
-   - Disable parent controls while `actionPending` is true.
-   - Show “syncing attack…” until the backend returns and canonical state is applied.
-   - If the action is rejected due to stale rev/wrong phase, immediately pull and show the latest canonical state.
+Instead of this flow:
 
-8. Validate the exact broken flow
-   - Student creates room.
-   - Parent joins.
-   - Student reads/skips through five words.
-   - Parent direct attack.
-   - Confirm both devices show, at the same revision:
-     - host HP decreased
-     - phase returned to `kid_turn`
-     - turn returned to `host`
-     - parent attack VFX plays on student
-     - floating damage appears on student
-     - `pvp_room_events` contains the parent ability event
-   - Repeat for reading-bonus and minigame paths.
+```text
+Reader hears word -> reader advances locally -> DB maybe catches up later
+```
 
-Technical files to change after approval:
+Use this flow:
+
+```text
+Reader hears current canonical word -> RPC submit -> DB rev increments -> UI receives canonical rev -> next word appears
+```
+
+This removes the local-progress race entirely.
+
+### 4. Disable every parent action during sync
+Update the parent reading controls so:
+
+- “Read Correctly” is disabled while `actionPending` is true.
+- “Missed It” is disabled while `actionPending` is true.
+- Mini-game completion submission is guarded so it cannot submit twice.
+
+### 5. Improve self-healing and visible sync status
+Keep the realtime + polling fallback, but make verification easier:
+
+- Keep canonical `pullRoom()` after subscription and after RPC rejection.
+- Add a small visible sync strip in online PvP showing:
+  - role
+  - room channel state
+  - event channel state
+  - phase
+  - turn
+  - revision
+  - last RPC result
+- This can be removed or hidden later, but right now it is necessary to stop guessing.
+
+### 6. Verify with live database evidence
+After implementation, verify by checking:
+
+- `multiplayer_rooms.game_state.rev` increments on student words and parent actions.
+- `pvp_room_events` contains one row per applied action.
+- Parent attack creates an event with `actor = guest`, `target = host`, and damage.
+- Student session receives the same final revision as parent session.
+- Direct active PvP room updates are blocked outside the secure RPCs.
+
+## Files expected to change
+
+- `supabase/migrations/...sql`
+  - secure join RPC
+  - stricter PvP action RPC
+  - PvP bypass lockdown
+  - co-op-only guard for legacy sync RPC
+
+- `src/components/aura/game/rpg/RPGMultiplayerLobby.tsx`
+  - join rooms through secure RPC instead of direct update
 
 - `src/components/aura/game/rpg/RPGOnlinePvPBattle.tsx`
-  - Fix canonical state application.
-  - Separate state revision tracking from event replay tracking.
-  - Disable word reader/parent controls while syncing.
-  - Add sync diagnostics.
+  - canonical one-word-at-a-time PvP reader
+  - stricter action guards
+  - parent reading button lock
+  - visible sync diagnostics
 
-- `src/components/aura/game/rpg/RPGParentControls.tsx`
-  - Add a `disabled`/`pending` prop so parent cannot double-submit during sync.
+- Possibly `src/components/aura/game/rpg/multiplayerRoomTypes.ts`
+  - type updates if RPC return shape changes
 
-- `src/components/aura/game/rpg/multiplayerRoomTypes.ts`
-  - Tighten event typing and state validation.
+## Brutally honest expected outcome
 
-- New database migration if needed
-  - Harden `submit_pvp_action` and/or add protections against direct PvP battle-state writes without breaking lobby join or co-op.
+This should remove the main architectural failure: multiple write paths and local UI advancement racing against database state.
 
-Bottom line: the rebuild was the correct direction, but I would not call it perfect yet. The absence of any `pvp_room_events` rows is the smoking gun that the new deterministic event path has not been proven. The next implementation should focus less on another blind patch and more on making the sync path observable, deterministic, and impossible to bypass.
+But the only honest definition of “perfect” here is evidence-based: after this, we need to see a parent action create a `pvp_room_events` row and update the student screen to the same revision. Right now that evidence does not exist.
+
+<lov-actions>
+<lov-open-history>View History</lov-open-history>
+<lov-link url="https://docs.lovable.dev/tips-tricks/troubleshooting">Troubleshooting docs</lov-link>
+</lov-actions>

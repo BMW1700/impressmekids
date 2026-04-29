@@ -273,6 +273,7 @@ export const RPGOnlinePvPBattle = ({
         console.warn(`[PvP] action rejected: ${row.reason}`);
         if (row.game_state) applyCanonical(row.game_state);
         if (row.reason === 'stale_rev' && !row.game_state) await pullRoom();
+        else if (row.reason === 'rev_mismatch') await pullRoom();
         else if (row.reason === 'on_cooldown') setActionError('That ability is on cooldown.');
         else if (row.reason === 'wrong_phase' && !row.game_state) await pullRoom();
         return;
@@ -587,15 +588,13 @@ export const RPGOnlinePvPBattle = ({
             <span className="text-red-400 text-xs">{actionError}</span>
           </div>
         )}
-        {import.meta.env.DEV && (
-          <div className="text-center mt-1">
-            <span className="text-slate-600 text-[10px] font-mono">
-              {isHost ? 'host' : 'guest'} • room {roomChannelStatusRef.current} • events {eventsChannelStatusRef.current}
-              {' • '}phase {gs.phase} • turn {gs.turn} • evtRev {lastEventRevRef.current}
-              {' • '}rpc {lastRpcReasonRef.current}
-            </span>
-          </div>
-        )}
+        <div className="text-center mt-1">
+          <span className="text-slate-500 text-[10px] font-mono">
+            {isHost ? 'host' : 'guest'} • room {roomChannelStatusRef.current} • events {eventsChannelStatusRef.current}
+            {' • '}phase {gs.phase} • turn {gs.turn} • evtRev {lastEventRevRef.current}
+            {' • '}rpc {lastRpcReasonRef.current}
+          </span>
+        </div>
       </div>
 
       <AnimatePresence>
@@ -711,14 +710,19 @@ export const RPGOnlinePvPBattle = ({
             </motion.div>
             <div className="flex gap-3 justify-center">
               <Button onClick={() => handleParentReadResult(true)}
-                className="bg-gradient-to-r from-green-600 to-emerald-500 text-white font-bold px-6">
+                disabled={actionPending}
+                className="bg-gradient-to-r from-green-600 to-emerald-500 text-white font-bold px-6 disabled:opacity-50">
                 ✅ Read Correctly
               </Button>
               <Button onClick={() => handleParentReadResult(false)}
-                variant="outline" className="border-red-500 text-red-300 px-6">
+                disabled={actionPending}
+                variant="outline" className="border-red-500 text-red-300 px-6 disabled:opacity-50">
                 ❌ Missed It
               </Button>
             </div>
+            {actionPending && (
+              <p className="text-red-200/70 text-xs mt-2">syncing…</p>
+            )}
           </div>
         </motion.div>
       )}
