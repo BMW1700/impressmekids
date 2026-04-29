@@ -8453,6 +8453,24 @@ export type Database = {
         Returns: boolean
       }
       join_classroom_by_code: { Args: { p_join_code: string }; Returns: Json }
+      join_multiplayer_room: {
+        Args: { p_room_code: string }
+        Returns: {
+          enemy_type: string
+          game_state: Json
+          guest_id: string
+          guest_name: string
+          host_id: string
+          host_name: string
+          id: string
+          mode: string
+          room_code: string
+          status: string
+          story_passage: string
+          story_title: string
+          world_number: number
+        }[]
+      }
       log_aura_access: {
         Args: {
           p_access_context?: string
