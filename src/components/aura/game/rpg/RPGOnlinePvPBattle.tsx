@@ -756,12 +756,16 @@ export const RPGOnlinePvPBattle = ({
         </div>
       )}
 
-      {/* Mini-games */}
+      {/* Mini-games — pointer-events frozen while a sync action is in flight */}
       {ready && gs.phase === 'mini_game' && gs.activeMiniGame === 'word_barrage' && !isHost && (
-        <RPGWordBarrage words={barrageWords} onComplete={handleMiniGameComplete} onWordHit={() => {}} />
+        <div style={{ pointerEvents: actionPending ? 'none' : 'auto', opacity: actionPending ? 0.6 : 1 }} aria-disabled={actionPending}>
+          <RPGWordBarrage words={barrageWords} onComplete={handleMiniGameComplete} onWordHit={() => {}} />
+        </div>
       )}
       {ready && gs.phase === 'mini_game' && gs.activeMiniGame === 'fireball_defense' && !isHost && (
-        <RPGFireballDefense words={barrageWords} onComplete={handleMiniGameComplete} />
+        <div style={{ pointerEvents: actionPending ? 'none' : 'auto', opacity: actionPending ? 0.6 : 1 }} aria-disabled={actionPending}>
+          <RPGFireballDefense words={barrageWords} onComplete={handleMiniGameComplete} />
+        </div>
       )}
       {ready && gs.phase === 'mini_game' && isHost && (
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-[70]">
