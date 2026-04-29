@@ -150,42 +150,59 @@ export const RPGOnlinePvPBattle = ({
   }, []);
 
   // ─── Apply canonical state from the database ───
+  // Self-healing: accepts strictly newer revisions, AND accepts equal/lower revisions
+  // that differ from local state (e.g. recovery after a missed websocket frame).
+  // Refuses to silently overwrite local state with an OLDER state that is identical
+  // (no-op) — this avoids ping-pong with stale poll responses.
   const applyCanonical = useCallback((
     incoming: any,
     roomMeta?: { host_name?: string | null; guest_name?: string | null; story_passage?: string | null; world_number?: number | null },
     markReady = false,
   ): boolean => {
     if (!isValidPvPState(incoming)) return false;
-    const wasReady = readyRef.current;
-    if (markReady && !wasReady) {
-      readyRef.current = true;
-      lastHpRef.current = { hostHp: incoming.hostHp, guestHp: incoming.guestHp };
-      setReady(true);
-    }
-    const incomingRev = (incoming as any).rev ?? 0;
-    const localRev = gsRef.current.rev ?? 0;
-    if (incomingRev < localRev) return false; // strictly newer or equal-with-diff
-    if (incomingRev === localRev) {
-      // Same rev = valid canonical state; metadata may still be fresher.
-      if (roomMeta) {
-        if (roomMeta.host_name) setHostName(roomMeta.host_name);
-        if (roomMeta.guest_name) setGuestName(roomMeta.guest_name);
-        if (roomMeta.story_passage) setRoomStory(roomMeta.story_passage);
-        if (typeof roomMeta.world_number === 'number') setRoomWorldNumber(roomMeta.world_number);
-      }
-      return true;
-    }
+
     if (roomMeta) {
       if (roomMeta.host_name) setHostName(roomMeta.host_name);
       if (roomMeta.guest_name) setGuestName(roomMeta.guest_name);
       if (roomMeta.story_passage) setRoomStory(roomMeta.story_passage);
       if (typeof roomMeta.world_number === 'number') setRoomWorldNumber(roomMeta.world_number);
     }
+
+    const wasReady = readyRef.current;
+    if (markReady && !wasReady) {
+      readyRef.current = true;
+      lastHpRef.current = { hostHp: incoming.hostHp, guestHp: incoming.guestHp };
+      setReady(true);
+    }
+
+    const incomingRev = (incoming as any).rev ?? 0;
+    const lastApplied = lastAppliedRevRef.current;
+
+    // Stale: older than what we've already applied → ignore
+    if (incomingRev < lastApplied) return false;
+
+    // Same rev as already applied AND content fingerprint matches → no-op
+    const local = gsRef.current;
+    const sameContent = local
+      && local.rev === incomingRev
+      && local.phase === incoming.phase
+      && local.turn === incoming.turn
+      && local.hostHp === incoming.hostHp
+      && local.guestHp === incoming.guestHp
+      && local.wordIndex === incoming.wordIndex
+      && local.batchProgress === incoming.batchProgress
+      && local.activeMiniGame === incoming.activeMiniGame
+      && local.pendingReadWord === incoming.pendingReadWord;
+    if (sameContent && incomingRev === lastApplied) return true;
+
+    lastAppliedRevRef.current = incomingRev;
     gsRef.current = incoming;
     setGs(incoming);
     setInitError(null);
+
+    // Drive animation/SFX from the canonical lastEvent. Dedupe via lastEventRevRef.
     const lastEvent = (incoming as any).lastEvent;
-    if (lastEvent) {
+    if (lastEvent && typeof lastEvent.rev === 'number') {
       replayBattleEvent({
         rev: lastEvent.rev,
         event_type: lastEvent.type,
@@ -196,6 +213,7 @@ export const RPGOnlinePvPBattle = ({
         message: lastEvent.message,
       });
     }
+    forceDiagTick(t => t + 1);
     return true;
   }, [replayBattleEvent]);
 
