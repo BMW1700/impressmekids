@@ -113,7 +113,7 @@ export const RPGOnlinePvPBattle = ({
     [storyWords, gs.wordIndex]
   );
 
-  const readerKey = `${gs.wordIndex}-${gs.turnCount}`;
+  const readerKey = `${gs.wordIndex}-${gs.batchProgress}-${gs.turnCount}`;
 
   const bannerText = useMemo(() => {
     if (eventFlash) return eventFlash;
