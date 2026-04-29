@@ -711,14 +711,19 @@ export const RPGOnlinePvPBattle = ({
             </motion.div>
             <div className="flex gap-3 justify-center">
               <Button onClick={() => handleParentReadResult(true)}
-                className="bg-gradient-to-r from-green-600 to-emerald-500 text-white font-bold px-6">
+                disabled={actionPending}
+                className="bg-gradient-to-r from-green-600 to-emerald-500 text-white font-bold px-6 disabled:opacity-50">
                 ✅ Read Correctly
               </Button>
               <Button onClick={() => handleParentReadResult(false)}
-                variant="outline" className="border-red-500 text-red-300 px-6">
+                disabled={actionPending}
+                variant="outline" className="border-red-500 text-red-300 px-6 disabled:opacity-50">
                 ❌ Missed It
               </Button>
             </div>
+            {actionPending && (
+              <p className="text-red-200/70 text-xs mt-2">syncing…</p>
+            )}
           </div>
         </motion.div>
       )}
