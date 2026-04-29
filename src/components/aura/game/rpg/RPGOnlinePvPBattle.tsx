@@ -89,6 +89,12 @@ export const RPGOnlinePvPBattle = ({
   const completedRef = useRef(false);
   const lastEventRevRef = useRef<number>(-1);
   const lastHpRef = useRef({ hostHp: INITIAL_PVP_STATE.hostHp, guestHp: INITIAL_PVP_STATE.guestHp });
+  const lastAppliedRevRef = useRef<number>(-1);
+  const roomChannelStatusRef = useRef<string>('init');
+  const eventsChannelStatusRef = useRef<string>('init');
+  const [, forceDiagTick] = useState(0);
+  const lastPullAtRef = useRef<number>(0);
+  const lastRpcReasonRef = useRef<string>('—');
 
   useEffect(() => { gsRef.current = gs; }, [gs]);
   useEffect(() => { readyRef.current = ready; }, [ready]);
