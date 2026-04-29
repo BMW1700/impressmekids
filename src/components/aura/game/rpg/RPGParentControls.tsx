@@ -125,17 +125,18 @@ export const RPGParentControls = ({
           {PARENT_ABILITIES.map(ability => {
             const Icon = ability.icon;
             const onCooldown = (cooldowns[ability.id] || 0) > 0;
-            
+            const isDisabled = onCooldown || disabled;
+
             return (
               <motion.button
                 key={ability.id}
-                whileHover={!onCooldown ? { scale: 1.05 } : undefined}
-                whileTap={!onCooldown ? { scale: 0.95 } : undefined}
-                onClick={() => !onCooldown && onSelectAbility(ability)}
-                disabled={onCooldown}
+                whileHover={!isDisabled ? { scale: 1.05 } : undefined}
+                whileTap={!isDisabled ? { scale: 0.95 } : undefined}
+                onClick={() => !isDisabled && onSelectAbility(ability)}
+                disabled={isDisabled}
                 className={`relative p-3 rounded-xl border-2 transition-all
-                  ${onCooldown 
-                    ? 'bg-slate-800/50 border-slate-700 opacity-50 cursor-not-allowed' 
+                  ${isDisabled
+                    ? 'bg-slate-800/50 border-slate-700 opacity-50 cursor-not-allowed'
                     : `bg-gradient-to-br ${ability.color} border-white/20 cursor-pointer hover:shadow-lg`
                   }`}
               >
@@ -149,6 +150,11 @@ export const RPGParentControls = ({
                 {onCooldown && (
                   <span className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl text-white font-bold text-lg">
                     {cooldowns[ability.id]}
+                  </span>
+                )}
+                {!onCooldown && disabled && (
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-xl text-white text-[10px] font-semibold">
+                    syncing…
                   </span>
                 )}
               </motion.button>
