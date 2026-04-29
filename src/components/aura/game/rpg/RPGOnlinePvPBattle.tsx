@@ -25,7 +25,7 @@ import {
 
 const battleSounds = new SoundEffects();
 const BATCH_SIZE = 5;
-const POLL_MS = 1500;
+const POLL_MS = 1000;
 
 interface BattleStats {
   wordsRead: number;
