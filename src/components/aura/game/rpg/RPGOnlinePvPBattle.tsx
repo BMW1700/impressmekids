@@ -630,6 +630,7 @@ export const RPGOnlinePvPBattle = ({
             words={currentBatchWords}
             onResult={(correct) => handleKidWordResult(correct)}
             mode="fast"
+            disabled={actionPending}
           />
         </div>
       )}
