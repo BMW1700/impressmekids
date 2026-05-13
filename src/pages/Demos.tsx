@@ -64,6 +64,21 @@ const Demos = () => {
         <meta property="og:description" content="Walk through the platform as a student, teacher, parent, or admin." />
         <meta property="og:url" content="https://nabulearn.com/demos" />
         <meta property="og:type" content="website" />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": "NabuLearn Interactive Demos",
+          "description": "Walk through NabuLearn as a Student, Teacher, Parent, or Admin. Includes AURA reading assessment, RPG adventure, gradebook, and analytics.",
+          "applicationCategory": "EducationalApplication",
+          "operatingSystem": "Web",
+          "url": "https://nabulearn.com/demos",
+          "provider": {
+            "@type": "Organization",
+            "name": "NabuLearn",
+            "url": "https://nabulearn.com"
+          },
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+        })}</script>
       </Helmet>
       <Header />
 

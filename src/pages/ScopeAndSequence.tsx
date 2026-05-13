@@ -25,6 +25,18 @@ const ScopeAndSequence = () => {
         <meta property="og:description" content="K-5 decoding skills, sight words, and practice word counts." />
         <meta property="og:url" content="https://nabulearn.com/scope-and-sequence" />
         <meta property="og:type" content="article" />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Course",
+          "name": "K-5 Phonics Scope & Sequence",
+          "description": "Complete K-5 phonics scope and sequence used by NabuLearn AURA, covering decoding skills, sight words, and practice word counts by grade.",
+          "educationalLevel": "K-5",
+          "provider": {
+            "@type": "Organization",
+            "name": "NabuLearn",
+            "url": "https://nabulearn.com"
+          }
+        })}</script>
       </Helmet>
 
       {/* Top bar — hidden when printing */}

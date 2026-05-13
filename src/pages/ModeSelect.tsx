@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Helmet } from "react-helmet-async";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Loader2, School, Gamepad2 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -57,20 +58,30 @@ const ModeSelect = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-hero relative overflow-hidden px-4 py-8">
+      <Helmet>
+        <title>NabuLearn — AI-Powered Literacy for K-12</title>
+        <meta name="description" content="Choose School Mode or Game Mode to begin. NabuLearn delivers AI-powered literacy assessment, adaptive RPG practice, and classroom analytics." />
+        <link rel="canonical" href="https://nabulearn.com/" />
+        <meta property="og:title" content="NabuLearn — AI-Powered Literacy" />
+        <meta property="og:description" content="Choose School Mode or Game Mode to begin." />
+        <meta property="og:url" content="https://nabulearn.com/" />
+        <meta property="og:type" content="website" />
+      </Helmet>
       {/* Background pattern */}
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItaDJWMzRoLTJ6bTAgNGgydjJoLTJ2LTJ6bTAtOGgydjJoLTJ2LTJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20" />
 
-      <motion.h1
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold mb-8 sm:mb-16 text-center relative z-10 leading-tight"
-      >
-        <span className="text-white">Welcome to </span>
-        <span className="text-yellow-400">NabuLearn</span>
-      </motion.h1>
+      <main className="flex flex-col items-center justify-center relative z-10 w-full">
+        <motion.h1
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold mb-8 sm:mb-16 text-center leading-tight"
+        >
+          <span className="text-white">Welcome to </span>
+          <span className="text-yellow-400">NabuLearn</span>
+        </motion.h1>
 
-      <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-12 relative z-10 w-full max-w-2xl sm:max-w-none sm:w-auto">
+        <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-12 w-full max-w-2xl sm:max-w-none sm:w-auto">
         {/* School Mode - larger */}
         <motion.button
           initial={{ opacity: 0, scale: 0.8 }}
@@ -116,7 +127,8 @@ const ModeSelect = () => {
           <span className="text-lg sm:text-xl md:text-2xl font-semibold text-white">Game Mode</span>
           <span className="text-xs sm:text-sm text-white/60">Play & Learn to Read</span>
         </motion.button>
-      </div>
+        </div>
+      </main>
     </div>
   );
 };
