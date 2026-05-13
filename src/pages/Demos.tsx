@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Link } from "react-router-dom";
@@ -55,6 +56,30 @@ const fadeIn = {
 const Demos = () => {
   return (
     <div className="min-h-screen flex flex-col">
+      <Helmet>
+        <title>Interactive Demos — NabuLearn</title>
+        <meta name="description" content="Try NabuLearn from any role — student, teacher, parent, or admin. See AURA reading assessment, RPG adventure, and analytics in action." />
+        <link rel="canonical" href="https://nabulearn.com/demos" />
+        <meta property="og:title" content="Interactive Demos — NabuLearn" />
+        <meta property="og:description" content="Walk through the platform as a student, teacher, parent, or admin." />
+        <meta property="og:url" content="https://nabulearn.com/demos" />
+        <meta property="og:type" content="website" />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": "NabuLearn Interactive Demos",
+          "description": "Walk through NabuLearn as a Student, Teacher, Parent, or Admin. Includes AURA reading assessment, RPG adventure, gradebook, and analytics.",
+          "applicationCategory": "EducationalApplication",
+          "operatingSystem": "Web",
+          "url": "https://nabulearn.com/demos",
+          "provider": {
+            "@type": "Organization",
+            "name": "NabuLearn",
+            "url": "https://nabulearn.com"
+          },
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+        })}</script>
+      </Helmet>
       <Header />
 
       <section className="bg-gradient-hero text-white py-16 md:py-20">

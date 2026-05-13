@@ -1,3 +1,4 @@
+import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +17,27 @@ const ScopeAndSequence = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Phonics Scope &amp; Sequence — NabuLearn</title>
+        <meta name="description" content="Complete K-5 phonics scope and sequence used by NabuLearn AURA. Decoding skills, sight words, and practice word counts by grade." />
+        <link rel="canonical" href="https://nabulearn.com/scope-and-sequence" />
+        <meta property="og:title" content="Phonics Scope &amp; Sequence — NabuLearn" />
+        <meta property="og:description" content="K-5 decoding skills, sight words, and practice word counts." />
+        <meta property="og:url" content="https://nabulearn.com/scope-and-sequence" />
+        <meta property="og:type" content="article" />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Course",
+          "name": "K-5 Phonics Scope & Sequence",
+          "description": "Complete K-5 phonics scope and sequence used by NabuLearn AURA, covering decoding skills, sight words, and practice word counts by grade.",
+          "educationalLevel": "K-5",
+          "provider": {
+            "@type": "Organization",
+            "name": "NabuLearn",
+            "url": "https://nabulearn.com"
+          }
+        })}</script>
+      </Helmet>
 
       {/* Top bar — hidden when printing */}
       <header className="border-b border-border bg-card print:hidden">

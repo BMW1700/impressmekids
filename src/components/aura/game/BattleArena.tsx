@@ -8,7 +8,9 @@ import { GoblinGuard, GoblinState } from "./characters/GoblinGuard";
 import { SirValor, KnightState } from "./characters/SirValor";
 import { ParticleBurst } from "./effects/ParticleBurst";
 import { ImpactFlash } from "./effects/ImpactFlash";
+import { VerbAnimationLayer } from "./effects/VerbAnimationLayer";
 import { useScreenShake } from "@/hooks/useScreenShake";
+import { useVerbAnimation, type VerbTrigger } from "@/hooks/useVerbAnimation";
 
 interface BattleArenaProps {
   // Enemy state
@@ -31,6 +33,9 @@ interface BattleArenaProps {
   triggerAttackBeam?: number;
   triggerDamageBeam?: number;
   isCriticalHit?: boolean;
+
+  // Verb animation: fires when student correctly reads a known verb.
+  triggerVerb?: VerbTrigger;
 
   // Custom avatars
   ellaAvatarUrl?: string;
@@ -75,6 +80,7 @@ export const BattleArena = ({
   triggerAttackBeam,
   triggerDamageBeam,
   isCriticalHit = false,
+  triggerVerb,
   ellaAvatarUrl,
   grogAvatarUrl,
   usePremiumSprites = true,
@@ -85,6 +91,9 @@ export const BattleArena = ({
   const [particleTrigger, setParticleTrigger] = useState(0);
   const [impactTrigger, setImpactTrigger] = useState(0);
   const { shakeStyle, shake, criticalShake } = useScreenShake();
+  const verb = useVerbAnimation(triggerVerb);
+  const verbTransform = verb?.descriptor.kind === 'transform' ? verb : null;
+  const verbEmoji = verb?.descriptor.kind === 'emoji' ? verb : null;
 
   // Trigger attack beam (player -> enemy)
   useEffect(() => {
@@ -208,22 +217,34 @@ export const BattleArena = ({
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
         >
-          {usePremiumSprites ? (
-            <GoblinGuard
-              state={mapToGoblinState(enemyState)}
-              healthPercent={enemyHealthPercent}
-              size="medium"
+          <motion.div
+            key={verbTransform?.id ?? 'enemy-base'}
+            className="relative"
+            style={{ transformOrigin: 'center center' }}
+            animate={verbTransform?.descriptor.kind === 'transform' ? verbTransform.descriptor.animate : undefined}
+          >
+            {usePremiumSprites ? (
+              <GoblinGuard
+                state={mapToGoblinState(enemyState)}
+                healthPercent={enemyHealthPercent}
+                size="medium"
+              />
+            ) : (
+              <GrogCharacter
+                state={enemyState}
+                healthPercent={enemyHealthPercent}
+                enemyType={enemyType}
+                taunt={enemyTaunt}
+                showDamage={showEnemyDamage}
+                avatarUrl={grogAvatarUrl}
+              />
+            )}
+            <VerbAnimationLayer
+              descriptor={verbEmoji?.descriptor.kind === 'emoji' ? verbEmoji.descriptor : null}
+              id={verbEmoji?.id ?? null}
+              anchor={{ x: 60, y: 75 }}
             />
-          ) : (
-            <GrogCharacter
-              state={enemyState}
-              healthPercent={enemyHealthPercent}
-              enemyType={enemyType}
-              taunt={enemyTaunt}
-              showDamage={showEnemyDamage}
-              avatarUrl={grogAvatarUrl}
-            />
-          )}
+          </motion.div>
         </motion.div>
       </div>
 

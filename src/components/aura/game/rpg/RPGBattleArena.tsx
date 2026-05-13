@@ -84,6 +84,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { updateStudentReadingStats as updateSharedReadingStats } from "@/lib/updateStudentReadingStats";
 import { useMLIntegration } from "@/hooks/useMLIntegration";
 import { usePlayerInventory } from "@/hooks/usePlayerInventory";
+import { useVerbAnimation, type VerbTrigger } from "@/hooks/useVerbAnimation";
+import { VerbAnimationLayer } from "@/components/aura/game/effects/VerbAnimationLayer";
 
 // Sound effects singleton
 const battleSounds = new SoundEffects();
@@ -375,6 +377,11 @@ export const RPGBattleArena = ({
   // When onMiss fires, we count the miss immediately. When handleWordResult(false) fires later via "Continue",
   // we skip the wordsRead increment if already counted.
   const countedWordIndicesRef = useRef<Set<number>>(new Set());
+
+  // Verb animation trigger — fires when student correctly reads a known verb.
+  const [triggerVerb, setTriggerVerb] = useState<VerbTrigger>(null);
+  const verb = useVerbAnimation(triggerVerb);
+  const verbEmoji = verb?.descriptor.kind === 'emoji' ? verb : null;
   
   // Phoneme tracking: accumulate per-phoneme accuracy throughout the battle
   const phonemeAccumulatorRef = useRef<Record<string, { correct: number; total: number }>>({});
@@ -410,6 +417,9 @@ export const RPGBattleArena = ({
   const [showDamageNumber, setShowDamageNumber] = useState(false);
   const [damageAmount, setDamageAmount] = useState(0);
   const [enemyAbilityMessage, setEnemyAbilityMessage] = useState<string | null>(null);
+
+  // Verb transform: only apply when enemy is idle (avoid conflict with attack/hit animations).
+  const verbTransform = verb?.descriptor.kind === 'transform' && !enemyAttacking && !enemyTakingDamage ? verb : null;
   
   // Spell effects state
   const [activeSpell, setActiveSpell] = useState<'fire' | 'ice' | 'lightning' | 'slash' | 'nature' | 'heal' | 'wind' | 'data_burst' | null>(null);
@@ -1774,6 +1784,8 @@ export const RPGBattleArena = ({
     }
 
     if (correct) {
+      // Trigger verb animation if word matches a known verb (no-op otherwise).
+      setTriggerVerb({ word: spokenWord || word, nonce: Date.now() });
       const newStreak = streakRef.current + 1;
       streakRef.current = newStreak;
       setStreak(newStreak);
@@ -2822,16 +2834,28 @@ export const RPGBattleArena = ({
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: 0.2 }}
             >
-              <RPGCharacter
-                character={enemy}
-                currentHp={enemyHp}
-                isEnemy
-                isAttacking={enemyAttacking}
-                isTakingDamage={enemyTakingDamage}
-                damageNumber={damageAmount}
-                showDamage={showDamageNumber}
-                usePremiumSprites={true}
-              />
+              <motion.div
+                key={verbTransform?.id ?? 'rpg-enemy-base'}
+                className="relative"
+                style={{ transformOrigin: 'center center' }}
+                animate={verbTransform?.descriptor.kind === 'transform' ? verbTransform.descriptor.animate : undefined}
+              >
+                <RPGCharacter
+                  character={enemy}
+                  currentHp={enemyHp}
+                  isEnemy
+                  isAttacking={enemyAttacking}
+                  isTakingDamage={enemyTakingDamage}
+                  damageNumber={damageAmount}
+                  showDamage={showDamageNumber}
+                  usePremiumSprites={true}
+                />
+                <VerbAnimationLayer
+                  descriptor={verbEmoji?.descriptor.kind === 'emoji' ? verbEmoji.descriptor : null}
+                  id={verbEmoji?.id ?? null}
+                  anchor={{ x: 60, y: 75 }}
+                />
+              </motion.div>
             </motion.div>
 
             {/* VS Indicator */}

@@ -1,38 +1,112 @@
-No code changes — drafted email reply for Christopher answering whether the three drawings accurately illustrate all parts of the invention.
 
----
 
-**Subject: Re: Drawings Review**
+# Verb Animation System for AURA Battle Mode
 
-Hi Christopher,
+Add embodied-semantics animations: when a student correctly reads a verb word during battle, the enemy (or scene) performs the matching action. Reading still gates the damage event — animation is a reward layer painted on top.
 
-I reviewed all three drawings against the actual NabuLearn codebase. Short answer: **all three are accurate and I approve them as drawn.** A couple of optional refinements below — none are required for the provisional.
+## Scope
 
-**FIG. 1 — Game interface screenshot**
-Accurate. This is a representative view of the in-browser reading/battle UI a student sees during a session and fairly depicts the user-facing embodiment of the invention. No changes needed for the provisional. (Optional, for the non-provisional: we could swap in a cleaner annotated screenshot that labels the passage text, the live word-by-word highlighting, and the speech-input indicator — but it's not necessary now.)
+Frontend-only. No DB, no edge functions, no `grade_mode` changes, no new routes. Drops into the existing `BattleArena` → `GoblinGuard` flow used by K-5 today.
 
-**FIG. 2 — System block diagram**
-Accurate and matches our architecture:
-- *User Speech → Microphone → Browser*: correct. Audio capture happens through the browser's mic API on the user's device.
-- *Speech-to-text Module ↔ Matching Unit, both inside the Browser*: correct. Both run client-side in the browser (Web Speech API for STT; our matching functions in `wordMatchingModes.ts`).
-- *Controller* inside the Browser, wired to STT, Matching Unit, and Screen: correct. The controller is the CPU on the user's device executing our JavaScript; it orchestrates STT, invokes the Matching Unit, and updates the Screen.
-- *Screen → Output Image*: correct.
-- *Storage Device* shown in dashed lines outside the Browser: correct. In-session state lives locally in browser `localStorage`, and the dashed remote storage represents the optional end-of-session sync to our cloud database — properly shown as optional.
+## Architecture
 
-Optional (not required): we could add a second dashed "Local Storage" block inside the Browser to make explicit that there are two storage paths — local (always on) and remote (optional sync). The current single-dashed-block treatment is fine for a provisional.
+```text
+correct word read
+   │
+   ▼
+GamePlay.tsx (existing damage handler)
+   │  passes spokenWord to BattleArena via new prop `triggerVerb`
+   ▼
+BattleArena
+   ├── existing: beam + shake + particles + damage number
+   └── NEW: VerbAnimationLayer
+            ├── lookup verb in verbAnimationMap
+            ├── Tier 1 → apply transform to enemy wrapper (motion variant)
+            └── Tier 2 → mount emoji-prop sprite, animate, unmount
+```
 
-**FIG. 3 — Four-layer matching flowchart**
-Accurate. The order and gating logic match the code exactly:
-1. Layer 1 — Exact Match → if yes, MATCH; else continue.
-2. Layer 2 — Homophone Dictionary → if yes, MATCH; else continue.
-3. Layer 3 — Levenshtein Distance → if yes, MATCH; else continue.
-4. Layer 4 — Phoneme Comparison → if yes, MATCH; else NO MATCH.
+## Files
 
-Two small clarifications worth folding into the spec text (not the figure itself):
-- Layer 2 actually consults **two parallel lookup tables** at this stage — a true-homophones table and a separate phonics-confusion / API-mishear table. The figure label "Homophone Dictionary" is fine as a generic label.
-- Layer 4 uses a **70% phoneme-similarity threshold with partial credit (0.7)** via an articulatory feature-distance metric. Spec-text detail, not a figure change.
+**New**
+- `src/lib/verbAnimations.ts` — verb → animation descriptor map (transform variants + emoji-prop configs)
+- `src/components/aura/game/effects/VerbAnimationLayer.tsx` — renders emoji-prop overlay, handles lifecycle
+- `src/hooks/useVerbAnimation.ts` — reads `triggerVerb` prop, resolves descriptor, returns variant + prop config
 
-**Bottom line:** Approve all three drawings as drawn. The two notes above are spec additions, not figure revisions. Happy to jump on a quick call if easier.
+**Edited**
+- `src/components/aura/game/BattleArena.tsx`
+  - Add `triggerVerb?: { word: string; nonce: number }` prop
+  - Wrap enemy `<motion.div>` with verb transform variant from hook
+  - Mount `<VerbAnimationLayer>` for emoji props
+- `src/pages/game/GamePlay.tsx` (or wherever damage is dispatched to BattleArena — confirm during build)
+  - On correct read, pass `{ word: spokenWord.toLowerCase(), nonce: Date.now() }` to BattleArena
 
-Best,
-[Name]
+No changes to `GoblinGuard.tsx` (stays pure). No changes to `battleMechanics.ts`. No changes to scoring/HP logic.
+
+## Verb library
+
+**Tier 1 — Transform verbs (~20, no art needed)**
+Acts on enemy sprite via framer-motion. CSS transforms only.
+
+| Verb        | Animation |
+|-------------|-----------|
+| flip        | rotateY 360° |
+| spin        | rotate 720° |
+| jump        | translateY -40 → 0 |
+| shrink      | scale 1 → 0.4 → 1 |
+| grow        | scale 1 → 1.6 → 1 |
+| fall        | translateY +60, rotate 90° |
+| bounce      | translateY 3× spring |
+| shake       | x oscillate ±15 |
+| tilt        | rotate ±25° |
+| wiggle      | rotate ±10° 3× |
+| stretch     | scaleY 1.5 |
+| squish      | scaleY 0.5, scaleX 1.3 |
+| float       | translateY -30, slow ease |
+| sink        | translateY +40, opacity 0.6 |
+| zoom        | scale 1.4 + translateX 30 |
+| slide       | translateX 50 → 0 |
+| roll        | translateX 60, rotate 360° |
+| dance       | combined wiggle + bounce |
+| freeze      | filter hue-rotate + scale 1, hold |
+| explode     | scale 1.5 → 0, opacity 0 |
+
+**Tier 2 — Emoji-prop verbs (~10, single absolutely-positioned span)**
+Mounts an emoji near enemy, animates, unmounts after ~1.2s.
+
+| Verb        | Prop |
+|-------------|------|
+| drink       | 🥤 → mouth, then 💧 |
+| eat         | 🍎 → mouth, then 😋 |
+| sleep       | 💤 floats up |
+| cry         | 💧💧 from eyes |
+| laugh       | 😂 burst |
+| read        | 📖 appears in hands |
+| run         | 💨 trail |
+| throw       | ⚾ arcs across arena |
+| burn        | 🔥 overlay |
+| sing        | 🎵🎶 float up |
+
+## Matching rules
+
+- Lowercase + strip punctuation before lookup.
+- Trivial morphology: strip trailing `s`, `ed`, `ing` → check root (`flips`, `flipped`, `flipping` all → `flip`). Single regex pass, no lib.
+- Unmatched words: no animation, existing beam/particles fire as today (zero regression).
+- Cooldown: ignore retrigger within 400ms to prevent spam from rapid corrections.
+
+## Performance
+
+- Transform verbs: pure GPU compositing, no extra cost vs. existing hit animations.
+- Emoji props: one absolutely-positioned `<motion.span>`, unmounts cleanly via AnimatePresence. ~0.3ms render.
+- No new images, no preloading, no bundle-size impact (~3KB total for map + layer + hook).
+- Verified safe on 5-year-old iPad (matches current Battle perf envelope).
+
+## Validation
+
+- Manual: read each verb in dev battle, confirm animation fires + damage still applied.
+- Confirm misreads → no animation, no damage (existing behavior preserved).
+- Confirm non-verb correct reads → existing beam/shake only (no regression).
+- Confirm rapid-fire reads don't queue/stack animations (cooldown works).
+
+## Out of scope (deferred)
+
+- Pre-K mode, custom sprite art, sentence-level parsing ("the goblin drinks water" as a phrase), grade_mode branching, new routes, telemetry on verb usage.

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { DemoTourProvider, TourStep } from "@/components/demos/DemoTourGuide";
@@ -49,6 +50,15 @@ const ParentDemo = () => {
 
   return (
     <DemoTourProvider steps={stepsWithActions}>
+      <Helmet>
+        <title>Parent Demo — NabuLearn</title>
+        <meta name="description" content="Interactive parent demo: child grades, reading progress, assignments, calendar, safety alerts, and teacher messaging." />
+        <link rel="canonical" href="https://nabulearn.com/demos/parent" />
+        <meta property="og:title" content="Parent Demo — NabuLearn" />
+        <meta property="og:description" content="Interactive parent demo for NabuLearn." />
+        <meta property="og:url" content="https://nabulearn.com/demos/parent" />
+        <meta property="og:type" content="website" />
+      </Helmet>
       <div className="min-h-screen flex flex-col bg-gradient-to-br from-secondary/[0.06] via-secondary/[0.02] to-primary/[0.03]">
         <div className="bg-primary/10 border-b border-primary/20 px-4 py-2 flex items-center justify-between">
           <div className="flex items-center gap-3">

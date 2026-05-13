@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Printer, Download } from "lucide-react";
@@ -142,6 +143,15 @@ export default function PolicyViewer() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Security & Compliance Policies — NabuLearn</title>
+        <meta name="description" content="NabuLearn security, privacy, and compliance documentation: access control, incident response, vendor management, and data classification policies." />
+        <link rel="canonical" href="https://nabulearn.com/policies" />
+        <meta property="og:title" content="Security & Compliance Policies — NabuLearn" />
+        <meta property="og:description" content="NabuLearn security, privacy, and compliance documentation." />
+        <meta property="og:url" content="https://nabulearn.com/policies" />
+        <meta property="og:type" content="website" />
+      </Helmet>
       <style>{`
         @media print {
           @page {

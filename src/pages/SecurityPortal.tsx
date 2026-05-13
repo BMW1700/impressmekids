@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,6 +98,15 @@ export default function SecurityPortal() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Security & Compliance — NabuLearn</title>
+        <meta name="description" content="NabuLearn security overview: encryption, access controls, FERPA & COPPA compliance, incident response, and vendor governance." />
+        <link rel="canonical" href="https://nabulearn.com/security" />
+        <meta property="og:title" content="Security & Compliance — NabuLearn" />
+        <meta property="og:description" content="Encryption, access controls, FERPA & COPPA compliance, and incident response." />
+        <meta property="og:url" content="https://nabulearn.com/security" />
+        <meta property="og:type" content="website" />
+      </Helmet>
       <Header />
       
       <main className="container mx-auto px-4 py-12">
