@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -71,6 +72,27 @@ const tiers = [
 const Pricing = () => {
   return (
     <div className="min-h-screen flex flex-col">
+      <Helmet>
+        <title>Pricing — NabuLearn AI Literacy Platform</title>
+        <meta name="description" content="Simple per-student pricing for NabuLearn. Free pilot up to 30 students, school plans, and district-wide tiers from $5–7/student/year." />
+        <link rel="canonical" href="https://nabulearn.com/pricing" />
+        <meta property="og:title" content="NabuLearn Pricing — Pilot, School, District" />
+        <meta property="og:description" content="$5–7/student/year. Free pilot up to 30 students. FERPA & COPPA aligned." />
+        <meta property="og:url" content="https://nabulearn.com/pricing" />
+        <meta property="og:type" content="website" />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Product",
+          "name": "NabuLearn AI Literacy Platform",
+          "description": "AI-powered literacy platform for K-12 schools and districts. Reading fluency assessment, ML-based intervention, and an RPG reading adventure.",
+          "brand": { "@type": "Organization", "name": "NabuLearn" },
+          "offers": [
+            { "@type": "Offer", "name": "Pilot Program", "price": "0", "priceCurrency": "USD", "description": "Free pilot for up to 30 students" },
+            { "@type": "Offer", "name": "School", "price": "5", "priceCurrency": "USD", "description": "Per student per year, billed annually for a single school" },
+            { "@type": "Offer", "name": "District", "price": "7", "priceCurrency": "USD", "description": "Per student per year, district-wide deployment with admin controls" }
+          ]
+        })}</script>
+      </Helmet>
       <Header />
 
       <main className="flex-1 py-16 md:py-24">
