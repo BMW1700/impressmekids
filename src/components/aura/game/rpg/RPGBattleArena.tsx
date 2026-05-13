@@ -417,6 +417,9 @@ export const RPGBattleArena = ({
   const [showDamageNumber, setShowDamageNumber] = useState(false);
   const [damageAmount, setDamageAmount] = useState(0);
   const [enemyAbilityMessage, setEnemyAbilityMessage] = useState<string | null>(null);
+
+  // Verb transform: only apply when enemy is idle (avoid conflict with attack/hit animations).
+  const verbTransform = verb?.descriptor.kind === 'transform' && !enemyAttacking && !enemyTakingDamage ? verb : null;
   
   // Spell effects state
   const [activeSpell, setActiveSpell] = useState<'fire' | 'ice' | 'lightning' | 'slash' | 'nature' | 'heal' | 'wind' | 'data_burst' | null>(null);
