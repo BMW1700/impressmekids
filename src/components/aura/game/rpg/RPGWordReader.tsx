@@ -916,25 +916,6 @@ export const RPGWordReader = ({
     setRecognitionState('idle');
   }, [disabled, clearAllTimeouts]);
 
-  // ─── Auto-start mic on mount when in fast mode (Elara / multiplayer PvP) ───
-  // The reader is remounted (key changes) on every new batch / turn switch in PvP,
-  // so this fires once per batch and removes the need for the kid to click "Start"
-  // again after the parent's turn — keeping the flow seamless.
-  useEffect(() => {
-    if (mode !== 'fast') return;
-    if (disabled) return;
-    if (!words || words.length === 0) return;
-    // Small delay so the mount animation settles and any prior recognition has fully torn down
-    const t = setTimeout(() => {
-      if (!isRecognitionRunningRef.current && !disabled) {
-        startRecognitionSession();
-      }
-    }, 250);
-    return () => clearTimeout(t);
-    // Intentionally only run on mount — the reader is keyed to remount per batch in PvP.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // Control functions
   const startReading = useCallback(() => {
     setCurrentIndex(0);
