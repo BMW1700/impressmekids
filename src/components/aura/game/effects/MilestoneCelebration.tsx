@@ -133,8 +133,7 @@ export const MilestoneCelebration = ({
             exit={{ scale: 0, opacity: 0 }}
             transition={{ 
               duration: 0.5,
-              type: "spring",
-              stiffness: 200,
+              ease: "easeOut",
             }}
           >
             {/* Glow effect */}
