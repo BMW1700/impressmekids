@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
@@ -109,6 +110,15 @@ const PhonicsFoundations = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Phonics Foundations — NabuLearn</title>
+        <meta name="description" content="World 0 Phonics Foundations: master all 44 English phonemes with mastery checks and a printable certificate of completion." />
+        <link rel="canonical" href="https://nabulearn.com/game/phonics-foundations" />
+        <meta property="og:title" content="Phonics Foundations — NabuLearn" />
+        <meta property="og:description" content="Master all 44 English phonemes with mastery checks and certificate." />
+        <meta property="og:url" content="https://nabulearn.com/game/phonics-foundations" />
+        <meta property="og:type" content="website" />
+      </Helmet>
       <header className="border-b border-border bg-card">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
           <Button asChild variant="ghost" size="sm">
