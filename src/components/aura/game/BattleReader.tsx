@@ -500,6 +500,7 @@ export const BattleReader = ({
         triggerAttackBeam={triggerAttackBeam}
         triggerDamageBeam={triggerDamageBeam}
         isCriticalHit={isCriticalHit}
+        triggerVerb={triggerVerb}
         ellaAvatarUrl={ellaAvatarUrl}
         grogAvatarUrl={grogAvatarUrl}
       />
