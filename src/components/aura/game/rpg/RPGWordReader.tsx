@@ -918,10 +918,9 @@ export const RPGWordReader = ({
 
   // Control functions
   const startReading = useCallback(() => {
-    setCurrentIndex(0);
-    currentIndexRef.current = 0;
+    // Preserve the current index when restarting the mic mid-batch. Resetting
+    // here made the UI jump back to word 1 after an automatic mic stop.
     isProcessingRef.current = false;
-    setCompletedWords(new Set());
     setFeedback(null);
     setSpokenText("");
     startRecognitionSession();
