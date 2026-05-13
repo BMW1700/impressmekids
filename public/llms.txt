@@ -1,0 +1,20 @@
+# NabuLearn
+
+> AI-Powered Literacy Platform. NabuLearn uses 4 proprietary ML models to assess reading fluency, predict at-risk students, and deliver targeted interventions through an RPG reading adventure for K-12.
+
+## Pages
+
+- [Home](/): Platform overview and key capabilities.
+- [Pricing](/pricing): Pilot, school, and district plans ($5–7/student/year).
+- [Interactive Demos](/demos): Student, teacher, parent, and admin role demos.
+- [Student Demo](/demos/student): See the AURA reading experience.
+- [Teacher Demo](/demos/teacher): Classroom analytics and intervention tools.
+- [Parent Demo](/demos/parent): Parent dashboard and progress views.
+- [Admin Demo](/demos/admin): District- and school-level administration.
+- [Scope & Sequence](/scope-and-sequence): Phonics scope and sequence reference.
+- [Sign In / Sign Up](/auth): Account access for schools and students.
+
+## Optional
+
+- [Privacy Policy](/privacy-policy): FERPA & COPPA-aligned data practices.
+- [Terms of Service](/terms-of-service): Platform terms.
