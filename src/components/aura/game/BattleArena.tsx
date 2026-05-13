@@ -8,7 +8,9 @@ import { GoblinGuard, GoblinState } from "./characters/GoblinGuard";
 import { SirValor, KnightState } from "./characters/SirValor";
 import { ParticleBurst } from "./effects/ParticleBurst";
 import { ImpactFlash } from "./effects/ImpactFlash";
+import { VerbAnimationLayer } from "./effects/VerbAnimationLayer";
 import { useScreenShake } from "@/hooks/useScreenShake";
+import { useVerbAnimation, type VerbTrigger } from "@/hooks/useVerbAnimation";
 
 interface BattleArenaProps {
   // Enemy state
