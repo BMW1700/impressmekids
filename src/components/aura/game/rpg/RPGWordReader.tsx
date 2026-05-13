@@ -738,6 +738,7 @@ export const RPGWordReader = ({
       console.log('[RPGWordReader] Recognition started');
       isRecognitionRunningRef.current = true;
       isRecognitionStartingRef.current = false;
+      processedResultsRef.current.clear();
       if (!isProcessingRef.current) {
         setRecognitionState('listening');
       }
