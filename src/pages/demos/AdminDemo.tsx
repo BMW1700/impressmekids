@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { liquidGlassTabClass } from "@/components/ui/liquid-glass-button";
@@ -62,6 +63,15 @@ const AdminDemo = () => {
 
   return (
     <DemoTourProvider steps={stepsWithActions}>
+      <Helmet>
+        <title>Admin Demo — NabuLearn</title>
+        <meta name="description" content="Interactive district admin demo: roster management, Clever sync, bulk import, safety protocols, and account verification." />
+        <link rel="canonical" href="https://nabulearn.com/demos/admin" />
+        <meta property="og:title" content="Admin Demo — NabuLearn" />
+        <meta property="og:description" content="Interactive district admin demo for NabuLearn." />
+        <meta property="og:url" content="https://nabulearn.com/demos/admin" />
+        <meta property="og:type" content="website" />
+      </Helmet>
       <div className="min-h-screen flex flex-col bg-background">
         <div className="bg-primary/10 border-b border-primary/20 px-4 py-2 flex items-center justify-between">
           <div className="flex items-center gap-3">
