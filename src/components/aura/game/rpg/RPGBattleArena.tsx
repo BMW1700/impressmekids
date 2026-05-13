@@ -2834,17 +2834,28 @@ export const RPGBattleArena = ({
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: 0.2 }}
             >
-              <RPGCharacter
-                character={enemy}
-                currentHp={enemyHp}
-                isEnemy
-                isAttacking={enemyAttacking}
-                isTakingDamage={enemyTakingDamage}
-                damageNumber={damageAmount}
-                showDamage={showDamageNumber}
-                usePremiumSprites={true}
-              />
-            </motion.div>
+              <motion.div
+                key={verbTransform?.id ?? 'rpg-enemy-base'}
+                className="relative"
+                style={{ transformOrigin: 'center center' }}
+                animate={verbTransform?.descriptor.kind === 'transform' ? verbTransform.descriptor.animate : undefined}
+              >
+                <RPGCharacter
+                  character={enemy}
+                  currentHp={enemyHp}
+                  isEnemy
+                  isAttacking={enemyAttacking}
+                  isTakingDamage={enemyTakingDamage}
+                  damageNumber={damageAmount}
+                  showDamage={showDamageNumber}
+                  usePremiumSprites={true}
+                />
+                <VerbAnimationLayer
+                  descriptor={verbEmoji?.descriptor.kind === 'emoji' ? verbEmoji.descriptor : null}
+                  id={verbEmoji?.id ?? null}
+                  anchor={{ x: 60, y: 75 }}
+                />
+              </motion.div>
 
             {/* VS Indicator */}
             <motion.div
