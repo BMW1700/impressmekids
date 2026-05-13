@@ -51,6 +51,7 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
+      <main>
       
       {/* Hero Section */}
       <section className="bg-gradient-hero text-white py-24 md:py-32 relative overflow-hidden">
@@ -293,6 +294,7 @@ const Index = () => {
         </div>
       </section>
 
+      </main>
       <Footer />
     </div>
   );
