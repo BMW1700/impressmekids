@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { GameHeader } from "@/components/game/GameHeader";
@@ -101,6 +102,15 @@ const GameRPGDemo = () => {
 
   return (
     <DemoTourProvider steps={tourSteps} onStepChange={handleStepChange}>
+      <Helmet>
+        <title>LexiQuest Demo — NabuLearn</title>
+        <meta name="description" content="Interactive LexiQuest RPG demo: explore the world map, battle bosses, and see how reading powers gameplay." />
+        <link rel="canonical" href="https://nabulearn.com/game/demo" />
+        <meta property="og:title" content="LexiQuest Demo — NabuLearn" />
+        <meta property="og:description" content="Interactive LexiQuest RPG demo for NabuLearn." />
+        <meta property="og:url" content="https://nabulearn.com/game/demo" />
+        <meta property="og:type" content="website" />
+      </Helmet>
       <div className="min-h-screen bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900">
         <GameHeader />
 
