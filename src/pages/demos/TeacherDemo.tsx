@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { cn } from "@/lib/utils";
@@ -972,15 +971,6 @@ const TeacherDemo = () => {
 
   return (
     <DemoTourProvider steps={stepsWithActions}>
-      <Helmet>
-        <title>Teacher Demo — NabuLearn</title>
-        <meta name="description" content="Interactive teacher demo: classroom rosters, AI lesson tools, gradebook, calendar, and student analytics." />
-        <link rel="canonical" href="https://nabulearn.com/demos/teacher" />
-        <meta property="og:title" content="Teacher Demo — NabuLearn" />
-        <meta property="og:description" content="Interactive teacher demo for NabuLearn." />
-        <meta property="og:url" content="https://nabulearn.com/demos/teacher" />
-        <meta property="og:type" content="website" />
-      </Helmet>
       <div className="min-h-screen flex flex-col bg-background">
         <div className="bg-primary/10 border-b border-primary/20 px-4 py-2 flex items-center justify-between">
           <div className="flex items-center gap-3">

@@ -77,7 +77,6 @@ export const BattleReader = ({
   const [triggerAttackBeam, setTriggerAttackBeam] = useState(0);
   const [triggerDamageBeam, setTriggerDamageBeam] = useState(0);
   const [isCriticalHit, setIsCriticalHit] = useState(false);
-  const [triggerVerb, setTriggerVerb] = useState<{ word: string; nonce: number } | undefined>(undefined);
   
   // STREAK POWER SYSTEM
   const [powerAvailable, setPowerAvailable] = useState(false);
@@ -231,7 +230,6 @@ export const BattleReader = ({
         setLastMessage(damageResult.message || undefined);
         setIsCriticalHit(damageResult.isCritical);
         setTriggerAttackBeam(Date.now());
-        setTriggerVerb({ word: result.word, nonce: Date.now() });
         
         // Clear taunt on hit
         setCurrentTaunt("");
@@ -500,7 +498,6 @@ export const BattleReader = ({
         triggerAttackBeam={triggerAttackBeam}
         triggerDamageBeam={triggerDamageBeam}
         isCriticalHit={isCriticalHit}
-        triggerVerb={triggerVerb}
         ellaAvatarUrl={ellaAvatarUrl}
         grogAvatarUrl={grogAvatarUrl}
       />

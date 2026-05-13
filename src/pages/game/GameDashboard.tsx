@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { GameHeader } from "@/components/game/GameHeader";
@@ -95,15 +94,6 @@ const GameDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Helmet>
-        <title>LexiQuest Game — NabuLearn</title>
-        <meta name="description" content="LexiQuest: an adaptive RPG that builds reading fluency, vocabulary, and phonemic awareness through story-driven battles and minigames." />
-        <link rel="canonical" href="https://nabulearn.com/game" />
-        <meta property="og:title" content="LexiQuest Game — NabuLearn" />
-        <meta property="og:description" content="Adaptive literacy RPG with story-driven battles and phonics minigames." />
-        <meta property="og:url" content="https://nabulearn.com/game" />
-        <meta property="og:type" content="website" />
-      </Helmet>
       <GameHeader studentId={user?.id}>
         {isSignedIn && user?.id && (
           <RPGPlayerHUD

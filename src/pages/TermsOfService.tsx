@@ -1,4 +1,3 @@
-import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,15 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 const TermsOfService = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Helmet>
-        <title>Terms of Service — NabuLearn</title>
-        <meta name="description" content="The terms governing use of NabuLearn by schools, districts, educators, parents, and students." />
-        <link rel="canonical" href="https://nabulearn.com/terms-of-service" />
-        <meta property="og:title" content="Terms of Service — NabuLearn" />
-        <meta property="og:description" content="The terms governing use of NabuLearn by schools, districts, educators, parents, and students." />
-        <meta property="og:url" content="https://nabulearn.com/terms-of-service" />
-        <meta property="og:type" content="website" />
-      </Helmet>
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
         <Card>

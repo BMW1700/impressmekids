@@ -1,4 +1,3 @@
-import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,15 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 const PrivacyPolicy = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Helmet>
-        <title>Privacy Policy — NabuLearn</title>
-        <meta name="description" content="How NabuLearn collects, uses, and protects student, parent, and educator data. COPPA and FERPA-aligned privacy practices." />
-        <link rel="canonical" href="https://nabulearn.com/privacy-policy" />
-        <meta property="og:title" content="Privacy Policy — NabuLearn" />
-        <meta property="og:description" content="How NabuLearn collects, uses, and protects student, parent, and educator data." />
-        <meta property="og:url" content="https://nabulearn.com/privacy-policy" />
-        <meta property="og:type" content="website" />
-      </Helmet>
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
         <Card>

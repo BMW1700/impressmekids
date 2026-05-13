@@ -15,7 +15,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -1188,15 +1187,6 @@ const StudentDemo = () => {
     <DemoTourProvider steps={stepsWithActions} onStepChange={(step) => {
       // Tab switching is handled by DemoClassroomDetail internally via user clicks
     }}>
-      <Helmet>
-        <title>Student Demo — NabuLearn</title>
-        <meta name="description" content="Interactive student demo: courses, AURA reading, study games, gradebook, calendar, and safety tools." />
-        <link rel="canonical" href="https://nabulearn.com/demos/student" />
-        <meta property="og:title" content="Student Demo — NabuLearn" />
-        <meta property="og:description" content="Interactive student demo for NabuLearn." />
-        <meta property="og:url" content="https://nabulearn.com/demos/student" />
-        <meta property="og:type" content="website" />
-      </Helmet>
       <div className="min-h-screen flex flex-col bg-background">
         <div className="bg-primary/10 border-b border-primary/20 px-4 py-2 flex items-center justify-between">
           <div className="flex items-center gap-3">
