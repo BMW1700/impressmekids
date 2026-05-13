@@ -12,4 +12,8 @@
   <url><loc>https://nabulearn.com/scope-and-sequence</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://nabulearn.com/privacy-policy</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
   <url><loc>https://nabulearn.com/terms-of-service</loc><changefreq>yearly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://nabulearn.com/policies</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://nabulearn.com/game</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://nabulearn.com/game/demo</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://nabulearn.com/game/phonics-foundations</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 </urlset>
