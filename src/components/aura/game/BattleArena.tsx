@@ -80,6 +80,7 @@ export const BattleArena = ({
   triggerAttackBeam,
   triggerDamageBeam,
   isCriticalHit = false,
+  triggerVerb,
   ellaAvatarUrl,
   grogAvatarUrl,
   usePremiumSprites = true,
@@ -90,6 +91,9 @@ export const BattleArena = ({
   const [particleTrigger, setParticleTrigger] = useState(0);
   const [impactTrigger, setImpactTrigger] = useState(0);
   const { shakeStyle, shake, criticalShake } = useScreenShake();
+  const verb = useVerbAnimation(triggerVerb);
+  const verbTransform = verb?.descriptor.kind === 'transform' ? verb : null;
+  const verbEmoji = verb?.descriptor.kind === 'emoji' ? verb : null;
 
   // Trigger attack beam (player -> enemy)
   useEffect(() => {
