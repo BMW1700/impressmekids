@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { playCorrectPronunciation, SoundEffects } from "@/lib/pronunciationPlayer";
 import { unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
-import { ensureMicrophoneAccess } from "@/lib/micDiagnostics";
 import { MicTroubleshooterModal } from "@/components/mic/MicTroubleshooterModal";
 import { getWordEmoji } from "@/lib/wordEmojiMap";
 import { RPGEmojiManager } from "./RPGEmojiPop";
@@ -138,6 +137,8 @@ export const RPGWordReader = ({
   // Refs - the key is keeping ONE recognition instance alive
   const recognitionRef = useRef<any>(null);
   const isRecognitionRunningRef = useRef(false);
+  const isRecognitionStartingRef = useRef(false);
+  const speechSessionIdRef = useRef(0);
   const currentIndexRef = useRef(0);
   const isProcessingRef = useRef(false);
   const shouldBeListeningRef = useRef(false);
@@ -239,17 +240,21 @@ export const RPGWordReader = ({
 
   // Stop recognition completely
   const stopRecognitionSession = useCallback(() => {
+    speechSessionIdRef.current += 1;
     shouldBeListeningRef.current = false;
     clearAllTimeouts();
     
-    if (recognitionRef.current) {
+    const activeRecognition = recognitionRef.current;
+    recognitionRef.current = null;
+    if (activeRecognition) {
       try {
-        recognitionRef.current.stop();
+        activeRecognition.stop();
       } catch (e) {
         // Ignore - may already be stopped
       }
     }
     isRecognitionRunningRef.current = false;
+    isRecognitionStartingRef.current = false;
   }, [clearAllTimeouts]);
 
   // Advance to next word (UI only, doesn't touch recognition)
@@ -676,22 +681,12 @@ export const RPGWordReader = ({
   }, [getTargetWord, enableEchoRetry, handleCorrect, handleRetrySuccess, handleIncorrectFinal, startEchoRetry]);
 
   // Create and start the recognition session (ONE instance, kept alive)
-  // FIXED: Now requires mic access before starting
-  const startRecognitionSession = useCallback(async () => {
+  const startRecognitionSession = useCallback(() => {
     if (disabled) return;
-    if (isRecognitionRunningRef.current) return;
+    if (isRecognitionRunningRef.current || isRecognitionStartingRef.current) return;
     
     setMicError(null);
-    
-    // STEP 1: Ensure mic access first
-    const micResult = await ensureMicrophoneAccess(false);
-    if (!micResult.success) {
-      console.error('[RPGWordReader] Mic access failed:', micResult.error);
-      setMicError(micResult.error?.userMessage || 'Microphone access failed');
-      setRecognitionState('idle');
-      return;
-    }
-    
+
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
     if (!SpeechRecognition) {
       console.error('[RPGWordReader] Speech recognition not supported');
@@ -701,6 +696,8 @@ export const RPGWordReader = ({
     
     unlockSpeechSynthesis();
     shouldBeListeningRef.current = true;
+    isRecognitionStartingRef.current = true;
+    const sessionId = ++speechSessionIdRef.current;
     
     // Create ONE recognition instance
     const recognition = new SpeechRecognition();
@@ -708,10 +705,40 @@ export const RPGWordReader = ({
     recognition.interimResults = true;
     recognition.lang = 'en-US';
     recognition.maxAlternatives = 5;
+
+    const isCurrentSession = () => recognitionRef.current === recognition && speechSessionIdRef.current === sessionId;
+
+    const scheduleRestart = (delayMs: number) => {
+      if (restartTimeoutRef.current) {
+        clearTimeout(restartTimeoutRef.current);
+        restartTimeoutRef.current = null;
+      }
+
+      restartTimeoutRef.current = setTimeout(() => {
+        if (!isCurrentSession() || !shouldBeListeningRef.current || isRecognitionRunningRef.current || isProcessingRef.current) {
+          return;
+        }
+
+        try {
+          console.log('[RPGWordReader] Restarting active speech session', { sessionId, wordIndex: currentIndexRef.current, target: getTargetWord(currentIndexRef.current) });
+          isRecognitionStartingRef.current = true;
+          recognition.start();
+        } catch (e) {
+          console.log('[RPGWordReader] Active-session restart skipped:', e);
+          isRecognitionStartingRef.current = false;
+        }
+      }, delayMs);
+    };
     
     recognition.onstart = () => {
+      if (!isCurrentSession()) {
+        console.log('[RPGWordReader] Ignoring stale onstart', { sessionId });
+        return;
+      }
       console.log('[RPGWordReader] Recognition started');
       isRecognitionRunningRef.current = true;
+      isRecognitionStartingRef.current = false;
+      processedResultsRef.current.clear();
       if (!isProcessingRef.current) {
         setRecognitionState('listening');
       }
@@ -721,6 +748,10 @@ export const RPGWordReader = ({
     const processedResultsRef = { current: new Set<number>() };
     
     recognition.onresult = (event: any) => {
+      if (!isCurrentSession()) {
+        console.log('[RPGWordReader] Ignoring stale result', { sessionId });
+        return;
+      }
       // CRITICAL FIX: Use event.resultIndex to only process NEW results
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
@@ -782,7 +813,12 @@ export const RPGWordReader = ({
     };
     
     recognition.onerror = (event: any) => {
+      if (!isCurrentSession()) {
+        console.log('[RPGWordReader] Ignoring stale error', { sessionId, error: event.error });
+        return;
+      }
       console.log('[RPGWordReader] Recognition error:', event.error);
+      isRecognitionStartingRef.current = false;
       
       if (event.error === 'aborted') {
         isRecognitionRunningRef.current = false;
@@ -791,6 +827,7 @@ export const RPGWordReader = ({
       
       // Handle permission errors
       if (event.error === 'not-allowed') {
+        shouldBeListeningRef.current = false;
         setMicError('Microphone access was denied.');
         isRecognitionRunningRef.current = false;
         setRecognitionState('idle');
@@ -802,27 +839,23 @@ export const RPGWordReader = ({
         isRecognitionRunningRef.current = false;
         
         if (shouldBeListeningRef.current && !isProcessingRef.current) {
-          restartTimeoutRef.current = setTimeout(() => {
-            if (shouldBeListeningRef.current) {
-              startRecognitionSession();
-            }
-          }, 300);
+          scheduleRestart(300);
         }
       }
     };
     
     recognition.onend = () => {
+      if (!isCurrentSession()) {
+        console.log('[RPGWordReader] Ignoring stale onend', { sessionId });
+        return;
+      }
       console.log('[RPGWordReader] Recognition ended');
       isRecognitionRunningRef.current = false;
+      isRecognitionStartingRef.current = false;
       
       // Auto-restart if we should still be listening
       if (shouldBeListeningRef.current && !isProcessingRef.current) {
-        restartTimeoutRef.current = setTimeout(() => {
-          if (shouldBeListeningRef.current && !isRecognitionRunningRef.current) {
-            console.log('[RPGWordReader] Auto-restarting recognition');
-            startRecognitionSession();
-          }
-        }, 100);
+        scheduleRestart(100);
       }
     };
     
@@ -833,17 +866,14 @@ export const RPGWordReader = ({
     } catch (e) {
       console.error('[RPGWordReader] Failed to start:', e);
       isRecognitionRunningRef.current = false;
+      isRecognitionStartingRef.current = false;
       
       // Retry after delay
       if (shouldBeListeningRef.current) {
-        restartTimeoutRef.current = setTimeout(() => {
-          if (shouldBeListeningRef.current) {
-            startRecognitionSession();
-          }
-        }, 500);
+        scheduleRestart(500);
       }
     }
-  }, [disabled, processResult]);
+  }, [disabled, mode, getTargetWord, handleRetrySuccess, handleCorrect, processResult]);
 
   // Set the ref for use in handlers that are defined before startRecognitionSession
   useEffect(() => {
@@ -853,13 +883,18 @@ export const RPGWordReader = ({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      speechSessionIdRef.current += 1;
       shouldBeListeningRef.current = false;
       clearAllTimeouts();
-      if (recognitionRef.current) {
+      const activeRecognition = recognitionRef.current;
+      recognitionRef.current = null;
+      if (activeRecognition) {
         try {
-          recognitionRef.current.stop();
+          activeRecognition.stop();
         } catch (e) {}
       }
+      isRecognitionRunningRef.current = false;
+      isRecognitionStartingRef.current = false;
     };
   }, [clearAllTimeouts]);
 
@@ -869,41 +904,25 @@ export const RPGWordReader = ({
   // double submissions or stale word advancement.
   useEffect(() => {
     if (!disabled) return;
+    speechSessionIdRef.current += 1;
     shouldBeListeningRef.current = false;
     clearAllTimeouts();
-    if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch (e) {}
+    const activeRecognition = recognitionRef.current;
+    recognitionRef.current = null;
+    if (activeRecognition) {
+      try { activeRecognition.stop(); } catch (e) {}
     }
     isRecognitionRunningRef.current = false;
+    isRecognitionStartingRef.current = false;
     isProcessingRef.current = false;
     setRecognitionState('idle');
   }, [disabled, clearAllTimeouts]);
 
-  // ─── Auto-start mic on mount when in fast mode (Elara / multiplayer PvP) ───
-  // The reader is remounted (key changes) on every new batch / turn switch in PvP,
-  // so this fires once per batch and removes the need for the kid to click "Start"
-  // again after the parent's turn — keeping the flow seamless.
-  useEffect(() => {
-    if (mode !== 'fast') return;
-    if (disabled) return;
-    if (!words || words.length === 0) return;
-    // Small delay so the mount animation settles and any prior recognition has fully torn down
-    const t = setTimeout(() => {
-      if (!isRecognitionRunningRef.current && !disabled) {
-        startRecognitionSession();
-      }
-    }, 250);
-    return () => clearTimeout(t);
-    // Intentionally only run on mount — the reader is keyed to remount per batch in PvP.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // Control functions
   const startReading = useCallback(() => {
-    setCurrentIndex(0);
-    currentIndexRef.current = 0;
+    // Preserve the current index when restarting the mic mid-batch. Resetting
+    // here made the UI jump back to word 1 after an automatic mic stop.
     isProcessingRef.current = false;
-    setCompletedWords(new Set());
     setFeedback(null);
     setSpokenText("");
     startRecognitionSession();

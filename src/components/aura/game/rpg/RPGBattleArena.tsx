@@ -2991,7 +2991,7 @@ export const RPGBattleArena = ({
                           onResult={handleWordResult}
                           onRetrySuccess={handleRetrySuccess}
                           onMiss={handleMiss}
-                          disabled={currentWordResult !== null || !isPlayerTurn}
+                          disabled={!isPlayerTurn}
                           streak={streak}
                           batchSize={5}
                           enableEchoRetry={true}
