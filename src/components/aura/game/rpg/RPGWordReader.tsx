@@ -826,6 +826,7 @@ export const RPGWordReader = ({
       
       // Handle permission errors
       if (event.error === 'not-allowed') {
+        shouldBeListeningRef.current = false;
         setMicError('Microphone access was denied.');
         isRecognitionRunningRef.current = false;
         setRecognitionState('idle');
