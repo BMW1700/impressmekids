@@ -2856,6 +2856,7 @@ export const RPGBattleArena = ({
                   anchor={{ x: 60, y: 75 }}
                 />
               </motion.div>
+            </motion.div>
 
             {/* VS Indicator */}
             <motion.div
