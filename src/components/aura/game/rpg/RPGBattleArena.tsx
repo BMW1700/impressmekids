@@ -1784,6 +1784,8 @@ export const RPGBattleArena = ({
     }
 
     if (correct) {
+      // Trigger verb animation if word matches a known verb (no-op otherwise).
+      setTriggerVerb({ word: spokenWord || word, nonce: Date.now() });
       const newStreak = streakRef.current + 1;
       streakRef.current = newStreak;
       setStreak(newStreak);
