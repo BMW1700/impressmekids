@@ -381,10 +381,7 @@ export const RPGBattleArena = ({
   // Verb animation trigger — fires when student correctly reads a known verb.
   const [triggerVerb, setTriggerVerb] = useState<VerbTrigger>(null);
   const verb = useVerbAnimation(triggerVerb);
-  const verbTransform = verb?.descriptor.kind === 'transform' ? verb : null;
   const verbEmoji = verb?.descriptor.kind === 'emoji' ? verb : null;
-  // Gate transform animations: only apply when enemy is idle (no attack/hit/defeat in flight).
-  const enemyIdle = !enemyAttacking && !enemyTakingDamage && phaseRef.current !== 'victory' && phaseRef.current !== 'defeat';
   
   // Phoneme tracking: accumulate per-phoneme accuracy throughout the battle
   const phonemeAccumulatorRef = useRef<Record<string, { correct: number; total: number }>>({});
