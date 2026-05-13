@@ -881,13 +881,18 @@ export const RPGWordReader = ({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      speechSessionIdRef.current += 1;
       shouldBeListeningRef.current = false;
       clearAllTimeouts();
-      if (recognitionRef.current) {
+      const activeRecognition = recognitionRef.current;
+      recognitionRef.current = null;
+      if (activeRecognition) {
         try {
-          recognitionRef.current.stop();
+          activeRecognition.stop();
         } catch (e) {}
       }
+      isRecognitionRunningRef.current = false;
+      isRecognitionStartingRef.current = false;
     };
   }, [clearAllTimeouts]);
 
@@ -897,12 +902,16 @@ export const RPGWordReader = ({
   // double submissions or stale word advancement.
   useEffect(() => {
     if (!disabled) return;
+    speechSessionIdRef.current += 1;
     shouldBeListeningRef.current = false;
     clearAllTimeouts();
-    if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch (e) {}
+    const activeRecognition = recognitionRef.current;
+    recognitionRef.current = null;
+    if (activeRecognition) {
+      try { activeRecognition.stop(); } catch (e) {}
     }
     isRecognitionRunningRef.current = false;
+    isRecognitionStartingRef.current = false;
     isProcessingRef.current = false;
     setRecognitionState('idle');
   }, [disabled, clearAllTimeouts]);
