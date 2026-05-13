@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Helmet } from "react-helmet-async";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -969,6 +970,15 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center relative z-0 overflow-hidden p-4">
+      <Helmet>
+        <title>Sign In — NabuLearn</title>
+        <meta name="description" content="Sign in or create your NabuLearn account. Secure access for students, teachers, parents, and district admins." />
+        <link rel="canonical" href="https://nabulearn.com/auth" />
+        <meta property="og:title" content="Sign In — NabuLearn" />
+        <meta property="og:description" content="Secure sign-in for students, teachers, parents, and admins." />
+        <meta property="og:url" content="https://nabulearn.com/auth" />
+        <meta property="og:type" content="website" />
+      </Helmet>
       {/* Fixed background so gradient is identical regardless of tab/content height */}
       <div aria-hidden className="fixed inset-0 -z-10 bg-gradient-hero pointer-events-none" />
       
