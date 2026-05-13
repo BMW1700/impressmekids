@@ -231,6 +231,7 @@ export const BattleReader = ({
         setLastMessage(damageResult.message || undefined);
         setIsCriticalHit(damageResult.isCritical);
         setTriggerAttackBeam(Date.now());
+        setTriggerVerb({ word: result.word, nonce: Date.now() });
         
         // Clear taunt on hit
         setCurrentTaunt("");
