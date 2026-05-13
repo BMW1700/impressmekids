@@ -217,22 +217,34 @@ export const BattleArena = ({
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
         >
-          {usePremiumSprites ? (
-            <GoblinGuard
-              state={mapToGoblinState(enemyState)}
-              healthPercent={enemyHealthPercent}
-              size="medium"
+          <motion.div
+            key={verbTransform?.id ?? 'enemy-base'}
+            className="relative"
+            style={{ transformOrigin: 'center center' }}
+            animate={verbTransform?.descriptor.kind === 'transform' ? verbTransform.descriptor.animate : undefined}
+          >
+            {usePremiumSprites ? (
+              <GoblinGuard
+                state={mapToGoblinState(enemyState)}
+                healthPercent={enemyHealthPercent}
+                size="medium"
+              />
+            ) : (
+              <GrogCharacter
+                state={enemyState}
+                healthPercent={enemyHealthPercent}
+                enemyType={enemyType}
+                taunt={enemyTaunt}
+                showDamage={showEnemyDamage}
+                avatarUrl={grogAvatarUrl}
+              />
+            )}
+            <VerbAnimationLayer
+              descriptor={verbEmoji?.descriptor.kind === 'emoji' ? verbEmoji.descriptor : null}
+              id={verbEmoji?.id ?? null}
+              anchor={{ x: 60, y: 75 }}
             />
-          ) : (
-            <GrogCharacter
-              state={enemyState}
-              healthPercent={enemyHealthPercent}
-              enemyType={enemyType}
-              taunt={enemyTaunt}
-              showDamage={showEnemyDamage}
-              avatarUrl={grogAvatarUrl}
-            />
-          )}
+          </motion.div>
         </motion.div>
       </div>
 
