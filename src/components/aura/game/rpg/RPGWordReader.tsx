@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { playCorrectPronunciation, SoundEffects } from "@/lib/pronunciationPlayer";
 import { unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
-import { ensureMicrophoneAccess } from "@/lib/micDiagnostics";
 import { MicTroubleshooterModal } from "@/components/mic/MicTroubleshooterModal";
 import { getWordEmoji } from "@/lib/wordEmojiMap";
 import { RPGEmojiManager } from "./RPGEmojiPop";
@@ -138,6 +137,8 @@ export const RPGWordReader = ({
   // Refs - the key is keeping ONE recognition instance alive
   const recognitionRef = useRef<any>(null);
   const isRecognitionRunningRef = useRef(false);
+  const isRecognitionStartingRef = useRef(false);
+  const speechSessionIdRef = useRef(0);
   const currentIndexRef = useRef(0);
   const isProcessingRef = useRef(false);
   const shouldBeListeningRef = useRef(false);
@@ -239,17 +240,21 @@ export const RPGWordReader = ({
 
   // Stop recognition completely
   const stopRecognitionSession = useCallback(() => {
+    speechSessionIdRef.current += 1;
     shouldBeListeningRef.current = false;
     clearAllTimeouts();
     
-    if (recognitionRef.current) {
+    const activeRecognition = recognitionRef.current;
+    recognitionRef.current = null;
+    if (activeRecognition) {
       try {
-        recognitionRef.current.stop();
+        activeRecognition.stop();
       } catch (e) {
         // Ignore - may already be stopped
       }
     }
     isRecognitionRunningRef.current = false;
+    isRecognitionStartingRef.current = false;
   }, [clearAllTimeouts]);
 
   // Advance to next word (UI only, doesn't touch recognition)
