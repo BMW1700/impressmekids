@@ -34,6 +34,9 @@ interface BattleArenaProps {
   triggerDamageBeam?: number;
   isCriticalHit?: boolean;
 
+  // Verb animation: fires when student correctly reads a known verb.
+  triggerVerb?: VerbTrigger;
+
   // Custom avatars
   ellaAvatarUrl?: string;
   grogAvatarUrl?: string;
