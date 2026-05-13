@@ -84,6 +84,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { updateStudentReadingStats as updateSharedReadingStats } from "@/lib/updateStudentReadingStats";
 import { useMLIntegration } from "@/hooks/useMLIntegration";
 import { usePlayerInventory } from "@/hooks/usePlayerInventory";
+import { useVerbAnimation, type VerbTrigger } from "@/hooks/useVerbAnimation";
+import { VerbAnimationLayer } from "@/components/aura/game/effects/VerbAnimationLayer";
 
 // Sound effects singleton
 const battleSounds = new SoundEffects();
