@@ -214,10 +214,42 @@ export const RPGWordReader = ({
       setPendingIncorrectWord(null);
       isRetryAttemptRef.current = false;
       isProcessingRef.current = false;
+      isWordTransitioningRef.current = true;
       batchCompletedRef.current = false;
+      if (feedbackTimeoutRef.current) {
+        clearTimeout(feedbackTimeoutRef.current);
+        feedbackTimeoutRef.current = null;
+      }
+      if (echoTimeoutRef.current) {
+        clearTimeout(echoTimeoutRef.current);
+        echoTimeoutRef.current = null;
+      }
+      if (echoIntervalRef.current) {
+        clearInterval(echoIntervalRef.current);
+        echoIntervalRef.current = null;
+      }
       // Clear processed-finals tracker so the next batch's first final
       // result isn't accidentally skipped as "already handled".
       processedFinalsRef.current.clear();
+      const activeRecognition = recognitionRef.current;
+      if (activeRecognition) {
+        speechSessionIdRef.current += 1;
+        recognitionRef.current = null;
+        isRecognitionRunningRef.current = false;
+        isRecognitionStartingRef.current = false;
+        try {
+          if (typeof activeRecognition.abort === 'function') activeRecognition.abort();
+          else activeRecognition.stop();
+        } catch (e) {}
+      }
+      if (shouldBeListeningRef.current) {
+        if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
+        restartTimeoutRef.current = setTimeout(() => {
+          if (shouldBeListeningRef.current && !recognitionRef.current && !isRecognitionRunningRef.current && !isRecognitionStartingRef.current) {
+            startRecognitionRef.current?.();
+          }
+        }, WORD_TRANSITION_ARM_MS + 120);
+      }
     }
   }, [wordsKey]);
 
@@ -227,6 +259,33 @@ export const RPGWordReader = ({
   }, [words, batchSize]);
   const currentWord = currentBatch[currentIndex] || "";
   const cleanWord = currentWord.replace(/[^a-zA-Z']/g, '');
+
+  useEffect(() => {
+    const tokenId = speechTargetTokenRef.current.id + 1;
+    const generation = wordGenerationRef.current;
+    const armedAt = Date.now() + WORD_TRANSITION_ARM_MS;
+    const targetWord = cleanWord;
+
+    isWordTransitioningRef.current = true;
+    speechTargetTokenRef.current = { id: tokenId, generation, index: currentIndex, word: targetWord, armedAt };
+
+    if (targetArmTimeoutRef.current) clearTimeout(targetArmTimeoutRef.current);
+    targetArmTimeoutRef.current = setTimeout(() => {
+      const token = speechTargetTokenRef.current;
+      if (token.id === tokenId && token.generation === generation && token.index === currentIndex && token.word === targetWord) {
+        isWordTransitioningRef.current = false;
+        wordDisplayTimestampRef.current = Date.now();
+      }
+      targetArmTimeoutRef.current = null;
+    }, WORD_TRANSITION_ARM_MS);
+
+    return () => {
+      if (targetArmTimeoutRef.current) {
+        clearTimeout(targetArmTimeoutRef.current);
+        targetArmTimeoutRef.current = null;
+      }
+    };
+  }, [cleanWord, currentIndex, wordsKey]);
 
   // Clear all timeouts
   const clearAllTimeouts = useCallback(() => {
@@ -245,6 +304,10 @@ export const RPGWordReader = ({
     if (echoIntervalRef.current) {
       clearInterval(echoIntervalRef.current);
       echoIntervalRef.current = null;
+    }
+    if (targetArmTimeoutRef.current) {
+      clearTimeout(targetArmTimeoutRef.current);
+      targetArmTimeoutRef.current = null;
     }
   }, []);
 
