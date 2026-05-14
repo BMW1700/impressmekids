@@ -265,16 +265,16 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 1.02, opacity: 0 }}
               transition={{ type: "spring", stiffness: 240, damping: 20 }}
-              className="bg-white rounded-2xl shadow-lg border-2 border-white px-6 py-4 sm:py-5 text-center"
+              className="bg-white rounded-2xl shadow-lg border-2 border-white px-6 py-3 text-center"
             >
-              <div className="text-6xl sm:text-7xl font-black text-slate-900 lowercase leading-none">
+              <div className="text-5xl sm:text-6xl font-black text-slate-900 lowercase leading-none">
                 {currentWord || (allDone ? "🎉" : "")}
               </div>
-              <div className="mt-2 text-sm sm:text-base font-bold text-slate-400 tracking-widest">
+              <div className="mt-1 text-xs sm:text-sm font-bold text-slate-400 tracking-widest">
                 {syllableHint(currentWord)}
               </div>
               {verbHint && !allDone && (
-                <div className="mt-2 inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-purple-600 bg-purple-100 px-3 py-1 rounded-full">
+                <div className="mt-1 inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-purple-600 bg-purple-100 px-3 py-1 rounded-full">
                   ✨ Watch what happens!
                 </div>
               )}
@@ -308,7 +308,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
         </div>
 
         {/* Mic reader — natural height inside the page scroll */}
-        <div className="rounded-2xl bg-white/85 backdrop-blur-sm p-3 sm:p-4 shadow-inner">
+        <div className="rounded-2xl bg-white/85 backdrop-blur-sm p-2 sm:p-3 shadow-inner">
           <RPGWordReader
             key={`prek-${world.id}-${level.id}`}
             words={items}
@@ -319,6 +319,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
             batchSize={items.length}
             enableEchoRetry={true}
             mode="fast"
+            compact
           />
         </div>
       </motion.div>
