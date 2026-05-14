@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 
-type CharacterType = 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'agent_x' | 'cipher' | 'shadow_agent';
+type CharacterType = 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'agent_x' | 'cipher' | 'shadow_agent' | 'wiggleworm' | 'bouncer' | 'echo_blob';
 
 interface RPGCharacterSpriteProps {
   type: CharacterType;
@@ -768,6 +768,108 @@ export const RPGCharacterSprite = ({
     </div>
   );
 
+  // ============ PRE-K FRIENDLY SPRITES ============
+  const renderWiggleworm = () => (
+    <div className="relative w-full h-full flex items-center justify-center">
+      {/* Body — pink wiggly worm with stacked segments */}
+      <motion.div
+        className="absolute inset-x-[15%] top-[20%] bottom-[15%] flex flex-col items-center justify-end gap-1"
+        animate={{ rotate: [0, -4, 4, -4, 4, 0] }}
+        transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}
+      >
+        {[0, 1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="rounded-full bg-gradient-to-br from-pink-300 via-pink-400 to-rose-500
+              shadow-[inset_-3px_-3px_8px_rgba(0,0,0,0.2),inset_3px_3px_6px_rgba(255,255,255,0.5)]"
+            style={{
+              width: `${65 - i * 5}%`,
+              height: `${22 - i * 2}%`,
+              opacity: 1 - i * 0.05,
+            }}
+          />
+        ))}
+      </motion.div>
+      {/* Face on top segment */}
+      <div className="absolute top-[18%] left-[25%] right-[25%] h-[22%] flex items-center justify-around z-10 pt-[6%]">
+        <div className="w-[18%] aspect-square bg-white rounded-full flex items-center justify-center">
+          <div className="w-1/2 h-1/2 bg-slate-900 rounded-full" />
+        </div>
+        <div className="w-[18%] aspect-square bg-white rounded-full flex items-center justify-center">
+          <div className="w-1/2 h-1/2 bg-slate-900 rounded-full" />
+        </div>
+      </div>
+      {/* Smile */}
+      <div className="absolute top-[32%] left-[40%] right-[40%] h-[6%] z-10
+        border-b-4 border-rose-700 rounded-b-full" />
+      {/* Cheek blushes */}
+      <div className="absolute top-[33%] left-[22%] w-[10%] h-[6%] bg-rose-300 rounded-full opacity-70 z-10" />
+      <div className="absolute top-[33%] right-[22%] w-[10%] h-[6%] bg-rose-300 rounded-full opacity-70 z-10" />
+    </div>
+  );
+
+  const renderBouncer = () => (
+    <div className="relative w-full h-full flex items-center justify-center">
+      {/* Round bouncy body */}
+      <motion.div
+        className="absolute inset-[18%] rounded-full
+          bg-gradient-to-br from-yellow-200 via-amber-300 to-orange-500
+          shadow-[inset_-8px_-8px_20px_rgba(0,0,0,0.25),inset_6px_6px_14px_rgba(255,255,255,0.6)]"
+        animate={{ scaleY: [1, 0.9, 1.05, 1], scaleX: [1, 1.08, 0.95, 1] }}
+        transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
+      >
+        {/* Highlight gleam */}
+        <div className="absolute top-[12%] left-[18%] w-[28%] h-[20%] bg-white/60 rounded-full blur-sm" />
+      </motion.div>
+      {/* Eyes */}
+      <div className="absolute top-[35%] left-[30%] w-[12%] aspect-square bg-white rounded-full flex items-center justify-center z-10">
+        <div className="w-1/2 h-1/2 bg-slate-900 rounded-full" />
+      </div>
+      <div className="absolute top-[35%] right-[30%] w-[12%] aspect-square bg-white rounded-full flex items-center justify-center z-10">
+        <div className="w-1/2 h-1/2 bg-slate-900 rounded-full" />
+      </div>
+      {/* Big grin */}
+      <div className="absolute top-[52%] left-[35%] right-[35%] h-[12%] bg-rose-700 rounded-b-full z-10
+        border-t-2 border-rose-800" />
+      {/* Tiny feet */}
+      <div className="absolute bottom-[10%] left-[30%] w-[12%] h-[8%] bg-orange-700 rounded-full" />
+      <div className="absolute bottom-[10%] right-[30%] w-[12%] h-[8%] bg-orange-700 rounded-full" />
+    </div>
+  );
+
+  const renderEchoBlob = () => (
+    <div className="relative w-full h-full flex items-center justify-center">
+      {/* Pulsing aura rings (the "echo") */}
+      <motion.div
+        className="absolute inset-[10%] rounded-full border-4 border-cyan-300/60"
+        animate={{ scale: [1, 1.25, 1], opacity: [0.6, 0, 0.6] }}
+        transition={{ repeat: Infinity, duration: 2.2, ease: "easeOut" }}
+      />
+      <motion.div
+        className="absolute inset-[10%] rounded-full border-4 border-cyan-200/50"
+        animate={{ scale: [1, 1.4, 1], opacity: [0.5, 0, 0.5] }}
+        transition={{ repeat: Infinity, duration: 2.2, ease: "easeOut", delay: 0.6 }}
+      />
+      {/* Blob body — soft amorphous shape */}
+      <motion.div
+        className="absolute inset-[22%] rounded-[42%]
+          bg-gradient-to-br from-cyan-200 via-sky-400 to-blue-500
+          shadow-[inset_-6px_-6px_18px_rgba(0,0,0,0.2),inset_5px_5px_12px_rgba(255,255,255,0.6)]"
+        animate={{ borderRadius: ["42% 42% 42% 42%", "50% 38% 45% 40%", "42% 42% 42% 42%"] }}
+        transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+      />
+      {/* Eyes */}
+      <div className="absolute top-[40%] left-[34%] w-[10%] aspect-square bg-white rounded-full flex items-center justify-center z-10">
+        <div className="w-1/2 h-1/2 bg-slate-900 rounded-full" />
+      </div>
+      <div className="absolute top-[40%] right-[34%] w-[10%] aspect-square bg-white rounded-full flex items-center justify-center z-10">
+        <div className="w-1/2 h-1/2 bg-slate-900 rounded-full" />
+      </div>
+      {/* Open mouth (singing the echo) */}
+      <div className="absolute top-[55%] left-[42%] right-[42%] aspect-square bg-slate-900 rounded-full z-10" />
+    </div>
+  );
+
   const renderCharacter = () => {
     switch (type) {
       case 'knight': return renderKnight();
@@ -782,6 +884,9 @@ export const RPGCharacterSprite = ({
       case 'agent_x': return renderAgentX();
       case 'cipher': return renderCipher();
       case 'shadow_agent': return renderShadowAgent();
+      case 'wiggleworm': return renderWiggleworm();
+      case 'bouncer': return renderBouncer();
+      case 'echo_blob': return renderEchoBlob();
       default: return renderKnight();
     }
   };
