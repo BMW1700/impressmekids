@@ -621,6 +621,9 @@ export const RPGWordReader = ({
       setCurrentIndex(nextIndex);
       currentIndexRef.current = nextIndex;
       setCanRetry(true);
+    } else {
+      isWordTransitioningRef.current = true;
+      abortActiveRecognitionForBatchTransition();
     }
     
     feedbackTimeoutRef.current = setTimeout(() => {
@@ -631,7 +634,7 @@ export const RPGWordReader = ({
       if (hasMoreWords) {
         setRecognitionState('listening');
       } else {
-        // Batch complete (deduped); keep mic alive for next batch
+        // Batch complete (deduped); next batch will restart the mic after render
         if (!batchCompletedRef.current) {
           batchCompletedRef.current = true;
           const results = Array.from(wordResults.values());
@@ -639,11 +642,10 @@ export const RPGWordReader = ({
         }
         setCurrentIndex(0);
         currentIndexRef.current = 0;
-        // Do NOT stop recognition — keep listening into the next batch.
         setRecognitionState('listening');
       }
     }, 300);
-  }, [currentBatch, words, batchSize, stopRecognitionSession, wordResults, onBatchComplete, onRetrySuccess]);
+  }, [currentBatch, words, batchSize, stopRecognitionSession, wordResults, onBatchComplete, onRetrySuccess, abortActiveRecognitionForBatchTransition]);
 
   // Handle "Continue" (Skip) - accept miss and trigger enemy attack
   const handleContinueAfterMiss = useCallback(() => {
@@ -935,13 +937,26 @@ export const RPGWordReader = ({
         // Show interim results for the latest
         if (!result.isFinal) {
           if (!isProcessingRef.current && i === event.results.length - 1) {
-            setSpokenText(transcript.toLowerCase());
+            const wordIdx = currentIndexRef.current;
+            const targetWord = getTargetWord(wordIdx);
+            const token = speechTargetTokenRef.current;
+            const targetIsArmed = Boolean(
+              transcript &&
+              targetWord &&
+              !isWordTransitioningRef.current &&
+              Date.now() >= token.armedAt &&
+              token.generation === wordGenerationRef.current &&
+              token.index === wordIdx &&
+              token.word === targetWord
+            );
+
+            if (targetIsArmed) {
+              setSpokenText(transcript.toLowerCase());
+            }
 
             // FAST MODE: Process interim results for quicker matching (Elara only)
             // CRITICAL FIX: Must respect retry state - route through proper handlers
-            if (mode === 'fast' && !isProcessingRef.current) {
-              const wordIdx = currentIndexRef.current;
-              const targetWord = getTargetWord(wordIdx);
+            if (mode === 'fast' && !isProcessingRef.current && targetIsArmed) {
               if (targetWord) {
                 const wordsSpoken = transcript.toLowerCase().split(/\s+/).filter(w => w.length > 0);
                 for (const word of wordsSpoken) {
