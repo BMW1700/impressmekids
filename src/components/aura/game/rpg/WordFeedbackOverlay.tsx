@@ -90,6 +90,7 @@ export const WordFeedbackOverlay = ({
   const tip = getWordTip(expectedWord);
 
   return (
+    <>{createPortal(
     <AnimatePresence>
       {isVisible && (
         <motion.div
