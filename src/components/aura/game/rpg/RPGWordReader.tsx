@@ -719,6 +719,16 @@ export const RPGWordReader = ({
     }
   }, [getTargetWord, enableEchoRetry, handleCorrect, handleRetrySuccess, handleIncorrectFinal, startEchoRetry]);
 
+  // Keep refs to the latest handlers so the long-lived recognition.onresult
+  // closure (created once when the mic starts) always invokes the current
+  // implementations — which in turn read the current `words` prop. This is
+  // what fixes "first word of next batch is marked wrong" after batch swap.
+  useEffect(() => {
+    processResultRef.current = processResult;
+    handleCorrectRef.current = handleCorrect;
+    handleRetrySuccessRef.current = handleRetrySuccess;
+  }, [processResult, handleCorrect, handleRetrySuccess]);
+
   // Create and start the recognition session (ONE instance, kept alive)
   const startRecognitionSession = useCallback(() => {
     if (disabled) return;
