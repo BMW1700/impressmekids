@@ -123,11 +123,20 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
           {/* Friendly creature */}
           <div className="relative flex flex-col items-center">
             <motion.div
-              key={`enemy-${index}`}
+              key={`enemy-wrap-${index}-${verb?.id ?? 0}`}
               initial={{ y: 0 }}
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              animate={
+                verb?.descriptor.kind === 'transform'
+                  ? verb.descriptor.animate
+                  : { y: [0, -8, 0] }
+              }
+              transition={
+                verb?.descriptor.kind === 'transform'
+                  ? { duration: 0.9, ease: 'easeInOut' }
+                  : { duration: 2, repeat: Infinity, ease: 'easeInOut' }
+              }
               className="relative"
+              style={{ transformOrigin: 'center center' }}
             >
               <RPGCharacterSprite type={enemy} isEnemy size="md" />
               <VerbAnimationLayer
