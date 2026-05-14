@@ -610,11 +610,16 @@ export const RPGWordReader = ({
     }, 1500);
   }, [handleIncorrectFinal]);
 
-  // Get target word from ref-synced index (avoids stale closure)
+  // Get target word from refs — stable identity, always reads the *current*
+  // words/batchSize props. This is critical because the long-lived
+  // SpeechRecognition.onresult closure captures this function, and we must
+  // never grade the new batch's word against the previous batch's array.
   const getTargetWord = useCallback((index: number) => {
-    const batch = words?.slice(0, Math.min(batchSize, words?.length || 0)) || [];
+    const w = wordsRef.current;
+    const bs = batchSizeRef.current;
+    const batch = w?.slice(0, Math.min(bs, w?.length || 0)) || [];
     return batch[index]?.replace(/[^a-zA-Z']/g, '') || '';
-  }, [words, batchSize]);
+  }, []);
 
   // State ref for echo retry (avoid stale closure)
   const recognitionStateRef = useRef<RecognitionState>('idle');
