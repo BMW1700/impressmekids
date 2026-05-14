@@ -512,14 +512,16 @@ export const RPGWordReader = ({
       if (hasMoreWords) {
         setRecognitionState('listening');
       } else {
-        // Batch complete
-        const results = Array.from(wordResults.values());
-        onBatchComplete?.(results);
-        
+        // Batch complete (deduped); keep mic alive for next batch
+        if (!batchCompletedRef.current) {
+          batchCompletedRef.current = true;
+          const results = Array.from(wordResults.values());
+          onBatchComplete?.(results);
+        }
         setCurrentIndex(0);
         currentIndexRef.current = 0;
-        stopRecognitionSession();
-        setRecognitionState('idle');
+        // Do NOT stop recognition — keep listening into the next batch.
+        setRecognitionState('listening');
       }
     }, 300);
   }, [currentBatch, words, batchSize, stopRecognitionSession, wordResults, onBatchComplete, onRetrySuccess]);
