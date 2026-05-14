@@ -857,7 +857,9 @@ export const RPGWordReader = ({
           if (alt) alternatives.push(alt);
         }
         
-        processResult(transcript, alternatives);
+        // Invoke through ref so we use the latest processResult (which
+        // closes over the current `words` prop / batch).
+        processResultRef.current?.(transcript, alternatives);
       }
     };
     
