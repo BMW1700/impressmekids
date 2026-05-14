@@ -7,6 +7,8 @@ import { CampaignModeEntry } from "@/components/aura/game/CampaignModeEntry";
 import { RPGBattleArena } from "@/components/aura/game/rpg/RPGBattleArena";
 import { RPGWorldMap, type WorldProgress } from "@/components/aura/game/rpg/RPGWorldMap";
 import { RPGLevelSelect, type CampaignLevel } from "@/components/aura/game/rpg/RPGLevelSelect";
+import { RPGOneWordReader } from "@/components/aura/game/rpg/RPGOneWordReader";
+import { getPreKContent, isPreKWorldId } from "@/data/preKWordBanks";
 import { type BattleMode } from "@/components/aura/game/rpg/RPGBattleModeSelector";
 import { BookRescueCelebration } from "@/components/aura/game/BookRescueCelebration";
 import { campaignWorlds, type CampaignWorld } from "@/lib/campaignData";
