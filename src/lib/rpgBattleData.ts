@@ -62,7 +62,7 @@ export type MiniGameType =
 export interface RPGEnemy {
   id: string;
   name: string;
-  type: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'goblin_shaman';
+  type: 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'goblin_shaman' | 'wiggleworm' | 'bouncer' | 'echo_blob';
   maxHp: number;
   attack: number;
   defense: number;
@@ -1062,7 +1062,7 @@ export const theLibrarian: RPGEnemy = {
 };
 
 // Get enemy by type for battle - UPDATED with all new enemies
-export type EnemyTypeKey = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'goblin_shaman' | 'fire_elemental' | 'lava_hound' | 'ember_drake' | 'crystal_knight' | 'prism_mage' | 'crystal_queen' | 'star_sprite' | 'comet_wolf' | 'nova_titan' | 'tome_golem' | 'page_wraith' | 'the_librarian' | 'vault_sentinel' | 'vault_drone' | 'the_vault_keeper' | 'shadow_operative' | 'shadow_drone' | 'the_shadow_broker' | 'frost_trooper' | 'ice_drone' | 'the_frostbite' | 'maze_runner' | 'tunnel_rat' | 'the_minotaur' | 'lab_guard' | 'bio_drone' | 'the_catalyst' | 'omega_soldier' | 'omega_elite' | 'the_omega';
+export type EnemyTypeKey = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'goblin_shaman' | 'fire_elemental' | 'lava_hound' | 'ember_drake' | 'crystal_knight' | 'prism_mage' | 'crystal_queen' | 'star_sprite' | 'comet_wolf' | 'nova_titan' | 'tome_golem' | 'page_wraith' | 'the_librarian' | 'vault_sentinel' | 'vault_drone' | 'the_vault_keeper' | 'shadow_operative' | 'shadow_drone' | 'the_shadow_broker' | 'frost_trooper' | 'ice_drone' | 'the_frostbite' | 'maze_runner' | 'tunnel_rat' | 'the_minotaur' | 'lab_guard' | 'bio_drone' | 'the_catalyst' | 'omega_soldier' | 'omega_elite' | 'the_omega' | 'wiggleworm' | 'bouncer' | 'echo_blob';
 
 export const getEnemyForBattle = (enemyType: EnemyTypeKey): RPGEnemy => {
   switch (enemyType) {
@@ -1137,9 +1137,48 @@ export const getEnemyForBattle = (enemyType: EnemyTypeKey): RPGEnemy => {
       return pageWraith;
     case 'the_librarian':
       return theLibrarian;
+    // Pre-K friendly enemies (no fail state, soft attack)
+    case 'wiggleworm':
+      return wiggleworm;
+    case 'bouncer':
+      return bouncer;
+    case 'echo_blob':
+      return echoBlob;
     default:
       return goblinMinion;
   }
+};
+
+// ============== PRE-K FRIENDLY ENEMIES ==============
+// Low HP, zero attack damage. Friendly dialogue. Used in worlds 101-103.
+export const wiggleworm: RPGEnemy = {
+  id: 'wiggleworm', name: 'Wiggleworm', type: 'wiggleworm', maxHp: 80, attack: 0, defense: 0,
+  wordDamageMultiplier: 1, color: 'from-pink-300 to-rose-400',
+  dialogueIntro: ['Hi friend!', 'Read with me!', 'Yay! A new reader!'],
+  dialogueAttack: ['*wiggles excitedly*', 'Try this word!'],
+  dialogueDefeat: ['Yay you did it!', 'You are a star!', 'High five!'],
+  barrageWordCount: 1,
+  miniGames: [], signatureMiniGame: 'word_barrage',
+};
+
+export const bouncer: RPGEnemy = {
+  id: 'bouncer', name: 'Bouncer', type: 'bouncer', maxHp: 80, attack: 0, defense: 0,
+  wordDamageMultiplier: 1, color: 'from-yellow-300 to-orange-400',
+  dialogueIntro: ['Boing boing!', 'Say the word and I bounce!', 'Lets play!'],
+  dialogueAttack: ['*bounces happily*', 'Your turn!'],
+  dialogueDefeat: ['Wheee!', 'You won!', 'So fun!'],
+  barrageWordCount: 1,
+  miniGames: [], signatureMiniGame: 'word_barrage',
+};
+
+export const echoBlob: RPGEnemy = {
+  id: 'echo_blob', name: 'Echo', type: 'echo_blob', maxHp: 80, attack: 0, defense: 0,
+  wordDamageMultiplier: 1, color: 'from-cyan-300 to-blue-400',
+  dialogueIntro: ['Echo echo!', 'Say the words!', 'I hear you!'],
+  dialogueAttack: ['*echo echo*', 'Your turn now!'],
+  dialogueDefeat: ['Hooray!', 'Echo loves you!', 'Read more soon!'],
+  barrageWordCount: 1,
+  miniGames: [], signatureMiniGame: 'word_barrage',
 };
 
 // Battle dialogue lines for heroes
