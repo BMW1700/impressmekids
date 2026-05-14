@@ -43,6 +43,7 @@ interface RPGWordReaderProps {
   batchSize?: number;
   enableEchoRetry?: boolean;
   mode?: 'normal' | 'fast'; // Fast mode for Elara - more lenient, quicker feedback
+  compact?: boolean;
 }
 
 type RecognitionState = 'idle' | 'listening' | 'processing' | 'paused' | 'echo_retry' | 'waiting_action';
@@ -120,6 +121,7 @@ export const RPGWordReader = ({
   batchSize = 5,
   enableEchoRetry = true,
   mode = 'normal',
+  compact = false,
 }: RPGWordReaderProps) => {
   // Core state
   const [recognitionState, setRecognitionState] = useState<RecognitionState>('idle');
@@ -1151,9 +1153,9 @@ export const RPGWordReader = ({
   const isActive = isListening || isEchoRetry;
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className={`flex flex-col items-center ${compact ? 'gap-2' : 'gap-4'}`}>
       {/* Active Indicator */}
-      {isActive && (
+      {isActive && !compact && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1175,7 +1177,7 @@ export const RPGWordReader = ({
       )}
       
       {/* Multi-Word Queue Display with Color Coding */}
-      <div ref={wordQueueRef} className="flex flex-wrap gap-2 justify-center max-w-md">
+      <div ref={wordQueueRef} className={`flex flex-wrap justify-center ${compact ? 'max-w-full gap-1.5' : 'max-w-md gap-2'}`}>
         {currentBatch.map((word, index) => {
           const clean = word.replace(/[^a-zA-Z']/g, '');
           const isActiveWord = index === currentIndex;
@@ -1209,14 +1211,14 @@ export const RPGWordReader = ({
           return (
             <motion.div
               key={`${word}-${index}`}
-              className={`px-4 py-2 rounded-lg font-medium transition-all cursor-pointer ${colorClass}`}
+              className={`${compact ? 'px-3 py-1.5' : 'px-4 py-2'} rounded-lg font-medium transition-all cursor-pointer ${colorClass}`}
               animate={shouldPulse ? { scale: [1.1, 1.15, 1.1] } : {}}
               transition={{ repeat: shouldPulse ? Infinity : 0, duration: 1.2 }}
               onClick={() => playCorrectPronunciation(clean)}
             >
               <div className="flex items-center gap-1.5">
                 {icon}
-                <span className={shouldPulse ? 'text-lg' : 'text-sm'}>{clean}</span>
+                <span className={compact ? 'text-sm' : shouldPulse ? 'text-lg' : 'text-sm'}>{clean}</span>
               </div>
             </motion.div>
           );
@@ -1224,7 +1226,7 @@ export const RPGWordReader = ({
       </div>
 
       {/* Current Word - Large Display */}
-      <motion.div
+      {!compact && <motion.div
         className={`relative px-12 py-6 rounded-2xl border-2 text-center min-w-[280px]
           ${feedback === 'correct' 
             ? 'bg-emerald-500/20 border-emerald-400 shadow-[0_0_30px_rgba(52,211,153,0.5)]' 
@@ -1310,17 +1312,17 @@ export const RPGWordReader = ({
             💡 {getWordTip(cleanWord)}
           </motion.div>
         )}
-      </motion.div>
+      </motion.div>}
 
-      <div className="text-center text-sm text-slate-400">
+      {!compact && <div className="text-center text-sm text-slate-400">
         Word {currentIndex + 1} of {currentBatch.length}
-      </div>
+      </div>}
 
       {/* Controls */}
-      <div className="flex items-center gap-3">
+      <div className={`flex items-center justify-center gap-2 ${compact ? 'flex-wrap' : 'gap-3'}`}>
         <Button
           variant="outline"
-          size="lg"
+          size={compact ? "sm" : "lg"}
           onClick={hearWord}
           disabled={isActive || feedback !== null || !cleanWord}
           className="border-blue-400/50 text-blue-300 hover:bg-blue-500/20"
@@ -1338,10 +1340,10 @@ export const RPGWordReader = ({
             className="rounded-xl"
           >
             <Button
-              size="lg"
+              size={compact ? "sm" : "lg"}
               onClick={isActive ? pauseReading : startReading}
               disabled={disabled || !cleanWord}
-              className={`min-w-[180px] font-bold transition-all ${
+              className={`${compact ? 'min-w-[148px]' : 'min-w-[180px]'} font-bold transition-all ${
                 isActive 
                   ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700' 
                   : 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700'
@@ -1369,10 +1371,10 @@ export const RPGWordReader = ({
 
         {isPaused && (
           <Button
-            size="lg"
+            size={compact ? "sm" : "lg"}
             onClick={resumeReading}
             disabled={disabled}
-            className="min-w-[180px] font-bold bg-gradient-to-r from-emerald-500 to-green-600"
+            className={`${compact ? 'min-w-[148px]' : 'min-w-[180px]'} font-bold bg-gradient-to-r from-emerald-500 to-green-600`}
           >
             <Play className="h-5 w-5 mr-2" />
             Resume
