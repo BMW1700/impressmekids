@@ -1,68 +1,66 @@
-# Plan — Pre-K Worlds + One-Word Reader + New Sprites + Verb Animations Expansion
+# Pre-K Worlds Are Broken — Real Root Cause + Fix
 
-Strategy: prepend 3 new Pre-K worlds (-3, -2, -1) before Tutorial. Worlds 1–12 stay untouched. Pre-K worlds use a new one-word reader (no story, no comprehension), 3 brand-new "friendly" enemy sprites, and a beefed-up verb-animation library so reading "jump" / "drink" / "shrink" makes the enemy actually do it.
+## What's actually broken
 
-## Architecture decision
+Phase 1 added data (`mode: 'prek'`, `storyIndex: -1`, new enemies `wiggleworm/bouncer/echo_blob`, Pre-K word banks) but **nothing reads any of it**. The runtime that converts `world.levels` → playable cards lives in `src/pages/student/AuraPractice.tsx` (lines 419–540) and it has zero awareness of Pre-K. So:
 
-The current battle loop assumes a `CuratedStory` → 5-word batches → barrage minigames → comprehension quiz. Forcing Pre-K through that path means hacking 6 components. Instead:
+**Bug 1 — Fake titles on level cards** (`AuraPractice.tsx:443`)
+```ts
+const story = isTutorial
+  ? { ...tutorial story... }
+  : (activeStories[levelData.storyIndex] || activeStories[idx % activeStories.length]);
+```
+For Pre-K, `storyIndex = -1` → `activeStories[-1]` is undefined → falls back to `activeStories[idx % length]`. Result: every Pre-K world gets the same first 5 curated stories: "The Friendly Dog", "My Pet Fish", "The Big Red Ball", "The Little Star", "The Magic Garden". That's why all 3 worlds look identical in your screenshots.
 
-- **Pre-K gets a parallel, slimmed battle path** in the same `RPGBattleArena` gated by a new `world.mode === 'prek'` flag.
-- Reuses: enemy sprite system, HP bar, victory screen, gold/XP, mic + speech-recognition manager (with the token guard we just shipped), verb-animation layer.
-- Skips: story text, 5-word batching, all 25+ minigames, comprehension quiz, vocab tooltips.
+**Bug 2 — Wrong enemy → goblin sprite** (`AuraPractice.tsx:472–506`)
+The `enemyMap` lookup has no entry for `wiggleworm | bouncer | echo_blob`, so `setRpgEnemyType(enemyMap[primaryEnemy] || 'minion')` always falls back to `'minion'` (goblin). The pretty new sprites Phase 1 added are never actually rendered in the level grid OR the battle.
 
-This is ~1 new branch in `RPGBattleArena`'s render switch, not a new arena.
+**Bug 3 — Battle still routes to standard story arena**
+`handleLevelSelect` always calls `setRpgView('battle')` and `setRpgStory(curated story)`. There is no `mode === 'prek'` branch anywhere, so even if titles were right the user lands in the full RPGBattleArena with story passages, comprehension prompts, and minigames — exactly what Pre-K is supposed to skip.
 
-## Phase 1 — Data + sprites
+**Bug 4 — Cosmetic: same forest background**
+The arena background is keyed off the world id but the Pre-K worlds aren't in the background map either, so they inherit the default forest scene.
 
-1. **Extend `CampaignWorld`** in `src/lib/campaignData.ts` with optional `mode?: 'story' | 'prek'` (default `'story'`). Negative IDs allowed.
-2. **Three new Pre-K worlds** prepended to `campaignWorlds` (kept in declaration order; `RPGWorldMap` already iterates the array):
-   - **World -3 "First Words"** — 5 levels, sight words: *I, a, the, is, my, you, me, see, go, up, down, in, on, big, little*. Boss: Wiggleworm.
-   - **World -2 "Action Time"** — 5 levels, verb words that map 1:1 to verb animations: *jump, spin, flip, shrink, grow, hop, dance, wiggle, clap, run, eat, drink, sleep, sing, fly*. Boss: Bouncer.
-   - **World -1 "Word + Picture"** — 5 levels, two-word phrase pairs ("help me" / "help you", "my dog" / "your dog", "in the box" / "on the box"). Boss: Echo.
-3. **Three new enemy types** added to `CampaignEnemyType` union and `rpgBattleData.ts`: `wiggleworm`, `bouncer`, `echo_blob`. Low HP (~80), zero attack damage (Pre-K = no fail state), friendly dialogue ("Yay!" / "Try again!"), bright cheerful colors.
-4. **Three new sprites** in `RPGCharacterSprite.tsx` — added cases to the `CharacterType` union (`'wiggleworm' | 'bouncer' | 'echo_blob'`) with simple SVG/emoji-based renders matching existing sprite style. No external assets, $0 cost.
-5. **World-map gating**: Pre-K worlds always unlocked when no progress exists; story worlds keep their existing unlock chain. Add small "Pre-K" badge gradient.
+The earlier "Phase 1 verified ✅" claim was structurally true (data exists, types compile) but operationally false: nothing consumes it. I owe you a straight call on that — it was over-confident.
 
-## Phase 2 — One-Word Reader component
+## Fix plan (single phase, ships Pre-K end-to-end)
 
-6. **New `src/components/aura/game/rpg/RPGOneWordReader.tsx`** — single big word centered, mic auto-on, optional emoji hint from `wordEmojiMap`, verb-animation fires on the enemy when correct. Reuses the `speechTargetTokenRef` + arm-window pattern from `RPGWordReader` so the mic stays alive between words with no first-word race.
-7. **Word-source helper `src/data/preKWordBanks.ts`** — exports `getPreKWords(worldId, levelId)` returning `string[]` (or `Array<{a:string;b:string}>` for World -1). Replaces the `storyIndex → curatedStories` lookup for Pre-K levels.
-8. **`RPGBattleArena` Pre-K branch**: when `world.mode === 'prek'`, render `RPGOneWordReader` instead of `RPGWordReader`, skip barrage/minigame triggers, skip comprehension quiz, advance HP by `enemy.maxHp / wordCount` per correct word, route to existing victory screen on KO.
-9. **`RPGLevelSelect` Pre-K mode**: hide story title / word count / grade label, show emoji + "X words" instead. Hide BOSS crown styling for Pre-K bosses (still tagged as boss internally for star thresholds).
+### Step 1 — Branch level building on `world.mode === 'prek'`
+`src/pages/student/AuraPractice.tsx` (lines 427–462). When the world is Pre-K:
+- Build `levels` from `getPreKContent(worldId, levelId)` in `src/data/preKWordBanks.ts` instead of curated stories.
+- Synthesize a lightweight `story` shape per level so `RPGLevelSelect` keeps rendering: title from the word list (e.g. "Lesson 1 · jump · hop · run"), grade_level 0, no passage_text, `category: 'adventure'`, cover_gradient from the world.
+- Unlock rule: linear (level N unlocks when N-1 completed). First always unlocked.
 
-## Phase 3 — Verb-animation expansion
+### Step 2 — Map new enemies properly
+Same file, `enemyMap` (lines 472–506): add `wiggleworm`, `bouncer`, `echo_blob`. Also extend `EnemyType` union in `src/lib/battleMechanics.ts` if missing, and make sure `BattleArena` / `RPGCharacterSprite` already handle them (Phase 1 added the renderers — verify wiring).
 
-`src/lib/verbAnimations.ts` already has 32 verbs. Add the missing high-value ones for Pre-K demos:
+### Step 3 — Route Pre-K to a dedicated reader, not RPGBattleArena
+In `handleLevelSelect`, if `selectedWorld.mode === 'prek'`, set a new view (`rpgView = 'prek_reader'`) instead of `'battle'`. Render a new component:
 
-10. **New transform verbs**: `clap`, `wave`, `nod`, `kick`, `stomp`, `crouch`, `twirl`.
-11. **New emoji-prop verbs**: `paint` 🎨, `cook` 🍳, `wash` 🫧, `brush` 🪥, `build` 🔨, `dig` ⛏️, `plant` 🌱, `hug` 🤗, `kiss` 💋.
-12. **New `kind: "sequence"` descriptor** — chains an emoji-prop into a transform (e.g., `drink water` = cup approaches → enemy `shrink`). `VerbAnimationLayer.tsx` and `useVerbAnimation.ts` extended to handle the chain. Single new descriptor type, ~40 lines.
-13. **Two-word phrase resolver** in `resolveVerbAnimation`: if input has a space, try `phrase` table first (`drink water`, `eat apple`, `wash hands`, `plant seed`) before falling back to per-word.
+`src/components/aura/game/rpg/RPGOneWordReader.tsx`
+- Props: `world`, `level`, words/phrases from `getPreKContent`, `onComplete`, `onBack`.
+- Layout: friendly enemy sprite (Wiggleworm/Bouncer/EchoBlob) on one side, knight+princess on the other, ONE giant word in the center, Hear / Start Reading buttons. No story panel, no comprehension, no minigames.
+- On correct read → fire `triggerVerb` so `VerbAnimationLayer` plays the matching animation (already wired in Phase 1's `verbAnimations.ts`), advance to next word.
+- After last word → simple celebration → call `onComplete` with stars based on accuracy.
 
-## Phase 4 — World map + entry points
+### Step 4 — Pre-K-friendly battle/world visuals
+- Add background gradients/scene for worlds 101/102/103 in whichever map keys the arena background by world id (likely `RPGBattleArena.tsx` constants — confirm during implementation). Use the pastel gradients already defined on each Pre-K world.
+- Keep enemies non-attacking (HP only, no fail state — already true in `rpgBattleData.ts`).
 
-14. **`RPGWorldMap.tsx`** — Pre-K worlds render with a softer pastel gradient and a "Ages 3–5" badge so older kids visually skip them. No code restructure; just style branch on `world.mode`.
-15. **`ModeSelect.tsx`** — leave the two main cards alone, but inside Game Mode dashboard add a "Pre-K Quick Play" shortcut that drops directly into World -3, Level 1 for fast Patrick demos.
+### Step 5 — Persistence
+Reuse the existing `campaign_progress.world_progress[worldId]` array. For Pre-K, store the synthesized level title (e.g. `"prek-101-1"`) so it doesn't collide with curated story titles.
 
-## Phase 5 — Validation
+## Files touched
 
-16. Read all 15 Pre-K words across a level — mic stays alive, no first-word race, verb animations fire on action words.
-17. Confirm Worlds 1–12 still load identically (no story regression; Pre-K branch is fully isolated by `world.mode` check).
-18. iPad viewport: one-word reader scales to `text-[10rem]` on landscape.
-19. New sprites render in both battle and level-select enemy preview.
+- `src/pages/student/AuraPractice.tsx` — branch level builder + enemy map + Pre-K view route (the actual fix for all 4 bugs)
+- `src/components/aura/game/rpg/RPGOneWordReader.tsx` — NEW component
+- `src/lib/battleMechanics.ts` — extend EnemyType union if needed
+- `src/components/aura/game/rpg/RPGBattleArena.tsx` — add Pre-K background entries (only if it owns the bg map)
 
-## Out of scope
+## Out of scope for this fix
+- School Mode pivot (deferred per your earlier instruction)
+- New sprite art beyond what Phase 1 already drew
+- Any change to grades 1+ story flow
 
-- School-mode pivot (parked per your call).
-- Persisting Pre-K progress to Supabase. Pre-K worlds use the same `useCampaignProgress` hook; negative world IDs slot in cleanly with no schema change.
-- Audio narration of words (deferred — `speechSynthesis.speak(word)` could be wired in 5 lines later if Patrick wants it).
-
-## File touch list
-
-**New (~7):** `RPGOneWordReader.tsx`, `preKWordBanks.ts`, three sprite cases (in existing file), three enemy entries (in existing file), one verb-phrase table.
-
-**Edited (~6):** `campaignData.ts`, `rpgBattleData.ts`, `RPGCharacterSprite.tsx`, `RPGBattleArena.tsx` (one branch + one prop), `RPGLevelSelect.tsx` (Pre-K cosmetic branch), `RPGWorldMap.tsx` (Pre-K cosmetic branch), `verbAnimations.ts`, `useVerbAnimation.ts`, `VerbAnimationLayer.tsx`.
-
-**Untouched:** every existing world, story, enemy, minigame, multiplayer flow, school mode, auth, DB schema.
-
-Approve and I'll build Phase 1 → 5 in order, pausing after Phase 2 so you can demo it before I expand verbs.
+## Honest call on Phase 1
+Phase 1 shipped the *ingredients* (data, sprites, verb maps) but never wired them into the only page that builds playable levels. That's why the screenshots look like all three worlds are clones — they literally are, because they're being built from `curatedStories[0..4]`. This plan is the missing wiring, not a redo.
