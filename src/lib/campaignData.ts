@@ -52,7 +52,70 @@ export const grogTheGoblinKing: CampaignCharacter = {
 // Campaign worlds with level structure - 13 WORLDS TOTAL (including Tutorial)
 // Stories assigned by grade: K→Worlds 1-2, 1→Worlds 3-4, 2→Worlds 5-6, 3→Worlds 7-8, 4→Worlds 9-10, 5→Worlds 11-12
 export const campaignWorlds: CampaignWorld[] = [
-  // TUTORIAL WORLD - Always first, always unlocked
+  // ============== PRE-K WORLDS (Ages 3-5) ==============
+  // No stories, no comprehension. One big word at a time + verb animations.
+  // Always unlocked. IDs 101/102/103 don't collide with story worlds 0-12.
+  {
+    id: 101,
+    name: 'First Words',
+    description: 'Your very first reading adventure!',
+    gradient: 'from-pink-300 via-rose-300 to-orange-300',
+    bgColor: 'bg-pink-900/10',
+    enemyTypes: ['wiggleworm'],
+    requiredGradeLevel: 0,
+    storyCount: 5,
+    unlockRequirement: 0,
+    mode: 'prek',
+    lore: 'Meet Wiggleworm! Read one word at a time. No story — just YOU and the word. Perfect for brand-new readers.',
+    levels: [
+      { id: 1, storyIndex: -1, enemies: ['wiggleworm'], isBossLevel: false, starThresholds: [50, 70, 90] },
+      { id: 2, storyIndex: -1, enemies: ['wiggleworm'], isBossLevel: false, starThresholds: [50, 70, 90] },
+      { id: 3, storyIndex: -1, enemies: ['wiggleworm'], isBossLevel: false, starThresholds: [50, 70, 90] },
+      { id: 4, storyIndex: -1, enemies: ['wiggleworm'], isBossLevel: false, starThresholds: [50, 70, 90] },
+      { id: 5, storyIndex: -1, enemies: ['wiggleworm'], isBossLevel: true, starThresholds: [40, 60, 80] },
+    ],
+  },
+  {
+    id: 102,
+    name: 'Action Time',
+    description: 'Say the word, watch it happen!',
+    gradient: 'from-yellow-300 via-amber-300 to-orange-400',
+    bgColor: 'bg-yellow-900/10',
+    enemyTypes: ['bouncer'],
+    requiredGradeLevel: 0,
+    storyCount: 5,
+    unlockRequirement: 0,
+    mode: 'prek',
+    lore: 'Say "jump" and Bouncer jumps! Say "spin" and he spins! Every word makes something happen on screen.',
+    levels: [
+      { id: 1, storyIndex: -1, enemies: ['bouncer'], isBossLevel: false, starThresholds: [50, 70, 90] },
+      { id: 2, storyIndex: -1, enemies: ['bouncer'], isBossLevel: false, starThresholds: [50, 70, 90] },
+      { id: 3, storyIndex: -1, enemies: ['bouncer'], isBossLevel: false, starThresholds: [50, 70, 90] },
+      { id: 4, storyIndex: -1, enemies: ['bouncer'], isBossLevel: false, starThresholds: [50, 70, 90] },
+      { id: 5, storyIndex: -1, enemies: ['bouncer'], isBossLevel: true, starThresholds: [40, 60, 80] },
+    ],
+  },
+  {
+    id: 103,
+    name: 'Word + Picture',
+    description: 'Two words at a time. You can do it!',
+    gradient: 'from-cyan-300 via-sky-300 to-blue-400',
+    bgColor: 'bg-cyan-900/10',
+    enemyTypes: ['echo_blob'],
+    requiredGradeLevel: 0,
+    storyCount: 5,
+    unlockRequirement: 0,
+    mode: 'prek',
+    lore: 'Echo loves two-word phrases. "Help me!" "My dog!" Read them out loud and watch the magic.',
+    levels: [
+      { id: 1, storyIndex: -1, enemies: ['echo_blob'], isBossLevel: false, starThresholds: [50, 70, 90] },
+      { id: 2, storyIndex: -1, enemies: ['echo_blob'], isBossLevel: false, starThresholds: [50, 70, 90] },
+      { id: 3, storyIndex: -1, enemies: ['echo_blob'], isBossLevel: false, starThresholds: [50, 70, 90] },
+      { id: 4, storyIndex: -1, enemies: ['echo_blob'], isBossLevel: false, starThresholds: [50, 70, 90] },
+      { id: 5, storyIndex: -1, enemies: ['echo_blob'], isBossLevel: true, starThresholds: [40, 60, 80] },
+    ],
+  },
+  // TUTORIAL WORLD - Always first of the story track
   {
     id: 0,
     name: 'Tutorial',
