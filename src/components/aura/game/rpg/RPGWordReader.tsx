@@ -196,6 +196,9 @@ export const RPGWordReader = ({
       isRetryAttemptRef.current = false;
       isProcessingRef.current = false;
       batchCompletedRef.current = false;
+      // Clear processed-finals tracker so the next batch's first final
+      // result isn't accidentally skipped as "already handled".
+      processedFinalsRef.current.clear();
     }
   }, [wordsKey]);
 
