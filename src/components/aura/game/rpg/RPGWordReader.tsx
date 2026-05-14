@@ -636,6 +636,19 @@ export const RPGWordReader = ({
   // Explicit ref: are we currently doing the one allowed retry attempt?
   const isRetryAttemptRef = useRef(false);
 
+  // Refs to the latest handler implementations so the long-lived
+  // SpeechRecognition.onresult closure always invokes the current versions
+  // (which read the current `words` prop). Without these, the new batch's
+  // first word is graded against the previous batch's array.
+  const processResultRef = useRef<((t: string, alts: string[]) => void) | null>(null);
+  const handleCorrectRef = useRef<((s: string, i: number) => void) | null>(null);
+  const handleRetrySuccessRef = useRef<((s: string, i: number) => void) | null>(null);
+
+  // Shared ref for tracking processed final-result indices across the
+  // long-lived recognition session. Lives outside startRecognitionSession
+  // so we can clear it on batch transitions.
+  const processedFinalsRef = useRef<Set<number>>(new Set());
+
   // Process speech result
   const processResult = useCallback((transcript: string, alternatives: string[]) => {
     if (isProcessingRef.current) return;
