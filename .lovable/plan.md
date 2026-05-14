@@ -1,34 +1,39 @@
-## Plan
+## Pre-K Reader: Remove HP Bars + Full-Viewport Layout
 
-1. **Restore real battle feedback in the Pre-K reader**
-   - Add enemy HP state, max HP per lesson, and deterministic damage per correct word.
-   - On each correct mic result, trigger enemy hit animation, damage number, HP reduction, screen shake/light attack feedback, and progress toward defeat.
-   - Keep Pre-K no-fail behavior: misses should not punish the child or end the lesson; correct reads still visibly damage/defeat the enemy.
+### 1. Remove HP bars, keep character reactions
 
-2. **Fix the cropped / oversized screen**
-   - Make `RPGOneWordReader` fit inside the visible game area instead of adding another full-screen layout inside `AuraPractice`.
-   - Remove the extra outer spacing conflict, reduce fixed sprite/card heights, and use responsive `min-h-0`, `h-full`, and compact mobile/tablet sizing so the mic controls stay visible at the current 690×636 preview size.
-   - Keep the battle frame visually aligned with the existing RPG screens instead of a huge isolated card that pushes content below the viewport.
+In `src/components/aura/game/rpg/RPGOneWordReader.tsx`:
 
-3. **Make it feel more “perfect” and consistent with RPG battles**
-   - Add an enemy HP bar/nameplate and defeat state.
-   - Add clearer “attack on read” visual sequence: hero/knight attacks, enemy flashes, damage floats, HP drops.
-   - Improve the current word panel so it is readable but not oversized, and make the embedded mic reader compact enough that the active word, mic button, and progress are all visible without clipping.
+- Delete the `enemyHp` / `enemyMaxHp` state, the HP bar JSX (heart icon + numeric + gradient bar), and the `damagePerWord` math.
+- Delete the floating `-20` damage number.
+- Keep and amplify the friendly feedback that already works:
+  - Enemy sprite **flinches** (`isTakingDamage` flash) on each correct word.
+  - Hero sprite **lunges forward** on attack.
+  - Screen **shake** stays.
+  - `VerbAnimationLayer` sparkle/emoji on action words stays.
+- Replace the floating "-20" with a friendly **"+1 ⭐"** float so kids see positive feedback instead of damage.
+- Lesson completion is now driven purely by `RPGWordReader`'s `onBatchComplete` (already the case) — not by HP hitting zero. The "enemy defeated" flying-up animation triggers when `correctCount === items.length` instead of `enemyHp <= 0`.
 
-4. **Clean integration details**
-   - Update Pre-K completion stats to report real damage dealt alongside words/stars, while preserving the existing saved completion flow.
-   - Avoid backend/schema changes.
-   - Reuse existing `RPGWordReader`, `RPGCharacterSprite`, `VerbAnimationLayer`, and pronunciation/mic logic rather than replacing the mic system.
+### 2. Full-viewport layout (match normal mode)
 
-## Files expected to change
+Normal mode (`RPGBattleArena`) renders directly inside `AuraPractice` and owns the full screen with its own internal scroll. Pre-K should do the same.
 
-- `src/components/aura/game/rpg/RPGOneWordReader.tsx`
-- `src/pages/student/AuraPractice.tsx` only if needed to remove the nested layout/spacing that causes clipping
+Changes:
 
-## Acceptance checks
+- **`src/pages/student/AuraPractice.tsx`**: when rendering `RPGOneWordReader`, render it the same way `RPGBattleArena` is rendered — directly into the page, not wrapped in the `h-screen overflow-hidden` shell that's squeezing it. Remove the constrained padding wrapper around the Pre-K branch only.
+- **`RPGOneWordReader.tsx`**: change root from `w-full h-full min-h-0 overflow-hidden rounded-2xl` to `min-h-screen w-full overflow-y-auto` (mirrors `RPGBattleArena`'s scroll model). Drop the `flex-1 min-h-0 overflow-y-auto` on the inner mic reader container so the whole page scrolls naturally instead of nesting two scroll regions that fight each other at 690×636.
+- Increase character sprite sizes back to `lg` (matching the felt presence of normal mode) and bump the word card to `text-6xl sm:text-7xl` since we now have room.
+- Top bar (Map / world name / star count) stays sticky at the top like normal mode's header.
 
-- Correctly read words visibly damage the enemy and reduce HP.
-- Enemy defeat/completion still happens after the lesson.
-- At 690×636, the screen no longer cuts off the important controls.
-- The mic reader remains present and usable.
-- Pre-K worlds still use distinct words/enemies/background themes.
+### 3. Files touched
+
+- `src/components/aura/game/rpg/RPGOneWordReader.tsx` — remove HP system, switch to full-viewport scroll layout, swap damage number for "+1 ⭐".
+- `src/pages/student/AuraPractice.tsx` — render Pre-K reader full-bleed, mirroring how `RPGBattleArena` is mounted.
+
+### 4. Acceptance
+
+- At 690×636 (current preview viewport) nothing is cut off; mic reader and Start Reading button are fully visible.
+- No HP numbers anywhere in Pre-K. Character still flinches/sparkles on correct reads.
+- Star count in top right still reflects progress (`correctCount / items.length`).
+- Lesson completes when all words are read, not when an HP bar hits zero.
+- Pink (101) / amber (102) / emerald (103) world themes preserved.
