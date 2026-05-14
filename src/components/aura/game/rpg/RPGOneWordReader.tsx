@@ -240,7 +240,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                   ? { duration: 0.9, ease: "easeInOut" }
                   : { duration: 2, repeat: Infinity, ease: "easeInOut" }
               }
-              className="relative flex h-[112px] items-end justify-center sm:h-[132px]"
+              className="relative flex h-[112px] items-end justify-center sm:h-[132px] mb-16 sm:mb-20"
               style={{ transformOrigin: "center bottom" }}
             >
               <div className="h-full w-[118px] sm:w-[140px]">
