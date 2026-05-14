@@ -158,6 +158,8 @@ export const RPGWordReader = ({
   // Stable key for detecting actual word content changes (not just array reference)
   const wordsKey = useMemo(() => words?.join("|") || "", [words]);
   const prevWordsKeyRef = useRef(wordsKey);
+  // Guard against duplicate onBatchComplete from late-arriving final transcripts
+  const batchCompletedRef = useRef(false);
 
   // Keep refs in sync
   useEffect(() => {
@@ -183,6 +185,7 @@ export const RPGWordReader = ({
       setPendingIncorrectWord(null);
       isRetryAttemptRef.current = false;
       isProcessingRef.current = false;
+      batchCompletedRef.current = false;
     }
   }, [wordsKey]);
 
@@ -266,14 +269,18 @@ export const RPGWordReader = ({
       setCanRetry(true); // Reset retry for next word
       return true;
     } else {
-      // Batch complete - report results
-      const results = Array.from(wordResults.values());
-      onBatchComplete?.(results);
-      
+      // Batch complete - report results (deduped)
+      if (!batchCompletedRef.current) {
+        batchCompletedRef.current = true;
+        const results = Array.from(wordResults.values());
+        onBatchComplete?.(results);
+      }
+
+      // Keep mic alive for the next batch — do NOT stop recognition here.
+      // Parent will swap in new words; the wordsKey effect will reset state
+      // and clear batchCompletedRef. Recognition keeps listening seamlessly.
       setCurrentIndex(0);
       currentIndexRef.current = 0;
-      stopRecognitionSession();
-      setRecognitionState('idle');
       return false;
     }
   }, [currentBatch.length, stopRecognitionSession, wordResults, onBatchComplete]);
@@ -376,14 +383,16 @@ export const RPGWordReader = ({
       if (hasMoreWords) {
         setRecognitionState('listening');
       } else {
-        // Batch complete - report results
-        const results = Array.from(wordResults.values());
-        onBatchComplete?.(results);
-        
+        // Batch complete - report results (deduped); keep mic alive for next batch
+        if (!batchCompletedRef.current) {
+          batchCompletedRef.current = true;
+          const results = Array.from(wordResults.values());
+          onBatchComplete?.(results);
+        }
         setCurrentIndex(0);
         currentIndexRef.current = 0;
-        stopRecognitionSession();
-        setRecognitionState('idle');
+        // Do NOT stop recognition — let it keep listening into the next batch.
+        setRecognitionState('listening');
       }
     }, feedbackDelay);
   }, [streak, onResult, onBatchComplete, words, batchSize, stopRecognitionSession, mode, currentBatch, wordResults]);
@@ -503,14 +512,16 @@ export const RPGWordReader = ({
       if (hasMoreWords) {
         setRecognitionState('listening');
       } else {
-        // Batch complete
-        const results = Array.from(wordResults.values());
-        onBatchComplete?.(results);
-        
+        // Batch complete (deduped); keep mic alive for next batch
+        if (!batchCompletedRef.current) {
+          batchCompletedRef.current = true;
+          const results = Array.from(wordResults.values());
+          onBatchComplete?.(results);
+        }
         setCurrentIndex(0);
         currentIndexRef.current = 0;
-        stopRecognitionSession();
-        setRecognitionState('idle');
+        // Do NOT stop recognition — keep listening into the next batch.
+        setRecognitionState('listening');
       }
     }, 300);
   }, [currentBatch, words, batchSize, stopRecognitionSession, wordResults, onBatchComplete, onRetrySuccess]);
