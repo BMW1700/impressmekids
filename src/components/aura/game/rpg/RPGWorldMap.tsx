@@ -59,6 +59,10 @@ const worldIcons: Record<number, React.ReactNode> = {
   6: <Cloud className="h-8 w-8" />,       // Floating Isles
   7: <Waves className="h-8 w-8" />,       // Sunken Library
   8: <Eclipse className="h-8 w-8" />,     // The Void
+  // Pre-K worlds
+  101: <Sparkles className="h-8 w-8" />,
+  102: <Zap className="h-8 w-8" />,
+  103: <BookOpen className="h-8 w-8" />,
 };
 
 // Enhanced SVG connecting path with dotted line and particle flow
@@ -231,6 +235,7 @@ export const RPGWorldMap = ({
   };
 
   const isWorldUnlocked = (world: CampaignWorld): boolean => {
+    if (world.mode === 'prek') return true; // Pre-K worlds always unlocked
     if (world.id === 0) return true; // Tutorial always unlocked
     if (world.id === 1) return true;
     const prevWorld = getWorldProgress(world.id - 1);
