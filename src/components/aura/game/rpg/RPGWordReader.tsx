@@ -311,6 +311,21 @@ export const RPGWordReader = ({
     }
   }, []);
 
+  const abortActiveRecognitionForBatchTransition = useCallback(() => {
+    speechSessionIdRef.current += 1;
+    processedFinalsRef.current.clear();
+    isRecognitionRunningRef.current = false;
+    isRecognitionStartingRef.current = false;
+    const activeRecognition = recognitionRef.current;
+    recognitionRef.current = null;
+    if (activeRecognition) {
+      try {
+        if (typeof activeRecognition.abort === 'function') activeRecognition.abort();
+        else activeRecognition.stop();
+      } catch (e) {}
+    }
+  }, []);
+
   const getEmojiPopupOrigin = useCallback(() => {
     const viewportWidth = typeof window === 'undefined' ? 878 : window.innerWidth;
     const viewportHeight = typeof window === 'undefined' ? 684 : window.innerHeight;
