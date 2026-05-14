@@ -161,6 +161,16 @@ export const RPGWordReader = ({
   // Guard against duplicate onBatchComplete from late-arriving final transcripts
   const batchCompletedRef = useRef(false);
 
+  // CRITICAL: Refs to current props so the long-lived recognition.onresult
+  // closure always reads the *current* batch, not the batch that existed
+  // when recognition was first started. Without this, after batch N
+  // completes the live mic still grades batch N+1's first word against
+  // batch N's first word (already completed) and marks it wrong.
+  const wordsRef = useRef(words);
+  const batchSizeRef = useRef(batchSize);
+  useEffect(() => { wordsRef.current = words; }, [words]);
+  useEffect(() => { batchSizeRef.current = batchSize; }, [batchSize]);
+
   // Keep refs in sync
   useEffect(() => {
     currentIndexRef.current = currentIndex;
