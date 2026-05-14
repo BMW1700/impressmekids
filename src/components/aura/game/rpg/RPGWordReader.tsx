@@ -158,6 +158,8 @@ export const RPGWordReader = ({
   // Stable key for detecting actual word content changes (not just array reference)
   const wordsKey = useMemo(() => words?.join("|") || "", [words]);
   const prevWordsKeyRef = useRef(wordsKey);
+  // Guard against duplicate onBatchComplete from late-arriving final transcripts
+  const batchCompletedRef = useRef(false);
 
   // Keep refs in sync
   useEffect(() => {
