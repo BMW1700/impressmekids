@@ -82,8 +82,6 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
   const [heroAttacking, setHeroAttacking] = useState(false);
   const [enemyHit, setEnemyHit] = useState(false);
   const [shake, setShake] = useState(false);
-  const [floatStar, setFloatStar] = useState<{ id: number } | null>(null);
-  const [floatDmg, setFloatDmg] = useState<{ id: number; n: number } | null>(null);
 
   const [verbTrigger, setVerbTrigger] = useState<{ word: string; nonce: number } | null>(null);
   const nonceRef = useRef(0);
