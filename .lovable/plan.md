@@ -1,66 +1,73 @@
-# Pre-K Worlds Are Broken — Real Root Cause + Fix
+# Fix Pre-K Reader: Mic, Visual Consistency, Readability
 
-## What's actually broken
+## What's wrong (from your screenshots)
 
-Phase 1 added data (`mode: 'prek'`, `storyIndex: -1`, new enemies `wiggleworm/bouncer/echo_blob`, Pre-K word banks) but **nothing reads any of it**. The runtime that converts `world.levels` → playable cards lives in `src/pages/student/AuraPractice.tsx` (lines 419–540) and it has zero awareness of Pre-K. So:
+1. **No mic.** It's a "tap I read it!" button — kids can lie or tap through. Every other AURA screen uses real speech recognition.
+2. **Looks nothing like the rest of the game.** Bare gradient, no battle frame, no HP/power bars, no "battle arena" chrome. Bouncer/Wiggleworm are floating on a blank field.
+3. **Word card is too sterile / hard to scan.** Tiny "Word 1 of N" header, plain white card, no syllable break, no emoji hint, no visual rhythm with the rest of the app.
 
-**Bug 1 — Fake titles on level cards** (`AuraPractice.tsx:443`)
-```ts
-const story = isTutorial
-  ? { ...tutorial story... }
-  : (activeStories[levelData.storyIndex] || activeStories[idx % activeStories.length]);
+The root cause: I built `RPGOneWordReader.tsx` from scratch with custom Hear it / I read it! / Skip buttons instead of reusing **`RPGWordReader.tsx`** — the 1,470-line component every other battle uses, which already has mic management, echo retry, speech matching, mic troubleshooter, emoji pops, and feedback overlay.
+
+## The fix — one focused refactor
+
+Rebuild `RPGOneWordReader.tsx` to be a **Pre-K-skinned battle screen** that wraps the real `RPGWordReader`.
+
+### Layout (matches RPGBattleArena visual language)
+
+```text
+┌────────────────────────────────────────────────────┐
+│  ← Map        World 1 · Level 2        ⭐ 3/5      │  ← top bar (same as battle)
+├────────────────────────────────────────────────────┤
+│  ╔══════════════════════════════════════════════╗  │
+│  ║  [Wiggleworm]                    [Knight]    ║  │  ← character row, same sprite sizes
+│  ║   Wiggleworm                     You got it! ║  │     as battle arena
+│  ║                                               ║  │
+│  ║          ┌──────────────────────┐             ║  │
+│  ║          │                      │             ║  │
+│  ║          │       JUMP           │             ║  │  ← BIG word card, lowercase
+│  ║          │       jump           │             ║  │     w/ phonetic hint below
+│  ║          │       j • u • mp     │             ║  │
+│  ║          │   ✨ Watch what       │             ║  │
+│  ║          │      happens!        │             ║  │
+│  ║          └──────────────────────┘             ║  │
+│  ║                                               ║  │
+│  ║   [🎤 Listening... say it!]    [🔊 Hear it]   ║  │  ← REAL mic, animated pulse
+│  ║                                               ║  │
+│  ║   ●●●○○  word 3 of 5                          ║  │  ← progress dots
+│  ╚══════════════════════════════════════════════╝  │
+│  Battle-frame border + soft shadow (same as arena) │
+└────────────────────────────────────────────────────┘
 ```
-For Pre-K, `storyIndex = -1` → `activeStories[-1]` is undefined → falls back to `activeStories[idx % length]`. Result: every Pre-K world gets the same first 5 curated stories: "The Friendly Dog", "My Pet Fish", "The Big Red Ball", "The Little Star", "The Magic Garden". That's why all 3 worlds look identical in your screenshots.
 
-**Bug 2 — Wrong enemy → goblin sprite** (`AuraPractice.tsx:472–506`)
-The `enemyMap` lookup has no entry for `wiggleworm | bouncer | echo_blob`, so `setRpgEnemyType(enemyMap[primaryEnemy] || 'minion')` always falls back to `'minion'` (goblin). The pretty new sprites Phase 1 added are never actually rendered in the level grid OR the battle.
+### Behavior
 
-**Bug 3 — Battle still routes to standard story arena**
-`handleLevelSelect` always calls `setRpgView('battle')` and `setRpgStory(curated story)`. There is no `mode === 'prek'` branch anywhere, so even if titles were right the user lands in the full RPGBattleArena with story passages, comprehension prompts, and minigames — exactly what Pre-K is supposed to skip.
+- **Speech recognition is the primary input.** Use `RPGWordReader` directly with `words={preKWords}`, `batchSize={preKWords.length}`, `enableEchoRetry={true}`, `mode="fast"` (Pre-K = lenient matching).
+- **`onResult(correct, ...)`**: on correct → fire `triggerVerb(word)` so Bouncer/Wiggleworm/Echo do their animation, then `RPGWordReader` auto-advances. On wrong → echo-retry kicks in (already built into the reader).
+- **`onBatchComplete(results)`**: compute stars from `results.filter(r => r.result === 'correct').length / results.length` and call `onComplete`.
+- **"Hear it" button** stays — calls `playCorrectPronunciation(currentWord)` (TTS).
+- **No "I read it!" or "Skip" buttons.** Pre-K kids prove they read it by saying it; teachers can hold the mic for shy kids.
+- **Mic permission prompt:** reuse `MicTroubleshooterModal` (already wired into `RPGWordReader`).
 
-**Bug 4 — Cosmetic: same forest background**
-The arena background is keyed off the world id but the Pre-K worlds aren't in the background map either, so they inherit the default forest scene.
+### Visual consistency with battle arena
 
-The earlier "Phase 1 verified ✅" claim was structurally true (data exists, types compile) but operationally false: nothing consumes it. I owe you a straight call on that — it was over-confident.
+- Wrap stage in the same `RPGBattleBackground` component the arena uses, with a Pre-K background variant (soft cloud/meadow scene, not the dark dungeon). Add `bg_meadow_pink`, `bg_meadow_yellow`, `bg_meadow_green` to `RPGBattleBackground.tsx` keyed off `world.id` 101/102/103.
+- Same character sprite sizing (`size="lg"`), same drop-shadow, same idle-bob animation as arena.
+- Word card: white rounded-3xl card with the same shadow/border treatment as `RPGCharacterSprite` name plates. Show the word in **lowercase 8xl** (kids learn lowercase first), with a smaller syllable hint (`j • u • mp`) below in muted color, and the purple "Watch what happens!" badge only when a verb animation is queued.
+- Add a tiny progress dot row (●●●○○) instead of "Word 3 of 5" text.
 
-## Fix plan (single phase, ships Pre-K end-to-end)
+## Files to change
 
-### Step 1 — Branch level building on `world.mode === 'prek'`
-`src/pages/student/AuraPractice.tsx` (lines 427–462). When the world is Pre-K:
-- Build `levels` from `getPreKContent(worldId, levelId)` in `src/data/preKWordBanks.ts` instead of curated stories.
-- Synthesize a lightweight `story` shape per level so `RPGLevelSelect` keeps rendering: title from the word list (e.g. "Lesson 1 · jump · hop · run"), grade_level 0, no passage_text, `category: 'adventure'`, cover_gradient from the world.
-- Unlock rule: linear (level N unlocks when N-1 completed). First always unlocked.
+| File | Change |
+|---|---|
+| `src/components/aura/game/rpg/RPGOneWordReader.tsx` | Rewrite: wrap `RPGWordReader`, add Pre-K chrome, route `onResult` → verb animation, `onBatchComplete` → stars |
+| `src/components/aura/game/rpg/RPGBattleBackground.tsx` | Add 3 Pre-K meadow background variants keyed by world id |
+| (no other files) | Routing in `AuraPractice.tsx` already sends Pre-K to this component — no change there |
 
-### Step 2 — Map new enemies properly
-Same file, `enemyMap` (lines 472–506): add `wiggleworm`, `bouncer`, `echo_blob`. Also extend `EnemyType` union in `src/lib/battleMechanics.ts` if missing, and make sure `BattleArena` / `RPGCharacterSprite` already handle them (Phase 1 added the renderers — verify wiring).
+## Out of scope
 
-### Step 3 — Route Pre-K to a dedicated reader, not RPGBattleArena
-In `handleLevelSelect`, if `selectedWorld.mode === 'prek'`, set a new view (`rpgView = 'prek_reader'`) instead of `'battle'`. Render a new component:
+- New sprite art (Wiggleworm/Bouncer/Echo from Phase 1 stay)
+- Word bank changes
+- HP / damage / battle stats — Pre-K stays "no fail" with infinite retries, just like now
+- School Mode pivot, grades 1+ flow
 
-`src/components/aura/game/rpg/RPGOneWordReader.tsx`
-- Props: `world`, `level`, words/phrases from `getPreKContent`, `onComplete`, `onBack`.
-- Layout: friendly enemy sprite (Wiggleworm/Bouncer/EchoBlob) on one side, knight+princess on the other, ONE giant word in the center, Hear / Start Reading buttons. No story panel, no comprehension, no minigames.
-- On correct read → fire `triggerVerb` so `VerbAnimationLayer` plays the matching animation (already wired in Phase 1's `verbAnimations.ts`), advance to next word.
-- After last word → simple celebration → call `onComplete` with stars based on accuracy.
-
-### Step 4 — Pre-K-friendly battle/world visuals
-- Add background gradients/scene for worlds 101/102/103 in whichever map keys the arena background by world id (likely `RPGBattleArena.tsx` constants — confirm during implementation). Use the pastel gradients already defined on each Pre-K world.
-- Keep enemies non-attacking (HP only, no fail state — already true in `rpgBattleData.ts`).
-
-### Step 5 — Persistence
-Reuse the existing `campaign_progress.world_progress[worldId]` array. For Pre-K, store the synthesized level title (e.g. `"prek-101-1"`) so it doesn't collide with curated story titles.
-
-## Files touched
-
-- `src/pages/student/AuraPractice.tsx` — branch level builder + enemy map + Pre-K view route (the actual fix for all 4 bugs)
-- `src/components/aura/game/rpg/RPGOneWordReader.tsx` — NEW component
-- `src/lib/battleMechanics.ts` — extend EnemyType union if needed
-- `src/components/aura/game/rpg/RPGBattleArena.tsx` — add Pre-K background entries (only if it owns the bg map)
-
-## Out of scope for this fix
-- School Mode pivot (deferred per your earlier instruction)
-- New sprite art beyond what Phase 1 already drew
-- Any change to grades 1+ story flow
-
-## Honest call on Phase 1
-Phase 1 shipped the *ingredients* (data, sprites, verb maps) but never wired them into the only page that builds playable levels. That's why the screenshots look like all three worlds are clones — they literally are, because they're being built from `curatedStories[0..4]`. This plan is the missing wiring, not a redo.
+Ready to implement on approval.
