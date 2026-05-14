@@ -76,46 +76,75 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
   const [currentIndex, setCurrentIndex] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
   const correctRef = useRef(0);
+  const [enemyHp, setEnemyHp] = useState(100);
+  const damagePerWord = items.length > 0 ? 100 / items.length : 100;
 
   const [heroAttacking, setHeroAttacking] = useState(false);
   const [enemyHit, setEnemyHit] = useState(false);
   const [shake, setShake] = useState(false);
   const [floatStar, setFloatStar] = useState<{ id: number } | null>(null);
+  const [floatDmg, setFloatDmg] = useState<{ id: number; n: number } | null>(null);
 
   const [verbTrigger, setVerbTrigger] = useState<{ word: string; nonce: number } | null>(null);
   const nonceRef = useRef(0);
   const verb = useVerbAnimation(verbTrigger);
+  const verbActiveRef = useRef(false);
+  const pendingCompleteRef = useRef<null | (() => void)>(null);
 
   // Reset when level changes
   useEffect(() => {
     setCurrentIndex(0);
     setCorrectCount(0);
     correctRef.current = 0;
+    setEnemyHp(100);
+    verbActiveRef.current = false;
+    pendingCompleteRef.current = null;
   }, [world.id, level.id]);
 
   const currentWord = items[currentIndex] ?? "";
   const verbHint = useMemo(() => resolveVerbAnimation(currentWord), [currentWord]);
   const allDone = correctCount >= items.length;
 
+  // Track verb animation lifecycle so we can defer completion until it finishes
+  useEffect(() => {
+    if (!verb) return;
+    verbActiveRef.current = true;
+    const t = window.setTimeout(() => {
+      verbActiveRef.current = false;
+      if (pendingCompleteRef.current) {
+        const fn = pendingCompleteRef.current;
+        pendingCompleteRef.current = null;
+        fn();
+      }
+    }, 1400);
+    return () => window.clearTimeout(t);
+  }, [verb?.id]);
+
   const triggerHit = useCallback((word: string) => {
     setHeroAttacking(true);
+    const dmg = Math.round(damagePerWord);
     setFloatStar({ id: Date.now() });
+    setFloatDmg({ id: Date.now() + 1, n: dmg });
     window.setTimeout(() => {
       setHeroAttacking(false);
       setEnemyHit(true);
       setShake(true);
+      setEnemyHp((hp) => Math.max(0, hp - damagePerWord));
       window.setTimeout(() => {
         setEnemyHit(false);
         setShake(false);
       }, 400);
-      window.setTimeout(() => setFloatStar(null), 900);
+      window.setTimeout(() => {
+        setFloatStar(null);
+        setFloatDmg(null);
+      }, 900);
     }, 220);
 
     if (resolveVerbAnimation(word)) {
       nonceRef.current += 1;
       setVerbTrigger({ word, nonce: nonceRef.current });
     }
-  }, []);
+  }, [damagePerWord]);
 
   const handleResult = useCallback(
     (correct: boolean, _spoken: string, wordIndex: number) => {
@@ -135,7 +164,15 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
       const correct = results.filter((r) => r.result === "correct").length;
       const accuracy = results.length > 0 ? correct / results.length : 0;
       const stars = accuracy >= 0.9 ? 3 : accuracy >= 0.7 ? 2 : 1;
-      onComplete({ wordsRead: results.length, correctWords: correct, stars });
+      const finish = () =>
+        onComplete({ wordsRead: results.length, correctWords: correct, stars });
+      // If a verb animation is still playing, wait for it to finish before ending.
+      if (verbActiveRef.current) {
+        pendingCompleteRef.current = finish;
+      } else {
+        // Tiny grace period so the last hit/star can render
+        window.setTimeout(finish, 600);
+      }
     },
     [onComplete]
   );
