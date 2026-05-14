@@ -790,15 +790,12 @@ export const RPGWordReader = ({
       console.log('[RPGWordReader] Recognition started');
       isRecognitionRunningRef.current = true;
       isRecognitionStartingRef.current = false;
-      processedResultsRef.current.clear();
+      processedFinalsRef.current.clear();
       if (!isProcessingRef.current) {
         setRecognitionState('listening');
       }
     };
-    
-    // Track which results we've already processed to avoid double-processing
-    const processedResultsRef = { current: new Set<number>() };
-    
+
     recognition.onresult = (event: any) => {
       if (!isCurrentSession()) {
         console.log('[RPGWordReader] Ignoring stale result', { sessionId });
@@ -808,12 +805,12 @@ export const RPGWordReader = ({
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
         const transcript = result[0]?.transcript?.trim() || '';
-        
+
         // Show interim results for the latest
         if (!result.isFinal) {
           if (!isProcessingRef.current && i === event.results.length - 1) {
             setSpokenText(transcript.toLowerCase());
-            
+
             // FAST MODE: Process interim results for quicker matching (Elara only)
             // CRITICAL FIX: Must respect retry state - route through proper handlers
             if (mode === 'fast' && !isProcessingRef.current) {
@@ -824,15 +821,15 @@ export const RPGWordReader = ({
                 for (const word of wordsSpoken) {
                   if (isWordMatchLenient(word, targetWord)) {
                     // Match found in interim - process immediately, but respect retry state!
-                    processedResultsRef.current.add(i);
-                    
-                    // If this is a retry attempt, route to handleRetrySuccess for YELLOW result
+                    processedFinalsRef.current.add(i);
+
+                    // Always invoke through refs so we hit the handlers that
+                    // close over the *current* batch's words.
                     if (isRetryAttemptRef.current || !canRetryRef.current) {
                       console.log('[RPGWordReader] FAST MODE: Routing to handleRetrySuccess (retry attempt)');
-                      handleRetrySuccess(word, wordIdx);
+                      handleRetrySuccessRef.current?.(word, wordIdx);
                     } else {
-                      // Normal first-try success - GREEN result
-                      handleCorrect(word, wordIdx);
+                      handleCorrectRef.current?.(word, wordIdx);
                     }
                     return;
                   }
@@ -842,17 +839,17 @@ export const RPGWordReader = ({
           }
           continue;
         }
-        
+
         // Skip if we already processed this result index
-        if (processedResultsRef.current.has(i)) {
+        if (processedFinalsRef.current.has(i)) {
           continue;
         }
-        processedResultsRef.current.add(i);
-        
+        processedFinalsRef.current.add(i);
+
         // Final result - process it
         const wordIdx = currentIndexRef.current;
         console.log('[RPGWordReader] Final transcript:', transcript, '| wordIndex:', wordIdx, '| target:', getTargetWord(wordIdx));
-        
+
         // Collect alternatives
         const alternatives: string[] = [];
         for (let j = 0; j < result.length; j++) {
