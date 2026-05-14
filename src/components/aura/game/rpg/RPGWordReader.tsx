@@ -49,6 +49,15 @@ type RecognitionState = 'idle' | 'listening' | 'processing' | 'paused' | 'echo_r
 
 const soundEffects = new SoundEffects();
 let emojiPopId = 0;
+const WORD_TRANSITION_ARM_MS = 260;
+
+interface SpeechTargetToken {
+  id: number;
+  generation: number;
+  index: number;
+  word: string;
+  armedAt: number;
+}
 
 // Helper: Simple phonetic breakdown for learning hints
 const getPhoneticHint = (word: string): string => {
@@ -142,12 +151,22 @@ export const RPGWordReader = ({
   const currentIndexRef = useRef(0);
   const isProcessingRef = useRef(false);
   const shouldBeListeningRef = useRef(false);
+  const isWordTransitioningRef = useRef(false);
+  const speechTargetTokenRef = useRef<SpeechTargetToken>({
+    id: 0,
+    generation: 0,
+    index: 0,
+    word: '',
+    armedAt: Date.now() + WORD_TRANSITION_ARM_MS,
+  });
+  const startRecognitionRef = useRef<(() => void) | null>(null);
   
   // Timeout refs
   const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const echoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const echoIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const targetArmTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Response time tracking for patent-critical speed-based damage
   const wordDisplayTimestampRef = useRef<number>(0);
