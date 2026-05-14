@@ -145,22 +145,22 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
   };
 
   return (
-    <div className={`relative w-full overflow-hidden rounded-3xl bg-gradient-to-br ${meadow.sky} shadow-xl`}>
+    <div className={`relative h-full min-h-0 w-full overflow-hidden rounded-3xl bg-gradient-to-br ${meadow.sky} shadow-xl`}>
       {/* Soft meadow decorations */}
       <div className="absolute inset-0 pointer-events-none opacity-40 select-none">
         <div className="absolute top-4 left-6 text-4xl">☁️</div>
         <div className="absolute top-6 right-10 text-3xl">☀️</div>
         <div className="absolute top-24 left-[20%] text-3xl">☁️</div>
-        <div className="absolute bottom-8 left-[8%] text-3xl">🌷</div>
-        <div className="absolute bottom-6 right-[12%] text-3xl">🌼</div>
-        <div className="absolute bottom-10 left-[40%] text-2xl">🌿</div>
+          <div className="absolute bottom-6 left-[8%] text-2xl">🌷</div>
+          <div className="absolute bottom-5 right-[12%] text-2xl">🌼</div>
+          <div className="absolute bottom-8 left-[40%] text-xl">🌿</div>
       </div>
       <div className={`absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t ${meadow.ground} pointer-events-none`} />
 
       <motion.div
         animate={shake ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
         transition={{ duration: 0.35 }}
-        className="relative z-10 flex flex-col p-4 sm:p-6 gap-4"
+        className="relative z-10 flex h-full min-h-0 flex-col gap-1.5 p-2.5 sm:gap-2 sm:p-3"
       >
         {/* Top bar */}
         <div className="flex items-center justify-between gap-2">
@@ -177,7 +177,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
         </div>
 
         {/* Battle row */}
-        <div className="flex items-end justify-between gap-3 px-2">
+        <div className="flex min-h-0 flex-1 items-end justify-between gap-3 px-2">
           {/* Friendly creature (no HP) */}
           <div className="relative flex flex-col items-center w-[44%]">
             <div className="text-xs sm:text-sm font-bold text-slate-700 bg-white/90 rounded-full px-3 py-1 shadow mb-2">
@@ -199,10 +199,10 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                   ? { duration: 0.9, ease: "easeInOut" }
                   : { duration: 2, repeat: Infinity, ease: "easeInOut" }
               }
-              className="relative h-[140px] sm:h-[180px] flex items-end justify-center"
+              className="relative flex h-[92px] items-end justify-center sm:h-[112px]"
               style={{ transformOrigin: "center bottom" }}
             >
-              <div className="h-full w-[160px] sm:w-[200px]">
+              <div className="h-full w-[118px] sm:w-[140px]">
                 <RPGCharacterSprite
                   type={enemy}
                   isEnemy
@@ -249,7 +249,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                   ? { duration: 0.22, ease: "easeOut" }
                   : { y: { duration: 2.2, repeat: Infinity, ease: "easeInOut" } }
               }
-              className="h-[140px] sm:h-[180px] w-[160px] sm:w-[200px] flex items-end justify-center"
+              className="flex h-[92px] w-[118px] items-end justify-center sm:h-[112px] sm:w-[140px]"
             >
               <RPGCharacterSprite type="knight" size="lg" isAttacking={heroAttacking} />
             </motion.div>
@@ -265,16 +265,16 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 1.02, opacity: 0 }}
               transition={{ type: "spring", stiffness: 240, damping: 20 }}
-              className="bg-white rounded-2xl shadow-lg border-2 border-white px-6 py-4 sm:py-5 text-center"
+              className="bg-white rounded-2xl shadow-lg border-2 border-white px-6 py-3 text-center"
             >
-              <div className="text-6xl sm:text-7xl font-black text-slate-900 lowercase leading-none">
+              <div className="text-5xl sm:text-6xl font-black text-slate-900 lowercase leading-none">
                 {currentWord || (allDone ? "🎉" : "")}
               </div>
-              <div className="mt-2 text-sm sm:text-base font-bold text-slate-400 tracking-widest">
+              <div className="mt-1 text-xs sm:text-sm font-bold text-slate-400 tracking-widest">
                 {syllableHint(currentWord)}
               </div>
               {verbHint && !allDone && (
-                <div className="mt-2 inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-purple-600 bg-purple-100 px-3 py-1 rounded-full">
+                <div className="mt-1 inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-purple-600 bg-purple-100 px-3 py-1 rounded-full">
                   ✨ Watch what happens!
                 </div>
               )}
@@ -308,7 +308,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
         </div>
 
         {/* Mic reader — natural height inside the page scroll */}
-        <div className="rounded-2xl bg-white/85 backdrop-blur-sm p-3 sm:p-4 shadow-inner">
+        <div className="rounded-2xl bg-white/85 backdrop-blur-sm p-2 sm:p-3 shadow-inner">
           <RPGWordReader
             key={`prek-${world.id}-${level.id}`}
             words={items}
@@ -319,6 +319,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
             batchSize={items.length}
             enableEchoRetry={true}
             mode="fast"
+            compact
           />
         </div>
       </motion.div>
