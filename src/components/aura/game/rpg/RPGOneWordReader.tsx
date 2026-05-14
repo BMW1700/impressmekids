@@ -177,7 +177,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
         </div>
 
         {/* Battle row */}
-        <div className="flex items-end justify-between gap-3 px-2">
+        <div className="flex min-h-0 flex-1 items-end justify-between gap-3 px-2">
           {/* Friendly creature (no HP) */}
           <div className="relative flex flex-col items-center w-[44%]">
             <div className="text-xs sm:text-sm font-bold text-slate-700 bg-white/90 rounded-full px-3 py-1 shadow mb-2">
@@ -199,10 +199,10 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                   ? { duration: 0.9, ease: "easeInOut" }
                   : { duration: 2, repeat: Infinity, ease: "easeInOut" }
               }
-              className="relative h-[140px] sm:h-[180px] flex items-end justify-center"
+              className="relative flex h-[110px] items-end justify-center sm:h-[130px]"
               style={{ transformOrigin: "center bottom" }}
             >
-              <div className="h-full w-[160px] sm:w-[200px]">
+              <div className="h-full w-[140px] sm:w-[160px]">
                 <RPGCharacterSprite
                   type={enemy}
                   isEnemy
@@ -249,7 +249,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                   ? { duration: 0.22, ease: "easeOut" }
                   : { y: { duration: 2.2, repeat: Infinity, ease: "easeInOut" } }
               }
-              className="h-[140px] sm:h-[180px] w-[160px] sm:w-[200px] flex items-end justify-center"
+              className="flex h-[110px] w-[140px] items-end justify-center sm:h-[130px] sm:w-[160px]"
             >
               <RPGCharacterSprite type="knight" size="lg" isAttacking={heroAttacking} />
             </motion.div>
