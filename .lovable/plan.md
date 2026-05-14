@@ -1,73 +1,34 @@
-# Fix Pre-K Reader: Mic, Visual Consistency, Readability
+## Plan
 
-## What's wrong (from your screenshots)
+1. **Restore real battle feedback in the Pre-K reader**
+   - Add enemy HP state, max HP per lesson, and deterministic damage per correct word.
+   - On each correct mic result, trigger enemy hit animation, damage number, HP reduction, screen shake/light attack feedback, and progress toward defeat.
+   - Keep Pre-K no-fail behavior: misses should not punish the child or end the lesson; correct reads still visibly damage/defeat the enemy.
 
-1. **No mic.** It's a "tap I read it!" button — kids can lie or tap through. Every other AURA screen uses real speech recognition.
-2. **Looks nothing like the rest of the game.** Bare gradient, no battle frame, no HP/power bars, no "battle arena" chrome. Bouncer/Wiggleworm are floating on a blank field.
-3. **Word card is too sterile / hard to scan.** Tiny "Word 1 of N" header, plain white card, no syllable break, no emoji hint, no visual rhythm with the rest of the app.
+2. **Fix the cropped / oversized screen**
+   - Make `RPGOneWordReader` fit inside the visible game area instead of adding another full-screen layout inside `AuraPractice`.
+   - Remove the extra outer spacing conflict, reduce fixed sprite/card heights, and use responsive `min-h-0`, `h-full`, and compact mobile/tablet sizing so the mic controls stay visible at the current 690×636 preview size.
+   - Keep the battle frame visually aligned with the existing RPG screens instead of a huge isolated card that pushes content below the viewport.
 
-The root cause: I built `RPGOneWordReader.tsx` from scratch with custom Hear it / I read it! / Skip buttons instead of reusing **`RPGWordReader.tsx`** — the 1,470-line component every other battle uses, which already has mic management, echo retry, speech matching, mic troubleshooter, emoji pops, and feedback overlay.
+3. **Make it feel more “perfect” and consistent with RPG battles**
+   - Add an enemy HP bar/nameplate and defeat state.
+   - Add clearer “attack on read” visual sequence: hero/knight attacks, enemy flashes, damage floats, HP drops.
+   - Improve the current word panel so it is readable but not oversized, and make the embedded mic reader compact enough that the active word, mic button, and progress are all visible without clipping.
 
-## The fix — one focused refactor
+4. **Clean integration details**
+   - Update Pre-K completion stats to report real damage dealt alongside words/stars, while preserving the existing saved completion flow.
+   - Avoid backend/schema changes.
+   - Reuse existing `RPGWordReader`, `RPGCharacterSprite`, `VerbAnimationLayer`, and pronunciation/mic logic rather than replacing the mic system.
 
-Rebuild `RPGOneWordReader.tsx` to be a **Pre-K-skinned battle screen** that wraps the real `RPGWordReader`.
+## Files expected to change
 
-### Layout (matches RPGBattleArena visual language)
+- `src/components/aura/game/rpg/RPGOneWordReader.tsx`
+- `src/pages/student/AuraPractice.tsx` only if needed to remove the nested layout/spacing that causes clipping
 
-```text
-┌────────────────────────────────────────────────────┐
-│  ← Map        World 1 · Level 2        ⭐ 3/5      │  ← top bar (same as battle)
-├────────────────────────────────────────────────────┤
-│  ╔══════════════════════════════════════════════╗  │
-│  ║  [Wiggleworm]                    [Knight]    ║  │  ← character row, same sprite sizes
-│  ║   Wiggleworm                     You got it! ║  │     as battle arena
-│  ║                                               ║  │
-│  ║          ┌──────────────────────┐             ║  │
-│  ║          │                      │             ║  │
-│  ║          │       JUMP           │             ║  │  ← BIG word card, lowercase
-│  ║          │       jump           │             ║  │     w/ phonetic hint below
-│  ║          │       j • u • mp     │             ║  │
-│  ║          │   ✨ Watch what       │             ║  │
-│  ║          │      happens!        │             ║  │
-│  ║          └──────────────────────┘             ║  │
-│  ║                                               ║  │
-│  ║   [🎤 Listening... say it!]    [🔊 Hear it]   ║  │  ← REAL mic, animated pulse
-│  ║                                               ║  │
-│  ║   ●●●○○  word 3 of 5                          ║  │  ← progress dots
-│  ╚══════════════════════════════════════════════╝  │
-│  Battle-frame border + soft shadow (same as arena) │
-└────────────────────────────────────────────────────┘
-```
+## Acceptance checks
 
-### Behavior
-
-- **Speech recognition is the primary input.** Use `RPGWordReader` directly with `words={preKWords}`, `batchSize={preKWords.length}`, `enableEchoRetry={true}`, `mode="fast"` (Pre-K = lenient matching).
-- **`onResult(correct, ...)`**: on correct → fire `triggerVerb(word)` so Bouncer/Wiggleworm/Echo do their animation, then `RPGWordReader` auto-advances. On wrong → echo-retry kicks in (already built into the reader).
-- **`onBatchComplete(results)`**: compute stars from `results.filter(r => r.result === 'correct').length / results.length` and call `onComplete`.
-- **"Hear it" button** stays — calls `playCorrectPronunciation(currentWord)` (TTS).
-- **No "I read it!" or "Skip" buttons.** Pre-K kids prove they read it by saying it; teachers can hold the mic for shy kids.
-- **Mic permission prompt:** reuse `MicTroubleshooterModal` (already wired into `RPGWordReader`).
-
-### Visual consistency with battle arena
-
-- Wrap stage in the same `RPGBattleBackground` component the arena uses, with a Pre-K background variant (soft cloud/meadow scene, not the dark dungeon). Add `bg_meadow_pink`, `bg_meadow_yellow`, `bg_meadow_green` to `RPGBattleBackground.tsx` keyed off `world.id` 101/102/103.
-- Same character sprite sizing (`size="lg"`), same drop-shadow, same idle-bob animation as arena.
-- Word card: white rounded-3xl card with the same shadow/border treatment as `RPGCharacterSprite` name plates. Show the word in **lowercase 8xl** (kids learn lowercase first), with a smaller syllable hint (`j • u • mp`) below in muted color, and the purple "Watch what happens!" badge only when a verb animation is queued.
-- Add a tiny progress dot row (●●●○○) instead of "Word 3 of 5" text.
-
-## Files to change
-
-| File | Change |
-|---|---|
-| `src/components/aura/game/rpg/RPGOneWordReader.tsx` | Rewrite: wrap `RPGWordReader`, add Pre-K chrome, route `onResult` → verb animation, `onBatchComplete` → stars |
-| `src/components/aura/game/rpg/RPGBattleBackground.tsx` | Add 3 Pre-K meadow background variants keyed by world id |
-| (no other files) | Routing in `AuraPractice.tsx` already sends Pre-K to this component — no change there |
-
-## Out of scope
-
-- New sprite art (Wiggleworm/Bouncer/Echo from Phase 1 stay)
-- Word bank changes
-- HP / damage / battle stats — Pre-K stays "no fail" with infinite retries, just like now
-- School Mode pivot, grades 1+ flow
-
-Ready to implement on approval.
+- Correctly read words visibly damage the enemy and reduce HP.
+- Enemy defeat/completion still happens after the lesson.
+- At 690×636, the screen no longer cuts off the important controls.
+- The mic reader remains present and usable.
+- Pre-K worlds still use distinct words/enemies/background themes.
