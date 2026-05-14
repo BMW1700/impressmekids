@@ -345,9 +345,9 @@ const AuraPractice = () => {
       setRpgView('level_select');
     };
     return (
-      <div className="h-screen flex flex-col bg-background overflow-hidden" onClick={handlePageInteraction}>
+      <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
         {isGameMode ? <GameHeader studentId={user?.id} /> : <Header />}
-        <main className="flex-1 min-h-0 px-2 py-2">
+        <main className="flex-1 container mx-auto px-4 py-8">
           <RPGOneWordReader
             world={selectedWorld}
             level={selectedLevel}
