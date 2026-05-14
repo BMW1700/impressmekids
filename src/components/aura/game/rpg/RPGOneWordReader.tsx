@@ -53,7 +53,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
   // Hint when current word maps to a verb animation
   const verbHint = useMemo(() => resolveVerbAnimation(current), [current]);
 
-  useVerbAnimation(verbTrigger); // wires nothing visible here, but keeps cooldown state warm
+  const verb = useVerbAnimation(verbTrigger);
 
   const handleHear = () => {
     if (!current) return;
