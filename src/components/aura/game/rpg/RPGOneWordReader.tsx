@@ -76,46 +76,75 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
   const [currentIndex, setCurrentIndex] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
   const correctRef = useRef(0);
+  const [enemyHp, setEnemyHp] = useState(100);
+  const damagePerWord = items.length > 0 ? 100 / items.length : 100;
 
   const [heroAttacking, setHeroAttacking] = useState(false);
   const [enemyHit, setEnemyHit] = useState(false);
   const [shake, setShake] = useState(false);
   const [floatStar, setFloatStar] = useState<{ id: number } | null>(null);
+  const [floatDmg, setFloatDmg] = useState<{ id: number; n: number } | null>(null);
 
   const [verbTrigger, setVerbTrigger] = useState<{ word: string; nonce: number } | null>(null);
   const nonceRef = useRef(0);
   const verb = useVerbAnimation(verbTrigger);
+  const verbActiveRef = useRef(false);
+  const pendingCompleteRef = useRef<null | (() => void)>(null);
 
   // Reset when level changes
   useEffect(() => {
     setCurrentIndex(0);
     setCorrectCount(0);
     correctRef.current = 0;
+    setEnemyHp(100);
+    verbActiveRef.current = false;
+    pendingCompleteRef.current = null;
   }, [world.id, level.id]);
 
   const currentWord = items[currentIndex] ?? "";
   const verbHint = useMemo(() => resolveVerbAnimation(currentWord), [currentWord]);
   const allDone = correctCount >= items.length;
 
+  // Track verb animation lifecycle so we can defer completion until it finishes
+  useEffect(() => {
+    if (!verb) return;
+    verbActiveRef.current = true;
+    const t = window.setTimeout(() => {
+      verbActiveRef.current = false;
+      if (pendingCompleteRef.current) {
+        const fn = pendingCompleteRef.current;
+        pendingCompleteRef.current = null;
+        fn();
+      }
+    }, 1400);
+    return () => window.clearTimeout(t);
+  }, [verb?.id]);
+
   const triggerHit = useCallback((word: string) => {
     setHeroAttacking(true);
+    const dmg = Math.round(damagePerWord);
     setFloatStar({ id: Date.now() });
+    setFloatDmg({ id: Date.now() + 1, n: dmg });
     window.setTimeout(() => {
       setHeroAttacking(false);
       setEnemyHit(true);
       setShake(true);
+      setEnemyHp((hp) => Math.max(0, hp - damagePerWord));
       window.setTimeout(() => {
         setEnemyHit(false);
         setShake(false);
       }, 400);
-      window.setTimeout(() => setFloatStar(null), 900);
+      window.setTimeout(() => {
+        setFloatStar(null);
+        setFloatDmg(null);
+      }, 900);
     }, 220);
 
     if (resolveVerbAnimation(word)) {
       nonceRef.current += 1;
       setVerbTrigger({ word, nonce: nonceRef.current });
     }
-  }, []);
+  }, [damagePerWord]);
 
   const handleResult = useCallback(
     (correct: boolean, _spoken: string, wordIndex: number) => {
@@ -135,7 +164,15 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
       const correct = results.filter((r) => r.result === "correct").length;
       const accuracy = results.length > 0 ? correct / results.length : 0;
       const stars = accuracy >= 0.9 ? 3 : accuracy >= 0.7 ? 2 : 1;
-      onComplete({ wordsRead: results.length, correctWords: correct, stars });
+      const finish = () =>
+        onComplete({ wordsRead: results.length, correctWords: correct, stars });
+      // If a verb animation is still playing, wait for it to finish before ending.
+      if (verbActiveRef.current) {
+        pendingCompleteRef.current = finish;
+      } else {
+        // Tiny grace period so the last hit/star can render
+        window.setTimeout(finish, 600);
+      }
     },
     [onComplete]
   );
@@ -176,12 +213,20 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
           </div>
         </div>
 
-        {/* Battle row */}
-        <div className="flex min-h-0 flex-1 items-end justify-between gap-3 px-2">
-          {/* Friendly creature (no HP) */}
+        {/* Battle row — both characters aligned at center vertically */}
+        <div className="flex min-h-0 flex-1 items-center justify-between gap-3 px-2">
+          {/* Friendly creature with HP bar */}
           <div className="relative flex flex-col items-center w-[44%]">
-            <div className="text-xs sm:text-sm font-bold text-slate-700 bg-white/90 rounded-full px-3 py-1 shadow mb-2">
+            <div className="text-xs sm:text-sm font-bold text-slate-700 bg-white/90 rounded-full px-3 py-1 shadow mb-1">
               {enemyName(enemy)}
+            </div>
+            {/* HP bar */}
+            <div className="w-full max-w-[160px] h-3 bg-slate-900/30 rounded-full overflow-hidden border border-white/60 shadow-inner mb-2">
+              <motion.div
+                className="h-full bg-gradient-to-r from-rose-400 via-rose-500 to-red-500"
+                animate={{ width: `${enemyHp}%` }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+              />
             </div>
             <motion.div
               key={`enemy-${verb?.id ?? 0}`}
@@ -199,7 +244,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                   ? { duration: 0.9, ease: "easeInOut" }
                   : { duration: 2, repeat: Infinity, ease: "easeInOut" }
               }
-              className="relative flex h-[92px] items-end justify-center sm:h-[112px]"
+              className="relative flex h-[112px] items-end justify-center sm:h-[132px]"
               style={{ transformOrigin: "center bottom" }}
             >
               <div className="h-full w-[118px] sm:w-[140px]">
@@ -215,7 +260,6 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                 id={verb?.id ?? null}
                 anchor={{ x: 50, y: 50 }}
               />
-              {/* Friendly +1 star feedback (replaces damage number) */}
               <AnimatePresence>
                 {floatStar && (
                   <motion.div
@@ -224,9 +268,21 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                     animate={{ opacity: 1, y: -60, scale: 1.3 }}
                     exit={{ opacity: 0, y: -80 }}
                     transition={{ duration: 0.8 }}
-                    className="absolute top-2 left-1/2 -translate-x-1/2 text-3xl sm:text-4xl font-black text-amber-500 drop-shadow-[0_2px_0_white] flex items-center gap-1"
+                    className="absolute top-2 left-1/2 -translate-x-1/2 text-2xl sm:text-3xl font-black text-amber-500 drop-shadow-[0_2px_0_white] flex items-center gap-1"
                   >
                     +1 ⭐
+                  </motion.div>
+                )}
+                {floatDmg && (
+                  <motion.div
+                    key={floatDmg.id}
+                    initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                    animate={{ opacity: 1, y: -40, scale: 1.4 }}
+                    exit={{ opacity: 0, y: -70 }}
+                    transition={{ duration: 0.8 }}
+                    className="absolute top-10 left-1/2 -translate-x-1/2 text-2xl sm:text-3xl font-black text-red-500 drop-shadow-[0_2px_0_white]"
+                  >
+                    -{floatDmg.n}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -249,7 +305,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                   ? { duration: 0.22, ease: "easeOut" }
                   : { y: { duration: 2.2, repeat: Infinity, ease: "easeInOut" } }
               }
-              className="flex h-[92px] w-[118px] items-end justify-center sm:h-[112px] sm:w-[140px]"
+              className="flex h-[112px] w-[118px] items-end justify-center sm:h-[132px] sm:w-[140px]"
             >
               <RPGCharacterSprite type="knight" size="lg" isAttacking={heroAttacking} />
             </motion.div>
