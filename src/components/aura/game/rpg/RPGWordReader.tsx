@@ -466,7 +466,6 @@ export const RPGWordReader = ({
 
   // Handle "Try Again" - retry the word for practice (no game rewards)
   // Note: Uses ref to avoid circular dependency with startRecognitionSession
-  const startRecognitionRef = useRef<(() => void) | null>(null);
   
   const handleTryAgain = useCallback(() => {
     if (!pendingIncorrectWord) return;
