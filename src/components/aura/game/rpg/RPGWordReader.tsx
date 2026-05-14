@@ -161,6 +161,16 @@ export const RPGWordReader = ({
   // Guard against duplicate onBatchComplete from late-arriving final transcripts
   const batchCompletedRef = useRef(false);
 
+  // CRITICAL: Refs to current props so the long-lived recognition.onresult
+  // closure always reads the *current* batch, not the batch that existed
+  // when recognition was first started. Without this, after batch N
+  // completes the live mic still grades batch N+1's first word against
+  // batch N's first word (already completed) and marks it wrong.
+  const wordsRef = useRef(words);
+  const batchSizeRef = useRef(batchSize);
+  useEffect(() => { wordsRef.current = words; }, [words]);
+  useEffect(() => { batchSizeRef.current = batchSize; }, [batchSize]);
+
   // Keep refs in sync
   useEffect(() => {
     currentIndexRef.current = currentIndex;
@@ -186,6 +196,9 @@ export const RPGWordReader = ({
       isRetryAttemptRef.current = false;
       isProcessingRef.current = false;
       batchCompletedRef.current = false;
+      // Clear processed-finals tracker so the next batch's first final
+      // result isn't accidentally skipped as "already handled".
+      processedFinalsRef.current.clear();
     }
   }, [wordsKey]);
 
@@ -600,11 +613,16 @@ export const RPGWordReader = ({
     }, 1500);
   }, [handleIncorrectFinal]);
 
-  // Get target word from ref-synced index (avoids stale closure)
+  // Get target word from refs — stable identity, always reads the *current*
+  // words/batchSize props. This is critical because the long-lived
+  // SpeechRecognition.onresult closure captures this function, and we must
+  // never grade the new batch's word against the previous batch's array.
   const getTargetWord = useCallback((index: number) => {
-    const batch = words?.slice(0, Math.min(batchSize, words?.length || 0)) || [];
+    const w = wordsRef.current;
+    const bs = batchSizeRef.current;
+    const batch = w?.slice(0, Math.min(bs, w?.length || 0)) || [];
     return batch[index]?.replace(/[^a-zA-Z']/g, '') || '';
-  }, [words, batchSize]);
+  }, []);
 
   // State ref for echo retry (avoid stale closure)
   const recognitionStateRef = useRef<RecognitionState>('idle');
@@ -620,6 +638,19 @@ export const RPGWordReader = ({
 
   // Explicit ref: are we currently doing the one allowed retry attempt?
   const isRetryAttemptRef = useRef(false);
+
+  // Refs to the latest handler implementations so the long-lived
+  // SpeechRecognition.onresult closure always invokes the current versions
+  // (which read the current `words` prop). Without these, the new batch's
+  // first word is graded against the previous batch's array.
+  const processResultRef = useRef<((t: string, alts: string[]) => void) | null>(null);
+  const handleCorrectRef = useRef<((s: string, i: number) => void) | null>(null);
+  const handleRetrySuccessRef = useRef<((s: string, i: number) => void) | null>(null);
+
+  // Shared ref for tracking processed final-result indices across the
+  // long-lived recognition session. Lives outside startRecognitionSession
+  // so we can clear it on batch transitions.
+  const processedFinalsRef = useRef<Set<number>>(new Set());
 
   // Process speech result
   const processResult = useCallback((transcript: string, alternatives: string[]) => {
@@ -691,6 +722,16 @@ export const RPGWordReader = ({
     }
   }, [getTargetWord, enableEchoRetry, handleCorrect, handleRetrySuccess, handleIncorrectFinal, startEchoRetry]);
 
+  // Keep refs to the latest handlers so the long-lived recognition.onresult
+  // closure (created once when the mic starts) always invokes the current
+  // implementations — which in turn read the current `words` prop. This is
+  // what fixes "first word of next batch is marked wrong" after batch swap.
+  useEffect(() => {
+    processResultRef.current = processResult;
+    handleCorrectRef.current = handleCorrect;
+    handleRetrySuccessRef.current = handleRetrySuccess;
+  }, [processResult, handleCorrect, handleRetrySuccess]);
+
   // Create and start the recognition session (ONE instance, kept alive)
   const startRecognitionSession = useCallback(() => {
     if (disabled) return;
@@ -749,15 +790,12 @@ export const RPGWordReader = ({
       console.log('[RPGWordReader] Recognition started');
       isRecognitionRunningRef.current = true;
       isRecognitionStartingRef.current = false;
-      processedResultsRef.current.clear();
+      processedFinalsRef.current.clear();
       if (!isProcessingRef.current) {
         setRecognitionState('listening');
       }
     };
-    
-    // Track which results we've already processed to avoid double-processing
-    const processedResultsRef = { current: new Set<number>() };
-    
+
     recognition.onresult = (event: any) => {
       if (!isCurrentSession()) {
         console.log('[RPGWordReader] Ignoring stale result', { sessionId });
@@ -767,12 +805,12 @@ export const RPGWordReader = ({
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
         const transcript = result[0]?.transcript?.trim() || '';
-        
+
         // Show interim results for the latest
         if (!result.isFinal) {
           if (!isProcessingRef.current && i === event.results.length - 1) {
             setSpokenText(transcript.toLowerCase());
-            
+
             // FAST MODE: Process interim results for quicker matching (Elara only)
             // CRITICAL FIX: Must respect retry state - route through proper handlers
             if (mode === 'fast' && !isProcessingRef.current) {
@@ -783,15 +821,15 @@ export const RPGWordReader = ({
                 for (const word of wordsSpoken) {
                   if (isWordMatchLenient(word, targetWord)) {
                     // Match found in interim - process immediately, but respect retry state!
-                    processedResultsRef.current.add(i);
-                    
-                    // If this is a retry attempt, route to handleRetrySuccess for YELLOW result
+                    processedFinalsRef.current.add(i);
+
+                    // Always invoke through refs so we hit the handlers that
+                    // close over the *current* batch's words.
                     if (isRetryAttemptRef.current || !canRetryRef.current) {
                       console.log('[RPGWordReader] FAST MODE: Routing to handleRetrySuccess (retry attempt)');
-                      handleRetrySuccess(word, wordIdx);
+                      handleRetrySuccessRef.current?.(word, wordIdx);
                     } else {
-                      // Normal first-try success - GREEN result
-                      handleCorrect(word, wordIdx);
+                      handleCorrectRef.current?.(word, wordIdx);
                     }
                     return;
                   }
@@ -801,17 +839,17 @@ export const RPGWordReader = ({
           }
           continue;
         }
-        
+
         // Skip if we already processed this result index
-        if (processedResultsRef.current.has(i)) {
+        if (processedFinalsRef.current.has(i)) {
           continue;
         }
-        processedResultsRef.current.add(i);
-        
+        processedFinalsRef.current.add(i);
+
         // Final result - process it
         const wordIdx = currentIndexRef.current;
         console.log('[RPGWordReader] Final transcript:', transcript, '| wordIndex:', wordIdx, '| target:', getTargetWord(wordIdx));
-        
+
         // Collect alternatives
         const alternatives: string[] = [];
         for (let j = 0; j < result.length; j++) {
@@ -819,7 +857,9 @@ export const RPGWordReader = ({
           if (alt) alternatives.push(alt);
         }
         
-        processResult(transcript, alternatives);
+        // Invoke through ref so we use the latest processResult (which
+        // closes over the current `words` prop / batch).
+        processResultRef.current?.(transcript, alternatives);
       }
     };
     
