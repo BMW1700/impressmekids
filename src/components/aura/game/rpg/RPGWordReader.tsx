@@ -465,14 +465,19 @@ export const RPGWordReader = ({
       ? Date.now() - wordDisplayTimestampRef.current
       : undefined;
     
-    // Mark word as completed and report to parent (deals damage, gives coins)
-    setCompletedWords(prev => new Set([...prev, wordIndex]));
-    onResult(true, spokenWord, wordIndex, responseTimeMs);
-    
     // CRITICAL FIX: Advance index IMMEDIATELY so next speech results compare to next word
     const nextIndex = wordIndex + 1;
     const batch = words?.slice(0, Math.min(batchSize, words?.length || 0)) || [];
     const hasMoreWords = nextIndex < batch.length;
+    
+    // Mark word as completed and report to parent (deals damage, gives coins)
+    setCompletedWords(prev => new Set([...prev, wordIndex]));
+    onResult(true, spokenWord, wordIndex, responseTimeMs);
+
+    if (!hasMoreWords) {
+      isWordTransitioningRef.current = true;
+      abortActiveRecognitionForBatchTransition();
+    }
     
     if (hasMoreWords) {
       // Update refs IMMEDIATELY before any async delays
@@ -493,7 +498,7 @@ export const RPGWordReader = ({
       if (hasMoreWords) {
         setRecognitionState('listening');
       } else {
-        // Batch complete - report results (deduped); keep mic alive for next batch
+        // Batch complete - report results (deduped); next batch will restart the mic after render
         if (!batchCompletedRef.current) {
           batchCompletedRef.current = true;
           const results = Array.from(wordResults.values());
@@ -501,11 +506,10 @@ export const RPGWordReader = ({
         }
         setCurrentIndex(0);
         currentIndexRef.current = 0;
-        // Do NOT stop recognition — let it keep listening into the next batch.
         setRecognitionState('listening');
       }
     }, feedbackDelay);
-  }, [streak, onResult, onBatchComplete, words, batchSize, stopRecognitionSession, mode, currentBatch, wordResults]);
+  }, [streak, onResult, onBatchComplete, words, batchSize, stopRecognitionSession, mode, currentBatch, wordResults, abortActiveRecognitionForBatchTransition]);
 
   // Handle incorrect word (after echo fails or no echo) - NOW PAUSES FOR USER ACTION
   const handleIncorrectFinal = useCallback((spokenWord: string, expectedWord: string, wordIndex: number) => {
