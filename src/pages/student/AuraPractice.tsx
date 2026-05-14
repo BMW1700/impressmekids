@@ -425,11 +425,45 @@ const AuraPractice = () => {
     const allCompletedStories = new Set(Object.values(worldProgressData).flat());
     const completedStories = completedStoriesInWorld;
     
-    // Generate levels from world's level data + curated stories
+    const isPreKWorld = selectedWorld.mode === 'prek' || isPreKWorldId(selectedWorld.id);
+
+    // Generate levels from world's level data + curated stories (or Pre-K word banks)
     const levels: CampaignLevel[] = selectedWorld.levels.map((levelData, idx) => {
-      // Tutorial world uses a special story
       const isTutorial = selectedWorld.id === 0;
-      const story = isTutorial 
+
+      // Pre-K worlds: synthesize a lightweight story from word banks (no curated stories)
+      if (isPreKWorld) {
+        const content = getPreKContent(selectedWorld.id, levelData.id);
+        const items = content.kind === 'single' ? content.words : content.phrases;
+        const preview = items.slice(0, 3).join(' · ');
+        const title = `${selectedWorld.name} · Lesson ${levelData.id}`;
+        const story = {
+          title,
+          description: preview,
+          passage_text: items.join(' '),
+          grade_level: 0,
+          category: 'adventure' as const,
+          word_count: items.length,
+          reading_time_minutes: 1,
+          difficulty_level: 0,
+          cover_gradient: selectedWorld.gradient || 'from-pink-300 to-rose-400',
+          target_phonemes: [] as string[],
+        };
+        const isCompleted = completedStories.includes(title);
+        const isUnlocked = idx === 0 || completedStories.length >= idx;
+        return {
+          id: levelData.id,
+          story,
+          enemies: levelData.enemies as CampaignLevel['enemies'],
+          isBossLevel: levelData.isBossLevel,
+          starsEarned: isCompleted ? 2 : 0,
+          isCompleted,
+          isUnlocked,
+          isTutorial: false,
+        };
+      }
+
+      const story = isTutorial
         ? {
             title: 'Tutorial',
             description: 'Learn how to play!',
@@ -443,14 +477,14 @@ const AuraPractice = () => {
             target_phonemes: [],
           }
         : (activeStories[levelData.storyIndex] || activeStories[idx % activeStories.length]);
-      
+
       const isCompleted = completedStories.includes(story.title) || allCompletedStories.has(story.title);
-      
+
       // Unlock logic: first level always unlocked, subsequent levels unlock when previous is completed
       const prevStoryTitle = activeStories[selectedWorld.levels[idx - 1]?.storyIndex]?.title || '';
       const isPrevCompleted = completedStories.includes(prevStoryTitle) || allCompletedStories.has(prevStoryTitle);
       const isUnlocked = idx === 0 || isPrevCompleted || completedStories.length >= idx;
-      
+
       return {
         id: levelData.id,
         story,
