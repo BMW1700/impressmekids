@@ -269,14 +269,18 @@ export const RPGWordReader = ({
       setCanRetry(true); // Reset retry for next word
       return true;
     } else {
-      // Batch complete - report results
-      const results = Array.from(wordResults.values());
-      onBatchComplete?.(results);
-      
+      // Batch complete - report results (deduped)
+      if (!batchCompletedRef.current) {
+        batchCompletedRef.current = true;
+        const results = Array.from(wordResults.values());
+        onBatchComplete?.(results);
+      }
+
+      // Keep mic alive for the next batch — do NOT stop recognition here.
+      // Parent will swap in new words; the wordsKey effect will reset state
+      // and clear batchCompletedRef. Recognition keeps listening seamlessly.
       setCurrentIndex(0);
       currentIndexRef.current = 0;
-      stopRecognitionSession();
-      setRecognitionState('idle');
       return false;
     }
   }, [currentBatch.length, stopRecognitionSession, wordResults, onBatchComplete]);
