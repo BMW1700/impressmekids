@@ -131,12 +131,8 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
             >
               <RPGCharacterSprite type={enemy} isEnemy size="md" />
               <VerbAnimationLayer
-                descriptor={
-                  verbTrigger && resolveVerbAnimation(verbTrigger.word)?.kind === "emoji"
-                    ? (resolveVerbAnimation(verbTrigger.word) as any)
-                    : null
-                }
-                id={verbTrigger?.nonce ?? null}
+                descriptor={verb?.descriptor.kind === 'emoji' ? verb.descriptor : null}
+                id={verb?.id ?? null}
                 anchor={{ x: 40, y: 40 }}
               />
             </motion.div>
