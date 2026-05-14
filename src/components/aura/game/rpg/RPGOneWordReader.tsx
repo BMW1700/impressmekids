@@ -145,22 +145,22 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
   };
 
   return (
-    <div className={`relative w-full overflow-hidden rounded-3xl bg-gradient-to-br ${meadow.sky} shadow-xl`}>
+    <div className={`relative h-full min-h-0 w-full overflow-hidden rounded-3xl bg-gradient-to-br ${meadow.sky} shadow-xl`}>
       {/* Soft meadow decorations */}
       <div className="absolute inset-0 pointer-events-none opacity-40 select-none">
         <div className="absolute top-4 left-6 text-4xl">☁️</div>
         <div className="absolute top-6 right-10 text-3xl">☀️</div>
         <div className="absolute top-24 left-[20%] text-3xl">☁️</div>
-        <div className="absolute bottom-8 left-[8%] text-3xl">🌷</div>
-        <div className="absolute bottom-6 right-[12%] text-3xl">🌼</div>
-        <div className="absolute bottom-10 left-[40%] text-2xl">🌿</div>
+          <div className="absolute bottom-6 left-[8%] text-2xl">🌷</div>
+          <div className="absolute bottom-5 right-[12%] text-2xl">🌼</div>
+          <div className="absolute bottom-8 left-[40%] text-xl">🌿</div>
       </div>
       <div className={`absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t ${meadow.ground} pointer-events-none`} />
 
       <motion.div
         animate={shake ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
         transition={{ duration: 0.35 }}
-        className="relative z-10 flex flex-col p-4 sm:p-6 gap-4"
+        className="relative z-10 flex h-full min-h-0 flex-col gap-2 p-3 sm:gap-3 sm:p-4"
       >
         {/* Top bar */}
         <div className="flex items-center justify-between gap-2">
