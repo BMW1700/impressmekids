@@ -160,7 +160,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
       <motion.div
         animate={shake ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
         transition={{ duration: 0.35 }}
-        className="relative z-10 flex h-full min-h-0 flex-col gap-2 p-3 sm:gap-3 sm:p-4"
+        className="relative z-10 flex h-full min-h-0 flex-col gap-1.5 p-2.5 sm:gap-2 sm:p-3"
       >
         {/* Top bar */}
         <div className="flex items-center justify-between gap-2">
@@ -199,10 +199,10 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                   ? { duration: 0.9, ease: "easeInOut" }
                   : { duration: 2, repeat: Infinity, ease: "easeInOut" }
               }
-              className="relative flex h-[110px] items-end justify-center sm:h-[130px]"
+              className="relative flex h-[92px] items-end justify-center sm:h-[112px]"
               style={{ transformOrigin: "center bottom" }}
             >
-              <div className="h-full w-[140px] sm:w-[160px]">
+              <div className="h-full w-[118px] sm:w-[140px]">
                 <RPGCharacterSprite
                   type={enemy}
                   isEnemy
@@ -249,7 +249,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                   ? { duration: 0.22, ease: "easeOut" }
                   : { y: { duration: 2.2, repeat: Infinity, ease: "easeInOut" } }
               }
-              className="flex h-[110px] w-[140px] items-end justify-center sm:h-[130px] sm:w-[160px]"
+              className="flex h-[92px] w-[118px] items-end justify-center sm:h-[112px] sm:w-[140px]"
             >
               <RPGCharacterSprite type="knight" size="lg" isAttacking={heroAttacking} />
             </motion.div>
