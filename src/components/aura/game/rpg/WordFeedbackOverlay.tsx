@@ -230,6 +230,8 @@ export const WordFeedbackOverlay = ({
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
+    )}</>
   );
 };
