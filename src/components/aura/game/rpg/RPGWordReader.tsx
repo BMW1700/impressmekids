@@ -185,6 +185,7 @@ export const RPGWordReader = ({
       setPendingIncorrectWord(null);
       isRetryAttemptRef.current = false;
       isProcessingRef.current = false;
+      batchCompletedRef.current = false;
     }
   }, [wordsKey]);
 
