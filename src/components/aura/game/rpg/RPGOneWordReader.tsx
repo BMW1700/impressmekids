@@ -82,8 +82,6 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
   const [heroAttacking, setHeroAttacking] = useState(false);
   const [enemyHit, setEnemyHit] = useState(false);
   const [shake, setShake] = useState(false);
-  const [floatStar, setFloatStar] = useState<{ id: number } | null>(null);
-  const [floatDmg, setFloatDmg] = useState<{ id: number; n: number } | null>(null);
 
   const [verbTrigger, setVerbTrigger] = useState<{ word: string; nonce: number } | null>(null);
   const nonceRef = useRef(0);
@@ -122,9 +120,6 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
 
   const triggerHit = useCallback((word: string) => {
     setHeroAttacking(true);
-    const dmg = Math.round(damagePerWord);
-    setFloatStar({ id: Date.now() });
-    setFloatDmg({ id: Date.now() + 1, n: dmg });
     window.setTimeout(() => {
       setHeroAttacking(false);
       setEnemyHit(true);
@@ -134,10 +129,6 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
         setEnemyHit(false);
         setShake(false);
       }, 400);
-      window.setTimeout(() => {
-        setFloatStar(null);
-        setFloatDmg(null);
-      }, 900);
     }, 220);
 
     if (resolveVerbAnimation(word)) {
@@ -213,20 +204,25 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
           </div>
         </div>
 
-        {/* Battle row — both characters aligned at center vertically */}
-        <div className="flex min-h-0 flex-1 items-center justify-between gap-3 px-2">
-          {/* Friendly creature with HP bar */}
+        {/* Battle row — both characters aligned at exact same baseline */}
+        <div className="flex min-h-0 flex-1 items-end justify-between gap-3 px-2 pt-14">
+          {/* Friendly creature */}
           <div className="relative flex flex-col items-center w-[44%]">
-            <div className="text-xs sm:text-sm font-bold text-slate-700 bg-white/90 rounded-full px-3 py-1 shadow mb-1">
-              {enemyName(enemy)}
-            </div>
-            {/* HP bar */}
-            <div className="w-full max-w-[160px] h-3 bg-slate-900/30 rounded-full overflow-hidden border border-white/60 shadow-inner mb-2">
-              <motion.div
-                className="h-full bg-gradient-to-r from-rose-400 via-rose-500 to-red-500"
-                animate={{ width: `${enemyHp}%` }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-              />
+            {/* Name + HP number + HP bar — absolutely positioned so it doesn't shift sprite baseline */}
+            <div className="absolute left-1/2 -translate-x-1/2 -top-14 flex flex-col items-center gap-1 w-full">
+              <div className="text-xs sm:text-sm font-bold text-slate-700 bg-white/90 rounded-full px-3 py-0.5 shadow">
+                {enemyName(enemy)}
+              </div>
+              <div className="text-sm sm:text-base font-black text-rose-700 drop-shadow-[0_1px_0_white] leading-none">
+                {Math.max(0, Math.round(enemyHp))} HP
+              </div>
+              <div className="w-full max-w-[160px] h-3 bg-slate-900/30 rounded-full overflow-hidden border border-white/60 shadow-inner">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-rose-400 via-rose-500 to-red-500"
+                  animate={{ width: `${enemyHp}%` }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                />
+              </div>
             </div>
             <motion.div
               key={`enemy-${verb?.id ?? 0}`}
@@ -260,38 +256,12 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                 id={verb?.id ?? null}
                 anchor={{ x: 50, y: 50 }}
               />
-              <AnimatePresence>
-                {floatStar && (
-                  <motion.div
-                    key={floatStar.id}
-                    initial={{ opacity: 0, y: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, y: -60, scale: 1.3 }}
-                    exit={{ opacity: 0, y: -80 }}
-                    transition={{ duration: 0.8 }}
-                    className="absolute top-2 left-1/2 -translate-x-1/2 text-2xl sm:text-3xl font-black text-amber-500 drop-shadow-[0_2px_0_white] flex items-center gap-1"
-                  >
-                    +1 ⭐
-                  </motion.div>
-                )}
-                {floatDmg && (
-                  <motion.div
-                    key={floatDmg.id}
-                    initial={{ opacity: 0, y: 10, scale: 0.8 }}
-                    animate={{ opacity: 1, y: -40, scale: 1.4 }}
-                    exit={{ opacity: 0, y: -70 }}
-                    transition={{ duration: 0.8 }}
-                    className="absolute top-10 left-1/2 -translate-x-1/2 text-2xl sm:text-3xl font-black text-red-500 drop-shadow-[0_2px_0_white]"
-                  >
-                    -{floatDmg.n}
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </motion.div>
           </div>
 
           {/* Knight */}
           <div className="relative flex flex-col items-center w-[44%]">
-            <div className="text-xs sm:text-sm font-bold text-slate-700 bg-white/90 rounded-full px-3 py-1 shadow mb-2">
+            <div className="absolute left-1/2 -translate-x-1/2 -top-14 text-xs sm:text-sm font-bold text-slate-700 bg-white/90 rounded-full px-3 py-0.5 shadow whitespace-nowrap">
               You can do it!
             </div>
             <motion.div
