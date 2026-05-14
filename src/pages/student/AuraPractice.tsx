@@ -501,7 +501,13 @@ const AuraPractice = () => {
       setSelectedLevel(level);
       setRpgStory(level.story);
       setSelectedBattleMode(battleMode); // Save the selected battle mode
-      
+
+      // Pre-K worlds: skip the standard battle and go straight to the One-Word Reader
+      if (isPreKWorld) {
+        setRpgView('prek_reader');
+        return;
+      }
+
       // Set enemy type based on level
       const primaryEnemy = level.enemies[0];
       // Map all campaign enemy types to battle enemy types
@@ -540,9 +546,9 @@ const AuraPractice = () => {
         the_librarian: 'the_librarian',
       };
       setRpgEnemyType(enemyMap[primaryEnemy] || 'minion');
-      
+
       console.log('[AuraPractice] Selected battle mode:', battleMode);
-      
+
       // Start battle session in database
       try {
         const battleSession = await startBattle({
@@ -556,7 +562,7 @@ const AuraPractice = () => {
       } catch (error) {
         console.error('Failed to start battle session:', error);
       }
-      
+
       setRpgView('battle');
     };
 
