@@ -494,6 +494,12 @@ export const RPGWordReader = ({
 
   // Handle incorrect word (after echo fails or no echo) - NOW PAUSES FOR USER ACTION
   const handleIncorrectFinal = useCallback((spokenWord: string, expectedWord: string, wordIndex: number) => {
+    const token = speechTargetTokenRef.current;
+    if (isWordTransitioningRef.current || Date.now() < token.armedAt || token.index !== wordIndex || token.word !== expectedWord) {
+      console.log('[RPGWordReader] Ignoring stale incorrect during transition', { spokenWord, expectedWord, wordIndex, token });
+      return;
+    }
+
     isProcessingRef.current = true;
     
     // Track as missed (RED) - can become 'retried' (YELLOW) if they try again
@@ -666,6 +672,12 @@ export const RPGWordReader = ({
 
   // Start echo retry mode
   const startEchoRetry = useCallback((spokenWord: string, expectedWord: string, wordIndex: number) => {
+    const token = speechTargetTokenRef.current;
+    if (isWordTransitioningRef.current || Date.now() < token.armedAt || token.index !== wordIndex || token.word !== expectedWord) {
+      console.log('[RPGWordReader] Suppressing echo retry during transition', { spokenWord, expectedWord, wordIndex, token });
+      return;
+    }
+
     setRecognitionState('echo_retry');
     setSpokenText(spokenWord);
     setEchoCountdown(1.5);
@@ -736,17 +748,31 @@ export const RPGWordReader = ({
   // Process speech result
   const processResult = useCallback((transcript: string, alternatives: string[]) => {
     if (isProcessingRef.current) return;
+    const cleanTranscript = transcript.trim();
+    if (!cleanTranscript) return;
     
     const wordIndex = currentIndexRef.current;
     const targetWord = getTargetWord(wordIndex);
+    const token = speechTargetTokenRef.current;
+    const now = Date.now();
+    if (
+      isWordTransitioningRef.current ||
+      now < token.armedAt ||
+      token.generation !== wordGenerationRef.current ||
+      token.index !== wordIndex ||
+      token.word !== targetWord
+    ) {
+      console.log('[RPGWordReader] Ignoring speech while target is not armed', { transcript: cleanTranscript, wordIndex, targetWord, token });
+      return;
+    }
     
-    console.log('[RPGWordReader] Processing:', { transcript, targetWord, wordIndex, canRetry: canRetryRef.current });
+    console.log('[RPGWordReader] Processing:', { transcript: cleanTranscript, targetWord, wordIndex, canRetry: canRetryRef.current });
     
     if (!targetWord) return;
     
     // Check all alternatives for a match
     let matched = false;
-    let bestSpoken = transcript;
+    let bestSpoken = cleanTranscript;
     
     // Check alternatives first
     for (const alt of alternatives) {
@@ -763,7 +789,7 @@ export const RPGWordReader = ({
     
     // Check main transcript words
     if (!matched) {
-      const wordsSpoken = transcript.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+      const wordsSpoken = cleanTranscript.toLowerCase().split(/\s+/).filter(w => w.length > 0);
       for (const word of wordsSpoken) {
         if (isWordMatchLenient(word, targetWord)) {
           matched = true;
@@ -791,14 +817,14 @@ export const RPGWordReader = ({
       // If this is a retry attempt and they got it wrong again, show overlay
       if (isRetryAttemptRef.current || !canRetryRef.current) {
         // Failed retry - go straight to continue (they already had their chance)
-        handleIncorrectFinal(transcript, targetWord, wordIndex);
+        handleIncorrectFinal(cleanTranscript, targetWord, wordIndex);
       } else if (enableEchoRetry && currentRecState !== 'echo_retry') {
-        startEchoRetry(transcript, targetWord, wordIndex);
+        startEchoRetry(cleanTranscript, targetWord, wordIndex);
       } else if (currentRecState === 'echo_retry') {
         // Already in echo - this attempt also failed, but let timeout handle final
-        setSpokenText(transcript);
+        setSpokenText(cleanTranscript);
       } else {
-        handleIncorrectFinal(transcript, targetWord, wordIndex);
+        handleIncorrectFinal(cleanTranscript, targetWord, wordIndex);
       }
     }
   }, [getTargetWord, enableEchoRetry, handleCorrect, handleRetrySuccess, handleIncorrectFinal, startEchoRetry]);
