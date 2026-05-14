@@ -49,6 +49,15 @@ type RecognitionState = 'idle' | 'listening' | 'processing' | 'paused' | 'echo_r
 
 const soundEffects = new SoundEffects();
 let emojiPopId = 0;
+const WORD_TRANSITION_ARM_MS = 260;
+
+interface SpeechTargetToken {
+  id: number;
+  generation: number;
+  index: number;
+  word: string;
+  armedAt: number;
+}
 
 // Helper: Simple phonetic breakdown for learning hints
 const getPhoneticHint = (word: string): string => {
@@ -142,12 +151,22 @@ export const RPGWordReader = ({
   const currentIndexRef = useRef(0);
   const isProcessingRef = useRef(false);
   const shouldBeListeningRef = useRef(false);
+  const isWordTransitioningRef = useRef(false);
+  const speechTargetTokenRef = useRef<SpeechTargetToken>({
+    id: 0,
+    generation: 0,
+    index: 0,
+    word: '',
+    armedAt: Date.now() + WORD_TRANSITION_ARM_MS,
+  });
+  const startRecognitionRef = useRef<(() => void) | null>(null);
   
   // Timeout refs
   const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const echoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const echoIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const targetArmTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Response time tracking for patent-critical speed-based damage
   const wordDisplayTimestampRef = useRef<number>(0);
@@ -195,10 +214,42 @@ export const RPGWordReader = ({
       setPendingIncorrectWord(null);
       isRetryAttemptRef.current = false;
       isProcessingRef.current = false;
+      isWordTransitioningRef.current = true;
       batchCompletedRef.current = false;
+      if (feedbackTimeoutRef.current) {
+        clearTimeout(feedbackTimeoutRef.current);
+        feedbackTimeoutRef.current = null;
+      }
+      if (echoTimeoutRef.current) {
+        clearTimeout(echoTimeoutRef.current);
+        echoTimeoutRef.current = null;
+      }
+      if (echoIntervalRef.current) {
+        clearInterval(echoIntervalRef.current);
+        echoIntervalRef.current = null;
+      }
       // Clear processed-finals tracker so the next batch's first final
       // result isn't accidentally skipped as "already handled".
       processedFinalsRef.current.clear();
+      const activeRecognition = recognitionRef.current;
+      if (activeRecognition) {
+        speechSessionIdRef.current += 1;
+        recognitionRef.current = null;
+        isRecognitionRunningRef.current = false;
+        isRecognitionStartingRef.current = false;
+        try {
+          if (typeof activeRecognition.abort === 'function') activeRecognition.abort();
+          else activeRecognition.stop();
+        } catch (e) {}
+      }
+      if (shouldBeListeningRef.current) {
+        if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
+        restartTimeoutRef.current = setTimeout(() => {
+          if (shouldBeListeningRef.current && !recognitionRef.current && !isRecognitionRunningRef.current && !isRecognitionStartingRef.current) {
+            startRecognitionRef.current?.();
+          }
+        }, WORD_TRANSITION_ARM_MS + 120);
+      }
     }
   }, [wordsKey]);
 
@@ -208,6 +259,33 @@ export const RPGWordReader = ({
   }, [words, batchSize]);
   const currentWord = currentBatch[currentIndex] || "";
   const cleanWord = currentWord.replace(/[^a-zA-Z']/g, '');
+
+  useEffect(() => {
+    const tokenId = speechTargetTokenRef.current.id + 1;
+    const generation = wordGenerationRef.current;
+    const armedAt = Date.now() + WORD_TRANSITION_ARM_MS;
+    const targetWord = cleanWord;
+
+    isWordTransitioningRef.current = true;
+    speechTargetTokenRef.current = { id: tokenId, generation, index: currentIndex, word: targetWord, armedAt };
+
+    if (targetArmTimeoutRef.current) clearTimeout(targetArmTimeoutRef.current);
+    targetArmTimeoutRef.current = setTimeout(() => {
+      const token = speechTargetTokenRef.current;
+      if (token.id === tokenId && token.generation === generation && token.index === currentIndex && token.word === targetWord) {
+        isWordTransitioningRef.current = false;
+        wordDisplayTimestampRef.current = Date.now();
+      }
+      targetArmTimeoutRef.current = null;
+    }, WORD_TRANSITION_ARM_MS);
+
+    return () => {
+      if (targetArmTimeoutRef.current) {
+        clearTimeout(targetArmTimeoutRef.current);
+        targetArmTimeoutRef.current = null;
+      }
+    };
+  }, [cleanWord, currentIndex, wordsKey]);
 
   // Clear all timeouts
   const clearAllTimeouts = useCallback(() => {
@@ -226,6 +304,25 @@ export const RPGWordReader = ({
     if (echoIntervalRef.current) {
       clearInterval(echoIntervalRef.current);
       echoIntervalRef.current = null;
+    }
+    if (targetArmTimeoutRef.current) {
+      clearTimeout(targetArmTimeoutRef.current);
+      targetArmTimeoutRef.current = null;
+    }
+  }, []);
+
+  const abortActiveRecognitionForBatchTransition = useCallback(() => {
+    speechSessionIdRef.current += 1;
+    processedFinalsRef.current.clear();
+    isRecognitionRunningRef.current = false;
+    isRecognitionStartingRef.current = false;
+    const activeRecognition = recognitionRef.current;
+    recognitionRef.current = null;
+    if (activeRecognition) {
+      try {
+        if (typeof activeRecognition.abort === 'function') activeRecognition.abort();
+        else activeRecognition.stop();
+      } catch (e) {}
     }
   }, []);
 
@@ -368,14 +465,19 @@ export const RPGWordReader = ({
       ? Date.now() - wordDisplayTimestampRef.current
       : undefined;
     
-    // Mark word as completed and report to parent (deals damage, gives coins)
-    setCompletedWords(prev => new Set([...prev, wordIndex]));
-    onResult(true, spokenWord, wordIndex, responseTimeMs);
-    
     // CRITICAL FIX: Advance index IMMEDIATELY so next speech results compare to next word
     const nextIndex = wordIndex + 1;
     const batch = words?.slice(0, Math.min(batchSize, words?.length || 0)) || [];
     const hasMoreWords = nextIndex < batch.length;
+    
+    // Mark word as completed and report to parent (deals damage, gives coins)
+    setCompletedWords(prev => new Set([...prev, wordIndex]));
+    onResult(true, spokenWord, wordIndex, responseTimeMs);
+
+    if (!hasMoreWords) {
+      isWordTransitioningRef.current = true;
+      abortActiveRecognitionForBatchTransition();
+    }
     
     if (hasMoreWords) {
       // Update refs IMMEDIATELY before any async delays
@@ -396,7 +498,7 @@ export const RPGWordReader = ({
       if (hasMoreWords) {
         setRecognitionState('listening');
       } else {
-        // Batch complete - report results (deduped); keep mic alive for next batch
+        // Batch complete - report results (deduped); next batch will restart the mic after render
         if (!batchCompletedRef.current) {
           batchCompletedRef.current = true;
           const results = Array.from(wordResults.values());
@@ -404,14 +506,19 @@ export const RPGWordReader = ({
         }
         setCurrentIndex(0);
         currentIndexRef.current = 0;
-        // Do NOT stop recognition — let it keep listening into the next batch.
         setRecognitionState('listening');
       }
     }, feedbackDelay);
-  }, [streak, onResult, onBatchComplete, words, batchSize, stopRecognitionSession, mode, currentBatch, wordResults]);
+  }, [streak, onResult, onBatchComplete, words, batchSize, stopRecognitionSession, mode, currentBatch, wordResults, abortActiveRecognitionForBatchTransition]);
 
   // Handle incorrect word (after echo fails or no echo) - NOW PAUSES FOR USER ACTION
   const handleIncorrectFinal = useCallback((spokenWord: string, expectedWord: string, wordIndex: number) => {
+    const token = speechTargetTokenRef.current;
+    if (isWordTransitioningRef.current || Date.now() < token.armedAt || token.index !== wordIndex || token.word !== expectedWord) {
+      console.log('[RPGWordReader] Ignoring stale incorrect during transition', { spokenWord, expectedWord, wordIndex, token });
+      return;
+    }
+
     isProcessingRef.current = true;
     
     // Track as missed (RED) - can become 'retried' (YELLOW) if they try again
@@ -447,7 +554,6 @@ export const RPGWordReader = ({
 
   // Handle "Try Again" - retry the word for practice (no game rewards)
   // Note: Uses ref to avoid circular dependency with startRecognitionSession
-  const startRecognitionRef = useRef<(() => void) | null>(null);
   
   const handleTryAgain = useCallback(() => {
     if (!pendingIncorrectWord) return;
@@ -515,6 +621,9 @@ export const RPGWordReader = ({
       setCurrentIndex(nextIndex);
       currentIndexRef.current = nextIndex;
       setCanRetry(true);
+    } else {
+      isWordTransitioningRef.current = true;
+      abortActiveRecognitionForBatchTransition();
     }
     
     feedbackTimeoutRef.current = setTimeout(() => {
@@ -525,7 +634,7 @@ export const RPGWordReader = ({
       if (hasMoreWords) {
         setRecognitionState('listening');
       } else {
-        // Batch complete (deduped); keep mic alive for next batch
+        // Batch complete (deduped); next batch will restart the mic after render
         if (!batchCompletedRef.current) {
           batchCompletedRef.current = true;
           const results = Array.from(wordResults.values());
@@ -533,11 +642,10 @@ export const RPGWordReader = ({
         }
         setCurrentIndex(0);
         currentIndexRef.current = 0;
-        // Do NOT stop recognition — keep listening into the next batch.
         setRecognitionState('listening');
       }
     }, 300);
-  }, [currentBatch, words, batchSize, stopRecognitionSession, wordResults, onBatchComplete, onRetrySuccess]);
+  }, [currentBatch, words, batchSize, stopRecognitionSession, wordResults, onBatchComplete, onRetrySuccess, abortActiveRecognitionForBatchTransition]);
 
   // Handle "Continue" (Skip) - accept miss and trigger enemy attack
   const handleContinueAfterMiss = useCallback(() => {
@@ -585,6 +693,12 @@ export const RPGWordReader = ({
 
   // Start echo retry mode
   const startEchoRetry = useCallback((spokenWord: string, expectedWord: string, wordIndex: number) => {
+    const token = speechTargetTokenRef.current;
+    if (isWordTransitioningRef.current || Date.now() < token.armedAt || token.index !== wordIndex || token.word !== expectedWord) {
+      console.log('[RPGWordReader] Suppressing echo retry during transition', { spokenWord, expectedWord, wordIndex, token });
+      return;
+    }
+
     setRecognitionState('echo_retry');
     setSpokenText(spokenWord);
     setEchoCountdown(1.5);
@@ -655,17 +769,31 @@ export const RPGWordReader = ({
   // Process speech result
   const processResult = useCallback((transcript: string, alternatives: string[]) => {
     if (isProcessingRef.current) return;
+    const cleanTranscript = transcript.trim();
+    if (!cleanTranscript) return;
     
     const wordIndex = currentIndexRef.current;
     const targetWord = getTargetWord(wordIndex);
+    const token = speechTargetTokenRef.current;
+    const now = Date.now();
+    if (
+      isWordTransitioningRef.current ||
+      now < token.armedAt ||
+      token.generation !== wordGenerationRef.current ||
+      token.index !== wordIndex ||
+      token.word !== targetWord
+    ) {
+      console.log('[RPGWordReader] Ignoring speech while target is not armed', { transcript: cleanTranscript, wordIndex, targetWord, token });
+      return;
+    }
     
-    console.log('[RPGWordReader] Processing:', { transcript, targetWord, wordIndex, canRetry: canRetryRef.current });
+    console.log('[RPGWordReader] Processing:', { transcript: cleanTranscript, targetWord, wordIndex, canRetry: canRetryRef.current });
     
     if (!targetWord) return;
     
     // Check all alternatives for a match
     let matched = false;
-    let bestSpoken = transcript;
+    let bestSpoken = cleanTranscript;
     
     // Check alternatives first
     for (const alt of alternatives) {
@@ -682,7 +810,7 @@ export const RPGWordReader = ({
     
     // Check main transcript words
     if (!matched) {
-      const wordsSpoken = transcript.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+      const wordsSpoken = cleanTranscript.toLowerCase().split(/\s+/).filter(w => w.length > 0);
       for (const word of wordsSpoken) {
         if (isWordMatchLenient(word, targetWord)) {
           matched = true;
@@ -710,14 +838,14 @@ export const RPGWordReader = ({
       // If this is a retry attempt and they got it wrong again, show overlay
       if (isRetryAttemptRef.current || !canRetryRef.current) {
         // Failed retry - go straight to continue (they already had their chance)
-        handleIncorrectFinal(transcript, targetWord, wordIndex);
+        handleIncorrectFinal(cleanTranscript, targetWord, wordIndex);
       } else if (enableEchoRetry && currentRecState !== 'echo_retry') {
-        startEchoRetry(transcript, targetWord, wordIndex);
+        startEchoRetry(cleanTranscript, targetWord, wordIndex);
       } else if (currentRecState === 'echo_retry') {
         // Already in echo - this attempt also failed, but let timeout handle final
-        setSpokenText(transcript);
+        setSpokenText(cleanTranscript);
       } else {
-        handleIncorrectFinal(transcript, targetWord, wordIndex);
+        handleIncorrectFinal(cleanTranscript, targetWord, wordIndex);
       }
     }
   }, [getTargetWord, enableEchoRetry, handleCorrect, handleRetrySuccess, handleIncorrectFinal, startEchoRetry]);
@@ -809,13 +937,26 @@ export const RPGWordReader = ({
         // Show interim results for the latest
         if (!result.isFinal) {
           if (!isProcessingRef.current && i === event.results.length - 1) {
-            setSpokenText(transcript.toLowerCase());
+            const wordIdx = currentIndexRef.current;
+            const targetWord = getTargetWord(wordIdx);
+            const token = speechTargetTokenRef.current;
+            const targetIsArmed = Boolean(
+              transcript &&
+              targetWord &&
+              !isWordTransitioningRef.current &&
+              Date.now() >= token.armedAt &&
+              token.generation === wordGenerationRef.current &&
+              token.index === wordIdx &&
+              token.word === targetWord
+            );
+
+            if (targetIsArmed) {
+              setSpokenText(transcript.toLowerCase());
+            }
 
             // FAST MODE: Process interim results for quicker matching (Elara only)
             // CRITICAL FIX: Must respect retry state - route through proper handlers
-            if (mode === 'fast' && !isProcessingRef.current) {
-              const wordIdx = currentIndexRef.current;
-              const targetWord = getTargetWord(wordIdx);
+            if (mode === 'fast' && !isProcessingRef.current && targetIsArmed) {
               if (targetWord) {
                 const wordsSpoken = transcript.toLowerCase().split(/\s+/).filter(w => w.length > 0);
                 for (const word of wordsSpoken) {

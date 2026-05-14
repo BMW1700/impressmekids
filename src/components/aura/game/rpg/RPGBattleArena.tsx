@@ -404,6 +404,7 @@ export const RPGBattleArena = ({
   // Word reading state
   const [words, setWords] = useState<string[]>([]);
   const [batchStartIndex, setBatchStartIndex] = useState(0); // Start of current 5-word batch (0, 5, 10, ...)
+  const lastBatchAdvanceGlobalIndexRef = useRef<number | null>(null);
   const [lastSpokenGlobalIndex, setLastSpokenGlobalIndex] = useState(-1); // For attack display
   const [currentWordResult, setCurrentWordResult] = useState<boolean | null>(null);
   const [attackType, setAttackType] = useState<'fire' | 'ice' | 'lightning' | 'slash' | 'nature' | 'heal' | 'wind' | 'data_burst'>('lightning');
@@ -575,6 +576,7 @@ export const RPGBattleArena = ({
   // Set words on mount
   useEffect(() => {
     setWords(storyWords);
+    lastBatchAdvanceGlobalIndexRef.current = null;
   }, [storyWords]);
 
   // Handle non-classic battle modes - skip intro and go directly to the selected mode
@@ -1993,6 +1995,11 @@ export const RPGBattleArena = ({
     // The batch size is 5, so when wordIndex === 4, we've finished the batch
     const batchSize = 5;
     if (wordIndex >= batchSize - 1) {
+      if (lastBatchAdvanceGlobalIndexRef.current === globalIndex) {
+        console.log('[RPGBattle] Skipping duplicate batch advance for global index:', globalIndex);
+        return;
+      }
+      lastBatchAdvanceGlobalIndexRef.current = globalIndex;
       // Move to next batch
       setBatchStartIndex(prev => prev + batchSize);
       console.log('[RPGBattle] Advancing to next batch:', batchStartIndex + batchSize);

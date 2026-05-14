@@ -1,36 +1,37 @@
-## Plan
+I know what the issue is.
 
-Fix the RPG reader so the mic handoff between 5-word batches is reliable without forcing the student to toggle the mic.
+The word reader keeps one continuous Web Speech recognition session alive while the parent swaps from one 5-word batch to the next. At the batch boundary, late/interim/final recognition events from the previous word/session can still arrive after `currentIndex` has already reset to `0`, so they get graded against the first word of the new batch. That triggers `echo_retry` immediately and then marks the first new word wrong before the student gets a fair chance to speak.
 
-## What I found
+Plan to fix it:
 
-- The mic is kept alive after word 5, but the speech callback still uses the old batch/state timing while the parent swaps in the next 5 words.
-- During that tiny transition window, the first spoken word of the new batch can be treated as stale, ignored, or compared while the reader is still marked as processing.
-- There is also an older missed-word path that still sets the reader back to `idle` at batch end, which can force manual mic toggling after certain retry/continue flows.
+1. Harden `RPGWordReader.tsx` with a per-word guard
+   - Add a current target token/ref containing: word generation, word index, expected word, and `armedAt` timestamp.
+   - Increment the token whenever the active word or batch changes.
+   - Ignore speech events that arrive before the new word is armed, belong to an old token, or contain an empty/stale transcript.
 
-## Implementation
+2. Reset speech recognition safely at batch boundaries
+   - When the 5th word completes, abort the current recognition session instead of leaving it continuously active with pending browser results.
+   - Automatically restart recognition after the next batch has rendered, so the mic still feels continuous and the user does not need to toggle it manually.
+   - Use `abort()` for boundary resets to discard pending stale final transcripts; keep normal stop behavior for intentional pause/disabled states.
 
-1. Update `RPGWordReader.tsx` to add a short “batch transition” guard:
-   - When a batch completes, keep the mic on but temporarily ignore late final transcripts from the previous batch.
-   - Clear that guard immediately when the new `wordsKey` arrives.
-   - Do not let the first valid transcript for the new batch be dropped because `isProcessingRef` is still true.
+3. Remove premature wrong-marking during transitions
+   - Block `startEchoRetry` and `handleIncorrectFinal` while a batch/word transition is in progress.
+   - Clear echo timers, processed final result tracking, feedback, retry state, and pending incorrect state when the batch changes.
+   - Prevent fast-mode interim processing from grading during the short transition arm window.
 
-2. Refactor the repeated batch-complete logic into one helper inside `RPGWordReader.tsx`:
-   - Deduplicate `onBatchComplete`.
-   - Reset `currentIndex`, feedback, spoken text, retry state, and processing flags consistently.
-   - Preserve `recognitionState = 'listening'` when the mic should remain active.
+4. Keep battle batch advancement aligned
+   - Ensure only the intended final word result advances `batchStartIndex` once.
+   - Avoid duplicate late `wordIndex === 4` callbacks from advancing the parent batch twice.
 
-3. Fix the `Continue after miss` end-of-batch path:
-   - It currently sets recognition back to `idle` after batch completion.
-   - Change it to use the same seamless transition helper so the next batch doesn’t require mic off/on.
+5. Validate with targeted checks
+   - Confirm the first word of a new 5-word batch waits for fresh speech.
+   - Confirm Elara/Cipher fast mode still recognizes correct interim matches quickly after the arm window.
+   - Confirm a real wrong answer still enters echo retry normally, but not automatically on batch transition.
 
-4. Add lightweight diagnostic logs around batch transition only:
-   - Log ignored stale transcripts and accepted first-word transcripts.
-   - Keep logs narrow so we can confirm the first word is now routed to the new batch.
+<presentation-actions>
+  <presentation-open-history>View History</presentation-open-history>
+</presentation-actions>
 
-## Validation
-
-- Start reading, complete 5 words, continue directly into the next 5 without touching the mic.
-- Confirm the first word of the new batch is matched against word 1 of the new batch, not the previous batch.
-- Confirm manual pause/resume still works.
-- Confirm enemy turn / disabled state still stops the mic as before.
+<presentation-actions>
+<presentation-link url="https://docs.lovable.dev/tips-tricks/troubleshooting">Troubleshooting docs</presentation-link>
+</presentation-actions>
