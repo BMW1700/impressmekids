@@ -317,6 +317,48 @@ const AuraPractice = () => {
     );
   }
 
+  // RPG Pre-K One-Word Reader (no story, no minigames, no fail state)
+  if (isRpgMode && rpgView === 'prek_reader' && selectedWorld && selectedLevel && user?.id) {
+    const handlePreKComplete = async (preKStats: { wordsRead: number; correctWords: number; stars: number }) => {
+      try {
+        const session = await startBattle({
+          storyTitle: selectedLevel.story.title,
+          storyCategory: selectedLevel.story.category,
+          worldNumber: selectedWorld.id,
+          enemyType: 'minion',
+          enemyMaxHp: 1,
+        });
+        await completeBattle({
+          battleId: session.id,
+          victory: true,
+          xpEarned: preKStats.stars * 10,
+          damageDealt: preKStats.correctWords,
+          longestStreak: preKStats.correctWords,
+          storyTitle: selectedLevel.story.title,
+          worldNumber: selectedWorld.id,
+          goldEarned: preKStats.stars * 5,
+        });
+        refetch();
+      } catch (e) {
+        console.error('[Pre-K] Failed to persist completion:', e);
+      }
+      setRpgView('level_select');
+    };
+    return (
+      <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
+        {isGameMode ? <GameHeader studentId={user?.id} /> : <Header />}
+        <main className="flex-1 container mx-auto px-2 py-4">
+          <RPGOneWordReader
+            world={selectedWorld}
+            level={selectedLevel}
+            onBack={() => setRpgView('level_select')}
+            onComplete={handlePreKComplete}
+          />
+        </main>
+      </div>
+    );
+  }
+
   // RPG Battle Mode takes over the whole screen
   if (isRpgMode && rpgView === 'battle' && rpgStory && user?.id) {
     const handleBattleComplete = async (victory: boolean, stats: { wordsRead: number; correctWords: number; longestStreak: number; damageDealt: number; xpEarned: number; goldEarned?: number }) => {
