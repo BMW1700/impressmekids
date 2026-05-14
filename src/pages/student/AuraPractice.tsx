@@ -7,6 +7,8 @@ import { CampaignModeEntry } from "@/components/aura/game/CampaignModeEntry";
 import { RPGBattleArena } from "@/components/aura/game/rpg/RPGBattleArena";
 import { RPGWorldMap, type WorldProgress } from "@/components/aura/game/rpg/RPGWorldMap";
 import { RPGLevelSelect, type CampaignLevel } from "@/components/aura/game/rpg/RPGLevelSelect";
+import { RPGOneWordReader } from "@/components/aura/game/rpg/RPGOneWordReader";
+import { getPreKContent, isPreKWorldId } from "@/data/preKWordBanks";
 import { type BattleMode } from "@/components/aura/game/rpg/RPGBattleModeSelector";
 import { BookRescueCelebration } from "@/components/aura/game/BookRescueCelebration";
 import { campaignWorlds, type CampaignWorld } from "@/lib/campaignData";
@@ -104,7 +106,7 @@ const AuraPractice = () => {
   const activeStories = gameTheme === 'agent' ? agentStories : curatedStories;
   const [isCampaignMode, setIsCampaignMode] = useState(false);
   const [isRpgMode, setIsRpgMode] = useState(false);
-  const [rpgView, setRpgView] = useState<'world_map' | 'level_select' | 'battle'>('world_map');
+  const [rpgView, setRpgView] = useState<'world_map' | 'level_select' | 'battle' | 'prek_reader'>('world_map');
   const [selectedWorld, setSelectedWorld] = useState<CampaignWorld | null>(null);
   const [selectedLevel, setSelectedLevel] = useState<CampaignLevel | null>(null);
   const [rpgStory, setRpgStory] = useState<Story | null>(null);
@@ -315,6 +317,48 @@ const AuraPractice = () => {
     );
   }
 
+  // RPG Pre-K One-Word Reader (no story, no minigames, no fail state)
+  if (isRpgMode && rpgView === 'prek_reader' && selectedWorld && selectedLevel && user?.id) {
+    const handlePreKComplete = async (preKStats: { wordsRead: number; correctWords: number; stars: number }) => {
+      try {
+        const session = await startBattle({
+          storyTitle: selectedLevel.story.title,
+          storyCategory: selectedLevel.story.category,
+          worldNumber: selectedWorld.id,
+          enemyType: 'minion',
+          enemyMaxHp: 1,
+        });
+        await completeBattle({
+          battleId: session.id,
+          victory: true,
+          xpEarned: preKStats.stars * 10,
+          damageDealt: preKStats.correctWords,
+          longestStreak: preKStats.correctWords,
+          storyTitle: selectedLevel.story.title,
+          worldNumber: selectedWorld.id,
+          goldEarned: preKStats.stars * 5,
+        });
+        refetch();
+      } catch (e) {
+        console.error('[Pre-K] Failed to persist completion:', e);
+      }
+      setRpgView('level_select');
+    };
+    return (
+      <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
+        {isGameMode ? <GameHeader studentId={user?.id} /> : <Header />}
+        <main className="flex-1 container mx-auto px-2 py-4">
+          <RPGOneWordReader
+            world={selectedWorld}
+            level={selectedLevel}
+            onBack={() => setRpgView('level_select')}
+            onComplete={handlePreKComplete}
+          />
+        </main>
+      </div>
+    );
+  }
+
   // RPG Battle Mode takes over the whole screen
   if (isRpgMode && rpgView === 'battle' && rpgStory && user?.id) {
     const handleBattleComplete = async (victory: boolean, stats: { wordsRead: number; correctWords: number; longestStreak: number; damageDealt: number; xpEarned: number; goldEarned?: number }) => {
@@ -423,11 +467,45 @@ const AuraPractice = () => {
     const allCompletedStories = new Set(Object.values(worldProgressData).flat());
     const completedStories = completedStoriesInWorld;
     
-    // Generate levels from world's level data + curated stories
+    const isPreKWorld = selectedWorld.mode === 'prek' || isPreKWorldId(selectedWorld.id);
+
+    // Generate levels from world's level data + curated stories (or Pre-K word banks)
     const levels: CampaignLevel[] = selectedWorld.levels.map((levelData, idx) => {
-      // Tutorial world uses a special story
       const isTutorial = selectedWorld.id === 0;
-      const story = isTutorial 
+
+      // Pre-K worlds: synthesize a lightweight story from word banks (no curated stories)
+      if (isPreKWorld) {
+        const content = getPreKContent(selectedWorld.id, levelData.id);
+        const items = content.kind === 'single' ? content.words : content.phrases;
+        const preview = items.slice(0, 3).join(' · ');
+        const title = `${selectedWorld.name} · Lesson ${levelData.id}`;
+        const story = {
+          title,
+          description: preview,
+          passage_text: items.join(' '),
+          grade_level: 0,
+          category: 'adventure' as const,
+          word_count: items.length,
+          reading_time_minutes: 1,
+          difficulty_level: 0,
+          cover_gradient: selectedWorld.gradient || 'from-pink-300 to-rose-400',
+          target_phonemes: [] as string[],
+        };
+        const isCompleted = completedStories.includes(title);
+        const isUnlocked = idx === 0 || completedStories.length >= idx;
+        return {
+          id: levelData.id,
+          story,
+          enemies: levelData.enemies as CampaignLevel['enemies'],
+          isBossLevel: levelData.isBossLevel,
+          starsEarned: isCompleted ? 2 : 0,
+          isCompleted,
+          isUnlocked,
+          isTutorial: false,
+        };
+      }
+
+      const story = isTutorial
         ? {
             title: 'Tutorial',
             description: 'Learn how to play!',
@@ -441,14 +519,14 @@ const AuraPractice = () => {
             target_phonemes: [],
           }
         : (activeStories[levelData.storyIndex] || activeStories[idx % activeStories.length]);
-      
+
       const isCompleted = completedStories.includes(story.title) || allCompletedStories.has(story.title);
-      
+
       // Unlock logic: first level always unlocked, subsequent levels unlock when previous is completed
       const prevStoryTitle = activeStories[selectedWorld.levels[idx - 1]?.storyIndex]?.title || '';
       const isPrevCompleted = completedStories.includes(prevStoryTitle) || allCompletedStories.has(prevStoryTitle);
       const isUnlocked = idx === 0 || isPrevCompleted || completedStories.length >= idx;
-      
+
       return {
         id: levelData.id,
         story,
@@ -465,7 +543,13 @@ const AuraPractice = () => {
       setSelectedLevel(level);
       setRpgStory(level.story);
       setSelectedBattleMode(battleMode); // Save the selected battle mode
-      
+
+      // Pre-K worlds: skip the standard battle and go straight to the One-Word Reader
+      if (isPreKWorld) {
+        setRpgView('prek_reader');
+        return;
+      }
+
       // Set enemy type based on level
       const primaryEnemy = level.enemies[0];
       // Map all campaign enemy types to battle enemy types
@@ -504,9 +588,9 @@ const AuraPractice = () => {
         the_librarian: 'the_librarian',
       };
       setRpgEnemyType(enemyMap[primaryEnemy] || 'minion');
-      
+
       console.log('[AuraPractice] Selected battle mode:', battleMode);
-      
+
       // Start battle session in database
       try {
         const battleSession = await startBattle({
@@ -520,7 +604,7 @@ const AuraPractice = () => {
       } catch (error) {
         console.error('Failed to start battle session:', error);
       }
-      
+
       setRpgView('battle');
     };
 
