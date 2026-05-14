@@ -1,10 +1,10 @@
 // Campaign data for Grog the Goblin King Story Campaign
 
-export type CampaignEnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'dragon' | 'final_boss' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'fire_elemental' | 'lava_hound' | 'ember_drake' | 'crystal_knight' | 'prism_mage' | 'crystal_queen' | 'star_sprite' | 'comet_wolf' | 'nova_titan' | 'tome_golem' | 'page_wraith' | 'the_librarian';
+export type CampaignEnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'dragon' | 'final_boss' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'fire_elemental' | 'lava_hound' | 'ember_drake' | 'crystal_knight' | 'prism_mage' | 'crystal_queen' | 'star_sprite' | 'comet_wolf' | 'nova_titan' | 'tome_golem' | 'page_wraith' | 'the_librarian' | 'wiggleworm' | 'bouncer' | 'echo_blob';
 
 export interface CampaignLevel {
   id: number;
-  storyIndex: number; // Index into curatedStories
+  storyIndex: number; // Index into curatedStories (-1 or unused for Pre-K)
   enemies: CampaignEnemyType[];
   isBossLevel: boolean;
   starThresholds: [number, number, number]; // Accuracy % for 1/2/3 stars
@@ -22,6 +22,8 @@ export interface CampaignWorld {
   unlockRequirement: number; // Books rescued in previous world to unlock
   lore: string;
   levels: CampaignLevel[];
+  /** "story" (default) = standard battle. "prek" = one-word reader, no story, no minigames. */
+  mode?: 'story' | 'prek';
 }
 
 export interface CampaignCharacter {
