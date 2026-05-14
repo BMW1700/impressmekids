@@ -120,9 +120,6 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
 
   const triggerHit = useCallback((word: string) => {
     setHeroAttacking(true);
-    const dmg = Math.round(damagePerWord);
-    setFloatStar({ id: Date.now() });
-    setFloatDmg({ id: Date.now() + 1, n: dmg });
     window.setTimeout(() => {
       setHeroAttacking(false);
       setEnemyHit(true);
@@ -132,10 +129,6 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
         setEnemyHit(false);
         setShake(false);
       }, 400);
-      window.setTimeout(() => {
-        setFloatStar(null);
-        setFloatDmg(null);
-      }, 900);
     }, 220);
 
     if (resolveVerbAnimation(word)) {
