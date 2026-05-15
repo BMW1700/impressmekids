@@ -160,7 +160,7 @@ const GameAnalytics = () => {
 
           <TabsContent value="overview" className="space-y-6">
             {/* Stats Summary */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
               <Card>
                 <CardContent className="p-4 text-center">
                   <div className="text-2xl font-bold text-primary">{auraRecords?.length ?? 0}</div>
@@ -177,12 +177,43 @@ const GameAnalytics = () => {
               </Card>
               <Card>
                 <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-primary">
-                    {auraRecords && auraRecords.length > 0
-                      ? Math.round(auraRecords.reduce((sum, r) => sum + (r.wpm || 0), 0) / auraRecords.length)
-                      : 0}
-                  </div>
+                  <Zap className="w-4 h-4 mx-auto mb-1 text-blue-500" />
+                  <div className="text-2xl font-bold text-primary">{readingSummary?.avgWpm ?? 0}</div>
                   <div className="text-xs text-muted-foreground">Avg WPM</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <Gauge className="w-4 h-4 mx-auto mb-1 text-pink-500" />
+                  <div className="text-2xl font-bold text-primary">{readingSummary?.avgWcpm ?? 0}</div>
+                  <div className="text-xs text-muted-foreground">Avg WCPM</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <Target className="w-4 h-4 mx-auto mb-1 text-emerald-500" />
+                  <div className="text-2xl font-bold text-primary">{readingSummary?.avgAccuracy ?? 0}%</div>
+                  <div className="text-xs text-muted-foreground">Accuracy</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <Activity className="w-4 h-4 mx-auto mb-1 text-amber-500" />
+                  <Badge
+                    variant={
+                      readingSummary?.fluencyTone === "good"
+                        ? "default"
+                        : readingSummary?.fluencyTone === "warn"
+                        ? "secondary"
+                        : readingSummary?.fluencyTone === "bad"
+                        ? "destructive"
+                        : "outline"
+                    }
+                    className="text-sm font-bold"
+                  >
+                    {readingSummary?.fluencyLabel ?? "—"}
+                  </Badge>
+                  <div className="text-xs text-muted-foreground mt-1">Fluency</div>
                 </CardContent>
               </Card>
               <Card>
