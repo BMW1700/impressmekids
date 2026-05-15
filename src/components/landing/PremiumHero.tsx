@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { RPGShowcase } from "@/components/landing/RPGShowcase";
 
 const HEADLINE = ["AI-Powered", "Literacy", "for", "every", "classroom."];
 
