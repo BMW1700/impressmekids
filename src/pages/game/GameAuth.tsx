@@ -375,7 +375,7 @@ const GameAuth = () => {
                       className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
                     />
                   </div>
-                  <IdentityInput idPrefix="signup" />
+                  {IdentityInput({ idPrefix: "signup" })}
                   {loginMode === "studentId" && (
                     <div className="space-y-2">
                       <Label htmlFor="signup-class-code" className="text-white/80">
