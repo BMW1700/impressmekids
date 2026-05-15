@@ -542,7 +542,7 @@ export const RPGWorldMap = ({
                     {/* Grade Label */}
                     {world.id > 0 && (
                       <span className="inline-block px-2 py-0.5 rounded text-xs font-semibold bg-yellow-500/20 text-yellow-300 mb-1">
-                        {getGradeTitle(world.requiredGradeLevel)}
+                        {world.mode === 'prek' ? 'Pre-K' : getGradeTitle(world.requiredGradeLevel)}
                       </span>
                     )}
 
