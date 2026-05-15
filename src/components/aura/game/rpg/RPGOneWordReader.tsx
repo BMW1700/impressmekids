@@ -239,10 +239,12 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
               </div>
             </div>
             <motion.div
-              key={`enemy-${verb?.id ?? 0}`}
+              key={`enemy-${prekScene?.id ?? verb?.id ?? 0}`}
               animate={
                 allDone
                   ? { y: -20, rotate: [0, -8, 8, -8, 8, 0], scale: 1.1 }
+                  : prekScene?.descriptor.transform
+                  ? prekScene.descriptor.transform.animate
                   : verb?.descriptor.kind === "transform"
                   ? verb.descriptor.animate
                   : { y: [0, -8, 0] }
@@ -250,6 +252,8 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
               transition={
                 allDone
                   ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" }
+                  : prekScene?.descriptor.transform
+                  ? { duration: prekScene.descriptor.duration, ease: "easeInOut" }
                   : verb?.descriptor.kind === "transform"
                   ? { duration: 0.9, ease: "easeInOut" }
                   : { duration: 2, repeat: Infinity, ease: "easeInOut" }
@@ -266,9 +270,10 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                 />
               </div>
               <VerbAnimationLayer
-                descriptor={verb?.descriptor.kind === "emoji" ? verb.descriptor : null}
-                id={verb?.id ?? null}
-                anchor={{ x: 50, y: 50 }}
+                descriptor={!prekScene && verb?.descriptor.kind === "emoji" ? verb.descriptor : null}
+                compound={prekScene?.descriptor ?? null}
+                id={prekScene?.id ?? verb?.id ?? null}
+                anchor={{ x: 60, y: 40 }}
               />
             </motion.div>
           </div>
