@@ -41,6 +41,7 @@ const GameDashboard = () => {
   const gold = progress?.total_gold ?? 0;
   const xp = progress?.total_xp_earned ?? 0;
   const isSignedIn = !!session;
+  const { data: readingSummary } = useGameReadingSummary(user?.id);
 
   const handleModeSelect = (mode: 'classic' | 'agent') => {
     setStoredTheme(mode);
