@@ -492,7 +492,7 @@ const MetricsRail = ({ story, phase }: { story: StoryConfig; phase: Phase }) => 
         <MetricCard label="Fluency" value={fluency} sub="prosody ✓" tone="gold" />
       </div>
       <div className="mt-1.5 text-center text-[10px] sm:text-[11px] uppercase tracking-[0.22em] text-white/45 font-medium">
-        Read story → defeat enemy · every metric tracked in real time
+        Every metric tracked. Surfaced where it matters.
       </div>
     </div>
   );
