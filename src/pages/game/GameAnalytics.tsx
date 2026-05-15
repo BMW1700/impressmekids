@@ -9,11 +9,12 @@ import PhonemeMasteryPathway from "@/components/aura/PhonemeMasteryPathway";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, TrendingUp, Brain, BookOpen, Activity, Loader2 } from "lucide-react";
+import { BarChart3, TrendingUp, Brain, BookOpen, Activity, Loader2, Zap, Target, Gauge } from "lucide-react";
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import { RPGPlayerHUD } from "@/components/aura/game/rpg/RPGPlayerHUD";
 import { MLStatusBadge } from "@/components/ml/MLStatusBadge";
 import { getStoredTheme, getGradeMode } from "@/lib/gameTheme";
+import { useGameReadingSummary } from "@/hooks/useGameReadingSummary";
 
 const GameAnalytics = () => {
   const { user, profile } = useAuth();
