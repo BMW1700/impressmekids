@@ -407,8 +407,12 @@ const ReadingTicker = ({
           <motion.div
             key={`${resetKey}-${i}`}
             initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.12 }}
+            animate={
+              isActive
+                ? { opacity: 1, y: 0, scale: [1, 1.08, 1] }
+                : { opacity: 1, y: 0, scale: 1 }
+            }
+            transition={{ delay: i * 0.12, duration: 0.5 }}
             className={`relative flex items-center gap-1 rounded-xl px-2.5 py-1 sm:px-3 sm:py-1.5 text-sm sm:text-lg font-bold transition-colors duration-300 ${
               isRead
                 ? "bg-emerald-500/90 text-white"
@@ -416,7 +420,6 @@ const ReadingTicker = ({
                 ? "bg-yellow-300/95 text-slate-900 ring-2 ring-yellow-200"
                 : "bg-white/15 text-white/70"
             }`}
-            animate={isActive ? { scale: [1, 1.08, 1] } : { scale: 1 }}
           >
             <span>{w}</span>
             {isRead && <Check className="h-3 w-3 sm:h-3.5 sm:w-3.5" strokeWidth={3} />}
