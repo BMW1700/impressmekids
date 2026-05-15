@@ -219,9 +219,9 @@ const GameDashboard = () => {
                 initial={{ opacity: 0, scale: 0.97 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.7 }}
-                className="mb-6 rounded-2xl border border-border/60 bg-gradient-to-br from-purple-950/40 via-background to-amber-950/20 overflow-hidden shadow-lg"
+                className="mb-8 rounded-3xl border border-white/10 bg-[hsl(270_45%_8%)] overflow-hidden shadow-[0_20px_80px_-20px_hsl(270_80%_30%/0.6)]"
               >
-                <RPGShowcase variant="compact" />
+                <RPGShowcase variant="hero" />
               </motion.div>
 
               {/* Welcome Section */}
