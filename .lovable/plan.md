@@ -1,87 +1,81 @@
+
+# Landing page restructure: lead with the assessment, not the game
+
 ## Goal
+Make the hero immediately convey what NabuLearn actually does for buyers (administrators, principals, teachers): **a child reads aloud → AI scores it live → teachers get WCPM, miscues, risk flags**. Move the RPG battle to a dedicated "Game Mode" section where its toy-look becomes an asset, not a liability. Keep RPG showcase intact in the in-app dashboards.
 
-Rebuild `RPGShowcase` so it instantly conveys what NabuLearn is: a kid reads words → words turn green → hero launches a power → enemy is hit → enemy retaliates. Loop. No description needed.
+---
 
-## What's wrong today
+## Changes
 
-- Custom inline SVG knight/goblin look amateur next to the real roster.
-- No words, no reading mechanic — the visual doesn't communicate "literacy."
-- Single-direction loop feels static.
+### 1. New component: `LiveAssessmentShowcase.tsx`
+A cinematic, looping "teacher-facing magic" visualization for the hero. No copy needed — the visual tells the story.
 
-## New design
+**Loop (~9s):**
+1. **Listen (1.5s)** — A pulsing mic icon + animated waveform appears. Caption chip: "Child reading aloud."
+2. **Transcribe (2.5s)** — A sentence appears word-by-word as if transcribed in real time:
+   *"The quick brown fox jumps over the lazy dog."*
+   Words land one at a time with a soft fade.
+3. **Analyze (2s)** — Words recolor:
+   - Most go **green** (correct)
+   - One word (e.g., "quick") flashes **amber** with a small tag: *"miscue: /kw/ → /k/"*
+   - One word (e.g., "lazy") gets a subtle underline: *"prosody: flat"*
+4. **Score (2s)** — A teacher-style metrics card slides in from the right:
+   - **WCPM: 87** (count-up animation)
+   - **Accuracy: 94%**
+   - **Phoneme mastery: /kw/ ⚠**
+   - **Risk: Low** (green pill)
+5. **Reset (1s)** — Card and transcript fade, loop restarts with a different sentence.
 
-Three layered scene inside one self-contained component:
+**Visual language:**
+- Dark glass card on the existing purple hero gradient (matches current aesthetic)
+- Solid colors, slow easings (per `mem://design/visual-restraint-solid-colors-mandate`)
+- `IntersectionObserver` to pause off-screen
+- `useReducedMotion` → static frame showing the metrics card fully populated
+- ~3 rotating sentences hardcoded (no backend)
 
-```text
-┌─────────────────────────────────────────────────────────┐
-│  HERO HP ████████░░          ██░░░░░░░░░░░  ENEMY HP    │
-│                                                          │
-│   [SirValor]    "the"  "brave"  "knight"   [Goblin]      │
-│    idle/atk      ░      ✓         ✓         idle/hit     │
-│                                                          │
-│              ──── fireball ───►                          │
-│              ◄──── ice blast ───                         │
-│                                                          │
-│        ✦ Read to attack · Powered by AURA ✦              │
-└─────────────────────────────────────────────────────────┘
-```
+### 2. Edit `PremiumHero.tsx`
+- Replace `<RPGShowcase variant="hero" />` with `<LiveAssessmentShowcase />`.
+- No copy changes in this pass (existing headline already speaks to assessment).
 
-### Cast (real roster)
-- Hero: `SirValor` (default skin) — iconic knight from `characters/SirValor.tsx`
-- Enemy: rotates each loop between `GoblinGuard`, `ShadowWraith`, `DrakeTheDragon`, `IceGolem` to feel alive
-- All accept `state: 'idle' | 'attacking' | 'hit' | 'victory' | 'defeated'` and `flipX`
+### 3. New section in `Index.tsx`: "Kids think it's a game. Teachers get NAEP-grade data."
+Insert a new section between `HowItWorks` and `ResearchSection`:
+- Two-column layout on desktop, stacked on mobile
+- **Left:** `<RPGShowcase variant="hero" />` (the existing battle, reused as-is)
+- **Right:** Headline + 3 short bullets:
+  - *Same voice. Same ML pipeline.*
+  - *Phoneme inference, miscues, prosody — scored mid-battle.*
+  - *Teachers see the data. Kids see a boss fight.*
+- CTA: "See Game Mode" → `/demos`
 
-### Battle loop (state machine, ~8s/cycle)
+This reframes the cartoon look as the **strategic moat** ("kids will actually do it") rather than the product itself.
 
-1. **Reading phase (2.4s)** — 3 words appear sequentially in the center band, each highlighting yellow then snapping to green with a soft check pulse. Uses themed phrases per enemy ("blast the goblin", "freeze the wraith", "tame the dragon").
-2. **Hero windup (0.3s)** — SirValor → `attacking`, slight forward lunge, glow charges around sword.
-3. **Hero attack (1.0s)** — `RPGParentAttackVFX` fires `fireball` left→right (existing `direction` + `contained` props).
-4. **Enemy hit (0.6s)** — enemy → `hit`, screen shake (transform on inner wrapper), HP bar drops with `framer-motion` width tween, floating "-12" damage number.
-5. **Enemy retaliation windup (0.3s)** + **attack (1.0s)** — enemy → `attacking`, fires `ice_blast` right→left.
-6. **Hero hit (0.6s)** — SirValor → `hit`, hero HP bar drops, damage number.
-7. **Reset (0.4s)** — HP bars regenerate smoothly back to full, words clear, next enemy rotates in via fade+slide. Loop.
+### 4. Untouched
+- `ModeSelect.tsx` — keeps `<RPGShowcase variant="compact" />` (right audience: students)
+- `GameDashboard.tsx` — same
+- `RPGShowcase.tsx`, `RPGParentAttackVFX.tsx` — no edits
+- All other landing sections (`BentoFeatures`, `OutcomesStrip`, `HowItWorks`, `TrustSection`, `ResearchSection`, `TestimonialSection`, closing CTA) stay in place
 
-Phase machine lives in `useReducer`; `IntersectionObserver` pauses when off-screen; `useReducedMotion` short-circuits to a single static frame (hero + enemy + one frozen fireball + one green word) — no motion at all.
+---
 
-### Word reading sub-component
+## Technical notes
 
-New small inline piece `ReadingTicker` inside the same file:
-- Renders 3 word slots, big rounded chips on a translucent dark band.
-- Each word transitions: `unread (white/40)` → `active (yellow ring + scale 1.05)` → `read (emerald-400 + checkmark)`.
-- Timing synced to phase 1 (~750ms per word).
+**New files:**
+- `src/components/landing/LiveAssessmentShowcase.tsx` (~200 LOC)
+- `src/components/landing/GameModeSection.tsx` (wrapper for the new RPG section)
 
-### HP bars
+**Edited files:**
+- `src/components/landing/PremiumHero.tsx` — swap one component
+- `src/pages/Index.tsx` — add `<GameModeSection />` between `HowItWorks` and `ResearchSection`
 
-- Slim 6px bars top-left (hero) and top-right (enemy), color-coded.
-- `motion.div` width animated; brief red flash + shake on damage.
-- Numbers hidden — purely visual, no clutter.
+**No backend, no deps, no schema changes.** Pure presentation work.
 
-### Caption
+**Order of operations:** build `LiveAssessmentShowcase` → swap in hero → build `GameModeSection` wrapper → insert in `Index`.
 
-Single subtle line under the arena: **"Read words → launch powers"** (small, muted, kerned). Removed in `compact` variant.
+---
 
-### Variants
-
-- `variant="hero"` — full 420px stage, all features, caption visible.
-- `variant="compact"` — 220px, smaller sprites, no caption, words shown as 2 chips instead of 3, same loop.
-
-### Performance
-
-- Reuses already-bundled character SVGs (zero new asset weight).
-- One `RPGParentAttackVFX` instance, one phase timer.
-- Paused via `IntersectionObserver` (already in current showcase).
-- No WebGL, no R3F, no new deps.
-
-## Files
-
-**Edit**
-- `src/components/landing/RPGShowcase.tsx` — full rewrite. Drop the inline `KnightSprite`/`GoblinSprite`. Import real characters. Add `ReadingTicker`, HP bars, enemy rotation, expanded phase machine.
-
-**No changes needed**
-- `RPGParentAttackVFX.tsx` — already supports `direction` + `contained`.
-- `PremiumHero.tsx`, `ModeSelect.tsx`, `GameDashboard.tsx` — already mount `<RPGShowcase variant="..." />`; the rewrite is drop-in.
-
-## Out of scope
-
-- No new character art, no 3D, no audio, no game logic changes.
-- No edits to the actual battle screens — this is landing/dashboard eye-candy only.
+## What this fixes (vs. current state)
+- Hero now reads as "AI literacy assessment platform" within 2 seconds, not "kids' game"
+- RPG showcase still appears prominently — but framed correctly for buyers
+- In-app experience for kids is unchanged
+- No loss of the work already done on `RPGShowcase`
