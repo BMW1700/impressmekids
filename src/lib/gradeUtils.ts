@@ -37,6 +37,7 @@ export const GRADES_K12 = [
 export const GRADES = GRADES_K12;
 
 export const getGradeDisplay = (grade: number): string => {
+  if (grade === -1) return 'Pre-K';
   if (grade === 0) return 'K';
   return grade.toString();
 };
