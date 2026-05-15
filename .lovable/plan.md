@@ -1,88 +1,39 @@
-# Epic Hero Showcase Redesign
+ns# Plan: Ship the Safe 3
 
-## Goal
-Transform the battle preview so a first-time visitor instantly understands:
-1. **Kids read real stories** (not random battle words) → those stories defeat enemies
-2. **Every literacy metric is tracked live** (WPM, WCPM, accuracy, phoneme mastery, fluency)
-3. Fits in **one viewport** (no scroll to see the whole thing)
-4. Feels **premium / "$2+/month worth it"** — cinematic, not cluttered
+Tight, low-risk polish pass. Zero new realtime, zero new backend, zero performance hit. Live teacher board is **explicitly deferred** to v1.5 pending real teacher feedback.
 
-## Scope
-**Single file edit:** `src/components/landing/RPGShowcase.tsx` (variant="hero").
-No changes to characters, VFX, page layout, or other components.
-Compact variant stays as-is (used inside game pages).
+## What we're building
 
-## New Layout (single viewport, ~560–620px tall)
+### 1. Landing page reorder
+Move the most superintendent-relevant proof points above the fold. Lead with outcomes ("every metric tracked, surfaced where it matters"), then product pillars, then social proof. No new sections, just reordering existing blocks.
 
-```text
-┌───────────────────────────────────────────────────────────────┐
-│ [HERO ████████░░] HP   ← READING "The Goblin's Cave" Ch. 2 →   [WRAITH ██████░░] HP │
-├──────────────┬───────────────────────────────────┬────────────┤
-│              │  ┌─ STORY PANEL ──────────────┐   │            │
-│              │  │ Mira crept past the goblin │   │            │
-│              │  │ guard, her ✦banish✦ spell  │   │  ENEMY     │
-│   HERO       │  │ ready in her trembling…    │   │  (right)   │
-│   (left)     │  └────────────────────────────┘   │            │
-│              │   words light green as read       │            │
-│              │   miscue word flashes amber       │            │
-├──────────────┴───────────────────────────────────┴────────────┤
-│  LIVE METRICS RAIL (always visible, updates per word)         │
-│  ┌─────────┬─────────┬──────────┬────────────┬────────────┐   │
-│  │ WPM 112 │ WCPM 98 │ ACC 94%  │ PHONEME 91%│ FLUENCY A- │   │
-│  │  ↑ live │  ↑ live │  ▓▓▓▓░   │  /sh/ /th/ │  prosody ✓ │   │
-│  └─────────┴─────────┴──────────┴────────────┴────────────┘   │
-│         "Read words → launch powers · tracked in real time"   │
-└───────────────────────────────────────────────────────────────┘
-```
+### 2. Cut the mic chip
+Remove the standalone microphone status chip from the battle UI. The mic indicator is already implicit in the speech-active animation; the chip is visual noise on iPad-sized viewports.
 
-## What Changes vs Current
+### 3. Auto-open recap modal at battle end
+When a battle resolves (victory or defeat), automatically open the existing post-battle recap modal instead of requiring a tap. Adds a single state trigger on the existing battle-end effect.
 
-| Element | Now | After |
-|---|---|---|
-| Word ticker | 3 generic words ("blast the goblin") | Real story sentence (1–2 lines) with the **power word** highlighted as ✦banish✦; reads left→right, words turn green |
-| Header context | Just HP bars | HP bars + center chip: **"READING · The Goblin's Cave · Ch. 2"** so parents see it's a *story* |
-| Metrics | None visible | Persistent bottom rail: WPM, WCPM, Accuracy %, Phoneme mastery, Fluency grade — numbers tick up live as words are read |
-| Caption | "Read words → launch powers" | "Read words → launch powers · tracked in real time" |
-| Height | h-[460px] desktop, content sometimes overflows page | Fixed total ≤ 600px, sized so hero + headline fit in one viewport on laptop (~720px tall after nav) |
-| Story rotation | 4 enemies, 3 throwaway words each | 4 enemies, each tied to a real micro-story title + sentence containing the spell word |
+### 4. Cinematic copy pass
+Update the "metrics tracked" section copy to: **"Every metric tracked. Surfaced where it matters."** No "coming soon" language anywhere. No promises of live dashboards we haven't shipped.
 
-## Story Content (inline, no backend)
+## What we are NOT building
 
-Each enemy gets `{ title, sentence, powerWord, attack }`:
-- Goblin Guard → *"The Goblin's Cave"* — "Mira raised her staff and whispered **blast** before the goblin could move."
-- Shadow Wraith → *"Whispers in the Dark"* — "Only one word could **banish** the wraith back to the shadow realm."
-- Drake the Dragon → *"The Dragon's Bargain"* — "She had to **tame** the dragon before its fire reached the village."
-- Ice Golem → *"Frozen Halls"* — "One sharp spell would **shatter** the golem and free the trapped explorers."
+- **Teacher live board** — deferred. Reasoning: the four-gate architecture is sound but carries a non-zero hiccup risk (presence burst, iPad battery, ~400 lines touching the speech hot path). Revisit in v1.5 once 2–3 pilot teachers explicitly request it.
+- No new realtime channels, no new edge functions, no new tables, no feature flags.
 
-Power word styled with subtle gold glow + ✦ markers so it visually "launches" the attack when read.
+## Technical notes
 
-## Live Metrics Behavior
+- **Landing reorder**: pure JSX section reordering in the landing page component. No new components.
+- **Mic chip removal**: delete the chip JSX + its conditional render guard. Verify the speech-active glow on the player avatar still communicates active listening.
+- **Recap auto-open**: in the battle-end `useEffect` that currently sets `phase` to `victory`/`defeat`, also set `recapOpen` to `true`. Existing modal already supports controlled open state.
+- **Copy**: string changes only.
 
-All client-side counters driven by the existing phase machine (no real audio):
-- **WPM**: idles ~95, rises to 110–125 during reading phase, eases back
-- **WCPM**: WPM minus miscues; on the planted miscue word it briefly flashes red and dips
-- **Accuracy**: starts 100%, dips to ~94% on the seeded miscue word, recovers
-- **Phoneme mastery**: small chip showing rotating phoneme tags (`/sh/ 92%`, `/th/ 88%`) — gives the "we track this" signal
-- **Fluency**: letter grade A / A- / B+ that animates a tick when prosody is "good"
+## Risk
 
-Numbers animated with `motion` value tweens; no new dependencies. Reduced-motion users see a static populated state.
+Effectively zero. All changes are presentational, no hot-path code, no new dependencies, no schema changes, no realtime. Total surface area: ~30–50 lines across 2–3 files.
 
-## Sizing & Responsive
+## Verification
 
-- Hero variant container: `h-[560px] sm:h-[580px] md:h-[600px]` (fixed total)
-- Internal grid: header (56px) + stage (1fr) + metrics rail (96px)
-- Characters drop one size class on `<sm` so they don't crowd the story panel
-- Story panel: `max-w-[440px]` centered, `text-base sm:text-lg`, max 2 lines
-- Metrics rail collapses to 3 cards on mobile (WPM, ACC, FLUENCY); full 5 on `sm+`
-
-## Out of Scope
-- No edits to characters, VFX layer, GameModeSection, LiveAssessmentShowcase, PremiumHero, Index
-- No real speech recognition — this is the marketing showcase
-- Compact variant (used in `/game` pages) stays untouched
-
-## Technical Notes
-- Single file: `RPGShowcase.tsx`
-- Uses existing `framer-motion` (already imported), no new deps
-- New sub-components (in same file): `StoryPanel`, `MetricsRail`, `StoryHeader`
-- Replace the current `ReadingTicker` only inside `variant="hero"`; compact path keeps the old ticker
-- Phase timings nudged: `reading` 3200ms (longer to read sentence), other phases unchanged so total cycle stays ~9s
+- Visual check landing on mobile + desktop viewports
+- Run a battle to victory and to defeat — recap modal should auto-open both times
+- Confirm mic chip is gone and speech glow still pulses while listening
