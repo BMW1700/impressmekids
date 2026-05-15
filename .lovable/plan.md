@@ -1,28 +1,40 @@
-# Show "Pre-K" on the first 3 worlds + add Pre-K grade level
+# Two fixes: Game Mode login focus bug + missing reading metrics
 
-The first 3 RPG worlds (101 First Words, 102 Action Time, 103 Word + Picture) are already Pre-K content (`mode: 'prek'`) in `src/lib/campaignData.ts`, but their badge currently shows **"Kindergarten"** because `requiredGradeLevel` is `0` and `getGradeTitle(0)` returns "Kindergarten".
+## Bug 1 — Login input loses focus after every keystroke
 
-## Changes
+**Root cause:** In `src/pages/game/GameAuth.tsx`, `LoginModeToggle` and `IdentityInput` are defined as **components inside the `GameAuth` render function** (lines 227–285). Every render creates a brand-new component type, so React unmounts and remounts the `<Input>` on every keystroke — that's why the field blurs after one character.
 
-**1. `src/components/aura/game/rpg/RPGWorldMap.tsx` (line ~545)**
-Replace the grade badge with a Pre-K-aware version:
-```tsx
-{world.mode === 'prek' ? 'Pre-K' : getGradeTitle(world.requiredGradeLevel)}
-```
+**Fix:** Inline the JSX directly inside the two `<form>` blocks (Login and Sign Up). No new components, no behavior change — just stable element identity so the input keeps focus while typing. Same fix applies to both the email and Student ID inputs and the Login/Email/Student ID toggle.
 
-**2. `src/components/aura/game/rpg/RPGLevelSelect.tsx` (line ~181)**
-Same swap in the world header line:
-```tsx
-World {world.id} — {world.mode === 'prek' ? 'Pre-K' : getGradeTitle(world.requiredGradeLevel)}
-```
+## Bug 2 — Game Mode hides Accuracy / WCPM / Fluency level
 
-**3. `src/lib/gradeUtils.ts` — add Pre-K as a real grade option**
-- Add `{ value: -1, label: 'Pre-K', short: 'Pre-K' }` at the top of `GRADES_K12`.
-- Update `getGradeDisplay(-1)` → `'Pre-K'` and `getGradeTitle(-1)` → `'Pre-K'`.
-- Leave `requiredGradeLevel: 0` on the Pre-K worlds untouched (mode-based check above handles the badge); changing it to -1 would risk breaking unlock/sort logic elsewhere.
+You're right. Here's what's actually shown in Game Mode today:
+
+| Surface | What it shows | Missing |
+|---|---|---|
+| **Dashboard top cards** (`GameDashboard.tsx` L270–295) | XP, Day Streak, Words Read | WPM, WCPM, Accuracy, Fluency |
+| **Reading Journey sidebar** (`ReadingProgressPanel`, RPG screen) | Reading Level, WPM, Accuracy, Words Mastered, Stories Read | WCPM (uses WPM fallback), Fluency label |
+| **Full Stats modal** (already exists) | WCPM/WPM, Accuracy + Frustration/Instructional badge, Words Read, Sessions, Benchmark | Explicit "Fluency" score |
+| **Analytics page Overview** (`GameAnalytics.tsx` L161–194) | Total Sessions, Words Read, **Avg WPM**, Day Streak | Accuracy, WCPM, Fluency |
+| **Analytics Sessions tab** | Per-session WPM + clarity % | Aggregate accuracy/WCPM/fluency |
+
+So Accuracy + WCPM + Fluency live only in the buried "View Full Stats" modal — never on the dashboard or analytics overview.
+
+### What I'll add
+
+1. **`GameDashboard` quick stats** — expand from 3 cards to **6** (responsive 3×2 grid on mobile, 6 across on desktop):
+   - keep XP, Day Streak, Words Read
+   - add **Avg WPM**, **Avg Accuracy %**, **Avg WCPM** pulled from the same `reading_sessions` query `ReadingProgressPanel` already uses (last 20 sessions). Source the values from a single new hook `useGameReadingSummary(userId)` so dashboard + analytics share one query.
+
+2. **`GameAnalytics` overview** — replace the 4-card row with a **6-card** row matching the dashboard, plus add a **Fluency** badge card that maps WCPM → benchmark label ("Below / On Track / Above") using the existing `getReadingJourneyLevel` / `fluencyBenchmarks` helpers.
+
+3. **`ReadingProgressPanel`** — relabel the WPM tile to **WCPM** when `wcpm` is present (so it matches the science-of-fluency reporting), and add a small **Fluency: On Track / Below / Above** chip under the Reading Level bar.
+
+No DB or backend changes — every metric already exists in `reading_sessions` and `student_reading_stats`. This is purely surfacing what's already collected.
 
 ## Out of scope
-- No changes to world content, unlock logic, or grade_mode routing.
-- No DB/schema changes.
+- No changes to how metrics are computed.
+- No new auth flows, no new pages.
+- No RPG/battle UI changes beyond the small chip on the existing sidebar.
 
-Confirm and I'll implement.
+Confirm and I'll ship both fixes.
