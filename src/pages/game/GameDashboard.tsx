@@ -271,7 +271,7 @@ const GameDashboard = () => {
 
               {/* Quick Stats — only for signed-in users */}
               {isSignedIn && (
-                <div className="grid grid-cols-3 gap-3 mb-8">
+                <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-8">
                   <Card className="bg-gradient-to-br from-yellow-500/10 to-amber-500/10 border-yellow-500/20">
                     <CardContent className="p-3 text-center">
                       <Star className="w-5 h-5 text-yellow-400 mx-auto mb-1" />
@@ -291,6 +291,27 @@ const GameDashboard = () => {
                       <BookOpen className="w-5 h-5 text-purple-400 mx-auto mb-1" />
                       <div className="text-lg font-bold text-purple-400">{readingStats?.total_words_read?.toLocaleString() ?? 0}</div>
                       <div className="text-xs text-muted-foreground">Words Read</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/20">
+                    <CardContent className="p-3 text-center">
+                      <Zap className="w-5 h-5 text-blue-400 mx-auto mb-1" />
+                      <div className="text-lg font-bold text-blue-400">{readingSummary?.avgWpm ?? 0}</div>
+                      <div className="text-xs text-muted-foreground">Avg WPM</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-br from-emerald-500/10 to-green-500/10 border-emerald-500/20">
+                    <CardContent className="p-3 text-center">
+                      <Target className="w-5 h-5 text-emerald-400 mx-auto mb-1" />
+                      <div className="text-lg font-bold text-emerald-400">{readingSummary?.avgAccuracy ?? 0}%</div>
+                      <div className="text-xs text-muted-foreground">Accuracy</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-br from-pink-500/10 to-rose-500/10 border-pink-500/20">
+                    <CardContent className="p-3 text-center">
+                      <Gauge className="w-5 h-5 text-pink-400 mx-auto mb-1" />
+                      <div className="text-lg font-bold text-pink-400">{readingSummary?.avgWcpm ?? 0}</div>
+                      <div className="text-xs text-muted-foreground">WCPM · {readingSummary?.fluencyLabel ?? '—'}</div>
                     </CardContent>
                   </Card>
                 </div>
