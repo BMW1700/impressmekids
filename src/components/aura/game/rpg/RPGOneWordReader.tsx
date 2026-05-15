@@ -138,8 +138,15 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
       }, 400);
     }, 220);
 
-    if (resolveVerbAnimation(word)) {
+    // Pre-K signature scene takes priority; fall back to legacy verb library
+    const prek = resolvePreKVerb(word);
+    if (prek) {
       nonceRef.current += 1;
+      setPrekScene({ id: nonceRef.current, descriptor: prek });
+      setVerbTrigger(null);
+    } else if (resolveVerbAnimation(word)) {
+      nonceRef.current += 1;
+      setPrekScene(null);
       setVerbTrigger({ word, nonce: nonceRef.current });
     }
   }, [damagePerWord]);
