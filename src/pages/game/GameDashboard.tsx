@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import { RPGPlayerHUD } from "@/components/aura/game/rpg/RPGPlayerHUD";
 import { getStoredTheme, setStoredTheme, getGradeMode } from "@/lib/gameTheme";
+import { RPGShowcase } from "@/components/landing/RPGShowcase";
 
 const GameDashboard = () => {
   const navigate = useNavigate();
