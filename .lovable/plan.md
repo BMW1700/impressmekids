@@ -1,42 +1,81 @@
-# Nabu Learn Landing Page — "Premium SaaS" Redesign (Tier 1)
+# RPG Battle Showcase — Landing Hero + Mode Select
 
 ## Goal
-Make the marketing landing page feel like a $50M Series A literacy company (Linear, Vercel, Arc, Notion vibe) — visually impressive enough to make a superintendent stop scrolling, without breaking iPads or Chromebooks.
+Make the landing page and the Game Mode entrance feel like the RPG product itself — two existing in-game characters facing off, throwing a power (fireball ⇄ ice blast) at each other in a slow, looping, cinematic battle. This becomes the visual hook that tells visitors in 2 seconds: "this is a literacy RPG."
 
-**Scope:** Marketing landing page only (`/` route). Zero changes to student/teacher/parent/admin app, auth, database, or any business logic.
+## Where it shows up
+1. **Landing hero** (`src/components/landing/PremiumHero.tsx`) — full-bleed showcase behind/around the headline.
+2. **Mode Select** (`src/pages/ModeSelect.tsx`) — smaller version above the School/Game cards.
+3. **Game Mode dashboard** entry (`/game` route, the screen in screenshot 3) — banner above "Welcome to NabuLearn" cards.
 
----
+## What the showcase looks like
 
-## What you'll see when it's done
+```text
+┌────────────────────────────────────────────────────────────┐
+│                                                            │
+│   [HERO]   ── 🔥 fireball ──▶                              │
+│   knight                                ◀── ❄️ ice ──  [VILLAIN]
+│                                                  goblin   │
+│   (idle bob)                              (idle bob)       │
+│                                                            │
+│        ✦  particles + screen flash on impact  ✦            │
+└────────────────────────────────────────────────────────────┘
+```
 
-1. **Cinematic hero** — large kinetic headline that animates in word-by-word, soft animated gradient mesh background (CSS only, no WebGL), subtle floating orbs, and a magnetic CTA button. Headline stays "AI-Powered Literacy" per brand memory.
-2. **Scroll-driven product reveal** — as you scroll, a stylized device frame (iPad mockup) tilts into view showing AURA in action, with a parallax glow behind it.
-3. **Feature pillars section** — 3–4 large bento-grid cards (AURA, LexiQuest, Teacher Insights, Safety) with hover lift, gradient borders, and small looping micro-animations inside each card.
-4. **"How it works" stepper** — sticky left column with 3 steps, right column animates between visuals as you scroll past each step.
-5. **Outcomes / proof strip** — large numbers (e.g., "44 phonemes", "K–12", "$0 setup") with count-up animation on scroll-into-view.
-6. **Quiet, premium footer** — refined type, subtle divider lines, no clutter.
+- Left: a real `RPGCharacter`/sprite from the existing roster (knight/dame hero).
+- Right: a real boss sprite (goblin/villain) from `MiniGoblin` or `RPGCharacterSprite`.
+- Every ~3.5s they trade an attack: hero fires a fireball → villain hit-flash → villain fires an ice blast → hero hit-flash → loop.
+- Idle bobbing between attacks. Subtle screen-glow tint matching the active element (orange / cyan).
+- Headline ("AI-Powered Literacy for every classroom.") sits **above or in front** of the scene, with a soft radial vignette so type stays readable.
 
-Smooth section transitions throughout. Slow, confident motion — no bouncing, no neon, no crypto vibe. Stays on-brand with the existing "elegant restraint" memory rule.
+## How it's built (technical)
 
-## What I will NOT touch
-- No changes to app routes, auth, Supabase, RLS, edge functions, or any feature code.
-- No new dependencies beyond what's already in the project (framer-motion is already installed).
-- No WebGL, no Three.js, no React Three Fiber, no heavy assets. Loads fast on iPad.
-- No removal of existing landing sections that you've previously approved (pricing tiers, demo links) — they'll be restyled, not deleted.
-- Tagline stays "AI-Powered Literacy". No "Science of Reading". No "For Free" / "Coming Soon". (Per memory.)
+### New component
+`src/components/landing/RPGShowcase.tsx`
+- Props: `variant: 'hero' | 'compact'`, `autoplay?: boolean`.
+- Reuses existing assets — **no new 3D, no new dependencies**:
+  - `RPGCharacter` or `RPGCharacterSprite` (left, hero pose)
+  - `MiniGoblin` or a boss sprite (right)
+  - `RPGParentAttackVFX` already implements `fireball`, `ice_blast`, `lightning`, `wind_slash` — perfect, reusable.
+- Internal state machine cycles: `idle → heroAttack → villainHit → idle → villainAttack → heroHit → idle`. Each step ~700–1100ms (matches `RPGParentAttackVFX` `DURATION_MS`).
+- Uses framer-motion for character bob, hit-shake, recoil, and impact flash.
+- Respects `useReducedMotion`: falls back to a static "frozen mid-battle" pose with one fireball drawn but not animated.
 
-## Technical details (for the record)
-- **Files touched:** `src/pages/Index.tsx` and the marketing section components it renders (`src/components/landing/*` if they exist, otherwise new ones colocated). `index.css` / `tailwind.config.ts` for new design tokens (gradient mesh, soft shadows, easing curves).
-- **Motion:** framer-motion only — `useScroll`, `useTransform`, `whileInView`, staggered children. All easing slow (0.6–1.2s, custom cubic-bezier). Reduced-motion respected via `prefers-reduced-motion`.
-- **Background:** CSS conic + radial gradients with slow `@keyframes` rotation, layered with a noise SVG overlay for grain. No canvas, no WebGL.
-- **Type:** keep existing font stack but introduce one display weight for the hero headline (loaded from Google Fonts via `<link>` in `index.html` if not already present).
-- **Performance budget:** First paint < 1.5s on a Chromebook. No image > 200KB. No new JS bundle > 30KB gzipped.
-- **Accessibility:** semantic H1, alt text on all imagery, contrast ≥ 4.5:1, keyboard focus rings preserved.
+### VFX direction reuse
+`RPGParentAttackVFX` currently fires right→left. We add a `direction: 'rightToLeft' | 'leftToRight'` prop (or a mirrored CSS transform wrapper) so the hero's fireball travels left→right and the villain's ice travels right→left. Tiny addition, no breaking changes.
 
-## Out of scope (deferred for later)
-- Any 3D / R3F hero element ("Tier 2") — revisit after patent filing.
-- Custom photogrammetry / video assets.
-- Replacing existing pricing/CTA copy (only restyling).
+### Hero integration
+`PremiumHero.tsx` — slot `<RPGShowcase variant="hero" />` as an absolutely-positioned layer behind the headline (z-index below text, above gradient mesh). Headline gains a subtle radial dark vignette behind it for legibility.
 
-## Approval check
-If this matches what you want, approve the plan and I'll build it in one pass. If you want me to swap any section (e.g. drop the bento grid, add a logo wall, change the order), tell me before approving.
+### Mode Select + Game Dashboard integration
+- `ModeSelect.tsx`: add `<RPGShowcase variant="compact" />` above the two mode cards (replaces or sits above the current "Welcome to NabuLearn" text).
+- `/game` dashboard top: same compact variant above the "Sign in to start your adventure" card.
+
+## Performance + constraints
+- All sprites are existing React/SVG — no new image downloads, no WebGL, no R3F.
+- One `RPGShowcase` instance per page; pauses when off-screen via `IntersectionObserver` so it doesn't burn CPU on scroll.
+- Bundle delta: ~3–6KB gzipped (one new component file).
+- Honors reduced-motion. Works on iPad Safari and Chromebook (no GPU-heavy effects).
+- Zero changes to game logic, auth, Supabase, or any business rules.
+
+## Out of scope
+- No new 3D character models, no R3F, no photogrammetry.
+- No changes to the actual RPG battle engine.
+- No new character art — uses what's already in `src/components/aura/game/rpg/`.
+- No copy changes beyond optionally tightening the hero subhead.
+
+## Files touched
+- **New:** `src/components/landing/RPGShowcase.tsx`
+- **Edit:** `src/components/landing/PremiumHero.tsx` (slot the showcase)
+- **Edit:** `src/pages/ModeSelect.tsx` (slot the compact showcase)
+- **Edit:** the `/game` dashboard top section (compact showcase)
+- **Edit:** `src/components/aura/game/rpg/RPGParentAttackVFX.tsx` — add optional `direction` prop, default preserves current behavior
+- **Edit:** `.lovable/plan.md`
+
+## Open question (one)
+Which two characters should star in the showcase?
+- **Option A (recommended):** Knight hero vs. classic Goblin boss — most iconic, instantly readable.
+- **Option B:** Dame hero vs. Shadow boss — moodier, fits the dark hero aesthetic.
+- **Option C:** Rotate randomly per page load from a curated 4-pair list.
+
+Confirm the pick (or say "you choose") and I'll build it.
