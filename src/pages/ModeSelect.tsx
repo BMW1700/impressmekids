@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Loader2, School, Gamepad2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
+import { RPGShowcase } from "@/components/landing/RPGShowcase";
 
 const ModeSelect = () => {
   const navigate = useNavigate();
