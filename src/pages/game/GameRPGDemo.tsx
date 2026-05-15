@@ -696,13 +696,6 @@ const BattleArenaView = () => (
 
             <div className="bg-slate-900 border-2 border-blue-500/30 rounded-xl px-8 py-5 inline-block relative shadow-[0_0_15px_rgba(59,130,246,0.2)]">
               <div className="text-3xl sm:text-4xl font-black text-white tracking-wider">a</div>
-              <motion.div
-                className="absolute -top-2 -right-2 bg-blue-500 text-white text-[9px] px-2 py-0.5 rounded-full flex items-center gap-1"
-                animate={{ opacity: [1, 0.6, 1] }}
-                transition={{ duration: 1, repeat: Infinity }}
-              >
-                <Mic className="w-2.5 h-2.5" /> Listening...
-              </motion.div>
             </div>
             <div className="text-white/30 text-xs mt-2">Word 3 of 62</div>
 
