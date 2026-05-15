@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import { RPGPlayerHUD } from "@/components/aura/game/rpg/RPGPlayerHUD";
 import { getStoredTheme, setStoredTheme, getGradeMode } from "@/lib/gameTheme";
+import { RPGShowcase } from "@/components/landing/RPGShowcase";
 
 const GameDashboard = () => {
   const navigate = useNavigate();
@@ -213,6 +214,16 @@ const GameDashboard = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0, y: -20 }}
             >
+              {/* RPG Battle Showcase */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.7 }}
+                className="mb-6 rounded-2xl border border-border/60 bg-gradient-to-br from-purple-950/40 via-background to-amber-950/20 overflow-hidden shadow-lg"
+              >
+                <RPGShowcase variant="compact" />
+              </motion.div>
+
               {/* Welcome Section */}
               <motion.div
                 initial={{ opacity: 0, y: -10 }}

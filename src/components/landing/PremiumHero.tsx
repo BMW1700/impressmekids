@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { RPGShowcase } from "@/components/landing/RPGShowcase";
 
 const HEADLINE = ["AI-Powered", "Literacy", "for", "every", "classroom."];
 
@@ -134,6 +135,19 @@ export const PremiumHero = () => {
           >
             FERPA · COPPA · SOC 2 aligned · $5–7 per student / year
           </motion.p>
+
+          {/* RPG live battle showcase */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1.1, delay: 1.6, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-16 mx-auto max-w-5xl rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-sm overflow-hidden shadow-[0_20px_80px_-20px_hsl(270_80%_30%/0.6)]"
+          >
+            <RPGShowcase variant="hero" />
+            <div className="px-6 pb-5 pt-1 text-xs uppercase tracking-[0.2em] text-white/40">
+              Live in-game · K–5 RPG mode
+            </div>
+          </motion.div>
         </div>
       </div>
     </section>

@@ -17,11 +17,15 @@ interface RPGParentAttackVFXProps {
   kind: ParentAttackKind | null;
   fireKey: number; // changes whenever a new attack should play
   onDone?: () => void;
+  /** Travel direction. Default 'rightToLeft' preserves existing parent→hero behavior. */
+  direction?: 'rightToLeft' | 'leftToRight';
+  /** When true, render absolutely inside the nearest positioned parent instead of fixed full-screen. */
+  contained?: boolean;
 }
 
 const DURATION_MS = 1100;
 
-export const RPGParentAttackVFX = ({ kind, fireKey, onDone }: RPGParentAttackVFXProps) => {
+export const RPGParentAttackVFX = ({ kind, fireKey, onDone, direction = 'rightToLeft', contained = false }: RPGParentAttackVFXProps) => {
   const [active, setActive] = useState(false);
 
   useEffect(() => {
@@ -36,9 +40,14 @@ export const RPGParentAttackVFX = ({ kind, fireKey, onDone }: RPGParentAttackVFX
 
   if (!kind || !active) return null;
 
+  const positionClass = contained
+    ? 'pointer-events-none absolute inset-0 z-[5] overflow-hidden'
+    : 'pointer-events-none fixed inset-0 z-[75] overflow-hidden';
+  const mirrorStyle = direction === 'leftToRight' ? { transform: 'scaleX(-1)' } : undefined;
+
   return (
     <AnimatePresence>
-      <div className="pointer-events-none fixed inset-0 z-[75] overflow-hidden">
+      <div className={positionClass} style={mirrorStyle}>
         {kind === 'fireball' && <FireballVFX />}
         {kind === 'lightning' && <LightningVFX />}
         {kind === 'ice_blast' && <IceVFX />}
