@@ -23,6 +23,7 @@ const GameAnalytics = () => {
 
   const gold = progress?.total_gold ?? 0;
   const xp = progress?.total_xp_earned ?? 0;
+  const { data: readingSummary } = useGameReadingSummary(user?.id);
 
   // Fetch user's AURA records
   const { data: auraRecords, isLoading: recordsLoading } = useQuery({
