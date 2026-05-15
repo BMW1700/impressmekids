@@ -55,6 +55,7 @@ export const getGradeRangeDisplay = (minGrade: number, maxGrade: number): string
 
 /** Get a friendly grade title like "Kindergarten", "1st Grade", "2nd Grade", etc. */
 export const getGradeTitle = (grade: number): string => {
+  if (grade === -1) return 'Pre-K';
   if (grade === 0) return 'Kindergarten';
   const suffixes: Record<number, string> = { 1: 'st', 2: 'nd', 3: 'rd' };
   const suffix = grade >= 11 && grade <= 13 ? 'th' : (suffixes[grade % 10] || 'th');
