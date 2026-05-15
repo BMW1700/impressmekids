@@ -6,7 +6,8 @@ import { RPGCharacterSprite } from "./RPGCharacterSprite";
 import { RPGWordReader, type WordAttempt } from "./RPGWordReader";
 import { VerbAnimationLayer } from "../effects/VerbAnimationLayer";
 import { useVerbAnimation } from "@/hooks/useVerbAnimation";
-import { resolveVerbAnimation } from "@/lib/verbAnimations";
+import { resolveVerbAnimation, type CompoundVerbDescriptor } from "@/lib/verbAnimations";
+import { resolvePreKVerb } from "@/lib/prekVerbAnimations";
 import { getPreKContent, type PreKLevelContent } from "@/data/preKWordBanks";
 import { type CampaignWorld } from "@/lib/campaignData";
 import { type CampaignLevel } from "./RPGLevelSelect";
@@ -84,6 +85,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
   const [shake, setShake] = useState(false);
 
   const [verbTrigger, setVerbTrigger] = useState<{ word: string; nonce: number } | null>(null);
+  const [prekScene, setPrekScene] = useState<{ id: number; descriptor: CompoundVerbDescriptor } | null>(null);
   const nonceRef = useRef(0);
   const verb = useVerbAnimation(verbTrigger);
   const verbActiveRef = useRef(false);
@@ -97,16 +99,21 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
     setEnemyHp(100);
     verbActiveRef.current = false;
     pendingCompleteRef.current = null;
+    setPrekScene(null);
   }, [world.id, level.id]);
 
   const currentWord = items[currentIndex] ?? "";
-  const verbHint = useMemo(() => resolveVerbAnimation(currentWord), [currentWord]);
+  const verbHint = useMemo(
+    () => resolvePreKVerb(currentWord) ?? resolveVerbAnimation(currentWord),
+    [currentWord]
+  );
   const allDone = correctCount >= items.length;
 
   // Track verb animation lifecycle so we can defer completion until it finishes
   useEffect(() => {
-    if (!verb) return;
+    if (!verb && !prekScene) return;
     verbActiveRef.current = true;
+    const ms = prekScene ? prekScene.descriptor.duration * 1000 + 200 : 1400;
     const t = window.setTimeout(() => {
       verbActiveRef.current = false;
       if (pendingCompleteRef.current) {
@@ -114,9 +121,9 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
         pendingCompleteRef.current = null;
         fn();
       }
-    }, 1400);
+    }, ms);
     return () => window.clearTimeout(t);
-  }, [verb?.id]);
+  }, [verb?.id, prekScene?.id]);
 
   const triggerHit = useCallback((word: string) => {
     setHeroAttacking(true);
@@ -131,8 +138,15 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
       }, 400);
     }, 220);
 
-    if (resolveVerbAnimation(word)) {
+    // Pre-K signature scene takes priority; fall back to legacy verb library
+    const prek = resolvePreKVerb(word);
+    if (prek) {
       nonceRef.current += 1;
+      setPrekScene({ id: nonceRef.current, descriptor: prek });
+      setVerbTrigger(null);
+    } else if (resolveVerbAnimation(word)) {
+      nonceRef.current += 1;
+      setPrekScene(null);
       setVerbTrigger({ word, nonce: nonceRef.current });
     }
   }, [damagePerWord]);
@@ -225,10 +239,12 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
               </div>
             </div>
             <motion.div
-              key={`enemy-${verb?.id ?? 0}`}
+              key={`enemy-${prekScene?.id ?? verb?.id ?? 0}`}
               animate={
                 allDone
                   ? { y: -20, rotate: [0, -8, 8, -8, 8, 0], scale: 1.1 }
+                  : prekScene?.descriptor.transform
+                  ? prekScene.descriptor.transform.animate
                   : verb?.descriptor.kind === "transform"
                   ? verb.descriptor.animate
                   : { y: [0, -8, 0] }
@@ -236,6 +252,8 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
               transition={
                 allDone
                   ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" }
+                  : prekScene?.descriptor.transform
+                  ? { duration: prekScene.descriptor.duration, ease: "easeInOut" }
                   : verb?.descriptor.kind === "transform"
                   ? { duration: 0.9, ease: "easeInOut" }
                   : { duration: 2, repeat: Infinity, ease: "easeInOut" }
@@ -252,9 +270,10 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                 />
               </div>
               <VerbAnimationLayer
-                descriptor={verb?.descriptor.kind === "emoji" ? verb.descriptor : null}
-                id={verb?.id ?? null}
-                anchor={{ x: 50, y: 50 }}
+                descriptor={!prekScene && verb?.descriptor.kind === "emoji" ? verb.descriptor : null}
+                compound={prekScene?.descriptor ?? null}
+                id={prekScene?.id ?? verb?.id ?? null}
+                anchor={{ x: 60, y: 40 }}
               />
             </motion.div>
           </div>

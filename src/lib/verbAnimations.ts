@@ -40,10 +40,23 @@ export type SequenceVerbDescriptor = {
   then: TransformVerbDescriptor;
 };
 
+export type CompoundVerbDescriptor = {
+  kind: "compound";
+  /** Multiple emoji props animated in parallel, each with own path/timing. */
+  props: EmojiPropDescriptor[];
+  /** Optional character body transform played in parallel with the props. */
+  transform?: TransformVerbDescriptor;
+  /** Optional on-screen action label (e.g. "BOING!", "ZZZ"). */
+  label?: { text: string; color?: string };
+  /** Total scene duration in seconds (used for grace timing). */
+  duration: number;
+};
+
 export type VerbDescriptor =
   | TransformVerbDescriptor
   | EmojiPropDescriptor
-  | SequenceVerbDescriptor;
+  | SequenceVerbDescriptor
+  | CompoundVerbDescriptor;
 
 const t = (animate: TargetAndTransition, duration = 0.7): TransformVerbDescriptor => ({
   kind: "transform",
