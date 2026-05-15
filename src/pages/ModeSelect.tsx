@@ -129,6 +129,15 @@ const ModeSelect = () => {
           <span className="text-xs sm:text-sm text-white/60">Play & Learn to Read</span>
         </motion.button>
         </div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.7, delay: 0.5 }}
+          className="w-full max-w-5xl mt-12 sm:mt-16 rounded-3xl border border-white/10 bg-[hsl(270_45%_8%)] overflow-hidden shadow-[0_20px_80px_-20px_hsl(270_80%_30%/0.6)]"
+        >
+          <RPGShowcase variant="hero" />
+        </motion.div>
       </main>
     </div>
   );
