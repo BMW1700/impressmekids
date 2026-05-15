@@ -21,11 +21,11 @@ const Index = () => {
         {/* 1. Cinematic hero — kinetic type, animated mesh */}
         <PremiumHero />
 
-        {/* 2. Bento feature pillars — dark continuation */}
-        <BentoFeatures />
-
-        {/* 3. Outcomes strip — count-up numbers on dark */}
+        {/* 2. Outcomes strip — lead with the proof points superintendents care about */}
         <OutcomesStrip />
+
+        {/* 3. Bento feature pillars — product capabilities */}
+        <BentoFeatures />
 
         {/* 4. How it works — three steps, light section */}
         <HowItWorks />
