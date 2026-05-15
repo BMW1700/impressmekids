@@ -116,13 +116,24 @@ export const ReadingProgressPanel = ({ studentId, studentName = "Reader", gradeM
               />
             ))}
           </div>
+          {stats.avgAccuracy > 0 && (
+            <div className="mt-2 flex items-center justify-center">
+              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                stats.avgAccuracy >= 97 ? 'bg-emerald-500/20 text-emerald-300' :
+                stats.avgAccuracy >= 90 ? 'bg-amber-500/20 text-amber-300' :
+                'bg-red-500/20 text-red-300'
+              }`}>
+                Fluency: {stats.avgAccuracy >= 97 ? 'Independent' : stats.avgAccuracy >= 90 ? 'Instructional' : 'Frustration'}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-2 mb-3">
           <div className="bg-blue-800/40 rounded-lg p-2 text-center">
             <Zap className="h-4 w-4 mx-auto text-blue-400 mb-1" />
             <div className="text-lg font-bold text-white">{stats.avgWpm}</div>
-            <div className="text-xs text-blue-300">Words/Min</div>
+            <div className="text-xs text-blue-300">WCPM</div>
             {stats.wpmTrend !== 0 && (
               <div className={`text-xs flex items-center justify-center gap-0.5 ${stats.wpmTrend > 0 ? 'text-green-400' : 'text-red-400'}`}>
                 <TrendingUp className={`h-3 w-3 ${stats.wpmTrend < 0 ? 'rotate-180' : ''}`} />

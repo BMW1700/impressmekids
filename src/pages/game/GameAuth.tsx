@@ -314,8 +314,8 @@ const GameAuth = () => {
             <TabsContent value="login">
               <form onSubmit={handleLogin}>
                 <CardContent className="space-y-4 pt-6">
-                  <LoginModeToggle />
-                  <IdentityInput idPrefix="login" />
+                  {LoginModeToggle()}
+                  {IdentityInput({ idPrefix: "login" })}
                   <div className="space-y-2">
                     <Label htmlFor="login-password" className="text-white/80">Password</Label>
                     <div className="relative">
@@ -358,7 +358,7 @@ const GameAuth = () => {
             <TabsContent value="signup">
               <form onSubmit={handleSignUp}>
                 <CardContent className="space-y-4 pt-6">
-                  <LoginModeToggle />
+                  {LoginModeToggle()}
                   {loginMode === "studentId" && (
                     <div className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs text-white/70 leading-relaxed">
                       Student ID accounts use a school-issued ID — not an email.
@@ -375,7 +375,7 @@ const GameAuth = () => {
                       className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
                     />
                   </div>
-                  <IdentityInput idPrefix="signup" />
+                  {IdentityInput({ idPrefix: "signup" })}
                   {loginMode === "studentId" && (
                     <div className="space-y-2">
                       <Label htmlFor="signup-class-code" className="text-white/80">
