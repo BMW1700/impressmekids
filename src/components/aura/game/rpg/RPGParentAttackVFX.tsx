@@ -40,9 +40,14 @@ export const RPGParentAttackVFX = ({ kind, fireKey, onDone, direction = 'rightTo
 
   if (!kind || !active) return null;
 
+  const positionClass = contained
+    ? 'pointer-events-none absolute inset-0 z-[5] overflow-hidden'
+    : 'pointer-events-none fixed inset-0 z-[75] overflow-hidden';
+  const mirrorStyle = direction === 'leftToRight' ? { transform: 'scaleX(-1)' } : undefined;
+
   return (
     <AnimatePresence>
-      <div className="pointer-events-none fixed inset-0 z-[75] overflow-hidden">
+      <div className={positionClass} style={mirrorStyle}>
         {kind === 'fireball' && <FireballVFX />}
         {kind === 'lightning' && <LightningVFX />}
         {kind === 'ice_blast' && <IceVFX />}
