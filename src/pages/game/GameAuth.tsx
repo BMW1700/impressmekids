@@ -358,7 +358,7 @@ const GameAuth = () => {
             <TabsContent value="signup">
               <form onSubmit={handleSignUp}>
                 <CardContent className="space-y-4 pt-6">
-                  <LoginModeToggle />
+                  {LoginModeToggle()}
                   {loginMode === "studentId" && (
                     <div className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs text-white/70 leading-relaxed">
                       Student ID accounts use a school-issued ID — not an email.
