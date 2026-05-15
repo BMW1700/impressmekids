@@ -11,6 +11,7 @@ import { OutcomesStrip } from "@/components/landing/OutcomesStrip";
 import { TrustSection } from "@/components/landing/TrustSection";
 import { ResearchSection } from "@/components/landing/ResearchSection";
 import { TestimonialSection } from "@/components/landing/TestimonialSection";
+import { GameModeSection } from "@/components/landing/GameModeSection";
 
 const Index = () => {
   return (
@@ -28,6 +29,9 @@ const Index = () => {
 
         {/* 4. How it works — three steps, light section */}
         <HowItWorks />
+
+        {/* 4b. Game mode — reframe the RPG as the engagement moat */}
+        <GameModeSection />
 
         {/* 5. Research credibility */}
         <ResearchSection />
