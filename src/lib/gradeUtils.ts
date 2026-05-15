@@ -18,6 +18,7 @@ export const SUBJECTS = [
 ];
 
 export const GRADES_K12 = [
+  { value: -1, label: 'Pre-K', short: 'Pre-K' },
   { value: 0, label: 'Kindergarten', short: 'K' },
   { value: 1, label: 'Grade 1', short: '1' },
   { value: 2, label: 'Grade 2', short: '2' },
@@ -36,6 +37,7 @@ export const GRADES_K12 = [
 export const GRADES = GRADES_K12;
 
 export const getGradeDisplay = (grade: number): string => {
+  if (grade === -1) return 'Pre-K';
   if (grade === 0) return 'K';
   return grade.toString();
 };
@@ -53,6 +55,7 @@ export const getGradeRangeDisplay = (minGrade: number, maxGrade: number): string
 
 /** Get a friendly grade title like "Kindergarten", "1st Grade", "2nd Grade", etc. */
 export const getGradeTitle = (grade: number): string => {
+  if (grade === -1) return 'Pre-K';
   if (grade === 0) return 'Kindergarten';
   const suffixes: Record<number, string> = { 1: 'st', 2: 'nd', 3: 'rd' };
   const suffix = grade >= 11 && grade <= 13 ? 'th' : (suffixes[grade % 10] || 'th');
