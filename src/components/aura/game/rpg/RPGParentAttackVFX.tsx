@@ -17,11 +17,15 @@ interface RPGParentAttackVFXProps {
   kind: ParentAttackKind | null;
   fireKey: number; // changes whenever a new attack should play
   onDone?: () => void;
+  /** Travel direction. Default 'rightToLeft' preserves existing parent→hero behavior. */
+  direction?: 'rightToLeft' | 'leftToRight';
+  /** When true, render absolutely inside the nearest positioned parent instead of fixed full-screen. */
+  contained?: boolean;
 }
 
 const DURATION_MS = 1100;
 
-export const RPGParentAttackVFX = ({ kind, fireKey, onDone }: RPGParentAttackVFXProps) => {
+export const RPGParentAttackVFX = ({ kind, fireKey, onDone, direction = 'rightToLeft', contained = false }: RPGParentAttackVFXProps) => {
   const [active, setActive] = useState(false);
 
   useEffect(() => {
