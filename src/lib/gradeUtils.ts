@@ -18,6 +18,7 @@ export const SUBJECTS = [
 ];
 
 export const GRADES_K12 = [
+  { value: -1, label: 'Pre-K', short: 'Pre-K' },
   { value: 0, label: 'Kindergarten', short: 'K' },
   { value: 1, label: 'Grade 1', short: '1' },
   { value: 2, label: 'Grade 2', short: '2' },
