@@ -133,7 +133,7 @@ export const ReadingProgressPanel = ({ studentId, studentName = "Reader", gradeM
           <div className="bg-blue-800/40 rounded-lg p-2 text-center">
             <Zap className="h-4 w-4 mx-auto text-blue-400 mb-1" />
             <div className="text-lg font-bold text-white">{stats.avgWpm}</div>
-            <div className="text-xs text-blue-300">Words/Min</div>
+            <div className="text-xs text-blue-300">WCPM</div>
             {stats.wpmTrend !== 0 && (
               <div className={`text-xs flex items-center justify-center gap-0.5 ${stats.wpmTrend > 0 ? 'text-green-400' : 'text-red-400'}`}>
                 <TrendingUp className={`h-3 w-3 ${stats.wpmTrend < 0 ? 'rotate-180' : ''}`} />
