@@ -178,7 +178,7 @@ export const RPGLevelSelect = ({
           </div>
         ) : (
           <div className={`inline-block px-4 py-1 rounded-full bg-gradient-to-r ${world.gradient} text-white text-sm font-bold mb-2`}>
-            World {world.id} — {getGradeTitle(world.requiredGradeLevel)}
+            World {world.id} — {world.mode === 'prek' ? 'Pre-K' : getGradeTitle(world.requiredGradeLevel)}
           </div>
         )}
         <h1 className={`text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r ${world.gradient} mb-2`}>
