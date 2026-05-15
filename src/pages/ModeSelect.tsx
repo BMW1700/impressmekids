@@ -76,9 +76,9 @@ const ModeSelect = () => {
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.7 }}
-          className="w-full max-w-4xl mb-6 rounded-3xl border border-white/15 bg-white/5 backdrop-blur-md overflow-hidden"
+          className="w-full max-w-5xl mb-8 rounded-3xl border border-white/10 bg-[hsl(270_45%_8%)] overflow-hidden shadow-[0_20px_80px_-20px_hsl(270_80%_30%/0.6)]"
         >
-          <RPGShowcase variant="compact" />
+          <RPGShowcase variant="hero" />
         </motion.div>
         <motion.h1
           initial={{ opacity: 0, y: -20 }}
