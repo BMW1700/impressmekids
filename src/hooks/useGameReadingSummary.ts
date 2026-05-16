@@ -8,6 +8,9 @@ export interface GameReadingSummary {
   fluencyLabel: "Independent" | "Instructional" | "Frustration" | "—";
   fluencyTone: "good" | "warn" | "bad" | "neutral";
   sessionCount: number;
+  totalSessions: number;
+  totalWordsRead: number;
+  hasEnoughData: boolean;
 }
 
 function fluencyFromAccuracy(acc: number): Pick<GameReadingSummary, "fluencyLabel" | "fluencyTone"> {
@@ -27,15 +30,29 @@ export function useGameReadingSummary(studentId?: string) {
     enabled: !!studentId,
     staleTime: 60_000,
     queryFn: async (): Promise<GameReadingSummary> => {
-      const { data: sessions } = await supabase
-        .from("reading_sessions")
-        .select("wpm, wcpm, accuracy_percent")
-        .eq("student_id", studentId!)
-        .order("created_at", { ascending: false })
-        .limit(20);
+      const [recentRes, countRes, statsRes] = await Promise.all([
+        supabase
+          .from("reading_sessions")
+          .select("wpm, wcpm, accuracy_percent")
+          .eq("student_id", studentId!)
+          .order("created_at", { ascending: false })
+          .limit(20),
+        supabase
+          .from("reading_sessions")
+          .select("id", { count: "exact", head: true })
+          .eq("student_id", studentId!),
+        supabase
+          .from("student_reading_stats")
+          .select("total_words_read")
+          .eq("student_id", studentId!)
+          .maybeSingle(),
+      ]);
 
-      const list = sessions ?? [];
+      const list = recentRes.data ?? [];
       const n = list.length;
+      const totalSessions = countRes.count ?? 0;
+      const totalWordsRead = (statsRes.data?.total_words_read as number | undefined) ?? 0;
+
       if (!n) {
         return {
           avgWpm: 0,
@@ -44,6 +61,9 @@ export function useGameReadingSummary(studentId?: string) {
           fluencyLabel: "—",
           fluencyTone: "neutral",
           sessionCount: 0,
+          totalSessions,
+          totalWordsRead,
+          hasEnoughData: false,
         };
       }
 
@@ -57,7 +77,11 @@ export function useGameReadingSummary(studentId?: string) {
         avgAccuracy,
         ...fluencyFromAccuracy(avgAccuracy),
         sessionCount: n,
+        totalSessions,
+        totalWordsRead,
+        hasEnoughData: n >= 3,
       };
     },
   });
 }
+
