@@ -1385,9 +1385,52 @@ export type Database = {
           },
         ]
       }
+      castle_swarm_campaign_progress: {
+        Row: {
+          best_accuracy: number
+          best_wave: number
+          best_words_read: number
+          completed_at: string | null
+          created_at: string
+          grade_mode: string
+          id: string
+          level_id: string
+          stars: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          best_accuracy?: number
+          best_wave?: number
+          best_words_read?: number
+          completed_at?: string | null
+          created_at?: string
+          grade_mode: string
+          id?: string
+          level_id: string
+          stars?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          best_accuracy?: number
+          best_wave?: number
+          best_words_read?: number
+          completed_at?: string | null
+          created_at?: string
+          grade_mode?: string
+          id?: string
+          level_id?: string
+          stars?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       castle_swarm_runs: {
         Row: {
           accuracy: number
+          challenge_seed: string | null
           character_id: string
           coins_earned: number
           created_at: string
@@ -1402,6 +1445,7 @@ export type Database = {
         }
         Insert: {
           accuracy?: number
+          challenge_seed?: string | null
           character_id: string
           coins_earned?: number
           created_at?: string
@@ -1416,6 +1460,7 @@ export type Database = {
         }
         Update: {
           accuracy?: number
+          challenge_seed?: string | null
           character_id?: string
           coins_earned?: number
           created_at?: string
@@ -1427,6 +1472,39 @@ export type Database = {
           user_id?: string
           wave_reached?: number
           words_read?: number
+        }
+        Relationships: []
+      }
+      castle_upgrades: {
+        Row: {
+          cap_level: number
+          created_at: string
+          damage_level: number
+          grade_mode: string
+          hp_level: number
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cap_level?: number
+          created_at?: string
+          damage_level?: number
+          grade_mode: string
+          hp_level?: number
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cap_level?: number
+          created_at?: string
+          damage_level?: number
+          grade_mode?: string
+          hp_level?: number
+          id?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
