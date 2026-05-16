@@ -53,8 +53,13 @@ export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
     queryClient.invalidateQueries({ queryKey: ["campaign-progress", studentId] });
   };
 
-  // Get list of owned item IDs
-  const ownedItems = inventory.map(item => item.item_id);
+  // Default skins (free, always owned — used to revert to generic look)
+  const defaultSkinIds = STORE_ITEMS
+    .filter(s => s.category === 'skin' && s.skinVariant === 'default')
+    .map(s => s.id);
+
+  // Get list of owned item IDs (default skins are always owned)
+  const ownedItems = Array.from(new Set([...inventory.map(item => item.item_id), ...defaultSkinIds]));
 
   // Get equipped skin for a specific character (scoped per character, not first-equipped)
   const getEquippedSkin = (character: string): string | null => {
@@ -65,7 +70,8 @@ export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
         return skinData.skinVariant || null;
       }
     }
-    return null;
+    // No custom skin equipped → user is on the generic default look
+    return 'default';
   };
 
   // Get all active permanent upgrades
