@@ -292,6 +292,32 @@ export const STORE_ITEMS: StoreItem[] = [
     price: 550, category: 'power', icon: '🧠', effect: 'neural', value: 55, rarity: 'epic', theme: 'agent',
   },
   
+  // =============== DEFAULT SKINS (free, always owned) ===============
+  {
+    id: 'default_valor', name: 'Classic Knight', description: 'The original Sir Valor look',
+    price: 0, category: 'skin', icon: '⚔️', rarity: 'common', character: 'valor', skinVariant: 'default', theme: 'classic',
+  },
+  {
+    id: 'default_elara', name: 'Classic Wizard', description: 'The original Elara look',
+    price: 0, category: 'skin', icon: '🔮', rarity: 'common', character: 'elara', skinVariant: 'default', theme: 'classic',
+  },
+  {
+    id: 'default_ella', name: 'Classic Princess', description: 'The original Princess Ella look',
+    price: 0, category: 'skin', icon: '👸', rarity: 'common', character: 'ella', skinVariant: 'default', theme: 'classic',
+  },
+  {
+    id: 'default_agent_x', name: 'Classic Agent X', description: 'Standard field operative gear',
+    price: 0, category: 'skin', icon: '🕴️', rarity: 'common', character: 'agent_x', skinVariant: 'default', theme: 'agent',
+  },
+  {
+    id: 'default_cipher', name: 'Classic Cipher', description: 'Standard tech specialist outfit',
+    price: 0, category: 'skin', icon: '💻', rarity: 'common', character: 'cipher', skinVariant: 'default', theme: 'agent',
+  },
+  {
+    id: 'default_shadow', name: 'Classic Shadow', description: 'Standard infiltrator suit',
+    price: 0, category: 'skin', icon: '🥷', rarity: 'common', character: 'shadow', skinVariant: 'default', theme: 'agent',
+  },
+
   // =============== SKINS - SIR VALOR ===============
   {
     id: 'golden_knight', name: 'Golden Knight', description: 'Shiny golden armor for Sir Valor',
