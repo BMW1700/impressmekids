@@ -350,8 +350,8 @@ const GameAuth = () => {
             <TabsContent value="login">
               <form onSubmit={handleLogin}>
                 <CardContent className="space-y-4 pt-6">
-                  {LoginModeToggle()}
-                  {IdentityInput({ idPrefix: "login" })}
+                  <LoginModeToggle loginMode={loginMode} onChange={setLoginMode} />
+                  <IdentityInput idPrefix="login" {...identityProps} />
                   <div className="space-y-2">
                     <Label htmlFor="login-password" className="text-white/80">Password</Label>
                     <div className="relative">
