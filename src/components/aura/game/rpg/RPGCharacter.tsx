@@ -761,6 +761,7 @@ export const RPGCharacter = ({
           size="medium"
           currentStreak={currentStreak}
           showHealthBar={showHealthBar}
+          skinVariant={skinVariant as any}
         />
       );
     }
@@ -774,6 +775,7 @@ export const RPGCharacter = ({
           maxHp={character.maxHp}
           size="medium"
           showHealthBar={showHealthBar}
+          skinVariant={skinVariant as any}
         />
       );
     }
@@ -787,6 +789,7 @@ export const RPGCharacter = ({
           maxHp={character.maxHp}
           size="medium"
           showHealthBar={showHealthBar}
+          skinVariant={skinVariant as any}
         />
       );
     }
