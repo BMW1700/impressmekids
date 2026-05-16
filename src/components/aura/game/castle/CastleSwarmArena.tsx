@@ -238,6 +238,16 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
       banner = isEndless ? `Endless · Wave ${n}` : `Wave ${n}`;
     }
 
+    // Boss wave every 5th wave (endless/daily/campaign): single tanky orc
+    const isBossWave = n > 0 && n % 5 === 0;
+    if (isBossWave) {
+      composition = ["orc"];
+      totalEnemies = 1;
+      cadenceMs = 1500;
+      hpBonus = hpBonus + Math.max(6, Math.floor(n * 1.5)); // 3x-ish HP swell
+      banner = `⚔️ Boss Wave ${n}!`;
+    }
+
     compositionRef.current = composition;
     compositionIdxRef.current = 0;
     waveSpawnedRef.current = 0;
@@ -247,7 +257,7 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
     waveRef.current = n;
     setWaveHud(n);
     setWaveBanner(banner);
-    setTimeout(() => setWaveBanner(null), 2000);
+    setTimeout(() => setWaveBanner(null), isBossWave ? 2600 : 2000);
 
     // Stash plan params on a single shared "wavePlan" via refs (closures read them below)
     (window as any).__cs_wave = { cadenceMs, baseSpeed, hpBonus };

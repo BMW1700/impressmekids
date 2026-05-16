@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Filter, Sparkles, Sword, BookOpen, Crown, Brain } from "lucide-react";
+import { Search, Filter, Sparkles, Sword, BookOpen, Crown, Brain, Castle } from "lucide-react";
 import { StoryCard } from "./StoryCard";
 import { curatedStories, CuratedStory } from "@/data/curatedStories";
 import { agentStories } from "@/data/agentStories";
@@ -19,6 +19,7 @@ interface StoryLibraryProps {
   onSelectStory: (story: CuratedStory) => void;
   onStartCampaign?: () => void;
   onStartRpgMode?: () => void;
+  onStartCastle?: () => void;
   categoryFilter?: string | null;
   gradeMode?: GradeMode;
 }
@@ -27,7 +28,7 @@ const categories = ['all', 'animals', 'space', 'sports', 'fairy_tales', 'science
 const k5Grades = ['all', 'K', '1', '2', '3', '4', '5'];
 const middleHighGrades = ['all', '6', '7', '8', '9', '10', '11', '12'];
 
-export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, categoryFilter, gradeMode = 'k5' }: StoryLibraryProps) => {
+export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, onStartCastle, categoryFilter, gradeMode = 'k5' }: StoryLibraryProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(categoryFilter || "all");
   const [selectedGrade, setSelectedGrade] = useState("all");
@@ -268,6 +269,38 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, c
                   >
                     <Sword className="h-4 w-4 mr-2" />
                     Enter World Map
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Castle Swarm Defense */}
+          {onStartCastle && (
+            <Card className="overflow-hidden border-2 border-amber-500/40 bg-gradient-to-r from-rose-600/15 via-amber-500/15 to-yellow-500/15">
+              <CardContent className="p-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-rose-600 flex items-center justify-center text-3xl shadow-lg">
+                      🏰
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg flex items-center gap-2">
+                        <Castle className="h-5 w-5 text-amber-500" />
+                        Castle Swarm Defense
+                        <Badge className="text-xs bg-amber-500 text-black">NEW</Badge>
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Defend your castle by reading words aloud. Campaign, Endless & Daily challenges.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={onStartCastle}
+                    className="bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-600 hover:to-rose-700"
+                  >
+                    <Castle className="h-4 w-4 mr-2" />
+                    Enter Castle
                   </Button>
                 </div>
               </CardContent>
