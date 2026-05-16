@@ -294,42 +294,45 @@ const GameAnalytics = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {(!auraRecords || auraRecords.length === 0) ? (
+                {(!recentReadingSessions || recentReadingSessions.length === 0) ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-50" />
                     <p>No reading sessions yet. Start your first adventure!</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {auraRecords.slice(0, 20).map((record) => (
-                      <div
-                        key={record.id}
-                        className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                      >
-                        <div>
-                          <div className="font-medium text-sm">
-                            {record.reading_type === 'reading_speaking' ? '📖 Reading' : 
-                             record.presentation_type ? '🎤 Presentation' : '🎯 Practice'}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {new Date(record.created_at).toLocaleDateString()} · {record.words} words · {Math.round(record.duration_s / 60)}m
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="text-right">
-                            <div className="text-sm font-bold">{record.wpm} WPM</div>
+                    {recentReadingSessions.map((session) => {
+                      const mode = (session.reading_mode || 'practice').replace(/_/g, ' ');
+                      const acc = session.accuracy_percent ?? 0;
+                      const wcpm = session.wcpm ?? session.wpm ?? 0;
+                      const mins = Math.max(1, Math.round((session.duration_seconds || 0) / 60));
+                      return (
+                        <div
+                          key={session.id}
+                          className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                        >
+                          <div>
+                            <div className="font-medium text-sm capitalize">
+                              📖 {mode}
+                            </div>
                             <div className="text-xs text-muted-foreground">
-                              {Math.round(record.clarity * 100)}% clarity
+                              {new Date(session.created_at).toLocaleDateString()} · {session.words_read ?? 0} words · {mins}m
                             </div>
                           </div>
-                          {record.grade !== null && (
-                            <Badge variant={record.grade >= 80 ? "default" : record.grade >= 60 ? "secondary" : "destructive"}>
-                              {Math.round(record.grade)}%
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <div className="text-sm font-bold">{Math.round(wcpm)} WCPM</div>
+                              <div className="text-xs text-muted-foreground">
+                                {Math.round(session.wpm ?? 0)} WPM
+                              </div>
+                            </div>
+                            <Badge variant={acc >= 95 ? "default" : acc >= 85 ? "secondary" : "destructive"}>
+                              {Math.round(acc)}%
                             </Badge>
-                          )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
