@@ -35,7 +35,7 @@ export const RPGPlayerHUD = ({
   const { hasClaimedToday, currentStreak } = useDailyRewards(studentId);
   const { getTotalStats } = usePlayerAchievements(studentId);
   const { equippedPet, equippedPetData } = usePlayerPets(studentId);
-  const { ownedItems, purchaseItem, equipSkin, getEquippedSkin } = usePlayerInventory(studentId);
+  const { ownedItems, purchaseItem, equipSkin, getEquippedSkin } = usePlayerInventory(studentId, gradeMode);
 
   const achievementStats = getTotalStats();
   const theme = getStoredTheme();
