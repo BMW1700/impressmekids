@@ -21,7 +21,7 @@ const AuraProgressChart = ({ records }: AuraProgressChartProps) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Your Progress Over Time</CardTitle>
+        <CardTitle>Speaking Practice Progress</CardTitle>
       </CardHeader>
       <CardContent>
         {chartData.length > 0 ? (
@@ -78,30 +78,9 @@ const AuraProgressChart = ({ records }: AuraProgressChartProps) => {
         )}
 
         {records.length > 0 && (
-          <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 border rounded-lg">
-              <div className="text-2xl font-bold">{records.length}</div>
-              <div className="text-sm text-muted-foreground">Total Sessions</div>
-            </div>
-            <div className="text-center p-4 border rounded-lg">
-              <div className="text-2xl font-bold">
-                {Math.round(records.reduce((sum, r) => sum + r.grade, 0) / records.length)}
-              </div>
-              <div className="text-sm text-muted-foreground">Avg Grade</div>
-            </div>
-            <div className="text-center p-4 border rounded-lg">
-              <div className="text-2xl font-bold">
-                {Math.round(records.reduce((sum, r) => sum + r.wpm, 0) / records.length)}
-              </div>
-              <div className="text-sm text-muted-foreground">Avg WPM</div>
-            </div>
-            <div className="text-center p-4 border rounded-lg">
-              <div className="text-2xl font-bold">
-                {(records.reduce((sum, r) => sum + (r.pronunciation ?? 0), 0) / records.length).toFixed(1)}
-              </div>
-              <div className="text-sm text-muted-foreground">Avg Pronunciation</div>
-            </div>
-          </div>
+          <p className="mt-4 text-xs text-muted-foreground text-center">
+            Based on {records.length} speaking practice {records.length === 1 ? 'clip' : 'clips'}. Reading fluency stats are shown above.
+          </p>
         )}
       </CardContent>
     </Card>
