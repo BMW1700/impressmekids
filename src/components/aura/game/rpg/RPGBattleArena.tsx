@@ -327,7 +327,11 @@ export const RPGBattleArena = ({
   const wordsReadRef = useRef(0);
   const correctWordsRef = useRef(0);
   
-  // REAL INVENTORY: Build from database — no regenerating starter kit
+  // Track whether starter kit has been seeded (prevents re-adding mid-battle after potions are used)
+  const starterKitSeededRef = useRef(false);
+
+  // REAL INVENTORY: Build from database. Live-rebuilds on every inventory change so
+  // mid-battle store purchases appear immediately.
   const battleInventory = useMemo(() => {
     const inv: Record<string, number> = {};
     const potionItems = STORE_ITEMS.filter(item => item.category === 'potion');
@@ -335,9 +339,10 @@ export const RPGBattleArena = ({
       const qty = playerInventory.getItemQuantity(item.id);
       if (qty > 0) inv[item.id] = qty;
     });
-    // Starter kit ONLY if player has zero potions of any kind
+    // Starter kit ONLY on first ever load when player truly has no potions in DB.
     const totalPotions = Object.values(inv).reduce((s, v) => s + v, 0);
-    if (totalPotions === 0) {
+    if (totalPotions === 0 && !starterKitSeededRef.current) {
+      starterKitSeededRef.current = true;
       inv['health_potion'] = 2;
       inv['magic_potion'] = 1;
     }
