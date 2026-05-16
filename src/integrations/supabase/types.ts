@@ -4542,6 +4542,7 @@ export type Database = {
         Row: {
           created_at: string
           experience: number
+          grade_mode: string
           id: string
           is_equipped: boolean
           last_fed_at: string | null
@@ -4554,6 +4555,7 @@ export type Database = {
         Insert: {
           created_at?: string
           experience?: number
+          grade_mode?: string
           id?: string
           is_equipped?: boolean
           last_fed_at?: string | null
@@ -4566,6 +4568,7 @@ export type Database = {
         Update: {
           created_at?: string
           experience?: number
+          grade_mode?: string
           id?: string
           is_equipped?: boolean
           last_fed_at?: string | null
