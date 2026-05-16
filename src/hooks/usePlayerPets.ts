@@ -13,19 +13,24 @@ interface PlayerPet {
   is_equipped: boolean;
   last_fed_at: string | null;
   unlocked_at: string;
+  grade_mode: string;
 }
+
+const normalizeGradeMode = (gm?: string): string => (gm === '6to12' ? '6to12' : 'k5');
 
 export const usePlayerPets = (studentId?: string, gradeMode?: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const gm = normalizeGradeMode(gradeMode);
 
   const { data: ownedPets = [], isLoading } = useQuery({
-    queryKey: ["player-pets", studentId],
+    queryKey: ["player-pets", studentId, gm],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("player_pets")
         .select("*")
         .eq("student_id", studentId!)
+        .eq("grade_mode", gm)
         .order("unlocked_at", { ascending: true });
       if (error) throw error;
       return data as PlayerPet[];
@@ -54,13 +59,18 @@ export const usePlayerPets = (studentId?: string, gradeMode?: string) => {
   const deductGold = async (currentGold: number, amount: number) => {
     if (!studentId) throw new Error("No student ID");
     if (currentGold < amount) throw new Error("Not enough gold");
-    let q = supabase
+    const { error } = await supabase
       .from("campaign_progress")
       .update({ total_gold: currentGold - amount })
-      .eq("student_id", studentId);
-    if (gradeMode) q = q.eq("grade_mode", gradeMode);
-    const { error } = await q;
+      .eq("student_id", studentId)
+      .eq("grade_mode", gm);
     if (error) throw error;
+  };
+
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ["player-pets", studentId, gm] });
+    queryClient.invalidateQueries({ queryKey: ["campaign-progress", studentId, gm] });
+    queryClient.invalidateQueries({ queryKey: ["campaign-progress", studentId] });
   };
 
   // Purchase pet — charges gold from active grade-mode wallet
@@ -81,15 +91,15 @@ export const usePlayerPets = (studentId?: string, gradeMode?: string) => {
           pet_type: petId,
           pet_name: customName || null,
           is_equipped: ownedPets.length === 0,
-        })
+          grade_mode: gm,
+        } as any)
         .select()
         .single();
       if (error) throw error;
       return { pet, record: data };
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["player-pets", studentId] });
-      queryClient.invalidateQueries({ queryKey: ["campaign-progress", studentId] });
+      invalidateAll();
       toast({
         title: `🎉 ${result.pet.emoji} ${result.pet.name} Joined Your Party!`,
         description: result.pet.baseBonus.label,
@@ -103,17 +113,23 @@ export const usePlayerPets = (studentId?: string, gradeMode?: string) => {
   const equipPet = useMutation({
     mutationFn: async (petId: string) => {
       if (!studentId) throw new Error("No student ID");
-      await supabase.from("player_pets").update({ is_equipped: false }).eq("student_id", studentId);
+      // Only unequip pets within the same grade mode
+      await supabase
+        .from("player_pets")
+        .update({ is_equipped: false })
+        .eq("student_id", studentId)
+        .eq("grade_mode", gm);
       const { error } = await supabase
         .from("player_pets")
         .update({ is_equipped: true })
         .eq("student_id", studentId)
+        .eq("grade_mode", gm)
         .eq("pet_type", petId);
       if (error) throw error;
       return getPetById(petId);
     },
     onSuccess: (pet) => {
-      queryClient.invalidateQueries({ queryKey: ["player-pets", studentId] });
+      invalidateAll();
       if (pet) toast({ title: `${pet.emoji} ${pet.name} Equipped!`, description: pet.baseBonus.label });
     },
   });
@@ -143,8 +159,7 @@ export const usePlayerPets = (studentId?: string, gradeMode?: string) => {
       return { pet, leveledUp: shouldLevelUp, newLevel };
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["player-pets", studentId] });
-      queryClient.invalidateQueries({ queryKey: ["campaign-progress", studentId] });
+      invalidateAll();
       if (result.leveledUp) {
         toast({ title: `🎉 ${result.pet.emoji} Leveled Up!`, description: `Now level ${result.newLevel}!` });
       } else {
@@ -163,12 +178,13 @@ export const usePlayerPets = (studentId?: string, gradeMode?: string) => {
         .from("player_pets")
         .update({ pet_name: newName })
         .eq("student_id", studentId)
+        .eq("grade_mode", gm)
         .eq("pet_type", petId);
       if (error) throw error;
       return newName;
     },
     onSuccess: (newName) => {
-      queryClient.invalidateQueries({ queryKey: ["player-pets", studentId] });
+      invalidateAll();
       toast({ title: "Pet Renamed!", description: `Your pet is now called ${newName}` });
     },
   });

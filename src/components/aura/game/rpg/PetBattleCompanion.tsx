@@ -42,13 +42,13 @@ export const PetBattleCompanion = ({ pet, petName, level, charge, maxCharge, att
         />
       </div>
 
-      {/* Attack effect — projectile flying toward enemy (left) */}
+      {/* Attack effect — projectile flying toward enemy (uses viewport-relative units so it scales on any layout) */}
       <AnimatePresence>
         {attacking && (
           <motion.div
             key="pet-attack"
             initial={{ opacity: 1, x: 0, y: 0, scale: 1 }}
-            animate={{ opacity: [1, 1, 0], x: -400, y: -20, scale: [1, 1.6, 1] }}
+            animate={{ opacity: [1, 1, 0], x: '-55vw', y: -20, scale: [1, 1.6, 1] }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.7, ease: 'easeOut' }}
             className="absolute top-6 right-2 pointer-events-none z-30"

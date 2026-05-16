@@ -1506,7 +1506,11 @@ export const RPGBattleArena = ({
         // FIRE!
         const dmg = calculatePetAttackDamage(equippedPetData, equippedPet.level);
         setPetAttacking(true);
-        setEnemyHp(prevHp => Math.max(0, prevHp - dmg));
+        setEnemyHp(prevHp => {
+          const updated = Math.max(0, prevHp - dmg);
+          enemyHpRef.current = updated;
+          return updated;
+        });
         setTotalDamage(d => d + dmg);
         setFloatingDamages(fd => [...fd, {
           id: Date.now() + 9999,
