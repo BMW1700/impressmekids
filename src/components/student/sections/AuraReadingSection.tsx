@@ -675,6 +675,7 @@ export const AuraReadingSection = () => {
             onSelectStory={handleStorySelect} 
             onStartCampaign={() => setIsCampaignMode(true)}
             onStartRpgMode={() => setIsRpgMode(true)}
+            onStartCastle={() => navigate('/game/castle-swarm')}
             gradeMode={currentGradeMode}
           />
         </TabsContent>
