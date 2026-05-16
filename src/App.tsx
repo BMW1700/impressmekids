@@ -90,6 +90,7 @@ const GameDashboard = lazy(() => import("./pages/game/GameDashboard"));
 const GamePlay = lazy(() => import("./pages/game/GamePlay"));
 const GameAnalytics = lazy(() => import("./pages/game/GameAnalytics"));
 const GameRPGDemo = lazy(() => import("./pages/game/GameRPGDemo"));
+const CastleSwarmDefense = lazy(() => import("./pages/game/CastleSwarmDefense"));
 const SchoolSetup = lazy(() => import("./pages/SchoolSetup"));
 const ScopeAndSequence = lazy(() => import("./pages/ScopeAndSequence"));
 const PhonicsFoundations = lazy(() => import("./pages/game/PhonicsFoundations"));
@@ -187,6 +188,7 @@ const App = () => (
                     {/* Game Mode — needs auth for gameplay */}
                     <Route path="/game/play" element={<GamePlay />} />
                     <Route path="/game/analytics" element={<GameAnalytics />} />
+                    <Route path="/game/castle-swarm" element={<CastleSwarmDefense />} />
 
                     {/* School Mode — needs auth AND school profile (role + district) */}
                     <Route element={<RequireSchoolProfile />}>
