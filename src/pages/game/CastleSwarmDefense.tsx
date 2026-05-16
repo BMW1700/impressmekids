@@ -1,16 +1,31 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { CastleSwarmArena } from "@/components/aura/game/castle/CastleSwarmArena";
+import { CastleSwarmArena, CastleRunMode } from "@/components/aura/game/castle/CastleSwarmArena";
+import { CastleCampaignSelect } from "@/components/aura/game/castle/CastleCampaignSelect";
 
 const CastleSwarmDefense = () => {
   const navigate = useNavigate();
+  const [run, setRun] = useState<CastleRunMode | null>(null);
   return (
     <>
       <Helmet>
         <title>Castle Swarm Defense — NabuLearn</title>
-        <meta name="description" content="Defend the castle by reading words and stories aloud. Endless horde mode for K-12 readers." />
+        <meta name="description" content="Defend the castle by reading words and stories aloud. Campaign, Endless, and Daily Challenge for K-12 readers." />
       </Helmet>
-      <CastleSwarmArena onExit={() => navigate("/game")} />
+      {run ? (
+        <CastleSwarmArena
+          mode={run}
+          onExit={() => setRun(null)}
+        />
+      ) : (
+        <CastleCampaignSelect
+          onBack={() => navigate("/game")}
+          onPickEndless={() => setRun({ kind: "endless" })}
+          onPickDaily={(seed) => setRun({ kind: "daily", seed })}
+          onPickCampaign={(level) => setRun({ kind: "campaign", level })}
+        />
+      )}
     </>
   );
 };

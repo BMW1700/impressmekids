@@ -1,6 +1,7 @@
 import { useRef } from "react";
+import * as htmlToImage from "html-to-image";
 import { Button } from "@/components/ui/button";
-import { Download, Share2, RotateCcw, Home } from "lucide-react";
+import { Download, Share2, RotateCcw, Home, Star } from "lucide-react";
 import { motion } from "framer-motion";
 
 export interface RunSummary {
@@ -16,99 +17,73 @@ export interface RunSummary {
 
 interface Props {
   summary: RunSummary;
+  stars?: number;
+  showStars?: boolean;
   onPlayAgain: () => void;
   onExit: () => void;
 }
 
-/**
- * Shareable end-of-run card. Renders as a styled DOM card that can be
- * rasterised to PNG via the browser's canvas (html2canvas-free approach
- * using SVG foreignObject) so kids/parents can screenshot or download.
- *
- * Built-in to Phase 1 because it's the distribution lever.
- */
-export const WaveSurvivedCard = ({ summary, onPlayAgain, onExit }: Props) => {
+export const WaveSurvivedCard = ({ summary, stars = 0, showStars = false, onPlayAgain, onExit }: Props) => {
   const cardRef = useRef<HTMLDivElement>(null);
 
   const downloadPng = async () => {
-    const node = cardRef.current;
-    if (!node) return;
-    const width = node.offsetWidth;
-    const height = node.offsetHeight;
-    const xml = new XMLSerializer().serializeToString(node);
-    const svg = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-        <foreignObject width="100%" height="100%">
-          <div xmlns="http://www.w3.org/1999/xhtml">${xml}</div>
-        </foreignObject>
-      </svg>`;
-    const blob = new Blob([svg], { type: "image/svg+xml" });
-    const url = URL.createObjectURL(blob);
+    if (!cardRef.current) return;
     try {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      await new Promise<void>((res, rej) => {
-        img.onload = () => res();
-        img.onerror = () => rej(new Error("image load failed"));
-        img.src = url;
-      });
-      const canvas = document.createElement("canvas");
-      canvas.width = width * 2;
-      canvas.height = height * 2;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      ctx.scale(2, 2);
-      ctx.fillStyle = "#0f172a";
-      ctx.fillRect(0, 0, width, height);
-      ctx.drawImage(img, 0, 0);
+      const url = await htmlToImage.toPng(cardRef.current, { pixelRatio: 2, cacheBust: true, backgroundColor: "#0f172a" });
       const link = document.createElement("a");
       link.download = `castle-swarm-wave-${summary.waveReached}.png`;
-      link.href = canvas.toDataURL("image/png");
+      link.href = url;
       link.click();
-    } catch {
-      // foreignObject can be blocked by CSP / tainting; fall back to a printable view
-      window.print();
-    } finally {
-      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("[WaveSurvivedCard] PNG export failed", e);
     }
   };
 
   const share = async () => {
     const text = `I survived Wave ${summary.waveReached} in Castle Swarm Defense on NabuLearn — ${summary.wordsRead} words read at ${summary.accuracy}% accuracy! 🏰⚔️`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "Castle Swarm Defense", text, url: "https://nabulearn.com/game/castle-swarm" });
-        return;
-      } catch {
-        /* user dismissed */
-      }
-    }
     try {
-      await navigator.clipboard.writeText(text);
-    } catch { /* ignore */ }
+      if (!cardRef.current) throw new Error("no card");
+      const blob = await htmlToImage.toBlob(cardRef.current, { pixelRatio: 2, backgroundColor: "#0f172a" });
+      if (blob && navigator.canShare && navigator.canShare({ files: [new File([blob], "card.png", { type: "image/png" })] })) {
+        await navigator.share({
+          title: "Castle Swarm Defense",
+          text,
+          url: "https://nabulearn.com/game/castle-swarm",
+          files: [new File([blob], `castle-swarm-wave-${summary.waveReached}.png`, { type: "image/png" })],
+        });
+        return;
+      }
+    } catch { /* fall through */ }
+    if (navigator.share) {
+      try { await navigator.share({ title: "Castle Swarm Defense", text, url: "https://nabulearn.com/game/castle-swarm" }); return; }
+      catch { /* dismissed */ }
+    }
+    try { await navigator.clipboard.writeText(text); } catch { /* ignore */ }
   };
 
-  const title =
-    summary.endedReason === "win" ? "Victory!" :
-    summary.endedReason === "quit" ? "Run Ended" :
-    "Castle Fallen";
+  const title = summary.endedReason === "win" ? "Victory!" : summary.endedReason === "quit" ? "Run Ended" : "Castle Fallen";
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.94 }}
-      animate={{ opacity: 1, scale: 1 }}
+      initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }}
       className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
     >
       <div className="w-full max-w-sm space-y-4">
-        <div
-          ref={cardRef}
-          className="rounded-2xl border-2 border-amber-400/40 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 shadow-2xl"
-        >
-          <div className="text-center mb-4">
+        <div ref={cardRef}
+          className="rounded-2xl border-2 border-amber-400/40 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 shadow-2xl">
+          <div className="text-center mb-3">
             <div className="text-5xl mb-2">{summary.endedReason === "win" ? "🏆" : "🏰"}</div>
             <h2 className="text-2xl font-black text-amber-300">{title}</h2>
             <p className="text-sm text-slate-400">{summary.characterName} · Castle Swarm Defense</p>
           </div>
+
+          {showStars && (
+            <div className="flex items-center justify-center gap-1 mb-3">
+              {[1, 2, 3].map(i => (
+                <Star key={i} className={`w-7 h-7 ${i <= stars ? "fill-amber-400 text-amber-400" : "text-slate-600"}`} />
+              ))}
+            </div>
+          )}
 
           <div className="text-center mb-4">
             <div className="text-xs uppercase tracking-wide text-slate-400">Wave Reached</div>
