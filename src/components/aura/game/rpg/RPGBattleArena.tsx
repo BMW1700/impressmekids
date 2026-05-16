@@ -3019,6 +3019,17 @@ export const RPGBattleArena = ({
                   showHealthBar={false}
                 />
               )}
+              {/* Pet battle companion */}
+              {equippedPet && equippedPetData && (
+                <PetBattleCompanion
+                  pet={equippedPetData}
+                  petName={equippedPet.nickname}
+                  level={equippedPet.level}
+                  charge={petCharge}
+                  maxCharge={equippedPetData.attack.chargeWords}
+                  attacking={petAttacking}
+                />
+              )}
             </motion.div>
           </div>
         </div>
