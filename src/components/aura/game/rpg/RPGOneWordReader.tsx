@@ -357,7 +357,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
         <div className="relative">
           <AnimatePresence mode="wait">
             <motion.div
-              key={`word-${currentIndex}`}
+              key={`word-${currentPhraseIndex}`}
               initial={{ scale: 0.85, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 1.02, opacity: 0 }}
@@ -365,10 +365,10 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
               className="bg-white rounded-2xl shadow-lg border-2 border-white px-6 py-3 text-center"
             >
               <div className="text-5xl sm:text-6xl font-black text-slate-900 lowercase leading-none">
-                {currentWord || (allDone ? "🎉" : "")}
+                {currentPhrase || (allDone ? "🎉" : "")}
               </div>
               <div className="mt-1 text-xs sm:text-sm font-bold text-slate-400 tracking-widest">
-                {syllableHint(currentWord)}
+                {syllableHint(currentPhrase)}
               </div>
               {verbHint && !allDone && (
                 <div className="mt-1 inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-purple-600 bg-purple-100 px-3 py-1 rounded-full">
@@ -390,13 +390,13 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
 
         {/* Progress dots */}
         <div className="flex items-center justify-center gap-2">
-          {items.map((_, i) => (
+          {phrases.map((_, i) => (
             <div
               key={i}
               className={`h-2.5 rounded-full transition-all ${
-                i < correctCount
+                i < correctPhrases
                   ? "w-6 bg-emerald-500"
-                  : i === currentIndex
+                  : i === currentPhraseIndex
                   ? "w-6 bg-slate-700"
                   : "w-2.5 bg-white/70"
               }`}
@@ -408,12 +408,12 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
         <div className="rounded-2xl bg-white/85 backdrop-blur-sm p-2 sm:p-3 shadow-inner">
           <RPGWordReader
             key={`prek-${world.id}-${level.id}`}
-            words={items}
+            words={wordList}
             onResult={handleResult}
             onBatchComplete={handleBatchComplete}
             disabled={false}
             streak={0}
-            batchSize={items.length}
+            batchSize={wordList.length}
             enableEchoRetry={true}
             mode="fast"
             compact
