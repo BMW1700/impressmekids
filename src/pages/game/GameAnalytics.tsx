@@ -163,14 +163,14 @@ const GameAnalytics = () => {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
               <Card>
                 <CardContent className="p-4 text-center">
-                  <div className="text-2xl font-bold text-primary">{auraRecords?.length ?? 0}</div>
+                  <div className="text-2xl font-bold text-primary">{readingSummary?.totalSessions ?? 0}</div>
                   <div className="text-xs text-muted-foreground">Total Sessions</div>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4 text-center">
                   <div className="text-2xl font-bold text-primary">
-                    {readingStats?.total_words_read?.toLocaleString() ?? 0}
+                    {(readingSummary?.totalWordsRead ?? 0).toLocaleString()}
                   </div>
                   <div className="text-xs text-muted-foreground">Words Read</div>
                 </CardContent>
@@ -178,21 +178,27 @@ const GameAnalytics = () => {
               <Card>
                 <CardContent className="p-4 text-center">
                   <Zap className="w-4 h-4 mx-auto mb-1 text-blue-500" />
-                  <div className="text-2xl font-bold text-primary">{readingSummary?.avgWpm ?? 0}</div>
+                  <div className="text-2xl font-bold text-primary">
+                    {readingSummary?.hasEnoughData ? readingSummary.avgWpm : "—"}
+                  </div>
                   <div className="text-xs text-muted-foreground">Avg WPM</div>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4 text-center">
                   <Gauge className="w-4 h-4 mx-auto mb-1 text-pink-500" />
-                  <div className="text-2xl font-bold text-primary">{readingSummary?.avgWcpm ?? 0}</div>
+                  <div className="text-2xl font-bold text-primary">
+                    {readingSummary?.hasEnoughData ? readingSummary.avgWcpm : "—"}
+                  </div>
                   <div className="text-xs text-muted-foreground">Avg WCPM</div>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4 text-center">
                   <Target className="w-4 h-4 mx-auto mb-1 text-emerald-500" />
-                  <div className="text-2xl font-bold text-primary">{readingSummary?.avgAccuracy ?? 0}%</div>
+                  <div className="text-2xl font-bold text-primary">
+                    {readingSummary?.hasEnoughData ? `${readingSummary.avgAccuracy}%` : "—"}
+                  </div>
                   <div className="text-xs text-muted-foreground">Accuracy</div>
                 </CardContent>
               </Card>
@@ -211,7 +217,7 @@ const GameAnalytics = () => {
                     }
                     className="text-sm font-bold"
                   >
-                    {readingSummary?.fluencyLabel ?? "—"}
+                    {readingSummary?.hasEnoughData ? readingSummary.fluencyLabel : "—"}
                   </Badge>
                   <div className="text-xs text-muted-foreground mt-1">Fluency</div>
                 </CardContent>
@@ -225,8 +231,13 @@ const GameAnalytics = () => {
                 </CardContent>
               </Card>
             </div>
+            {readingSummary && !readingSummary.hasEnoughData && readingSummary.totalSessions < 3 && (
+              <p className="text-xs text-muted-foreground text-center -mt-2">
+                Complete a few more reading sessions for an accurate fluency average.
+              </p>
+            )}
 
-            {/* Progress Chart */}
+            {/* Speaking practice trend (separate from reading) */}
             <AuraProgressChart records={auraRecords || []} />
           </TabsContent>
 
