@@ -48,20 +48,15 @@ export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
   // Get list of owned item IDs
   const ownedItems = inventory.map(item => item.item_id);
 
-  // Get equipped skin for a character
+  // Get equipped skin for a specific character (scoped per character, not first-equipped)
   const getEquippedSkin = (character: string): string | null => {
-    const equippedSkin = inventory.find(
-      item => item.item_category === 'skin' && item.is_equipped
-    );
-    
-    if (!equippedSkin) return null;
-    
-    // Check if this skin belongs to the requested character
-    const skinData = STORE_ITEMS.find(s => s.id === equippedSkin.item_id);
-    if (skinData?.character === character) {
-      return skinData.skinVariant || null;
+    for (const inv of inventory) {
+      if (!inv.is_equipped) continue;
+      const skinData = STORE_ITEMS.find(s => s.id === inv.item_id);
+      if (skinData?.category === 'skin' && skinData.character === character) {
+        return skinData.skinVariant || null;
+      }
     }
-    
     return null;
   };
 
