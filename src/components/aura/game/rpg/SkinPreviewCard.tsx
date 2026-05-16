@@ -3,6 +3,9 @@ import { Check, Sparkles } from "lucide-react";
 import { SirValor } from "../characters/SirValor";
 import { Elara } from "../characters/Elara";
 import { PrincessElla } from "../characters/PrincessElla";
+import { AgentX } from "../characters/AgentX";
+import { Cipher } from "../characters/Cipher";
+import { Shadow } from "../characters/Shadow";
 import { RARITY_COLORS, type ItemRarity, type SkinCharacter } from "@/lib/gameEconomy";
 
 interface SkinPreviewCardProps {
