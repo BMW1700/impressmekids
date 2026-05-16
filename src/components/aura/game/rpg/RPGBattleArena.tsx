@@ -850,7 +850,7 @@ export const RPGBattleArena = ({
   const handleFireballDefenseComplete = useCallback((blocked: number, hit: number, damage: number) => {
     console.log('[RPGBattle] Fireball Defense complete:', { blocked, hit, damage });
     if (damage > 0) {
-      setPlayerHp(prev => Math.max(0, prev - damage));
+      takePlayerDamage(damage);
     }
     const bonusDamage = blocked * 10;
     if (bonusDamage > 0) {
@@ -876,7 +876,7 @@ export const RPGBattleArena = ({
     
     const reducedDamage = Math.floor(20 * (1 - shieldStrength / 100));
     if (reducedDamage > 0) {
-      setPlayerHp(prev => Math.max(0, prev - reducedDamage));
+      takePlayerDamage(reducedDamage);
     }
     if (shieldStrength > 50) {
       const newHp = Math.max(0, enemyHpRef.current - damage);
@@ -991,7 +991,7 @@ export const RPGBattleArena = ({
       setEnemyHp(newHp);
       setTotalDamage(prev => prev + bonusDamage);
     } else {
-      setPlayerHp(prev => Math.max(0, prev - 20));
+      takePlayerDamage(20);
     }
     setBatchStartIndex(prev => prev + barrageWords.length);
     returnToReading();
@@ -1025,7 +1025,7 @@ export const RPGBattleArena = ({
       setEnemyHp(newHp);
       setTotalDamage(prev => prev + bonusDamage);
     } else {
-      setPlayerHp(prev => Math.max(0, prev - 30));
+      takePlayerDamage(30);
     }
     setBatchStartIndex(prev => prev + barrageWords.length);
     returnToReading();
@@ -1062,7 +1062,7 @@ export const RPGBattleArena = ({
       setTotalDamage(prev => prev + bonusDamage);
     }
     if (missed > 0) {
-      setPlayerHp(prev => Math.max(0, prev - missed * 15));
+      takePlayerDamage(missed * 15);
     }
     setCorrectWords(prev => prev + destroyed);
     setWordsRead(prev => prev + destroyed + missed);
@@ -1083,7 +1083,7 @@ export const RPGBattleArena = ({
       setTotalDamage(prev => prev + bonusDamage);
     }
     if (damage > 0) {
-      setPlayerHp(prev => Math.max(0, prev - damage));
+      takePlayerDamage(damage);
     }
     setCorrectWords(prev => prev + wordsFreed);
     setWordsRead(prev => prev + barrageWords.length);
@@ -1119,7 +1119,7 @@ export const RPGBattleArena = ({
     }
     
     if (damageTaken > 0) {
-      setPlayerHp(prev => Math.max(0, prev - damageTaken));
+      takePlayerDamage(damageTaken);
       triggerScreenShake();
     }
     
@@ -1133,7 +1133,7 @@ export const RPGBattleArena = ({
   
   // Handle mini-game damage
   const handleMiniGameDamage = useCallback((damage: number) => {
-    setPlayerHp(prev => Math.max(0, prev - damage));
+    takePlayerDamage(damage);
     triggerScreenShake();
   }, []);
 
@@ -1196,7 +1196,7 @@ export const RPGBattleArena = ({
       battleSounds.comboSuccess();
     } else {
       // Boss counter-attacks
-      setPlayerHp(prev => Math.max(0, prev - 15));
+      takePlayerDamage(15);
       triggerScreenShake();
     }
     setVocabShieldData(null);
@@ -1211,7 +1211,7 @@ export const RPGBattleArena = ({
       setEnemyHp(newHp);
       setTotalDamage(prev => prev + damage);
     } else {
-      setPlayerHp(prev => Math.max(0, prev - 10));
+      takePlayerDamage(10);
       triggerScreenShake();
     }
     setContextClueData(null);
@@ -1391,7 +1391,7 @@ export const RPGBattleArena = ({
 
   // Handle barrage word hit
   const handleBarrageWordHit = useCallback((damage: number) => {
-    setPlayerHp(prev => Math.max(0, prev - damage));
+    takePlayerDamage(damage);
     // Add floating damage number
     setFloatingDamages(prev => [...prev, {
       id: Date.now(),
@@ -1741,13 +1741,13 @@ export const RPGBattleArena = ({
           case 'poison':
             setIsPoisoned(true);
             setPoisonDamage(ability.damage);
-            setPlayerHp(prev => Math.max(0, prev - Math.floor(ability.damage / 2)));
+            takePlayerDamage(Math.floor(ability.damage / 2));
             break;
           case 'debuff':
             setIsDebuffed(true);
             setDebuffTurns(3);
             if (ability.damage > 0) {
-              setPlayerHp(prev => Math.max(0, prev - ability.damage));
+              takePlayerDamage(ability.damage);
             }
             break;
           case 'silence':
@@ -1755,7 +1755,7 @@ export const RPGBattleArena = ({
             setWizardMp(prev => Math.max(0, prev - 20));
             break;
           default:
-            setPlayerHp(prev => Math.max(0, prev - ability.damage));
+            takePlayerDamage(ability.damage);
         }
         
         setHeroTakingDamage(true);
@@ -1860,7 +1860,7 @@ export const RPGBattleArena = ({
 
     // Apply poison damage if poisoned
     if (isPoisoned && poisonDamage > 0) {
-      setPlayerHp(prev => Math.max(0, prev - 2));
+      takePlayerDamage(2);
     }
 
     // Reduce debuff turns
@@ -2067,7 +2067,7 @@ export const RPGBattleArena = ({
         setTimeout(() => {
           setEnemyAttacking(false);
           setHeroTakingDamage(true);
-          setPlayerHp(prev => Math.max(0, prev - damage));
+          takePlayerDamage(damage);
           triggerScreenShake();
           
           setTimeout(() => {
@@ -2600,7 +2600,7 @@ export const RPGBattleArena = ({
               // Similar handling to word shield
               const reducedDamage = Math.floor(20 * (1 - shieldStrength / 100));
               if (reducedDamage > 0) {
-                setPlayerHp(prev => Math.max(0, prev - reducedDamage));
+                takePlayerDamage(reducedDamage);
               }
               if (shieldStrength > 50) {
                 const newHp = Math.max(0, enemyHpRef.current - damage);
@@ -2686,7 +2686,7 @@ export const RPGBattleArena = ({
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
-            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
+            onWordHit={(damage) => takePlayerDamage(damage)}
           />
         )}
         {phase === 'wind_chase' && (
@@ -2702,7 +2702,7 @@ export const RPGBattleArena = ({
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
-            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
+            onWordHit={(damage) => takePlayerDamage(damage)}
           />
         )}
         {phase === 'ink_splash' && (
@@ -2718,7 +2718,7 @@ export const RPGBattleArena = ({
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
-            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
+            onWordHit={(damage) => takePlayerDamage(damage)}
           />
         )}
         {phase === 'crystal_prison' && (
@@ -2734,7 +2734,7 @@ export const RPGBattleArena = ({
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
-            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
+            onWordHit={(damage) => takePlayerDamage(damage)}
           />
         )}
         {phase === 'lightning_storm' && (
@@ -2750,7 +2750,7 @@ export const RPGBattleArena = ({
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
-            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
+            onWordHit={(damage) => takePlayerDamage(damage)}
           />
         )}
         {phase === 'void_pull' && (
@@ -2766,7 +2766,7 @@ export const RPGBattleArena = ({
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
-            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
+            onWordHit={(damage) => takePlayerDamage(damage)}
           />
         )}
         {/* GROG'S SIGNATURE: Ground Ripple - word mountains roll toward heroes */}
