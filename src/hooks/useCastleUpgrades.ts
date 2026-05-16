@@ -49,25 +49,30 @@ export function useCastleUpgrades() {
   });
 
   const buy = useMutation({
-    mutationFn: async (track: UpgradeTrack) => {
-      if (!user?.id) return;
-      const current = query.data || { hp_level: 0, damage_level: 0, cap_level: 0 };
-      const next = { ...current, [track]: (current[track] ?? 0) + 1 } as UpgradesRow;
-      const { error } = await supabase
-        .from("castle_upgrades")
-        .upsert(
-          { user_id: user.id, grade_mode: gradeMode, ...next, updated_at: new Date().toISOString() },
-          { onConflict: "user_id,grade_mode" }
-        );
-      if (error) console.error("[castle-upgrades] buy", error);
+    mutationFn: async ({ track, cost }: { track: UpgradeTrack; cost: number }) => {
+      if (!user?.id) throw new Error("Not signed in");
+      const { data, error } = await supabase.rpc("purchase_castle_upgrade", {
+        p_grade_mode: gradeMode,
+        p_track: track,
+        p_cost: cost,
+      });
+      if (error) throw error;
+      const result = data as { success: boolean; error?: string; balance?: number; new_level?: number };
+      if (!result?.success) throw new Error(result?.error || "Purchase failed");
+      return result;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["castle-upgrades", user?.id, gradeMode] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["castle-upgrades", user?.id, gradeMode] });
+      qc.invalidateQueries({ queryKey: ["campaign-progress", user?.id, gradeMode] });
+      qc.invalidateQueries({ queryKey: ["campaign-progress", user?.id] });
+    },
   });
 
   return {
     upgrades: query.data || { hp_level: 0, damage_level: 0, cap_level: 0 },
     stats: effectiveKnightStats(query.data || { hp_level: 0, damage_level: 0, cap_level: 0 }),
-    buy: buy.mutate,
+    buy: buy.mutateAsync,
+    isBuying: buy.isPending,
     isLoading: query.isLoading,
   };
 }
