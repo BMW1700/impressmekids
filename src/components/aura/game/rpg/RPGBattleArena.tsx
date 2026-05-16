@@ -3273,7 +3273,10 @@ export const RPGBattleArena = ({
                     <div className="bg-slate-800/60 rounded-lg p-4 border border-slate-700">
                       <p className="text-3xl font-bold text-yellow-400 flex items-center justify-center gap-1">
                         <Star className="h-5 w-5" />
-                        {Math.floor(100 + correctWords * 5 + longestStreak * 10)}
+                        {Math.floor(
+                          (100 + correctWords * 5 + longestStreak * 10 + totalDamage * 0.5) *
+                          (1 + ((activeUpgrades.xp_boost || 0) + petXpBonusPct) / 100)
+                        )}
                       </p>
                       <p className="text-xs text-slate-400">XP Earned</p>
                     </div>
