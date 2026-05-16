@@ -1,45 +1,67 @@
-## Three fixes, all scoped to Pre-K presentation
+## Brutally honest audit: what works vs what's broken
 
-### 1. Kill the red "33 HP" damage indicator on Worlds 102 and 103
+I traced every store category through the database → inventory hook → battle code. Here's the truth:
 
-In `src/components/aura/game/rpg/RPGOneWordReader.tsx` the friendly creature shows a big red HP number + red HP bar + red shake on every correct word. For Pre-K worlds 102 (Action Time) and 103 (Word + Picture), this distracts from the verb animation.
+### ✅ Working today
+- **Skins** — purchase saves to `player_inventory`, `equipSkin` flips `is_equipped`, and characters render with the variant in both HUD previews and the battle arena (`RPGBattleArena.tsx:2897`).
+- **Powers (spells)** — purchased powers are converted into real `Spell` objects with damage, MP cost, icon, and effect, and appear in the spell menu (`RPGBattleArena.tsx:331`).
+- **Upgrades that work:** `attack_boost`, `health_boost`, `mp_boost`, `gold_boost`, `xp_boost`.
+- **Potions that work:** `health_potion` (heal_hp), `magic_potion` (restore_mp), `mega_health` / `heal_full`, `mana_surge` / `mp_full`.
 
-Change:
-- Hide the `{HP}` red number and the red HP bar block for worlds 102 and 103 (only World 101 keeps the classic battle UI; or remove for all 3 Pre-K worlds — see Q below if needed; default is suppress on 102 + 103 as requested).
-- Skip the `setEnemyHit(true)` red flash and the `setShake(true)` screen shake on those two worlds. The creature still animates (jump / verb scene) so feedback is preserved.
-- Keep the existing star counter (e.g. `2/3`) at the top — that's the kid-friendly success signal.
+### ❌ Broken — paid for, no effect
 
-### 2. World 103: present phrases as two real words + an action
+**Upgrades sold but never read anywhere in battle:**
+- `streak_boost` ("Focus Mastery, +50% streak bonus damage") — never applied to streak damage math.
+- `crit_boost` ("Sharp Eye, +15% crit chance") — there is no crit system at all.
+- `defense_boost` ("Adamantine Shield, -15% damage taken") — incoming damage is never multiplied by this.
 
-Today World 103 stores `"help me"` as a single phrase, and `RPGWordReader` strips the space (`replace(/[^a-zA-Z']/g, '')`) so the chip shows `"helpme"` and the matcher rejects natural speech. The displayed phrase ("help me") doesn't match the target ("helpme").
+**Potions sold but the switch in `handleUseItem` has no case for them:**
+- `speed_potion` — no effect.
+- `double_xp` — no effect (no XP multiplier hook).
+- `lucky_coin` / gold boost potion — no effect.
+- `revive_feather` — no effect (no revive-on-death check).
+- `shield_potion` (`defense`) — deducts the potion but applies no buff/timer.
+- `rage_potion` — drains HP but never grants the +100% damage window the description promises.
 
-Change in `RPGOneWordReader.tsx`:
-- When `content.kind === "phrase"`, expand each phrase into its individual words and feed those to `RPGWordReader` as the real word list. So `"help me"` becomes `["help", "me"]`, `"in the box"` becomes `["in", "the", "box"]`, etc.
-- Track which words belong to which phrase so:
-  - The big word card still shows the full phrase ("help me") while the kid is reading it.
-  - The verb animation (jump, drink, wash, plant, throw…) fires once when the phrase's action word is read correctly (or at phrase completion), not on the filler words.
-  - The `2/3` star counter advances per completed phrase, not per word, matching the existing UX.
-- Update `damagePerWord` / completion logic to count phrases, not words, so progress dots and stars still line up with the level design.
+**Catalog mismatch:**
+- `mega_health` exists in the in-battle item menu but is NOT in `STORE_ITEMS`, so players can never buy it.
 
-No change to `preKWordBanks.ts` data — phrases stay authored as-is.
+**Cross-mode gold bug:**
+- `RPGPlayerHUD` calls `usePlayerInventory(studentId)` without `gradeMode`, so purchases made from the HUD deduct gold from every grade-mode row, not just the active one (`usePlayerInventory.ts:101`). `RPGBattleArena` passes it correctly.
 
-### 3. Add Pre-K rung to My Reading Journey
+---
 
-In `src/lib/readingJourneyLevel.ts`, add Pre-K as the first step of the K-5 ladder:
+## Plan to fix everything
 
-```text
-Pre-K (0 wpm) → K (20 wpm) → 1st (53) → 2nd (82) → 3rd (104) → 4th (123) → 5th (139)
-```
+### 1. Wire up the three dead upgrades in `RPGBattleArena.tsx`
+- `defense_boost`: multiply every incoming-damage write (enemy attacks, poison tick, rage self-damage if applicable) by `(1 - defense_boost/100)`, floored at 1.
+- `streak_boost`: in the damage calc around line 1439, scale the existing streak bonus by `(1 + streak_boost/100)`.
+- `crit_boost`: add a simple crit roll in the same damage block — on hit, `Math.random() < crit_boost/100` → multiply damage by 2 and show a "CRIT!" damage label. Show the crit chance on the upgrade tooltip.
 
-That makes `ReadingProgressPanel` render 7 dots and label Pre-K readers correctly. The 6-12 ladder is untouched. `benchmarkGrade` for Pre-K is `-1` (or `0` with a `label: 'Pre-K'`) — used only for display, no downstream benchmark math breaks since existing callers key off `label` / `displayLabel`.
+### 2. Make every potion do what it says
+Extend `handleUseItem` switch (and add timed buffs via existing state):
+- `speed` → set a `speedBuff` flag for N seconds that reduces enemy turn delay / increases reading window.
+- `double_xp` → set `xpMultiplierBuff = 2` for the rest of the battle, then multiply the `xpBoostPercent` payload at line 1894 accordingly.
+- `gold_boost` (lucky_coin) → same pattern as double_xp but for `goldBoostPercent` at line 1889.
+- `revive` → when `playerHp <= 0`, consume one `revive_feather` from inventory and restore to 50% HP instead of game-over.
+- `defense` (shield_potion) → set a `shieldTurns` counter (e.g. 3 turns) and apply -50% damage taken while active.
+- `rage` → set `ragePending = true` for next N attacks, multiplying outgoing damage by 2 (already self-damages).
 
-No DB, RLS, or edge-function changes. All edits are presentation-layer.
+### 3. Catalog cleanup
+- Add `mega_health` to `STORE_ITEMS` (price/rarity matching the menu) so it can actually be purchased, OR remove it from `RPGItemMenu` defaults. Default: add it to the store (better player value).
+- Align effect strings: keep menu's `heal_hp`/`restore_mp` and rely on `id` matching (already correct via id-based lookup); no schema change needed.
 
-### Files touched
+### 4. Fix the cross-mode gold bug
+- Pass `gradeMode` into `usePlayerInventory` from `RPGPlayerHUD`. Thread `gradeMode` prop from wherever the HUD is mounted (same source the BattleArena uses).
 
-- `src/components/aura/game/rpg/RPGOneWordReader.tsx` — suppress HP UI + shake on worlds 102/103; expand phrases into individual words while keeping phrase display and per-phrase progress.
-- `src/lib/readingJourneyLevel.ts` — prepend Pre-K rung to K-5 ladder.
+### 5. QA pass
+After each change, manually verify in-preview: buy each upgrade, see the stat tick up; drink each potion, see the matching buff; equip each skin, see character render; cast each purchased power, see damage land.
 
-### One quick check before I build
+### Files to touch
+- `src/components/aura/game/rpg/RPGBattleArena.tsx` — damage math, potion switch, revive check, buff state.
+- `src/components/aura/game/rpg/RPGPlayerHUD.tsx` — accept + forward `gradeMode`.
+- Whatever parent mounts `RPGPlayerHUD` — pass `gradeMode` down.
+- `src/lib/gameEconomy.ts` — add `mega_health` entry.
+- (Optional) `src/components/aura/game/rpg/RPGStore.tsx` — surface live values (e.g. "you already have +20% attack") so the player can see upgrades stacking.
 
-You said "the same should not be happening on world three" for the red indicator — I'm assuming World 101 (First Words) keeps the HP bar as-is. If you also want it gone there, say so and I'll strip it for all three Pre-K worlds.
+No DB schema changes needed — everything is already persisted in `player_inventory`.

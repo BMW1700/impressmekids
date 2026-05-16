@@ -17,6 +17,7 @@ interface RPGPlayerHUDProps {
   gold: number;
   xp: number;
   className?: string;
+  gradeMode?: string;
 }
 
 export const RPGPlayerHUD = ({ 
@@ -24,6 +25,7 @@ export const RPGPlayerHUD = ({
   gold, 
   xp, 
   className = "",
+  gradeMode,
 }: RPGPlayerHUDProps) => {
   const [showDailyRewards, setShowDailyRewards] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
@@ -33,7 +35,7 @@ export const RPGPlayerHUD = ({
   const { hasClaimedToday, currentStreak } = useDailyRewards(studentId);
   const { getTotalStats } = usePlayerAchievements(studentId);
   const { equippedPet, equippedPetData } = usePlayerPets(studentId);
-  const { ownedItems, purchaseItem, equipSkin, getEquippedSkin } = usePlayerInventory(studentId);
+  const { ownedItems, purchaseItem, equipSkin, getEquippedSkin } = usePlayerInventory(studentId, gradeMode);
 
   const achievementStats = getTotalStats();
   const theme = getStoredTheme();

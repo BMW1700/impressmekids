@@ -400,6 +400,52 @@ export const RPGBattleArena = ({
   const [poisonDamage, setPoisonDamage] = useState(0);
   const [isDebuffed, setIsDebuffed] = useState(false);
   const [debuffTurns, setDebuffTurns] = useState(0);
+
+  // Purchased-potion buffs (battle-scoped)
+  const [shieldHits, setShieldHits] = useState(0); // Shield Potion: -50% damage taken for N hits
+  const [rageHits, setRageHits] = useState(0); // Rage Potion: +100% outgoing damage for N hits
+  const [speedHits, setSpeedHits] = useState(0); // Speed Potion: bonus speed damage for N hits
+  const [xpMultiplier, setXpMultiplier] = useState(1); // Double XP elixir
+  const [goldMultiplier, setGoldMultiplier] = useState(1); // Lucky Coin
+  const [reviveAvailable, setReviveAvailable] = useState(false); // Set true once revive happens to prevent loop
+  const reviveAvailableRef = useRef(false);
+  const rageHitsRef = useRef(0);
+  useEffect(() => { rageHitsRef.current = rageHits; }, [rageHits]);
+
+  // Apply incoming damage with defense_boost upgrade + active shield potion.
+  // CRITs (crit_boost) for outgoing damage are applied separately in calculateDamage.
+  const takePlayerDamage = useCallback((raw: number) => {
+    if (raw <= 0) return;
+    const defensePct = activeUpgrades.defense_boost || 0;
+    let amount = raw * (1 - defensePct / 100);
+    if (shieldHits > 0) {
+      amount = amount * 0.5;
+      setShieldHits(h => Math.max(0, h - 1));
+    }
+    const final = Math.max(1, Math.floor(amount));
+    setPlayerHp(prev => {
+      const next = Math.max(0, prev - final);
+      // Revive check — if player would die and has revive_feather, consume it.
+      if (next === 0 && !reviveAvailableRef.current) {
+        const reviveQty = playerInventory.getItemQuantity('revive_feather');
+        if (reviveQty > 0) {
+          reviveAvailableRef.current = true;
+          setReviveAvailable(true);
+          playerInventory.usePotion.mutate('revive_feather');
+          const restored = Math.floor(maxHpWithBoost * 0.5);
+          // Apply revive in a microtask so the death-effect doesn't immediately fire
+          setTimeout(() => {
+            setPlayerHp(restored);
+            reviveAvailableRef.current = false;
+            setReviveAvailable(false);
+          }, 0);
+          return next;
+        }
+      }
+      return next;
+    });
+  }, [activeUpgrades.defense_boost, shieldHits, playerInventory, maxHpWithBoost]);
+
   
   // Word reading state
   const [words, setWords] = useState<string[]>([]);
@@ -804,7 +850,7 @@ export const RPGBattleArena = ({
   const handleFireballDefenseComplete = useCallback((blocked: number, hit: number, damage: number) => {
     console.log('[RPGBattle] Fireball Defense complete:', { blocked, hit, damage });
     if (damage > 0) {
-      setPlayerHp(prev => Math.max(0, prev - damage));
+      takePlayerDamage(damage);
     }
     const bonusDamage = blocked * 10;
     if (bonusDamage > 0) {
@@ -830,7 +876,7 @@ export const RPGBattleArena = ({
     
     const reducedDamage = Math.floor(20 * (1 - shieldStrength / 100));
     if (reducedDamage > 0) {
-      setPlayerHp(prev => Math.max(0, prev - reducedDamage));
+      takePlayerDamage(reducedDamage);
     }
     if (shieldStrength > 50) {
       const newHp = Math.max(0, enemyHpRef.current - damage);
@@ -945,7 +991,7 @@ export const RPGBattleArena = ({
       setEnemyHp(newHp);
       setTotalDamage(prev => prev + bonusDamage);
     } else {
-      setPlayerHp(prev => Math.max(0, prev - 20));
+      takePlayerDamage(20);
     }
     setBatchStartIndex(prev => prev + barrageWords.length);
     returnToReading();
@@ -979,7 +1025,7 @@ export const RPGBattleArena = ({
       setEnemyHp(newHp);
       setTotalDamage(prev => prev + bonusDamage);
     } else {
-      setPlayerHp(prev => Math.max(0, prev - 30));
+      takePlayerDamage(30);
     }
     setBatchStartIndex(prev => prev + barrageWords.length);
     returnToReading();
@@ -1016,7 +1062,7 @@ export const RPGBattleArena = ({
       setTotalDamage(prev => prev + bonusDamage);
     }
     if (missed > 0) {
-      setPlayerHp(prev => Math.max(0, prev - missed * 15));
+      takePlayerDamage(missed * 15);
     }
     setCorrectWords(prev => prev + destroyed);
     setWordsRead(prev => prev + destroyed + missed);
@@ -1037,7 +1083,7 @@ export const RPGBattleArena = ({
       setTotalDamage(prev => prev + bonusDamage);
     }
     if (damage > 0) {
-      setPlayerHp(prev => Math.max(0, prev - damage));
+      takePlayerDamage(damage);
     }
     setCorrectWords(prev => prev + wordsFreed);
     setWordsRead(prev => prev + barrageWords.length);
@@ -1073,7 +1119,7 @@ export const RPGBattleArena = ({
     }
     
     if (damageTaken > 0) {
-      setPlayerHp(prev => Math.max(0, prev - damageTaken));
+      takePlayerDamage(damageTaken);
       triggerScreenShake();
     }
     
@@ -1087,7 +1133,7 @@ export const RPGBattleArena = ({
   
   // Handle mini-game damage
   const handleMiniGameDamage = useCallback((damage: number) => {
-    setPlayerHp(prev => Math.max(0, prev - damage));
+    takePlayerDamage(damage);
     triggerScreenShake();
   }, []);
 
@@ -1150,7 +1196,7 @@ export const RPGBattleArena = ({
       battleSounds.comboSuccess();
     } else {
       // Boss counter-attacks
-      setPlayerHp(prev => Math.max(0, prev - 15));
+      takePlayerDamage(15);
       triggerScreenShake();
     }
     setVocabShieldData(null);
@@ -1165,7 +1211,7 @@ export const RPGBattleArena = ({
       setEnemyHp(newHp);
       setTotalDamage(prev => prev + damage);
     } else {
-      setPlayerHp(prev => Math.max(0, prev - 10));
+      takePlayerDamage(10);
       triggerScreenShake();
     }
     setContextClueData(null);
@@ -1345,7 +1391,7 @@ export const RPGBattleArena = ({
 
   // Handle barrage word hit
   const handleBarrageWordHit = useCallback((damage: number) => {
-    setPlayerHp(prev => Math.max(0, prev - damage));
+    takePlayerDamage(damage);
     // Add floating damage number
     setFloatingDamages(prev => [...prev, {
       id: Date.now(),
@@ -1399,7 +1445,9 @@ export const RPGBattleArena = ({
   // No random component — all damage is deterministic from reading performance
   const calculateDamage = useCallback((wordLength: number, currentStreak: number, responseTimeMs?: number, sessionAccuracy?: number): { damage: number; speedTier: 'fast' | 'normal' | 'slow'; isCritical: boolean; accuracyMultiplier: number } => {
     let baseDamage = Math.max(8, wordLength * 3);
-    const streakBonus = Math.floor(currentStreak / 2) * 5;
+    // Apply streak_boost upgrade — scales the streak bonus damage
+    const streakBoostPct = activeUpgrades.streak_boost || 0;
+    const streakBonus = Math.floor(Math.floor(currentStreak / 2) * 5 * (1 + streakBoostPct / 100));
     
     // SPEED BONUS: Based on response time (ms between word appearing and correct speech)
     let speedBonus = 0;
@@ -1419,6 +1467,13 @@ export const RPGBattleArena = ({
         speedTier = 'slow';
       }
     }
+
+    // SPEED POTION buff: extra speed bonus and treat as critical
+    if (speedHits > 0) {
+      speedBonus += 10;
+      isCritical = true;
+      setSpeedHits(h => Math.max(0, h - 1));
+    }
     
     // ACCURACY MULTIPLIER: Based on session accuracy (correctWords / wordsRead)
     let accuracyMultiplier = 1.0;
@@ -1437,10 +1492,24 @@ export const RPGBattleArena = ({
     
     // Apply attack_boost from purchased upgrades
     const attackBoost = activeUpgrades.attack_boost || 0;
-    const totalDamage = Math.floor((baseDamage + streakBonus + speedBonus + attackBoost) * accuracyMultiplier);
+    let totalDamage = Math.floor((baseDamage + streakBonus + speedBonus + attackBoost) * accuracyMultiplier);
+
+    // CRIT chance from crit_boost upgrade — doubles damage on roll
+    const critPct = activeUpgrades.crit_boost || 0;
+    if (critPct > 0 && Math.random() * 100 < critPct) {
+      totalDamage = totalDamage * 2;
+      isCritical = true;
+    }
+
+    // RAGE POTION: +100% outgoing damage for next N hits
+    if (rageHitsRef.current > 0) {
+      totalDamage = totalDamage * 2;
+      setRageHits(h => Math.max(0, h - 1));
+    }
     
     return { damage: totalDamage, speedTier, isCritical, accuracyMultiplier };
-  }, [isDebuffed, activeUpgrades.attack_boost]);
+  }, [isDebuffed, activeUpgrades.attack_boost, activeUpgrades.streak_boost, activeUpgrades.crit_boost, speedHits]);
+
 
   // Trigger screen shake
   const triggerScreenShake = () => {
@@ -1575,6 +1644,9 @@ export const RPGBattleArena = ({
   const handleUseItem = useCallback((item: Item) => {
     const itemKey = item.id;
     if (!inventory[itemKey] || inventory[itemKey] <= 0) return;
+
+    // Revive feather is passive (auto-consumed on death). Manual use is a no-op.
+    if (item.effect === 'revive') return;
     
     // Deduct from local state immediately for responsive UI
     setInventory(prev => ({ ...prev, [itemKey]: (prev[itemKey] || 0) - 1 }));
@@ -1603,16 +1675,31 @@ export const RPGBattleArena = ({
         setWizardMp(maxMp);
         break;
       case 'defense':
-        // Handled via UI buff indicator
+        // Shield Potion: -50% damage taken for next 5 enemy hits
+        setShieldHits(prev => prev + 5);
         break;
       case 'rage':
-        // +100% damage, -20% HP
+        // Rage Potion: +100% outgoing damage for next 5 hits, costs 20% HP
+        setRageHits(prev => prev + 5);
         setPlayerHp(prev => Math.max(1, prev - Math.floor(maxHp * 0.2)));
         break;
+      case 'speed':
+        // Speed Potion: bonus speed damage for next 5 hits
+        setSpeedHits(prev => prev + 5);
+        break;
+      case 'double_xp':
+        setXpMultiplier(prev => Math.max(prev, 2));
+        break;
+      case 'gold_boost':
+        setGoldMultiplier(prev => Math.max(prev, 2));
+        break;
+      // 'revive' is handled by early-return above (passive auto-consume on death)
+
       default:
         break;
     }
   }, [inventory, playerInventory.usePotion, maxHpWithBoost, activeUpgrades.mp_boost]);
+
 
   // Enemy turn logic - with failsafe to prevent stuck state
   // UPDATED: Uses setPhaseSafe and scheduleTimeout for terminal state safety
@@ -1654,13 +1741,13 @@ export const RPGBattleArena = ({
           case 'poison':
             setIsPoisoned(true);
             setPoisonDamage(ability.damage);
-            setPlayerHp(prev => Math.max(0, prev - Math.floor(ability.damage / 2)));
+            takePlayerDamage(Math.floor(ability.damage / 2));
             break;
           case 'debuff':
             setIsDebuffed(true);
             setDebuffTurns(3);
             if (ability.damage > 0) {
-              setPlayerHp(prev => Math.max(0, prev - ability.damage));
+              takePlayerDamage(ability.damage);
             }
             break;
           case 'silence':
@@ -1668,7 +1755,7 @@ export const RPGBattleArena = ({
             setWizardMp(prev => Math.max(0, prev - 20));
             break;
           default:
-            setPlayerHp(prev => Math.max(0, prev - ability.damage));
+            takePlayerDamage(ability.damage);
         }
         
         setHeroTakingDamage(true);
@@ -1773,7 +1860,7 @@ export const RPGBattleArena = ({
 
     // Apply poison damage if poisoned
     if (isPoisoned && poisonDamage > 0) {
-      setPlayerHp(prev => Math.max(0, prev - 2));
+      takePlayerDamage(2);
     }
 
     // Reduce debuff turns
@@ -1882,16 +1969,21 @@ export const RPGBattleArena = ({
       setTotalDamage(prev => prev + actualDamage);
       
       // Calculate and trigger gold/XP rewards
+      // Apply Lucky Coin / Double XP potion multipliers on top of permanent upgrades
+      const goldBoostFromUpgrade = activeUpgrades.gold_boost || 0;
+      const xpBoostFromUpgrade = activeUpgrades.xp_boost || 0;
+      const goldBoostTotal = goldBoostFromUpgrade + (goldMultiplier > 1 ? 100 : 0);
+      const xpBoostTotal = xpBoostFromUpgrade + (xpMultiplier > 1 ? 100 : 0);
       const goldAmount = calculateGoldEarned({ 
         wordCorrect: true, 
         streak: newStreak, 
         wordLength: word.length || 5,
-        goldBoostPercent: activeUpgrades.gold_boost || 0,
+        goldBoostPercent: goldBoostTotal,
       });
       const xpAmount = calculateXpEarned({ 
         wordCorrect: true, 
         streak: newStreak,
-        xpBoostPercent: activeUpgrades.xp_boost || 0,
+        xpBoostPercent: xpBoostTotal,
       });
       
       // Trigger coin drop animation
@@ -1980,7 +2072,7 @@ export const RPGBattleArena = ({
         setTimeout(() => {
           setEnemyAttacking(false);
           setHeroTakingDamage(true);
-          setPlayerHp(prev => Math.max(0, prev - damage));
+          takePlayerDamage(damage);
           triggerScreenShake();
           
           setTimeout(() => {
@@ -2513,7 +2605,7 @@ export const RPGBattleArena = ({
               // Similar handling to word shield
               const reducedDamage = Math.floor(20 * (1 - shieldStrength / 100));
               if (reducedDamage > 0) {
-                setPlayerHp(prev => Math.max(0, prev - reducedDamage));
+                takePlayerDamage(reducedDamage);
               }
               if (shieldStrength > 50) {
                 const newHp = Math.max(0, enemyHpRef.current - damage);
@@ -2599,7 +2691,7 @@ export const RPGBattleArena = ({
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
-            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
+            onWordHit={(damage) => takePlayerDamage(damage)}
           />
         )}
         {phase === 'wind_chase' && (
@@ -2615,7 +2707,7 @@ export const RPGBattleArena = ({
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
-            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
+            onWordHit={(damage) => takePlayerDamage(damage)}
           />
         )}
         {phase === 'ink_splash' && (
@@ -2631,7 +2723,7 @@ export const RPGBattleArena = ({
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
-            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
+            onWordHit={(damage) => takePlayerDamage(damage)}
           />
         )}
         {phase === 'crystal_prison' && (
@@ -2647,7 +2739,7 @@ export const RPGBattleArena = ({
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
-            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
+            onWordHit={(damage) => takePlayerDamage(damage)}
           />
         )}
         {phase === 'lightning_storm' && (
@@ -2663,7 +2755,7 @@ export const RPGBattleArena = ({
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
-            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
+            onWordHit={(damage) => takePlayerDamage(damage)}
           />
         )}
         {phase === 'void_pull' && (
@@ -2679,7 +2771,7 @@ export const RPGBattleArena = ({
               setBatchStartIndex(prev => prev + barrageWords.length);
               returnToReading();
             }}
-            onWordHit={(damage) => setPlayerHp(prev => Math.max(0, prev - damage))}
+            onWordHit={(damage) => takePlayerDamage(damage)}
           />
         )}
         {/* GROG'S SIGNATURE: Ground Ripple - word mountains roll toward heroes */}

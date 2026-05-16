@@ -132,6 +132,7 @@ const GameAnalytics = () => {
             studentId={user.id}
             gold={gold}
             xp={xp}
+            gradeMode={currentGradeMode}
             className="hidden sm:flex"
           />
         )}
