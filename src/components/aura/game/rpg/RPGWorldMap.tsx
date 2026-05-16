@@ -303,6 +303,7 @@ export const RPGWorldMap = ({
             studentId={studentId} 
             gold={gold} 
             xp={xp}
+            gradeMode={gradeMode}
             className="hidden sm:flex"
           />
         )}
