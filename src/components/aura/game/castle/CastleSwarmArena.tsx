@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Heart, Sparkles, Mic, MicOff, Shield, Zap, Flame, Snowflake } from "lucide-react";
 import { MiniGoblin } from "@/components/aura/game/rpg/MiniGoblin";
-import { speechManager } from "@/lib/speechManager";
+import { speechManager } from "@/lib/speechRecognitionManager";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStoredTheme, getGradeMode } from "@/lib/gameTheme";
