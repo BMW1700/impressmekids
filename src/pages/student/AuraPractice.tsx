@@ -901,6 +901,7 @@ const AuraPractice = () => {
                 onSelectStory={handleStorySelect} 
                 onStartCampaign={() => setIsCampaignMode(true)}
                 onStartRpgMode={() => setIsRpgMode(true)}
+                onStartCastle={() => navigate('/game/castle-swarm')}
                 categoryFilter={categoryFilter}
                 gradeMode={currentGradeMode}
               />
