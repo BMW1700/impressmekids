@@ -262,7 +262,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
           </div>
           <div className="text-sm sm:text-base font-bold flex items-center gap-1 text-amber-700 bg-white/90 rounded-full px-3 py-1 shadow">
             <Star className="h-4 w-4 fill-amber-400 text-amber-500" />
-            {correctCount}/{items.length}
+            {correctPhrases}/{phrases.length}
           </div>
         </div>
 
