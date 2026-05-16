@@ -327,7 +327,11 @@ export const RPGBattleArena = ({
   const wordsReadRef = useRef(0);
   const correctWordsRef = useRef(0);
   
-  // REAL INVENTORY: Build from database — no regenerating starter kit
+  // Track whether starter kit has been seeded (prevents re-adding mid-battle after potions are used)
+  const starterKitSeededRef = useRef(false);
+
+  // REAL INVENTORY: Build from database. Live-rebuilds on every inventory change so
+  // mid-battle store purchases appear immediately.
   const battleInventory = useMemo(() => {
     const inv: Record<string, number> = {};
     const potionItems = STORE_ITEMS.filter(item => item.category === 'potion');
@@ -335,9 +339,10 @@ export const RPGBattleArena = ({
       const qty = playerInventory.getItemQuantity(item.id);
       if (qty > 0) inv[item.id] = qty;
     });
-    // Starter kit ONLY if player has zero potions of any kind
+    // Starter kit ONLY on first ever load when player truly has no potions in DB.
     const totalPotions = Object.values(inv).reduce((s, v) => s + v, 0);
-    if (totalPotions === 0) {
+    if (totalPotions === 0 && !starterKitSeededRef.current) {
+      starterKitSeededRef.current = true;
       inv['health_potion'] = 2;
       inv['magic_potion'] = 1;
     }
@@ -369,16 +374,24 @@ export const RPGBattleArena = ({
       flash: Zap, shield: ShieldIcon, jam: Binary, plasma: Bomb,
       neural: Zap,
     };
-    return powerItems.map(item => ({
-      id: item.id,
-      name: item.name,
-      damage: item.value || 0,
-      mpCost: Math.max(15, Math.floor((item.price || 300) / 20)),
-      icon: iconMap[item.effect || 'fire'] || Flame,
-      color: theme === 'agent' ? 'from-cyan-500 to-teal-600' : 'from-purple-500 to-indigo-600',
-      effect: effectMap[item.effect || 'fire'] || 'fire',
-      description: item.description,
-    })) as Spell[];
+    return powerItems.map(item => {
+      // Special-case powers whose value is 0 in store but have meaningful effects:
+      // - time_stop / system_override: spells already skip enemy counter (free action),
+      //   plus deal solid damage and grant 3 shield-charges to feel "legendary"
+      // - cyber_shield: deploys 5 shield-charges (handled in handleCastSpell)
+      const isTimeSkip = item.id === 'time_stop' || item.id === 'system_override';
+      const baseDamage = isTimeSkip ? 45 : (item.value || 0);
+      return {
+        id: item.id,
+        name: item.name,
+        damage: baseDamage,
+        mpCost: Math.max(15, Math.floor((item.price || 300) / 20)),
+        icon: iconMap[item.effect || 'fire'] || Flame,
+        color: theme === 'agent' ? 'from-cyan-500 to-teal-600' : 'from-purple-500 to-indigo-600',
+        effect: effectMap[item.effect || 'fire'] || 'fire',
+        description: item.description,
+      };
+    }) as Spell[];
   }, [playerInventory.ownedItems]);
   const [inventory, setInventory] = useState<Record<string, number>>({});
   
@@ -1555,14 +1568,24 @@ export const RPGBattleArena = ({
     setAttackType(spell.effect);
     hasManualSpellRef.current = true;
     setDamageAmount(spell.damage);
-    
+
+    // Power-specific side effects (purchased powers from the store)
+    if (spell.id === 'time_stop' || spell.id === 'system_override') {
+      // Legendary "skip turn" powers: spells already skip enemy counter, but also
+      // grant 3 shield charges so the player gets a meaningful defensive window.
+      setShieldHits(h => h + 3);
+    } else if (spell.id === 'cyber_shield') {
+      // Cyber Shield: deploys a 5-hit digital barrier
+      setShieldHits(h => h + 5);
+    }
+
     // Handle healing spells differently - they target the player
     if (spell.effect === 'heal') {
       battleSounds.magicSparkle();
       battleSounds.healingChime();
       setActiveSpell('heal');
       setShowSpellEffect(true);
-      
+
       // Heal the player
       setPlayerHp(prev => Math.min(maxHpWithBoost, prev + 25));
       
