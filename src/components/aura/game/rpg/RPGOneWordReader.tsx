@@ -275,16 +275,20 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
               <div className="text-xs sm:text-sm font-bold text-slate-700 bg-white/90 rounded-full px-3 py-0.5 shadow">
                 {enemyName(enemy)}
               </div>
-              <div className="text-sm sm:text-base font-black text-rose-700 drop-shadow-[0_1px_0_white] leading-none">
-                {Math.max(0, Math.round(enemyHp))} HP
-              </div>
-              <div className="w-full max-w-[160px] h-3 bg-slate-900/30 rounded-full overflow-hidden border border-white/60 shadow-inner">
-                <motion.div
-                  className="h-full bg-gradient-to-r from-rose-400 via-rose-500 to-red-500"
-                  animate={{ width: `${enemyHp}%` }}
-                  transition={{ duration: 0.4, ease: "easeOut" }}
-                />
-              </div>
+              {showCombatUI && (
+                <>
+                  <div className="text-sm sm:text-base font-black text-rose-700 drop-shadow-[0_1px_0_white] leading-none">
+                    {Math.max(0, Math.round(enemyHp))} HP
+                  </div>
+                  <div className="w-full max-w-[160px] h-3 bg-slate-900/30 rounded-full overflow-hidden border border-white/60 shadow-inner">
+                    <motion.div
+                      className="h-full bg-gradient-to-r from-rose-400 via-rose-500 to-red-500"
+                      animate={{ width: `${enemyHp}%` }}
+                      transition={{ duration: 0.4, ease: "easeOut" }}
+                    />
+                  </div>
+                </>
+              )}
             </div>
             <motion.div
               key={`enemy-${prekScene?.id ?? verb?.id ?? 0}`}
