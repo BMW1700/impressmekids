@@ -1894,7 +1894,10 @@ export const RPGBattleArena = ({
       setStreak(newStreak);
       correctWordsRef.current += 1;
       setCorrectWords(prev => prev + 1);
-      
+
+      // Pet companion: charge up and fire when ready
+      triggerPetTick();
+
       // Power word detection - show loot drop overlay
       handlePowerWordCheck(word);
       if (newStreak > longestStreakRef.current) {
@@ -2206,9 +2209,14 @@ export const RPGBattleArena = ({
   
   // Handle battle end - also saves reading session for teacher visibility
   const handleBattleEnd = useCallback(async (victory: boolean) => {
-    const finalXpEarned = victory ? 
+    const baseXp = victory ? 
       Math.floor(100 + correctWords * 5 + longestStreak * 10 + totalDamage * 0.5) :
       Math.floor(correctWords * 2);
+    // Apply upgrade + pet multipliers to final rewards
+    const xpMult = 1 + ((activeUpgrades.xp_boost || 0) + petXpBonusPct) / 100;
+    const goldMult = 1 + ((activeUpgrades.gold_boost || 0) + petGoldBonusPct) / 100;
+    const finalXpEarned = Math.floor(baseXp * xpMult);
+    const finalGoldEarned = Math.floor(goldEarned * goldMult);
     
     // Calculate battle duration and WPM
     const durationSeconds = Math.max(1, (Date.now() - battleStartTime.current) / 1000);
@@ -2310,7 +2318,7 @@ export const RPGBattleArena = ({
       longestStreak,
       damageDealt: totalDamage,
       xpEarned: finalXpEarned,
-      goldEarned,
+      goldEarned: finalGoldEarned,
     };
 
     // Show Victory Arena for boss/final victories as a reward
@@ -2322,7 +2330,7 @@ export const RPGBattleArena = ({
     }
 
     onComplete(victory, finalStats);
-  }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete, studentId, story, battleMode, saveToAuraRecords, triggerQLearningUpdate, goldEarned, enemyType]);
+  }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete, studentId, story, battleMode, saveToAuraRecords, triggerQLearningUpdate, goldEarned, enemyType, activeUpgrades.xp_boost, activeUpgrades.gold_boost, petXpBonusPct, petGoldBonusPct]);
 
   // Get current batch of words for reading - MEMOIZED for stable reference
   // batchStartIndex only changes when we complete a full batch, keeping this stable
@@ -3009,6 +3017,17 @@ export const RPGBattleArena = ({
                   currentHp={companion.maxHp}
                   usePremiumSprites={true}
                   showHealthBar={false}
+                />
+              )}
+              {/* Pet battle companion */}
+              {equippedPet && equippedPetData && (
+                <PetBattleCompanion
+                  pet={equippedPetData}
+                  petName={equippedPet.pet_name}
+                  level={equippedPet.level}
+                  charge={petCharge}
+                  maxCharge={equippedPetData.attack.chargeWords}
+                  attacking={petAttacking}
                 />
               )}
             </motion.div>
