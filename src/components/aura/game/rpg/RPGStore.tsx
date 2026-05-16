@@ -55,8 +55,9 @@ export const RPGStore = ({
   const theme = getStoredTheme();
   const isAgent = theme === 'agent';
 
-  const { getAllPetsWithStatus, purchasePet, equipPet, equippedPet } = usePlayerPets(studentId, gradeMode);
+  const { getAllPetsWithStatus, purchasePet, equipPet, equippedPet, purchasePetMutation, equipPetMutation } = usePlayerPets(studentId, gradeMode);
   const petsWithStatus = studentId ? getAllPetsWithStatus() : [];
+  const petBusyId = purchasePetMutation.isPending ? (purchasePetMutation.variables as any)?.petId : equipPetMutation.isPending ? (equipPetMutation.variables as string) : null;
 
   // Filter items by theme: show theme-specific + shared (no theme tag = shared)
   const filteredItems = STORE_ITEMS.filter(item => {
