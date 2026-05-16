@@ -3023,7 +3023,7 @@ export const RPGBattleArena = ({
               {equippedPet && equippedPetData && (
                 <PetBattleCompanion
                   pet={equippedPetData}
-                  petName={equippedPet.nickname}
+                  petName={equippedPet.pet_name}
                   level={equippedPet.level}
                   charge={petCharge}
                   maxCharge={equippedPetData.attack.chargeWords}
