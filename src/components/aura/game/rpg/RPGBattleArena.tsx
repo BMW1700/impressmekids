@@ -1693,12 +1693,8 @@ export const RPGBattleArena = ({
       case 'gold_boost':
         setGoldMultiplier(prev => Math.max(prev, 2));
         break;
-      case 'revive':
-        // Revive feather is passive: consumed automatically on death.
-        // Using it manually has no effect — refund quantity by re-incrementing local state.
-        setInventory(prev => ({ ...prev, [itemKey]: (prev[itemKey] || 0) + 1 }));
-        // Don't actually consume DB quantity either
-        return;
+      // 'revive' is handled by early-return above (passive auto-consume on death)
+
       default:
         break;
     }
