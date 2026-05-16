@@ -30,7 +30,7 @@ import SpeakerDiarizationView from "@/components/aura/SpeakerDiarizationView";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Mic, TrendingUp, BookOpen, Library, Sparkles, Trophy, AlertTriangle, ArrowLeft, Presentation } from "lucide-react";
+import { Mic, TrendingUp, BookOpen, Library, Sparkles, Trophy, AlertTriangle, ArrowLeft, Presentation, Castle } from "lucide-react";
 import GeneratedExercises from "@/components/aura/GeneratedExercises";
 import PhonemeMasteryPathway from "@/components/aura/PhonemeMasteryPathway";
 import DifficultyProgressCard from "@/components/aura/DifficultyProgressCard";
@@ -870,6 +870,33 @@ const AuraPractice = () => {
             )}
           </div>
 
+          <Card className="overflow-hidden border-2 border-amber-500/50 bg-gradient-to-r from-rose-600/20 via-amber-500/20 to-yellow-500/20 shadow-lg shadow-amber-500/10">
+            <CardContent className="p-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-rose-600 flex items-center justify-center text-3xl shadow-lg">
+                    🏰
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold flex items-center gap-2">
+                      <Castle className="h-5 w-5 text-amber-500" />
+                      Castle Swarm Defense
+                      <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-black text-amber-950">NEW</span>
+                    </h2>
+                    <p className="text-sm text-muted-foreground">Defend your castle by reading aloud in Campaign, Endless, and Daily Challenge.</p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => navigate('/game/castle-swarm')}
+                  className="bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-600 hover:to-rose-700 font-bold"
+                >
+                  <Castle className="h-4 w-4 mr-2" />
+                  Enter Castle Mode
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="w-full flex justify-center overflow-x-auto">
               <TabsList className="inline-flex">
@@ -901,6 +928,7 @@ const AuraPractice = () => {
                 onSelectStory={handleStorySelect} 
                 onStartCampaign={() => setIsCampaignMode(true)}
                 onStartRpgMode={() => setIsRpgMode(true)}
+                onStartCastle={() => navigate('/game/castle-swarm')}
                 categoryFilter={categoryFilter}
                 gradeMode={currentGradeMode}
               />
